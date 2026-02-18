@@ -37,7 +37,7 @@ jobs:
             npm ci
             
             echo "🏗️ Building frontend..."
-            npm run build
+            npx vite build
             
             echo "🔄 Restarting backend..."
             pm2 restart zodo-crm-api

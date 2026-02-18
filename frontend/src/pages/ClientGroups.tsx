@@ -1,0 +1,2105 @@
+
+// src/pages/ClientGroups.tsx
+
+import React, { useState, useEffect, useMemo } from "react";
+import { Sidebar } from "@/components/Sidebar";
+import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Progress } from "@/components/ui/progress";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { useToast } from "@/components/ui/use-toast";
+import { cn } from "@/lib/utils";
+import {
+  Users,
+  UserPlus,
+  UserMinus,
+  UserCheck,
+  User,
+  Search,
+  Plus,
+  Filter,
+  Download,
+  Upload,
+  MoreHorizontal,
+  MoreVertical,
+  LayoutGrid,
+  List,
+  ChevronRight,
+  ChevronDown,
+  Eye,
+  Pencil,
+  Trash2,
+  Copy,
+  Check,
+  X,
+  Star,
+  StarOff,
+  Mail,
+  Phone,
+  MapPin,
+  Globe,
+  Building2,
+  Briefcase,
+  Calendar,
+  CalendarDays,
+  Clock,
+  DollarSign,
+  TrendingUp,
+  TrendingDown,
+  ArrowUpRight,
+  ArrowDownRight,
+  RefreshCw,
+  Settings,
+  Tag,
+  Tags,
+  Folder,
+  FolderPlus,
+  FolderOpen,
+  Layers,
+  Target,
+  Zap,
+  Sparkles,
+  Crown,
+  Shield,
+  Heart,
+  Award,
+  Gem,
+  CircleDollarSign,
+  PieChart,
+  BarChart3,
+  Activity,
+  Send,
+  MessageSquare,
+  Bell,
+  Link as LinkIcon,
+  ExternalLink,
+  Palette,
+  Hash,
+  AtSign,
+  type LucideIcon,
+} from "lucide-react";
+import { Link } from "react-router-dom";
+
+// ============================================
+// TYPES
+// ============================================
+
+interface Client {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  company: string;
+  avatar?: string;
+  status: "active" | "inactive" | "pending";
+  totalRevenue: number;
+  projectsCount: number;
+  lastActivity: Date;
+  joinedDate: Date;
+  tags?: string[];
+}
+
+interface ClientGroup {
+  id: string;
+  name: string;
+  description?: string;
+  color: string;
+  icon: string;
+  type: "segment" | "tier" | "industry" | "region" | "custom";
+  members: Client[];
+  memberCount: number;
+  totalRevenue: number;
+  avgRevenue: number;
+  isDefault: boolean;
+  isAutomatic: boolean;
+  rules?: GroupRule[];
+  createdBy: string;
+  createdAt: Date;
+  updatedAt?: Date;
+}
+
+interface GroupRule {
+  id: string;
+  field: string;
+  operator: string;
+  value: string;
+}
+
+interface GroupStats {
+  totalGroups: number;
+  totalClients: number;
+  avgGroupSize: number;
+  totalRevenue: number;
+  topGroup: string;
+}
+
+// ============================================
+// CONSTANTS & DATA
+// ============================================
+
+const groupIcons: { [key: string]: LucideIcon } = {
+  users: Users,
+  crown: Crown,
+  gem: Gem,
+  star: Star,
+  shield: Shield,
+  heart: Heart,
+  award: Award,
+  target: Target,
+  zap: Zap,
+  building: Building2,
+  briefcase: Briefcase,
+  globe: Globe,
+  folder: Folder,
+  layers: Layers,
+  tag: Tag,
+};
+
+const groupColors = [
+  { id: "blue", color: "#3B82F6", name: "Blue" },
+  { id: "purple", color: "#8B5CF6", name: "Purple" },
+  { id: "green", color: "#10B981", name: "Green" },
+  { id: "yellow", color: "#F59E0B", name: "Yellow" },
+  { id: "red", color: "#EF4444", name: "Red" },
+  { id: "pink", color: "#EC4899", name: "Pink" },
+  { id: "teal", color: "#17C3B2", name: "Teal" },
+  { id: "orange", color: "#F97316", name: "Orange" },
+  { id: "indigo", color: "#6366F1", name: "Indigo" },
+  { id: "gray", color: "#64748B", name: "Gray" },
+];
+
+const groupTypes = [
+  { id: "segment", name: "Segment", description: "Group by behavior or characteristics" },
+  { id: "tier", name: "Tier", description: "Group by value or subscription level" },
+  { id: "industry", name: "Industry", description: "Group by business sector" },
+  { id: "region", name: "Region", description: "Group by geographic location" },
+  { id: "custom", name: "Custom", description: "Custom grouping criteria" },
+];
+
+// Sample clients data
+const sampleClients: Client[] = [
+  {
+    id: "client_1",
+    name: "Sarah Johnson",
+    email: "sarah@techcorp.com",
+    phone: "+1 (416) 555-0123",
+    company: "TechCorp Solutions",
+    avatar: "https://randomuser.me/api/portraits/women/1.jpg",
+    status: "active",
+    totalRevenue: 125000,
+    projectsCount: 8,
+    lastActivity: new Date("2024-01-20"),
+    joinedDate: new Date("2023-03-15"),
+    tags: ["enterprise", "priority"],
+  },
+  {
+    id: "client_2",
+    name: "Michael Chen",
+    email: "m.chen@innovatelab.io",
+    phone: "+1 (604) 555-0456",
+    company: "InnovateLab",
+    avatar: "https://randomuser.me/api/portraits/men/2.jpg",
+    status: "active",
+    totalRevenue: 98500,
+    projectsCount: 5,
+    lastActivity: new Date("2024-01-19"),
+    joinedDate: new Date("2023-05-20"),
+    tags: ["startup", "tech"],
+  },
+  {
+    id: "client_3",
+    name: "Emma Williams",
+    email: "emma@retailplus.ca",
+    phone: "+1 (905) 555-0789",
+    company: "RetailPlus Canada",
+    avatar: "https://randomuser.me/api/portraits/women/3.jpg",
+    status: "active",
+    totalRevenue: 67000,
+    projectsCount: 4,
+    lastActivity: new Date("2024-01-18"),
+    joinedDate: new Date("2023-07-10"),
+    tags: ["retail"],
+  },
+  {
+    id: "client_4",
+    name: "David Brown",
+    email: "david@globalfinance.com",
+    phone: "+1 (514) 555-0321",
+    company: "Global Finance Inc.",
+    avatar: "https://randomuser.me/api/portraits/men/4.jpg",
+    status: "active",
+    totalRevenue: 245000,
+    projectsCount: 12,
+    lastActivity: new Date("2024-01-20"),
+    joinedDate: new Date("2022-11-05"),
+    tags: ["enterprise", "finance"],
+  },
+  {
+    id: "client_5",
+    name: "Lisa Anderson",
+    email: "lisa@startupventure.io",
+    phone: "+1 (403) 555-0654",
+    company: "Startup Venture",
+    avatar: "https://randomuser.me/api/portraits/women/5.jpg",
+    status: "pending",
+    totalRevenue: 15000,
+    projectsCount: 2,
+    lastActivity: new Date("2024-01-15"),
+    joinedDate: new Date("2024-01-01"),
+    tags: ["startup"],
+  },
+  {
+    id: "client_6",
+    name: "James Taylor",
+    email: "j.taylor@meditech.ca",
+    phone: "+1 (613) 555-0987",
+    company: "MediTech Solutions",
+    avatar: "https://randomuser.me/api/portraits/men/6.jpg",
+    status: "active",
+    totalRevenue: 156000,
+    projectsCount: 9,
+    lastActivity: new Date("2024-01-17"),
+    joinedDate: new Date("2023-02-28"),
+    tags: ["healthcare", "enterprise"],
+  },
+  {
+    id: "client_7",
+    name: "Amanda Martinez",
+    email: "amanda@edulearn.org",
+    phone: "+1 (204) 555-0147",
+    company: "EduLearn Institute",
+    avatar: "https://randomuser.me/api/portraits/women/7.jpg",
+    status: "active",
+    totalRevenue: 45000,
+    projectsCount: 3,
+    lastActivity: new Date("2024-01-19"),
+    joinedDate: new Date("2023-09-15"),
+    tags: ["education", "non-profit"],
+  },
+  {
+    id: "client_8",
+    name: "Robert Garcia",
+    email: "rgarcia@constructco.ca",
+    phone: "+1 (780) 555-0258",
+    company: "ConstructCo Ltd.",
+    avatar: "https://randomuser.me/api/portraits/men/8.jpg",
+    status: "inactive",
+    totalRevenue: 32000,
+    projectsCount: 2,
+    lastActivity: new Date("2023-12-10"),
+    joinedDate: new Date("2023-06-20"),
+    tags: ["construction"],
+  },
+  {
+    id: "client_9",
+    name: "Jennifer Lee",
+    email: "jennifer@designstudio.com",
+    phone: "+1 (647) 555-0369",
+    company: "Creative Design Studio",
+    avatar: "https://randomuser.me/api/portraits/women/9.jpg",
+    status: "active",
+    totalRevenue: 78000,
+    projectsCount: 6,
+    lastActivity: new Date("2024-01-18"),
+    joinedDate: new Date("2023-04-12"),
+    tags: ["creative", "design"],
+  },
+  {
+    id: "client_10",
+    name: "William Thompson",
+    email: "w.thompson@lawfirm.ca",
+    phone: "+1 (416) 555-0741",
+    company: "Thompson & Associates",
+    avatar: "https://randomuser.me/api/portraits/men/10.jpg",
+    status: "active",
+    totalRevenue: 189000,
+    projectsCount: 7,
+    lastActivity: new Date("2024-01-16"),
+    joinedDate: new Date("2022-08-30"),
+    tags: ["legal", "enterprise"],
+  },
+];
+
+// Sample groups data
+const initialGroups: ClientGroup[] = [
+  {
+    id: "group_1",
+    name: "Enterprise Clients",
+    description: "High-value enterprise customers with annual contracts over $100k",
+    color: "#8B5CF6",
+    icon: "crown",
+    type: "tier",
+    members: sampleClients.filter((c) => c.tags?.includes("enterprise")),
+    memberCount: 4,
+    totalRevenue: 715000,
+    avgRevenue: 178750,
+    isDefault: false,
+    isAutomatic: true,
+    rules: [
+      { id: "r1", field: "totalRevenue", operator: "greaterThan", value: "100000" },
+    ],
+    createdBy: "John Smith",
+    createdAt: new Date("2023-06-01"),
+  },
+  {
+    id: "group_2",
+    name: "Startup Partners",
+    description: "Early-stage startups and emerging businesses",
+    color: "#10B981",
+    icon: "zap",
+    type: "segment",
+    members: sampleClients.filter((c) => c.tags?.includes("startup")),
+    memberCount: 2,
+    totalRevenue: 113500,
+    avgRevenue: 56750,
+    isDefault: false,
+    isAutomatic: false,
+    createdBy: "Emily Davis",
+    createdAt: new Date("2023-08-15"),
+  },
+  {
+    id: "group_3",
+    name: "Healthcare Sector",
+    description: "Clients in healthcare and medical technology industries",
+    color: "#3B82F6",
+    icon: "heart",
+    type: "industry",
+    members: sampleClients.filter((c) => c.tags?.includes("healthcare")),
+    memberCount: 1,
+    totalRevenue: 156000,
+    avgRevenue: 156000,
+    isDefault: false,
+    isAutomatic: true,
+    rules: [
+      { id: "r2", field: "industry", operator: "equals", value: "healthcare" },
+    ],
+    createdBy: "Sarah Johnson",
+    createdAt: new Date("2023-09-20"),
+  },
+  {
+    id: "group_4",
+    name: "VIP Clients",
+    description: "Top-tier clients requiring premium support and services",
+    color: "#F59E0B",
+    icon: "gem",
+    type: "tier",
+    members: sampleClients.filter((c) => c.totalRevenue > 150000),
+    memberCount: 3,
+    totalRevenue: 590000,
+    avgRevenue: 196667,
+    isDefault: false,
+    isAutomatic: true,
+    rules: [
+      { id: "r3", field: "totalRevenue", operator: "greaterThan", value: "150000" },
+    ],
+    createdBy: "John Smith",
+    createdAt: new Date("2023-05-10"),
+  },
+  {
+    id: "group_5",
+    name: "Creative & Design",
+    description: "Clients in creative industries including design and media",
+    color: "#EC4899",
+    icon: "star",
+    type: "industry",
+    members: sampleClients.filter((c) => c.tags?.includes("creative") || c.tags?.includes("design")),
+    memberCount: 1,
+    totalRevenue: 78000,
+    avgRevenue: 78000,
+    isDefault: false,
+    isAutomatic: false,
+    createdBy: "Mike Wilson",
+    createdAt: new Date("2023-10-05"),
+  },
+  {
+    id: "group_6",
+    name: "New Clients (2024)",
+    description: "Clients who joined in 2024",
+    color: "#17C3B2",
+    icon: "users",
+    type: "segment",
+    members: sampleClients.filter((c) => c.joinedDate >= new Date("2024-01-01")),
+    memberCount: 1,
+    totalRevenue: 15000,
+    avgRevenue: 15000,
+    isDefault: false,
+    isAutomatic: true,
+    rules: [
+      { id: "r4", field: "joinedDate", operator: "after", value: "2024-01-01" },
+    ],
+    createdBy: "System",
+    createdAt: new Date("2024-01-01"),
+  },
+  {
+    id: "group_7",
+    name: "All Clients",
+    description: "Default group containing all clients",
+    color: "#64748B",
+    icon: "folder",
+    type: "custom",
+    members: sampleClients,
+    memberCount: 10,
+    totalRevenue: sampleClients.reduce((acc, c) => acc + c.totalRevenue, 0),
+    avgRevenue: sampleClients.reduce((acc, c) => acc + c.totalRevenue, 0) / 10,
+    isDefault: true,
+    isAutomatic: true,
+    createdBy: "System",
+    createdAt: new Date("2022-01-01"),
+  },
+];
+
+// ============================================
+// UTILITY FUNCTIONS
+// ============================================
+
+const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat("en-CA", {
+    style: "currency",
+    currency: "CAD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
+
+const formatDate = (date: Date): string => {
+  return new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  }).format(date);
+};
+
+const formatNumber = (num: number): string => {
+  return new Intl.NumberFormat("en-CA").format(num);
+};
+
+const getInitials = (name: string): string => {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase();
+};
+
+const getTypeInfo = (type: string) => {
+  return groupTypes.find((t) => t.id === type) || groupTypes[4];
+};
+
+const getRelativeTime = (date: Date): string => {
+  const now = new Date();
+  const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diffInDays === 0) return "Today";
+  if (diffInDays === 1) return "Yesterday";
+  if (diffInDays < 7) return `${diffInDays} days ago`;
+  if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`;
+  return formatDate(date);
+};
+
+// ============================================
+// STAT CARD COMPONENT
+// ============================================
+
+const StatCard = ({
+  title,
+  value,
+  subtitle,
+  icon: Icon,
+  color,
+  trend,
+  delay = 0,
+}: {
+  title: string;
+  value: number | string;
+  subtitle?: string;
+  icon: LucideIcon;
+  color: string;
+  trend?: { value: number; label: string };
+  delay?: number;
+}) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay }}
+      whileHover={{ y: -4 }}
+      className="relative bg-white rounded-2xl p-5 border border-slate-200 hover:border-[#17C3B2]/30 hover:shadow-xl hover:shadow-[#17C3B2]/5 transition-all overflow-hidden group"
+    >
+      <div
+        className="absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-10 group-hover:opacity-20 transition-all"
+        style={{ backgroundColor: color }}
+      />
+
+      <div className="relative flex items-start justify-between">
+        <div>
+          <p className="text-sm text-slate-500 mb-1">{title}</p>
+          <p className="text-2xl font-bold text-[#0D2342]">
+            {typeof value === "number" ? formatNumber(value) : value}
+          </p>
+          {subtitle && <p className="text-xs text-slate-400 mt-1">{subtitle}</p>}
+          {trend && (
+            <div className="flex items-center gap-1 mt-2">
+              {trend.value >= 0 ? (
+                <ArrowUpRight size={14} className="text-green-500" />
+              ) : (
+                <ArrowDownRight size={14} className="text-red-500" />
+              )}
+              <span
+                className={cn(
+                  "text-xs font-semibold",
+                  trend.value >= 0 ? "text-green-600" : "text-red-600"
+                )}
+              >
+                {Math.abs(trend.value)}%
+              </span>
+              <span className="text-xs text-slate-400">{trend.label}</span>
+            </div>
+          )}
+        </div>
+        <div
+          className="w-12 h-12 rounded-xl flex items-center justify-center"
+          style={{ backgroundColor: `${color}15` }}
+        >
+          <Icon size={22} style={{ color }} />
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+// ============================================
+// GROUP CARD COMPONENT
+// ============================================
+
+const GroupCard = ({
+  group,
+  onClick,
+  onEdit,
+  onDelete,
+  onManageMembers,
+  delay = 0,
+}: {
+  group: ClientGroup;
+  onClick: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  onManageMembers: () => void;
+  delay?: number;
+}) => {
+  const IconComponent = groupIcons[group.icon] || Users;
+  const typeInfo = getTypeInfo(group.type);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay }}
+      whileHover={{ y: -4 }}
+      className="relative bg-white rounded-2xl border border-slate-200 overflow-hidden hover:border-[#17C3B2]/30 hover:shadow-xl hover:shadow-[#17C3B2]/5 transition-all group cursor-pointer"
+      onClick={onClick}
+    >
+      {/* Color Header */}
+      <div
+        className="h-2"
+        style={{ backgroundColor: group.color }}
+      />
+
+      {/* Actions */}
+      <div
+        className="absolute top-5 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-lg bg-white/80 backdrop-blur-sm hover:bg-white"
+            >
+              <MoreHorizontal size={16} />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48 rounded-xl">
+            <DropdownMenuItem onClick={onClick} className="rounded-lg">
+              <Eye size={14} className="mr-2" /> View Details
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onManageMembers} className="rounded-lg">
+              <Users size={14} className="mr-2" /> Manage Members
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onEdit} className="rounded-lg">
+              <Pencil size={14} className="mr-2" /> Edit Group
+            </DropdownMenuItem>
+            <DropdownMenuItem className="rounded-lg">
+              <Copy size={14} className="mr-2" /> Duplicate
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="rounded-lg">
+              <Mail size={14} className="mr-2" /> Email Group
+            </DropdownMenuItem>
+            <DropdownMenuItem className="rounded-lg">
+              <Download size={14} className="mr-2" /> Export Members
+            </DropdownMenuItem>
+            {!group.isDefault && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={onDelete}
+                  className="rounded-lg text-red-600 focus:text-red-600"
+                >
+                  <Trash2 size={14} className="mr-2" /> Delete
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <div className="p-5">
+        {/* Header */}
+        <div className="flex items-start gap-4 mb-4">
+          <div
+            className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ backgroundColor: `${group.color}15` }}
+          >
+            <IconComponent size={28} style={{ color: group.color }} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="font-semibold text-[#0D2342] truncate group-hover:text-[#17C3B2] transition-colors">
+                {group.name}
+              </h3>
+              {group.isDefault && (
+                <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-xs font-medium rounded">
+                  Default
+                </span>
+              )}
+              {group.isAutomatic && (
+                <Zap size={14} className="text-yellow-500" title="Auto-updated" />
+              )}
+            </div>
+            <p className="text-sm text-slate-500 line-clamp-2">{group.description}</p>
+          </div>
+        </div>
+
+        {/* Type Badge */}
+        <div className="mb-4">
+          <span
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium capitalize"
+            style={{ backgroundColor: `${group.color}10`, color: group.color }}
+          >
+            <Tag size={12} />
+            {typeInfo.name}
+          </span>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="text-center p-3 bg-slate-50 rounded-xl">
+            <p className="text-lg font-bold text-[#0D2342]">{group.memberCount}</p>
+            <p className="text-xs text-slate-500">Members</p>
+          </div>
+          <div className="text-center p-3 bg-slate-50 rounded-xl">
+            <p className="text-lg font-bold text-[#17C3B2]">{formatCurrency(group.totalRevenue)}</p>
+            <p className="text-xs text-slate-500">Total Revenue</p>
+          </div>
+          <div className="text-center p-3 bg-slate-50 rounded-xl">
+            <p className="text-lg font-bold text-[#C9A14A]">{formatCurrency(group.avgRevenue)}</p>
+            <p className="text-xs text-slate-500">Avg Revenue</p>
+          </div>
+        </div>
+
+        {/* Members Preview */}
+        <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+          <div className="flex -space-x-2">
+            {group.members.slice(0, 5).map((member) => (
+              <Avatar key={member.id} className="h-8 w-8 border-2 border-white">
+                <AvatarImage src={member.avatar} />
+                <AvatarFallback className="text-xs bg-slate-200">
+                  {getInitials(member.name)}
+                </AvatarFallback>
+              </Avatar>
+            ))}
+            {group.memberCount > 5 && (
+              <div className="h-8 w-8 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-xs font-medium text-slate-600">
+                +{group.memberCount - 5}
+              </div>
+            )}
+          </div>
+          <span className="text-xs text-slate-400">
+            Updated {getRelativeTime(group.updatedAt || group.createdAt)}
+          </span>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+// ============================================
+// GROUP TABLE ROW COMPONENT
+// ============================================
+
+const GroupTableRow = ({
+  group,
+  onClick,
+  onEdit,
+  onDelete,
+  onManageMembers,
+}: {
+  group: ClientGroup;
+  onClick: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  onManageMembers: () => void;
+}) => {
+  const IconComponent = groupIcons[group.icon] || Users;
+  const typeInfo = getTypeInfo(group.type);
+
+  return (
+    <TableRow className="group hover:bg-slate-50 cursor-pointer" onClick={onClick}>
+      <TableCell>
+        <div className="flex items-center gap-3">
+          <div
+            className="w-10 h-10 rounded-lg flex items-center justify-center"
+            style={{ backgroundColor: `${group.color}15` }}
+          >
+            <IconComponent size={20} style={{ color: group.color }} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <p className="font-medium text-[#0D2342] group-hover:text-[#17C3B2] transition-colors">
+                {group.name}
+              </p>
+              {group.isDefault && (
+                <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-medium rounded">
+                  Default
+                </span>
+              )}
+              {group.isAutomatic && (
+                <Zap size={12} className="text-yellow-500" />
+              )}
+            </div>
+            <p className="text-sm text-slate-500 truncate max-w-[250px]">
+              {group.description}
+            </p>
+          </div>
+        </div>
+      </TableCell>
+      <TableCell>
+        <span
+          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium capitalize"
+          style={{ backgroundColor: `${group.color}10`, color: group.color }}
+        >
+          {typeInfo.name}
+        </span>
+      </TableCell>
+      <TableCell>
+        <div className="flex items-center gap-2">
+          <div className="flex -space-x-1">
+            {group.members.slice(0, 3).map((member) => (
+              <Avatar key={member.id} className="h-6 w-6 border border-white">
+                <AvatarImage src={member.avatar} />
+                <AvatarFallback className="text-[10px] bg-slate-200">
+                  {getInitials(member.name)}
+                </AvatarFallback>
+              </Avatar>
+            ))}
+          </div>
+          <span className="text-sm font-medium text-[#0D2342]">{group.memberCount}</span>
+        </div>
+      </TableCell>
+      <TableCell>
+        <span className="font-semibold text-[#0D2342]">
+          {formatCurrency(group.totalRevenue)}
+        </span>
+      </TableCell>
+      <TableCell>
+        <span className="text-sm text-slate-600">
+          {formatCurrency(group.avgRevenue)}
+        </span>
+      </TableCell>
+      <TableCell>
+        <span className="text-sm text-slate-500">
+          {formatDate(group.createdAt)}
+        </span>
+      </TableCell>
+      <TableCell>
+        <div
+          className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={onClick}>
+                  <Eye size={16} className="text-slate-400" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>View Details</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={onManageMembers}>
+                  <Users size={16} className="text-slate-400" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Manage Members</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={onEdit}>
+                  <Pencil size={16} className="text-slate-400" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Edit</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
+                <MoreVertical size={16} className="text-slate-400" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48 rounded-xl">
+              <DropdownMenuItem className="rounded-lg">
+                <Mail size={14} className="mr-2" /> Email Group
+              </DropdownMenuItem>
+              <DropdownMenuItem className="rounded-lg">
+                <Download size={14} className="mr-2" /> Export Members
+              </DropdownMenuItem>
+              <DropdownMenuItem className="rounded-lg">
+                <Copy size={14} className="mr-2" /> Duplicate
+              </DropdownMenuItem>
+              {!group.isDefault && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onDelete} className="rounded-lg text-red-600">
+                    <Trash2 size={14} className="mr-2" /> Delete
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+};
+
+// ============================================
+// GROUP FORM DIALOG
+// ============================================
+
+const GroupFormDialog = ({
+  isOpen,
+  onClose,
+  group,
+  onSubmit,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  group: ClientGroup | null;
+  onSubmit: (data: Partial<ClientGroup>) => void;
+}) => {
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    color: "#3B82F6",
+    icon: "users",
+    type: "custom" as ClientGroup["type"],
+    isAutomatic: false,
+  });
+
+  useEffect(() => {
+    if (group) {
+      setFormData({
+        name: group.name,
+        description: group.description || "",
+        color: group.color,
+        icon: group.icon,
+        type: group.type,
+        isAutomatic: group.isAutomatic,
+      });
+    } else {
+      setFormData({
+        name: "",
+        description: "",
+        color: "#3B82F6",
+        icon: "users",
+        type: "custom",
+        isAutomatic: false,
+      });
+    }
+  }, [group, isOpen]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name.trim()) return;
+
+    onSubmit(formData);
+    onClose();
+  };
+
+  const SelectedIcon = groupIcons[formData.icon] || Users;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[500px] p-0 rounded-2xl overflow-hidden">
+        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#17C3B2]/10 to-transparent">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-[#0D2342]">
+              {group ? "Edit Group" : "Create New Group"}
+            </DialogTitle>
+            <DialogDescription className="text-slate-500">
+              {group ? "Update group settings" : "Create a new client group for better organization"}
+            </DialogDescription>
+          </DialogHeader>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          {/* Group Name */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-slate-600">
+              Group Name <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="e.g., Enterprise Clients, VIP Members"
+              required
+              className="h-11 rounded-xl"
+            />
+          </div>
+
+          {/* Description */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-slate-600">Description</Label>
+            <Textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Describe this group's purpose..."
+              rows={3}
+              className="rounded-xl resize-none"
+            />
+          </div>
+
+          {/* Type */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-slate-600">Group Type</Label>
+            <Select
+              value={formData.type}
+              onValueChange={(val) => setFormData({ ...formData, type: val as ClientGroup["type"] })}
+            >
+              <SelectTrigger className="h-11 rounded-xl">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl">
+                {groupTypes.map((type) => (
+                  <SelectItem key={type.id} value={type.id} className="rounded-lg">
+                    <div>
+                      <p className="font-medium">{type.name}</p>
+                      <p className="text-xs text-slate-500">{type.description}</p>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Icon Selection */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-slate-600">Icon</Label>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(groupIcons).map(([key, Icon]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, icon: key })}
+                  className={cn(
+                    "w-10 h-10 rounded-lg flex items-center justify-center transition-all",
+                    formData.icon === key
+                      ? "ring-2 ring-[#17C3B2] ring-offset-2"
+                      : "hover:bg-slate-100"
+                  )}
+                  style={{
+                    backgroundColor: formData.icon === key ? `${formData.color}15` : undefined,
+                  }}
+                >
+                  <Icon
+                    size={20}
+                    style={{ color: formData.icon === key ? formData.color : "#64748B" }}
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Color Selection */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-slate-600">Color</Label>
+            <div className="flex flex-wrap gap-2">
+              {groupColors.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, color: c.color })}
+                  className={cn(
+                    "w-8 h-8 rounded-lg transition-all",
+                    formData.color === c.color && "ring-2 ring-offset-2 ring-[#17C3B2]"
+                  )}
+                  style={{ backgroundColor: c.color }}
+                  title={c.name}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Preview */}
+          <div className="p-4 bg-slate-50 rounded-xl">
+            <p className="text-xs text-slate-400 mb-3">Preview</p>
+            <div className="flex items-center gap-3">
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center"
+                style={{ backgroundColor: `${formData.color}15` }}
+              >
+                <SelectedIcon size={24} style={{ color: formData.color }} />
+              </div>
+              <div>
+                <p className="font-semibold text-[#0D2342]">
+                  {formData.name || "Group Name"}
+                </p>
+                <span
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium capitalize"
+                  style={{ backgroundColor: `${formData.color}10`, color: formData.color }}
+                >
+                  {getTypeInfo(formData.type).name}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Auto-update Toggle */}
+          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+            <div className="flex items-center gap-3">
+              <Zap size={18} className="text-yellow-500" />
+              <div>
+                <p className="font-medium text-[#0D2342]">Auto-update Members</p>
+                <p className="text-xs text-slate-500">Automatically add clients based on rules</p>
+              </div>
+            </div>
+            <Switch
+              checked={formData.isAutomatic}
+              onCheckedChange={(checked) => setFormData({ ...formData, isAutomatic: checked })}
+              className="data-[state=checked]:bg-[#17C3B2]"
+            />
+          </div>
+
+          <DialogFooter className="pt-4 gap-3">
+            <Button type="button" variant="outline" onClick={onClose} className="rounded-xl">
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={!formData.name.trim()}
+              className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl"
+            >
+              {group ? (
+                <>
+                  <Check size={16} className="mr-2" /> Update Group
+                </>
+              ) : (
+                <>
+                  <Plus size={16} className="mr-2" /> Create Group
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// ============================================
+// MANAGE MEMBERS DIALOG
+// ============================================
+
+const ManageMembersDialog = ({
+  isOpen,
+  onClose,
+  group,
+  allClients,
+  onUpdateMembers,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  group: ClientGroup | null;
+  allClients: Client[];
+  onUpdateMembers: (members: Client[]) => void;
+}) => {
+  const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    if (group) {
+      setSelectedMembers(new Set(group.members.map((m) => m.id)));
+    }
+  }, [group, isOpen]);
+
+  if (!group) return null;
+
+  const filteredClients = allClients.filter((client) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      client.name.toLowerCase().includes(query) ||
+      client.email.toLowerCase().includes(query) ||
+      client.company.toLowerCase().includes(query)
+    );
+  });
+
+  const toggleMember = (clientId: string) => {
+    setSelectedMembers((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(clientId)) {
+        newSet.delete(clientId);
+      } else {
+        newSet.add(clientId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSave = () => {
+    const members = allClients.filter((c) => selectedMembers.has(c.id));
+    onUpdateMembers(members);
+    onClose();
+  };
+
+  const IconComponent = groupIcons[group.icon] || Users;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[600px] p-0 rounded-2xl overflow-hidden max-h-[80vh]">
+        <div
+          className="p-6 border-b border-slate-100"
+          style={{ background: `linear-gradient(to right, ${group.color}10, transparent)` }}
+        >
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center"
+                style={{ backgroundColor: `${group.color}20` }}
+              >
+                <IconComponent size={24} style={{ color: group.color }} />
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-bold text-[#0D2342]">
+                  Manage Members
+                </DialogTitle>
+                <DialogDescription className="text-slate-500">
+                  {group.name} • {selectedMembers.size} members selected
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+        </div>
+
+        <div className="p-4 border-b border-slate-100">
+          <div className="relative">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search clients..."
+              className="pl-9 h-10 rounded-xl border-slate-200"
+            />
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto max-h-[400px] p-4">
+          <div className="space-y-2">
+            {filteredClients.map((client) => {
+              const isSelected = selectedMembers.has(client.id);
+
+              return (
+                <div
+                  key={client.id}
+                  onClick={() => toggleMember(client.id)}
+                  className={cn(
+                    "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all",
+                    isSelected
+                      ? "bg-[#17C3B2]/10 border border-[#17C3B2]/30"
+                      : "hover:bg-slate-50 border border-transparent"
+                  )}
+                >
+                  <Checkbox
+                    checked={isSelected}
+                    onCheckedChange={() => toggleMember(client.id)}
+                    className="data-[state=checked]:bg-[#17C3B2] data-[state=checked]:border-[#17C3B2]"
+                  />
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={client.avatar} />
+                    <AvatarFallback className="bg-slate-200 text-sm">
+                      {getInitials(client.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-[#0D2342]">{client.name}</p>
+                    <p className="text-sm text-slate-500 truncate">{client.company}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-[#0D2342]">
+                      {formatCurrency(client.totalRevenue)}
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      {client.projectsCount} projects
+                    </p>
+                  </div>
+                  {isSelected && (
+                    <Check size={16} className="text-[#17C3B2]" />
+                  )}
+                </div>
+              );
+            })}
+
+            {filteredClients.length === 0 && (
+              <div className="text-center py-8">
+                <Users size={32} className="text-slate-300 mx-auto mb-2" />
+                <p className="text-slate-500">No clients found</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <DialogFooter className="p-6 pt-4 border-t border-slate-100 gap-3">
+          <div className="flex-1 text-sm text-slate-500">
+            {selectedMembers.size} of {allClients.length} clients selected
+          </div>
+          <Button variant="outline" onClick={onClose} className="rounded-xl">
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSave}
+            className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl"
+          >
+            <Check size={16} className="mr-2" />
+            Save Changes
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// ============================================
+// GROUP DETAILS DIALOG
+// ============================================
+
+const GroupDetailsDialog = ({
+  isOpen,
+  onClose,
+  group,
+  onEdit,
+  onManageMembers,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  group: ClientGroup | null;
+  onEdit: () => void;
+  onManageMembers: () => void;
+}) => {
+  if (!group) return null;
+
+  const IconComponent = groupIcons[group.icon] || Users;
+  const typeInfo = getTypeInfo(group.type);
+
+  // Calculate stats
+  const activeMembers = group.members.filter((m) => m.status === "active").length;
+  const avgProjects = group.members.length > 0
+    ? Math.round(group.members.reduce((acc, m) => acc + m.projectsCount, 0) / group.members.length)
+    : 0;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[700px] p-0 rounded-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div
+          className="p-6 border-b border-slate-100"
+          style={{ background: `linear-gradient(to right, ${group.color}15, transparent)` }}
+        >
+          <div className="flex items-start justify-between">
+            <div className="flex items-start gap-4">
+              <div
+                className="w-16 h-16 rounded-xl flex items-center justify-center"
+                style={{ backgroundColor: `${group.color}20` }}
+              >
+                <IconComponent size={32} style={{ color: group.color }} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <h2 className="text-2xl font-bold text-[#0D2342]">{group.name}</h2>
+                  {group.isDefault && (
+                    <span className="px-2 py-0.5 bg-slate-200 text-slate-600 text-xs font-medium rounded">
+                      Default
+                    </span>
+                  )}
+                  {group.isAutomatic && (
+                    <span className="px-2 py-0.5 bg-yellow-100 text-yellow-600 text-xs font-medium rounded flex items-center gap-1">
+                      <Zap size={10} /> Auto
+                    </span>
+                  )}
+                </div>
+                <p className="text-slate-500 mb-2">{group.description}</p>
+                <span
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-sm font-medium capitalize"
+                  style={{ backgroundColor: `${group.color}15`, color: group.color }}
+                >
+                  <Tag size={14} />
+                  {typeInfo.name}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Stats Grid */}
+          <div className="grid grid-cols-4 gap-4">
+            <div className="p-4 bg-slate-50 rounded-xl text-center">
+              <p className="text-2xl font-bold text-[#0D2342]">{group.memberCount}</p>
+              <p className="text-sm text-slate-500">Total Members</p>
+            </div>
+            <div className="p-4 bg-green-50 rounded-xl text-center">
+              <p className="text-2xl font-bold text-green-600">{activeMembers}</p>
+              <p className="text-sm text-slate-500">Active</p>
+            </div>
+            <div className="p-4 bg-[#17C3B2]/10 rounded-xl text-center">
+              <p className="text-2xl font-bold text-[#17C3B2]">{formatCurrency(group.totalRevenue)}</p>
+              <p className="text-sm text-slate-500">Total Revenue</p>
+            </div>
+            <div className="p-4 bg-[#C9A14A]/10 rounded-xl text-center">
+              <p className="text-2xl font-bold text-[#C9A14A]">{avgProjects}</p>
+              <p className="text-sm text-slate-500">Avg Projects</p>
+            </div>
+          </div>
+
+          {/* Auto Rules */}
+          {group.isAutomatic && group.rules && group.rules.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-[#0D2342] mb-3 flex items-center gap-2">
+                <Zap size={16} className="text-yellow-500" />
+                Automatic Membership Rules
+              </h3>
+              <div className="space-y-2">
+                {group.rules.map((rule) => (
+                  <div
+                    key={rule.id}
+                    className="flex items-center gap-3 p-3 bg-yellow-50 border border-yellow-100 rounded-xl text-sm"
+                  >
+                    <span className="font-medium text-slate-700 capitalize">{rule.field}</span>
+                    <span className="text-slate-500">{rule.operator.replace(/([A-Z])/g, ' $1').toLowerCase()}</span>
+                    <span className="font-medium text-[#0D2342]">{rule.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Members List */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-[#0D2342]">
+                Members ({group.memberCount})
+              </h3>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onManageMembers}
+                className="rounded-lg"
+              >
+                <UserPlus size={14} className="mr-1" />
+                Manage
+              </Button>
+            </div>
+            <div className="border border-slate-200 rounded-xl overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50">
+                    <TableHead>Client</TableHead>
+                    <TableHead>Company</TableHead>
+                    <TableHead>Revenue</TableHead>
+                    <TableHead>Projects</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {group.members.slice(0, 5).map((member) => (
+                    <TableRow key={member.id} className="hover:bg-slate-50">
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={member.avatar} />
+                            <AvatarFallback className="text-xs bg-slate-200">
+                              {getInitials(member.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium text-[#0D2342]">{member.name}</p>
+                            <p className="text-xs text-slate-500">{member.email}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm text-slate-600">{member.company}</TableCell>
+                      <TableCell className="font-medium text-[#0D2342]">
+                        {formatCurrency(member.totalRevenue)}
+                      </TableCell>
+                      <TableCell className="text-sm text-slate-600">{member.projectsCount}</TableCell>
+                      <TableCell>
+                        <span
+                          className={cn(
+                            "px-2 py-1 rounded-full text-xs font-medium capitalize",
+                            member.status === "active" && "bg-green-100 text-green-600",
+                            member.status === "inactive" && "bg-slate-100 text-slate-600",
+                            member.status === "pending" && "bg-yellow-100 text-yellow-600"
+                          )}
+                        >
+                          {member.status}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              {group.memberCount > 5 && (
+                <div className="p-3 text-center border-t border-slate-100">
+                  <Button variant="link" size="sm" onClick={onManageMembers}>
+                    View all {group.memberCount} members
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Meta Info */}
+          <div className="pt-4 border-t border-slate-100 grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <p className="text-slate-400">Created by</p>
+              <p className="font-medium text-[#0D2342]">{group.createdBy}</p>
+            </div>
+            <div>
+              <p className="text-slate-400">Created on</p>
+              <p className="font-medium text-[#0D2342]">{formatDate(group.createdAt)}</p>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter className="p-6 pt-0 gap-3 border-t border-slate-100">
+          <Button variant="outline" className="rounded-xl gap-2">
+            <Mail size={16} />
+            Email Group
+          </Button>
+          <Button variant="outline" className="rounded-xl gap-2">
+            <Download size={16} />
+            Export
+          </Button>
+          <Button
+            onClick={onEdit}
+            className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl gap-2"
+          >
+            <Pencil size={16} />
+            Edit Group
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// ============================================
+// MAIN CLIENT GROUPS PAGE
+// ============================================
+
+const ClientGroupsPage = () => {
+  const { toast } = useToast();
+
+  // State
+  const [groups, setGroups] = useState<ClientGroup[]>(initialGroups);
+  const [clients] = useState<Client[]>(sampleClients);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedType, setSelectedType] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<"name" | "members" | "revenue" | "created">("name");
+
+  // Dialog states
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isMembersOpen, setIsMembersOpen] = useState(false);
+  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+  const [currentGroup, setCurrentGroup] = useState<ClientGroup | null>(null);
+
+        // Continue from where the code was cut off...
+
+const filteredGroups = useMemo(() => {
+  let result = [...groups];
+
+  // Search filter
+  if (searchQuery) {
+    const query = searchQuery.toLowerCase();
+    result = result.filter(
+      (g) =>
+        g.name.toLowerCase().includes(query) ||
+        g.description?.toLowerCase().includes(query)
+    );
+  }
+
+  // Type filter
+  if (selectedType !== "all") {
+    result = result.filter((g) => g.type === selectedType);
+  }
+
+  // Sorting
+  result.sort((a, b) => {
+    switch (sortBy) {
+      case "members":
+        return b.memberCount - a.memberCount;
+      case "revenue":
+        return b.totalRevenue - a.totalRevenue;
+      case "created":
+        return b.createdAt.getTime() - a.createdAt.getTime();
+      default:
+        return a.name.localeCompare(b.name);
+    }
+  });
+
+  return result;
+}, [groups, searchQuery, selectedType, sortBy]);
+
+// Calculate stats
+const stats: GroupStats = useMemo(() => {
+  const totalRevenue = groups.reduce((acc, g) => acc + g.totalRevenue, 0);
+  const topGroup = groups.reduce((max, g) => 
+    g.totalRevenue > max.totalRevenue ? g : max, groups[0]
+  );
+  
+  return {
+    totalGroups: groups.length,
+    totalClients: clients.length,
+    avgGroupSize: Math.round(groups.reduce((acc, g) => acc + g.memberCount, 0) / groups.length),
+    totalRevenue,
+    topGroup: topGroup?.name || "N/A",
+  };
+}, [groups, clients]);
+
+// Handlers
+const handleCreateGroup = () => {
+  setCurrentGroup(null);
+  setIsFormOpen(true);
+};
+
+const handleEditGroup = (group: ClientGroup) => {
+  setCurrentGroup(group);
+  setIsFormOpen(true);
+};
+
+const handleViewGroup = (group: ClientGroup) => {
+  setCurrentGroup(group);
+  setIsDetailsOpen(true);
+};
+
+const handleManageMembers = (group: ClientGroup) => {
+  setCurrentGroup(group);
+  setIsMembersOpen(true);
+};
+
+const handleDeleteGroup = (group: ClientGroup) => {
+  setCurrentGroup(group);
+  setIsDeleteAlertOpen(true);
+};
+
+const handleFormSubmit = (data: Partial<ClientGroup>) => {
+  if (currentGroup) {
+    // Update existing group
+    setGroups((prev) =>
+      prev.map((g) =>
+        g.id === currentGroup.id
+          ? { ...g, ...data, updatedAt: new Date() }
+          : g
+      )
+    );
+    toast({
+      title: "Group Updated",
+      description: `"${data.name}" has been updated successfully.`,
+    });
+  } else {
+    // Create new group
+    const newGroup: ClientGroup = {
+      id: `group_${Date.now()}`,
+      name: data.name || "",
+      description: data.description,
+      color: data.color || "#3B82F6",
+      icon: data.icon || "users",
+      type: data.type || "custom",
+      members: [],
+      memberCount: 0,
+      totalRevenue: 0,
+      avgRevenue: 0,
+      isDefault: false,
+      isAutomatic: data.isAutomatic || false,
+      createdBy: "Current User",
+      createdAt: new Date(),
+    };
+    setGroups((prev) => [...prev, newGroup]);
+    toast({
+      title: "Group Created",
+      description: `"${data.name}" has been created successfully.`,
+    });
+  }
+};
+
+const handleUpdateMembers = (members: Client[]) => {
+  if (!currentGroup) return;
+
+  const totalRevenue = members.reduce((acc, m) => acc + m.totalRevenue, 0);
+  const avgRevenue = members.length > 0 ? totalRevenue / members.length : 0;
+
+  setGroups((prev) =>
+    prev.map((g) =>
+      g.id === currentGroup.id
+        ? {
+            ...g,
+            members,
+            memberCount: members.length,
+            totalRevenue,
+            avgRevenue,
+            updatedAt: new Date(),
+          }
+        : g
+    )
+  );
+
+  toast({
+    title: "Members Updated",
+    description: `${members.length} members in "${currentGroup.name}".`,
+  });
+};
+
+const confirmDeleteGroup = () => {
+  if (!currentGroup) return;
+
+  setGroups((prev) => prev.filter((g) => g.id !== currentGroup.id));
+  setIsDeleteAlertOpen(false);
+  setCurrentGroup(null);
+
+  toast({
+    title: "Group Deleted",
+    description: `"${currentGroup.name}" has been deleted.`,
+    variant: "destructive",
+  });
+};
+
+// ============================================
+// RENDER
+// ============================================
+
+return (
+  <div className="flex h-screen bg-[#F8FAFC]">
+    <Sidebar />
+
+    <main className="flex-1 overflow-auto">
+      {/* Header */}
+      <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-slate-200">
+        <div className="px-8 py-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
+                <Link to="/dashboard" className="hover:text-[#17C3B2]">
+                  Dashboard
+                </Link>
+                <ChevronRight size={14} />
+                <Link to="/clients" className="hover:text-[#17C3B2]">
+                  Clients
+                </Link>
+                <ChevronRight size={14} />
+                <span className="text-[#0D2342]">Groups</span>
+              </div>
+              <h1 className="text-2xl font-bold text-[#0D2342]">Client Groups</h1>
+              <p className="text-slate-500 mt-1">
+                Organize and segment your clients for targeted management
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Button variant="outline" className="rounded-xl gap-2">
+                <Upload size={16} />
+                Import
+              </Button>
+              <Button variant="outline" className="rounded-xl gap-2">
+                <Download size={16} />
+                Export
+              </Button>
+              <Button
+                onClick={handleCreateGroup}
+                className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl gap-2"
+              >
+                <Plus size={16} />
+                Create Group
+              </Button>
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-5 gap-4">
+            <StatCard
+              title="Total Groups"
+              value={stats.totalGroups}
+              icon={Layers}
+              color="#8B5CF6"
+              delay={0}
+            />
+            <StatCard
+              title="Total Clients"
+              value={stats.totalClients}
+              icon={Users}
+              color="#3B82F6"
+              delay={0.05}
+            />
+            <StatCard
+              title="Avg Group Size"
+              value={stats.avgGroupSize}
+              subtitle="clients per group"
+              icon={Target}
+              color="#10B981"
+              delay={0.1}
+            />
+            <StatCard
+              title="Total Revenue"
+              value={formatCurrency(stats.totalRevenue)}
+              icon={CircleDollarSign}
+              color="#17C3B2"
+              trend={{ value: 12.5, label: "vs last month" }}
+              delay={0.15}
+            />
+            <StatCard
+              title="Top Group"
+              value={stats.topGroup}
+              subtitle="by revenue"
+              icon={Crown}
+              color="#C9A14A"
+              delay={0.2}
+            />
+          </div>
+        </div>
+
+        {/* Filters Bar */}
+        <div className="px-8 py-4 border-t border-slate-100 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 flex-1">
+            {/* Search */}
+            <div className="relative w-80">
+              <Search
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search groups..."
+                className="pl-9 h-10 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-[#17C3B2]/20"
+              />
+            </div>
+
+            {/* Type Filter */}
+            <Select value={selectedType} onValueChange={setSelectedType}>
+              <SelectTrigger className="w-44 h-10 rounded-xl">
+                <Filter size={14} className="mr-2 text-slate-400" />
+                <SelectValue placeholder="Filter by type" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl">
+                <SelectItem value="all" className="rounded-lg">
+                  All Types
+                </SelectItem>
+                {groupTypes.map((type) => (
+                  <SelectItem key={type.id} value={type.id} className="rounded-lg">
+                    {type.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Sort */}
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+              <SelectTrigger className="w-40 h-10 rounded-xl">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl">
+                <SelectItem value="name" className="rounded-lg">
+                  Name
+                </SelectItem>
+                <SelectItem value="members" className="rounded-lg">
+                  Members
+                </SelectItem>
+                <SelectItem value="revenue" className="rounded-lg">
+                  Revenue
+                </SelectItem>
+                <SelectItem value="created" className="rounded-lg">
+                  Date Created
+                </SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Clear Filters */}
+            {(searchQuery || selectedType !== "all") && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSearchQuery("");
+                  setSelectedType("all");
+                }}
+                className="rounded-lg text-slate-500"
+              >
+                <X size={14} className="mr-1" />
+                Clear
+              </Button>
+            )}
+          </div>
+
+          {/* View Toggle */}
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+            <Button
+              variant={viewMode === "grid" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("grid")}
+              className={cn(
+                "rounded-lg h-8 w-8 p-0",
+                viewMode === "grid" && "bg-white shadow-sm"
+              )}
+            >
+              <LayoutGrid size={16} />
+            </Button>
+            <Button
+              variant={viewMode === "list" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("list")}
+              className={cn(
+                "rounded-lg h-8 w-8 p-0",
+                viewMode === "list" && "bg-white shadow-sm"
+              )}
+            >
+              <List size={16} />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="p-8">
+        {filteredGroups.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center justify-center py-20"
+          >
+            <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+              <Folder size={32} className="text-slate-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-[#0D2342] mb-2">
+              No groups found
+            </h3>
+            <p className="text-slate-500 mb-6 text-center max-w-md">
+              {searchQuery || selectedType !== "all"
+                ? "Try adjusting your search or filters"
+                : "Create your first client group to start organizing your clients"}
+            </p>
+            <Button
+              onClick={handleCreateGroup}
+              className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl gap-2"
+            >
+              <Plus size={16} />
+              Create Group
+            </Button>
+          </motion.div>
+        ) : viewMode === "grid" ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <AnimatePresence mode="popLayout">
+              {filteredGroups.map((group, index) => (
+                <GroupCard
+                  key={group.id}
+                  group={group}
+                  onClick={() => handleViewGroup(group)}
+                  onEdit={() => handleEditGroup(group)}
+                  onDelete={() => handleDeleteGroup(group)}
+                  onManageMembers={() => handleManageMembers(group)}
+                  delay={index * 0.05}
+                />
+              ))}
+            </AnimatePresence>
+          </div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="bg-white rounded-2xl border border-slate-200 overflow-hidden"
+          >
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50">
+                  <TableHead className="font-semibold">Group</TableHead>
+                  <TableHead className="font-semibold">Type</TableHead>
+                  <TableHead className="font-semibold">Members</TableHead>
+                  <TableHead className="font-semibold">Total Revenue</TableHead>
+                  <TableHead className="font-semibold">Avg Revenue</TableHead>
+                  <TableHead className="font-semibold">Created</TableHead>
+                  <TableHead className="w-[100px]"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredGroups.map((group) => (
+                  <GroupTableRow
+                    key={group.id}
+                    group={group}
+                    onClick={() => handleViewGroup(group)}
+                    onEdit={() => handleEditGroup(group)}
+                    onDelete={() => handleDeleteGroup(group)}
+                    onManageMembers={() => handleManageMembers(group)}
+                  />
+                ))}
+              </TableBody>
+            </Table>
+          </motion.div>
+        )}
+
+        {/* Results Count */}
+        {filteredGroups.length > 0 && (
+          <div className="mt-6 text-center text-sm text-slate-500">
+            Showing {filteredGroups.length} of {groups.length} groups
+          </div>
+        )}
+      </div>
+    </main>
+
+    {/* Dialogs */}
+    <GroupFormDialog
+      isOpen={isFormOpen}
+      onClose={() => setIsFormOpen(false)}
+      group={currentGroup}
+      onSubmit={handleFormSubmit}
+    />
+
+    <GroupDetailsDialog
+      isOpen={isDetailsOpen}
+      onClose={() => setIsDetailsOpen(false)}
+      group={currentGroup}
+      onEdit={() => {
+        setIsDetailsOpen(false);
+        setIsFormOpen(true);
+      }}
+      onManageMembers={() => {
+        setIsDetailsOpen(false);
+        setIsMembersOpen(true);
+      }}
+    />
+
+    <ManageMembersDialog
+      isOpen={isMembersOpen}
+      onClose={() => setIsMembersOpen(false)}
+      group={currentGroup}
+      allClients={clients}
+      onUpdateMembers={handleUpdateMembers}
+    />
+
+    <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+      <AlertDialogContent className="rounded-2xl">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete Group</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to delete "{currentGroup?.name}"? This action cannot
+            be undone. The clients in this group will not be deleted.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={confirmDeleteGroup}
+            className="bg-red-600 hover:bg-red-700 rounded-xl"
+          >
+            Delete Group
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  </div>
+);
+};
+
+export default ClientGroupsPage;

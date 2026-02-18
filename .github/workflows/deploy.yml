@@ -1,0 +1,45 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: 22
+          script_stop: true
+          script: |
+            set -e
+            echo "📦 Pulling latest code..."
+            cd /var/www/zodo-crm
+            
+            # Pull latest changes
+            git pull origin main
+            
+            echo "🔧 Installing backend dependencies..."
+            cd /var/www/zodo-crm/backend
+            npm ci --production=false
+            
+            echo "🏗️ Building backend..."
+            npx prisma generate
+            npm run build
+            
+            echo "🎨 Installing frontend dependencies..."
+            cd /var/www/zodo-crm/frontend
+            npm ci
+            
+            echo "🏗️ Building frontend..."
+            npm run build
+            
+            echo "🔄 Restarting backend..."
+            pm2 restart zodo-crm-api
+            
+            echo "✅ Deployment complete!"

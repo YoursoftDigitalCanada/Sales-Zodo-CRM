@@ -39,7 +39,7 @@ export function StatCard({
   const cm = colorMap[color];
 
   return (
-    <div className="rounded-lg bg-white p-4"
+    <div className="rounded-lg bg-white p-4 card-interactive"
       style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.04), 0 6px 16px rgba(15,23,42,0.06)' }}>
       {/* Header: Title + Trend */}
       <div className="flex items-center justify-between mb-3">

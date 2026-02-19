@@ -636,11 +636,11 @@ const Index = () => {
         {/* ============================================ */}
         {/* MAIN CONTENT */}
         {/* ============================================ */}
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-6 page-enter">
           {/* ============================================ */}
           {/* AI BUSINESS OVERVIEW — Hero Intelligence Card */}
           {/* ============================================ */}
-          <div className="bg-white rounded-lg border-l-[3px] border-l-[#0891B2] p-0 overflow-hidden"
+          <div className="bg-white rounded-lg border-l-[3px] border-l-[#0891B2] p-0 overflow-hidden ai-hero-pulse"
             style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.04), 0 8px 20px rgba(15,23,42,0.05)' }}>
             {/* Hero Header */}
             <div className="flex items-center justify-between px-5 pt-4 pb-3">
@@ -756,7 +756,7 @@ const Index = () => {
           </div>
 
           {/* Stats Grid — Analytical KPIs */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 stagger-enter">
             <StatCard
               title="Active Projects"
               value={stats.projectsCount}

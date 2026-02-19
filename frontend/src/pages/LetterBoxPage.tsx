@@ -1241,10 +1241,10 @@ const LetterBoxPage = () => {
         f.id === "inbox"
           ? unreadCount
           : f.id === "starred"
-          ? emails.filter((e) => e.starred).length
-          : f.id === "important"
-          ? emails.filter((e) => e.important).length
-          : emails.filter((e) => e.folder === f.id).length,
+            ? emails.filter((e) => e.starred).length
+            : f.id === "important"
+              ? emails.filter((e) => e.important).length
+              : emails.filter((e) => e.folder === f.id).length,
     }));
   }, [emails, unreadCount]);
 
@@ -1361,12 +1361,12 @@ const LetterBoxPage = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC]">
+    <div className="flex h-screen overflow-hidden bg-[#F8FAFC]">
       <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
 
       <main
         className={cn(
-          "flex-1 transition-all duration-300",
+          "flex-1 flex flex-col overflow-hidden transition-all duration-300",
           collapsed ? "ml-0" : "ml-30"
         )}
       >
@@ -1413,9 +1413,9 @@ const LetterBoxPage = () => {
         </header>
 
         {/* Main Layout */}
-        <div className="flex h-[calc(100vh-89px)]">
+        <div className="flex flex-1 min-h-0 overflow-hidden">
           {/* Folders Sidebar */}
-          <aside className="w-64 border-r border-[rgba(15,23,42,0.06)] bg-white p-4 flex flex-col">
+          <aside className="w-64 border-r border-[rgba(15,23,42,0.06)] bg-white p-4 flex flex-col min-h-0 overflow-y-auto">
             {/* Compose Button */}
             <Button
               onClick={() => {
@@ -1461,8 +1461,8 @@ const LetterBoxPage = () => {
                         selectedFolder === folder.id
                           ? "bg-[#0891B2] text-white"
                           : folder.id === "inbox" && folder.count > 0
-                          ? "bg-[#0891B2] text-white"
-                          : "bg-white/5 text-[#94A3B8]"
+                            ? "bg-[#0891B2] text-white"
+                            : "bg-white/5 text-[#94A3B8]"
                       )}
                     >
                       {folder.count}
@@ -1572,7 +1572,7 @@ const LetterBoxPage = () => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="start" className="w-48 rounded-md">
-                                                <DropdownMenuItem
+                        <DropdownMenuItem
                           onClick={() => handleBulkAction("read")}
                           className="rounded-md"
                         >

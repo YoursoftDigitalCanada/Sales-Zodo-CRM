@@ -28,6 +28,8 @@ import {
   Zap,
   X,
   Command,
+  Activity,
+  AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -635,51 +637,87 @@ const Index = () => {
         {/* MAIN CONTENT */}
         {/* ============================================ */}
         <div className="p-6 space-y-6">
-          {/* AI Insights Panel */}
-          <div className="space-y-4">
-            {/* Header Row */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-lg font-semibold text-[#0F172A]">
-                  {getGreeting()}, {user?.firstName || "Guest"}
-                </h1>
-                <p className="text-xs text-[#94A3B8]">
-                  {currentTime.toLocaleDateString("en-US", {
-                    weekday: "long",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </p>
-              </div>
+          {/* ============================================ */}
+          {/* AI BUSINESS OVERVIEW — Hero Intelligence Card */}
+          {/* ============================================ */}
+          <div className="bg-white rounded-lg border-l-[3px] border-l-[#0891B2] p-0 overflow-hidden"
+            style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.04), 0 8px 20px rgba(15,23,42,0.05)' }}>
+            {/* Hero Header */}
+            <div className="flex items-center justify-between px-5 pt-4 pb-3">
               <div className="flex items-center gap-3">
-                {[
-                  { label: "Tasks", value: stats.pendingTasks, color: "#22D3EE" },
-                  { label: "Projects", value: stats.activeProjects, color: "#4ADE80" },
-                  { label: "Revenue", value: "$8.2k", color: "#F97316" },
-                ].map((kpi, i) => (
-                  <div key={i} className="text-center px-4 py-2 rounded-md bg-white card-shadow">
-                    <p className="metric-value" style={{ color: kpi.color }}>{kpi.value}</p>
-                    <p className="metric-label">{kpi.label}</p>
-                  </div>
-                ))}
+                <div className="w-8 h-8 rounded-md bg-[#0891B2]/8 flex items-center justify-center">
+                  <Sparkles size={16} className="text-[#0891B2]" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold text-[#0F172A] tracking-tight">AI Business Overview</h2>
+                  <p className="text-[11px] text-[#94A3B8]">
+                    {currentTime.toLocaleDateString("en-US", {
+                      weekday: "long", month: "long", day: "numeric",
+                    })} · Updated just now
+                  </p>
+                </div>
               </div>
+              <span className="ai-tag">LIVE</span>
             </div>
 
-            {/* AI Summary Card */}
-            <div className="ai-highlight rounded-md p-3 flex items-start gap-3">
-              <div className="w-7 h-7 rounded-md bg-[#0891B2]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <Sparkles size={14} className="text-[#0891B2]" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-medium text-[#0F172A]">AI Summary</span>
-                  <span className="ai-tag">Live</span>
+            {/* Intelligence Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 divide-x divide-[rgba(15,23,42,0.06)]">
+              {/* Pipeline Health */}
+              <div className="px-5 py-4">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Activity size={12} className="text-[#94A3B8]" />
+                  <span className="metric-label">Pipeline Health</span>
                 </div>
-                <p className="text-xs text-[#475569] leading-relaxed">
-                  Pipeline risk detected — <span className="text-[#EA580C]">3 leads</span> need follow-up within 48h.
-                  <span className="text-[#16A34A]"> Revenue is trending +12% </span>
-                  vs last week. {stats.pendingTasks} tasks are overdue.
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-lg font-bold text-[#0F172A] tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>Medium Risk</span>
+                </div>
+                <p className="text-[11px] text-[#475569] leading-relaxed">
+                  <span className="text-[#EA580C] font-medium">3 leads</span> stalled &gt;5 days
                 </p>
+              </div>
+
+              {/* Revenue Forecast */}
+              <div className="px-5 py-4">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <TrendingUp size={12} className="text-[#94A3B8]" />
+                  <span className="metric-label">Revenue Forecast</span>
+                </div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-lg font-bold text-[#0F172A] tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>+12%</span>
+                  <span className="text-[11px] text-[#16A34A] font-medium">↑ trending</span>
+                </div>
+                <p className="text-[11px] text-[#475569]">vs previous period</p>
+              </div>
+
+              {/* Priority Alerts */}
+              <div className="px-5 py-4">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <AlertCircle size={12} className="text-[#94A3B8]" />
+                  <span className="metric-label">Priority Alerts</span>
+                </div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-lg font-bold text-[#EA580C] tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>{stats.pendingTasks}</span>
+                  <span className="text-[11px] text-[#94A3B8] font-medium">actions needed</span>
+                </div>
+                <p className="text-[11px] text-[#475569]">Follow-up within 48h</p>
+              </div>
+
+              {/* Smart Actions */}
+              <div className="px-5 py-4">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Zap size={12} className="text-[#94A3B8]" />
+                  <span className="metric-label">Suggested Actions</span>
+                </div>
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1 h-1 rounded-full bg-[#0891B2]" />
+                    <span className="text-[11px] text-[#475569]">Follow up with 2 hot leads</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-1 h-1 rounded-full bg-[#0891B2]" />
+                    <span className="text-[11px] text-[#475569]">Review {stats.pendingTasks} overdue tasks</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -717,47 +755,51 @@ const Index = () => {
             })}
           </div>
 
-          {/* Stats Grid - Using StatCard Component */}
+          {/* Stats Grid — Analytical KPIs */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
               title="Active Projects"
               value={stats.projectsCount}
               subtitle="Total projects"
               trend={10}
+              comparison="+2 vs last week"
               icon={FolderKanban}
               color="cyan"
               isLoading={isLoading}
-              delay={0}
+              lastUpdated="Updated 1h ago"
             />
             <StatCard
               title="Total Earnings"
               value={`$${stats.earnings.toLocaleString()}`}
               subtitle="Paid invoices"
               trend={25}
+              comparison="+$1.2k vs last month"
               icon={DollarSign}
               color="orange"
               isLoading={isLoading}
-              delay={0.1}
+              lastUpdated="Updated 2h ago"
             />
             <StatCard
               title="Total Clients"
               value={stats.clientsCount}
               subtitle="Active clients"
               trend={5}
+              comparison="+3 vs last month"
               icon={Users}
               color="green"
               isLoading={isLoading}
-              delay={0.2}
+              lastUpdated="Updated 30m ago"
             />
             <StatCard
               title="Pending Tasks"
               value={stats.pendingTasks}
               subtitle="Due this week"
               trend={-3}
+              comparison="−2 vs yesterday"
               icon={Clock}
               color="purple"
               isLoading={isLoading}
-              delay={0.3}
+              lastUpdated="Updated just now"
             />
           </div>
 

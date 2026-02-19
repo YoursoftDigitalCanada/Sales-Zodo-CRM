@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import axios from "@/lib/axios";
 import { Sidebar } from "@/components/Sidebar";
+import { AiInsightBadge, getTaskInsights } from "@/components/ai/AiInsightBadge";
 import { motion, AnimatePresence, Reorder } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -542,6 +543,18 @@ const TaskListItem = ({
               )}
             </div>
 
+            {/* AI Insight Badges */}
+            {(() => {
+              const insights = getTaskInsights(task);
+              return insights.length > 0 ? (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {insights.map((type) => (
+                    <AiInsightBadge key={type} type={type} size="sm" />
+                  ))}
+                </div>
+              ) : null;
+            })()}
+
             {/* Subtask Progress */}
             {task.subtasks && task.subtasks.length > 0 && (
               <div className="mt-2 max-w-[200px]">
@@ -797,6 +810,18 @@ const TaskCard = ({
             {priorityInfo.name}
           </span>
         </div>
+
+        {/* AI Insight Badges */}
+        {(() => {
+          const insights = getTaskInsights(task);
+          return insights.length > 0 ? (
+            <div className="flex flex-wrap gap-1 mb-3">
+              {insights.map((type) => (
+                <AiInsightBadge key={type} type={type} />
+              ))}
+            </div>
+          ) : null;
+        })()}
 
         {/* Footer */}
         <div className="flex items-center justify-between pt-3 border-t border-[rgba(15,23,42,0.06)]">

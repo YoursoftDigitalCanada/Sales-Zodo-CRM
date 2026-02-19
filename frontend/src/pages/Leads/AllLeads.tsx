@@ -1,8 +1,7 @@
-// src/pages/Leads/AllLeads.tsx
-
 import React, { useState, useEffect, useMemo } from "react";
 import axios from "@/lib/axios";
 import { Sidebar } from "@/components/Sidebar";
+import { AiInsightBadge, getLeadInsights } from "@/components/ai/AiInsightBadge";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -539,6 +538,18 @@ const LeadCard = ({
           </div>
         )}
 
+        {/* AI Insight Badges */}
+        {(() => {
+          const insights = getLeadInsights(lead);
+          return insights.length > 0 ? (
+            <div className="flex flex-wrap gap-1 mb-4 justify-center">
+              {insights.map((type) => (
+                <AiInsightBadge key={type} type={type} />
+              ))}
+            </div>
+          ) : null;
+        })()}
+
         {/* Footer */}
         <div className="flex items-center justify-between pt-4 border-t border-[rgba(15,23,42,0.06)]">
           <div className="flex items-center gap-2">
@@ -660,6 +671,13 @@ const LeadRow = ({
         <span className="font-semibold text-[#0F172A]">
           {formatCurrency(lead.value, lead.currency)}
         </span>
+      </TableCell>
+      <TableCell>
+        <div className="flex flex-wrap gap-1">
+          {getLeadInsights(lead).map((type) => (
+            <AiInsightBadge key={type} type={type} size="sm" />
+          ))}
+        </div>
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-2">
@@ -1414,6 +1432,34 @@ const LeadDetailsDialog = ({
               </div>
             </div>
           )}
+
+          {/* AI Insights Section */}
+          {(() => {
+            const insights = getLeadInsights(lead);
+            return insights.length > 0 ? (
+              <div className="ai-insight-enter">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles size={14} className="text-[#0891B2]" />
+                  <h3 className="text-sm font-semibold text-[#0F172A]">AI Insights</h3>
+                  <span className="ai-tag">AI</span>
+                </div>
+                <div className="p-4 bg-[#F0FDFA] rounded-md border border-[#22D3EE]/15 space-y-2">
+                  <div className="flex flex-wrap gap-1.5">
+                    {insights.map((type) => (
+                      <AiInsightBadge key={type} type={type} size="md" />
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-[#475569] leading-relaxed">
+                    {lead.score >= 80
+                      ? `High-value lead with ${lead.score}% score. Recommend prioritizing engagement.`
+                      : lead.score >= 50
+                        ? `Moderate lead score (${lead.score}%). Consider nurturing through targeted outreach.`
+                        : `Lead needs attention — score at ${lead.score}%. Review qualification criteria.`}
+                  </p>
+                </div>
+              </div>
+            ) : null;
+          })()}
 
           {/* Activity Timeline */}
           <div>

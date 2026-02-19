@@ -325,6 +325,17 @@ const navigationItems: NavigationItem[] = [
     featureId: "api",
   },
 
+  // ===== AI ASSISTANT =====
+  { title: "AI", isHeader: true },
+  {
+    title: "Ask Experts",
+    icon: Sparkles,
+    path: "/dashboard",
+    isNew: true,
+    badge: "AI",
+    badgeColor: "teal" as const,
+  },
+
   // ===== ANALYTICS =====
   { title: "Analytics", isHeader: true },
   {

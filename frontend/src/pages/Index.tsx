@@ -7,6 +7,7 @@ import { ProjectsChart } from "@/components/dashboard/ProjectsChart";
 import { CalendarWidget } from "@/components/dashboard/CalendarWidget";
 import { ProjectsTable } from "@/components/dashboard/ProjectsTable";
 import { fetchDashboardStats } from "@/features/dashboard";
+import { AiCopilotPanel } from "@/components/ai/AiCopilotPanel";
 import {
   FolderKanban,
   DollarSign,
@@ -249,6 +250,7 @@ const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showCopilot, setShowCopilot] = useState(false);
 
   // Refs
   const notificationRef = useRef<HTMLDivElement>(null);
@@ -440,6 +442,15 @@ const Index = () => {
 
             {/* Right Section */}
             <div className="flex items-center gap-3">
+              {/* AI Copilot Toggle */}
+              <button
+                onClick={() => setShowCopilot(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0891B2]/8 text-[#0891B2] text-xs font-medium rounded-md hover:bg-[#0891B2]/14 transition-colors border border-[#0891B2]/15"
+              >
+                <Sparkles size={14} />
+                <span className="hidden sm:inline">Ask Experts</span>
+              </button>
+
               {/* Quick Add Button */}
               <button
                 onClick={() => navigate("/projects/new")}
@@ -722,6 +733,26 @@ const Index = () => {
             </div>
           </div>
 
+          {/* AI Daily Summary */}
+          <div className="ai-insight-enter" style={{ animationDelay: '200ms' }}>
+            <div className="flex items-center gap-2 px-1 mb-3">
+              <Sparkles size={13} className="text-[#0891B2]" />
+              <span className="text-xs font-semibold text-[#0F172A]">Daily AI Summary</span>
+              <span className="ai-tag">AI</span>
+            </div>
+            <div className="bg-white rounded-lg border border-[rgba(15,23,42,0.06)] px-5 py-3" style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.03)' }}>
+              <p className="text-[12px] text-[#475569] leading-relaxed">
+                <span className="text-[#0F172A] font-medium">Today's overview:</span>{' '}
+                {stats.pendingTasks > 0 ? `${stats.pendingTasks} tasks need attention` : 'All tasks on track'}.
+                {stats.clientsCount > 0 ? ` ${stats.clientsCount} active clients in your portfolio.` : ''}
+                {stats.projectsCount > 0 ? ` ${stats.projectsCount} projects running — ` : ''}
+                {stats.pendingTasks > 3
+                  ? 'consider prioritizing overdue items today.'
+                  : 'healthy pipeline activity detected.'}
+              </p>
+            </div>
+          </div>
+
           {/* Quick Actions */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {quickActions.map((action, index) => {
@@ -767,6 +798,7 @@ const Index = () => {
               color="cyan"
               isLoading={isLoading}
               lastUpdated="Updated 1h ago"
+              aiInsight="Delivery pace on track"
             />
             <StatCard
               title="Total Earnings"
@@ -778,6 +810,7 @@ const Index = () => {
               color="orange"
               isLoading={isLoading}
               lastUpdated="Updated 2h ago"
+              aiInsight="Revenue trending +12%"
             />
             <StatCard
               title="Total Clients"
@@ -789,6 +822,7 @@ const Index = () => {
               color="green"
               isLoading={isLoading}
               lastUpdated="Updated 30m ago"
+              aiInsight={stats.clientsCount > 0 ? `${Math.min(stats.clientsCount, 3)} new this week` : undefined}
             />
             <StatCard
               title="Pending Tasks"
@@ -800,6 +834,7 @@ const Index = () => {
               color="purple"
               isLoading={isLoading}
               lastUpdated="Updated just now"
+              aiInsight={stats.pendingTasks > 5 ? "Prioritize overdue items" : "On track"}
             />
           </div>
 
@@ -1038,6 +1073,9 @@ const Index = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* AI Copilot Panel */}
+      <AiCopilotPanel isOpen={showCopilot} onClose={() => setShowCopilot(false)} />
     </div>
   );
 };

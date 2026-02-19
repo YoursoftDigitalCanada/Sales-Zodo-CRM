@@ -1,4 +1,4 @@
-import { LucideIcon, TrendingUp, TrendingDown } from "lucide-react";
+import { LucideIcon, TrendingUp, TrendingDown, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface StatCardProps {
@@ -13,6 +13,7 @@ interface StatCardProps {
   delay?: number;
   comparison?: string;
   lastUpdated?: string;
+  aiInsight?: string;
 }
 
 const colorMap = {
@@ -34,6 +35,7 @@ export function StatCard({
   isLoading = false,
   comparison,
   lastUpdated,
+  aiInsight,
 }: StatCardProps) {
   const isPositive = trend >= 0;
   const cm = colorMap[color];
@@ -109,6 +111,14 @@ export function StatCard({
       {/* Context label */}
       {lastUpdated && (
         <p className="text-[10px] text-[#CBD5E1] mt-2">{lastUpdated}</p>
+      )}
+
+      {/* AI Insight */}
+      {aiInsight && (
+        <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-[rgba(15,23,42,0.04)] ai-insight-enter">
+          <Sparkles size={10} className="text-[#0891B2] flex-shrink-0" />
+          <span className="text-[10px] text-[#0891B2] font-medium">{aiInsight}</span>
+        </div>
       )}
     </div>
   );

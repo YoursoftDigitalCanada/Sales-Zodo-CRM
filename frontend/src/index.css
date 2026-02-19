@@ -299,3 +299,160 @@ body::before {
 .smooth-hover:active {
   transform: translateY(0) scale(0.99);
 }
+
+/* =============================================
+   AI INSIGHT BADGES (Inline intelligence pills)
+   ============================================= */
+.ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+  white-space: nowrap;
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ai-badge-cyan {
+  background: rgba(8, 145, 178, 0.08);
+  color: #0891B2;
+  border: 1px solid rgba(8, 145, 178, 0.12);
+}
+
+.ai-badge-amber {
+  background: rgba(217, 119, 6, 0.08);
+  color: #B45309;
+  border: 1px solid rgba(217, 119, 6, 0.12);
+}
+
+.ai-badge-red {
+  background: rgba(220, 38, 38, 0.08);
+  color: #DC2626;
+  border: 1px solid rgba(220, 38, 38, 0.12);
+}
+
+.ai-badge-green {
+  background: rgba(22, 163, 74, 0.08);
+  color: #16A34A;
+  border: 1px solid rgba(22, 163, 74, 0.12);
+}
+
+.ai-badge-neutral {
+  background: rgba(100, 116, 139, 0.08);
+  color: #475569;
+  border: 1px solid rgba(100, 116, 139, 0.12);
+}
+
+/* =============================================
+   AI INSIGHT FADE-IN ANIMATION
+   ============================================= */
+@keyframes ai-insight-fade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ai-insight-enter {
+  animation: ai-insight-fade 400ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* =============================================
+   AI LIVE INDICATOR (Refined pulse)
+   ============================================= */
+@keyframes ai-live-dot {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.ai-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #0891B2;
+  animation: ai-live-dot 2s ease-in-out infinite;
+}
+
+/* =============================================
+   AI COPILOT PANEL
+   ============================================= */
+.ai-copilot-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  width: 400px;
+  max-width: 100vw;
+  z-index: 50;
+  background: #FFFFFF;
+  border-left: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: -8px 0 32px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-copilot-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 49;
+  background: rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(2px);
+}
+
+/* =============================================
+   AI SPARKLINE (Mini inline charts)
+   ============================================= */
+.ai-sparkline {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 1px;
+  height: 20px;
+}
+
+.ai-sparkline-bar {
+  width: 3px;
+  border-radius: 1px;
+  background: rgba(8, 145, 178, 0.3);
+  transition: height 600ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ai-sparkline-bar:last-child {
+  background: #0891B2;
+}
+
+/* =============================================
+   AI COUNT-UP (Gentle number animation)
+   ============================================= */
+@keyframes ai-count-flash {
+  0% {
+    color: #0F172A;
+  }
+
+  50% {
+    color: #0891B2;
+  }
+
+  100% {
+    color: #0F172A;
+  }
+}
+
+.ai-count-update {
+  animation: ai-count-flash 800ms ease-out;
+}

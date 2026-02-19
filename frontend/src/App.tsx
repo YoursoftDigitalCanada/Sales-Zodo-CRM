@@ -3,6 +3,7 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { GlobalAiFloatingButton } from "@/components/ai/GlobalAiFloatingButton";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
@@ -199,7 +200,7 @@ const App = () => (
               </FeatureGuard>
             }
           />
-          
+
           {/* ✅ Time Tracking Route */}
           <Route
             path="/time-tracking"
@@ -227,7 +228,7 @@ const App = () => (
               </FeatureGuard>
             }
           />
-          
+
           {/* Invoice routes using Layout wrapper */}
           <Route element={<Layout />}>
             <Route
@@ -246,47 +247,47 @@ const App = () => (
                 </FeatureGuard>
               }
             />
-                     {/* ✅ NEW: Employee Management Routes */}
-          <Route
-            path="/employees"
-            element={
-              <FeatureGuard featureId="api">
-                <AllEmployeesPage />
-              </FeatureGuard>
-            }
-          />
-          <Route
-            path="/employees/all"
-            element={
-              <FeatureGuard featureId="api">
-                <AllEmployeesPage />
-              </FeatureGuard>
-            }
-          />
-          <Route
-            path="/employees/departments"
-            element={
-              <FeatureGuard featureId="api">
-                <DepartmentsPage />
-              </FeatureGuard>
-            }
-          />
-          <Route
-            path="/employees/attendance"
-            element={
-              <FeatureGuard featureId="api">
-                <AttendancePage />
-              </FeatureGuard>
-            }
-          />
-          <Route
-            path="/employees/leave-requests"
-            element={
-              <FeatureGuard featureId="api">
-                <LeaveRequestsPage />
-              </FeatureGuard>
-            }
-          />
+            {/* ✅ NEW: Employee Management Routes */}
+            <Route
+              path="/employees"
+              element={
+                <FeatureGuard featureId="api">
+                  <AllEmployeesPage />
+                </FeatureGuard>
+              }
+            />
+            <Route
+              path="/employees/all"
+              element={
+                <FeatureGuard featureId="api">
+                  <AllEmployeesPage />
+                </FeatureGuard>
+              }
+            />
+            <Route
+              path="/employees/departments"
+              element={
+                <FeatureGuard featureId="api">
+                  <DepartmentsPage />
+                </FeatureGuard>
+              }
+            />
+            <Route
+              path="/employees/attendance"
+              element={
+                <FeatureGuard featureId="api">
+                  <AttendancePage />
+                </FeatureGuard>
+              }
+            />
+            <Route
+              path="/employees/leave-requests"
+              element={
+                <FeatureGuard featureId="api">
+                  <LeaveRequestsPage />
+                </FeatureGuard>
+              }
+            />
           </Route>
 
           {/* ========== BUSINESS ROUTES ========== */}
@@ -318,10 +319,10 @@ const App = () => (
 
           {/* ========== TEAM / EMPLOYEE ROUTES ========== */}
           {/* Legacy employee page */}
-       
-          
- 
-          
+
+
+
+
           {/* Other Team Routes */}
           <Route
             path="/users"
@@ -365,7 +366,7 @@ const App = () => (
               </FeatureGuard>
             }
           />
-          
+
           {/* ✅ Chat Route */}
           <Route
             path="/chats"
@@ -379,10 +380,11 @@ const App = () => (
           {/* ========== SETTINGS ROUTES ========== */}
           {/* <Route path="/settings" element={<Settings />} /> */}
           <Route path="/onboarding" element={<Onboarding />} />
-          
+
           {/* ========== 404 CATCH-ALL ========== */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        <GlobalAiFloatingButton />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

@@ -3,6 +3,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sidebar } from "@/components/Sidebar";
+import { AiInsightBadge, getClientInsights } from "@/components/ai/AiInsightBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -562,20 +563,25 @@ const ClientRow = ({
       {/* Status */}
       {columns.find((c) => c.key === "status")?.visible && (
         <td className="py-4 px-4">
-          <span className={cn(
-            "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold",
-            client.status === "Active" ? "bg-emerald-100 text-emerald-700" :
-              client.status === "Pending" ? "bg-[#D97706]/10 text-[#D97706]" :
-                "bg-white/5 text-[#475569]"
-          )}>
+          <div className="flex items-center gap-2">
             <span className={cn(
-              "w-1.5 h-1.5 rounded-full",
-              client.status === "Active" ? "bg-emerald-500" :
-                client.status === "Pending" ? "bg-[#D97706]" :
-                  "bg-slate-400"
-            )} />
-            {client.status}
-          </span>
+              "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold",
+              client.status === "Active" ? "bg-emerald-100 text-emerald-700" :
+                client.status === "Pending" ? "bg-[#D97706]/10 text-[#D97706]" :
+                  "bg-white/5 text-[#475569]"
+            )}>
+              <span className={cn(
+                "w-1.5 h-1.5 rounded-full",
+                client.status === "Active" ? "bg-emerald-500" :
+                  client.status === "Pending" ? "bg-[#D97706]" :
+                    "bg-slate-400"
+              )} />
+              {client.status}
+            </span>
+            {getClientInsights(client).map((type) => (
+              <AiInsightBadge key={type} type={type} size="sm" />
+            ))}
+          </div>
         </td>
       )}
 
@@ -795,6 +801,18 @@ const ClientCard = ({
         </div>
       )}
 
+      {/* AI Insight Badges */}
+      {(() => {
+        const insights = getClientInsights(client);
+        return insights.length > 0 ? (
+          <div className="flex flex-wrap gap-1 mb-4">
+            {insights.map((type) => (
+              <AiInsightBadge key={type} type={type} />
+            ))}
+          </div>
+        ) : null;
+      })()}
+
       {/* Footer Stats */}
       <div className="flex items-center justify-between pt-4 border-t border-[rgba(15,23,42,0.06)]">
         <div>
@@ -893,8 +911,8 @@ const ClientListPage = () => {
       const clientsData = Array.isArray(payload)
         ? payload
         : Array.isArray(payload?.data)
-        ? payload.data
-        : [];
+          ? payload.data
+          : [];
 
       const enrichedData = clientsData.map((client: any) => {
         const mappedClient = mapClientFromApi(client);

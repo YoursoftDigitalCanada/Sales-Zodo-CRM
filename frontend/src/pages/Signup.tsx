@@ -7,11 +7,12 @@ import {
   clearOnboardingData,
   setOnboardingCompleted,
 } from "@/lib/enabled-features";
-import { 
-  Loader2, Mail, Lock, Eye, EyeOff, ArrowRight, 
+import {
+  Loader2, Mail, Lock, Eye, EyeOff, ArrowRight,
   Layers, Check, Sparkles, Shield, Zap, Users,
   Github, Chrome, User, Building2, CheckCircle2
 } from "lucide-react";
+import logo from "../Images/Logo/logo.png";
 
 const SignUpPage = () => {
   const navigate = useNavigate();
@@ -56,7 +57,7 @@ const SignUpPage = () => {
       });
       return;
     }
-    
+
     if (formData.password !== formData.confirmPassword) {
       toast({ title: "Error", description: "Passwords do not match", variant: "destructive" });
       return;
@@ -79,12 +80,12 @@ const SignUpPage = () => {
 
       const authData = response?.data as
         | {
-            tokens?: { accessToken?: string; refreshToken?: string };
-            user?: unknown;
-            employee?: unknown;
-            tenant?: unknown;
-            permissions?: unknown;
-          }
+          tokens?: { accessToken?: string; refreshToken?: string };
+          user?: unknown;
+          employee?: unknown;
+          tenant?: unknown;
+          permissions?: unknown;
+        }
         | undefined;
 
       const accessToken = authData?.tokens?.accessToken;
@@ -104,7 +105,7 @@ const SignUpPage = () => {
         clearEnabledFeatures();
         clearOnboardingData();
 
-        toast({ title: "Account Created!", description: "Welcome to Yoursoft Digital!" });
+        toast({ title: "Account Created!", description: "Welcome to ZODO!" });
         navigate("/onboarding", {
           state: {
             prefill: {
@@ -157,31 +158,28 @@ const SignUpPage = () => {
   return (
     <div className="min-h-screen flex">
       {/* Left Side - Branding & Features */}
-      <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-purple-600 via-indigo-600 to-blue-600 overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-[#0F172A] via-[#1e293b] to-[#0F172A] overflow-hidden">
         {/* Background Pattern */}
-        <div 
+        <div
           className="absolute inset-0 opacity-10"
           style={{
             backgroundImage: `radial-gradient(circle at 2px 2px, white 1px, transparent 0)`,
             backgroundSize: '32px 32px'
           }}
         />
-        
+
         {/* Floating Orbs */}
-        <div className="absolute top-20 right-20 w-72 h-72 bg-white/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-20 left-20 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="absolute top-1/3 left-1/4 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
-        
+        <div className="absolute top-20 right-20 w-72 h-72 bg-[#23D3EE]/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-20 left-20 w-96 h-96 bg-[#FBBF23]/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-1/3 left-1/4 w-64 h-64 bg-[#F97315]/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
+
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-between p-12 w-full">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-              <Layers className="text-white" size={28} />
-            </div>
-            <span className="text-white font-bold text-2xl">Yoursoft</span>
+            <img src={logo} alt="ZODO" className="h-12 w-auto object-contain" />
           </div>
-          
+
           {/* Main Content */}
           <div className="space-y-8">
             <div>
@@ -192,10 +190,10 @@ const SignUpPage = () => {
                 </span>
               </h1>
               <p className="text-lg text-white/70 max-w-md">
-                Join 500+ companies using Yoursoft Digital to streamline their operations and boost revenue.
+                Join 500+ companies using ZODO to streamline their operations and boost revenue.
               </p>
             </div>
-            
+
             {/* Benefits */}
             <div className="space-y-4">
               {[
@@ -212,7 +210,7 @@ const SignUpPage = () => {
               ))}
             </div>
           </div>
-          
+
           {/* Stats */}
           <div className="grid grid-cols-3 gap-6">
             {[
@@ -234,10 +232,7 @@ const SignUpPage = () => {
         <div className="w-full max-w-md py-8">
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center gap-2 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-              <Layers className="text-white" size={24} />
-            </div>
-            <span className="font-bold text-xl text-gray-900">Yoursoft</span>
+            <img src={logo} alt="ZODO" className="h-10 w-auto object-contain" />
           </div>
 
           {/* Header */}
@@ -380,24 +375,22 @@ const SignUpPage = () => {
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
-              
+
               {/* Password Strength Indicator */}
               {formData.password && (
                 <div className="mt-2">
                   <div className="flex gap-1 mb-1">
                     {[0, 1, 2, 3].map((i) => (
-                      <div 
+                      <div
                         key={i}
-                        className={`h-1 flex-1 rounded-full transition-all ${
-                          i < currentStrength ? strengthColors[currentStrength - 1] : 'bg-gray-200'
-                        }`}
+                        className={`h-1 flex-1 rounded-full transition-all ${i < currentStrength ? strengthColors[currentStrength - 1] : 'bg-gray-200'
+                          }`}
                       />
                     ))}
                   </div>
-                  <p className={`text-xs ${
-                    currentStrength === 4 ? 'text-green-600' : 
-                    currentStrength >= 2 ? 'text-yellow-600' : 'text-red-600'
-                  }`}>
+                  <p className={`text-xs ${currentStrength === 4 ? 'text-green-600' :
+                      currentStrength >= 2 ? 'text-yellow-600' : 'text-red-600'
+                    }`}>
                     Password strength: {currentStrength > 0 ? strengthLabels[currentStrength - 1] : 'Too weak'}
                   </p>
                 </div>
@@ -422,11 +415,10 @@ const SignUpPage = () => {
                   onChange={handleChange}
                   disabled={isLoading}
                   placeholder="••••••••"
-                  className={`w-full pl-11 pr-4 py-3 bg-white border rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
-                    formData.confirmPassword && formData.password !== formData.confirmPassword
+                  className={`w-full pl-11 pr-4 py-3 bg-white border rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${formData.confirmPassword && formData.password !== formData.confirmPassword
                       ? 'border-red-300'
                       : 'border-gray-200'
-                  }`}
+                    }`}
                 />
                 {formData.confirmPassword && formData.password === formData.confirmPassword && (
                   <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
@@ -466,7 +458,7 @@ const SignUpPage = () => {
             <button
               type="submit"
               disabled={isLoading || !agreeTerms}
-              className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-xl shadow-lg shadow-purple-500/25 hover:shadow-xl hover:shadow-purple-500/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg group"
+              className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-r from-[#23D3EE] to-[#6366F1] text-white font-semibold rounded-xl shadow-lg shadow-[#23D3EE]/25 hover:shadow-xl hover:shadow-[#23D3EE]/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg group"
             >
               {isLoading ? (
                 <Loader2 className="animate-spin" size={20} />
@@ -482,8 +474,8 @@ const SignUpPage = () => {
           {/* Sign In Link */}
           <p className="mt-8 text-center text-gray-500">
             Already have an account?{" "}
-            <NavLink 
-              to="/login" 
+            <NavLink
+              to="/login"
               className="font-semibold text-indigo-600 hover:text-indigo-500 transition-colors"
             >
               Sign in

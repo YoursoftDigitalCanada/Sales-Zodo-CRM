@@ -103,21 +103,21 @@ interface SidebarProps {
 const navigationItems: NavigationItem[] = [
   // ===== MAIN =====
   { title: "Main", isHeader: true },
-  { 
-    title: "Dashboard", 
-    icon: LayoutDashboard, 
+  {
+    title: "Dashboard",
+    icon: LayoutDashboard,
     path: "/dashboard",
   },
-  { 
-    title: "Calendar", 
-    icon: Calendar, 
+  {
+    title: "Calendar",
+    icon: Calendar,
     path: "/calendar",
     featureId: "calendar",
     isNew: true,
   },
-  { 
-    title: "Tasks", 
-    icon: CheckSquare, 
+  {
+    title: "Tasks",
+    icon: CheckSquare,
     path: "/tasks",
     featureId: "tasks",
     badge: 5,
@@ -126,35 +126,35 @@ const navigationItems: NavigationItem[] = [
 
   // ===== CRM =====
   { title: "CRM", isHeader: true },
-  { 
-    title: "Leads", 
+  {
+    title: "Leads",
     icon: Target,
     featureId: ["leads", "pipeline"],
     submenu: [
       { title: "All Leads", path: "/leads", featureId: "leads" },
       { title: "Pipeline", path: "/leads/pipeline", featureId: "pipeline", isNew: true },
       { title: "Lead Sources", path: "/leads/sources", featureId: "leads" },
-    ] 
+    ]
   },
-  { 
-    title: "Clients", 
+  {
+    title: "Clients",
     icon: Users,
     featureId: ["companies", "contacts"],
     submenu: [
       { title: "Client List", path: "/client-list", featureId: "companies" },
       { title: "Client Contacts", path: "/client-contact-list", featureId: "contacts" },
       { title: "Client Groups", path: "/clients/groups", featureId: "companies" },
-    ] 
+    ]
   },
-  { 
-    title: "Contacts", 
-    icon: Contact, 
+  {
+    title: "Contacts",
+    icon: Contact,
     path: "/contacts",
     featureId: "contacts",
   },
-  { 
-    title: "Applications", 
-    icon: ClipboardList, 
+  {
+    title: "Applications",
+    icon: ClipboardList,
     path: "/applications",
     featureId: "leads",
     badge: 3,
@@ -163,84 +163,84 @@ const navigationItems: NavigationItem[] = [
 
   // ===== PROJECT MANAGEMENT =====
   { title: "Projects", isHeader: true },
-  { 
-    title: "All Projects", 
+  {
+    title: "All Projects",
     icon: Briefcase,
     featureId: "tasks",
     submenu: [
       { title: "Active Projects", path: "/projects", featureId: "tasks" },
       { title: "Archived", path: "/projects/archived", featureId: "tasks" },
       { title: "Templates", path: "/projects/templates", featureId: "tasks" },
-    ] 
+    ]
   },
-  { 
-    title: "Kanban Board", 
-    icon: FolderKanban, 
+  {
+    title: "Kanban Board",
+    icon: FolderKanban,
     path: "/kanban",
     featureId: "tasks",
   },
-  { 
-    title: "Time Tracking", 
-    icon: Clock, 
+  {
+    title: "Time Tracking",
+    icon: Clock,
     path: "/time-tracking",
     featureId: "tasks",
     isNew: true,
   },
-  { 
-    title: "File Manager", 
-    icon: FileText, 
+  {
+    title: "File Manager",
+    icon: FileText,
     path: "/filemanager",
     featureId: "documents",
   },
 
   // ===== FINANCE =====
   { title: "Finance", isHeader: true },
-  { 
-    title: "Invoices", 
+  {
+    title: "Invoices",
     icon: Receipt,
     featureId: "invoices",
     submenu: [
       { title: "All Invoices", path: "/invoice", featureId: "invoices" },
       { title: "Create Invoice", path: "/invoice/create", featureId: "invoices" },
       { title: "Recurring", path: "/invoice/recurring", featureId: "invoices" },
-    ] 
+    ]
   },
-  { 
-    title: "Quotes", 
-    icon: FileStack, 
+  {
+    title: "Quotes",
+    icon: FileStack,
     path: "/quotes",
     featureId: "invoices",
     isNew: true,
   },
-  { 
-    title: "Expenses", 
-    icon: Landmark, 
+  {
+    title: "Expenses",
+    icon: Landmark,
     path: "/expenses",
     featureId: "invoices",
   },
-  { 
-    title: "Payments", 
+  {
+    title: "Payments",
     icon: CreditCard,
     featureId: "invoices",
     submenu: [
       { title: "All Payments", path: "/payments", featureId: "invoices" },
       { title: "Payment Methods", path: "/payments/methods", featureId: "invoices" },
       { title: "Transactions", path: "/payments/transactions", featureId: "invoices" },
-    ] 
+    ]
   },
 
   // ===== BUSINESS =====
   { title: "Business", isHeader: true },
-  { 
-    title: "Bookings", 
-    icon: CalendarDays, 
+  {
+    title: "Bookings",
+    icon: CalendarDays,
     path: "/bookings",
     featureId: "calendar",
     badge: 2,
     badgeColor: "blue",
   },
-  { 
-    title: "Ecommerce", 
+  {
+    title: "Ecommerce",
     icon: ShoppingCart,
     featureId: "api",
     submenu: [
@@ -248,10 +248,10 @@ const navigationItems: NavigationItem[] = [
       { title: "Products", path: "/ecommerce/products", featureId: "api" },
       { title: "Orders", path: "/ecommerce/orders", featureId: "api", badge: 8, badgeColor: "red" },
       { title: "Categories", path: "/ecommerce/categories", featureId: "api" },
-    ] 
+    ]
   },
-  { 
-    title: "Documents", 
+  {
+    title: "Documents",
     icon: FileStack,
     featureId: "documents",
     submenu: [
@@ -259,40 +259,40 @@ const navigationItems: NavigationItem[] = [
       { title: "Contracts", path: "/documents/contracts", featureId: "documents" },
       { title: "Proposals", path: "/documents/proposals", featureId: "documents" },
       { title: "Templates", path: "/documents/templates", featureId: "documents" },
-    ] 
+    ]
   },
 
   // ===== COMMUNICATION =====
   { title: "Communication", isHeader: true },
-  { 
-    title: "Letter Box", 
-    icon: Mail, 
+  {
+    title: "Letter Box",
+    icon: Mail,
     path: "/letterbox",
     featureId: "email",
     badge: 12,
     badgeColor: "teal",
   },
-  { 
-    title: "Chats", 
-    icon: MessageSquare, 
+  {
+    title: "Chats",
+    icon: MessageSquare,
     path: "/chats",
     featureId: "email",
     badge: "●",
     badgeColor: "teal",
   },
-  { 
-    title: "Support", 
+  {
+    title: "Support",
     icon: Headphones,
     featureId: "email",
     submenu: [
       { title: "Tickets", path: "/support/tickets", featureId: "email", badge: 4, badgeColor: "red" },
       { title: "Knowledge Base", path: "/support/knowledge-base", featureId: "email" },
       { title: "FAQ", path: "/support/faq", featureId: "email" },
-    ] 
+    ]
   },
-  { 
-    title: "Notifications", 
-    icon: Bell, 
+  {
+    title: "Notifications",
+    icon: Bell,
     path: "/notifications",
     featureId: "email",
     badge: 7,
@@ -301,8 +301,8 @@ const navigationItems: NavigationItem[] = [
 
   // ===== TEAM =====
   { title: "Team", isHeader: true },
-  { 
-    title: "Employees", 
+  {
+    title: "Employees",
     icon: UserCog,
     featureId: "api",
     submenu: [
@@ -310,25 +310,25 @@ const navigationItems: NavigationItem[] = [
       { title: "Departments", path: "/employees/departments", featureId: "api", isNew: true },
       { title: "Attendance", path: "/employees/attendance", featureId: "api" },
       { title: "Leave Requests", path: "/employees/leave-requests", featureId: "api", badge: 2, badgeColor: "gold" },
-    ] 
+    ]
   },
-  { 
-    title: "Users", 
-    icon: Users, 
+  {
+    title: "Users",
+    icon: Users,
     path: "/users",
     featureId: "api",
   },
-  { 
-    title: "Roles & Permissions", 
-    icon: Shield, 
+  {
+    title: "Roles & Permissions",
+    icon: Shield,
     path: "/roles",
     featureId: "api",
   },
 
   // ===== ANALYTICS =====
   { title: "Analytics", isHeader: true },
-  { 
-    title: "Reports", 
+  {
+    title: "Reports",
     icon: BarChart3,
     featureId: "reports",
     submenu: [
@@ -336,11 +336,11 @@ const navigationItems: NavigationItem[] = [
       { title: "Revenue Report", path: "/reports/revenue", featureId: "reports" },
       { title: "Expense Report", path: "/reports/expenses", featureId: "reports" },
       { title: "Custom Reports", path: "/reports/custom", featureId: "reports", isPro: true },
-    ] 
+    ]
   },
-  { 
-    title: "Analytics", 
-    icon: TrendingUp, 
+  {
+    title: "Analytics",
+    icon: TrendingUp,
     path: "/analytics",
     featureId: "reports",
     isPro: true,
@@ -348,8 +348,8 @@ const navigationItems: NavigationItem[] = [
 
   // ===== SETTINGS =====
   { title: "Settings", isHeader: true },
-  { 
-    title: "Settings", 
+  {
+    title: "Settings",
     icon: Settings,
     submenu: [
       { title: "General", path: "/settings/general" },
@@ -357,18 +357,18 @@ const navigationItems: NavigationItem[] = [
       { title: "Billing", path: "/settings/billing" },
       { title: "Email Settings", path: "/settings/email" },
       { title: "Security", path: "/settings/security" },
-    ] 
+    ]
   },
-  { 
-    title: "Integrations", 
-    icon: Plug, 
+  {
+    title: "Integrations",
+    icon: Plug,
     path: "/integrations",
     featureId: "automation",
     isNew: true,
   },
-  { 
-    title: "Help Center", 
-    icon: HelpCircle, 
+  {
+    title: "Help Center",
+    icon: HelpCircle,
     path: "/help",
   },
 ];
@@ -442,12 +442,12 @@ const filterNavigationItemsByFeatures = (
 // BADGE COMPONENT
 // ============================================
 
-const Badge = ({ 
-  children, 
+const Badge = ({
+  children,
   color = "teal",
-  size = "sm" 
-}: { 
-  children: React.ReactNode; 
+  size = "sm"
+}: {
+  children: React.ReactNode;
   color?: "teal" | "gold" | "red" | "blue";
   size?: "xs" | "sm";
 }) => {
@@ -498,9 +498,9 @@ const Tag = ({ type }: { type: "new" | "pro" }) => {
 // MAIN SIDEBAR COMPONENT
 // ============================================
 
-export function Sidebar({ 
-  collapsed: controlledCollapsed, 
-  setCollapsed: controlledSetCollapsed 
+export function Sidebar({
+  collapsed: controlledCollapsed,
+  setCollapsed: controlledSetCollapsed
 }: SidebarProps) {
   const [internalCollapsed, setInternalCollapsed] = useState(false);
   const collapsed = controlledCollapsed ?? internalCollapsed;
@@ -534,7 +534,7 @@ export function Sidebar({
   useEffect(() => {
     visibleNavigationItems.forEach((item) => {
       if (item.submenu) {
-        const isActive = item.submenu.some((sub) => 
+        const isActive = item.submenu.some((sub) =>
           location.pathname === sub.path || location.pathname.startsWith(sub.path + '/')
         );
         if (isActive) {
@@ -567,7 +567,7 @@ export function Sidebar({
   const getInitials = () => (user ? (user.firstName[0] + user.lastName[0]).toUpperCase() : "GU");
   const getFullName = () => (user ? `${user.firstName} ${user.lastName}` : "Guest User");
   const getEmail = () => user?.email || "guest@yoursoft.ca";
-  
+
   // Check if path is active (exact match or starts with for nested routes)
   const isActive = (path: string) => {
     if (path === "/employees") {
@@ -575,7 +575,7 @@ export function Sidebar({
     }
     return location.pathname === path;
   };
-  
+
   // Check if any submenu item is active
   const isSubmenuActive = (submenu: SubMenuItem[]) => {
     return submenu.some((item) => {
@@ -627,20 +627,13 @@ export function Sidebar({
                 className="flex items-center gap-3"
               >
                 <div className="relative">
-                  <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#23D3EE]/70 flex items-center justify-center shadow-lg shadow-[#23D3EE]/20">
-                    <Sparkles size={22} className="text-white" />
-                  </div>
-                  <motion.div
-                    animate={{ scale: [1, 1.2, 1] }}
-                    transition={{ repeat: Infinity, duration: 2 }}
-                    className="absolute -bottom-1 -right-1 w-3 h-3 bg-[#FBBF23] rounded-full border-2 border-[#0F172A]"
+                  <img
+                    src={logo}
+                    alt="ZODO"
+                    className="h-11 w-auto object-contain"
                   />
                 </div>
                 <div>
-                  <div className="flex items-center gap-1">
-                    <span className="font-bold text-white text-lg">Yoursoft</span>
-                    <span className="font-bold text-[#23D3EE] text-lg">CRM</span>
-                  </div>
                   <p className="text-[10px] text-slate-400 -mt-0.5">Business Management Suite</p>
                 </div>
               </motion.div>
@@ -650,8 +643,8 @@ export function Sidebar({
                 animate={{ opacity: 1, scale: 1 }}
                 className="mx-auto"
               >
-                <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#23D3EE]/70 flex items-center justify-center shadow-lg shadow-[#23D3EE]/20">
-                  <Sparkles size={22} className="text-white" />
+                <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-[#4BDE80] to-[#23D3EE] flex items-center justify-center shadow-lg shadow-[#23D3EE]/20">
+                  <span className="text-white font-bold text-lg">Z</span>
                 </div>
               </motion.div>
             )}
@@ -1048,7 +1041,7 @@ export function Sidebar({
                     {getInitials()}
                   </div>
                   <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-[#0F172A]" />
-                  
+
                   {/* Tooltip */}
                   <div className="absolute left-full ml-2 px-3 py-2 bg-[#0F172A] border border-white/10 rounded-lg text-white text-sm font-medium opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 shadow-xl">
                     {getFullName()}

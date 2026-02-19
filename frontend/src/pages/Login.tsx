@@ -8,6 +8,7 @@ import {
   Layers, Check, Sparkles, Shield, Zap, Users,
   Github, Chrome
 } from "lucide-react";
+import logo from "../Images/Logo/logo.png";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -26,12 +27,12 @@ const LoginPage = () => {
       const response = await login({ email, password });
       const authData = response?.data as
         | {
-            tokens?: { accessToken?: string; refreshToken?: string };
-            user?: { firstName?: string };
-            employee?: unknown;
-            tenant?: unknown;
-            permissions?: unknown;
-          }
+          tokens?: { accessToken?: string; refreshToken?: string };
+          user?: { firstName?: string };
+          employee?: unknown;
+          tenant?: unknown;
+          permissions?: unknown;
+        }
         | undefined;
       const accessToken = authData?.tokens?.accessToken;
 
@@ -85,7 +86,7 @@ const LoginPage = () => {
   return (
     <div className="min-h-screen flex">
       {/* Left Side - Branding & Features */}
-      <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-[#0F172A] via-[#1e293b] to-[#0F172A] overflow-hidden">
         {/* Background Pattern */}
         <div
           className="absolute inset-0 opacity-10"
@@ -96,18 +97,15 @@ const LoginPage = () => {
         />
 
         {/* Floating Orbs */}
-        <div className="absolute top-20 left-20 w-72 h-72 bg-white/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-20 right-20 w-96 h-96 bg-pink-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="absolute top-1/2 left-1/3 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
+        <div className="absolute top-20 left-20 w-72 h-72 bg-[#23D3EE]/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-20 right-20 w-96 h-96 bg-[#4BDE80]/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-1/2 left-1/3 w-64 h-64 bg-[#F97315]/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
 
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-between p-12 w-full">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-              <Layers className="text-white" size={28} />
-            </div>
-            <span className="text-white font-bold text-2xl">Yoursoft</span>
+            <img src={logo} alt="ZODO" className="h-12 w-auto object-contain" />
           </div>
 
           {/* Main Content */}
@@ -144,7 +142,7 @@ const LoginPage = () => {
           {/* Testimonial */}
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
             <p className="text-white/90 italic mb-4">
-              "Yoursoft Digital transformed how we manage clients. The CRM is intuitive and the AI chatbot handles 60% of our support queries automatically."
+              "ZODO CRM transformed how we manage clients. The CRM is intuitive and the AI chatbot handles 60% of our support queries automatically."
             </p>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-white font-bold">
@@ -164,10 +162,7 @@ const LoginPage = () => {
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center gap-2 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-              <Layers className="text-white" size={24} />
-            </div>
-            <span className="font-bold text-xl text-gray-900">Yoursoft</span>
+            <img src={logo} alt="ZODO" className="h-10 w-auto object-contain" />
           </div>
 
           {/* Header */}
@@ -297,7 +292,7 @@ const LoginPage = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg group"
+              className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-r from-[#23D3EE] to-[#6366F1] text-white font-semibold rounded-xl shadow-lg shadow-[#23D3EE]/25 hover:shadow-xl hover:shadow-[#23D3EE]/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg group"
             >
               {isLoading ? (
                 <Loader2 className="animate-spin" size={20} />

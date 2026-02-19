@@ -189,10 +189,10 @@ export const AddLeaveRequestDialog: React.FC<AddLeaveRequestDialogProps> = ({
 
             {/* Duration Summary */}
             {totalDays > 0 && (
-              <div className="bg-[#17C3B2]/10 rounded-lg p-4">
+              <div className="bg-[#23D3EE]/10 rounded-lg p-4">
                 <div className="flex items-center justify-between">
                   <span className="text-gray-700">Total Duration</span>
-                  <span className="text-xl font-bold text-[#17C3B2]">
+                  <span className="text-xl font-bold text-[#23D3EE]">
                     {totalDays} business day{totalDays !== 1 ? 's' : ''}
                   </span>
                 </div>
@@ -225,7 +225,7 @@ export const AddLeaveRequestDialog: React.FC<AddLeaveRequestDialogProps> = ({
             />
 
             {/* File Upload */}
-            <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center hover:border-[#17C3B2] transition-colors cursor-pointer">
+            <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center hover:border-[#23D3EE] transition-colors cursor-pointer">
               <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
               <p className="text-sm text-gray-600">
                 Drag and drop supporting documents here
@@ -245,7 +245,7 @@ export const AddLeaveRequestDialog: React.FC<AddLeaveRequestDialogProps> = ({
               </Button>
               <Button 
                 type="submit"
-                className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white"
+                className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white"
                 disabled={selectedBalance && totalDays > selectedBalance.available}
               >
                 Submit Request

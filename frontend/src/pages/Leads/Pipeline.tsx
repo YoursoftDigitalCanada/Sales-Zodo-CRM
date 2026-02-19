@@ -99,7 +99,7 @@ const pipelineStageConfig: Omit<PipelineStage, "leads">[] = [
   { id: "new", name: "New Leads", color: "#3B82F6", bgColor: "#EFF6FF", icon: Sparkles },
   { id: "contacted", name: "Contacted", color: "#8B5CF6", bgColor: "#F5F3FF", icon: Mail },
   { id: "qualified", name: "Qualified", color: "#F59E0B", bgColor: "#FFFBEB", icon: Target },
-  { id: "proposal", name: "Proposal Sent", color: "#17C3B2", bgColor: "#F0FDFA", icon: Clock },
+  { id: "proposal", name: "Proposal Sent", color: "#23D3EE", bgColor: "#F0FDFA", icon: Clock },
   { id: "negotiation", name: "Negotiation", color: "#EC4899", bgColor: "#FDF2F8", icon: TrendingUp },
   { id: "won", name: "Won", color: "#10B981", bgColor: "#ECFDF5", icon: CheckCircle2 },
   { id: "lost", name: "Lost", color: "#EF4444", bgColor: "#FEF2F2", icon: XCircle },
@@ -218,12 +218,12 @@ const PipelineLeadCard = ({
         <div className="flex items-center gap-3">
           <Avatar className="h-10 w-10 border-2 border-white shadow">
             <AvatarImage src={lead.avatar} />
-            <AvatarFallback className="bg-gradient-to-br from-[#17C3B2] to-[#17C3B2]/70 text-white font-medium text-sm">
+            <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#23D3EE]/70 text-white font-medium text-sm">
               {getInitials(lead.firstName, lead.lastName)}
             </AvatarFallback>
           </Avatar>
           <div>
-            <h4 className="font-semibold text-[#0D2342] text-sm group-hover:text-[#17C3B2] transition-colors">
+            <h4 className="font-semibold text-[#0F172A] text-sm group-hover:text-[#23D3EE] transition-colors">
               {lead.firstName} {lead.lastName}
             </h4>
             <p className="text-xs text-slate-500">{lead.company}</p>
@@ -261,7 +261,7 @@ const PipelineLeadCard = ({
 
       {/* Value */}
       <div className="mb-3">
-        <span className="text-lg font-bold text-[#0D2342]">
+        <span className="text-lg font-bold text-[#0F172A]">
           {formatCurrency(lead.value, lead.currency)}
         </span>
       </div>
@@ -350,7 +350,7 @@ const PipelineColumn = ({
               <StageIcon size={16} style={{ color: stage.color }} />
             </div>
             <div>
-              <h3 className="font-semibold text-[#0D2342] text-sm">{stage.name}</h3>
+              <h3 className="font-semibold text-[#0F172A] text-sm">{stage.name}</h3>
               <p className="text-xs text-slate-500">{stage.leads.length} leads</p>
             </div>
           </div>
@@ -359,7 +359,7 @@ const PipelineColumn = ({
           </span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold text-[#0D2342]">{formatCurrency(totalValue)}</span>
+          <span className="text-sm font-semibold text-[#0F172A]">{formatCurrency(totalValue)}</span>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -441,7 +441,7 @@ const LeadDetailPanel = ({ lead, onClose, stageColor }: { lead: Lead; onClose: (
       {/* Header */}
       <div className="p-6 border-b border-slate-100" style={{ background: `linear-gradient(135deg, ${stageColor}10, transparent)` }}>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-[#0D2342]">Lead Details</h2>
+          <h2 className="text-lg font-bold text-[#0F172A]">Lead Details</h2>
           <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={onClose}>
             <X size={18} />
           </Button>
@@ -450,12 +450,12 @@ const LeadDetailPanel = ({ lead, onClose, stageColor }: { lead: Lead; onClose: (
         <div className="flex items-center gap-4">
           <Avatar className="h-16 w-16 border-2 shadow-md" style={{ borderColor: stageColor }}>
             <AvatarImage src={lead.avatar} />
-            <AvatarFallback className="bg-gradient-to-br from-[#17C3B2] to-[#17C3B2]/70 text-white font-bold text-xl">
+            <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#23D3EE]/70 text-white font-bold text-xl">
               {getInitials(lead.firstName, lead.lastName)}
             </AvatarFallback>
           </Avatar>
           <div>
-            <h3 className="text-xl font-bold text-[#0D2342]">{lead.firstName} {lead.lastName}</h3>
+            <h3 className="text-xl font-bold text-[#0F172A]">{lead.firstName} {lead.lastName}</h3>
             <p className="text-sm text-slate-500">{lead.jobTitle}</p>
             <div className="flex items-center gap-2 mt-1">
               <Badge variant="outline" className="text-xs capitalize px-2 py-0.5 rounded-full" style={{ borderColor: stageColor, color: stageColor }}>
@@ -491,14 +491,14 @@ const LeadDetailPanel = ({ lead, onClose, stageColor }: { lead: Lead; onClose: (
 
         {/* Contact Info */}
         <div className="space-y-1">
-          <h4 className="text-sm font-semibold text-[#0D2342] mb-3">Contact Information</h4>
+          <h4 className="text-sm font-semibold text-[#0F172A] mb-3">Contact Information</h4>
           <div className="space-y-3">
             {lead.email && (
               <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
                 <Mail size={16} className="text-slate-400 flex-shrink-0" />
                 <div>
                   <p className="text-xs text-slate-400">Email</p>
-                  <a href={`mailto:${lead.email}`} className="text-sm text-[#17C3B2] hover:underline">{lead.email}</a>
+                  <a href={`mailto:${lead.email}`} className="text-sm text-[#23D3EE] hover:underline">{lead.email}</a>
                 </div>
               </div>
             )}
@@ -507,7 +507,7 @@ const LeadDetailPanel = ({ lead, onClose, stageColor }: { lead: Lead; onClose: (
                 <Phone size={16} className="text-slate-400 flex-shrink-0" />
                 <div>
                   <p className="text-xs text-slate-400">Phone</p>
-                  <a href={`tel:${lead.phone}`} className="text-sm text-[#0D2342]">{lead.phone}</a>
+                  <a href={`tel:${lead.phone}`} className="text-sm text-[#0F172A]">{lead.phone}</a>
                 </div>
               </div>
             )}
@@ -516,7 +516,7 @@ const LeadDetailPanel = ({ lead, onClose, stageColor }: { lead: Lead; onClose: (
                 <Building2 size={16} className="text-slate-400 flex-shrink-0" />
                 <div>
                   <p className="text-xs text-slate-400">Company</p>
-                  <p className="text-sm text-[#0D2342]">{lead.company}</p>
+                  <p className="text-sm text-[#0F172A]">{lead.company}</p>
                 </div>
               </div>
             )}
@@ -525,7 +525,7 @@ const LeadDetailPanel = ({ lead, onClose, stageColor }: { lead: Lead; onClose: (
                 <Briefcase size={16} className="text-slate-400 flex-shrink-0" />
                 <div>
                   <p className="text-xs text-slate-400">Job Title</p>
-                  <p className="text-sm text-[#0D2342]">{lead.jobTitle}</p>
+                  <p className="text-sm text-[#0F172A]">{lead.jobTitle}</p>
                 </div>
               </div>
             )}
@@ -534,14 +534,14 @@ const LeadDetailPanel = ({ lead, onClose, stageColor }: { lead: Lead; onClose: (
 
         {/* Additional Details */}
         <div className="space-y-1">
-          <h4 className="text-sm font-semibold text-[#0D2342] mb-3">Details</h4>
+          <h4 className="text-sm font-semibold text-[#0F172A] mb-3">Details</h4>
           <div className="space-y-3">
             {lead.source && (
               <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
                 <Globe size={16} className="text-slate-400 flex-shrink-0" />
                 <div>
                   <p className="text-xs text-slate-400">Lead Source</p>
-                  <p className="text-sm text-[#0D2342] capitalize">{lead.source}</p>
+                  <p className="text-sm text-[#0F172A] capitalize">{lead.source}</p>
                 </div>
               </div>
             )}
@@ -549,21 +549,21 @@ const LeadDetailPanel = ({ lead, onClose, stageColor }: { lead: Lead; onClose: (
               <User size={16} className="text-slate-400 flex-shrink-0" />
               <div>
                 <p className="text-xs text-slate-400">Assigned To</p>
-                <p className="text-sm text-[#0D2342]">{lead.assignedTo}</p>
+                <p className="text-sm text-[#0F172A]">{lead.assignedTo}</p>
               </div>
             </div>
             <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
               <Calendar size={16} className="text-slate-400 flex-shrink-0" />
               <div>
                 <p className="text-xs text-slate-400">Created</p>
-                <p className="text-sm text-[#0D2342]">{formatDate(lead.createdAt)}</p>
+                <p className="text-sm text-[#0F172A]">{formatDate(lead.createdAt)}</p>
               </div>
             </div>
             <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
               <Clock size={16} className="text-slate-400 flex-shrink-0" />
               <div>
                 <p className="text-xs text-slate-400">Days in Stage</p>
-                <p className="text-sm text-[#0D2342]">{lead.daysInStage} days</p>
+                <p className="text-sm text-[#0F172A]">{lead.daysInStage} days</p>
               </div>
             </div>
           </div>
@@ -572,7 +572,7 @@ const LeadDetailPanel = ({ lead, onClose, stageColor }: { lead: Lead; onClose: (
 
       {/* Footer Actions */}
       <div className="p-4 border-t border-slate-100 flex gap-3">
-        <Button className="flex-1 bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl gap-2">
+        <Button className="flex-1 bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl gap-2">
           <Mail size={16} /> Send Email
         </Button>
         <Button variant="outline" className="flex-1 rounded-xl gap-2">
@@ -627,8 +627,8 @@ const Pipeline = () => {
 
   // Find the stage color for the selected lead
   const selectedLeadStageColor = selectedLead
-    ? pipeline.find((s) => s.leads.some((l) => l.id === selectedLead.id))?.color || "#17C3B2"
-    : "#17C3B2";
+    ? pipeline.find((s) => s.leads.some((l) => l.id === selectedLead.id))?.color || "#23D3EE"
+    : "#23D3EE";
 
   const handleLeadView = (lead: Lead) => {
     setSelectedLead(lead);
@@ -724,15 +724,15 @@ const Pipeline = () => {
             <div className="flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
-                  <Link to="/dashboard" className="hover:text-[#17C3B2]">Dashboard</Link>
+                  <Link to="/dashboard" className="hover:text-[#23D3EE]">Dashboard</Link>
                   <ChevronRight size={14} />
-                  <Link to="/leads" className="hover:text-[#17C3B2]">Leads</Link>
+                  <Link to="/leads" className="hover:text-[#23D3EE]">Leads</Link>
                   <ChevronRight size={14} />
-                  <span className="text-[#0D2342] font-medium">Pipeline</span>
+                  <span className="text-[#0F172A] font-medium">Pipeline</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <h1 className="text-2xl font-bold text-[#0D2342]">Sales Pipeline</h1>
-                  <span className="px-2 py-1 bg-[#17C3B2]/10 text-[#17C3B2] text-xs font-bold rounded-lg">LIVE</span>
+                  <h1 className="text-2xl font-bold text-[#0F172A]">Sales Pipeline</h1>
+                  <span className="px-2 py-1 bg-[#23D3EE]/10 text-[#23D3EE] text-xs font-bold rounded-lg">LIVE</span>
                 </div>
               </div>
 
@@ -740,12 +740,12 @@ const Pipeline = () => {
                 <div className="flex items-center gap-4 mr-4">
                   <div className="text-center">
                     <p className="text-xs text-slate-500">Total Leads</p>
-                    <p className="text-lg font-bold text-[#0D2342]">{totalLeads}</p>
+                    <p className="text-lg font-bold text-[#0F172A]">{totalLeads}</p>
                   </div>
                   <div className="w-px h-8 bg-slate-200" />
                   <div className="text-center">
                     <p className="text-xs text-slate-500">Pipeline Value</p>
-                    <p className="text-lg font-bold text-[#17C3B2]">{formatCurrency(totalValue)}</p>
+                    <p className="text-lg font-bold text-[#23D3EE]">{formatCurrency(totalValue)}</p>
                   </div>
                   <div className="w-px h-8 bg-slate-200" />
                   <div className="text-center">
@@ -769,7 +769,7 @@ const Pipeline = () => {
                   Filter
                 </Button>
 
-                <Button className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl gap-2">
+                <Button className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl gap-2">
                   <Plus size={18} />
                   Add Lead
                 </Button>

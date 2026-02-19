@@ -355,16 +355,16 @@ const SectionCard = ({
       animate={{ opacity: 1, y: 0 }}
       className={cn(
         "bg-white rounded-2xl border border-slate-200 overflow-hidden",
-        "hover:border-[#17C3B2]/30 hover:shadow-lg hover:shadow-[#17C3B2]/5 transition-all",
+        "hover:border-[#23D3EE]/30 hover:shadow-lg hover:shadow-[#23D3EE]/5 transition-all",
         className
       )}
     >
       <div className="flex items-center justify-between p-5 border-b border-slate-100">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#17C3B2]/10 to-[#C9A14A]/10 flex items-center justify-center">
-            <Icon size={20} className="text-[#17C3B2]" />
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#23D3EE]/10 to-[#FBBF23]/10 flex items-center justify-center">
+            <Icon size={20} className="text-[#23D3EE]" />
           </div>
-          <h3 className="font-semibold text-[#0D2342]">{title}</h3>
+          <h3 className="font-semibold text-[#0F172A]">{title}</h3>
         </div>
         {headerAction}
       </div>
@@ -409,8 +409,8 @@ const AddressBlock = ({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h4 className="font-medium text-[#0D2342] flex items-center gap-2">
-          {isBilledTo ? <Users size={16} className="text-[#C9A14A]" /> : <Building2 size={16} className="text-[#17C3B2]" />}
+        <h4 className="font-medium text-[#0F172A] flex items-center gap-2">
+          {isBilledTo ? <Users size={16} className="text-[#FBBF23]" /> : <Building2 size={16} className="text-[#23D3EE]" />}
           {title}
         </h4>
         {showClientSelector && (
@@ -442,7 +442,7 @@ const AddressBlock = ({
                     className="rounded-lg cursor-pointer"
                   >
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] flex items-center justify-center text-white text-xs font-semibold">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white text-xs font-semibold">
                         {getInitials(client.businessName)}
                       </div>
                       <div>
@@ -457,7 +457,7 @@ const AddressBlock = ({
                 )}
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="rounded-lg text-[#17C3B2]">
+              <DropdownMenuItem className="rounded-lg text-[#23D3EE]">
                 <PlusCircle size={14} className="mr-2" />
                 Add New Client
               </DropdownMenuItem>
@@ -696,7 +696,7 @@ const LineItemRow = ({
 
       {/* Total */}
       <td className="py-3 px-2 w-32 text-right">
-        <span className="text-sm font-bold text-[#0D2342]">{formatCurrency(total)}</span>
+        <span className="text-sm font-bold text-[#0F172A]">{formatCurrency(total)}</span>
       </td>
 
       {/* Actions */}
@@ -789,7 +789,7 @@ const LineItemsTable = ({
                 total: 0,
               });
             }}
-            className="px-3 py-1.5 rounded-lg bg-slate-100 text-xs text-slate-600 hover:bg-[#17C3B2]/10 hover:text-[#17C3B2] transition-colors"
+            className="px-3 py-1.5 rounded-lg bg-slate-100 text-xs text-slate-600 hover:bg-[#23D3EE]/10 hover:text-[#23D3EE] transition-colors"
           >
             + {product.name}
           </motion.button>
@@ -852,7 +852,7 @@ const LineItemsTable = ({
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.99 }}
             onClick={handleAddItem}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-slate-200 text-slate-500 hover:border-[#17C3B2] hover:text-[#17C3B2] hover:bg-[#17C3B2]/5 transition-all"
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-slate-200 text-slate-500 hover:border-[#23D3EE] hover:text-[#23D3EE] hover:bg-[#23D3EE]/5 transition-all"
           >
             <PlusCircle size={18} />
             <span className="font-medium">Add Line Item</span>
@@ -881,11 +881,11 @@ const InvoicePreview = ({
       {/* Header */}
       <div className="flex justify-between items-start mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-[#0D2342]">INVOICE</h1>
+          <h1 className="text-3xl font-bold text-[#0F172A]">INVOICE</h1>
           <p className="text-slate-500 mt-1">{data.invoiceNumber}</p>
         </div>
         <div className="text-right">
-          <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] flex items-center justify-center text-white font-bold text-xl">
+          <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white font-bold text-xl">
             {getInitials(data.billedBy.businessName || "YB")}
           </div>
         </div>
@@ -895,15 +895,15 @@ const InvoicePreview = ({
       <div className="grid grid-cols-3 gap-4 mb-8 p-4 bg-slate-50 rounded-xl">
         <div>
           <p className="text-xs text-slate-500 uppercase">Invoice Date</p>
-          <p className="font-semibold text-[#0D2342]">{data.invoiceDate}</p>
+          <p className="font-semibold text-[#0F172A]">{data.invoiceDate}</p>
         </div>
         <div>
           <p className="text-xs text-slate-500 uppercase">Due Date</p>
-          <p className="font-semibold text-[#0D2342]">{data.dueDate}</p>
+          <p className="font-semibold text-[#0F172A]">{data.dueDate}</p>
         </div>
         <div>
           <p className="text-xs text-slate-500 uppercase">Amount Due</p>
-          <p className="font-bold text-[#17C3B2] text-lg">{formatCurrency(totals.total, data.currency)}</p>
+          <p className="font-bold text-[#23D3EE] text-lg">{formatCurrency(totals.total, data.currency)}</p>
         </div>
       </div>
 
@@ -911,7 +911,7 @@ const InvoicePreview = ({
       <div className="grid grid-cols-2 gap-8 mb-8">
         <div>
           <p className="text-xs text-slate-500 uppercase mb-2">From</p>
-          <p className="font-semibold text-[#0D2342]">{data.billedBy.businessName}</p>
+          <p className="font-semibold text-[#0F172A]">{data.billedBy.businessName}</p>
           <p className="text-sm text-slate-600">{data.billedBy.address}</p>
           <p className="text-sm text-slate-600">{data.billedBy.city}, {data.billedBy.province} {data.billedBy.postalCode}</p>
           <p className="text-sm text-slate-600">{data.billedBy.email}</p>
@@ -921,7 +921,7 @@ const InvoicePreview = ({
         </div>
         <div>
           <p className="text-xs text-slate-500 uppercase mb-2">Bill To</p>
-          <p className="font-semibold text-[#0D2342]">{data.billedTo.businessName}</p>
+          <p className="font-semibold text-[#0F172A]">{data.billedTo.businessName}</p>
           <p className="text-sm text-slate-600">{data.billedTo.address}</p>
           <p className="text-sm text-slate-600">{data.billedTo.city}, {data.billedTo.province} {data.billedTo.postalCode}</p>
           <p className="text-sm text-slate-600">{data.billedTo.email}</p>
@@ -934,7 +934,7 @@ const InvoicePreview = ({
       {/* Items Table */}
       <table className="w-full mb-8">
         <thead>
-          <tr className="border-b-2 border-[#17C3B2]">
+          <tr className="border-b-2 border-[#23D3EE]">
             <th className="py-3 text-left text-xs font-semibold text-slate-500 uppercase">Description</th>
             <th className="py-3 text-center text-xs font-semibold text-slate-500 uppercase w-16">Qty</th>
             <th className="py-3 text-right text-xs font-semibold text-slate-500 uppercase w-24">Rate</th>
@@ -945,12 +945,12 @@ const InvoicePreview = ({
           {data.items.map((item, index) => (
             <tr key={index} className="border-b border-slate-100">
               <td className="py-3">
-                <p className="font-medium text-[#0D2342]">{item.name}</p>
+                <p className="font-medium text-[#0F172A]">{item.name}</p>
                 {item.description && <p className="text-xs text-slate-500">{item.description}</p>}
               </td>
               <td className="py-3 text-center text-slate-600">{item.quantity}</td>
               <td className="py-3 text-right text-slate-600">{formatCurrency(item.rate)}</td>
-              <td className="py-3 text-right font-medium text-[#0D2342]">{formatCurrency(item.amount)}</td>
+              <td className="py-3 text-right font-medium text-[#0F172A]">{formatCurrency(item.amount)}</td>
             </tr>
           ))}
         </tbody>
@@ -993,8 +993,8 @@ const InvoicePreview = ({
             </>
           )}
           <div className="flex justify-between pt-2 border-t border-slate-200">
-            <span className="font-bold text-[#0D2342]">Total ({data.currency})</span>
-            <span className="font-bold text-xl text-[#17C3B2]">{formatCurrency(totals.total, data.currency)}</span>
+            <span className="font-bold text-[#0F172A]">Total ({data.currency})</span>
+            <span className="font-bold text-xl text-[#23D3EE]">{formatCurrency(totals.total, data.currency)}</span>
           </div>
         </div>
       </div>
@@ -1307,7 +1307,7 @@ const CreateInvoicePage = () => {
               <div className="flex items-center gap-2 text-sm">
                 <span className="text-slate-400">Invoices</span>
                 <ChevronRight size={16} className="text-slate-300" />
-                <span className="font-medium text-[#0D2342]">Create Invoice</span>
+                <span className="font-medium text-[#0F172A]">Create Invoice</span>
               </div>
             </div>
 
@@ -1320,7 +1320,7 @@ const CreateInvoicePage = () => {
                 className={cn(
                   "flex items-center gap-2 px-4 py-2 rounded-xl border transition-colors",
                   showPreview
-                    ? "bg-[#17C3B2]/10 border-[#17C3B2] text-[#17C3B2]"
+                    ? "bg-[#23D3EE]/10 border-[#23D3EE] text-[#23D3EE]"
                     : "border-slate-200 text-slate-600 hover:bg-slate-50"
                 )}
               >
@@ -1360,7 +1360,7 @@ const CreateInvoicePage = () => {
                 type="button"
                 onClick={handleSaveAndSend}
                 disabled={isSaving}
-                className="bg-gradient-to-r from-[#17C3B2] to-[#17C3B2]/90 hover:from-[#17C3B2]/90 hover:to-[#17C3B2] text-white rounded-xl shadow-lg shadow-[#17C3B2]/25"
+                className="bg-gradient-to-r from-[#23D3EE] to-[#23D3EE]/90 hover:from-[#23D3EE]/90 hover:to-[#23D3EE] text-white rounded-xl shadow-lg shadow-[#23D3EE]/25"
               >
                 <Send size={16} className="mr-2" />
                 Save & Send
@@ -1384,11 +1384,11 @@ const CreateInvoicePage = () => {
                     animate={{ opacity: 1, y: 0 }}
                     className="flex items-center gap-4"
                   >
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] flex items-center justify-center shadow-lg shadow-[#17C3B2]/25">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center shadow-lg shadow-[#23D3EE]/25">
                       <FilePlus size={24} className="text-white" />
                     </div>
                     <div>
-                      <h1 className="text-2xl font-bold text-[#0D2342]">Create Invoice</h1>
+                      <h1 className="text-2xl font-bold text-[#0F172A]">Create Invoice</h1>
                       <p className="text-slate-500">Fill in the details to generate a new invoice</p>
                     </div>
                   </motion.div>
@@ -1517,10 +1517,10 @@ const CreateInvoicePage = () => {
                       </div>
 
                       {/* Tax Rate Display */}
-                      <div className="col-span-2 p-3 bg-[#17C3B2]/5 rounded-xl border border-[#17C3B2]/20">
+                      <div className="col-span-2 p-3 bg-[#23D3EE]/5 rounded-xl border border-[#23D3EE]/20">
                         <div className="flex items-center gap-2 mb-1">
-                          <Percent size={14} className="text-[#17C3B2]" />
-                          <span className="text-xs font-medium text-[#17C3B2]">Tax Rates Applied</span>
+                          <Percent size={14} className="text-[#23D3EE]" />
+                          <span className="text-xs font-medium text-[#23D3EE]">Tax Rates Applied</span>
                         </div>
                         <div className="flex items-center gap-4 text-sm">
                           {taxRates.hst > 0 ? (
@@ -1565,7 +1565,7 @@ const CreateInvoicePage = () => {
                           variant="ghost"
                           size="sm"
                           onClick={() => navigate("/clients/add")}
-                          className="text-[#17C3B2] hover:text-[#17C3B2]/80 hover:bg-[#17C3B2]/5"
+                          className="text-[#23D3EE] hover:text-[#23D3EE]/80 hover:bg-[#23D3EE]/5"
                         >
                           <PlusCircle size={14} className="mr-1" />
                           New Client
@@ -1698,8 +1698,8 @@ const CreateInvoicePage = () => {
 
                           <div className="pt-3 border-t border-slate-200">
                             <div className="flex justify-between items-center">
-                              <span className="font-bold text-[#0D2342]">Total ({watch("currency")})</span>
-                              <span className="text-2xl font-bold text-[#17C3B2]">
+                              <span className="font-bold text-[#0F172A]">Total ({watch("currency")})</span>
+                              <span className="text-2xl font-bold text-[#23D3EE]">
                                 {formatCurrency(totals.total, watch("currency"))}
                               </span>
                             </div>
@@ -1707,9 +1707,9 @@ const CreateInvoicePage = () => {
                         </div>
 
                         {/* Amount in Words */}
-                        <div className="p-3 bg-[#17C3B2]/5 rounded-xl border border-[#17C3B2]/20">
+                        <div className="p-3 bg-[#23D3EE]/5 rounded-xl border border-[#23D3EE]/20">
                           <p className="text-xs text-slate-500 uppercase mb-1">Amount in Words</p>
-                          <p className="text-sm text-[#0D2342] font-medium italic">
+                          <p className="text-sm text-[#0F172A] font-medium italic">
                             {numberToWords(totals.total)}
                           </p>
                         </div>
@@ -1723,11 +1723,11 @@ const CreateInvoicePage = () => {
                       {/* Send Reminder */}
                       <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-[#C9A14A]/10 flex items-center justify-center">
-                            <Bell size={18} className="text-[#C9A14A]" />
+                          <div className="w-10 h-10 rounded-lg bg-[#FBBF23]/10 flex items-center justify-center">
+                            <Bell size={18} className="text-[#FBBF23]" />
                           </div>
                           <div>
-                            <p className="font-medium text-[#0D2342] text-sm">Payment Reminders</p>
+                            <p className="font-medium text-[#0F172A] text-sm">Payment Reminders</p>
                             <p className="text-xs text-slate-500">Send automatic reminders before due date</p>
                           </div>
                         </div>
@@ -1738,7 +1738,7 @@ const CreateInvoicePage = () => {
                             <Checkbox
                               checked={field.value}
                               onCheckedChange={field.onChange}
-                              className="border-slate-300 data-[state=checked]:bg-[#17C3B2] data-[state=checked]:border-[#17C3B2]"
+                              className="border-slate-300 data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
                             />
                           )}
                         />
@@ -1752,7 +1752,7 @@ const CreateInvoicePage = () => {
                               <Repeat size={18} className="text-purple-500" />
                             </div>
                             <div>
-                              <p className="font-medium text-[#0D2342] text-sm">Recurring Invoice</p>
+                              <p className="font-medium text-[#0F172A] text-sm">Recurring Invoice</p>
                               <p className="text-xs text-slate-500">Automatically generate this invoice</p>
                             </div>
                           </div>
@@ -1763,7 +1763,7 @@ const CreateInvoicePage = () => {
                               <Checkbox
                                 checked={field.value}
                                 onCheckedChange={field.onChange}
-                                className="border-slate-300 data-[state=checked]:bg-[#17C3B2] data-[state=checked]:border-[#17C3B2]"
+                                className="border-slate-300 data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
                               />
                             )}
                           />
@@ -1809,7 +1809,7 @@ const CreateInvoicePage = () => {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <h3 className="font-semibold text-[#0D2342] mb-1">Digital Signature</h3>
+                        <h3 className="font-semibold text-[#0F172A] mb-1">Digital Signature</h3>
                         <p className="text-xs text-slate-500">
                           Add your signature to make this invoice official
                         </p>
@@ -1836,7 +1836,7 @@ const CreateInvoicePage = () => {
                     <Button
                       type="submit"
                       disabled={isSaving}
-                      className="flex-1 bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl"
+                      className="flex-1 bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl"
                     >
                       {isSaving ? (
                         <Loader2 size={16} className="animate-spin mr-2" />
@@ -1858,12 +1858,12 @@ const CreateInvoicePage = () => {
                   >
                     <div className="bg-slate-100 rounded-2xl p-4">
                       <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-semibold text-[#0D2342]">Live Preview</h3>
+                        <h3 className="font-semibold text-[#0F172A]">Live Preview</h3>
                         <div className="flex items-center gap-2">
-                          <button className="p-2 rounded-lg bg-white text-slate-500 hover:text-[#17C3B2]">
+                          <button className="p-2 rounded-lg bg-white text-slate-500 hover:text-[#23D3EE]">
                             <Printer size={16} />
                           </button>
-                          <button className="p-2 rounded-lg bg-white text-slate-500 hover:text-[#17C3B2]">
+                          <button className="p-2 rounded-lg bg-white text-slate-500 hover:text-[#23D3EE]">
                             <Download size={16} />
                           </button>
                         </div>

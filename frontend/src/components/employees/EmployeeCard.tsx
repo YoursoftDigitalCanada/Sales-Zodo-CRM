@@ -58,7 +58,7 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
       <div 
         className="h-20 relative"
         style={{ 
-          background: `linear-gradient(135deg, #17C3B2 0%, #17C3B2/70 100%)` 
+          background: `linear-gradient(135deg, #23D3EE 0%, #23D3EE/70 100%)` 
         }}
       >
         <div className="absolute top-3 right-3">
@@ -96,7 +96,7 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
         <div className="flex flex-col items-center">
           <Avatar className="w-20 h-20 border-4 border-white shadow-lg">
             <AvatarImage src={employee.avatar} alt={`${employee.firstName} ${employee.lastName}`} />
-            <AvatarFallback className="text-lg bg-[#17C3B2] text-white">
+            <AvatarFallback className="text-lg bg-[#23D3EE] text-white">
               {getInitials(employee.firstName, employee.lastName)}
             </AvatarFallback>
           </Avatar>
@@ -176,7 +176,7 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
         {/* Action Button */}
         <Button 
           variant="outline" 
-          className="w-full mt-4 group-hover:bg-[#17C3B2] group-hover:text-white group-hover:border-[#17C3B2] transition-colors"
+          className="w-full mt-4 group-hover:bg-[#23D3EE] group-hover:text-white group-hover:border-[#23D3EE] transition-colors"
           onClick={() => onView?.(employee)}
         >
           View Profile

@@ -32,8 +32,8 @@ export function StatsCards({
       subtitle: "Hours tracked",
       icon: Clock,
       color: "teal",
-      bgColor: "bg-[#17C3B2]/10",
-      iconColor: "text-[#17C3B2]",
+      bgColor: "bg-[#23D3EE]/10",
+      iconColor: "text-[#23D3EE]",
     },
     {
       title: "This Week",
@@ -69,8 +69,8 @@ export function StatsCards({
       subtitle: "This week",
       icon: DollarSign,
       color: "gold",
-      bgColor: "bg-[#C9A14A]/10",
-      iconColor: "text-[#C9A14A]",
+      bgColor: "bg-[#FBBF23]/10",
+      iconColor: "text-[#FBBF23]",
     },
   ];
 

@@ -199,7 +199,7 @@ const expenseCategories: ExpenseCategory[] = [
   { id: "travel", name: "Travel & Transport", icon: Plane, color: "#3B82F6", budget: 5000, spent: 3200 },
   { id: "meals", name: "Meals & Entertainment", icon: Utensils, color: "#F97316", budget: 2000, spent: 1450 },
   { id: "office", name: "Office Supplies", icon: Briefcase, color: "#8B5CF6", budget: 1500, spent: 890 },
-  { id: "software", name: "Software & Tools", icon: Monitor, color: "#17C3B2", budget: 3000, spent: 2100 },
+  { id: "software", name: "Software & Tools", icon: Monitor, color: "#23D3EE", budget: 3000, spent: 2100 },
   { id: "utilities", name: "Utilities", icon: Zap, color: "#EAB308", budget: 1000, spent: 750 },
   { id: "marketing", name: "Marketing", icon: TrendingUp, color: "#EC4899", budget: 4000, spent: 2800 },
   { id: "rent", name: "Rent & Facilities", icon: Building2, color: "#6B7280", budget: 8000, spent: 8000 },
@@ -472,9 +472,9 @@ const StatCard = ({
   trend?: "up" | "down";
 }) => {
   const colorClasses = {
-    teal: { bg: "bg-[#17C3B2]", light: "bg-[#17C3B2]/10", text: "text-[#17C3B2]" },
-    gold: { bg: "bg-[#C9A14A]", light: "bg-[#C9A14A]/10", text: "text-[#C9A14A]" },
-    navy: { bg: "bg-[#0D2342]", light: "bg-[#0D2342]/10", text: "text-[#0D2342]" },
+    teal: { bg: "bg-[#23D3EE]", light: "bg-[#23D3EE]/10", text: "text-[#23D3EE]" },
+    gold: { bg: "bg-[#FBBF23]", light: "bg-[#FBBF23]/10", text: "text-[#FBBF23]" },
+    navy: { bg: "bg-[#0F172A]", light: "bg-[#0F172A]/10", text: "text-[#0F172A]" },
     purple: { bg: "bg-purple-500", light: "bg-purple-500/10", text: "text-purple-500" },
     green: { bg: "bg-green-500", light: "bg-green-500/10", text: "text-green-500" },
     blue: { bg: "bg-blue-500", light: "bg-blue-500/10", text: "text-blue-500" },
@@ -489,14 +489,14 @@ const StatCard = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
       whileHover={{ y: -4 }}
-      className="relative bg-white rounded-2xl p-5 border border-slate-200 hover:border-[#17C3B2]/30 hover:shadow-xl hover:shadow-[#17C3B2]/5 transition-all overflow-hidden group"
+      className="relative bg-white rounded-2xl p-5 border border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5 transition-all overflow-hidden group"
     >
       <div className={cn("absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-10 group-hover:opacity-20 transition-all", colors.bg)} />
 
       <div className="relative flex items-start justify-between">
         <div>
           <p className="text-sm text-slate-500 mb-1">{title}</p>
-          <p className="text-2xl font-bold text-[#0D2342]">
+          <p className="text-2xl font-bold text-[#0F172A]">
             {prefix}{typeof value === "number" ? value.toLocaleString() : value}
           </p>
           {change !== undefined && (
@@ -555,7 +555,7 @@ const ExpenseRow = ({
         <Checkbox
           checked={isSelected}
           onCheckedChange={onSelect}
-          className="data-[state=checked]:bg-[#17C3B2] data-[state=checked]:border-[#17C3B2]"
+          className="data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
         />
       </TableCell>
       <TableCell>
@@ -567,7 +567,7 @@ const ExpenseRow = ({
             <CategoryIcon size={18} style={{ color: categoryInfo.color }} />
           </div>
           <div>
-            <p className="font-medium text-[#0D2342] group-hover:text-[#17C3B2] transition-colors">
+            <p className="font-medium text-[#0F172A] group-hover:text-[#23D3EE] transition-colors">
               {expense.item}
             </p>
             <p className="text-sm text-slate-500">{expense.vendor}</p>
@@ -586,7 +586,7 @@ const ExpenseRow = ({
         <span className="text-sm text-slate-600">{formatDate(expense.date)}</span>
       </TableCell>
       <TableCell>
-        <span className="font-semibold text-[#0D2342]">
+        <span className="font-semibold text-[#0F172A]">
           {formatCurrency(expense.amount, expense.currency)}
         </span>
       </TableCell>
@@ -706,8 +706,8 @@ const ExpenseCard = ({
       className={cn(
         "relative bg-white rounded-2xl border overflow-hidden transition-all group cursor-pointer",
         isSelected
-          ? "border-[#17C3B2] ring-2 ring-[#17C3B2]/20"
-          : "border-slate-200 hover:border-[#17C3B2]/30 hover:shadow-xl hover:shadow-[#17C3B2]/5"
+          ? "border-[#23D3EE] ring-2 ring-[#23D3EE]/20"
+          : "border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5"
       )}
       onClick={onView}
     >
@@ -719,7 +719,7 @@ const ExpenseCard = ({
         <Checkbox
           checked={isSelected}
           onCheckedChange={onSelect}
-          className="data-[state=checked]:bg-[#17C3B2] data-[state=checked]:border-[#17C3B2] bg-white"
+          className="data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE] bg-white"
         />
       </div>
 
@@ -781,7 +781,7 @@ const ExpenseCard = ({
             <CategoryIcon size={24} style={{ color: categoryInfo.color }} />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-[#0D2342] truncate group-hover:text-[#17C3B2] transition-colors">
+            <h3 className="font-semibold text-[#0F172A] truncate group-hover:text-[#23D3EE] transition-colors">
               {expense.item}
             </h3>
             <p className="text-sm text-slate-500 truncate">{expense.vendor}</p>
@@ -790,7 +790,7 @@ const ExpenseCard = ({
 
         {/* Amount */}
         <div className="mb-4">
-          <span className="text-2xl font-bold text-[#0D2342]">
+          <span className="text-2xl font-bold text-[#0F172A]">
             {formatCurrency(expense.amount, expense.currency)}
           </span>
         </div>
@@ -928,9 +928,9 @@ const ExpenseFormDialog = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px] p-0 rounded-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#17C3B2]/10 to-transparent sticky top-0 bg-white z-10">
+        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#23D3EE]/10 to-transparent sticky top-0 bg-white z-10">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-[#0D2342]">
+            <DialogTitle className="text-xl font-bold text-[#0F172A]">
               {expense ? "Edit Expense" : "Add New Expense"}
             </DialogTitle>
             <DialogDescription className="text-slate-500">
@@ -952,7 +952,7 @@ const ExpenseFormDialog = ({
                 onChange={(e) => setFormData({ ...formData, item: e.target.value })}
                 placeholder="e.g., Office Supplies, Travel, Software"
                 required
-                className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+                className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
               />
             </div>
           </div>
@@ -965,7 +965,7 @@ const ExpenseFormDialog = ({
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               placeholder="Add details about this expense..."
               rows={2}
-              className="rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20 resize-none"
+              className="rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20 resize-none"
             />
           </div>
 
@@ -984,7 +984,7 @@ const ExpenseFormDialog = ({
                   onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                   placeholder="0.00"
                   required
-                  className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+                  className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
                 />
               </div>
             </div>
@@ -999,7 +999,7 @@ const ExpenseFormDialog = ({
                   value={formData.date}
                   onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                   required
-                  className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+                  className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
                 />
               </div>
             </div>
@@ -1018,7 +1018,7 @@ const ExpenseFormDialog = ({
                   onChange={(e) => setFormData({ ...formData, vendor: e.target.value })}
                   placeholder="Company or vendor name"
                   required
-                  className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+                  className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
                 />
               </div>
             </div>
@@ -1097,7 +1097,7 @@ const ExpenseFormDialog = ({
                   value={formData.project}
                   onChange={(e) => setFormData({ ...formData, project: e.target.value })}
                   placeholder="Associated project"
-                  className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+                  className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
                 />
               </div>
             </div>
@@ -1109,7 +1109,7 @@ const ExpenseFormDialog = ({
                   value={formData.client}
                   onChange={(e) => setFormData({ ...formData, client: e.target.value })}
                   placeholder="Associated client"
-                  className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+                  className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
                 />
               </div>
             </div>
@@ -1124,7 +1124,7 @@ const ExpenseFormDialog = ({
                 value={formData.tags}
                 onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
                 placeholder="Add tags separated by commas"
-                className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+                className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
               />
             </div>
           </div>
@@ -1132,7 +1132,7 @@ const ExpenseFormDialog = ({
           {/* Receipt Upload */}
           <div className="space-y-2">
             <Label className="text-sm font-medium text-slate-600">Receipt</Label>
-            <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:border-[#17C3B2] transition-colors cursor-pointer">
+            <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:border-[#23D3EE] transition-colors cursor-pointer">
               <label className="cursor-pointer">
                 <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-slate-100 flex items-center justify-center">
                   <Paperclip size={24} className="text-slate-400" />
@@ -1159,7 +1159,7 @@ const ExpenseFormDialog = ({
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               placeholder="Additional notes..."
               rows={2}
-              className="rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20 resize-none"
+              className="rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20 resize-none"
             />
           </div>
 
@@ -1170,7 +1170,7 @@ const ExpenseFormDialog = ({
             <Button
               type="submit"
               disabled={saving || !formData.item || !formData.amount || !formData.vendor}
-              className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl"
+              className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl"
             >
               {saving ? (
                 <>
@@ -1219,10 +1219,10 @@ const ExpenseDetailsDialog = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px] p-0 rounded-2xl overflow-hidden">
-        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#17C3B2]/10 to-transparent">
+        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#23D3EE]/10 to-transparent">
           <DialogHeader>
             <div className="flex items-center justify-between">
-              <DialogTitle className="text-xl font-bold text-[#0D2342]">
+              <DialogTitle className="text-xl font-bold text-[#0F172A]">
                 Expense Details
               </DialogTitle>
               <span className={cn(
@@ -1246,14 +1246,14 @@ const ExpenseDetailsDialog = ({
               <CategoryIcon size={28} style={{ color: categoryInfo.color }} />
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-[#0D2342]">{expense.item}</h3>
+              <h3 className="text-lg font-semibold text-[#0F172A]">{expense.item}</h3>
               <p className="text-slate-500">{expense.vendor}</p>
               {expense.description && (
                 <p className="text-sm text-slate-400 mt-1">{expense.description}</p>
               )}
             </div>
             <div className="text-right">
-              <p className="text-2xl font-bold text-[#0D2342]">
+              <p className="text-2xl font-bold text-[#0F172A]">
                 {formatCurrency(expense.amount, expense.currency)}
               </p>
               <p className="text-sm text-slate-400">{formatDate(expense.date)}</p>
@@ -1266,23 +1266,23 @@ const ExpenseDetailsDialog = ({
               <p className="text-xs text-slate-400 mb-1">Category</p>
               <div className="flex items-center gap-2">
                 <CategoryIcon size={16} style={{ color: categoryInfo.color }} />
-                <span className="font-medium text-[#0D2342]">{categoryInfo.name}</span>
+                <span className="font-medium text-[#0F172A]">{categoryInfo.name}</span>
               </div>
             </div>
             <div className="p-4 bg-slate-50 rounded-xl">
               <p className="text-xs text-slate-400 mb-1">Payment Method</p>
               <div className="flex items-center gap-2">
                 <PaymentIcon size={16} className="text-slate-500" />
-                <span className="font-medium text-[#0D2342]">{paymentInfo.name}</span>
+                <span className="font-medium text-[#0F172A]">{paymentInfo.name}</span>
               </div>
             </div>
             <div className="p-4 bg-slate-50 rounded-xl">
               <p className="text-xs text-slate-400 mb-1">Submitted By</p>
-              <span className="font-medium text-[#0D2342]">{expense.submittedBy}</span>
+              <span className="font-medium text-[#0F172A]">{expense.submittedBy}</span>
             </div>
             <div className="p-4 bg-slate-50 rounded-xl">
               <p className="text-xs text-slate-400 mb-1">Approved By</p>
-              <span className="font-medium text-[#0D2342]">
+              <span className="font-medium text-[#0F172A]">
                 {expense.approvedBy || "Pending"}
               </span>
             </div>
@@ -1295,8 +1295,8 @@ const ExpenseDetailsDialog = ({
                 <div className="p-4 bg-slate-50 rounded-xl">
                   <p className="text-xs text-slate-400 mb-1">Project</p>
                   <div className="flex items-center gap-2">
-                    <Briefcase size={16} className="text-[#17C3B2]" />
-                    <span className="font-medium text-[#0D2342]">{expense.project}</span>
+                    <Briefcase size={16} className="text-[#23D3EE]" />
+                    <span className="font-medium text-[#0F172A]">{expense.project}</span>
                   </div>
                 </div>
               )}
@@ -1304,8 +1304,8 @@ const ExpenseDetailsDialog = ({
                 <div className="p-4 bg-slate-50 rounded-xl">
                   <p className="text-xs text-slate-400 mb-1">Client</p>
                   <div className="flex items-center gap-2">
-                    <Users size={16} className="text-[#C9A14A]" />
-                    <span className="font-medium text-[#0D2342]">{expense.client}</span>
+                    <Users size={16} className="text-[#FBBF23]" />
+                    <span className="font-medium text-[#0F172A]">{expense.client}</span>
                   </div>
                 </div>
               )}
@@ -1320,7 +1320,7 @@ const ExpenseDetailsDialog = ({
                 {expense.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="px-3 py-1 bg-[#17C3B2]/10 text-[#17C3B2] rounded-lg text-sm font-medium"
+                    className="px-3 py-1 bg-[#23D3EE]/10 text-[#23D3EE] rounded-lg text-sm font-medium"
                   >
                     {tag}
                   </span>
@@ -1346,7 +1346,7 @@ const ExpenseDetailsDialog = ({
                   <ImageIcon size={20} className="text-slate-400" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-[#0D2342]">receipt.pdf</p>
+                  <p className="text-sm font-medium text-[#0F172A]">receipt.pdf</p>
                   <p className="text-xs text-slate-400">Uploaded on {formatDate(expense.createdAt)}</p>
                 </div>
                 <Button variant="outline" size="sm" className="rounded-lg">
@@ -1364,11 +1364,11 @@ const ExpenseDetailsDialog = ({
             <p className="text-xs text-slate-400 mb-3">Activity</p>
             <div className="space-y-3">
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-[#17C3B2]/10 flex items-center justify-center flex-shrink-0">
-                  <Plus size={14} className="text-[#17C3B2]" />
+                <div className="w-8 h-8 rounded-full bg-[#23D3EE]/10 flex items-center justify-center flex-shrink-0">
+                  <Plus size={14} className="text-[#23D3EE]" />
                 </div>
                 <div>
-                  <p className="text-sm text-[#0D2342]">Expense created</p>
+                  <p className="text-sm text-[#0F172A]">Expense created</p>
                   <p className="text-xs text-slate-400">{getRelativeTime(expense.createdAt)}</p>
                 </div>
               </div>
@@ -1378,7 +1378,7 @@ const ExpenseDetailsDialog = ({
                     <CheckCircle2 size={14} className="text-green-600" />
                   </div>
                   <div>
-                    <p className="text-sm text-[#0D2342]">Approved by {expense.approvedBy}</p>
+                    <p className="text-sm text-[#0F172A]">Approved by {expense.approvedBy}</p>
                     <p className="text-xs text-slate-400">{getRelativeTime(expense.updatedAt || expense.createdAt)}</p>
                   </div>
                 </div>
@@ -1446,11 +1446,11 @@ const BudgetOverview = () => {
       >
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="font-semibold text-[#0D2342]">Monthly Budget Overview</h3>
+            <h3 className="font-semibold text-[#0F172A]">Monthly Budget Overview</h3>
             <p className="text-sm text-slate-500">January 2024</p>
           </div>
           <div className="text-right">
-            <p className="text-2xl font-bold text-[#0D2342]">{formatCurrency(totalSpent)}</p>
+            <p className="text-2xl font-bold text-[#0F172A]">{formatCurrency(totalSpent)}</p>
             <p className="text-sm text-slate-500">of {formatCurrency(totalBudget)}</p>
           </div>
         </div>
@@ -1467,7 +1467,7 @@ const BudgetOverview = () => {
                   ? "bg-gradient-to-r from-red-500 to-red-400"
                   : totalPercentage > 75
                     ? "bg-gradient-to-r from-yellow-500 to-yellow-400"
-                    : "bg-gradient-to-r from-[#17C3B2] to-[#17C3B2]/80"
+                    : "bg-gradient-to-r from-[#23D3EE] to-[#23D3EE]/80"
               )}
             />
           </div>
@@ -1504,7 +1504,7 @@ const BudgetOverview = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium text-[#0D2342] truncate">
+                    <span className="text-sm font-medium text-[#0F172A] truncate">
                       {item.category}
                     </span>
                     <span className="text-sm text-slate-500">
@@ -1821,7 +1821,7 @@ const Expenses = () => {
           <div className="px-8 py-4">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-bold text-[#0D2342]">Expenses</h1>
+                <h1 className="text-2xl font-bold text-[#0F172A]">Expenses</h1>
                 <p className="text-slate-500">Track and manage business expenses</p>
               </div>
 
@@ -1842,7 +1842,7 @@ const Expenses = () => {
                     setCurrentExpense(null);
                     setIsFormOpen(true);
                   }}
-                  className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl gap-2"
+                  className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl gap-2"
                 >
                   <Plus size={18} />
                   Add Expense
@@ -2004,7 +2004,7 @@ const Expenses = () => {
                             <Calendar size={14} className="mr-2" />
                             Date
                             {sortBy === "date" && (
-                              <Check size={14} className="ml-auto text-[#17C3B2]" />
+                              <Check size={14} className="ml-auto text-[#23D3EE]" />
                             )}
                           </DropdownMenuItem>
                           <DropdownMenuItem
@@ -2017,7 +2017,7 @@ const Expenses = () => {
                             <DollarSign size={14} className="mr-2" />
                             Amount
                             {sortBy === "amount" && (
-                              <Check size={14} className="ml-auto text-[#17C3B2]" />
+                              <Check size={14} className="ml-auto text-[#23D3EE]" />
                             )}
                           </DropdownMenuItem>
                           <DropdownMenuItem
@@ -2030,7 +2030,7 @@ const Expenses = () => {
                             <Activity size={14} className="mr-2" />
                             Status
                             {sortBy === "status" && (
-                              <Check size={14} className="ml-auto text-[#17C3B2]" />
+                              <Check size={14} className="ml-auto text-[#23D3EE]" />
                             )}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -2042,9 +2042,9 @@ const Expenses = () => {
                       <motion.div
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="flex items-center gap-3 mt-4 p-3 bg-[#17C3B2]/10 rounded-xl"
+                        className="flex items-center gap-3 mt-4 p-3 bg-[#23D3EE]/10 rounded-xl"
                       >
-                        <span className="text-sm font-medium text-[#0D2342]">
+                        <span className="text-sm font-medium text-[#0F172A]">
                           {selectedExpenses.size} selected
                         </span>
                         <div className="flex-1" />
@@ -2094,7 +2094,7 @@ const Expenses = () => {
                                   filteredExpenses.length > 0
                                 }
                                 onCheckedChange={toggleSelectAll}
-                                className="data-[state=checked]:bg-[#17C3B2] data-[state=checked]:border-[#17C3B2]"
+                                className="data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
                               />
                             </TableHead>
                             <TableHead>Expense</TableHead>

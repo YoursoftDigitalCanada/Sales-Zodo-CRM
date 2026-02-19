@@ -228,7 +228,7 @@ export function TimeEntriesTable({
                                       className="w-1.5 h-1.5 rounded-full"
                                       style={{
                                         backgroundColor:
-                                          project.color === "teal" ? "#17C3B2" : project.color,
+                                          project.color === "teal" ? "#23D3EE" : project.color,
                                       }}
                                     />
                                     {project.name}
@@ -252,7 +252,7 @@ export function TimeEntriesTable({
 
                           <TableCell>
                             {entry.isBillable ? (
-                              <div className="flex items-center gap-1 text-[#17C3B2]">
+                              <div className="flex items-center gap-1 text-[#23D3EE]">
                                 <DollarSign size={14} />
                                 <span className="text-sm font-medium">Billable</span>
                               </div>
@@ -266,7 +266,7 @@ export function TimeEntriesTable({
                               {formatDuration(entry.duration)}
                             </p>
                             {earnings > 0 && (
-                              <p className="text-xs text-[#17C3B2]">{formatCurrency(earnings)}</p>
+                              <p className="text-xs text-[#23D3EE]">{formatCurrency(earnings)}</p>
                             )}
                           </TableCell>
 

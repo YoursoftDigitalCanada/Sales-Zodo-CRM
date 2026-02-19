@@ -452,8 +452,8 @@ const Badge = ({
   size?: "xs" | "sm";
 }) => {
   const colorClasses = {
-    teal: "bg-[#17C3B2] text-white",
-    gold: "bg-[#C9A14A] text-white",
+    teal: "bg-[#23D3EE] text-white",
+    gold: "bg-[#FBBF23] text-white",
     red: "bg-red-500 text-white",
     blue: "bg-blue-500 text-white",
   };
@@ -481,13 +481,13 @@ const Badge = ({
 const Tag = ({ type }: { type: "new" | "pro" }) => {
   if (type === "new") {
     return (
-      <span className="px-1.5 py-0.5 text-[9px] font-bold bg-gradient-to-r from-[#17C3B2] to-[#17C3B2]/80 text-white rounded-md uppercase tracking-wider">
+      <span className="px-1.5 py-0.5 text-[9px] font-bold bg-gradient-to-r from-[#23D3EE] to-[#23D3EE]/80 text-white rounded-md uppercase tracking-wider">
         New
       </span>
     );
   }
   return (
-    <span className="px-1.5 py-0.5 text-[9px] font-bold bg-gradient-to-r from-[#C9A14A] to-[#C9A14A]/80 text-white rounded-md uppercase tracking-wider flex items-center gap-0.5">
+    <span className="px-1.5 py-0.5 text-[9px] font-bold bg-gradient-to-r from-[#FBBF23] to-[#FBBF23]/80 text-white rounded-md uppercase tracking-wider flex items-center gap-0.5">
       <Star size={8} className="fill-current" />
       Pro
     </span>
@@ -605,15 +605,15 @@ export function Sidebar({
       <aside
         className={cn(
           "fixed top-0 left-0 h-screen z-40 transition-all duration-300 flex flex-col",
-          "bg-[#0D2342] border-r border-[#17C3B2]/10",
+          "bg-[#0F172A] border-r border-[#23D3EE]/10",
           collapsed ? "w-20" : "w-72"
         )}
       >
         {/* Decorative Background Elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-20 -right-20 w-40 h-40 bg-[#17C3B2]/5 rounded-full blur-3xl" />
-          <div className="absolute bottom-20 -left-10 w-32 h-32 bg-[#C9A14A]/5 rounded-full blur-3xl" />
-          <div className="absolute top-1/2 right-0 w-24 h-24 bg-[#17C3B2]/3 rounded-full blur-2xl" />
+          <div className="absolute -top-20 -right-20 w-40 h-40 bg-[#23D3EE]/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-20 -left-10 w-32 h-32 bg-[#FBBF23]/5 rounded-full blur-3xl" />
+          <div className="absolute top-1/2 right-0 w-24 h-24 bg-[#23D3EE]/3 rounded-full blur-2xl" />
         </div>
 
         {/* Header */}
@@ -627,19 +627,19 @@ export function Sidebar({
                 className="flex items-center gap-3"
               >
                 <div className="relative">
-                  <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-[#17C3B2] to-[#17C3B2]/70 flex items-center justify-center shadow-lg shadow-[#17C3B2]/20">
+                  <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#23D3EE]/70 flex items-center justify-center shadow-lg shadow-[#23D3EE]/20">
                     <Sparkles size={22} className="text-white" />
                   </div>
                   <motion.div
                     animate={{ scale: [1, 1.2, 1] }}
                     transition={{ repeat: Infinity, duration: 2 }}
-                    className="absolute -bottom-1 -right-1 w-3 h-3 bg-[#C9A14A] rounded-full border-2 border-[#0D2342]"
+                    className="absolute -bottom-1 -right-1 w-3 h-3 bg-[#FBBF23] rounded-full border-2 border-[#0F172A]"
                   />
                 </div>
                 <div>
                   <div className="flex items-center gap-1">
                     <span className="font-bold text-white text-lg">Yoursoft</span>
-                    <span className="font-bold text-[#17C3B2] text-lg">CRM</span>
+                    <span className="font-bold text-[#23D3EE] text-lg">CRM</span>
                   </div>
                   <p className="text-[10px] text-slate-400 -mt-0.5">Business Management Suite</p>
                 </div>
@@ -650,7 +650,7 @@ export function Sidebar({
                 animate={{ opacity: 1, scale: 1 }}
                 className="mx-auto"
               >
-                <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-[#17C3B2] to-[#17C3B2]/70 flex items-center justify-center shadow-lg shadow-[#17C3B2]/20">
+                <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#23D3EE]/70 flex items-center justify-center shadow-lg shadow-[#23D3EE]/20">
                   <Sparkles size={22} className="text-white" />
                 </div>
               </motion.div>
@@ -662,7 +662,7 @@ export function Sidebar({
             whileTap={{ scale: 0.95 }}
             onClick={() => setCollapsed(!collapsed)}
             className={cn(
-              "p-2 rounded-lg bg-white/5 hover:bg-[#17C3B2]/20 text-slate-400 hover:text-[#17C3B2] transition-all",
+              "p-2 rounded-lg bg-white/5 hover:bg-[#23D3EE]/20 text-slate-400 hover:text-[#23D3EE] transition-all",
               collapsed && "mx-auto"
             )}
           >
@@ -681,7 +681,7 @@ export function Sidebar({
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-lg text-sm font-medium transition-all shadow-lg shadow-[#17C3B2]/20"
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-lg text-sm font-medium transition-all shadow-lg shadow-[#23D3EE]/20"
               >
                 <Zap size={14} />
                 Quick Add
@@ -709,7 +709,7 @@ export function Sidebar({
                   animate={{ opacity: 1 }}
                   className="pt-6 pb-2 first:pt-0"
                 >
-                  <p className="px-3 text-[10px] font-bold text-[#17C3B2] uppercase tracking-[0.2em]">
+                  <p className="px-3 text-[10px] font-bold text-[#23D3EE] uppercase tracking-[0.2em]">
                     {item.title}
                   </p>
                 </motion.div>
@@ -734,7 +734,7 @@ export function Sidebar({
                     className={cn(
                       "flex items-center justify-between w-full gap-3 px-3 py-2.5 rounded-xl transition-all group relative",
                       hasActiveChild
-                        ? "bg-[#17C3B2]/10 text-[#17C3B2]"
+                        ? "bg-[#23D3EE]/10 text-[#23D3EE]"
                         : "text-slate-400 hover:bg-white/5 hover:text-white",
                       collapsed && "justify-center px-3"
                     )}
@@ -744,8 +744,8 @@ export function Sidebar({
                         className={cn(
                           "p-2 rounded-lg transition-all relative",
                           hasActiveChild
-                            ? "bg-[#17C3B2]/20 text-[#17C3B2]"
-                            : "bg-white/5 text-slate-400 group-hover:bg-[#17C3B2]/10 group-hover:text-[#17C3B2]"
+                            ? "bg-[#23D3EE]/20 text-[#23D3EE]"
+                            : "bg-white/5 text-slate-400 group-hover:bg-[#23D3EE]/10 group-hover:text-[#23D3EE]"
                         )}
                       >
                         {Icon && <Icon size={18} />}
@@ -776,12 +776,12 @@ export function Sidebar({
 
                     {/* Tooltip for collapsed state */}
                     {collapsed && (
-                      <div className="absolute left-full ml-2 px-3 py-2 bg-[#0D2342] border border-white/10 rounded-lg text-white text-sm font-medium opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 shadow-xl">
+                      <div className="absolute left-full ml-2 px-3 py-2 bg-[#0F172A] border border-white/10 rounded-lg text-white text-sm font-medium opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 shadow-xl">
                         <div className="flex items-center gap-2">
                           {item.title}
                           {totalBadge && <Badge color="red" size="xs">{totalBadge}</Badge>}
                         </div>
-                        <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-[#0D2342] border-l border-b border-white/10 rotate-45" />
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-[#0F172A] border-l border-b border-white/10 rotate-45" />
                       </div>
                     )}
                   </motion.button>
@@ -808,7 +808,7 @@ export function Sidebar({
                                 className={cn(
                                   "flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-sm transition-all group/sub",
                                   isActive(subItem.path)
-                                    ? "bg-[#17C3B2] text-white font-medium shadow-lg shadow-[#17C3B2]/25"
+                                    ? "bg-[#23D3EE] text-white font-medium shadow-lg shadow-[#23D3EE]/25"
                                     : "text-slate-400 hover:bg-white/5 hover:text-white"
                                 )}
                               >
@@ -818,7 +818,7 @@ export function Sidebar({
                                       "h-1.5 w-1.5 transition-all",
                                       isActive(subItem.path)
                                         ? "fill-white scale-125"
-                                        : "fill-slate-500 group-hover/sub:fill-[#17C3B2]"
+                                        : "fill-slate-500 group-hover/sub:fill-[#23D3EE]"
                                     )}
                                   />
                                   <span>{subItem.title}</span>
@@ -850,7 +850,7 @@ export function Sidebar({
                   className={cn(
                     "flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl transition-all group relative",
                     isActive(item.path!)
-                      ? "bg-[#17C3B2] text-white shadow-lg shadow-[#17C3B2]/25"
+                      ? "bg-[#23D3EE] text-white shadow-lg shadow-[#23D3EE]/25"
                       : "text-slate-400 hover:bg-white/5 hover:text-white",
                     collapsed && "justify-center px-3"
                   )}
@@ -859,7 +859,7 @@ export function Sidebar({
                   {isActive(item.path!) && (
                     <motion.div
                       layoutId="activeIndicator"
-                      className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-[#C9A14A] rounded-r-full"
+                      className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-[#FBBF23] rounded-r-full"
                     />
                   )}
 
@@ -869,7 +869,7 @@ export function Sidebar({
                         "p-2 rounded-lg transition-all relative",
                         isActive(item.path!)
                           ? "bg-white/20 text-white"
-                          : "bg-white/5 text-slate-400 group-hover:bg-[#17C3B2]/10 group-hover:text-[#17C3B2]"
+                          : "bg-white/5 text-slate-400 group-hover:bg-[#23D3EE]/10 group-hover:text-[#23D3EE]"
                       )}
                     >
                       {Icon && <Icon size={18} />}
@@ -895,7 +895,7 @@ export function Sidebar({
 
                   {/* Tooltip for collapsed state */}
                   {collapsed && (
-                    <div className="absolute left-full ml-2 px-3 py-2 bg-[#0D2342] border border-white/10 rounded-lg text-white text-sm font-medium opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 shadow-xl">
+                    <div className="absolute left-full ml-2 px-3 py-2 bg-[#0F172A] border border-white/10 rounded-lg text-white text-sm font-medium opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 shadow-xl">
                       <div className="flex items-center gap-2">
                         {item.title}
                         {item.badge && typeof item.badge === "number" && (
@@ -903,7 +903,7 @@ export function Sidebar({
                         )}
                         {item.isNew && <Tag type="new" />}
                       </div>
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-[#0D2342] border-l border-b border-white/10 rotate-45" />
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-[#0F172A] border-l border-b border-white/10 rotate-45" />
                     </div>
                   )}
                 </Link>
@@ -919,11 +919,11 @@ export function Sidebar({
             animate={{ opacity: 1, y: 0 }}
             className="mx-4 mb-4"
           >
-            <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-[#17C3B2]/20 to-[#C9A14A]/20 border border-[#17C3B2]/20 p-4">
-              <div className="absolute top-0 right-0 w-20 h-20 bg-[#17C3B2]/10 rounded-full blur-2xl" />
+            <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-[#23D3EE]/20 to-[#FBBF23]/20 border border-[#23D3EE]/20 p-4">
+              <div className="absolute top-0 right-0 w-20 h-20 bg-[#23D3EE]/10 rounded-full blur-2xl" />
               <div className="relative">
                 <div className="flex items-center gap-2 mb-2">
-                  <Award size={18} className="text-[#C9A14A]" />
+                  <Award size={18} className="text-[#FBBF23]" />
                   <span className="text-sm font-bold text-white">Upgrade to Pro</span>
                 </div>
                 <p className="text-xs text-slate-400 mb-3">
@@ -932,7 +932,7 @@ export function Sidebar({
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full py-2 bg-gradient-to-r from-[#C9A14A] to-[#C9A14A]/80 text-white text-xs font-bold rounded-lg shadow-lg shadow-[#C9A14A]/20 hover:shadow-[#C9A14A]/40 transition-all"
+                  className="w-full py-2 bg-gradient-to-r from-[#FBBF23] to-[#FBBF23]/80 text-white text-xs font-bold rounded-lg shadow-lg shadow-[#FBBF23]/20 hover:shadow-[#FBBF23]/40 transition-all"
                 >
                   Upgrade Now
                 </motion.button>
@@ -957,13 +957,13 @@ export function Sidebar({
                   className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all group"
                 >
                   <div className="relative">
-                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#17C3B2] via-[#17C3B2]/80 to-[#C9A14A] flex items-center justify-center text-white font-bold shadow-lg">
+                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#23D3EE] via-[#23D3EE]/80 to-[#FBBF23] flex items-center justify-center text-white font-bold shadow-lg">
                       {getInitials()}
                     </div>
                     <motion.div
                       animate={{ scale: [1, 1.2, 1] }}
                       transition={{ repeat: Infinity, duration: 2, delay: 1 }}
-                      className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-[#0D2342]"
+                      className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-[#0F172A]"
                     />
                   </div>
                   <div className="flex-1 min-w-0 text-left">
@@ -987,7 +987,7 @@ export function Sidebar({
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 10 }}
-                      className="absolute bottom-full left-4 right-4 mb-2 bg-[#0D2342] border border-white/10 rounded-xl shadow-2xl overflow-hidden"
+                      className="absolute bottom-full left-4 right-4 mb-2 bg-[#0F172A] border border-white/10 rounded-xl shadow-2xl overflow-hidden"
                     >
                       <div className="p-3 border-b border-white/10">
                         <p className="text-xs text-slate-400">Signed in as</p>
@@ -1044,15 +1044,15 @@ export function Sidebar({
                   className="relative cursor-pointer group"
                   onClick={() => setCollapsed(false)}
                 >
-                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#17C3B2] via-[#17C3B2]/80 to-[#C9A14A] flex items-center justify-center text-white font-bold shadow-lg">
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#23D3EE] via-[#23D3EE]/80 to-[#FBBF23] flex items-center justify-center text-white font-bold shadow-lg">
                     {getInitials()}
                   </div>
-                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-[#0D2342]" />
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-[#0F172A]" />
                   
                   {/* Tooltip */}
-                  <div className="absolute left-full ml-2 px-3 py-2 bg-[#0D2342] border border-white/10 rounded-lg text-white text-sm font-medium opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 shadow-xl">
+                  <div className="absolute left-full ml-2 px-3 py-2 bg-[#0F172A] border border-white/10 rounded-lg text-white text-sm font-medium opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 shadow-xl">
                     {getFullName()}
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-[#0D2342] border-l border-b border-white/10 rotate-45" />
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-[#0F172A] border-l border-b border-white/10 rotate-45" />
                   </div>
                 </motion.div>
               </motion.div>
@@ -1063,11 +1063,11 @@ export function Sidebar({
         {/* Version Badge */}
         {!collapsed && (
           <div className="px-4 pb-4">
-            <div className="px-3 py-2 rounded-lg bg-[#17C3B2]/10 border border-[#17C3B2]/20">
+            <div className="px-3 py-2 rounded-lg bg-[#23D3EE]/10 border border-[#23D3EE]/20">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] text-slate-400">Version</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold text-[#17C3B2]">v2.1.0</span>
+                  <span className="text-[10px] font-bold text-[#23D3EE]">v2.1.0</span>
                   <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
                 </div>
               </div>

@@ -118,7 +118,7 @@ export const CheckInOutCard: React.FC<CheckInOutCardProps> = ({
             {/* Check In Button */}
             <Button
               onClick={() => onCheckIn(isRemote)}
-              className="w-full h-14 text-lg bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white shadow-lg shadow-[#17C3B2]/20"
+              className="w-full h-14 text-lg bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white shadow-lg shadow-[#23D3EE]/20"
             >
               <LogIn className="w-5 h-5 mr-2" />
               Check In

@@ -299,9 +299,9 @@ const StatCard = ({
   delay?: number;
 }) => {
   const colorClasses = {
-    teal: { bg: "bg-[#17C3B2]", light: "bg-[#17C3B2]/10", text: "text-[#17C3B2]" },
-    gold: { bg: "bg-[#C9A14A]", light: "bg-[#C9A14A]/10", text: "text-[#C9A14A]" },
-    navy: { bg: "bg-[#0D2342]", light: "bg-[#0D2342]/10", text: "text-[#0D2342]" },
+    teal: { bg: "bg-[#23D3EE]", light: "bg-[#23D3EE]/10", text: "text-[#23D3EE]" },
+    gold: { bg: "bg-[#FBBF23]", light: "bg-[#FBBF23]/10", text: "text-[#FBBF23]" },
+    navy: { bg: "bg-[#0F172A]", light: "bg-[#0F172A]/10", text: "text-[#0F172A]" },
     purple: { bg: "bg-purple-500", light: "bg-purple-500/10", text: "text-purple-500" },
     green: { bg: "bg-green-500", light: "bg-green-500/10", text: "text-green-500" },
     red: { bg: "bg-red-500", light: "bg-red-500/10", text: "text-red-500" },
@@ -316,7 +316,7 @@ const StatCard = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
       whileHover={{ y: -4 }}
-      className="relative bg-white rounded-2xl p-5 border border-slate-200 hover:border-[#17C3B2]/30 hover:shadow-xl hover:shadow-[#17C3B2]/5 transition-all overflow-hidden group"
+      className="relative bg-white rounded-2xl p-5 border border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5 transition-all overflow-hidden group"
     >
       <div className={cn("absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-10 group-hover:opacity-20 transition-all", colors.bg)} />
 
@@ -324,7 +324,7 @@ const StatCard = ({
         <div>
           <p className="text-sm text-slate-500 mb-1">{title}</p>
           <div className="flex items-baseline gap-2">
-            <p className="text-2xl font-bold text-[#0D2342]">{value}</p>
+            <p className="text-2xl font-bold text-[#0F172A]">{value}</p>
             {trend && (
               <span className={cn(
                 "flex items-center text-xs font-semibold",
@@ -380,7 +380,7 @@ const BookingRow = ({
       exit={{ opacity: 0 }}
       className={cn(
         "group hover:bg-slate-50/80 transition-colors cursor-pointer border-b border-slate-100 last:border-0",
-        isSelected && "bg-[#17C3B2]/5"
+        isSelected && "bg-[#23D3EE]/5"
       )}
       onClick={onView}
     >
@@ -389,18 +389,18 @@ const BookingRow = ({
         <Checkbox
           checked={isSelected}
           onCheckedChange={onSelect}
-          className="border-slate-300 data-[state=checked]:bg-[#17C3B2] data-[state=checked]:border-[#17C3B2]"
+          className="border-slate-300 data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
         />
       </td>
 
       {/* Client */}
       <td className="py-4 px-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] flex items-center justify-center text-white font-semibold text-sm">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white font-semibold text-sm">
             {getInitials(booking.clientName)}
           </div>
           <div>
-            <p className="font-semibold text-[#0D2342] group-hover:text-[#17C3B2] transition-colors">
+            <p className="font-semibold text-[#0F172A] group-hover:text-[#23D3EE] transition-colors">
               {booking.clientName}
             </p>
             <p className="text-xs text-slate-400">{booking.clientEmail}</p>
@@ -411,8 +411,8 @@ const BookingRow = ({
       {/* Service */}
       <td className="py-4 px-4">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[#17C3B2]/10 flex items-center justify-center">
-            <Briefcase size={14} className="text-[#17C3B2]" />
+          <div className="w-8 h-8 rounded-lg bg-[#23D3EE]/10 flex items-center justify-center">
+            <Briefcase size={14} className="text-[#23D3EE]" />
           </div>
           <div>
             <p className="text-sm font-medium text-slate-700">{booking.serviceName}</p>
@@ -428,18 +428,18 @@ const BookingRow = ({
         <div className="flex items-center gap-2">
           <div className={cn(
             "w-8 h-8 rounded-lg flex items-center justify-center",
-            today ? "bg-[#17C3B2]/10" : "bg-slate-100"
+            today ? "bg-[#23D3EE]/10" : "bg-slate-100"
           )}>
-            <CalendarDays size={14} className={today ? "text-[#17C3B2]" : "text-slate-500"} />
+            <CalendarDays size={14} className={today ? "text-[#23D3EE]" : "text-slate-500"} />
           </div>
           <div>
             <p className={cn(
               "text-sm font-medium",
-              today ? "text-[#17C3B2]" : "text-slate-700"
+              today ? "text-[#23D3EE]" : "text-slate-700"
             )}>
               {formatDate(booking.startTime)}
               {today && (
-                <span className="ml-2 px-1.5 py-0.5 rounded bg-[#17C3B2]/10 text-[#17C3B2] text-[10px] font-semibold">
+                <span className="ml-2 px-1.5 py-0.5 rounded bg-[#23D3EE]/10 text-[#23D3EE] text-[10px] font-semibold">
                   TODAY
                 </span>
               )}
@@ -473,7 +473,7 @@ const BookingRow = ({
 
       {/* Price */}
       <td className="py-4 px-4">
-        <span className="text-sm font-semibold text-[#0D2342]">
+        <span className="text-sm font-semibold text-[#0F172A]">
           {formatCurrency(booking.price)}
         </span>
       </td>
@@ -583,26 +583,26 @@ const BookingCard = ({
       whileHover={{ y: -4 }}
       className={cn(
         "bg-white rounded-2xl border border-slate-200 overflow-hidden cursor-pointer group",
-        "hover:border-[#17C3B2]/30 hover:shadow-xl hover:shadow-[#17C3B2]/5 transition-all",
-        isSelected && "border-[#17C3B2] bg-[#17C3B2]/5"
+        "hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5 transition-all",
+        isSelected && "border-[#23D3EE] bg-[#23D3EE]/5"
       )}
       onClick={onView}
     >
       {/* Time Banner */}
       <div className={cn(
         "px-4 py-2 flex items-center justify-between",
-        today ? "bg-[#17C3B2]/10" : "bg-slate-50"
+        today ? "bg-[#23D3EE]/10" : "bg-slate-50"
       )}>
         <div className="flex items-center gap-2">
-          <Clock size={14} className={today ? "text-[#17C3B2]" : "text-slate-500"} />
+          <Clock size={14} className={today ? "text-[#23D3EE]" : "text-slate-500"} />
           <span className={cn(
             "text-sm font-semibold",
-            today ? "text-[#17C3B2]" : "text-slate-600"
+            today ? "text-[#23D3EE]" : "text-slate-600"
           )}>
             {formatTime(booking.startTime)}
           </span>
           {today && (
-            <span className="px-1.5 py-0.5 rounded bg-[#17C3B2] text-white text-[10px] font-semibold">
+            <span className="px-1.5 py-0.5 rounded bg-[#23D3EE] text-white text-[10px] font-semibold">
               TODAY
             </span>
           )}
@@ -625,9 +625,9 @@ const BookingCard = ({
               checked={isSelected}
               onCheckedChange={onSelect}
               onClick={(e) => e.stopPropagation()}
-              className="border-slate-300 data-[state=checked]:bg-[#17C3B2] data-[state=checked]:border-[#17C3B2]"
+              className="border-slate-300 data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
             />
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] flex items-center justify-center text-white font-bold text-sm">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white font-bold text-sm">
               {getInitials(booking.clientName)}
             </div>
           </div>
@@ -661,7 +661,7 @@ const BookingCard = ({
 
         {/* Client Info */}
         <div className="mb-3">
-          <h3 className="font-semibold text-[#0D2342] group-hover:text-[#17C3B2] transition-colors mb-0.5">
+          <h3 className="font-semibold text-[#0F172A] group-hover:text-[#23D3EE] transition-colors mb-0.5">
             {booking.clientName}
           </h3>
           <p className="text-xs text-slate-400">{booking.clientEmail}</p>
@@ -670,18 +670,18 @@ const BookingCard = ({
         {/* Service & Provider */}
         <div className="space-y-2 mb-3">
           <div className="flex items-center gap-2 text-sm">
-            <Briefcase size={14} className="text-[#17C3B2]" />
+            <Briefcase size={14} className="text-[#23D3EE]" />
             <span className="text-slate-600">{booking.serviceName}</span>
           </div>
           <div className="flex items-center gap-2 text-sm">
-            <User size={14} className="text-[#C9A14A]" />
+            <User size={14} className="text-[#FBBF23]" />
             <span className="text-slate-600">{booking.providerName}</span>
           </div>
         </div>
 
         {/* Footer */}
         <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-          <span className="text-sm font-bold text-[#0D2342]">
+          <span className="text-sm font-bold text-[#0F172A]">
             {formatCurrency(booking.price)}
           </span>
           <span className="text-xs text-slate-400">
@@ -714,30 +714,30 @@ const UpcomingBookingMini = ({
     >
       <div className={cn(
         "w-12 h-12 rounded-xl flex flex-col items-center justify-center text-center",
-        today ? "bg-[#17C3B2]/10" : "bg-slate-100"
+        today ? "bg-[#23D3EE]/10" : "bg-slate-100"
       )}>
         <span className={cn(
           "text-xs font-semibold",
-          today ? "text-[#17C3B2]" : "text-slate-500"
+          today ? "text-[#23D3EE]" : "text-slate-500"
         )}>
           {new Date(booking.startTime).toLocaleDateString("en-US", { month: "short" })}
         </span>
         <span className={cn(
           "text-lg font-bold -mt-1",
-          today ? "text-[#17C3B2]" : "text-slate-700"
+          today ? "text-[#23D3EE]" : "text-slate-700"
         )}>
           {new Date(booking.startTime).getDate()}
         </span>
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-[#0D2342] truncate group-hover:text-[#17C3B2] transition-colors">
+        <p className="font-medium text-[#0F172A] truncate group-hover:text-[#23D3EE] transition-colors">
           {booking.clientName}
         </p>
         <p className="text-xs text-slate-500">
           {formatTime(booking.startTime)} • {booking.serviceName}
         </p>
       </div>
-      <ChevronRight size={16} className="text-slate-300 group-hover:text-[#17C3B2] transition-colors" />
+      <ChevronRight size={16} className="text-slate-300 group-hover:text-[#23D3EE] transition-colors" />
     </motion.div>
   );
 };
@@ -841,9 +841,9 @@ const CreateBookingWizard = ({
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[600px] p-0 rounded-2xl overflow-hidden">
         {/* Header */}
-        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#17C3B2]/10 to-[#C9A14A]/10">
+        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#23D3EE]/10 to-[#FBBF23]/10">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-[#0D2342]">
+            <DialogTitle className="text-xl font-bold text-[#0F172A]">
               New Booking
             </DialogTitle>
             <DialogDescription className="text-slate-500">
@@ -865,9 +865,9 @@ const CreateBookingWizard = ({
                       animate={{
                         scale: isActive ? 1.1 : 1,
                         backgroundColor: isCompleted
-                          ? "#17C3B2"
+                          ? "#23D3EE"
                           : isActive
-                          ? "#17C3B2"
+                          ? "#23D3EE"
                           : "#f1f5f9",
                       }}
                       className={cn(
@@ -883,7 +883,7 @@ const CreateBookingWizard = ({
                     </motion.div>
                     <span className={cn(
                       "text-xs mt-1 font-medium",
-                      isActive ? "text-[#17C3B2]" : "text-slate-400"
+                      isActive ? "text-[#23D3EE]" : "text-slate-400"
                     )}>
                       {s.title}
                     </span>
@@ -891,7 +891,7 @@ const CreateBookingWizard = ({
                   {index < steps.length - 1 && (
                     <div className={cn(
                       "w-12 h-0.5 mx-2 rounded transition-colors",
-                      step > s.num ? "bg-[#17C3B2]" : "bg-slate-200"
+                      step > s.num ? "bg-[#23D3EE]" : "bg-slate-200"
                     )} />
                   )}
                 </div>
@@ -928,19 +928,19 @@ const CreateBookingWizard = ({
                         className={cn(
                           "relative p-4 rounded-xl border-2 text-left transition-all",
                           selectedService?.id === service.id
-                            ? "border-[#17C3B2] bg-[#17C3B2]/5"
+                            ? "border-[#23D3EE] bg-[#23D3EE]/5"
                             : "border-slate-200 hover:border-slate-300"
                         )}
                       >
                         <div className="flex items-start justify-between mb-2">
-                          <div className="w-8 h-8 rounded-lg bg-[#17C3B2]/10 flex items-center justify-center">
-                            <Briefcase size={16} className="text-[#17C3B2]" />
+                          <div className="w-8 h-8 rounded-lg bg-[#23D3EE]/10 flex items-center justify-center">
+                            <Briefcase size={16} className="text-[#23D3EE]" />
                           </div>
-                          <span className="text-lg font-bold text-[#17C3B2]">
+                          <span className="text-lg font-bold text-[#23D3EE]">
                             ${service.price}
                           </span>
                         </div>
-                        <p className="font-semibold text-[#0D2342] mb-1">{service.name}</p>
+                        <p className="font-semibold text-[#0F172A] mb-1">{service.name}</p>
                         {service.duration && (
                           <p className="text-xs text-slate-400">{service.duration} minutes</p>
                         )}
@@ -948,7 +948,7 @@ const CreateBookingWizard = ({
                           <motion.div
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
-                            className="absolute -top-2 -right-2 w-6 h-6 bg-[#17C3B2] rounded-full flex items-center justify-center"
+                            className="absolute -top-2 -right-2 w-6 h-6 bg-[#23D3EE] rounded-full flex items-center justify-center"
                           >
                             <CheckCircle2 size={14} className="text-white" />
                           </motion.div>
@@ -973,15 +973,15 @@ const CreateBookingWizard = ({
                         className={cn(
                           "w-full flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all",
                           selectedProvider?.id === provider.id
-                            ? "border-[#17C3B2] bg-[#17C3B2]/5"
+                            ? "border-[#23D3EE] bg-[#23D3EE]/5"
                             : "border-slate-200 hover:border-slate-300"
                         )}
                       >
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0D2342] to-[#17C3B2] flex items-center justify-center text-white font-semibold text-sm">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0F172A] to-[#23D3EE] flex items-center justify-center text-white font-semibold text-sm">
                           {getInitials(provider.name)}
                         </div>
                         <div className="flex-1">
-                          <p className="font-medium text-[#0D2342]">{provider.name}</p>
+                          <p className="font-medium text-[#0F172A]">{provider.name}</p>
                           {provider.specialty && (
                             <p className="text-xs text-slate-400">{provider.specialty}</p>
                           )}
@@ -992,7 +992,7 @@ const CreateBookingWizard = ({
                           </span>
                         )}
                         {selectedProvider?.id === provider.id && (
-                          <CheckCircle2 size={18} className="text-[#17C3B2]" />
+                          <CheckCircle2 size={18} className="text-[#23D3EE]" />
                         )}
                       </motion.button>
                     ))}
@@ -1022,7 +1022,7 @@ const CreateBookingWizard = ({
                       value={date}
                       onChange={(e) => setDate(e.target.value)}
                       min={new Date().toISOString().split("T")[0]}
-                      className="h-12 pl-10 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+                      className="h-12 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
                     />
                   </div>
                 </div>
@@ -1044,7 +1044,7 @@ const CreateBookingWizard = ({
                         className={cn(
                           "p-3 rounded-xl text-sm font-medium transition-all",
                           time === slot.time
-                            ? "bg-[#17C3B2] text-white shadow-lg shadow-[#17C3B2]/25"
+                            ? "bg-[#23D3EE] text-white shadow-lg shadow-[#23D3EE]/25"
                             : slot.available
                             ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
                             : "bg-slate-50 text-slate-300 cursor-not-allowed"
@@ -1059,18 +1059,18 @@ const CreateBookingWizard = ({
                 {/* Meeting Type */}
                 <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-[#17C3B2]/10 flex items-center justify-center">
-                      <Video size={18} className="text-[#17C3B2]" />
+                    <div className="w-10 h-10 rounded-lg bg-[#23D3EE]/10 flex items-center justify-center">
+                      <Video size={18} className="text-[#23D3EE]" />
                     </div>
                     <div>
-                      <p className="font-medium text-[#0D2342]">Online Meeting</p>
+                      <p className="font-medium text-[#0F172A]">Online Meeting</p>
                       <p className="text-xs text-slate-500">Generate video call link</p>
                     </div>
                   </div>
                   <Checkbox
                     checked={isOnline}
                     onCheckedChange={(checked) => setIsOnline(checked as boolean)}
-                    className="border-slate-300 data-[state=checked]:bg-[#17C3B2] data-[state=checked]:border-[#17C3B2]"
+                    className="border-slate-300 data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
                   />
                 </div>
               </motion.div>
@@ -1095,7 +1095,7 @@ const CreateBookingWizard = ({
                       value={clientDetails.name}
                       onChange={(e) => setClientDetails({ ...clientDetails, name: e.target.value })}
                       placeholder="John Doe"
-                      className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+                      className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
                     />
                   </div>
                 </div>
@@ -1111,7 +1111,7 @@ const CreateBookingWizard = ({
                       value={clientDetails.email}
                       onChange={(e) => setClientDetails({ ...clientDetails, email: e.target.value })}
                       placeholder="john@example.com"
-                      className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+                      className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
                     />
                   </div>
                 </div>
@@ -1124,7 +1124,7 @@ const CreateBookingWizard = ({
                       value={clientDetails.phone}
                       onChange={(e) => setClientDetails({ ...clientDetails, phone: e.target.value })}
                       placeholder="+1 (555) 000-0000"
-                      className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+                      className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
                     />
                   </div>
                 </div>
@@ -1136,25 +1136,25 @@ const CreateBookingWizard = ({
                     onChange={(e) => setClientDetails({ ...clientDetails, notes: e.target.value })}
                     placeholder="Any special requests or notes..."
                     rows={3}
-                    className="rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20 resize-none"
+                    className="rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20 resize-none"
                   />
                 </div>
 
                 {/* Send Reminder */}
                 <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-[#C9A14A]/10 flex items-center justify-center">
-                      <Bell size={18} className="text-[#C9A14A]" />
+                    <div className="w-10 h-10 rounded-lg bg-[#FBBF23]/10 flex items-center justify-center">
+                      <Bell size={18} className="text-[#FBBF23]" />
                     </div>
                     <div>
-                      <p className="font-medium text-[#0D2342]">Send Reminder</p>
+                      <p className="font-medium text-[#0F172A]">Send Reminder</p>
                       <p className="text-xs text-slate-500">Email reminder 24h before</p>
                     </div>
                   </div>
                   <Checkbox
                     checked={sendReminder}
                     onCheckedChange={(checked) => setSendReminder(checked as boolean)}
-                    className="border-slate-300 data-[state=checked]:bg-[#17C3B2] data-[state=checked]:border-[#17C3B2]"
+                    className="border-slate-300 data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
                   />
                 </div>
               </motion.div>
@@ -1170,10 +1170,10 @@ const CreateBookingWizard = ({
                 className="space-y-4"
               >
                 <div className="text-center mb-6">
-                  <div className="w-16 h-16 rounded-2xl bg-[#17C3B2]/10 flex items-center justify-center mx-auto mb-4">
-                    <CalendarCheck size={32} className="text-[#17C3B2]" />
+                  <div className="w-16 h-16 rounded-2xl bg-[#23D3EE]/10 flex items-center justify-center mx-auto mb-4">
+                    <CalendarCheck size={32} className="text-[#23D3EE]" />
                   </div>
-                  <h3 className="text-lg font-bold text-[#0D2342]">Review Booking</h3>
+                  <h3 className="text-lg font-bold text-[#0F172A]">Review Booking</h3>
                   <p className="text-sm text-slate-500">Please confirm the details below</p>
                 </div>
 
@@ -1181,23 +1181,23 @@ const CreateBookingWizard = ({
                   {/* Service */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-[#17C3B2]/10 flex items-center justify-center">
-                        <Briefcase size={14} className="text-[#17C3B2]" />
+                      <div className="w-8 h-8 rounded-lg bg-[#23D3EE]/10 flex items-center justify-center">
+                        <Briefcase size={14} className="text-[#23D3EE]" />
                       </div>
                       <span className="text-sm text-slate-500">Service</span>
                     </div>
-                    <span className="font-medium text-[#0D2342]">{selectedService?.name}</span>
+                    <span className="font-medium text-[#0F172A]">{selectedService?.name}</span>
                   </div>
 
                   {/* Provider */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-[#C9A14A]/10 flex items-center justify-center">
-                        <User size={14} className="text-[#C9A14A]" />
+                      <div className="w-8 h-8 rounded-lg bg-[#FBBF23]/10 flex items-center justify-center">
+                        <User size={14} className="text-[#FBBF23]" />
                       </div>
                       <span className="text-sm text-slate-500">Provider</span>
                     </div>
-                    <span className="font-medium text-[#0D2342]">{selectedProvider?.name}</span>
+                    <span className="font-medium text-[#0F172A]">{selectedProvider?.name}</span>
                   </div>
 
                   {/* Date & Time */}
@@ -1208,7 +1208,7 @@ const CreateBookingWizard = ({
                       </div>
                       <span className="text-sm text-slate-500">Date & Time</span>
                     </div>
-                    <span className="font-medium text-[#0D2342]">
+                    <span className="font-medium text-[#0F172A]">
                       {date && new Date(date).toLocaleDateString()} at {time}
                     </span>
                   </div>
@@ -1221,7 +1221,7 @@ const CreateBookingWizard = ({
                       </div>
                       <span className="text-sm text-slate-500">Client</span>
                     </div>
-                    <span className="font-medium text-[#0D2342]">{clientDetails.name}</span>
+                    <span className="font-medium text-[#0F172A]">{clientDetails.name}</span>
                   </div>
 
                   {/* Meeting Type */}
@@ -1232,16 +1232,16 @@ const CreateBookingWizard = ({
                       </div>
                       <span className="text-sm text-slate-500">Location</span>
                     </div>
-                    <span className="font-medium text-[#0D2342]">
+                    <span className="font-medium text-[#0F172A]">
                       {isOnline ? "Online Meeting" : "In Person"}
                     </span>
                   </div>
                 </div>
 
                 {/* Price Summary */}
-                <div className="flex items-center justify-between p-4 bg-[#17C3B2]/10 rounded-xl">
-                  <span className="font-medium text-[#0D2342]">Total Amount</span>
-                  <span className="text-2xl font-bold text-[#17C3B2]">
+                <div className="flex items-center justify-between p-4 bg-[#23D3EE]/10 rounded-xl">
+                  <span className="font-medium text-[#0F172A]">Total Amount</span>
+                  <span className="text-2xl font-bold text-[#23D3EE]">
                     ${selectedService?.price || 0}
                   </span>
                 </div>
@@ -1268,7 +1268,7 @@ const CreateBookingWizard = ({
               type="button"
               onClick={() => setStep(step + 1)}
               disabled={!canProceed()}
-              className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl flex-1"
+              className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl flex-1"
             >
               Continue
               <ChevronRight size={16} className="ml-1" />
@@ -1278,7 +1278,7 @@ const CreateBookingWizard = ({
               type="button"
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="bg-gradient-to-r from-[#17C3B2] to-[#17C3B2]/90 hover:from-[#17C3B2]/90 hover:to-[#17C3B2] text-white rounded-xl shadow-lg shadow-[#17C3B2]/25 flex-1"
+              className="bg-gradient-to-r from-[#23D3EE] to-[#23D3EE]/90 hover:from-[#23D3EE]/90 hover:to-[#23D3EE] text-white rounded-xl shadow-lg shadow-[#23D3EE]/25 flex-1"
             >
               {isSubmitting ? (
                 <>
@@ -1309,16 +1309,16 @@ const EmptyState = ({ onAdd }: { onAdd: () => void }) => (
     animate={{ opacity: 1, y: 0 }}
     className="flex flex-col items-center justify-center py-16 px-4"
   >
-    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#17C3B2]/10 to-[#C9A14A]/10 flex items-center justify-center mb-6">
-      <CalendarDays size={40} className="text-[#17C3B2]" />
+    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#23D3EE]/10 to-[#FBBF23]/10 flex items-center justify-center mb-6">
+      <CalendarDays size={40} className="text-[#23D3EE]" />
     </div>
-    <h3 className="text-xl font-semibold text-[#0D2342] mb-2">No bookings yet</h3>
+    <h3 className="text-xl font-semibold text-[#0F172A] mb-2">No bookings yet</h3>
     <p className="text-slate-500 text-center max-w-sm mb-6">
       Start scheduling appointments by creating your first booking.
     </p>
     <Button
       onClick={onAdd}
-      className="bg-gradient-to-r from-[#17C3B2] to-[#17C3B2]/90 hover:from-[#17C3B2]/90 hover:to-[#17C3B2] text-white rounded-xl shadow-lg shadow-[#17C3B2]/25"
+      className="bg-gradient-to-r from-[#23D3EE] to-[#23D3EE]/90 hover:from-[#23D3EE]/90 hover:to-[#23D3EE] text-white rounded-xl shadow-lg shadow-[#23D3EE]/25"
     >
       <Plus size={18} className="mr-2" />
       Create Your First Booking
@@ -1749,7 +1749,7 @@ const BookingsPage = () => {
             <div className="flex items-center gap-2 text-sm">
               <span className="text-slate-400">Dashboard</span>
               <ChevronRight size={16} className="text-slate-300" />
-              <span className="font-medium text-[#0D2342]">Bookings</span>
+              <span className="font-medium text-[#0F172A]">Bookings</span>
             </div>
 
             <div className="flex items-center gap-3">
@@ -1759,11 +1759,11 @@ const BookingsPage = () => {
                 className="relative p-2 rounded-xl hover:bg-slate-100 text-slate-600 transition-colors"
               >
                 <Bell size={20} />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#17C3B2] rounded-full" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#23D3EE] rounded-full" />
               </motion.button>
 
               <div className="flex items-center gap-3 pl-3 border-l border-slate-200">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] flex items-center justify-center text-white font-semibold text-sm">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white font-semibold text-sm">
                   {user ? getInitials(`${user.firstName} ${user.lastName}`) : "?"}
                 </div>
               </div>
@@ -1782,11 +1782,11 @@ const BookingsPage = () => {
             className="flex items-center justify-between"
           >
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] flex items-center justify-center shadow-lg shadow-[#17C3B2]/25">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center shadow-lg shadow-[#23D3EE]/25">
                 <CalendarDays size={24} className="text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-[#0D2342]">Bookings</h1>
+                <h1 className="text-2xl font-bold text-[#0F172A]">Bookings</h1>
                 <p className="text-slate-500">Manage appointments and schedules</p>
               </div>
             </div>
@@ -1813,7 +1813,7 @@ const BookingsPage = () => {
 
               <Button
                 onClick={() => setIsModalOpen(true)}
-                className="bg-gradient-to-r from-[#17C3B2] to-[#17C3B2]/90 hover:from-[#17C3B2]/90 hover:to-[#17C3B2] text-white rounded-xl shadow-lg shadow-[#17C3B2]/25 px-5"
+                className="bg-gradient-to-r from-[#23D3EE] to-[#23D3EE]/90 hover:from-[#23D3EE]/90 hover:to-[#23D3EE] text-white rounded-xl shadow-lg shadow-[#23D3EE]/25 px-5"
               >
                 <Plus size={18} className="mr-2" />
                 New Booking
@@ -1889,7 +1889,7 @@ const BookingsPage = () => {
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         placeholder="Search bookings..."
-                        className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+                        className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
                       />
                       {searchTerm && (
                         <button
@@ -1944,7 +1944,7 @@ const BookingsPage = () => {
                           setFilterStatus("all");
                           setFilterDate("all");
                         }}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-slate-500 hover:text-[#17C3B2] hover:bg-[#17C3B2]/5 transition-colors"
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-slate-500 hover:text-[#23D3EE] hover:bg-[#23D3EE]/5 transition-colors"
                       >
                         <X size={14} />
                         Clear
@@ -1986,7 +1986,7 @@ const BookingsPage = () => {
                         className={cn(
                           "p-2 rounded-lg transition-all",
                           viewMode === "table"
-                            ? "bg-white text-[#17C3B2] shadow-sm"
+                            ? "bg-white text-[#23D3EE] shadow-sm"
                             : "text-slate-500 hover:text-slate-700"
                         )}
                       >
@@ -1997,7 +1997,7 @@ const BookingsPage = () => {
                         className={cn(
                           "p-2 rounded-lg transition-all",
                           viewMode === "grid"
-                            ? "bg-white text-[#17C3B2] shadow-sm"
+                            ? "bg-white text-[#23D3EE] shadow-sm"
                             : "text-slate-500 hover:text-slate-700"
                         )}
                       >
@@ -2017,7 +2017,7 @@ const BookingsPage = () => {
               >
                 {isLoading ? (
                   <div className="flex flex-col items-center justify-center py-20">
-                    <Loader2 size={40} className="animate-spin text-[#17C3B2] mb-4" />
+                    <Loader2 size={40} className="animate-spin text-[#23D3EE] mb-4" />
                     <p className="text-slate-500">Loading bookings...</p>
                   </div>
                 ) : filteredBookings.length === 0 ? (
@@ -2036,7 +2036,7 @@ const BookingsPage = () => {
                                   paginatedBookings.length > 0
                                 }
                                 onCheckedChange={handleSelectAll}
-                                className="border-slate-300 data-[state=checked]:bg-[#17C3B2] data-[state=checked]:border-[#17C3B2]"
+                                className="border-slate-300 data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
                               />
                             </th>
                             <th className="py-4 px-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
@@ -2154,7 +2154,7 @@ const BookingsPage = () => {
                                 className={cn(
                                   "h-9 w-9 rounded-lg text-sm font-medium transition-all",
                                   currentPage === pageNum
-                                    ? "bg-[#17C3B2] text-white shadow-lg shadow-[#17C3B2]/25"
+                                    ? "bg-[#23D3EE] text-white shadow-lg shadow-[#23D3EE]/25"
                                     : "text-slate-600 hover:bg-slate-100"
                                 )}
                               >
@@ -2246,7 +2246,7 @@ const BookingsPage = () => {
                                 className={cn(
                                   "h-9 w-9 rounded-lg text-sm font-medium transition-all",
                                   currentPage === pageNum
-                                    ? "bg-[#17C3B2] text-white shadow-lg shadow-[#17C3B2]/25"
+                                    ? "bg-[#23D3EE] text-white shadow-lg shadow-[#23D3EE]/25"
                                     : "text-slate-600 hover:bg-slate-100"
                                 )}
                               >
@@ -2283,7 +2283,7 @@ const BookingsPage = () => {
                 className="bg-white rounded-2xl border border-slate-200 p-5"
               >
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-[#0D2342]">Upcoming</h3>
+                  <h3 className="font-semibold text-[#0F172A]">Upcoming</h3>
                   <span className="text-xs text-slate-400">{upcomingBookings.length} bookings</span>
                 </div>
 
@@ -2313,7 +2313,7 @@ const BookingsPage = () => {
                 {upcomingBookings.length > 0 && (
                   <Button
                     variant="ghost"
-                    className="w-full mt-3 text-[#17C3B2] hover:text-[#17C3B2]/80 hover:bg-[#17C3B2]/5"
+                    className="w-full mt-3 text-[#23D3EE] hover:text-[#23D3EE]/80 hover:bg-[#23D3EE]/5"
                     onClick={() => setFilterDate("upcoming")}
                   >
                     View All Upcoming
@@ -2329,7 +2329,7 @@ const BookingsPage = () => {
                 transition={{ delay: 0.5 }}
                 className="bg-white rounded-2xl border border-slate-200 p-5"
               >
-                <h3 className="font-semibold text-[#0D2342] mb-4">Quick Actions</h3>
+                <h3 className="font-semibold text-[#0F172A] mb-4">Quick Actions</h3>
 
                 <div className="space-y-2">
                   {[
@@ -2339,7 +2339,7 @@ const BookingsPage = () => {
                     { icon: Settings, label: "Settings", color: "slate", action: () => navigate("/settings/booking") },
                   ].map((action, index) => {
                     const colorClasses: Record<string, string> = {
-                      teal: "bg-[#17C3B2]/10 text-[#17C3B2]",
+                      teal: "bg-[#23D3EE]/10 text-[#23D3EE]",
                       blue: "bg-blue-500/10 text-blue-500",
                       purple: "bg-purple-500/10 text-purple-500",
                       slate: "bg-slate-100 text-slate-600",
@@ -2355,7 +2355,7 @@ const BookingsPage = () => {
                         <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center", colorClasses[action.color])}>
                           <action.icon size={18} />
                         </div>
-                        <span className="font-medium text-slate-600 group-hover:text-[#0D2342] transition-colors">
+                        <span className="font-medium text-slate-600 group-hover:text-[#0F172A] transition-colors">
                           {action.label}
                         </span>
                         <ChevronRight size={16} className="ml-auto text-slate-300 group-hover:text-slate-500 transition-colors" />
@@ -2372,7 +2372,7 @@ const BookingsPage = () => {
                 transition={{ delay: 0.6 }}
                 className="bg-white rounded-2xl border border-slate-200 p-5"
               >
-                <h3 className="font-semibold text-[#0D2342] mb-4">Status Summary</h3>
+                <h3 className="font-semibold text-[#0F172A] mb-4">Status Summary</h3>
 
                 <div className="space-y-3">
                   {[
@@ -2392,7 +2392,7 @@ const BookingsPage = () => {
                       <div key={index}>
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-sm text-slate-600">{status.label}</span>
-                          <span className="text-sm font-semibold text-[#0D2342]">{status.count}</span>
+                          <span className="text-sm font-semibold text-[#0F172A]">{status.count}</span>
                         </div>
                         <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                           <motion.div
@@ -2413,18 +2413,18 @@ const BookingsPage = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.7 }}
-                className="p-4 bg-gradient-to-br from-[#17C3B2]/5 to-[#C9A14A]/5 rounded-2xl border border-[#17C3B2]/20"
+                className="p-4 bg-gradient-to-br from-[#23D3EE]/5 to-[#FBBF23]/5 rounded-2xl border border-[#23D3EE]/20"
               >
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-[#17C3B2]/10 flex items-center justify-center flex-shrink-0">
-                    <Sparkles size={16} className="text-[#17C3B2]" />
+                  <div className="w-8 h-8 rounded-lg bg-[#23D3EE]/10 flex items-center justify-center flex-shrink-0">
+                    <Sparkles size={16} className="text-[#23D3EE]" />
                   </div>
                   <div>
-                    <p className="font-medium text-[#0D2342] text-sm mb-1">Pro Tip</p>
+                    <p className="font-medium text-[#0F172A] text-sm mb-1">Pro Tip</p>
                     <p className="text-xs text-slate-500 leading-relaxed">
                       Send automated reminders 24 hours before appointments to reduce no-shows by up to 50%.
                     </p>
-                    <button className="mt-2 text-xs font-medium text-[#17C3B2] hover:underline">
+                    <button className="mt-2 text-xs font-medium text-[#23D3EE] hover:underline">
                       Enable Reminders →
                     </button>
                   </div>
@@ -2454,12 +2454,12 @@ const BookingsPage = () => {
               <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
                 <XCircle size={24} className="text-red-600" />
               </div>
-              <AlertDialogTitle className="text-center text-[#0D2342]">
+              <AlertDialogTitle className="text-center text-[#0F172A]">
                 Cancel Booking
               </AlertDialogTitle>
               <AlertDialogDescription className="text-center">
                 Are you sure you want to cancel the booking with{" "}
-                <span className="font-semibold text-[#0D2342]">
+                <span className="font-semibold text-[#0F172A]">
                   {bookingToCancel?.clientName}
                 </span>
                 ? They will be notified about this cancellation.

@@ -191,7 +191,7 @@ const eventColors = [
   { id: "yellow", color: "#F59E0B", name: "Yellow" },
   { id: "red", color: "#EF4444", name: "Red" },
   { id: "pink", color: "#EC4899", name: "Pink" },
-  { id: "teal", color: "#17C3B2", name: "Teal" },
+  { id: "teal", color: "#23D3EE", name: "Teal" },
   { id: "orange", color: "#F97316", name: "Orange" },
 ];
 
@@ -331,7 +331,7 @@ const MiniCalendar = ({
     <div className="bg-white rounded-2xl border border-slate-200 p-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-[#0D2342]">
+        <h3 className="font-semibold text-[#0F172A]">
           {viewDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
         </h3>
         <div className="flex items-center gap-1">
@@ -381,13 +381,13 @@ const MiniCalendar = ({
                 "relative h-8 w-8 rounded-lg text-sm font-medium transition-all",
                 !isCurrentMonth && "text-slate-300",
                 isCurrentMonth && !isSelected && "text-slate-600 hover:bg-slate-100",
-                isTodayDate && !isSelected && "bg-[#17C3B2]/10 text-[#17C3B2]",
-                isSelected && "bg-[#17C3B2] text-white shadow-lg shadow-[#17C3B2]/30"
+                isTodayDate && !isSelected && "bg-[#23D3EE]/10 text-[#23D3EE]",
+                isSelected && "bg-[#23D3EE] text-white shadow-lg shadow-[#23D3EE]/30"
               )}
             >
               {day}
               {hasEvent && !isSelected && (
-                <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#17C3B2]" />
+                <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#23D3EE]" />
               )}
             </button>
           );
@@ -398,7 +398,7 @@ const MiniCalendar = ({
       <div className="mt-4 pt-4 border-t border-slate-100">
         <Button
           variant="ghost"
-          className="w-full justify-start text-sm text-slate-600 hover:text-[#17C3B2] rounded-lg"
+          className="w-full justify-start text-sm text-slate-600 hover:text-[#23D3EE] rounded-lg"
           onClick={() => onDateSelect(new Date())}
         >
           <CalendarIcon size={14} className="mr-2" />
@@ -427,7 +427,7 @@ const UpcomingEvents = ({
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-4">
-      <h3 className="font-semibold text-[#0D2342] mb-4">Upcoming Events</h3>
+      <h3 className="font-semibold text-[#0F172A] mb-4">Upcoming Events</h3>
 
       {upcomingEvents.length === 0 ? (
         <div className="text-center py-8">
@@ -454,7 +454,7 @@ const UpcomingEvents = ({
                   <CategoryIcon size={18} style={{ color: event.color }} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-[#0D2342] truncate">{event.title}</p>
+                  <p className="font-medium text-[#0F172A] truncate">{event.title}</p>
                   <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
                     <Clock size={12} />
                     <span>
@@ -496,7 +496,7 @@ const CategoryFilter = ({
 }) => {
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-4">
-      <h3 className="font-semibold text-[#0D2342] mb-4">Categories</h3>
+      <h3 className="font-semibold text-[#0F172A] mb-4">Categories</h3>
       <div className="space-y-2">
         {eventCategories.map((category) => {
           const CategoryIcon = category.icon;
@@ -518,10 +518,10 @@ const CategoryFilter = ({
                 style={{ backgroundColor: category.color }}
               />
               <CategoryIcon size={16} style={{ color: category.color }} />
-              <span className="text-sm font-medium text-[#0D2342] flex-1 text-left">
+              <span className="text-sm font-medium text-[#0F172A] flex-1 text-left">
                 {category.name}
               </span>
-              {isSelected && <Check size={14} className="text-[#17C3B2]" />}
+              {isSelected && <Check size={14} className="text-[#23D3EE]" />}
             </button>
           );
         })}
@@ -571,7 +571,7 @@ const EventCard = ({
       <div className="flex items-start gap-2">
         <CategoryIcon size={14} style={{ color: event.color }} className="mt-0.5 flex-shrink-0" />
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-[#0D2342] text-sm truncate">{event.title}</p>
+          <p className="font-medium text-[#0F172A] text-sm truncate">{event.title}</p>
           {!event.allDay && (
             <p className="text-xs text-slate-500 mt-0.5">
               {formatTime(event.start)} - {formatTime(event.end)}
@@ -709,7 +709,7 @@ const MonthView = ({
                     "w-7 h-7 flex items-center justify-center rounded-full text-sm font-medium",
                     !isCurrentMonth && "text-slate-400",
                     isCurrentMonth && "text-slate-700",
-                    isTodayDate && "bg-[#17C3B2] text-white"
+                    isTodayDate && "bg-[#23D3EE] text-white"
                   )}
                 >
                   {day}
@@ -796,7 +796,7 @@ const WeekView = ({
             key={index}
             className={cn(
               "p-3 text-center border-l border-slate-200",
-              isToday(date) && "bg-[#17C3B2]/5"
+              isToday(date) && "bg-[#23D3EE]/5"
             )}
           >
             <p className="text-xs text-slate-500">
@@ -805,7 +805,7 @@ const WeekView = ({
             <p
               className={cn(
                 "text-lg font-semibold",
-                isToday(date) ? "text-[#17C3B2]" : "text-[#0D2342]"
+                isToday(date) ? "text-[#23D3EE]" : "text-[#0F172A]"
               )}
             >
               {date.getDate()}
@@ -861,7 +861,7 @@ const WeekView = ({
                   key={index}
                   className={cn(
                     "p-1 border-l border-slate-100 min-h-[50px]",
-                    isToday(date) && "bg-[#17C3B2]/5"
+                    isToday(date) && "bg-[#23D3EE]/5"
                   )}
                 >
                   {hourEvents.map((event) => (
@@ -922,14 +922,14 @@ const DayView = ({
             className={cn(
               "w-12 h-12 flex items-center justify-center rounded-xl text-2xl font-bold",
               isToday(currentDate)
-                ? "bg-[#17C3B2] text-white"
-                : "bg-slate-200 text-[#0D2342]"
+                ? "bg-[#23D3EE] text-white"
+                : "bg-slate-200 text-[#0F172A]"
             )}
           >
             {currentDate.getDate()}
           </span>
           <div>
-            <p className="font-semibold text-[#0D2342]">
+            <p className="font-semibold text-[#0F172A]">
               {currentDate.toLocaleDateString("en-US", { weekday: "long" })}
             </p>
             <p className="text-sm text-slate-500">
@@ -1045,7 +1045,7 @@ const AgendaView = ({
                 <div
                   className={cn(
                     "sticky top-0 px-4 py-3 bg-slate-50 border-b border-slate-100",
-                    isToday(date) && "bg-[#17C3B2]/10"
+                    isToday(date) && "bg-[#23D3EE]/10"
                   )}
                 >
                   <div className="flex items-center gap-3">
@@ -1053,8 +1053,8 @@ const AgendaView = ({
                       className={cn(
                         "w-10 h-10 flex items-center justify-center rounded-xl font-bold",
                         isToday(date)
-                          ? "bg-[#17C3B2] text-white"
-                          : "bg-white text-[#0D2342] border border-slate-200"
+                          ? "bg-[#23D3EE] text-white"
+                          : "bg-white text-[#0F172A] border border-slate-200"
                       )}
                     >
                       {date.getDate()}
@@ -1063,7 +1063,7 @@ const AgendaView = ({
                       <p
                         className={cn(
                           "font-semibold",
-                          isToday(date) ? "text-[#17C3B2]" : "text-[#0D2342]"
+                          isToday(date) ? "text-[#23D3EE]" : "text-[#0F172A]"
                         )}
                       >
                         {isToday(date)
@@ -1103,7 +1103,7 @@ const AgendaView = ({
                             <span className="text-sm text-slate-400">All Day</span>
                           ) : (
                             <>
-                              <p className="text-sm font-medium text-[#0D2342]">
+                              <p className="text-sm font-medium text-[#0F172A]">
                                 {formatTime(event.start)}
                               </p>
                               <p className="text-xs text-slate-400">
@@ -1123,7 +1123,7 @@ const AgendaView = ({
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between">
                             <div>
-                              <h4 className="font-semibold text-[#0D2342] group-hover:text-[#17C3B2] transition-colors">
+                              <h4 className="font-semibold text-[#0F172A] group-hover:text-[#23D3EE] transition-colors">
                                 {event.title}
                               </h4>
                               {event.description && (
@@ -1320,9 +1320,9 @@ const EventFormDialog = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px] p-0 rounded-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#17C3B2]/10 to-transparent sticky top-0 bg-white z-10">
+        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#23D3EE]/10 to-transparent sticky top-0 bg-white z-10">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-[#0D2342]">
+            <DialogTitle className="text-xl font-bold text-[#0F172A]">
               {event ? "Edit Event" : "Create Event"}
             </DialogTitle>
             <DialogDescription className="text-slate-500">
@@ -1362,12 +1362,12 @@ const EventFormDialog = ({
           <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
             <div className="flex items-center gap-3">
               <CalendarDays size={18} className="text-slate-500" />
-              <span className="font-medium text-[#0D2342]">All Day Event</span>
+              <span className="font-medium text-[#0F172A]">All Day Event</span>
             </div>
             <Switch
               checked={formData.allDay}
               onCheckedChange={(checked) => setFormData({ ...formData, allDay: checked })}
-              className="data-[state=checked]:bg-[#17C3B2]"
+              className="data-[state=checked]:bg-[#23D3EE]"
             />
           </div>
 
@@ -1458,7 +1458,7 @@ const EventFormDialog = ({
                     onClick={() => setFormData({ ...formData, color: c.color })}
                     className={cn(
                       "w-7 h-7 rounded-lg transition-all",
-                      formData.color === c.color && "ring-2 ring-offset-2 ring-[#17C3B2]"
+                      formData.color === c.color && "ring-2 ring-offset-2 ring-[#23D3EE]"
                     )}
                     style={{ backgroundColor: c.color }}
                   />
@@ -1538,7 +1538,7 @@ const EventFormDialog = ({
                   {selectedAttendees.map((attendee) => (
                     <div
                       key={attendee.id}
-                      className="flex items-center gap-2 px-2 py-1 bg-[#17C3B2]/10 rounded-lg"
+                      className="flex items-center gap-2 px-2 py-1 bg-[#23D3EE]/10 rounded-lg"
                     >
                       <Avatar className="h-5 w-5">
                         <AvatarImage src={attendee.avatar} />
@@ -1546,7 +1546,7 @@ const EventFormDialog = ({
                           {getInitials(attendee.name)}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="text-sm text-[#0D2342]">{attendee.name}</span>
+                      <span className="text-sm text-[#0F172A]">{attendee.name}</span>
                       <button
                         type="button"
                         onClick={() => toggleAttendee(attendee)}
@@ -1577,7 +1577,7 @@ const EventFormDialog = ({
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 text-left">
-                        <p className="text-sm font-medium text-[#0D2342]">{member.name}</p>
+                        <p className="text-sm font-medium text-[#0F172A]">{member.name}</p>
                         <p className="text-xs text-slate-500">{member.email}</p>
                       </div>
                       <Plus size={16} className="text-slate-400" />
@@ -1592,14 +1592,14 @@ const EventFormDialog = ({
             <div className="flex items-center gap-3">
               <Bell size={18} className="text-slate-500" />
               <div>
-                <span className="font-medium text-[#0D2342]">Private Event</span>
+                <span className="font-medium text-[#0F172A]">Private Event</span>
                 <p className="text-xs text-slate-500">Only you can see this event</p>
               </div>
             </div>
             <Switch
               checked={formData.isPrivate}
               onCheckedChange={(checked) => setFormData({ ...formData, isPrivate: checked })}
-              className="data-[state=checked]:bg-[#17C3B2]"
+              className="data-[state=checked]:bg-[#23D3EE]"
             />
           </div>
 
@@ -1622,7 +1622,7 @@ const EventFormDialog = ({
             <Button
               type="submit"
               disabled={!formData.title}
-              className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl"
+              className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl"
             >
               {event ? (
                 <>
@@ -1703,7 +1703,7 @@ const EventDetailsDialog = ({
               <Clock size={18} className="text-slate-500" />
             </div>
             <div>
-              <p className="font-medium text-[#0D2342]">
+              <p className="font-medium text-[#0F172A]">
                 {formatDate(event.start)}
               </p>
               {event.allDay ? (
@@ -1714,7 +1714,7 @@ const EventDetailsDialog = ({
                 </p>
               )}
               {event.recurrence && (
-                <div className="flex items-center gap-1 text-sm text-[#17C3B2] mt-1">
+                <div className="flex items-center gap-1 text-sm text-[#23D3EE] mt-1">
                   <Repeat size={14} />
                   <span className="capitalize">
                     Repeats {event.recurrence.frequency}
@@ -1731,7 +1731,7 @@ const EventDetailsDialog = ({
                 <MapPin size={18} className="text-slate-500" />
               </div>
               <div>
-                <p className="font-medium text-[#0D2342]">Location</p>
+                <p className="font-medium text-[#0F172A]">Location</p>
                 <p className="text-sm text-slate-500">{event.location}</p>
               </div>
             </div>
@@ -1744,7 +1744,7 @@ const EventDetailsDialog = ({
                 <Video size={18} className="text-blue-500" />
               </div>
               <div className="flex-1">
-                <p className="font-medium text-[#0D2342]">Meeting Link</p>
+                <p className="font-medium text-[#0F172A]">Meeting Link</p>
                 <a
                   href={event.meetingLink}
                   target="_blank"
@@ -1771,7 +1771,7 @@ const EventDetailsDialog = ({
                 <AlertCircle size={18} className="text-slate-500" />
               </div>
               <div>
-                <p className="font-medium text-[#0D2342]">Description</p>
+                <p className="font-medium text-[#0F172A]">Description</p>
                 <p className="text-sm text-slate-500">{event.description}</p>
               </div>
             </div>
@@ -1784,7 +1784,7 @@ const EventDetailsDialog = ({
                 <Users size={18} className="text-slate-500" />
               </div>
               <div className="flex-1">
-                <p className="font-medium text-[#0D2342] mb-2">
+                <p className="font-medium text-[#0F172A] mb-2">
                   Attendees ({event.attendees.length})
                 </p>
                 <div className="space-y-2">
@@ -1797,7 +1797,7 @@ const EventDetailsDialog = ({
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-[#0D2342]">
+                        <p className="text-sm font-medium text-[#0F172A]">
                           {attendee.name}
                         </p>
                         <p className="text-xs text-slate-500">{attendee.email}</p>
@@ -1847,7 +1847,7 @@ const EventDetailsDialog = ({
           </Button>
           <Button
             onClick={onEdit}
-            className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl"
+            className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl"
           >
             <Pencil size={16} className="mr-2" />
             Edit Event
@@ -2156,7 +2156,7 @@ const CalendarPage = () => {
                 </div>
 
                 {/* Period Title */}
-                <h1 className="text-2xl font-bold text-[#0D2342]">
+                <h1 className="text-2xl font-bold text-[#0F172A]">
                   {getPeriodTitle()}
                 </h1>
               </div>
@@ -2219,7 +2219,7 @@ const CalendarPage = () => {
                     setCurrentEvent(null);
                     setIsFormOpen(true);
                   }}
-                  className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl gap-2"
+                  className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl gap-2"
                 >
                   <Plus size={18} />
                   Add Event
@@ -2308,14 +2308,14 @@ const CalendarPage = () => {
                 animate={{ opacity: 1, y: 0 }}
                 className="bg-white rounded-2xl border border-slate-200 p-4"
               >
-                <h3 className="font-semibold text-[#0D2342] mb-4">Overview</h3>
+                <h3 className="font-semibold text-[#0F172A] mb-4">Overview</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 bg-[#17C3B2]/10 rounded-xl text-center">
-                    <p className="text-2xl font-bold text-[#17C3B2]">{todayEvents}</p>
+                  <div className="p-3 bg-[#23D3EE]/10 rounded-xl text-center">
+                    <p className="text-2xl font-bold text-[#23D3EE]">{todayEvents}</p>
                     <p className="text-xs text-slate-500">Today</p>
                   </div>
-                  <div className="p-3 bg-[#C9A14A]/10 rounded-xl text-center">
-                    <p className="text-2xl font-bold text-[#C9A14A]">{upcomingEvents}</p>
+                  <div className="p-3 bg-[#FBBF23]/10 rounded-xl text-center">
+                    <p className="text-2xl font-bold text-[#FBBF23]">{upcomingEvents}</p>
                     <p className="text-xs text-slate-500">Upcoming</p>
                   </div>
                 </div>

@@ -98,7 +98,7 @@ export const LeaveRequestTable: React.FC<LeaveRequestTableProps> = ({
             return (
               <TableRow
                 key={request.id}
-                className={isSelected ? 'bg-[#17C3B2]/5' : ''}
+                className={isSelected ? 'bg-[#23D3EE]/5' : ''}
               >
                 {showSelection && (
                   <TableCell>
@@ -115,7 +115,7 @@ export const LeaveRequestTable: React.FC<LeaveRequestTableProps> = ({
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
                       <AvatarImage src={request.employeeAvatar} />
-                      <AvatarFallback className="bg-[#17C3B2]/10 text-[#17C3B2]">
+                      <AvatarFallback className="bg-[#23D3EE]/10 text-[#23D3EE]">
                         {getInitials(nameParts[0], nameParts[1] || '')}
                       </AvatarFallback>
                     </Avatar>

@@ -346,7 +346,7 @@ const StatCard = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
       whileHover={{ y: -4 }}
-      className="relative bg-white rounded-2xl p-5 border border-slate-200 hover:border-[#17C3B2]/30 hover:shadow-xl hover:shadow-[#17C3B2]/5 transition-all overflow-hidden group"
+      className="relative bg-white rounded-2xl p-5 border border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5 transition-all overflow-hidden group"
     >
       <div
         className="absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-10 group-hover:opacity-20 transition-all"
@@ -356,7 +356,7 @@ const StatCard = ({
       <div className="relative flex items-start justify-between">
         <div>
           <p className="text-sm text-slate-500 mb-1">{title}</p>
-          <p className="text-2xl font-bold text-[#0D2342]">{value}</p>
+          <p className="text-2xl font-bold text-[#0F172A]">{value}</p>
           {subtitle && <p className="text-xs text-slate-400 mt-1">{subtitle}</p>}
           {trend && (
             <div className="flex items-center gap-1 mt-2">
@@ -435,7 +435,7 @@ const TaskListItem = ({
             "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
             task.status === "completed"
               ? "bg-green-500 border-green-500 text-white"
-              : "border-slate-300 hover:border-[#17C3B2]"
+              : "border-slate-300 hover:border-[#23D3EE]"
           )}
         >
           {task.status === "completed" && <Check size={12} />}
@@ -450,7 +450,7 @@ const TaskListItem = ({
             <div className="flex items-center gap-2">
               <h3
                 className={cn(
-                  "font-medium text-[#0D2342] truncate",
+                  "font-medium text-[#0F172A] truncate",
                   task.status === "completed" && "line-through text-slate-400"
                 )}
               >
@@ -653,7 +653,7 @@ const TaskCard = ({
         "relative bg-white rounded-2xl border overflow-hidden transition-all group cursor-pointer",
         task.status === "completed"
           ? "border-slate-200 opacity-70"
-          : "border-slate-200 hover:border-[#17C3B2]/30 hover:shadow-xl hover:shadow-[#17C3B2]/5"
+          : "border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5"
       )}
       onClick={onClick}
     >
@@ -736,14 +736,14 @@ const TaskCard = ({
               "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0 mt-0.5",
               task.status === "completed"
                 ? "bg-green-500 border-green-500 text-white"
-                : "border-slate-300 hover:border-[#17C3B2]"
+                : "border-slate-300 hover:border-[#23D3EE]"
             )}
           >
             {task.status === "completed" && <Check size={12} />}
           </button>
           <h3
             className={cn(
-              "font-semibold text-[#0D2342] line-clamp-2",
+              "font-semibold text-[#0F172A] line-clamp-2",
               task.status === "completed" && "line-through text-slate-400"
             )}
           >
@@ -763,7 +763,7 @@ const TaskCard = ({
           <div className="mb-3">
             <div className="flex items-center justify-between text-xs mb-1">
               <span className="text-slate-500">Subtasks</span>
-              <span className="font-medium text-[#0D2342]">
+              <span className="font-medium text-[#0F172A]">
                 {task.subtasks.filter((st) => st.completed).length}/{task.subtasks.length}
               </span>
             </div>
@@ -877,7 +877,7 @@ const KanbanColumn = ({
               <StatusIcon size={16} style={{ color: status.color }} />
             </div>
             <div>
-              <h3 className="font-semibold text-[#0D2342] text-sm">{status.name}</h3>
+              <h3 className="font-semibold text-[#0F172A] text-sm">{status.name}</h3>
               <p className="text-xs text-slate-500">{tasks.length} tasks</p>
             </div>
           </div>
@@ -930,14 +930,14 @@ const KanbanColumn = ({
                       "w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0 mt-0.5",
                       task.status === "completed"
                         ? "bg-green-500 border-green-500 text-white"
-                        : "border-slate-300 hover:border-[#17C3B2]"
+                        : "border-slate-300 hover:border-[#23D3EE]"
                     )}
                   >
                     {task.status === "completed" && <Check size={10} />}
                   </button>
                   <h4
                     className={cn(
-                      "font-medium text-[#0D2342] text-sm line-clamp-2",
+                      "font-medium text-[#0F172A] text-sm line-clamp-2",
                       task.status === "completed" && "line-through text-slate-400"
                     )}
                   >
@@ -1169,9 +1169,9 @@ const TaskFormDialog = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px] p-0 rounded-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#17C3B2]/10 to-transparent sticky top-0 bg-white z-10">
+        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#23D3EE]/10 to-transparent sticky top-0 bg-white z-10">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-[#0D2342]">
+            <DialogTitle className="text-xl font-bold text-[#0F172A]">
               {task ? "Edit Task" : "Create Task"}
             </DialogTitle>
             <DialogDescription className="text-slate-500">
@@ -1355,7 +1355,7 @@ const TaskFormDialog = ({
                   {selectedAssignees.map((assignee) => (
                     <div
                       key={assignee.id}
-                      className="flex items-center gap-2 px-2 py-1 bg-[#17C3B2]/10 rounded-lg"
+                      className="flex items-center gap-2 px-2 py-1 bg-[#23D3EE]/10 rounded-lg"
                     >
                       <Avatar className="h-5 w-5">
                         <AvatarImage src={assignee.avatar} />
@@ -1363,7 +1363,7 @@ const TaskFormDialog = ({
                           {getInitials(assignee.name)}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="text-sm text-[#0D2342]">{assignee.name}</span>
+                      <span className="text-sm text-[#0F172A]">{assignee.name}</span>
                       <button
                         type="button"
                         onClick={() => toggleAssignee(assignee)}
@@ -1473,14 +1473,14 @@ const TaskFormDialog = ({
             <div className="flex items-center gap-3">
               <Repeat size={18} className="text-slate-500" />
               <div>
-                <span className="font-medium text-[#0D2342]">Recurring Task</span>
+                <span className="font-medium text-[#0F172A]">Recurring Task</span>
                 <p className="text-xs text-slate-500">This task repeats on a schedule</p>
               </div>
             </div>
             <Switch
               checked={formData.isRecurring}
               onCheckedChange={(checked) => setFormData({ ...formData, isRecurring: checked })}
-              className="data-[state=checked]:bg-[#17C3B2]"
+              className="data-[state=checked]:bg-[#23D3EE]"
             />
           </div>
 
@@ -1491,7 +1491,7 @@ const TaskFormDialog = ({
             <Button
               type="submit"
               disabled={!formData.title.trim()}
-              className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl"
+              className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl"
             >
               {task ? (
                 <>
@@ -1547,7 +1547,7 @@ const TaskDetailsDialog = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px] p-0 rounded-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#17C3B2]/10 to-transparent">
+        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#23D3EE]/10 to-transparent">
           <div className="flex items-start justify-between">
             <div className="flex items-start gap-4">
               <button
@@ -1556,7 +1556,7 @@ const TaskDetailsDialog = ({
                   "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all mt-1",
                   task.status === "completed"
                     ? "bg-green-500 border-green-500 text-white"
-                    : "border-slate-300 hover:border-[#17C3B2]"
+                    : "border-slate-300 hover:border-[#23D3EE]"
                 )}
               >
                 {task.status === "completed" && <Check size={14} />}
@@ -1564,7 +1564,7 @@ const TaskDetailsDialog = ({
               <div>
                 <h2
                   className={cn(
-                    "text-xl font-bold text-[#0D2342]",
+                    "text-xl font-bold text-[#0F172A]",
                     task.status === "completed" && "line-through text-slate-400"
                   )}
                 >
@@ -1605,7 +1605,7 @@ const TaskDetailsDialog = ({
           {/* Description */}
           {task.description && (
             <div>
-              <h3 className="text-sm font-semibold text-[#0D2342] mb-2">Description</h3>
+              <h3 className="text-sm font-semibold text-[#0F172A] mb-2">Description</h3>
               <p className="text-sm text-slate-600 whitespace-pre-wrap">{task.description}</p>
             </div>
           )}
@@ -1621,7 +1621,7 @@ const TaskDetailsDialog = ({
                     className="w-3 h-3 rounded-full"
                     style={{ backgroundColor: task.projectColor }}
                   />
-                  <span className="font-medium text-[#0D2342]">{task.project}</span>
+                  <span className="font-medium text-[#0F172A]">{task.project}</span>
                 </div>
               </div>
             )}
@@ -1631,7 +1631,7 @@ const TaskDetailsDialog = ({
               <p className="text-xs text-slate-400 mb-1">Category</p>
               <div className="flex items-center gap-2">
                 <CategoryIcon size={16} style={{ color: categoryInfo.color }} />
-                <span className="font-medium text-[#0D2342]">{categoryInfo.name}</span>
+                <span className="font-medium text-[#0F172A]">{categoryInfo.name}</span>
               </div>
             </div>
 
@@ -1648,7 +1648,7 @@ const TaskDetailsDialog = ({
                 </p>
                 <div className="flex items-center gap-2">
                   <CalendarIcon size={16} className={overdue ? "text-red-500" : "text-slate-500"} />
-                  <span className={cn("font-medium", overdue ? "text-red-600" : "text-[#0D2342]")}>
+                  <span className={cn("font-medium", overdue ? "text-red-600" : "text-[#0F172A]")}>
                     {formatDate(task.dueDate)}
                     {overdue && " (Overdue)"}
                   </span>
@@ -1662,7 +1662,7 @@ const TaskDetailsDialog = ({
                 <p className="text-xs text-slate-400 mb-1">Estimated Time</p>
                 <div className="flex items-center gap-2">
                   <Clock size={16} className="text-slate-500" />
-                  <span className="font-medium text-[#0D2342]">
+                  <span className="font-medium text-[#0F172A]">
                     {formatTime(task.estimatedTime)}
                   </span>
                   {task.actualTime && (
@@ -1678,7 +1678,7 @@ const TaskDetailsDialog = ({
           {/* Assignees */}
           {task.assignees && task.assignees.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold text-[#0D2342] mb-3">
+              <h3 className="text-sm font-semibold text-[#0F172A] mb-3">
                 Assignees ({task.assignees.length})
               </h3>
               <div className="flex flex-wrap gap-2">
@@ -1694,7 +1694,7 @@ const TaskDetailsDialog = ({
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="text-sm font-medium text-[#0D2342]">{assignee.name}</p>
+                      <p className="text-sm font-medium text-[#0F172A]">{assignee.name}</p>
                       <p className="text-xs text-slate-500">{assignee.email}</p>
                     </div>
                   </div>
@@ -1707,10 +1707,10 @@ const TaskDetailsDialog = ({
           {task.subtasks && task.subtasks.length > 0 && (
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-[#0D2342]">
+                <h3 className="text-sm font-semibold text-[#0F172A]">
                   Subtasks ({task.subtasks.filter((st) => st.completed).length}/{task.subtasks.length})
                 </h3>
-                <span className="text-sm text-[#17C3B2] font-medium">{subtaskProgress}%</span>
+                <span className="text-sm text-[#23D3EE] font-medium">{subtaskProgress}%</span>
               </div>
               <Progress value={subtaskProgress} className="h-2 mb-3" />
               <div className="space-y-2">
@@ -1747,12 +1747,12 @@ const TaskDetailsDialog = ({
           {/* Tags */}
           {task.tags && task.tags.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold text-[#0D2342] mb-3">Tags</h3>
+              <h3 className="text-sm font-semibold text-[#0F172A] mb-3">Tags</h3>
               <div className="flex flex-wrap gap-2">
                 {task.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="px-3 py-1 bg-[#17C3B2]/10 text-[#17C3B2] rounded-lg text-sm font-medium"
+                    className="px-3 py-1 bg-[#23D3EE]/10 text-[#23D3EE] rounded-lg text-sm font-medium"
                   >
                     #{tag}
                   </span>
@@ -1786,7 +1786,7 @@ const TaskDetailsDialog = ({
           </Button>
           <Button
             onClick={onEdit}
-            className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl"
+            className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl"
           >
             <Pencil size={16} className="mr-2" />
             Edit Task
@@ -1833,7 +1833,7 @@ const TaskSidebar = ({
     <div className="space-y-6">
       {/* Quick Filters */}
       <div className="bg-white rounded-2xl border border-slate-200 p-4">
-        <h3 className="font-semibold text-[#0D2342] mb-3">Quick Filters</h3>
+        <h3 className="font-semibold text-[#0F172A] mb-3">Quick Filters</h3>
         <div className="space-y-1">
           <button
             onClick={() => {
@@ -1843,7 +1843,7 @@ const TaskSidebar = ({
             className={cn(
               "w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors",
               !selectedProject && !selectedCategory
-                ? "bg-[#17C3B2]/10 text-[#17C3B2]"
+                ? "bg-[#23D3EE]/10 text-[#23D3EE]"
                 : "hover:bg-slate-50 text-slate-600"
             )}
           >
@@ -1895,7 +1895,7 @@ const TaskSidebar = ({
       {/* Projects */}
       <div className="bg-white rounded-2xl border border-slate-200 p-4">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-[#0D2342]">Projects</h3>
+          <h3 className="font-semibold text-[#0F172A]">Projects</h3>
           <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg">
             <Plus size={14} />
           </Button>
@@ -1908,7 +1908,7 @@ const TaskSidebar = ({
               className={cn(
                 "w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors",
                 selectedProject === project.id
-                  ? "bg-[#17C3B2]/10 text-[#17C3B2]"
+                  ? "bg-[#23D3EE]/10 text-[#23D3EE]"
                   : "hover:bg-slate-50 text-slate-600"
               )}
             >
@@ -1927,7 +1927,7 @@ const TaskSidebar = ({
 
       {/* Categories */}
       <div className="bg-white rounded-2xl border border-slate-200 p-4">
-        <h3 className="font-semibold text-[#0D2342] mb-3">Categories</h3>
+        <h3 className="font-semibold text-[#0F172A] mb-3">Categories</h3>
         <div className="space-y-1">
           {taskCategories.map((category) => (
             <button
@@ -1936,7 +1936,7 @@ const TaskSidebar = ({
               className={cn(
                 "w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors",
                 selectedCategory === category.id
-                  ? "bg-[#17C3B2]/10 text-[#17C3B2]"
+                  ? "bg-[#23D3EE]/10 text-[#23D3EE]"
                   : "hover:bg-slate-50 text-slate-600"
               )}
             >
@@ -1949,14 +1949,14 @@ const TaskSidebar = ({
 
       {/* Options */}
       <div className="bg-white rounded-2xl border border-slate-200 p-4">
-        <h3 className="font-semibold text-[#0D2342] mb-3">Options</h3>
+        <h3 className="font-semibold text-[#0F172A] mb-3">Options</h3>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-sm text-slate-600">Show Completed</span>
             <Switch
               checked={showCompleted}
               onCheckedChange={onToggleShowCompleted}
-              className="data-[state=checked]:bg-[#17C3B2]"
+              className="data-[state=checked]:bg-[#23D3EE]"
             />
           </div>
         </div>
@@ -2336,7 +2336,7 @@ const TasksPage = () => {
           <div className="px-8 py-4">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-bold text-[#0D2342]">Tasks</h1>
+                <h1 className="text-2xl font-bold text-[#0F172A]">Tasks</h1>
                 <p className="text-slate-500">Manage and track your tasks</p>
               </div>
 
@@ -2377,7 +2377,7 @@ const TasksPage = () => {
                     setCurrentTask(null);
                     setIsFormOpen(true);
                   }}
-                  className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl gap-2"
+                  className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl gap-2"
                 >
                   <Plus size={18} />
                   Add Task
@@ -2395,7 +2395,7 @@ const TasksPage = () => {
               value={tasks.length}
               subtitle={`${taskCounts.completed} completed`}
               icon={ListTodo}
-              color="#17C3B2"
+              color="#23D3EE"
             />
             <StatCard
               title="To Do"

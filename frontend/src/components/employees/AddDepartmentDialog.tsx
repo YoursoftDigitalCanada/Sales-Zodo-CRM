@@ -50,7 +50,7 @@ interface AddDepartmentDialogProps {
 }
 
 const colorOptions = [
-  { value: '#17C3B2', label: 'Teal' },
+  { value: '#23D3EE', label: 'Teal' },
   { value: '#8B5CF6', label: 'Purple' },
   { value: '#F59E0B', label: 'Amber' },
   { value: '#EC4899', label: 'Pink' },
@@ -58,7 +58,7 @@ const colorOptions = [
   { value: '#3B82F6', label: 'Blue' },
   { value: '#EF4444', label: 'Red' },
   { value: '#6366F1', label: 'Indigo' },
-  { value: '#C9A14A', label: 'Gold' },
+  { value: '#FBBF23', label: 'Gold' },
 ];
 
 export const AddDepartmentDialog: React.FC<AddDepartmentDialogProps> = ({
@@ -76,7 +76,7 @@ export const AddDepartmentDialog: React.FC<AddDepartmentDialogProps> = ({
       description: editingDepartment?.description || '',
       headId: editingDepartment?.headId || '',
       budget: editingDepartment?.budget?.toString() || '',
-      color: editingDepartment?.color || '#17C3B2',
+      color: editingDepartment?.color || '#23D3EE',
     },
   });
 
@@ -247,7 +247,7 @@ export const AddDepartmentDialog: React.FC<AddDepartmentDialogProps> = ({
               </Button>
               <Button 
                 type="submit"
-                className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white"
+                className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white"
               >
                 {editingDepartment ? 'Update Department' : 'Create Department'}
               </Button>

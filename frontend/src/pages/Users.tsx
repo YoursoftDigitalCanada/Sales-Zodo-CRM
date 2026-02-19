@@ -232,7 +232,7 @@ const roles: Role[] = [
     id: "staff",
     name: "Staff",
     description: "Standard employee access",
-    color: "#17C3B2",
+    color: "#23D3EE",
     icon: User,
     permissions: ["read", "write"],
     userCount: 18,
@@ -496,9 +496,9 @@ const StatCard = ({
   delay?: number;
 }) => {
   const colorClasses = {
-    teal: { bg: "bg-[#17C3B2]", light: "bg-[#17C3B2]/10", text: "text-[#17C3B2]" },
-    gold: { bg: "bg-[#C9A14A]", light: "bg-[#C9A14A]/10", text: "text-[#C9A14A]" },
-    navy: { bg: "bg-[#0D2342]", light: "bg-[#0D2342]/10", text: "text-[#0D2342]" },
+    teal: { bg: "bg-[#23D3EE]", light: "bg-[#23D3EE]/10", text: "text-[#23D3EE]" },
+    gold: { bg: "bg-[#FBBF23]", light: "bg-[#FBBF23]/10", text: "text-[#FBBF23]" },
+    navy: { bg: "bg-[#0F172A]", light: "bg-[#0F172A]/10", text: "text-[#0F172A]" },
     purple: { bg: "bg-purple-500", light: "bg-purple-500/10", text: "text-purple-500" },
     green: { bg: "bg-green-500", light: "bg-green-500/10", text: "text-green-500" },
     blue: { bg: "bg-blue-500", light: "bg-blue-500/10", text: "text-blue-500" },
@@ -513,14 +513,14 @@ const StatCard = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
       whileHover={{ y: -4 }}
-      className="relative bg-white rounded-2xl p-5 border border-slate-200 hover:border-[#17C3B2]/30 hover:shadow-xl hover:shadow-[#17C3B2]/5 transition-all overflow-hidden group"
+      className="relative bg-white rounded-2xl p-5 border border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5 transition-all overflow-hidden group"
     >
       <div className={cn("absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-10 group-hover:opacity-20 transition-all", colors.bg)} />
 
       <div className="relative flex items-start justify-between">
         <div>
           <p className="text-sm text-slate-500 mb-1">{title}</p>
-          <p className="text-2xl font-bold text-[#0D2342]">{value}</p>
+          <p className="text-2xl font-bold text-[#0F172A]">{value}</p>
           {change !== undefined && (
             <div className="flex items-center gap-1 mt-2">
               {change >= 0 ? (
@@ -578,8 +578,8 @@ const UserCard = ({
       className={cn(
         "relative bg-white rounded-2xl border overflow-hidden transition-all group",
         isSelected
-          ? "border-[#17C3B2] ring-2 ring-[#17C3B2]/20"
-          : "border-slate-200 hover:border-[#17C3B2]/30 hover:shadow-xl hover:shadow-[#17C3B2]/5"
+          ? "border-[#23D3EE] ring-2 ring-[#23D3EE]/20"
+          : "border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5"
       )}
     >
       {/* Selection Checkbox */}
@@ -590,7 +590,7 @@ const UserCard = ({
         <Checkbox
           checked={isSelected}
           onCheckedChange={onSelect}
-          className="data-[state=checked]:bg-[#17C3B2] data-[state=checked]:border-[#17C3B2] bg-white"
+          className="data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE] bg-white"
         />
       </div>
 
@@ -655,7 +655,7 @@ const UserCard = ({
               className="w-20 h-20 rounded-2xl object-cover mx-auto"
             />
           ) : (
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] flex items-center justify-center text-white text-2xl font-bold mx-auto">
+            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white text-2xl font-bold mx-auto">
               {getInitials(user.fullName)}
             </div>
           )}
@@ -665,7 +665,7 @@ const UserCard = ({
         </div>
 
         {/* Name & Position */}
-        <h3 className="font-semibold text-[#0D2342] mb-1 group-hover:text-[#17C3B2] transition-colors">
+        <h3 className="font-semibold text-[#0F172A] mb-1 group-hover:text-[#23D3EE] transition-colors">
           {user.fullName}
         </h3>
         <p className="text-sm text-slate-500 mb-3">{user.position || "Team Member"}</p>
@@ -697,15 +697,15 @@ const UserCard = ({
       <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50">
         <div className="flex items-center justify-between text-xs">
           <div className="text-center">
-            <p className="font-semibold text-[#0D2342]">{user.tasksCompleted || 0}</p>
+            <p className="font-semibold text-[#0F172A]">{user.tasksCompleted || 0}</p>
             <p className="text-slate-400">Tasks</p>
           </div>
           <div className="text-center">
-            <p className="font-semibold text-[#0D2342]">{user.projectsCount || 0}</p>
+            <p className="font-semibold text-[#0F172A]">{user.projectsCount || 0}</p>
             <p className="text-slate-400">Projects</p>
           </div>
           <div className="text-center">
-            <p className="font-semibold text-[#0D2342]">{user.loginCount || 0}</p>
+            <p className="font-semibold text-[#0F172A]">{user.loginCount || 0}</p>
             <p className="text-slate-400">Logins</p>
           </div>
         </div>
@@ -744,7 +744,7 @@ const UserRow = ({
         <Checkbox
           checked={isSelected}
           onCheckedChange={onSelect}
-          className="data-[state=checked]:bg-[#17C3B2] data-[state=checked]:border-[#17C3B2]"
+          className="data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
         />
       </TableCell>
       <TableCell>
@@ -757,7 +757,7 @@ const UserRow = ({
                 className="w-10 h-10 rounded-xl object-cover"
               />
             ) : (
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] flex items-center justify-center text-white text-sm font-bold">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white text-sm font-bold">
                 {getInitials(user.fullName)}
               </div>
             )}
@@ -766,7 +766,7 @@ const UserRow = ({
             )}
           </div>
           <div>
-            <p className="font-medium text-[#0D2342] group-hover:text-[#17C3B2] transition-colors">
+            <p className="font-medium text-[#0F172A] group-hover:text-[#23D3EE] transition-colors">
               {user.fullName}
             </p>
             <p className="text-sm text-slate-500">{user.email}</p>
@@ -937,9 +937,9 @@ const UserFormDialog = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px] p-0 rounded-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#17C3B2]/10 to-transparent sticky top-0 bg-white z-10">
+        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#23D3EE]/10 to-transparent sticky top-0 bg-white z-10">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-[#0D2342]">
+            <DialogTitle className="text-xl font-bold text-[#0F172A]">
               {user ? "Edit User" : "Add New User"}
             </DialogTitle>
             <DialogDescription className="text-slate-500">
@@ -959,17 +959,17 @@ const UserFormDialog = ({
                   className="w-20 h-20 rounded-2xl object-cover"
                 />
               ) : (
-                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] flex items-center justify-center text-white text-2xl font-bold">
+                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white text-2xl font-bold">
                   {formData.fullName ? getInitials(formData.fullName) : <User size={32} />}
                 </div>
               )}
-              <label className="absolute -bottom-2 -right-2 w-8 h-8 bg-[#17C3B2] rounded-xl flex items-center justify-center cursor-pointer hover:bg-[#17C3B2]/90 transition-colors">
+              <label className="absolute -bottom-2 -right-2 w-8 h-8 bg-[#23D3EE] rounded-xl flex items-center justify-center cursor-pointer hover:bg-[#23D3EE]/90 transition-colors">
                 <Camera size={14} className="text-white" />
                 <input type="file" className="hidden" accept="image/*" />
               </label>
             </div>
             <div>
-              <p className="font-medium text-[#0D2342]">Profile Photo</p>
+              <p className="font-medium text-[#0F172A]">Profile Photo</p>
               <p className="text-sm text-slate-500">JPG, PNG or GIF. Max 2MB</p>
             </div>
           </div>
@@ -987,7 +987,7 @@ const UserFormDialog = ({
                   onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                   placeholder="John Smith"
                   required
-                  className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+                  className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
                 />
               </div>
             </div>
@@ -1003,7 +1003,7 @@ const UserFormDialog = ({
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="john@yoursoft.ca"
                   required
-                  className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+                  className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
                 />
               </div>
             </div>
@@ -1018,7 +1018,7 @@ const UserFormDialog = ({
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   placeholder="+1 (555) 123-4567"
-                  className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+                  className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
                 />
               </div>
             </div>
@@ -1030,7 +1030,7 @@ const UserFormDialog = ({
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                   placeholder="Toronto, Canada"
-                  className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+                  className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
                 />
               </div>
             </div>
@@ -1091,7 +1091,7 @@ const UserFormDialog = ({
                   value={formData.position}
                   onChange={(e) => setFormData({ ...formData, position: e.target.value })}
                   placeholder="Senior Developer"
-                  className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+                  className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
                 />
               </div>
             </div>
@@ -1142,7 +1142,7 @@ const UserFormDialog = ({
               onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
               placeholder="A brief description about the user..."
               rows={3}
-              className="rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20 resize-none"
+              className="rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20 resize-none"
             />
           </div>
 
@@ -1150,7 +1150,7 @@ const UserFormDialog = ({
           {!user && (
             <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
               <div>
-                <p className="font-medium text-[#0D2342]">Send Invitation Email</p>
+                <p className="font-medium text-[#0F172A]">Send Invitation Email</p>
                 <p className="text-sm text-slate-500">User will receive an email to set their password</p>
               </div>
               <Switch defaultChecked />
@@ -1164,7 +1164,7 @@ const UserFormDialog = ({
             <Button
               type="submit"
               disabled={saving || !formData.fullName || !formData.email}
-              className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl"
+              className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl"
             >
               {saving ? (
                 <>
@@ -1209,7 +1209,7 @@ const UserProfileDialog = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[700px] p-0 rounded-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
         {/* Header with Cover */}
-        <div className="relative h-32 bg-gradient-to-r from-[#17C3B2] to-[#C9A14A]">
+        <div className="relative h-32 bg-gradient-to-r from-[#23D3EE] to-[#6366F1]">
           <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-10" />
           <Button
             variant="ghost"
@@ -1233,7 +1233,7 @@ const UserProfileDialog = ({
                     className="w-28 h-28 rounded-2xl object-cover border-4 border-white shadow-lg"
                   />
                 ) : (
-                  <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] flex items-center justify-center text-white text-3xl font-bold border-4 border-white shadow-lg">
+                  <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white text-3xl font-bold border-4 border-white shadow-lg">
                     {getInitials(user.fullName)}
                   </div>
                 )}
@@ -1243,7 +1243,7 @@ const UserProfileDialog = ({
               </div>
               <div className="flex-1 pb-2">
                 <div className="flex items-center gap-3 mb-1">
-                  <h2 className="text-2xl font-bold text-[#0D2342]">{user.fullName}</h2>
+                  <h2 className="text-2xl font-bold text-[#0F172A]">{user.fullName}</h2>
                   <span
                     className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium"
                     style={{ backgroundColor: `${roleInfo.color}15`, color: roleInfo.color }}
@@ -1254,7 +1254,7 @@ const UserProfileDialog = ({
                 </div>
                 <p className="text-slate-500">{user.position || "Team Member"}</p>
               </div>
-              <Button onClick={onEdit} className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl">
+              <Button onClick={onEdit} className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl">
                 <Pencil size={16} className="mr-2" />
                 Edit Profile
               </Button>
@@ -1303,15 +1303,15 @@ const UserProfileDialog = ({
               {/* Stats Grid */}
               <div className="grid grid-cols-4 gap-4">
                 <div className="p-4 bg-slate-50 rounded-xl text-center">
-                  <p className="text-2xl font-bold text-[#0D2342]">{user.tasksCompleted || 0}</p>
+                  <p className="text-2xl font-bold text-[#0F172A]">{user.tasksCompleted || 0}</p>
                   <p className="text-sm text-slate-500">Tasks Completed</p>
                 </div>
                 <div className="p-4 bg-slate-50 rounded-xl text-center">
-                  <p className="text-2xl font-bold text-[#17C3B2]">{user.projectsCount || 0}</p>
+                  <p className="text-2xl font-bold text-[#23D3EE]">{user.projectsCount || 0}</p>
                   <p className="text-sm text-slate-500">Projects</p>
                 </div>
                 <div className="p-4 bg-slate-50 rounded-xl text-center">
-                  <p className="text-2xl font-bold text-[#C9A14A]">{user.loginCount || 0}</p>
+                  <p className="text-2xl font-bold text-[#FBBF23]">{user.loginCount || 0}</p>
                   <p className="text-sm text-slate-500">Total Logins</p>
                 </div>
                 <div className="p-4 bg-slate-50 rounded-xl text-center">
@@ -1324,24 +1324,24 @@ const UserProfileDialog = ({
 
               {/* Contact Information */}
               <div className="space-y-4">
-                <h3 className="font-semibold text-[#0D2342]">Contact Information</h3>
+                <h3 className="font-semibold text-[#0F172A]">Contact Information</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl">
-                    <div className="w-10 h-10 rounded-lg bg-[#17C3B2]/10 flex items-center justify-center">
-                      <Mail size={18} className="text-[#17C3B2]" />
+                    <div className="w-10 h-10 rounded-lg bg-[#23D3EE]/10 flex items-center justify-center">
+                      <Mail size={18} className="text-[#23D3EE]" />
                     </div>
                     <div>
                       <p className="text-xs text-slate-400">Email</p>
-                      <p className="text-sm font-medium text-[#0D2342]">{user.email}</p>
+                      <p className="text-sm font-medium text-[#0F172A]">{user.email}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl">
-                    <div className="w-10 h-10 rounded-lg bg-[#C9A14A]/10 flex items-center justify-center">
-                      <Phone size={18} className="text-[#C9A14A]" />
+                    <div className="w-10 h-10 rounded-lg bg-[#FBBF23]/10 flex items-center justify-center">
+                      <Phone size={18} className="text-[#FBBF23]" />
                     </div>
                     <div>
                       <p className="text-xs text-slate-400">Phone</p>
-                      <p className="text-sm font-medium text-[#0D2342]">{user.phone || "Not provided"}</p>
+                      <p className="text-sm font-medium text-[#0F172A]">{user.phone || "Not provided"}</p>
                     </div>
                   </div>
                 </div>
@@ -1349,15 +1349,15 @@ const UserProfileDialog = ({
 
               {/* Account Details */}
               <div className="space-y-4">
-                <h3 className="font-semibold text-[#0D2342]">Account Details</h3>
+                <h3 className="font-semibold text-[#0F172A]">Account Details</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-4 bg-slate-50 rounded-xl">
                     <p className="text-xs text-slate-400 mb-1">Member Since</p>
-                    <p className="text-sm font-medium text-[#0D2342]">{formatDate(user.createdAt)}</p>
+                    <p className="text-sm font-medium text-[#0F172A]">{formatDate(user.createdAt)}</p>
                   </div>
                   <div className="p-4 bg-slate-50 rounded-xl">
                     <p className="text-xs text-slate-400 mb-1">Last Login</p>
-                    <p className="text-sm font-medium text-[#0D2342]">
+                    <p className="text-sm font-medium text-[#0F172A]">
                       {user.lastLogin ? getRelativeTime(user.lastLogin) : "Never"}
                     </p>
                   </div>
@@ -1367,12 +1367,12 @@ const UserProfileDialog = ({
               {/* Teams */}
               {user.teams && user.teams.length > 0 && (
                 <div className="space-y-4">
-                  <h3 className="font-semibold text-[#0D2342]">Teams</h3>
+                  <h3 className="font-semibold text-[#0F172A]">Teams</h3>
                   <div className="flex flex-wrap gap-2">
                     {user.teams.map((team) => (
                       <span
                         key={team}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#17C3B2]/10 text-[#17C3B2] rounded-lg text-sm font-medium"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#23D3EE]/10 text-[#23D3EE] rounded-lg text-sm font-medium"
                       >
                         <UsersRound size={14} />
                         {team}
@@ -1385,7 +1385,7 @@ const UserProfileDialog = ({
 
             {/* Activity Tab */}
             <TabsContent value="activity" className="space-y-4">
-              <h3 className="font-semibold text-[#0D2342]">Recent Activity</h3>
+              <h3 className="font-semibold text-[#0F172A]">Recent Activity</h3>
               <div className="space-y-3">
                 {activityLogs
                   .filter((log) => log.userId === user.id)
@@ -1395,15 +1395,15 @@ const UserProfileDialog = ({
                       key={log.id}
                       className="flex items-start gap-4 p-4 bg-slate-50 rounded-xl"
                     >
-                      <div className="w-10 h-10 rounded-lg bg-[#17C3B2]/10 flex items-center justify-center flex-shrink-0">
-                        {log.action === "login" && <LogIn size={18} className="text-[#17C3B2]" />}
+                      <div className="w-10 h-10 rounded-lg bg-[#23D3EE]/10 flex items-center justify-center flex-shrink-0">
+                        {log.action === "login" && <LogIn size={18} className="text-[#23D3EE]" />}
                         {log.action === "logout" && <LogOut size={18} className="text-slate-500" />}
-                        {log.action === "update_profile" && <UserCog size={18} className="text-[#C9A14A]" />}
+                        {log.action === "update_profile" && <UserCog size={18} className="text-[#FBBF23]" />}
                         {log.action === "create_task" && <Plus size={18} className="text-green-500" />}
                         {log.action === "complete_task" && <CheckCircle2 size={18} className="text-green-500" />}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-[#0D2342]">{log.description}</p>
+                        <p className="text-sm font-medium text-[#0F172A]">{log.description}</p>
                         <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
                           <span>{getRelativeTime(log.timestamp)}</span>
                           {log.ip && <span>IP: {log.ip}</span>}
@@ -1423,7 +1423,7 @@ const UserProfileDialog = ({
             {/* Permissions Tab */}
             <TabsContent value="permissions" className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-[#0D2342]">Role & Permissions</h3>
+                <h3 className="font-semibold text-[#0F172A]">Role & Permissions</h3>
                 <Button variant="outline" size="sm" className="rounded-lg">
                   <Settings size={14} className="mr-2" />
                   Manage Permissions
@@ -1440,7 +1440,7 @@ const UserProfileDialog = ({
                     <roleInfo.icon size={24} style={{ color: roleInfo.color }} />
                   </div>
                   <div className="flex-1">
-                    <p className="font-semibold text-[#0D2342]">{roleInfo.name}</p>
+                    <p className="font-semibold text-[#0F172A]">{roleInfo.name}</p>
                     <p className="text-sm text-slate-500">{roleInfo.description}</p>
                   </div>
                   <Button variant="outline" size="sm" className="rounded-lg">
@@ -1531,9 +1531,9 @@ const InviteUsersDialog = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px] p-0 rounded-2xl overflow-hidden">
-        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#17C3B2]/10 to-transparent">
+        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#23D3EE]/10 to-transparent">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-[#0D2342]">
+            <DialogTitle className="text-xl font-bold text-[#0F172A]">
               Invite Team Members
             </DialogTitle>
             <DialogDescription className="text-slate-500">
@@ -1553,7 +1553,7 @@ const InviteUsersDialog = ({
               onChange={(e) => setEmails(e.target.value)}
               placeholder="Enter email addresses (separated by comma or new line)&#10;e.g., john@example.com, jane@example.com"
               rows={4}
-              className="rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20 resize-none"
+              className="rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20 resize-none"
             />
             <p className="text-xs text-slate-400">
               You can invite multiple users at once
@@ -1574,7 +1574,7 @@ const InviteUsersDialog = ({
                   className={cn(
                     "flex items-center gap-3 p-4 rounded-xl border-2 text-left transition-all",
                     role === r.id
-                      ? "border-[#17C3B2] bg-[#17C3B2]/5"
+                      ? "border-[#23D3EE] bg-[#23D3EE]/5"
                       : "border-slate-200 hover:border-slate-300"
                   )}
                 >
@@ -1585,11 +1585,11 @@ const InviteUsersDialog = ({
                     <r.icon size={20} style={{ color: r.color }} />
                   </div>
                   <div>
-                    <p className="font-medium text-[#0D2342]">{r.name}</p>
+                    <p className="font-medium text-[#0F172A]">{r.name}</p>
                     <p className="text-xs text-slate-500">{r.description}</p>
                   </div>
                   {role === r.id && (
-                    <CheckCircle2 size={18} className="text-[#17C3B2] ml-auto" />
+                    <CheckCircle2 size={18} className="text-[#23D3EE] ml-auto" />
                   )}
                 </motion.button>
               ))}
@@ -1599,7 +1599,7 @@ const InviteUsersDialog = ({
           {/* Preview */}
           {emails.trim() && (
             <div className="p-4 bg-slate-50 rounded-xl">
-              <p className="text-sm font-medium text-[#0D2342] mb-2">
+              <p className="text-sm font-medium text-[#0F172A] mb-2">
                 Invitations will be sent to:
               </p>
               <div className="flex flex-wrap gap-2">
@@ -1628,7 +1628,7 @@ const InviteUsersDialog = ({
           <Button
             onClick={handleInvite}
             disabled={sending || !emails.trim()}
-            className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl"
+            className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl"
           >
             {sending ? (
               <>
@@ -1657,10 +1657,10 @@ const RolesSection = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-[#0D2342]">Roles & Permissions</h2>
+          <h2 className="text-lg font-semibold text-[#0F172A]">Roles & Permissions</h2>
           <p className="text-sm text-slate-500">Manage user roles and access levels</p>
         </div>
-        <Button className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl">
+        <Button className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl">
           <Plus size={16} className="mr-2" />
           Create Role
         </Button>
@@ -1674,7 +1674,7 @@ const RolesSection = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
             whileHover={{ y: -4 }}
-            className="bg-white rounded-2xl border border-slate-200 p-5 hover:border-[#17C3B2]/30 hover:shadow-xl hover:shadow-[#17C3B2]/5 transition-all"
+            className="bg-white rounded-2xl border border-slate-200 p-5 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5 transition-all"
           >
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
@@ -1685,7 +1685,7 @@ const RolesSection = () => {
                   <role.icon size={24} style={{ color: role.color }} />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-[#0D2342]">{role.name}</h3>
+                  <h3 className="font-semibold text-[#0F172A]">{role.name}</h3>
                   <p className="text-sm text-slate-500">{role.description}</p>
                 </div>
               </div>
@@ -1738,10 +1738,10 @@ const DepartmentsSection = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-[#0D2342]">Departments</h2>
+          <h2 className="text-lg font-semibold text-[#0F172A]">Departments</h2>
           <p className="text-sm text-slate-500">Organize users by department</p>
         </div>
-        <Button className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl">
+        <Button className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl">
           <Plus size={16} className="mr-2" />
           Add Department
         </Button>
@@ -1755,7 +1755,7 @@ const DepartmentsSection = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
             whileHover={{ y: -4 }}
-            className="bg-white rounded-2xl border border-slate-200 p-5 hover:border-[#17C3B2]/30 hover:shadow-xl hover:shadow-[#17C3B2]/5 transition-all cursor-pointer group"
+            className="bg-white rounded-2xl border border-slate-200 p-5 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5 transition-all cursor-pointer group"
           >
             <div className="flex items-start justify-between mb-4">
               <div
@@ -1789,7 +1789,7 @@ const DepartmentsSection = () => {
               </DropdownMenu>
             </div>
 
-            <h3 className="font-semibold text-[#0D2342] mb-1 group-hover:text-[#17C3B2] transition-colors">
+            <h3 className="font-semibold text-[#0F172A] mb-1 group-hover:text-[#23D3EE] transition-colors">
               {dept.name}
             </h3>
             {dept.head && (
@@ -1821,9 +1821,9 @@ const ActivityLogSection = ({ users }: { users: User[] }) => {
       case "logout":
         return <LogOut size={16} className="text-slate-500" />;
       case "update_profile":
-        return <UserCog size={16} className="text-[#C9A14A]" />;
+        return <UserCog size={16} className="text-[#FBBF23]" />;
       case "create_task":
-        return <Plus size={16} className="text-[#17C3B2]" />;
+        return <Plus size={16} className="text-[#23D3EE]" />;
       case "complete_task":
         return <CheckCircle2 size={16} className="text-green-500" />;
       default:
@@ -1835,7 +1835,7 @@ const ActivityLogSection = ({ users }: { users: User[] }) => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-[#0D2342]">Activity Log</h2>
+          <h2 className="text-lg font-semibold text-[#0F172A]">Activity Log</h2>
           <p className="text-sm text-slate-500">Recent user activities and actions</p>
         </div>
         <div className="flex items-center gap-2">
@@ -1883,11 +1883,11 @@ const ActivityLogSection = ({ users }: { users: User[] }) => {
                           className="w-8 h-8 rounded-lg object-cover"
                         />
                       ) : (
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] flex items-center justify-center text-white text-xs font-bold">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white text-xs font-bold">
                           {user ? getInitials(user.fullName) : "?"}
                         </div>
                       )}
-                      <span className="font-medium text-[#0D2342]">
+                      <span className="font-medium text-[#0F172A]">
                         {user?.fullName || "Unknown User"}
                       </span>
                     </div>
@@ -2302,9 +2302,9 @@ export default function UsersPage() {
                 <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
                   <span>Dashboard</span>
                   <ChevronRight size={14} />
-                  <span className="text-[#17C3B2] font-medium">Users</span>
+                  <span className="text-[#23D3EE] font-medium">Users</span>
                 </div>
-                <h1 className="text-2xl font-bold text-[#0D2342]">User Management</h1>
+                <h1 className="text-2xl font-bold text-[#0F172A]">User Management</h1>
               </div>
 
               {/* Header Actions */}
@@ -2312,14 +2312,14 @@ export default function UsersPage() {
                 <Button
                   variant="outline"
                   onClick={() => setShowInviteDialog(true)}
-                  className="rounded-xl border-slate-200 hover:border-[#17C3B2] hover:text-[#17C3B2]"
+                  className="rounded-xl border-slate-200 hover:border-[#23D3EE] hover:text-[#23D3EE]"
                 >
                   <MailPlus size={16} className="mr-2" />
                   Invite Users
                 </Button>
                 <Button
                   onClick={handleCreateUser}
-                  className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl"
+                  className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl"
                 >
                   <UserPlus size={16} className="mr-2" />
                   Add User
@@ -2333,11 +2333,11 @@ export default function UsersPage() {
                 </div>
 
                 <div className="flex items-center gap-3 pl-3 border-l border-slate-200">
-                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] flex items-center justify-center text-white font-bold shadow-lg shadow-[#17C3B2]/20">
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white font-bold shadow-lg shadow-[#23D3EE]/20">
                     SA
                   </div>
                   <div className="hidden sm:block">
-                    <p className="text-sm font-semibold text-[#0D2342]">SAdmin</p>
+                    <p className="text-sm font-semibold text-[#0F172A]">SAdmin</p>
                     <p className="text-xs text-slate-500">Administrator</p>
                   </div>
                   <ChevronDown size={16} className="text-slate-400" />
@@ -2361,7 +2361,7 @@ export default function UsersPage() {
                   className={cn(
                     "flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all",
                     activeTab === tab.id
-                      ? "text-[#17C3B2] border-[#17C3B2]"
+                      ? "text-[#23D3EE] border-[#23D3EE]"
                       : "text-slate-500 border-transparent hover:text-slate-700"
                   )}
                 >
@@ -2420,7 +2420,7 @@ export default function UsersPage() {
                   <Checkbox
                     checked={selectedUsers.length > 0 && selectedUsers.length === filteredUsers.length}
                     onCheckedChange={handleSelectAll}
-                    className="data-[state=checked]:bg-[#17C3B2] data-[state=checked]:border-[#17C3B2]"
+                    className="data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
                   />
 
                   {/* Search */}
@@ -2430,7 +2430,7 @@ export default function UsersPage() {
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       placeholder="Search users..."
-                      className="h-10 w-64 pl-9 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+                      className="h-10 w-64 pl-9 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
                     />
                   </div>
 
@@ -2441,15 +2441,15 @@ export default function UsersPage() {
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-[#17C3B2]/10 rounded-xl"
+                        className="flex items-center gap-2 px-3 py-1.5 bg-[#23D3EE]/10 rounded-xl"
                       >
-                        <span className="text-sm font-medium text-[#17C3B2]">
+                        <span className="text-sm font-medium text-[#23D3EE]">
                           {selectedUsers.length} selected
                         </span>
-                        <div className="h-4 w-px bg-[#17C3B2]/30" />
+                        <div className="h-4 w-px bg-[#23D3EE]/30" />
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-7 rounded-lg text-[#17C3B2]">
+                            <Button variant="ghost" size="sm" className="h-7 rounded-lg text-[#23D3EE]">
                               Actions <ChevronDown size={14} className="ml-1" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -2487,9 +2487,9 @@ export default function UsersPage() {
                         </DropdownMenu>
                         <button
                           onClick={() => setSelectedUsers([])}
-                          className="p-1 rounded-md hover:bg-[#17C3B2]/20"
+                          className="p-1 rounded-md hover:bg-[#23D3EE]/20"
                         >
-                          <X size={14} className="text-[#17C3B2]" />
+                          <X size={14} className="text-[#23D3EE]" />
                         </button>
                       </motion.div>
                     )}
@@ -2546,7 +2546,7 @@ export default function UsersPage() {
                       className={cn(
                         "p-2 rounded-lg transition-all",
                         viewMode === "grid"
-                          ? "bg-white text-[#17C3B2] shadow-sm"
+                          ? "bg-white text-[#23D3EE] shadow-sm"
                           : "text-slate-500 hover:text-slate-700"
                       )}
                     >
@@ -2557,7 +2557,7 @@ export default function UsersPage() {
                       className={cn(
                         "p-2 rounded-lg transition-all",
                         viewMode === "list"
-                          ? "bg-white text-[#17C3B2] shadow-sm"
+                          ? "bg-white text-[#23D3EE] shadow-sm"
                           : "text-slate-500 hover:text-slate-700"
                       )}
                     >
@@ -2578,7 +2578,7 @@ export default function UsersPage() {
               {/* Users Grid/List */}
               {loading ? (
                 <div className="flex items-center justify-center py-20">
-                  <RefreshCw size={32} className="animate-spin text-[#17C3B2]" />
+                  <RefreshCw size={32} className="animate-spin text-[#23D3EE]" />
                 </div>
               ) : viewMode === "grid" ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -2607,7 +2607,7 @@ export default function UsersPage() {
                           <Checkbox
                             checked={selectedUsers.length === filteredUsers.length}
                             onCheckedChange={handleSelectAll}
-                            className="data-[state=checked]:bg-[#17C3B2] data-[state=checked]:border-[#17C3B2]"
+                            className="data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
                           />
                         </TableHead>
                         <TableHead>User</TableHead>
@@ -2637,7 +2637,7 @@ export default function UsersPage() {
                   {filteredUsers.length === 0 && (
                     <div className="text-center py-12">
                       <Users size={48} className="mx-auto text-slate-300 mb-4" />
-                      <h3 className="text-lg font-semibold text-[#0D2342] mb-2">No users found</h3>
+                      <h3 className="text-lg font-semibold text-[#0F172A] mb-2">No users found</h3>
                       <p className="text-slate-500">
                         {searchTerm
                           ? `No users match "${searchTerm}"`
@@ -2658,7 +2658,7 @@ export default function UsersPage() {
                   <div className="w-20 h-20 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
                     <Users size={40} className="text-slate-300" />
                   </div>
-                  <h3 className="text-lg font-semibold text-[#0D2342] mb-2">No users found</h3>
+                  <h3 className="text-lg font-semibold text-[#0F172A] mb-2">No users found</h3>
                   <p className="text-slate-500 text-center mb-6">
                     {searchTerm
                       ? `No users match "${searchTerm}"`
@@ -2666,7 +2666,7 @@ export default function UsersPage() {
                   </p>
                   <Button
                     onClick={handleCreateUser}
-                    className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl"
+                    className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl"
                   >
                     <UserPlus size={16} className="mr-2" />
                     Add User
@@ -2725,7 +2725,7 @@ export default function UsersPage() {
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-[#0D2342]">Delete User?</AlertDialogTitle>
+            <AlertDialogTitle className="text-[#0F172A]">Delete User?</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete <strong>{deletingUser?.fullName}</strong>? This action cannot be undone.
             </AlertDialogDescription>

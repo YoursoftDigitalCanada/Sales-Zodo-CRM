@@ -122,8 +122,8 @@ export const formatCurrency = (amount: number): string => {
 
 export const getProjectColor = (color: string): { bg: string; text: string; border: string } => {
   const colors: Record<string, { bg: string; text: string; border: string }> = {
-    teal: { bg: "bg-[#17C3B2]/10", text: "text-[#17C3B2]", border: "border-[#17C3B2]" },
-    gold: { bg: "bg-[#C9A14A]/10", text: "text-[#C9A14A]", border: "border-[#C9A14A]" },
+    teal: { bg: "bg-[#23D3EE]/10", text: "text-[#23D3EE]", border: "border-[#23D3EE]" },
+    gold: { bg: "bg-[#FBBF23]/10", text: "text-[#FBBF23]", border: "border-[#FBBF23]" },
     blue: { bg: "bg-blue-500/10", text: "text-blue-500", border: "border-blue-500" },
     purple: { bg: "bg-purple-500/10", text: "text-purple-500", border: "border-purple-500" },
     red: { bg: "bg-red-500/10", text: "text-red-500", border: "border-red-500" },

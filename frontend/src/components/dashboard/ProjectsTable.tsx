@@ -33,16 +33,16 @@ const projects = [
 ];
 
 const statusStyles = {
-  teal: "bg-[#17C3B2]/10 text-[#17C3B2] border border-[#17C3B2]/20",
-  gold: "bg-[#C9A14A]/10 text-[#C9A14A] border border-[#C9A14A]/20",
+  teal: "bg-[#23D3EE]/10 text-[#23D3EE] border border-[#23D3EE]/20",
+  gold: "bg-[#FBBF23]/10 text-[#FBBF23] border border-[#FBBF23]/20",
   green: "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20",
-  navy: "bg-[#0D2342]/10 text-[#0D2342] border border-[#0D2342]/20",
+  navy: "bg-[#0F172A]/10 text-[#0F172A] border border-[#0F172A]/20",
 };
 
 const avatarGradients = [
-  "bg-gradient-to-br from-[#17C3B2] to-[#17C3B2]/70",
-  "bg-gradient-to-br from-[#C9A14A] to-[#C9A14A]/70",
-  "bg-gradient-to-br from-[#0D2342] to-[#0D2342]/70",
+  "bg-gradient-to-br from-[#23D3EE] to-[#23D3EE]/70",
+  "bg-gradient-to-br from-[#FBBF23] to-[#FBBF23]/70",
+  "bg-gradient-to-br from-[#0F172A] to-[#0F172A]/70",
   "bg-gradient-to-br from-purple-500 to-purple-400",
 ];
 
@@ -53,15 +53,15 @@ export function ProjectsTable() {
       <div className="p-6 border-b border-slate-100">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#17C3B2]/10 flex items-center justify-center">
-              <FolderKanban size={18} className="text-[#17C3B2]" />
+            <div className="w-10 h-10 rounded-xl bg-[#23D3EE]/10 flex items-center justify-center">
+              <FolderKanban size={18} className="text-[#23D3EE]" />
             </div>
             <div>
-              <h3 className="font-semibold text-[#0D2342]">Projects Status</h3>
+              <h3 className="font-semibold text-[#0F172A]">Projects Status</h3>
               <p className="text-xs text-slate-400">Track your ongoing work</p>
             </div>
           </div>
-          <button className="flex items-center gap-1 text-sm text-[#17C3B2] font-medium hover:underline group">
+          <button className="flex items-center gap-1 text-sm text-[#23D3EE] font-medium hover:underline group">
             View All
             <ArrowUpRight size={14} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
           </button>
@@ -98,7 +98,7 @@ export function ProjectsTable() {
                 className="hover:bg-slate-50/50 transition-colors group cursor-pointer"
               >
                 <td className="py-4 px-6">
-                  <span className="font-medium text-[#0D2342] group-hover:text-[#17C3B2] transition-colors">
+                  <span className="font-medium text-[#0F172A] group-hover:text-[#23D3EE] transition-colors">
                     {project.name}
                   </span>
                 </td>

@@ -120,7 +120,7 @@ export function TimerCard({
         animate={{ opacity: 1, scale: 1 }}
         className={cn(
           "inline-flex items-center gap-3 px-4 py-2 bg-white rounded-xl border border-gray-200 shadow-sm",
-          timerState.isRunning && "border-[#17C3B2] shadow-[#17C3B2]/10",
+          timerState.isRunning && "border-[#23D3EE] shadow-[#23D3EE]/10",
           className
         )}
       >
@@ -130,7 +130,7 @@ export function TimerCard({
           transition={{ repeat: Infinity, duration: 1.5 }}
           className={cn(
             "font-mono font-bold text-lg",
-            timerState.isRunning ? "text-[#17C3B2]" : "text-gray-400"
+            timerState.isRunning ? "text-[#23D3EE]" : "text-gray-400"
           )}
         >
           {formatDuration(elapsedTime)}
@@ -145,9 +145,9 @@ export function TimerCard({
             "w-8 h-8 rounded-lg flex items-center justify-center transition-all",
             timerState.isRunning
               ? timerState.isPaused
-                ? "bg-[#17C3B2] text-white"
+                ? "bg-[#23D3EE] text-white"
                 : "bg-yellow-500 text-white"
-              : "bg-[#17C3B2] text-white"
+              : "bg-[#23D3EE] text-white"
           )}
         >
           {timerState.isRunning && !timerState.isPaused ? (
@@ -183,7 +183,7 @@ export function TimerCard({
         className={cn(
           "bg-white rounded-xl border-2 p-4 transition-all",
           timerState.isRunning
-            ? "border-[#17C3B2] shadow-lg shadow-[#17C3B2]/10"
+            ? "border-[#23D3EE] shadow-lg shadow-[#23D3EE]/10"
             : "border-gray-200",
           className
         )}
@@ -211,7 +211,7 @@ export function TimerCard({
                     className="w-1.5 h-1.5 rounded-full"
                     style={{
                       backgroundColor:
-                        selectedProject.color === "teal" ? "#17C3B2" : selectedProject.color,
+                        selectedProject.color === "teal" ? "#23D3EE" : selectedProject.color,
                     }}
                   />
                   {selectedProject.name}
@@ -219,7 +219,7 @@ export function TimerCard({
               ) : (
                 <button
                   onClick={() => setShowProjectDropdown(true)}
-                  className="text-xs text-gray-400 hover:text-[#17C3B2]"
+                  className="text-xs text-gray-400 hover:text-[#23D3EE]"
                 >
                   + Add project
                 </button>
@@ -237,7 +237,7 @@ export function TimerCard({
                   className={cn(
                     "p-1.5 rounded-lg transition-colors",
                     timerState.isBillable
-                      ? "text-[#17C3B2] bg-[#17C3B2]/10"
+                      ? "text-[#23D3EE] bg-[#23D3EE]/10"
                       : "text-gray-400 hover:bg-gray-100"
                   )}
                 >
@@ -255,7 +255,7 @@ export function TimerCard({
               transition={{ repeat: Infinity, duration: 1 }}
               className={cn(
                 "font-mono font-bold text-xl min-w-[80px] text-center",
-                timerState.isRunning ? "text-[#17C3B2]" : "text-gray-400"
+                timerState.isRunning ? "text-[#23D3EE]" : "text-gray-400"
               )}
             >
               {formatDuration(elapsedTime)}
@@ -271,9 +271,9 @@ export function TimerCard({
                   "w-10 h-10 rounded-xl flex items-center justify-center transition-all",
                   timerState.isRunning
                     ? timerState.isPaused
-                      ? "bg-[#17C3B2] text-white shadow-lg shadow-[#17C3B2]/30"
+                      ? "bg-[#23D3EE] text-white shadow-lg shadow-[#23D3EE]/30"
                       : "bg-yellow-500 text-white shadow-lg shadow-yellow-500/30"
-                    : "bg-[#17C3B2] text-white shadow-lg shadow-[#17C3B2]/30"
+                    : "bg-[#23D3EE] text-white shadow-lg shadow-[#23D3EE]/30"
                 )}
               >
                 {timerState.isRunning && !timerState.isPaused ? (
@@ -310,7 +310,7 @@ export function TimerCard({
       className={cn(
         "bg-white rounded-xl border-2 overflow-hidden transition-all",
         timerState.isRunning
-          ? "border-[#17C3B2] shadow-xl shadow-[#17C3B2]/10"
+          ? "border-[#23D3EE] shadow-xl shadow-[#23D3EE]/10"
           : "border-gray-200 shadow-sm",
         className
       )}
@@ -322,7 +322,7 @@ export function TimerCard({
             initial={{ scaleX: 0 }}
             animate={{ scaleX: 1 }}
             exit={{ scaleX: 0 }}
-            className="h-1 bg-gradient-to-r from-[#17C3B2] via-[#17C3B2]/70 to-[#17C3B2] origin-left"
+            className="h-1 bg-gradient-to-r from-[#23D3EE] via-[#23D3EE]/70 to-[#23D3EE] origin-left"
           />
         )}
       </AnimatePresence>
@@ -333,12 +333,12 @@ export function TimerCard({
           <div
             className={cn(
               "p-2 rounded-lg",
-              timerState.isRunning ? "bg-[#17C3B2]/10" : "bg-gray-100"
+              timerState.isRunning ? "bg-[#23D3EE]/10" : "bg-gray-100"
             )}
           >
             <Clock
               size={18}
-              className={timerState.isRunning ? "text-[#17C3B2]" : "text-gray-500"}
+              className={timerState.isRunning ? "text-[#23D3EE]" : "text-gray-500"}
             />
           </div>
           <div>
@@ -410,7 +410,7 @@ export function TimerCard({
                     className="w-2 h-2 rounded-full mr-2"
                     style={{
                       backgroundColor:
-                        project.color === "teal" ? "#17C3B2" : project.color,
+                        project.color === "teal" ? "#23D3EE" : project.color,
                     }}
                   />
                   {project.name}
@@ -445,13 +445,13 @@ export function TimerCard({
           <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg">
             <DollarSign
               size={14}
-              className={timerState.isBillable ? "text-[#17C3B2]" : "text-gray-400"}
+              className={timerState.isBillable ? "text-[#23D3EE]" : "text-gray-400"}
             />
             <span className="text-sm text-gray-600">Billable</span>
             <Switch
               checked={timerState.isBillable}
               onCheckedChange={(checked) => onUpdateTimer({ isBillable: checked })}
-              className="data-[state=checked]:bg-[#17C3B2] scale-90"
+              className="data-[state=checked]:bg-[#23D3EE] scale-90"
             />
           </div>
         </div>
@@ -467,7 +467,7 @@ export function TimerCard({
             <span
               className={cn(
                 "text-5xl font-mono font-bold tracking-tight",
-                timerState.isRunning ? "text-[#17C3B2]" : "text-gray-300"
+                timerState.isRunning ? "text-[#23D3EE]" : "text-gray-300"
               )}
             >
               {formatDuration(elapsedTime)}
@@ -485,9 +485,9 @@ export function TimerCard({
                 "w-14 h-14 rounded-2xl flex items-center justify-center transition-all",
                 timerState.isRunning
                   ? timerState.isPaused
-                    ? "bg-[#17C3B2] text-white shadow-xl shadow-[#17C3B2]/30"
+                    ? "bg-[#23D3EE] text-white shadow-xl shadow-[#23D3EE]/30"
                     : "bg-yellow-500 text-white shadow-xl shadow-yellow-500/30"
-                  : "bg-[#17C3B2] text-white shadow-xl shadow-[#17C3B2]/30"
+                  : "bg-[#23D3EE] text-white shadow-xl shadow-[#23D3EE]/30"
               )}
             >
               {timerState.isRunning && !timerState.isPaused ? (
@@ -524,14 +524,14 @@ export function TimerCard({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="px-6 py-3 bg-[#17C3B2]/5 border-t border-[#17C3B2]/10"
+            className="px-6 py-3 bg-[#23D3EE]/5 border-t border-[#23D3EE]/10"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <motion.div
                   animate={{ opacity: [1, 0.5, 1] }}
                   transition={{ repeat: Infinity, duration: 1.5 }}
-                  className="w-2 h-2 bg-[#17C3B2] rounded-full"
+                  className="w-2 h-2 bg-[#23D3EE] rounded-full"
                 />
                 <span className="text-sm text-gray-600">
                   {timerState.isPaused ? "Timer paused" : "Recording time"}
@@ -539,7 +539,7 @@ export function TimerCard({
                 </span>
               </div>
               {timerState.isBillable && (
-                <span className="text-sm text-[#17C3B2] font-medium">
+                <span className="text-sm text-[#23D3EE] font-medium">
                   $75/hr
                 </span>
               )}

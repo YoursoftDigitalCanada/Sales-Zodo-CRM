@@ -211,7 +211,7 @@ const LeaveRequestsPage: React.FC = () => {
           </Button>
           <Button
             onClick={() => setIsAddDialogOpen(true)}
-            className="gap-2 bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white shadow-lg shadow-[#17C3B2]/20"
+            className="gap-2 bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white shadow-lg shadow-[#23D3EE]/20"
           >
             <Plus className="w-4 h-4" />
             Request Leave
@@ -264,7 +264,7 @@ const LeaveRequestsPage: React.FC = () => {
                   variant={viewMode === 'cards' ? 'default' : 'ghost'}
                   size="icon"
                   className={`h-8 w-8 ${
-                    viewMode === 'cards' ? 'bg-[#17C3B2] hover:bg-[#17C3B2]/90' : ''
+                    viewMode === 'cards' ? 'bg-[#23D3EE] hover:bg-[#23D3EE]/90' : ''
                   }`}
                   onClick={() => setViewMode('cards')}
                 >
@@ -274,7 +274,7 @@ const LeaveRequestsPage: React.FC = () => {
                   variant={viewMode === 'table' ? 'default' : 'ghost'}
                   size="icon"
                   className={`h-8 w-8 ${
-                    viewMode === 'table' ? 'bg-[#17C3B2] hover:bg-[#17C3B2]/90' : ''
+                    viewMode === 'table' ? 'bg-[#23D3EE] hover:bg-[#23D3EE]/90' : ''
                   }`}
                   onClick={() => setViewMode('table')}
                 >

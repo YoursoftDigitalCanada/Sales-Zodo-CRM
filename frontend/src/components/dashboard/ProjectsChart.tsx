@@ -47,9 +47,9 @@ const CustomTooltip = ({ active, payload, label }: any) => {
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-[#0D2342] border border-white/10 rounded-xl p-4 shadow-2xl"
+        className="bg-[#0F172A] border border-white/10 rounded-xl p-4 shadow-2xl"
       >
-        <p className="text-[#17C3B2] font-semibold mb-3 text-sm">{label} 2024</p>
+        <p className="text-[#23D3EE] font-semibold mb-3 text-sm">{label} 2024</p>
         <div className="space-y-2">
           {payload.map((entry: any, index: number) => (
             <div key={index} className="flex items-center justify-between gap-6">
@@ -99,7 +99,7 @@ const CustomLegend = ({ payload, activeLines, toggleLine }: any) => {
             />
             <span className={cn(
               "text-xs font-medium transition-colors",
-              isActive ? "text-[#0D2342]" : "text-slate-400"
+              isActive ? "text-[#0F172A]" : "text-slate-400"
             )}>
               {entry.value}
             </span>
@@ -157,9 +157,9 @@ export function ProjectsChart() {
   ];
 
   const chartColors = {
-    projects: '#17C3B2',
-    completed: '#C9A14A',
-    pending: '#0D2342',
+    projects: '#23D3EE',
+    completed: '#FBBF23',
+    pending: '#0F172A',
   };
 
   const renderChart = () => {
@@ -348,12 +348,12 @@ export function ProjectsChart() {
           <div className="flex items-center gap-4">
             <motion.div 
               whileHover={{ rotate: 10 }}
-              className="h-12 w-12 rounded-xl bg-gradient-to-br from-[#17C3B2] to-[#17C3B2]/70 flex items-center justify-center shadow-lg shadow-[#17C3B2]/20"
+              className="h-12 w-12 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#23D3EE]/70 flex items-center justify-center shadow-lg shadow-[#23D3EE]/20"
             >
               <BarChart3 size={22} className="text-white" />
             </motion.div>
             <div>
-              <h3 className="text-xl font-bold text-[#0D2342]">Projects Overview</h3>
+              <h3 className="text-xl font-bold text-[#0F172A]">Projects Overview</h3>
               <p className="text-sm text-slate-400">Track your project performance</p>
             </div>
           </div>
@@ -371,8 +371,8 @@ export function ProjectsChart() {
                   className={cn(
                     "flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all",
                     chartType === type.id 
-                      ? "bg-white text-[#0D2342] shadow-sm" 
-                      : "text-slate-500 hover:text-[#0D2342]"
+                      ? "bg-white text-[#0F172A] shadow-sm" 
+                      : "text-slate-500 hover:text-[#0F172A]"
                   )}
                 >
                   <type.icon size={14} />
@@ -386,7 +386,7 @@ export function ProjectsChart() {
               <select
                 value={selectedPeriod}
                 onChange={(e) => setSelectedPeriod(e.target.value)}
-                className="appearance-none bg-slate-100 border-none rounded-xl px-4 py-2.5 pr-8 text-xs font-medium text-[#0D2342] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#17C3B2]/20"
+                className="appearance-none bg-slate-100 border-none rounded-xl px-4 py-2.5 pr-8 text-xs font-medium text-[#0F172A] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#23D3EE]/20"
               >
                 {periods.map((period) => (
                   <option key={period.id} value={period.id}>{period.label}</option>
@@ -401,21 +401,21 @@ export function ProjectsChart() {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleRefresh}
-                className="p-2.5 rounded-xl bg-slate-100 text-slate-500 hover:text-[#17C3B2] hover:bg-[#17C3B2]/10 transition-all"
+                className="p-2.5 rounded-xl bg-slate-100 text-slate-500 hover:text-[#23D3EE] hover:bg-[#23D3EE]/10 transition-all"
               >
                 <RefreshCw size={16} className={cn(isRefreshing && "animate-spin")} />
               </motion.button>
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="p-2.5 rounded-xl bg-slate-100 text-slate-500 hover:text-[#17C3B2] hover:bg-[#17C3B2]/10 transition-all"
+                className="p-2.5 rounded-xl bg-slate-100 text-slate-500 hover:text-[#23D3EE] hover:bg-[#23D3EE]/10 transition-all"
               >
                 <Download size={16} />
               </motion.button>
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="p-2.5 rounded-xl bg-slate-100 text-slate-500 hover:text-[#17C3B2] hover:bg-[#17C3B2]/10 transition-all"
+                className="p-2.5 rounded-xl bg-slate-100 text-slate-500 hover:text-[#23D3EE] hover:bg-[#23D3EE]/10 transition-all"
               >
                 <MoreHorizontal size={16} />
               </motion.button>
@@ -433,18 +433,18 @@ export function ProjectsChart() {
               transition={{ delay: index * 0.1 }}
               className={cn(
                 "p-4 rounded-xl border transition-all hover:shadow-md",
-                stat.color === 'teal' && "bg-[#17C3B2]/5 border-[#17C3B2]/20",
-                stat.color === 'gold' && "bg-[#C9A14A]/5 border-[#C9A14A]/20",
-                stat.color === 'navy' && "bg-[#0D2342]/5 border-[#0D2342]/20"
+                stat.color === 'teal' && "bg-[#23D3EE]/5 border-[#23D3EE]/20",
+                stat.color === 'gold' && "bg-[#FBBF23]/5 border-[#FBBF23]/20",
+                stat.color === 'navy' && "bg-[#0F172A]/5 border-[#0F172A]/20"
               )}
             >
               <p className="text-xs text-slate-500 mb-1">{stat.label}</p>
               <div className="flex items-center justify-between">
                 <span className={cn(
                   "text-xl font-bold",
-                  stat.color === 'teal' && "text-[#17C3B2]",
-                  stat.color === 'gold' && "text-[#C9A14A]",
-                  stat.color === 'navy' && "text-[#0D2342]"
+                  stat.color === 'teal' && "text-[#23D3EE]",
+                  stat.color === 'gold' && "text-[#FBBF23]",
+                  stat.color === 'navy' && "text-[#0F172A]"
                 )}>
                   {stat.value}
                 </span>
@@ -492,7 +492,7 @@ export function ProjectsChart() {
             Last updated: <span className="text-slate-600 font-medium">Today at 2:30 PM</span>
           </p>
           <div className="flex items-center gap-4">
-            <button className="text-xs text-[#17C3B2] font-medium hover:underline flex items-center gap-1">
+            <button className="text-xs text-[#23D3EE] font-medium hover:underline flex items-center gap-1">
               View Detailed Report
               <ArrowUpRight size={12} />
             </button>

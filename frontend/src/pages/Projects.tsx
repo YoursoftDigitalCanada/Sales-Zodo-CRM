@@ -210,7 +210,7 @@ const getStatusConfig = (status: string) => {
   const configs: Record<string, { bg: string; text: string; dot: string; icon: React.ElementType }> = {
     not_started: { bg: "bg-slate-100", text: "text-slate-600", dot: "bg-slate-400", icon: CircleDot },
     planning: { bg: "bg-blue-100", text: "text-blue-600", dot: "bg-blue-500", icon: Target },
-    in_progress: { bg: "bg-[#17C3B2]/10", text: "text-[#17C3B2]", dot: "bg-[#17C3B2]", icon: PlayCircle },
+    in_progress: { bg: "bg-[#23D3EE]/10", text: "text-[#23D3EE]", dot: "bg-[#23D3EE]", icon: PlayCircle },
     on_hold: { bg: "bg-amber-100", text: "text-amber-600", dot: "bg-amber-500", icon: PauseCircle },
     completed: { bg: "bg-green-100", text: "text-green-600", dot: "bg-green-500", icon: CheckCircle2 },
     cancelled: { bg: "bg-red-100", text: "text-red-600", dot: "bg-red-500", icon: XCircle },
@@ -232,7 +232,7 @@ const getProgressColor = (progress: number) => {
   if (progress < 25) return "bg-slate-400";
   if (progress < 50) return "bg-amber-500";
   if (progress < 75) return "bg-blue-500";
-  return "bg-[#17C3B2]";
+  return "bg-[#23D3EE]";
 };
 
 const formatCurrency = (amount?: number) => {
@@ -267,9 +267,9 @@ const StatCard = ({
   delay?: number;
 }) => {
   const colorClasses = {
-    teal: { bg: "bg-[#17C3B2]", light: "bg-[#17C3B2]/10", text: "text-[#17C3B2]" },
-    gold: { bg: "bg-[#C9A14A]", light: "bg-[#C9A14A]/10", text: "text-[#C9A14A]" },
-    navy: { bg: "bg-[#0D2342]", light: "bg-[#0D2342]/10", text: "text-[#0D2342]" },
+    teal: { bg: "bg-[#23D3EE]", light: "bg-[#23D3EE]/10", text: "text-[#23D3EE]" },
+    gold: { bg: "bg-[#FBBF23]", light: "bg-[#FBBF23]/10", text: "text-[#FBBF23]" },
+    navy: { bg: "bg-[#0F172A]", light: "bg-[#0F172A]/10", text: "text-[#0F172A]" },
     purple: { bg: "bg-purple-500", light: "bg-purple-500/10", text: "text-purple-500" },
     green: { bg: "bg-green-500", light: "bg-green-500/10", text: "text-green-500" },
     red: { bg: "bg-red-500", light: "bg-red-500/10", text: "text-red-500" },
@@ -283,7 +283,7 @@ const StatCard = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
       whileHover={{ y: -4 }}
-      className="relative bg-white rounded-2xl p-5 border border-slate-200 hover:border-[#17C3B2]/30 hover:shadow-xl hover:shadow-[#17C3B2]/5 transition-all overflow-hidden group"
+      className="relative bg-white rounded-2xl p-5 border border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5 transition-all overflow-hidden group"
     >
       <div className={cn("absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-10 group-hover:opacity-20 transition-all", colors.bg)} />
 
@@ -291,7 +291,7 @@ const StatCard = ({
         <div>
           <p className="text-sm text-slate-500 mb-1">{title}</p>
           <div className="flex items-baseline gap-2">
-            <p className="text-2xl font-bold text-[#0D2342]">{value}</p>
+            <p className="text-2xl font-bold text-[#0F172A]">{value}</p>
             {trend && (
               <span className={cn(
                 "flex items-center text-xs font-semibold",
@@ -349,7 +349,7 @@ const ProjectRow = ({
       exit={{ opacity: 0 }}
       className={cn(
         "group hover:bg-slate-50/80 transition-colors cursor-pointer border-b border-slate-100 last:border-0",
-        isSelected && "bg-[#17C3B2]/5"
+        isSelected && "bg-[#23D3EE]/5"
       )}
       onClick={onView}
     >
@@ -358,7 +358,7 @@ const ProjectRow = ({
         <Checkbox
           checked={isSelected}
           onCheckedChange={onSelect}
-          className="border-slate-300 data-[state=checked]:bg-[#17C3B2] data-[state=checked]:border-[#17C3B2]"
+          className="border-slate-300 data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
         />
       </td>
 
@@ -369,7 +369,7 @@ const ProjectRow = ({
           className="p-1 rounded-lg hover:bg-slate-100 transition-colors"
         >
           {project.isFavorite ? (
-            <Star size={16} className="text-[#C9A14A] fill-[#C9A14A]" />
+            <Star size={16} className="text-[#FBBF23] fill-[#FBBF23]" />
           ) : (
             <StarOff size={16} className="text-slate-300 group-hover:text-slate-400" />
           )}
@@ -381,7 +381,7 @@ const ProjectRow = ({
         <td className="py-4 px-4">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] flex items-center justify-center text-white font-semibold text-sm">
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white font-semibold text-sm">
                 {getInitials(project.name)}
               </div>
               {project.progress === 100 && (
@@ -391,7 +391,7 @@ const ProjectRow = ({
               )}
             </div>
             <div>
-              <div className="font-semibold text-[#0D2342] group-hover:text-[#17C3B2] transition-colors flex items-center gap-2">
+              <div className="font-semibold text-[#0F172A] group-hover:text-[#23D3EE] transition-colors flex items-center gap-2">
                 {project.name}
                 {project.category && (
                   <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-500">
@@ -425,7 +425,7 @@ const ProjectRow = ({
       {columns.find((c) => c.key === "projectManager")?.visible && (
         <td className="py-4 px-4">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-[#0D2342]/10 flex items-center justify-center text-[#0D2342] text-xs font-semibold">
+            <div className="w-7 h-7 rounded-lg bg-[#0F172A]/10 flex items-center justify-center text-[#0F172A] text-xs font-semibold">
               {getInitials(project.projectManager)}
             </div>
             <span className="text-sm text-slate-600">
@@ -480,7 +480,7 @@ const ProjectRow = ({
             </div>
             <span className={cn(
               "text-xs font-semibold min-w-[36px]",
-              project.progress >= 75 ? "text-[#17C3B2]" : "text-slate-500"
+              project.progress >= 75 ? "text-[#23D3EE]" : "text-slate-500"
             )}>
               {project.progress}%
             </span>
@@ -521,7 +521,7 @@ const ProjectRow = ({
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={onView}
-            className="p-2 rounded-lg hover:bg-[#17C3B2]/10 text-[#17C3B2] transition-colors"
+            className="p-2 rounded-lg hover:bg-[#23D3EE]/10 text-[#23D3EE] transition-colors"
             title="View Project"
           >
             <Eye size={16} />
@@ -614,8 +614,8 @@ const ProjectCard = ({
       whileHover={{ y: -4 }}
       className={cn(
         "bg-white rounded-2xl border border-slate-200 overflow-hidden cursor-pointer group",
-        "hover:border-[#17C3B2]/30 hover:shadow-xl hover:shadow-[#17C3B2]/5 transition-all",
-        isSelected && "border-[#17C3B2] bg-[#17C3B2]/5"
+        "hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5 transition-all",
+        isSelected && "border-[#23D3EE] bg-[#23D3EE]/5"
       )}
       onClick={onView}
     >
@@ -636,9 +636,9 @@ const ProjectCard = ({
               checked={isSelected}
               onCheckedChange={onSelect}
               onClick={(e) => e.stopPropagation()}
-              className="border-slate-300 data-[state=checked]:bg-[#17C3B2] data-[state=checked]:border-[#17C3B2]"
+              className="border-slate-300 data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
             />
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] flex items-center justify-center text-white font-bold text-sm">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white font-bold text-sm">
               {getInitials(project.name)}
             </div>
           </div>
@@ -649,7 +649,7 @@ const ProjectCard = ({
               className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
             >
               {project.isFavorite ? (
-                <Star size={16} className="text-[#C9A14A] fill-[#C9A14A]" />
+                <Star size={16} className="text-[#FBBF23] fill-[#FBBF23]" />
               ) : (
                 <StarOff size={16} className="text-slate-300" />
               )}
@@ -684,7 +684,7 @@ const ProjectCard = ({
 
         {/* Project Info */}
         <div className="mb-4">
-          <h3 className="font-semibold text-[#0D2342] group-hover:text-[#17C3B2] transition-colors mb-1 line-clamp-1">
+          <h3 className="font-semibold text-[#0F172A] group-hover:text-[#23D3EE] transition-colors mb-1 line-clamp-1">
             {project.name}
           </h3>
           {project.description && (
@@ -727,7 +727,7 @@ const ProjectCard = ({
             <span className="text-slate-500">Progress</span>
             <span className={cn(
               "font-semibold",
-              project.progress >= 75 ? "text-[#17C3B2]" : "text-slate-600"
+              project.progress >= 75 ? "text-[#23D3EE]" : "text-slate-600"
             )}>
               {project.progress}%
             </span>
@@ -744,7 +744,7 @@ const ProjectCard = ({
         {/* Footer */}
         <div className="flex items-center justify-between pt-4 border-t border-slate-100">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-[#0D2342]/10 flex items-center justify-center text-[#0D2342] text-[10px] font-semibold">
+            <div className="w-6 h-6 rounded-lg bg-[#0F172A]/10 flex items-center justify-center text-[#0F172A] text-[10px] font-semibold">
               {getInitials(project.projectManager)}
             </div>
             <span className="text-xs text-slate-500">{project.projectManager}</span>
@@ -772,16 +772,16 @@ const EmptyState = ({ onAdd }: { onAdd: () => void }) => (
     animate={{ opacity: 1, y: 0 }}
     className="flex flex-col items-center justify-center py-16 px-4"
   >
-    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#17C3B2]/10 to-[#C9A14A]/10 flex items-center justify-center mb-6">
-      <FolderOpen size={40} className="text-[#17C3B2]" />
+    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#23D3EE]/10 to-[#FBBF23]/10 flex items-center justify-center mb-6">
+      <FolderOpen size={40} className="text-[#23D3EE]" />
     </div>
-    <h3 className="text-xl font-semibold text-[#0D2342] mb-2">No projects yet</h3>
+    <h3 className="text-xl font-semibold text-[#0F172A] mb-2">No projects yet</h3>
     <p className="text-slate-500 text-center max-w-sm mb-6">
       Get started by creating your first project. Track progress, manage teams, and deliver on time.
     </p>
     <Button
       onClick={onAdd}
-      className="bg-gradient-to-r from-[#17C3B2] to-[#17C3B2]/90 hover:from-[#17C3B2]/90 hover:to-[#17C3B2] text-white rounded-xl shadow-lg shadow-[#17C3B2]/25"
+      className="bg-gradient-to-r from-[#23D3EE] to-[#23D3EE]/90 hover:from-[#23D3EE]/90 hover:to-[#23D3EE] text-white rounded-xl shadow-lg shadow-[#23D3EE]/25"
     >
       <Plus size={18} className="mr-2" />
       Create Your First Project
@@ -1113,7 +1113,7 @@ const ProjectsPage = () => {
             <div className="flex items-center gap-2 text-sm">
               <span className="text-slate-400">Dashboard</span>
               <ChevronRight size={16} className="text-slate-300" />
-              <span className="font-medium text-[#0D2342]">Projects</span>
+              <span className="font-medium text-[#0F172A]">Projects</span>
             </div>
 
             <div className="flex items-center gap-3">
@@ -1123,11 +1123,11 @@ const ProjectsPage = () => {
                 className="relative p-2 rounded-xl hover:bg-slate-100 text-slate-600 transition-colors"
               >
                 <Bell size={20} />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#17C3B2] rounded-full" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#23D3EE] rounded-full" />
               </motion.button>
 
               <div className="flex items-center gap-3 pl-3 border-l border-slate-200">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] flex items-center justify-center text-white font-semibold text-sm">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white font-semibold text-sm">
                   {user ? getInitials(`${user.firstName} ${user.lastName}`) : "?"}
                 </div>
               </div>
@@ -1146,11 +1146,11 @@ const ProjectsPage = () => {
             className="flex items-center justify-between"
           >
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] flex items-center justify-center shadow-lg shadow-[#17C3B2]/25">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center shadow-lg shadow-[#23D3EE]/25">
                 <Briefcase size={24} className="text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-[#0D2342]">Projects</h1>
+                <h1 className="text-2xl font-bold text-[#0F172A]">Projects</h1>
                 <p className="text-slate-500">
                   Manage and track all your projects
                 </p>
@@ -1179,7 +1179,7 @@ const ProjectsPage = () => {
 
               <Button
                 onClick={() => navigate("/projects/add")}
-                className="bg-gradient-to-r from-[#17C3B2] to-[#17C3B2]/90 hover:from-[#17C3B2]/90 hover:to-[#17C3B2] text-white rounded-xl shadow-lg shadow-[#17C3B2]/25 px-5"
+                className="bg-gradient-to-r from-[#23D3EE] to-[#23D3EE]/90 hover:from-[#23D3EE]/90 hover:to-[#23D3EE] text-white rounded-xl shadow-lg shadow-[#23D3EE]/25 px-5"
               >
                 <Plus size={18} className="mr-2" />
                 New Project
@@ -1251,7 +1251,7 @@ const ProjectsPage = () => {
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Search projects..."
-                    className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+                    className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
                   />
                   {searchTerm && (
                     <button
@@ -1309,7 +1309,7 @@ const ProjectsPage = () => {
                       setFilterStatus("all");
                       setFilterPriority("all");
                     }}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-slate-500 hover:text-[#17C3B2] hover:bg-[#17C3B2]/5 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-slate-500 hover:text-[#23D3EE] hover:bg-[#23D3EE]/5 transition-colors"
                   >
                     <X size={14} />
                     Clear
@@ -1375,7 +1375,7 @@ const ProjectsPage = () => {
                     className={cn(
                       "p-2 rounded-lg transition-all",
                       viewMode === "table"
-                        ? "bg-white text-[#17C3B2] shadow-sm"
+                        ? "bg-white text-[#23D3EE] shadow-sm"
                         : "text-slate-500 hover:text-slate-700"
                     )}
                   >
@@ -1386,7 +1386,7 @@ const ProjectsPage = () => {
                     className={cn(
                       "p-2 rounded-lg transition-all",
                       viewMode === "grid"
-                        ? "bg-white text-[#17C3B2] shadow-sm"
+                        ? "bg-white text-[#23D3EE] shadow-sm"
                         : "text-slate-500 hover:text-slate-700"
                     )}
                   >
@@ -1406,7 +1406,7 @@ const ProjectsPage = () => {
           >
             {isLoading ? (
               <div className="flex flex-col items-center justify-center py-20">
-                <Loader2 size={40} className="animate-spin text-[#17C3B2] mb-4" />
+                <Loader2 size={40} className="animate-spin text-[#23D3EE] mb-4" />
                 <p className="text-slate-500">Loading projects...</p>
               </div>
             ) : filteredProjects.length === 0 ? (
@@ -1425,7 +1425,7 @@ const ProjectsPage = () => {
                               paginatedProjects.length > 0
                             }
                             onCheckedChange={handleSelectAll}
-                            className="border-slate-300 data-[state=checked]:bg-[#17C3B2] data-[state=checked]:border-[#17C3B2]"
+                            className="border-slate-300 data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
                           />
                         </th>
                         <th className="py-4 px-2 text-left w-10"></th>
@@ -1437,14 +1437,14 @@ const ProjectsPage = () => {
                             {col.sortable ? (
                               <button
                                 onClick={() => handleSort(col.key)}
-                                className="flex items-center gap-1.5 hover:text-[#17C3B2] transition-colors"
+                                className="flex items-center gap-1.5 hover:text-[#23D3EE] transition-colors"
                               >
                                 {col.label}
                                 <ArrowUpDown
                                   size={14}
                                   className={cn(
                                     sortConfig?.key === col.key
-                                      ? "text-[#17C3B2]"
+                                      ? "text-[#23D3EE]"
                                       : "text-slate-300"
                                   )}
                                 />
@@ -1552,7 +1552,7 @@ const ProjectsPage = () => {
                             className={cn(
                               "h-9 w-9 rounded-lg text-sm font-medium transition-all",
                               currentPage === pageNum
-                                ? "bg-[#17C3B2] text-white shadow-lg shadow-[#17C3B2]/25"
+                                ? "bg-[#23D3EE] text-white shadow-lg shadow-[#23D3EE]/25"
                                 : "text-slate-600 hover:bg-slate-100"
                             )}
                           >
@@ -1644,7 +1644,7 @@ const ProjectsPage = () => {
                           className={cn(
                             "h-9 w-9 rounded-lg text-sm font-medium transition-all",
                             currentPage === pageNum
-                              ? "bg-[#17C3B2] text-white shadow-lg shadow-[#17C3B2]/25"
+                              ? "bg-[#23D3EE] text-white shadow-lg shadow-[#23D3EE]/25"
                               : "text-slate-600 hover:bg-slate-100"
                           )}
                         >
@@ -1679,7 +1679,7 @@ const ProjectsPage = () => {
             {/* Status Distribution */}
             <div className="col-span-2 bg-white rounded-2xl border border-slate-200 p-5">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-[#0D2342]">Status Distribution</h3>
+                <h3 className="font-semibold text-[#0F172A]">Status Distribution</h3>
                 <PieChart size={18} className="text-slate-400" />
               </div>
               <div className="space-y-3">
@@ -1694,7 +1694,7 @@ const ProjectsPage = () => {
                     <div key={status.value} className="flex items-center gap-3">
                       <div className={cn("w-3 h-3 rounded-full", config.dot)} />
                       <span className="text-sm text-slate-600 flex-1">{status.label}</span>
-                      <span className="text-sm font-semibold text-[#0D2342]">{count}</span>
+                      <span className="text-sm font-semibold text-[#0F172A]">{count}</span>
                       <div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden">
                         <motion.div
                           initial={{ width: 0 }}
@@ -1714,7 +1714,7 @@ const ProjectsPage = () => {
             {/* Recent Activity */}
             <div className="col-span-2 bg-white rounded-2xl border border-slate-200 p-5">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-[#0D2342]">Recent Activity</h3>
+                <h3 className="font-semibold text-[#0F172A]">Recent Activity</h3>
                 <Activity size={18} className="text-slate-400" />
               </div>
               <div className="space-y-3">
@@ -1727,11 +1727,11 @@ const ProjectsPage = () => {
                     className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors"
                     onClick={() => navigate(`/projects/${project.id}`)}
                   >
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#17C3B2]/20 to-[#C9A14A]/20 flex items-center justify-center text-[#17C3B2] text-xs font-semibold">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#23D3EE]/20 to-[#FBBF23]/20 flex items-center justify-center text-[#23D3EE] text-xs font-semibold">
                       {getInitials(project.name)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-[#0D2342] truncate">
+                      <p className="text-sm font-medium text-[#0F172A] truncate">
                         {project.name}
                       </p>
                       <p className="text-xs text-slate-400">
@@ -1755,12 +1755,12 @@ const ProjectsPage = () => {
               <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
                 <Trash2 size={24} className="text-red-600" />
               </div>
-              <AlertDialogTitle className="text-center text-[#0D2342]">
+              <AlertDialogTitle className="text-center text-[#0F172A]">
                 Delete Project
               </AlertDialogTitle>
               <AlertDialogDescription className="text-center">
                 Are you sure you want to delete{" "}
-                <span className="font-semibold text-[#0D2342]">
+                <span className="font-semibold text-[#0F172A]">
                   "{projectToDelete?.name}"
                 </span>
                 ? This action cannot be undone and all associated data will be permanently removed.

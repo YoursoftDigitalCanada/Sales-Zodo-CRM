@@ -96,11 +96,11 @@ export const SettingsDropdown: React.FC<SettingsDropdownProps> = ({
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="relative h-10 w-10 rounded-full ring-2 ring-white shadow-sm hover:ring-[#17C3B2]/20"
+          className="relative h-10 w-10 rounded-full ring-2 ring-white shadow-sm hover:ring-[#23D3EE]/20"
         >
           <Avatar className="h-10 w-10">
             <AvatarImage src={user.avatar} alt={user.name} />
-            <AvatarFallback className="bg-gradient-to-br from-[#17C3B2] to-[#0D2342] text-white font-semibold">
+            <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#0F172A] text-white font-semibold">
               {getInitials(user.name)}
             </AvatarFallback>
           </Avatar>
@@ -111,14 +111,14 @@ export const SettingsDropdown: React.FC<SettingsDropdownProps> = ({
         <div className="flex items-center gap-3 p-3 mb-2">
           <Avatar className="h-12 w-12 border-2 border-white shadow-md">
             <AvatarImage src={user.avatar} alt={user.name} />
-            <AvatarFallback className="bg-gradient-to-br from-[#17C3B2] to-[#0D2342] text-white font-semibold">
+            <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#0F172A] text-white font-semibold">
               {getInitials(user.name)}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-[#0D2342] truncate">{user.name}</p>
+            <p className="font-semibold text-[#0F172A] truncate">{user.name}</p>
             <p className="text-sm text-slate-500 truncate">{user.email}</p>
-            <p className="text-xs text-[#17C3B2] font-medium">{user.role}</p>
+            <p className="text-xs text-[#23D3EE] font-medium">{user.role}</p>
           </div>
         </div>
 
@@ -170,7 +170,7 @@ export const SettingsDropdown: React.FC<SettingsDropdownProps> = ({
                   <item.icon size={16} className="text-slate-500" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-[#0D2342]">{item.label}</p>
+                  <p className="text-sm font-medium text-[#0F172A]">{item.label}</p>
                   <p className="text-xs text-slate-400 truncate">{item.description}</p>
                 </div>
                 <ChevronRight size={16} className="text-slate-300" />

@@ -21,7 +21,7 @@ export const getEmployeeStatusConfig = (status: EmployeeStatus) => {
 
 export const getEmploymentTypeConfig = (type: EmploymentType) => {
   const configs = {
-    'full-time': { label: 'Full Time', color: 'bg-[#17C3B2]/10 text-[#17C3B2]' },
+    'full-time': { label: 'Full Time', color: 'bg-[#23D3EE]/10 text-[#23D3EE]' },
     'part-time': { label: 'Part Time', color: 'bg-purple-100 text-purple-700' },
     contract: { label: 'Contract', color: 'bg-orange-100 text-orange-700' },
     intern: { label: 'Intern', color: 'bg-pink-100 text-pink-700' },
@@ -43,7 +43,7 @@ export const getAttendanceStatusConfig = (status: AttendanceStatus) => {
 
 export const getLeaveTypeConfig = (type: LeaveType) => {
   const configs = {
-    annual: { label: 'Annual Leave', color: 'bg-[#17C3B2]/10 text-[#17C3B2]', icon: '🌴' },
+    annual: { label: 'Annual Leave', color: 'bg-[#23D3EE]/10 text-[#23D3EE]', icon: '🌴' },
     sick: { label: 'Sick Leave', color: 'bg-red-100 text-red-700', icon: '🏥' },
     personal: { label: 'Personal Leave', color: 'bg-purple-100 text-purple-700', icon: '👤' },
     maternity: { label: 'Maternity Leave', color: 'bg-pink-100 text-pink-700', icon: '👶' },

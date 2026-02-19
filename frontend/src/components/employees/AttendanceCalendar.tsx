@@ -128,11 +128,11 @@ export const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
                     className={`
                       relative aspect-square p-1 rounded-lg text-sm
                       ${!isCurrentMonth ? 'text-gray-300' : 'text-gray-700'}
-                      ${isCurrentDay ? 'ring-2 ring-[#17C3B2] ring-offset-2' : ''}
+                      ${isCurrentDay ? 'ring-2 ring-[#23D3EE] ring-offset-2' : ''}
                       hover:bg-gray-100 transition-colors
                     `}
                   >
-                    <span className={`${isCurrentDay ? 'font-bold text-[#17C3B2]' : ''}`}>
+                    <span className={`${isCurrentDay ? 'font-bold text-[#23D3EE]' : ''}`}>
                       {format(day, 'd')}
                     </span>
                     

@@ -189,7 +189,7 @@ const folders: Folder[] = [
 const labels: EmailLabel[] = [
   { id: "work", name: "Work", color: "#3B82F6" },
   { id: "personal", name: "Personal", color: "#8B5CF6" },
-  { id: "clients", name: "Clients", color: "#17C3B2" },
+  { id: "clients", name: "Clients", color: "#23D3EE" },
   { id: "finance", name: "Finance", color: "#22C55E" },
   { id: "urgent", name: "Urgent", color: "#EF4444" },
   { id: "social", name: "Social", color: "#EC4899" },
@@ -503,7 +503,7 @@ const ComposeEmailDialog = ({
         className="fixed bottom-0 right-6 w-72 bg-white rounded-t-xl shadow-2xl border border-slate-200 z-50"
       >
         <div
-          className="flex items-center justify-between p-3 bg-[#0D2342] text-white rounded-t-xl cursor-pointer"
+          className="flex items-center justify-between p-3 bg-[#0F172A] text-white rounded-t-xl cursor-pointer"
           onClick={() => setIsMinimized(false)}
         >
           <div className="flex items-center gap-2">
@@ -539,7 +539,7 @@ const ComposeEmailDialog = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[700px] p-0 rounded-2xl overflow-hidden max-h-[90vh]">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 bg-[#0D2342] text-white">
+        <div className="flex items-center justify-between p-4 bg-[#0F172A] text-white">
           <h2 className="font-semibold">
             {replyTo ? "Reply" : forwardEmail ? "Forward" : "New Message"}
           </h2>
@@ -569,12 +569,12 @@ const ComposeEmailDialog = ({
                 value={to}
                 onChange={(e) => setTo(e.target.value)}
                 placeholder="recipient@email.com"
-                className="flex-1 h-9 border-0 border-b border-slate-200 rounded-none px-0 focus-visible:ring-0 focus-visible:border-[#17C3B2]"
+                className="flex-1 h-9 border-0 border-b border-slate-200 rounded-none px-0 focus-visible:ring-0 focus-visible:border-[#23D3EE]"
               />
               {!showCc && (
                 <button
                   onClick={() => setShowCc(true)}
-                  className="text-xs text-slate-400 hover:text-[#17C3B2]"
+                  className="text-xs text-slate-400 hover:text-[#23D3EE]"
                 >
                   Cc/Bcc
                 </button>
@@ -590,7 +590,7 @@ const ComposeEmailDialog = ({
                 value={cc}
                 onChange={(e) => setCc(e.target.value)}
                 placeholder="cc@email.com"
-                className="flex-1 h-9 border-0 border-b border-slate-200 rounded-none px-0 focus-visible:ring-0 focus-visible:border-[#17C3B2]"
+                className="flex-1 h-9 border-0 border-b border-slate-200 rounded-none px-0 focus-visible:ring-0 focus-visible:border-[#23D3EE]"
               />
             </div>
           )}
@@ -602,7 +602,7 @@ const ComposeEmailDialog = ({
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               placeholder="Email subject"
-              className="flex-1 h-9 border-0 border-b border-slate-200 rounded-none px-0 focus-visible:ring-0 focus-visible:border-[#17C3B2]"
+              className="flex-1 h-9 border-0 border-b border-slate-200 rounded-none px-0 focus-visible:ring-0 focus-visible:border-[#23D3EE]"
             />
           </div>
 
@@ -719,7 +719,7 @@ const ComposeEmailDialog = ({
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl">
+                <Button className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl">
                   <Send size={16} className="mr-2" />
                   Send
                   <ChevronDown size={14} className="ml-2" />
@@ -777,7 +777,7 @@ const EmailListItem = ({
       className={cn(
         "flex items-center gap-3 px-4 py-3 cursor-pointer border-b border-slate-100 transition-all group",
         isActive
-          ? "bg-[#17C3B2]/10 border-l-4 border-l-[#17C3B2]"
+          ? "bg-[#23D3EE]/10 border-l-4 border-l-[#23D3EE]"
           : "hover:bg-slate-50",
         !email.read && "bg-blue-50/50"
       )}
@@ -788,14 +788,14 @@ const EmailListItem = ({
         <Checkbox
           checked={isSelected}
           onCheckedChange={onSelect}
-          className="data-[state=checked]:bg-[#17C3B2] data-[state=checked]:border-[#17C3B2]"
+          className="data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
         />
         <button
           onClick={onStar}
           className="p-1 rounded-lg hover:bg-slate-200 transition-colors"
         >
           {email.starred ? (
-            <Star size={16} className="text-[#C9A14A] fill-[#C9A14A]" />
+            <Star size={16} className="text-[#FBBF23] fill-[#FBBF23]" />
           ) : (
             <Star size={16} className="text-slate-300 group-hover:text-slate-400" />
           )}
@@ -813,7 +813,7 @@ const EmailListItem = ({
           className="w-10 h-10 rounded-full object-cover flex-shrink-0"
         />
       ) : (
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
           {getInitials(email.from.name)}
         </div>
       )}
@@ -823,18 +823,18 @@ const EmailListItem = ({
         <div className="flex items-center gap-2 mb-0.5">
           <span className={cn(
             "font-medium truncate",
-            !email.read ? "text-[#0D2342] font-semibold" : "text-slate-600"
+            !email.read ? "text-[#0F172A] font-semibold" : "text-slate-600"
           )}>
             {email.from.name}
           </span>
           {!email.read && (
-            <span className="w-2 h-2 rounded-full bg-[#17C3B2] flex-shrink-0" />
+            <span className="w-2 h-2 rounded-full bg-[#23D3EE] flex-shrink-0" />
           )}
         </div>
         <div className="flex items-center gap-2">
           <span className={cn(
             "truncate",
-            !email.read ? "text-[#0D2342] font-medium" : "text-slate-500"
+            !email.read ? "text-[#0F172A] font-medium" : "text-slate-500"
           )}>
             {email.subject}
           </span>
@@ -846,7 +846,7 @@ const EmailListItem = ({
       <div className="flex flex-col items-end gap-1 flex-shrink-0">
         <span className={cn(
           "text-xs",
-          !email.read ? "text-[#17C3B2] font-semibold" : "text-slate-400"
+          !email.read ? "text-[#23D3EE] font-semibold" : "text-slate-400"
         )}>
           {email.time}
         </span>
@@ -952,7 +952,7 @@ const EmailDetailView = ({
           >
             <ArrowLeft size={18} />
           </Button>
-          <h2 className="text-lg font-semibold text-[#0D2342] truncate max-w-[400px]">
+          <h2 className="text-lg font-semibold text-[#0F172A] truncate max-w-[400px]">
             {email.subject}
           </h2>
         </div>
@@ -1058,16 +1058,16 @@ const EmailDetailView = ({
                 className="w-12 h-12 rounded-full object-cover"
               />
             ) : (
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] flex items-center justify-center text-white font-bold">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white font-bold">
                 {getInitials(email.from.name)}
               </div>
             )}
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-semibold text-[#0D2342]">{email.from.name}</span>
+                <span className="font-semibold text-[#0F172A]">{email.from.name}</span>
                 <button onClick={onStar}>
                   {email.starred ? (
-                    <Star size={16} className="text-[#C9A14A] fill-[#C9A14A]" />
+                    <Star size={16} className="text-[#FBBF23] fill-[#FBBF23]" />
                   ) : (
                     <Star size={16} className="text-slate-300 hover:text-slate-400" />
                   )}
@@ -1127,7 +1127,7 @@ const EmailDetailView = ({
         {/* Attachments */}
         {email.hasAttachments && email.attachments && (
           <div className="mt-8 pt-6 border-t border-slate-100">
-            <h4 className="text-sm font-semibold text-[#0D2342] mb-3">
+            <h4 className="text-sm font-semibold text-[#0F172A] mb-3">
               Attachments ({email.attachments.length})
             </h4>
             <div className="flex flex-wrap gap-3">
@@ -1135,11 +1135,11 @@ const EmailDetailView = ({
                 <motion.div
                   key={attachment.id}
                   whileHover={{ y: -2 }}
-                  className="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-xl border border-slate-200 hover:border-[#17C3B2]/30 hover:shadow-md transition-all cursor-pointer group"
+                  className="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-xl border border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-md transition-all cursor-pointer group"
                 >
                   <span className="text-2xl">{getAttachmentIcon(attachment.type)}</span>
                   <div>
-                    <p className="text-sm font-medium text-[#0D2342] group-hover:text-[#17C3B2] transition-colors">
+                    <p className="text-sm font-medium text-[#0F172A] group-hover:text-[#23D3EE] transition-colors">
                       {attachment.name}
                     </p>
                     <p className="text-xs text-slate-400">{attachment.size}</p>
@@ -1164,14 +1164,14 @@ const EmailDetailView = ({
           <Button
             onClick={onReply}
             variant="outline"
-            className="flex-1 rounded-xl border-slate-200 hover:border-[#17C3B2] hover:text-[#17C3B2]"
+            className="flex-1 rounded-xl border-slate-200 hover:border-[#23D3EE] hover:text-[#23D3EE]"
           >
             <CornerUpLeft size={16} className="mr-2" />
             Reply
           </Button>
           <Button
             variant="outline"
-            className="flex-1 rounded-xl border-slate-200 hover:border-[#17C3B2] hover:text-[#17C3B2]"
+            className="flex-1 rounded-xl border-slate-200 hover:border-[#23D3EE] hover:text-[#23D3EE]"
           >
             <ReplyAll size={16} className="mr-2" />
             Reply All
@@ -1179,7 +1179,7 @@ const EmailDetailView = ({
           <Button
             onClick={onForward}
             variant="outline"
-            className="flex-1 rounded-xl border-slate-200 hover:border-[#17C3B2] hover:text-[#17C3B2]"
+            className="flex-1 rounded-xl border-slate-200 hover:border-[#23D3EE] hover:text-[#23D3EE]"
           >
             <CornerUpRight size={16} className="mr-2" />
             Forward
@@ -1379,9 +1379,9 @@ const LetterBoxPage = () => {
                 <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
                   <span>Dashboard</span>
                   <ChevronRight size={14} />
-                  <span className="text-[#17C3B2] font-medium">Letter Box</span>
+                  <span className="text-[#23D3EE] font-medium">Letter Box</span>
                 </div>
-                <h1 className="text-2xl font-bold text-[#0D2342]">Letter Box</h1>
+                <h1 className="text-2xl font-bold text-[#0F172A]">Letter Box</h1>
               </div>
 
               {/* Header Actions */}
@@ -1398,11 +1398,11 @@ const LetterBoxPage = () => {
                 </div>
 
                 <div className="flex items-center gap-3 pl-3 border-l border-slate-200">
-                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] flex items-center justify-center text-white font-bold shadow-lg shadow-[#17C3B2]/20">
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white font-bold shadow-lg shadow-[#23D3EE]/20">
                     SA
                   </div>
                   <div className="hidden sm:block">
-                    <p className="text-sm font-semibold text-[#0D2342]">SAdmin</p>
+                    <p className="text-sm font-semibold text-[#0F172A]">SAdmin</p>
                     <p className="text-xs text-slate-500">Administrator</p>
                   </div>
                   <ChevronDown size={16} className="text-slate-400" />
@@ -1423,7 +1423,7 @@ const LetterBoxPage = () => {
                 setForwardEmail(undefined);
                 setShowCompose(true);
               }}
-              className="w-full h-12 bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl shadow-lg shadow-[#17C3B2]/20 mb-6"
+              className="w-full h-12 bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl shadow-lg shadow-[#23D3EE]/20 mb-6"
             >
               <MailPlus size={18} className="mr-2" />
               Compose
@@ -1443,14 +1443,14 @@ const LetterBoxPage = () => {
                   className={cn(
                     "w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all",
                     selectedFolder === folder.id
-                      ? "bg-[#17C3B2]/10 text-[#17C3B2]"
+                      ? "bg-[#23D3EE]/10 text-[#23D3EE]"
                       : "text-slate-600 hover:bg-slate-50"
                   )}
                 >
                   <div className="flex items-center gap-3">
                     <folder.icon
                       size={18}
-                      className={selectedFolder === folder.id ? "text-[#17C3B2]" : "text-slate-400"}
+                      className={selectedFolder === folder.id ? "text-[#23D3EE]" : "text-slate-400"}
                     />
                     <span className="font-medium">{folder.name}</span>
                   </div>
@@ -1459,9 +1459,9 @@ const LetterBoxPage = () => {
                       className={cn(
                         "px-2 py-0.5 rounded-md text-xs font-semibold",
                         selectedFolder === folder.id
-                          ? "bg-[#17C3B2] text-white"
+                          ? "bg-[#23D3EE] text-white"
                           : folder.id === "inbox" && folder.count > 0
-                          ? "bg-[#17C3B2] text-white"
+                          ? "bg-[#23D3EE] text-white"
                           : "bg-slate-100 text-slate-500"
                       )}
                     >
@@ -1500,15 +1500,15 @@ const LetterBoxPage = () => {
 
             {/* Storage Info */}
             <div className="pt-4 mt-4 border-t border-slate-100">
-              <div className="p-4 rounded-xl bg-gradient-to-br from-[#17C3B2]/10 to-[#C9A14A]/10">
+              <div className="p-4 rounded-xl bg-gradient-to-br from-[#23D3EE]/10 to-[#FBBF23]/10">
                 <div className="flex items-center gap-2 mb-2">
-                  <Sparkles size={16} className="text-[#17C3B2]" />
-                  <span className="text-sm font-semibold text-[#0D2342]">Storage</span>
+                  <Sparkles size={16} className="text-[#23D3EE]" />
+                  <span className="text-sm font-semibold text-[#0F172A]">Storage</span>
                 </div>
                 <p className="text-xs text-slate-500 mb-2">2.4 GB of 15 GB used</p>
                 <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-[#17C3B2] to-[#C9A14A] rounded-full"
+                    className="h-full bg-gradient-to-r from-[#23D3EE] to-[#6366F1] rounded-full"
                     style={{ width: "16%" }}
                   />
                 </div>
@@ -1532,7 +1532,7 @@ const LetterBoxPage = () => {
                     selectedEmails.length === filteredEmails.length
                   }
                   onCheckedChange={handleSelectAll}
-                  className="data-[state=checked]:bg-[#17C3B2] data-[state=checked]:border-[#17C3B2]"
+                  className="data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
                 />
                 <Button
                   variant="ghost"
@@ -1611,7 +1611,7 @@ const LetterBoxPage = () => {
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Search emails..."
-                    className="h-9 w-64 pl-9 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+                    className="h-9 w-64 pl-9 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
                   />
                   {searchTerm && (
                     <button
@@ -1687,7 +1687,7 @@ const LetterBoxPage = () => {
                   <div className="w-20 h-20 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
                     <Inbox size={40} className="text-slate-300" />
                   </div>
-                  <h3 className="text-lg font-semibold text-[#0D2342] mb-2">
+                  <h3 className="text-lg font-semibold text-[#0F172A] mb-2">
                     {searchTerm ? "No emails found" : "No emails here"}
                   </h3>
                   <p className="text-sm text-slate-500 text-center max-w-xs">
@@ -1749,10 +1749,10 @@ const LetterBoxPage = () => {
                 className="hidden lg:flex flex-1 flex-col items-center justify-center bg-slate-50"
               >
                 <div className="text-center">
-                  <div className="w-32 h-32 mx-auto mb-6 rounded-3xl bg-gradient-to-br from-[#17C3B2]/20 to-[#C9A14A]/20 flex items-center justify-center">
-                    <Mail size={56} className="text-[#17C3B2]" />
+                  <div className="w-32 h-32 mx-auto mb-6 rounded-3xl bg-gradient-to-br from-[#23D3EE]/20 to-[#FBBF23]/20 flex items-center justify-center">
+                    <Mail size={56} className="text-[#23D3EE]" />
                   </div>
-                  <h3 className="text-xl font-semibold text-[#0D2342] mb-2">
+                  <h3 className="text-xl font-semibold text-[#0F172A] mb-2">
                     Select an email to read
                   </h3>
                   <p className="text-slate-500 max-w-sm">

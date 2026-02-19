@@ -120,7 +120,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
             return (
               <TableRow 
                 key={employee.id}
-                className={isSelected ? 'bg-[#17C3B2]/5' : ''}
+                className={isSelected ? 'bg-[#23D3EE]/5' : ''}
               >
                 <TableCell>
                   <Checkbox 
@@ -132,7 +132,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
                       <AvatarImage src={employee.avatar} />
-                      <AvatarFallback className="bg-[#17C3B2]/10 text-[#17C3B2]">
+                      <AvatarFallback className="bg-[#23D3EE]/10 text-[#23D3EE]">
                         {getInitials(employee.firstName, employee.lastName)}
                       </AvatarFallback>
                     </Avatar>

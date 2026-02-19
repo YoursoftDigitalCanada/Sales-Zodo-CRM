@@ -404,7 +404,7 @@ const AllEmployeesPage: React.FC = () => {
           </Button>
           <Button
             onClick={() => setIsAddDialogOpen(true)}
-            className="gap-2 bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white shadow-lg shadow-[#17C3B2]/20"
+            className="gap-2 bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white shadow-lg shadow-[#23D3EE]/20"
           >
             <Plus className="w-4 h-4" />
             Add Employee
@@ -439,11 +439,11 @@ const AllEmployeesPage: React.FC = () => {
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
-          className="flex items-center justify-between p-4 bg-[#17C3B2]/10 rounded-xl border border-[#17C3B2]/20"
+          className="flex items-center justify-between p-4 bg-[#23D3EE]/10 rounded-xl border border-[#23D3EE]/20"
         >
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[#17C3B2]/20">
-              <Users className="w-5 h-5 text-[#17C3B2]" />
+            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[#23D3EE]/20">
+              <Users className="w-5 h-5 text-[#23D3EE]" />
             </div>
             <div>
               <p className="font-medium text-gray-900">
@@ -546,7 +546,7 @@ const AllEmployeesPage: React.FC = () => {
             filters.employmentTypes.length === 0 && (
               <Button
                 onClick={() => setIsAddDialogOpen(true)}
-                className="gap-2 bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white"
+                className="gap-2 bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white"
               >
                 <UserPlus className="w-4 h-4" />
                 Add Your First Employee

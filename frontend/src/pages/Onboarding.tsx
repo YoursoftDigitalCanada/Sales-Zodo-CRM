@@ -157,11 +157,11 @@ import Confetti from "react-confetti";
 // Floating Orbs Component
 const FloatingOrbs = () => {
   const orbs = [
-    { size: 600, x: "10%", y: "20%", color: "#17C3B2", delay: 0, duration: 20 },
-    { size: 400, x: "80%", y: "10%", color: "#0D2342", delay: 2, duration: 25 },
-    { size: 300, x: "70%", y: "70%", color: "#17C3B2", delay: 4, duration: 18 },
-    { size: 500, x: "20%", y: "80%", color: "#0D2342", delay: 1, duration: 22 },
-    { size: 200, x: "50%", y: "50%", color: "#17C3B2", delay: 3, duration: 15 },
+    { size: 600, x: "10%", y: "20%", color: "#23D3EE", delay: 0, duration: 20 },
+    { size: 400, x: "80%", y: "10%", color: "#0F172A", delay: 2, duration: 25 },
+    { size: 300, x: "70%", y: "70%", color: "#23D3EE", delay: 4, duration: 18 },
+    { size: 500, x: "20%", y: "80%", color: "#0F172A", delay: 1, duration: 22 },
+    { size: 200, x: "50%", y: "50%", color: "#23D3EE", delay: 3, duration: 15 },
   ];
 
   return (
@@ -212,7 +212,7 @@ const ParticleField = () => {
       {particles.map((particle) => (
         <motion.div
           key={particle.id}
-          className="absolute rounded-full bg-[#17C3B2]"
+          className="absolute rounded-full bg-[#23D3EE]"
           style={{
             width: particle.size,
             height: particle.size,
@@ -245,8 +245,8 @@ const GridPattern = () => {
         className="absolute inset-0"
         style={{
           backgroundImage: `
-            linear-gradient(to right, #0D2342 1px, transparent 1px),
-            linear-gradient(to bottom, #0D2342 1px, transparent 1px)
+            linear-gradient(to right, #0F172A 1px, transparent 1px),
+            linear-gradient(to bottom, #0F172A 1px, transparent 1px)
           `,
           backgroundSize: "60px 60px",
         }}
@@ -287,15 +287,15 @@ const GradientMesh = () => {
 // Floating Icons Component
 const FloatingIcons = () => {
   const icons = [
-    { Icon: Rocket, x: "5%", y: "15%", size: 32, color: "#17C3B2" },
+    { Icon: Rocket, x: "5%", y: "15%", size: 32, color: "#23D3EE" },
     { Icon: Star, x: "90%", y: "20%", size: 24, color: "#F59E0B" },
-    { Icon: Target, x: "85%", y: "75%", size: 28, color: "#17C3B2" },
+    { Icon: Target, x: "85%", y: "75%", size: 28, color: "#23D3EE" },
     { Icon: Zap, x: "8%", y: "70%", size: 26, color: "#8B5CF6" },
     { Icon: Heart, x: "15%", y: "45%", size: 20, color: "#EC4899" },
     { Icon: Crown, x: "92%", y: "50%", size: 24, color: "#F59E0B" },
     { Icon: Trophy, x: "75%", y: "10%", size: 22, color: "#10B981" },
     { Icon: Gift, x: "3%", y: "85%", size: 28, color: "#EF4444" },
-    { Icon: Sparkles, x: "50%", y: "5%", size: 24, color: "#17C3B2" },
+    { Icon: Sparkles, x: "50%", y: "5%", size: 24, color: "#23D3EE" },
     { Icon: Lightbulb, x: "45%", y: "90%", size: 26, color: "#F59E0B" },
   ];
 
@@ -337,9 +337,9 @@ const AnimatedLines = () => {
       <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#17C3B2" stopOpacity="0" />
-            <stop offset="50%" stopColor="#17C3B2" stopOpacity="0.3" />
-            <stop offset="100%" stopColor="#17C3B2" stopOpacity="0" />
+            <stop offset="0%" stopColor="#23D3EE" stopOpacity="0" />
+            <stop offset="50%" stopColor="#23D3EE" stopOpacity="0.3" />
+            <stop offset="100%" stopColor="#23D3EE" stopOpacity="0" />
           </linearGradient>
         </defs>
         {[...Array(5)].map((_, i) => (
@@ -410,7 +410,7 @@ const WaveAnimation = () => {
         preserveAspectRatio="none"
       >
         <motion.path
-          fill="#17C3B2"
+          fill="#23D3EE"
           fillOpacity="0.3"
           initial={{ d: "M0,160L48,176C96,192,192,224,288,213.3C384,203,480,149,576,138.7C672,128,768,160,864,181.3C960,203,1056,213,1152,197.3C1248,181,1344,139,1392,117.3L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z" }}
           animate={{
@@ -427,7 +427,7 @@ const WaveAnimation = () => {
           }}
         />
         <motion.path
-          fill="#0D2342"
+          fill="#0F172A"
           fillOpacity="0.2"
           initial={{ d: "M0,256L48,240C96,224,192,192,288,181.3C384,171,480,181,576,186.7C672,192,768,192,864,186.7C960,181,1056,171,1152,181.3C1248,192,1344,224,1392,240L1440,256L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z" }}
           animate={{
@@ -701,14 +701,14 @@ const ProgressIndicator = ({
             animate={{ opacity: 1, x: 0 }}
           >
             <motion.div 
-              className="w-12 h-12 bg-gradient-to-br from-[#17C3B2] to-[#0D2342] rounded-2xl flex items-center justify-center shadow-lg shadow-[#17C3B2]/30"
+              className="w-12 h-12 bg-gradient-to-br from-[#23D3EE] to-[#0F172A] rounded-2xl flex items-center justify-center shadow-lg shadow-[#23D3EE]/30"
               whileHover={{ scale: 1.1, rotate: 5 }}
               transition={{ type: "spring", stiffness: 400 }}
             >
               <Sparkles size={24} className="text-white" />
             </motion.div>
             <div>
-              <h2 className="font-bold text-[#0D2342] text-lg">CRM Setup</h2>
+              <h2 className="font-bold text-[#0F172A] text-lg">CRM Setup</h2>
               <p className="text-sm text-slate-500">Step {currentIndex + 1} of {steps.length}</p>
             </div>
           </motion.div>
@@ -716,7 +716,7 @@ const ProgressIndicator = ({
           {/* Animated Progress Bar */}
           <div className="relative h-3 bg-slate-100 rounded-full overflow-hidden">
             <motion.div
-              className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#17C3B2] to-[#0D2342] rounded-full"
+              className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#23D3EE] to-[#0F172A] rounded-full"
               initial={{ width: 0 }}
               animate={{ width: `${progress}%` }}
               transition={{ duration: 0.5, ease: "easeOut" }}
@@ -750,7 +750,7 @@ const ProgressIndicator = ({
                 className={cn(
                   "w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all",
                   isCurrent
-                    ? "bg-gradient-to-r from-[#17C3B2]/20 to-[#0D2342]/10 border border-[#17C3B2]/30 shadow-lg shadow-[#17C3B2]/10"
+                    ? "bg-gradient-to-r from-[#23D3EE]/20 to-[#0F172A]/10 border border-[#23D3EE]/30 shadow-lg shadow-[#23D3EE]/10"
                     : isCompleted
                     ? "hover:bg-white/50"
                     : "opacity-40 cursor-not-allowed"
@@ -760,7 +760,7 @@ const ProgressIndicator = ({
                   className={cn(
                     "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all",
                     isCurrent
-                      ? "bg-gradient-to-br from-[#17C3B2] to-[#0D2342] text-white shadow-lg shadow-[#17C3B2]/30"
+                      ? "bg-gradient-to-br from-[#23D3EE] to-[#0F172A] text-white shadow-lg shadow-[#23D3EE]/30"
                       : isCompleted
                       ? "bg-gradient-to-br from-green-400 to-green-600 text-white"
                       : "bg-slate-100 text-slate-400"
@@ -784,7 +784,7 @@ const ProgressIndicator = ({
                     <span
                       className={cn(
                         "text-sm font-semibold truncate",
-                        isCurrent ? "text-[#17C3B2]" : isCompleted ? "text-[#0D2342]" : "text-slate-400"
+                        isCurrent ? "text-[#23D3EE]" : isCompleted ? "text-[#0F172A]" : "text-slate-400"
                       )}
                     >
                       {step.title}
@@ -844,23 +844,23 @@ const MobileProgressBar = ({
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
             <motion.div
-              className="w-10 h-10 bg-gradient-to-br from-[#17C3B2] to-[#0D2342] rounded-xl flex items-center justify-center"
+              className="w-10 h-10 bg-gradient-to-br from-[#23D3EE] to-[#0F172A] rounded-xl flex items-center justify-center"
               whileHover={{ scale: 1.1 }}
             >
               <CurrentIcon size={20} className="text-white" />
             </motion.div>
             <div>
-              <p className="font-semibold text-[#0D2342]">{steps[currentIndex].title}</p>
+              <p className="font-semibold text-[#0F172A]">{steps[currentIndex].title}</p>
               <p className="text-xs text-slate-500">Step {currentIndex + 1} of {steps.length}</p>
             </div>
           </div>
           <div className="text-right">
-            <p className="text-2xl font-bold text-[#17C3B2]">{Math.round(progress)}%</p>
+            <p className="text-2xl font-bold text-[#23D3EE]">{Math.round(progress)}%</p>
           </div>
         </div>
         <div className="relative h-2 bg-slate-100 rounded-full overflow-hidden">
           <motion.div
-            className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#17C3B2] to-[#0D2342] rounded-full"
+            className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#23D3EE] to-[#0F172A] rounded-full"
             initial={{ width: 0 }}
             animate={{ width: `${progress}%` }}
             transition={{ duration: 0.5 }}
@@ -893,7 +893,7 @@ const WelcomeStep = ({ onNext }: { onNext: () => void }) => {
           className="relative w-28 h-28 mx-auto mb-8"
         >
           <motion.div
-            className="absolute inset-0 bg-gradient-to-br from-[#17C3B2] to-[#0D2342] rounded-3xl shadow-2xl shadow-[#17C3B2]/30"
+            className="absolute inset-0 bg-gradient-to-br from-[#23D3EE] to-[#0F172A] rounded-3xl shadow-2xl shadow-[#23D3EE]/30"
             animate={{
               boxShadow: [
                 "0 25px 50px -12px rgba(23, 195, 178, 0.3)",
@@ -916,7 +916,7 @@ const WelcomeStep = ({ onNext }: { onNext: () => void }) => {
           {[...Array(3)].map((_, i) => (
             <motion.div
               key={i}
-              className="absolute w-3 h-3 bg-[#17C3B2] rounded-full"
+              className="absolute w-3 h-3 bg-[#23D3EE] rounded-full"
               style={{
                 top: "50%",
                 left: "50%",
@@ -941,7 +941,7 @@ const WelcomeStep = ({ onNext }: { onNext: () => void }) => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="text-3xl lg:text-4xl font-bold text-[#0D2342] mb-4"
+          className="text-3xl lg:text-4xl font-bold text-[#0F172A] mb-4"
         >
           Welcome to Your New CRM! 
           <motion.span
@@ -970,7 +970,7 @@ const WelcomeStep = ({ onNext }: { onNext: () => void }) => {
           className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10"
         >
           {[
-            { icon: Clock, label: "5 minutes", description: "Quick setup", color: "#17C3B2" },
+            { icon: Clock, label: "5 minutes", description: "Quick setup", color: "#23D3EE" },
             { icon: Sparkles, label: "Personalized", description: "Tailored for you", color: "#8B5CF6" },
             { icon: Shield, label: "Secure", description: "Your data is safe", color: "#10B981" },
           ].map((item, index) => (
@@ -989,7 +989,7 @@ const WelcomeStep = ({ onNext }: { onNext: () => void }) => {
               >
                 <item.icon size={24} style={{ color: item.color }} />
               </motion.div>
-              <p className="font-bold text-[#0D2342]">{item.label}</p>
+              <p className="font-bold text-[#0F172A]">{item.label}</p>
               <p className="text-sm text-slate-500">{item.description}</p>
             </motion.div>
           ))}
@@ -1004,7 +1004,7 @@ const WelcomeStep = ({ onNext }: { onNext: () => void }) => {
             onClick={onNext}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="group relative px-8 py-4 bg-gradient-to-r from-[#17C3B2] to-[#0D2342] text-white font-semibold rounded-2xl shadow-xl shadow-[#17C3B2]/30 overflow-hidden"
+            className="group relative px-8 py-4 bg-gradient-to-r from-[#23D3EE] to-[#0F172A] text-white font-semibold rounded-2xl shadow-xl shadow-[#23D3EE]/30 overflow-hidden"
           >
             <motion.div
               className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0"
@@ -1080,11 +1080,11 @@ const ProfileStep = ({
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", stiffness: 200 }}
-            className="w-16 h-16 bg-gradient-to-br from-[#17C3B2]/20 to-[#0D2342]/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[#17C3B2]/30"
+            className="w-16 h-16 bg-gradient-to-br from-[#23D3EE]/20 to-[#0F172A]/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[#23D3EE]/30"
           >
-            <User size={32} className="text-[#17C3B2]" />
+            <User size={32} className="text-[#23D3EE]" />
           </motion.div>
-          <h2 className="text-2xl font-bold text-[#0D2342] mb-2">Tell us about yourself</h2>
+          <h2 className="text-2xl font-bold text-[#0F172A] mb-2">Tell us about yourself</h2>
           <p className="text-slate-500">This helps us personalize your experience</p>
         </div>
 
@@ -1095,7 +1095,7 @@ const ProfileStep = ({
         >
           <div className="relative group">
             <motion.div
-              className="absolute -inset-1 bg-gradient-to-r from-[#17C3B2] to-[#0D2342] rounded-full blur opacity-30 group-hover:opacity-50 transition-opacity"
+              className="absolute -inset-1 bg-gradient-to-r from-[#23D3EE] to-[#0F172A] rounded-full blur opacity-30 group-hover:opacity-50 transition-opacity"
               animate={{
                 scale: [1, 1.05, 1],
               }}
@@ -1103,7 +1103,7 @@ const ProfileStep = ({
             />
             <Avatar className="relative w-28 h-28 border-4 border-white shadow-xl">
               <AvatarImage src={data.avatar || undefined} />
-              <AvatarFallback className="bg-gradient-to-br from-[#17C3B2] to-[#0D2342] text-white text-2xl font-bold">
+              <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#0F172A] text-white text-2xl font-bold">
                 {data.firstName && data.lastName ? getInitials(data.firstName, data.lastName) : "?"}
               </AvatarFallback>
             </Avatar>
@@ -1111,7 +1111,7 @@ const ProfileStep = ({
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={() => onUpdate({ avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${Date.now()}` })}
-              className="absolute -bottom-2 -right-2 w-10 h-10 bg-gradient-to-br from-[#17C3B2] to-[#0D2342] rounded-xl flex items-center justify-center text-white shadow-lg"
+              className="absolute -bottom-2 -right-2 w-10 h-10 bg-gradient-to-br from-[#23D3EE] to-[#0F172A] rounded-xl flex items-center justify-center text-white shadow-lg"
             >
               <Camera size={18} />
             </motion.button>
@@ -1127,7 +1127,7 @@ const ProfileStep = ({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
             >
-              <Label htmlFor="firstName" className="text-sm font-medium text-[#0D2342]">
+              <Label htmlFor="firstName" className="text-sm font-medium text-[#0F172A]">
                 First Name *
               </Label>
               <Input
@@ -1136,7 +1136,7 @@ const ProfileStep = ({
                 onChange={(e) => onUpdate({ firstName: e.target.value })}
                 placeholder="John"
                 className={cn(
-                  "rounded-xl border-slate-200 bg-white/50 backdrop-blur-sm focus:border-[#17C3B2] focus:ring-[#17C3B2]/20 transition-all",
+                  "rounded-xl border-slate-200 bg-white/50 backdrop-blur-sm focus:border-[#23D3EE] focus:ring-[#23D3EE]/20 transition-all",
                   errors.firstName && "border-red-500"
                 )}
               />
@@ -1156,7 +1156,7 @@ const ProfileStep = ({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
             >
-              <Label htmlFor="lastName" className="text-sm font-medium text-[#0D2342]">
+              <Label htmlFor="lastName" className="text-sm font-medium text-[#0F172A]">
                 Last Name *
               </Label>
               <Input
@@ -1165,7 +1165,7 @@ const ProfileStep = ({
                 onChange={(e) => onUpdate({ lastName: e.target.value })}
                 placeholder="Doe"
                 className={cn(
-                  "rounded-xl border-slate-200 bg-white/50 backdrop-blur-sm focus:border-[#17C3B2] focus:ring-[#17C3B2]/20 transition-all",
+                  "rounded-xl border-slate-200 bg-white/50 backdrop-blur-sm focus:border-[#23D3EE] focus:ring-[#23D3EE]/20 transition-all",
                   errors.lastName && "border-red-500"
                 )}
               />
@@ -1187,7 +1187,7 @@ const ProfileStep = ({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <Label htmlFor="email" className="text-sm font-medium text-[#0D2342]">
+            <Label htmlFor="email" className="text-sm font-medium text-[#0F172A]">
               Email Address *
             </Label>
             <div className="relative">
@@ -1199,7 +1199,7 @@ const ProfileStep = ({
                 onChange={(e) => onUpdate({ email: e.target.value })}
                 placeholder="john@company.com"
                 className={cn(
-                  "pl-10 rounded-xl border-slate-200 bg-white/50 backdrop-blur-sm focus:border-[#17C3B2] focus:ring-[#17C3B2]/20 transition-all",
+                  "pl-10 rounded-xl border-slate-200 bg-white/50 backdrop-blur-sm focus:border-[#23D3EE] focus:ring-[#23D3EE]/20 transition-all",
                   errors.email && "border-red-500"
                 )}
               />
@@ -1221,7 +1221,7 @@ const ProfileStep = ({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25 }}
           >
-            <Label htmlFor="phone" className="text-sm font-medium text-[#0D2342]">
+            <Label htmlFor="phone" className="text-sm font-medium text-[#0F172A]">
               Phone Number
             </Label>
             <div className="relative">
@@ -1232,7 +1232,7 @@ const ProfileStep = ({
                 value={data.phone}
                 onChange={(e) => onUpdate({ phone: e.target.value })}
                 placeholder="+1 (555) 000-0000"
-                className="pl-10 rounded-xl border-slate-200 bg-white/50 backdrop-blur-sm focus:border-[#17C3B2] focus:ring-[#17C3B2]/20 transition-all"
+                className="pl-10 rounded-xl border-slate-200 bg-white/50 backdrop-blur-sm focus:border-[#23D3EE] focus:ring-[#23D3EE]/20 transition-all"
               />
             </div>
           </motion.div>
@@ -1244,7 +1244,7 @@ const ProfileStep = ({
             transition={{ delay: 0.3 }}
           >
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-[#0D2342]">Job Title</Label>
+              <Label className="text-sm font-medium text-[#0F172A]">Job Title</Label>
               <Select value={data.jobTitle} onValueChange={(value) => onUpdate({ jobTitle: value })}>
                 <SelectTrigger className="rounded-xl border-slate-200 bg-white/50 backdrop-blur-sm">
                   <SelectValue placeholder="Select your role" />
@@ -1259,7 +1259,7 @@ const ProfileStep = ({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-[#0D2342]">Department</Label>
+              <Label className="text-sm font-medium text-[#0F172A]">Department</Label>
               <Select value={data.department} onValueChange={(value) => onUpdate({ department: value })}>
                 <SelectTrigger className="rounded-xl border-slate-200 bg-white/50 backdrop-blur-sm">
                   <SelectValue placeholder="Select department" />
@@ -1296,7 +1296,7 @@ const ProfileStep = ({
             onClick={handleNext}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="flex items-center gap-2 px-6 py-3 text-white bg-gradient-to-r from-[#17C3B2] to-[#0D2342] rounded-xl shadow-lg shadow-[#17C3B2]/30 hover:shadow-xl transition-all"
+            className="flex items-center gap-2 px-6 py-3 text-white bg-gradient-to-r from-[#23D3EE] to-[#0F172A] rounded-xl shadow-lg shadow-[#23D3EE]/30 hover:shadow-xl transition-all"
           >
             Continue
             <ArrowRight size={18} />
@@ -1347,11 +1347,11 @@ const CompanyStep = ({
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", stiffness: 200 }}
-            className="w-16 h-16 bg-gradient-to-br from-[#17C3B2]/20 to-[#0D2342]/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[#17C3B2]/30"
+            className="w-16 h-16 bg-gradient-to-br from-[#23D3EE]/20 to-[#0F172A]/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[#23D3EE]/30"
           >
-            <Building2 size={32} className="text-[#17C3B2]" />
+            <Building2 size={32} className="text-[#23D3EE]" />
           </motion.div>
-          <h2 className="text-2xl font-bold text-[#0D2342] mb-2">Company Details</h2>
+          <h2 className="text-2xl font-bold text-[#0F172A] mb-2">Company Details</h2>
           <p className="text-slate-500">Tell us about your organization</p>
         </div>
 
@@ -1362,7 +1362,7 @@ const CompanyStep = ({
         >
           <div className="relative group">
             <motion.div
-              className="w-24 h-24 rounded-2xl bg-white/50 backdrop-blur-sm border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:border-[#17C3B2] transition-colors"
+              className="w-24 h-24 rounded-2xl bg-white/50 backdrop-blur-sm border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:border-[#23D3EE] transition-colors"
               whileHover={{ scale: 1.05 }}
               onClick={() => onUpdate({ logo: `https://api.dicebear.com/7.x/identicon/svg?seed=${Date.now()}` })}
             >
@@ -1386,7 +1386,7 @@ const CompanyStep = ({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <Label htmlFor="companyName" className="text-sm font-medium text-[#0D2342]">
+            <Label htmlFor="companyName" className="text-sm font-medium text-[#0F172A]">
               Company Name *
             </Label>
             <div className="relative">
@@ -1397,7 +1397,7 @@ const CompanyStep = ({
                 onChange={(e) => onUpdate({ name: e.target.value })}
                 placeholder="Acme Inc."
                 className={cn(
-                  "pl-10 rounded-xl border-slate-200 bg-white/50 backdrop-blur-sm focus:border-[#17C3B2] focus:ring-[#17C3B2]/20 transition-all",
+                  "pl-10 rounded-xl border-slate-200 bg-white/50 backdrop-blur-sm focus:border-[#23D3EE] focus:ring-[#23D3EE]/20 transition-all",
                   errors.name && "border-red-500"
                 )}
               />
@@ -1419,7 +1419,7 @@ const CompanyStep = ({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
           >
-            <Label htmlFor="website" className="text-sm font-medium text-[#0D2342]">
+            <Label htmlFor="website" className="text-sm font-medium text-[#0F172A]">
               Website
             </Label>
             <div className="relative">
@@ -1429,7 +1429,7 @@ const CompanyStep = ({
                 value={data.website}
                 onChange={(e) => onUpdate({ website: e.target.value })}
                 placeholder="https://www.example.com"
-                className="pl-10 rounded-xl border-slate-200 bg-white/50 backdrop-blur-sm focus:border-[#17C3B2] focus:ring-[#17C3B2]/20 transition-all"
+                className="pl-10 rounded-xl border-slate-200 bg-white/50 backdrop-blur-sm focus:border-[#23D3EE] focus:ring-[#23D3EE]/20 transition-all"
               />
             </div>
           </motion.div>
@@ -1441,7 +1441,7 @@ const CompanyStep = ({
             transition={{ delay: 0.2 }}
           >
             <div className="space-y-2">
-              <Label htmlFor="city" className="text-sm font-medium text-[#0D2342]">
+              <Label htmlFor="city" className="text-sm font-medium text-[#0F172A]">
                 City
               </Label>
               <div className="relative">
@@ -1451,12 +1451,12 @@ const CompanyStep = ({
                   value={data.city}
                   onChange={(e) => onUpdate({ city: e.target.value })}
                   placeholder="New York"
-                  className="pl-10 rounded-xl border-slate-200 bg-white/50 backdrop-blur-sm focus:border-[#17C3B2] focus:ring-[#17C3B2]/20 transition-all"
+                  className="pl-10 rounded-xl border-slate-200 bg-white/50 backdrop-blur-sm focus:border-[#23D3EE] focus:ring-[#23D3EE]/20 transition-all"
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="country" className="text-sm font-medium text-[#0D2342]">
+              <Label htmlFor="country" className="text-sm font-medium text-[#0F172A]">
                 Country
               </Label>
               <Select value={data.country} onValueChange={(value) => onUpdate({ country: value })}>
@@ -1480,7 +1480,7 @@ const CompanyStep = ({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25 }}
           >
-            <Label htmlFor="address" className="text-sm font-medium text-[#0D2342]">
+            <Label htmlFor="address" className="text-sm font-medium text-[#0F172A]">
               Address
             </Label>
             <Textarea
@@ -1488,7 +1488,7 @@ const CompanyStep = ({
               value={data.address}
               onChange={(e) => onUpdate({ address: e.target.value })}
               placeholder="123 Business Street, Suite 100"
-              className="rounded-xl border-slate-200 bg-white/50 backdrop-blur-sm focus:border-[#17C3B2] focus:ring-[#17C3B2]/20 transition-all resize-none"
+              className="rounded-xl border-slate-200 bg-white/50 backdrop-blur-sm focus:border-[#23D3EE] focus:ring-[#23D3EE]/20 transition-all resize-none"
               rows={2}
             />
           </motion.div>
@@ -1514,7 +1514,7 @@ const CompanyStep = ({
             onClick={handleNext}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="flex items-center gap-2 px-6 py-3 text-white bg-gradient-to-r from-[#17C3B2] to-[#0D2342] rounded-xl shadow-lg shadow-[#17C3B2]/30 hover:shadow-xl transition-all"
+            className="flex items-center gap-2 px-6 py-3 text-white bg-gradient-to-r from-[#23D3EE] to-[#0F172A] rounded-xl shadow-lg shadow-[#23D3EE]/30 hover:shadow-xl transition-all"
           >
             Continue
             <ArrowRight size={18} />
@@ -1551,11 +1551,11 @@ const TeamSizeStep = ({
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", stiffness: 200 }}
-            className="w-16 h-16 bg-gradient-to-br from-[#17C3B2]/20 to-[#0D2342]/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[#17C3B2]/30"
+            className="w-16 h-16 bg-gradient-to-br from-[#23D3EE]/20 to-[#0F172A]/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[#23D3EE]/30"
           >
-            <Users size={32} className="text-[#17C3B2]" />
+            <Users size={32} className="text-[#23D3EE]" />
           </motion.div>
-          <h2 className="text-2xl font-bold text-[#0D2342] mb-2">How big is your team?</h2>
+          <h2 className="text-2xl font-bold text-[#0F172A] mb-2">How big is your team?</h2>
           <p className="text-slate-500">This helps us recommend the right plan for you</p>
         </div>
 
@@ -1577,15 +1577,15 @@ const TeamSizeStep = ({
                 className={cn(
                   "relative p-6 rounded-2xl border-2 text-left transition-all overflow-hidden",
                   isSelected
-                    ? "border-[#17C3B2] bg-gradient-to-br from-[#17C3B2]/10 to-[#0D2342]/5 shadow-lg shadow-[#17C3B2]/20"
-                    : "border-slate-200 bg-white/50 hover:border-[#17C3B2]/50 hover:bg-white/80"
+                    ? "border-[#23D3EE] bg-gradient-to-br from-[#23D3EE]/10 to-[#0F172A]/5 shadow-lg shadow-[#23D3EE]/20"
+                    : "border-slate-200 bg-white/50 hover:border-[#23D3EE]/50 hover:bg-white/80"
                 )}
               >
                 {isSelected && (
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    className="absolute top-3 right-3 w-6 h-6 bg-gradient-to-br from-[#17C3B2] to-[#0D2342] rounded-full flex items-center justify-center"
+                    className="absolute top-3 right-3 w-6 h-6 bg-gradient-to-br from-[#23D3EE] to-[#0F172A] rounded-full flex items-center justify-center"
                   >
                     <Check size={14} className="text-white" />
                   </motion.div>
@@ -1594,7 +1594,7 @@ const TeamSizeStep = ({
                   className={cn(
                     "w-12 h-12 rounded-xl flex items-center justify-center mb-3 transition-colors",
                     isSelected
-                      ? "bg-gradient-to-br from-[#17C3B2] to-[#0D2342] text-white"
+                      ? "bg-gradient-to-br from-[#23D3EE] to-[#0F172A] text-white"
                       : "bg-slate-100 text-slate-500"
                   )}
                   whileHover={{ rotate: 5 }}
@@ -1603,7 +1603,7 @@ const TeamSizeStep = ({
                 </motion.div>
                 <h3 className={cn(
                   "font-semibold mb-1 transition-colors",
-                  isSelected ? "text-[#17C3B2]" : "text-[#0D2342]"
+                  isSelected ? "text-[#23D3EE]" : "text-[#0F172A]"
                 )}>
                   {size.label}
                 </h3>
@@ -1638,7 +1638,7 @@ const TeamSizeStep = ({
             className={cn(
               "flex items-center gap-2 px-6 py-3 rounded-xl transition-all",
               selected
-                ? "text-white bg-gradient-to-r from-[#17C3B2] to-[#0D2342] shadow-lg shadow-[#17C3B2]/30 hover:shadow-xl"
+                ? "text-white bg-gradient-to-r from-[#23D3EE] to-[#0F172A] shadow-lg shadow-[#23D3EE]/30 hover:shadow-xl"
                 : "text-slate-400 bg-slate-100 cursor-not-allowed"
             )}
           >
@@ -1677,11 +1677,11 @@ const IndustryStep = ({
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", stiffness: 200 }}
-            className="w-16 h-16 bg-gradient-to-br from-[#17C3B2]/20 to-[#0D2342]/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[#17C3B2]/30"
+            className="w-16 h-16 bg-gradient-to-br from-[#23D3EE]/20 to-[#0F172A]/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[#23D3EE]/30"
           >
-            <Briefcase size={32} className="text-[#17C3B2]" />
+            <Briefcase size={32} className="text-[#23D3EE]" />
           </motion.div>
-          <h2 className="text-2xl font-bold text-[#0D2342] mb-2">What industry are you in?</h2>
+          <h2 className="text-2xl font-bold text-[#0F172A] mb-2">What industry are you in?</h2>
           <p className="text-slate-500">We'll customize your experience based on your industry</p>
         </div>
 
@@ -1703,15 +1703,15 @@ const IndustryStep = ({
                 className={cn(
                   "relative p-4 rounded-xl border-2 text-center transition-all",
                   isSelected
-                    ? "border-[#17C3B2] bg-gradient-to-br from-[#17C3B2]/10 to-[#0D2342]/5 shadow-lg"
-                    : "border-slate-200 bg-white/50 hover:border-[#17C3B2]/50"
+                    ? "border-[#23D3EE] bg-gradient-to-br from-[#23D3EE]/10 to-[#0F172A]/5 shadow-lg"
+                    : "border-slate-200 bg-white/50 hover:border-[#23D3EE]/50"
                 )}
               >
                 {isSelected && (
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    className="absolute -top-2 -right-2 w-5 h-5 bg-gradient-to-br from-[#17C3B2] to-[#0D2342] rounded-full flex items-center justify-center"
+                    className="absolute -top-2 -right-2 w-5 h-5 bg-gradient-to-br from-[#23D3EE] to-[#0F172A] rounded-full flex items-center justify-center"
                   >
                     <Check size={12} className="text-white" />
                   </motion.div>
@@ -1725,7 +1725,7 @@ const IndustryStep = ({
                 </motion.div>
                 <p className={cn(
                   "text-sm font-medium transition-colors",
-                  isSelected ? "text-[#17C3B2]" : "text-[#0D2342]"
+                  isSelected ? "text-[#23D3EE]" : "text-[#0F172A]"
                 )}>
                   {industry.label}
                 </p>
@@ -1758,7 +1758,7 @@ const IndustryStep = ({
             className={cn(
               "flex items-center gap-2 px-6 py-3 rounded-xl transition-all",
               selected
-                ? "text-white bg-gradient-to-r from-[#17C3B2] to-[#0D2342] shadow-lg shadow-[#17C3B2]/30 hover:shadow-xl"
+                ? "text-white bg-gradient-to-r from-[#23D3EE] to-[#0F172A] shadow-lg shadow-[#23D3EE]/30 hover:shadow-xl"
                 : "text-slate-400 bg-slate-100 cursor-not-allowed"
             )}
           >
@@ -1797,11 +1797,11 @@ const GoalsStep = ({
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", stiffness: 200 }}
-            className="w-16 h-16 bg-gradient-to-br from-[#17C3B2]/20 to-[#0D2342]/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[#17C3B2]/30"
+            className="w-16 h-16 bg-gradient-to-br from-[#23D3EE]/20 to-[#0F172A]/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[#23D3EE]/30"
           >
-            <Target size={32} className="text-[#17C3B2]" />
+            <Target size={32} className="text-[#23D3EE]" />
           </motion.div>
-          <h2 className="text-2xl font-bold text-[#0D2342] mb-2">What are your main goals?</h2>
+          <h2 className="text-2xl font-bold text-[#0F172A] mb-2">What are your main goals?</h2>
           <p className="text-slate-500">Select all that apply - we'll prioritize these features for you</p>
         </div>
 
@@ -1823,15 +1823,15 @@ const GoalsStep = ({
                 className={cn(
                   "relative flex items-start gap-4 p-4 rounded-xl border-2 text-left transition-all",
                   isSelected
-                    ? "border-[#17C3B2] bg-gradient-to-br from-[#17C3B2]/10 to-[#0D2342]/5 shadow-lg"
-                    : "border-slate-200 bg-white/50 hover:border-[#17C3B2]/50"
+                    ? "border-[#23D3EE] bg-gradient-to-br from-[#23D3EE]/10 to-[#0F172A]/5 shadow-lg"
+                    : "border-slate-200 bg-white/50 hover:border-[#23D3EE]/50"
                 )}
               >
                 <motion.div
                   className={cn(
                     "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all",
                     isSelected
-                      ? "bg-gradient-to-br from-[#17C3B2] to-[#0D2342] text-white"
+                      ? "bg-gradient-to-br from-[#23D3EE] to-[#0F172A] text-white"
                       : "bg-slate-100 text-slate-500"
                   )}
                   animate={isSelected ? { scale: [1, 1.1, 1] } : {}}
@@ -1841,7 +1841,7 @@ const GoalsStep = ({
                 <div className="flex-1 min-w-0">
                   <h3 className={cn(
                     "font-semibold mb-1 transition-colors",
-                    isSelected ? "text-[#17C3B2]" : "text-[#0D2342]"
+                    isSelected ? "text-[#23D3EE]" : "text-[#0F172A]"
                   )}>
                     {goal.label}
                   </h3>
@@ -1850,7 +1850,7 @@ const GoalsStep = ({
                 <div className={cn(
                   "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
                   isSelected
-                    ? "border-[#17C3B2] bg-[#17C3B2]"
+                    ? "border-[#23D3EE] bg-[#23D3EE]"
                     : "border-slate-300"
                 )}>
                   {isSelected && (
@@ -1874,7 +1874,7 @@ const GoalsStep = ({
             animate={{ opacity: 1, y: 0 }}
             className="text-center mb-6"
           >
-            <Badge className="bg-[#17C3B2]/10 text-[#17C3B2] border-[#17C3B2]/30">
+            <Badge className="bg-[#23D3EE]/10 text-[#23D3EE] border-[#23D3EE]/30">
               {selected.length} goal{selected.length !== 1 ? "s" : ""} selected
             </Badge>
           </motion.div>
@@ -1904,7 +1904,7 @@ const GoalsStep = ({
             className={cn(
               "flex items-center gap-2 px-6 py-3 rounded-xl transition-all",
               selected.length > 0
-                ? "text-white bg-gradient-to-r from-[#17C3B2] to-[#0D2342] shadow-lg shadow-[#17C3B2]/30 hover:shadow-xl"
+                ? "text-white bg-gradient-to-r from-[#23D3EE] to-[#0F172A] shadow-lg shadow-[#23D3EE]/30 hover:shadow-xl"
                 : "text-slate-400 bg-slate-100 cursor-not-allowed"
             )}
           >
@@ -1945,11 +1945,11 @@ const FeaturesStep = ({
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", stiffness: 200 }}
-            className="w-16 h-16 bg-gradient-to-br from-[#17C3B2]/20 to-[#0D2342]/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[#17C3B2]/30"
+            className="w-16 h-16 bg-gradient-to-br from-[#23D3EE]/20 to-[#0F172A]/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[#23D3EE]/30"
           >
-            <Zap size={32} className="text-[#17C3B2]" />
+            <Zap size={32} className="text-[#23D3EE]" />
           </motion.div>
-          <h2 className="text-2xl font-bold text-[#0D2342] mb-2">Choose your key features</h2>
+          <h2 className="text-2xl font-bold text-[#0F172A] mb-2">Choose your key features</h2>
           <p className="text-slate-500">We'll enable these features in your workspace</p>
         </div>
 
@@ -1984,14 +1984,14 @@ const FeaturesStep = ({
                         className={cn(
                           "flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all",
                           isSelected
-                            ? "border-[#17C3B2] bg-gradient-to-br from-[#17C3B2]/10 to-[#0D2342]/5"
-                            : "border-slate-200 bg-white/50 hover:border-[#17C3B2]/50"
+                            ? "border-[#23D3EE] bg-gradient-to-br from-[#23D3EE]/10 to-[#0F172A]/5"
+                            : "border-slate-200 bg-white/50 hover:border-[#23D3EE]/50"
                         )}
                       >
                         <div className={cn(
                           "w-8 h-8 rounded-lg flex items-center justify-center transition-all",
                           isSelected
-                            ? "bg-gradient-to-br from-[#17C3B2] to-[#0D2342] text-white"
+                            ? "bg-gradient-to-br from-[#23D3EE] to-[#0F172A] text-white"
                             : "bg-slate-100 text-slate-500"
                         )}>
                           <Icon size={16} />
@@ -1999,7 +1999,7 @@ const FeaturesStep = ({
                         <div className="flex-1 min-w-0">
                           <p className={cn(
                             "text-sm font-medium transition-colors",
-                            isSelected ? "text-[#17C3B2]" : "text-[#0D2342]"
+                            isSelected ? "text-[#23D3EE]" : "text-[#0F172A]"
                           )}>
                             {feature.label}
                           </p>
@@ -2008,7 +2008,7 @@ const FeaturesStep = ({
                         <div className={cn(
                           "w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0",
                           isSelected
-                            ? "border-[#17C3B2] bg-[#17C3B2]"
+                            ? "border-[#23D3EE] bg-[#23D3EE]"
                             : "border-slate-300"
                         )}>
                           {isSelected && <Check size={10} className="text-white" />}
@@ -2028,7 +2028,7 @@ const FeaturesStep = ({
             animate={{ opacity: 1, y: 0 }}
             className="text-center mb-6"
           >
-            <Badge className="bg-[#17C3B2]/10 text-[#17C3B2] border-[#17C3B2]/30">
+            <Badge className="bg-[#23D3EE]/10 text-[#23D3EE] border-[#23D3EE]/30">
               {selected.length} feature{selected.length !== 1 ? "s" : ""} selected
             </Badge>
           </motion.div>
@@ -2054,7 +2054,7 @@ const FeaturesStep = ({
             onClick={onNext}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="flex items-center gap-2 px-6 py-3 text-white bg-gradient-to-r from-[#17C3B2] to-[#0D2342] rounded-xl shadow-lg shadow-[#17C3B2]/30 hover:shadow-xl transition-all"
+            className="flex items-center gap-2 px-6 py-3 text-white bg-gradient-to-r from-[#23D3EE] to-[#0F172A] rounded-xl shadow-lg shadow-[#23D3EE]/30 hover:shadow-xl transition-all"
           >
             Continue
             <ArrowRight size={18} />
@@ -2094,11 +2094,11 @@ const IntegrationsStep = ({
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", stiffness: 200 }}
-            className="w-16 h-16 bg-gradient-to-br from-[#17C3B2]/20 to-[#0D2342]/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[#17C3B2]/30"
+            className="w-16 h-16 bg-gradient-to-br from-[#23D3EE]/20 to-[#0F172A]/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[#23D3EE]/30"
           >
-            <LinkIcon size={32} className="text-[#17C3B2]" />
+            <LinkIcon size={32} className="text-[#23D3EE]" />
           </motion.div>
-          <h2 className="text-2xl font-bold text-[#0D2342] mb-2">Connect your tools</h2>
+          <h2 className="text-2xl font-bold text-[#0F172A] mb-2">Connect your tools</h2>
           <p className="text-slate-500">Integrate with the apps you already use</p>
           <Badge variant="outline" className="mt-2">
             Optional - Skip if you prefer
@@ -2127,8 +2127,8 @@ const IntegrationsStep = ({
                   className={cn(
                     "flex items-center gap-4 p-4 rounded-xl border-2 text-left transition-all",
                     isSelected
-                      ? "border-[#17C3B2] bg-gradient-to-br from-[#17C3B2]/10 to-[#0D2342]/5 shadow-lg"
-                      : "border-slate-200 bg-white/50 hover:border-[#17C3B2]/50"
+                      ? "border-[#23D3EE] bg-gradient-to-br from-[#23D3EE]/10 to-[#0F172A]/5 shadow-lg"
+                      : "border-slate-200 bg-white/50 hover:border-[#23D3EE]/50"
                   )}
                 >
                   <div
@@ -2140,7 +2140,7 @@ const IntegrationsStep = ({
                   <div className="flex-1">
                     <p className={cn(
                       "font-semibold transition-colors",
-                      isSelected ? "text-[#17C3B2]" : "text-[#0D2342]"
+                      isSelected ? "text-[#23D3EE]" : "text-[#0F172A]"
                     )}>
                       {integration.name}
                     </p>
@@ -2149,7 +2149,7 @@ const IntegrationsStep = ({
                   <div className={cn(
                     "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0",
                     isSelected
-                      ? "border-[#17C3B2] bg-[#17C3B2]"
+                      ? "border-[#23D3EE] bg-[#23D3EE]"
                       : "border-slate-300"
                   )}>
                     {isSelected && <Check size={12} className="text-white" />}
@@ -2181,8 +2181,8 @@ const IntegrationsStep = ({
                   className={cn(
                     "p-3 rounded-xl border-2 text-center transition-all",
                     isSelected
-                      ? "border-[#17C3B2] bg-gradient-to-br from-[#17C3B2]/10 to-[#0D2342]/5"
-                      : "border-slate-200 bg-white/50 hover:border-[#17C3B2]/50"
+                      ? "border-[#23D3EE] bg-gradient-to-br from-[#23D3EE]/10 to-[#0F172A]/5"
+                      : "border-slate-200 bg-white/50 hover:border-[#23D3EE]/50"
                   )}
                 >
                   <div
@@ -2193,7 +2193,7 @@ const IntegrationsStep = ({
                   </div>
                   <p className={cn(
                     "text-sm font-medium transition-colors",
-                    isSelected ? "text-[#17C3B2]" : "text-[#0D2342]"
+                    isSelected ? "text-[#23D3EE]" : "text-[#0F172A]"
                   )}>
                     {integration.name}
                   </p>
@@ -2232,7 +2232,7 @@ const IntegrationsStep = ({
               onClick={onNext}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="flex items-center gap-2 px-6 py-3 text-white bg-gradient-to-r from-[#17C3B2] to-[#0D2342] rounded-xl shadow-lg shadow-[#17C3B2]/30 hover:shadow-xl transition-all"
+              className="flex items-center gap-2 px-6 py-3 text-white bg-gradient-to-r from-[#23D3EE] to-[#0F172A] rounded-xl shadow-lg shadow-[#23D3EE]/30 hover:shadow-xl transition-all"
             >
               Continue
               <ArrowRight size={18} />
@@ -2286,11 +2286,11 @@ const InviteTeamStep = ({
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", stiffness: 200 }}
-            className="w-16 h-16 bg-gradient-to-br from-[#17C3B2]/20 to-[#0D2342]/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[#17C3B2]/30"
+            className="w-16 h-16 bg-gradient-to-br from-[#23D3EE]/20 to-[#0F172A]/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[#23D3EE]/30"
           >
-            <UserPlus size={32} className="text-[#17C3B2]" />
+            <UserPlus size={32} className="text-[#23D3EE]" />
           </motion.div>
-          <h2 className="text-2xl font-bold text-[#0D2342] mb-2">Invite your team</h2>
+          <h2 className="text-2xl font-bold text-[#0F172A] mb-2">Invite your team</h2>
           <p className="text-slate-500">Collaborate together from day one</p>
           <Badge variant="outline" className="mt-2">
             Optional - You can invite later
@@ -2328,7 +2328,7 @@ const InviteTeamStep = ({
               onClick={handleAddMember}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="px-4 py-2 bg-gradient-to-r from-[#17C3B2] to-[#0D2342] text-white rounded-xl flex items-center gap-2 justify-center"
+              className="px-4 py-2 bg-gradient-to-r from-[#23D3EE] to-[#0F172A] text-white rounded-xl flex items-center gap-2 justify-center"
             >
               <Plus size={18} />
               Add
@@ -2352,12 +2352,12 @@ const InviteTeamStep = ({
                 className="flex items-center gap-3 p-3 bg-white/50 rounded-xl border border-slate-200"
               >
                 <Avatar className="w-10 h-10">
-                  <AvatarFallback className="bg-gradient-to-br from-[#17C3B2] to-[#0D2342] text-white text-sm">
+                  <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#0F172A] text-white text-sm">
                     {member.email.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-[#0D2342] truncate">{member.email}</p>
+                  <p className="text-sm font-medium text-[#0F172A] truncate">{member.email}</p>
                   <Badge variant="outline" className="text-xs">
                     {member.role}
                   </Badge>
@@ -2417,7 +2417,7 @@ const InviteTeamStep = ({
               onClick={onNext}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="flex items-center gap-2 px-6 py-3 text-white bg-gradient-to-r from-[#17C3B2] to-[#0D2342] rounded-xl shadow-lg shadow-[#17C3B2]/30 hover:shadow-xl transition-all"
+              className="flex items-center gap-2 px-6 py-3 text-white bg-gradient-to-r from-[#23D3EE] to-[#0F172A] rounded-xl shadow-lg shadow-[#23D3EE]/30 hover:shadow-xl transition-all"
             >
               Continue
               <ArrowRight size={18} />
@@ -2455,11 +2455,11 @@ const PreferencesStep = ({
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", stiffness: 200 }}
-            className="w-16 h-16 bg-gradient-to-br from-[#17C3B2]/20 to-[#0D2342]/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[#17C3B2]/30"
+            className="w-16 h-16 bg-gradient-to-br from-[#23D3EE]/20 to-[#0F172A]/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[#23D3EE]/30"
           >
-            <Settings size={32} className="text-[#17C3B2]" />
+            <Settings size={32} className="text-[#23D3EE]" />
           </motion.div>
-          <h2 className="text-2xl font-bold text-[#0D2342] mb-2">Personalize your workspace</h2>
+          <h2 className="text-2xl font-bold text-[#0F172A] mb-2">Personalize your workspace</h2>
           <p className="text-slate-500">Set up your preferences</p>
         </div>
 
@@ -2471,7 +2471,7 @@ const PreferencesStep = ({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <Label className="text-sm font-medium text-[#0D2342] mb-3 block">Theme</Label>
+            <Label className="text-sm font-medium text-[#0F172A] mb-3 block">Theme</Label>
             <div className="grid grid-cols-3 gap-3">
               {[
                 { id: "light", icon: Sun, label: "Light" },
@@ -2490,17 +2490,17 @@ const PreferencesStep = ({
                     className={cn(
                       "p-4 rounded-xl border-2 text-center transition-all",
                       isSelected
-                        ? "border-[#17C3B2] bg-gradient-to-br from-[#17C3B2]/10 to-[#0D2342]/5"
-                        : "border-slate-200 bg-white/50 hover:border-[#17C3B2]/50"
+                        ? "border-[#23D3EE] bg-gradient-to-br from-[#23D3EE]/10 to-[#0F172A]/5"
+                        : "border-slate-200 bg-white/50 hover:border-[#23D3EE]/50"
                     )}
                   >
                     <Icon size={24} className={cn(
                       "mx-auto mb-2",
-                      isSelected ? "text-[#17C3B2]" : "text-slate-500"
+                      isSelected ? "text-[#23D3EE]" : "text-slate-500"
                     )} />
                     <p className={cn(
                       "text-sm font-medium",
-                      isSelected ? "text-[#17C3B2]" : "text-[#0D2342]"
+                      isSelected ? "text-[#23D3EE]" : "text-[#0F172A]"
                     )}>
                       {theme.label}
                     </p>
@@ -2518,7 +2518,7 @@ const PreferencesStep = ({
             transition={{ delay: 0.2 }}
           >
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-[#0D2342]">Language</Label>
+              <Label className="text-sm font-medium text-[#0F172A]">Language</Label>
               <Select value={preferences.language} onValueChange={(value) => onUpdate({ language: value })}>
                 <SelectTrigger className="rounded-xl border-slate-200 bg-white/50">
                   <SelectValue />
@@ -2536,7 +2536,7 @@ const PreferencesStep = ({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-[#0D2342]">Timezone</Label>
+              <Label className="text-sm font-medium text-[#0F172A]">Timezone</Label>
               <Select value={preferences.timezone} onValueChange={(value) => onUpdate({ timezone: value })}>
                 <SelectTrigger className="rounded-xl border-slate-200 bg-white/50">
                   <SelectValue />
@@ -2558,7 +2558,7 @@ const PreferencesStep = ({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
-            <Label className="text-sm font-medium text-[#0D2342] mb-3 block">Default View</Label>
+            <Label className="text-sm font-medium text-[#0F172A] mb-3 block">Default View</Label>
             <div className="grid grid-cols-3 gap-3">
               {[
                 { id: "list", icon: List, label: "List" },
@@ -2577,17 +2577,17 @@ const PreferencesStep = ({
                     className={cn(
                       "p-4 rounded-xl border-2 text-center transition-all",
                       isSelected
-                        ? "border-[#17C3B2] bg-gradient-to-br from-[#17C3B2]/10 to-[#0D2342]/5"
-                        : "border-slate-200 bg-white/50 hover:border-[#17C3B2]/50"
+                        ? "border-[#23D3EE] bg-gradient-to-br from-[#23D3EE]/10 to-[#0F172A]/5"
+                        : "border-slate-200 bg-white/50 hover:border-[#23D3EE]/50"
                     )}
                   >
                     <Icon size={24} className={cn(
                       "mx-auto mb-2",
-                      isSelected ? "text-[#17C3B2]" : "text-slate-500"
+                      isSelected ? "text-[#23D3EE]" : "text-slate-500"
                     )} />
                     <p className={cn(
                       "text-sm font-medium",
-                      isSelected ? "text-[#17C3B2]" : "text-[#0D2342]"
+                      isSelected ? "text-[#23D3EE]" : "text-[#0F172A]"
                     )}>
                       {view.label}
                     </p>
@@ -2603,7 +2603,7 @@ const PreferencesStep = ({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
           >
-            <Label className="text-sm font-medium text-[#0D2342] mb-3 block">Notifications</Label>
+            <Label className="text-sm font-medium text-[#0F172A] mb-3 block">Notifications</Label>
             <div className="space-y-3">
               {[
                 { id: "email", icon: Mail, label: "Email Notifications", description: "Receive updates via email" },
@@ -2625,7 +2625,7 @@ const PreferencesStep = ({
                         <Icon size={18} className="text-slate-500" />
                       </div>
                       <div>
-                        <p className="font-medium text-[#0D2342]">{notification.label}</p>
+                        <p className="font-medium text-[#0F172A]">{notification.label}</p>
                         <p className="text-sm text-slate-500">{notification.description}</p>
                       </div>
                     </div>
@@ -2664,7 +2664,7 @@ const PreferencesStep = ({
             onClick={onNext}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="flex items-center gap-2 px-6 py-3 text-white bg-gradient-to-r from-[#17C3B2] to-[#0D2342] rounded-xl shadow-lg shadow-[#17C3B2]/30 hover:shadow-xl transition-all"
+            className="flex items-center gap-2 px-6 py-3 text-white bg-gradient-to-r from-[#23D3EE] to-[#0F172A] rounded-xl shadow-lg shadow-[#23D3EE]/30 hover:shadow-xl transition-all"
           >
             Finish Setup
             <ArrowRight size={18} />
@@ -2731,7 +2731,7 @@ const CompleteStep = ({
           recycle={false}
           numberOfPieces={500}
           gravity={0.2}
-          colors={["#17C3B2", "#0D2342", "#F59E0B", "#8B5CF6", "#EC4899", "#10B981"]}
+          colors={["#23D3EE", "#0F172A", "#F59E0B", "#8B5CF6", "#EC4899", "#10B981"]}
         />
       )}
 
@@ -2745,7 +2745,7 @@ const CompleteStep = ({
         >
           {/* Outer ring animation */}
           <motion.div
-            className="absolute inset-0 rounded-full border-4 border-[#17C3B2]/30"
+            className="absolute inset-0 rounded-full border-4 border-[#23D3EE]/30"
             animate={{
               scale: [1, 1.2, 1],
               opacity: [0.5, 0, 0.5],
@@ -2753,7 +2753,7 @@ const CompleteStep = ({
             transition={{ duration: 2, repeat: Infinity }}
           />
           <motion.div
-            className="absolute inset-0 rounded-full border-4 border-[#17C3B2]/20"
+            className="absolute inset-0 rounded-full border-4 border-[#23D3EE]/20"
             animate={{
               scale: [1, 1.4, 1],
               opacity: [0.3, 0, 0.3],
@@ -2763,7 +2763,7 @@ const CompleteStep = ({
           
           {/* Trophy icon */}
           <motion.div
-            className="absolute inset-0 bg-gradient-to-br from-[#17C3B2] to-[#0D2342] rounded-full flex items-center justify-center shadow-2xl shadow-[#17C3B2]/40"
+            className="absolute inset-0 bg-gradient-to-br from-[#23D3EE] to-[#0F172A] rounded-full flex items-center justify-center shadow-2xl shadow-[#23D3EE]/40"
             animate={{
               boxShadow: [
                 "0 25px 50px -12px rgba(23, 195, 178, 0.4)",
@@ -2812,7 +2812,7 @@ const CompleteStep = ({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="text-3xl lg:text-4xl font-bold text-[#0D2342] mb-4"
+          className="text-3xl lg:text-4xl font-bold text-[#0F172A] mb-4"
         >
           You're All Set! 🎉
         </motion.h1>
@@ -2845,13 +2845,13 @@ const CompleteStep = ({
                 className="p-4 bg-white/50 backdrop-blur-sm rounded-2xl border border-white/30 shadow-lg"
               >
                 <motion.div
-                  className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#17C3B2]/20 to-[#0D2342]/10 flex items-center justify-center mx-auto mb-2"
+                  className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#23D3EE]/20 to-[#0F172A]/10 flex items-center justify-center mx-auto mb-2"
                   whileHover={{ rotate: 10 }}
                 >
-                  <Icon size={20} className="text-[#17C3B2]" />
+                  <Icon size={20} className="text-[#23D3EE]" />
                 </motion.div>
                 <motion.p
-                  className="text-2xl font-bold text-[#0D2342]"
+                  className="text-2xl font-bold text-[#0F172A]"
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ delay: 0.9 + index * 0.1, type: "spring" }}
@@ -2869,17 +2869,17 @@ const CompleteStep = ({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.8 }}
-          className="p-6 bg-gradient-to-br from-[#17C3B2]/10 to-[#0D2342]/5 rounded-2xl border border-[#17C3B2]/20 mb-8"
+          className="p-6 bg-gradient-to-br from-[#23D3EE]/10 to-[#0F172A]/5 rounded-2xl border border-[#23D3EE]/20 mb-8"
         >
           <div className="flex items-start gap-4">
             <Avatar className="w-12 h-12 border-2 border-white shadow-lg">
               <AvatarImage src={data.profile.avatar || undefined} />
-              <AvatarFallback className="bg-gradient-to-br from-[#17C3B2] to-[#0D2342] text-white font-bold">
+              <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#0F172A] text-white font-bold">
                 {getInitials(data.profile.firstName, data.profile.lastName)}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 text-left">
-              <h3 className="font-semibold text-[#0D2342]">
+              <h3 className="font-semibold text-[#0F172A]">
                 Welcome, {data.profile.firstName}!
               </h3>
               <p className="text-sm text-slate-600">
@@ -2893,7 +2893,7 @@ const CompleteStep = ({
                     <Badge
                       key={goalId}
                       variant="outline"
-                      className="bg-white/50 text-[#0D2342] border-[#17C3B2]/30"
+                      className="bg-white/50 text-[#0F172A] border-[#23D3EE]/30"
                     >
                       {goal.label}
                     </Badge>
@@ -2934,12 +2934,12 @@ const CompleteStep = ({
                   transition={{ delay: 1 + index * 0.1 }}
                   whileHover={{ scale: 1.03, y: -3 }}
                   whileTap={{ scale: 0.98 }}
-                  className="p-4 bg-white/50 backdrop-blur-sm rounded-xl border border-slate-200 text-left hover:border-[#17C3B2]/50 hover:shadow-lg transition-all"
+                  className="p-4 bg-white/50 backdrop-blur-sm rounded-xl border border-slate-200 text-left hover:border-[#23D3EE]/50 hover:shadow-lg transition-all"
                 >
                   <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center mb-3">
-                    <Icon size={20} className="text-[#17C3B2]" />
+                    <Icon size={20} className="text-[#23D3EE]" />
                   </div>
-                  <p className="font-semibold text-[#0D2342]">{item.label}</p>
+                  <p className="font-semibold text-[#0F172A]">{item.label}</p>
                   <p className="text-sm text-slate-500">{item.description}</p>
                 </motion.button>
               );
@@ -2957,7 +2957,7 @@ const CompleteStep = ({
             onClick={onFinish}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="group relative px-10 py-4 bg-gradient-to-r from-[#17C3B2] to-[#0D2342] text-white font-semibold rounded-2xl shadow-xl shadow-[#17C3B2]/30 overflow-hidden"
+            className="group relative px-10 py-4 bg-gradient-to-r from-[#23D3EE] to-[#0F172A] text-white font-semibold rounded-2xl shadow-xl shadow-[#23D3EE]/30 overflow-hidden"
           >
             <motion.div
               className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0"
@@ -2984,15 +2984,15 @@ const CompleteStep = ({
           transition={{ delay: 1.2 }}
           className="flex justify-center gap-6 mt-8 text-sm text-slate-500"
         >
-          <button className="hover:text-[#17C3B2] transition-colors flex items-center gap-1">
+          <button className="hover:text-[#23D3EE] transition-colors flex items-center gap-1">
             <BookOpen size={14} />
             Documentation
           </button>
-          <button className="hover:text-[#17C3B2] transition-colors flex items-center gap-1">
+          <button className="hover:text-[#23D3EE] transition-colors flex items-center gap-1">
             <Video size={14} />
             Video Tutorials
           </button>
-          <button className="hover:text-[#17C3B2] transition-colors flex items-center gap-1">
+          <button className="hover:text-[#23D3EE] transition-colors flex items-center gap-1">
             <MessageSquare size={14} />
             Get Support
           </button>
@@ -3439,7 +3439,7 @@ const Onboarding: React.FC = () => {
               >
                 <button
                   onClick={() => setCurrentStep("complete")}
-                  className="text-sm text-slate-400 hover:text-[#17C3B2] transition-colors"
+                  className="text-sm text-slate-400 hover:text-[#23D3EE] transition-colors"
                 >
                   Skip setup and go to dashboard →
                 </button>

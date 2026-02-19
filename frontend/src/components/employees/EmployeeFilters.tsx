@@ -132,7 +132,7 @@ export const EmployeeFilters: React.FC<EmployeeFiltersProps> = ({
               <SlidersHorizontal className="w-4 h-4" />
               Filters
               {activeFiltersCount > 0 && (
-                <Badge className="ml-1 bg-[#17C3B2] hover:bg-[#17C3B2]">
+                <Badge className="ml-1 bg-[#23D3EE] hover:bg-[#23D3EE]">
                   {activeFiltersCount}
                 </Badge>
               )}
@@ -234,7 +234,7 @@ export const EmployeeFilters: React.FC<EmployeeFiltersProps> = ({
           <Button
             variant={viewMode === 'grid' ? 'default' : 'ghost'}
             size="icon"
-            className={`h-8 w-8 ${viewMode === 'grid' ? 'bg-[#17C3B2] hover:bg-[#17C3B2]/90' : ''}`}
+            className={`h-8 w-8 ${viewMode === 'grid' ? 'bg-[#23D3EE] hover:bg-[#23D3EE]/90' : ''}`}
             onClick={() => onViewModeChange('grid')}
           >
             <LayoutGrid className="w-4 h-4" />
@@ -242,7 +242,7 @@ export const EmployeeFilters: React.FC<EmployeeFiltersProps> = ({
           <Button
             variant={viewMode === 'table' ? 'default' : 'ghost'}
             size="icon"
-            className={`h-8 w-8 ${viewMode === 'table' ? 'bg-[#17C3B2] hover:bg-[#17C3B2]/90' : ''}`}
+            className={`h-8 w-8 ${viewMode === 'table' ? 'bg-[#23D3EE] hover:bg-[#23D3EE]/90' : ''}`}
             onClick={() => onViewModeChange('table')}
           >
             <List className="w-4 h-4" />

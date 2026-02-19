@@ -741,9 +741,9 @@ const StatCard = ({
   delay?: number;
 }) => {
   const colorClasses = {
-    teal: { bg: "bg-[#17C3B2]", light: "bg-[#17C3B2]/10", text: "text-[#17C3B2]" },
-    gold: { bg: "bg-[#C9A14A]", light: "bg-[#C9A14A]/10", text: "text-[#C9A14A]" },
-    navy: { bg: "bg-[#0D2342]", light: "bg-[#0D2342]/10", text: "text-[#0D2342]" },
+    teal: { bg: "bg-[#23D3EE]", light: "bg-[#23D3EE]/10", text: "text-[#23D3EE]" },
+    gold: { bg: "bg-[#FBBF23]", light: "bg-[#FBBF23]/10", text: "text-[#FBBF23]" },
+    navy: { bg: "bg-[#0F172A]", light: "bg-[#0F172A]/10", text: "text-[#0F172A]" },
     purple: { bg: "bg-purple-500", light: "bg-purple-500/10", text: "text-purple-500" },
     green: { bg: "bg-green-500", light: "bg-green-500/10", text: "text-green-500" },
     blue: { bg: "bg-blue-500", light: "bg-blue-500/10", text: "text-blue-500" },
@@ -758,14 +758,14 @@ const StatCard = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
       whileHover={{ y: -4 }}
-      className="relative bg-white rounded-2xl p-5 border border-slate-200 hover:border-[#17C3B2]/30 hover:shadow-xl hover:shadow-[#17C3B2]/5 transition-all overflow-hidden group"
+      className="relative bg-white rounded-2xl p-5 border border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5 transition-all overflow-hidden group"
     >
       <div className={cn("absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-10 group-hover:opacity-20 transition-all", colors.bg)} />
 
       <div className="relative flex items-start justify-between">
         <div>
           <p className="text-sm text-slate-500 mb-1">{title}</p>
-          <p className="text-2xl font-bold text-[#0D2342]">
+          <p className="text-2xl font-bold text-[#0F172A]">
             {prefix}{typeof value === 'number' ? formatNumber(value) : value}
           </p>
           {change !== undefined && (
@@ -820,7 +820,7 @@ const ProductCard = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
       whileHover={{ y: -4 }}
-      className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:border-[#17C3B2]/30 hover:shadow-xl hover:shadow-[#17C3B2]/5 transition-all group"
+      className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5 transition-all group"
     >
       {/* Image */}
       <div className="relative h-48 bg-slate-100">
@@ -844,12 +844,12 @@ const ProductCard = ({
             </span>
           )}
           {product.tags.includes("bestseller") && (
-            <span className="px-2 py-1 rounded-lg bg-[#C9A14A] text-white text-xs font-bold">
+            <span className="px-2 py-1 rounded-lg bg-[#FBBF23] text-white text-xs font-bold">
               Bestseller
             </span>
           )}
           {product.tags.includes("new") && (
-            <span className="px-2 py-1 rounded-lg bg-[#17C3B2] text-white text-xs font-bold">
+            <span className="px-2 py-1 rounded-lg bg-[#23D3EE] text-white text-xs font-bold">
               New
             </span>
           )}
@@ -900,7 +900,7 @@ const ProductCard = ({
         <div className="flex items-start justify-between gap-2 mb-2">
           <div>
             <p className="text-xs text-slate-400 mb-1">{product.category}</p>
-            <h3 className="font-semibold text-[#0D2342] line-clamp-1 group-hover:text-[#17C3B2] transition-colors">
+            <h3 className="font-semibold text-[#0F172A] line-clamp-1 group-hover:text-[#23D3EE] transition-colors">
               {product.name}
             </h3>
           </div>
@@ -914,7 +914,7 @@ const ProductCard = ({
 
         {/* Price */}
         <div className="flex items-baseline gap-2 mb-3">
-          <span className="text-lg font-bold text-[#0D2342]">{formatCurrency(product.price)}</span>
+          <span className="text-lg font-bold text-[#0F172A]">{formatCurrency(product.price)}</span>
           {product.comparePrice && (
             <span className="text-sm text-slate-400 line-through">{formatCurrency(product.comparePrice)}</span>
           )}
@@ -923,8 +923,8 @@ const ProductCard = ({
         {/* Stats Row */}
         <div className="flex items-center justify-between pt-3 border-t border-slate-100">
           <div className="flex items-center gap-1">
-            <Star size={14} className="text-[#C9A14A] fill-[#C9A14A]" />
-            <span className="text-sm font-medium text-[#0D2342]">{product.rating}</span>
+            <Star size={14} className="text-[#FBBF23] fill-[#FBBF23]" />
+            <span className="text-sm font-medium text-[#0F172A]">{product.rating}</span>
             <span className="text-xs text-slate-400">({product.reviews})</span>
           </div>
           <div className={cn(
@@ -968,9 +968,9 @@ const OrderRow = ({
     <TableRow className="group hover:bg-slate-50">
       <TableCell>
         <div className="flex items-center gap-3">
-          <Checkbox className="data-[state=checked]:bg-[#17C3B2] data-[state=checked]:border-[#17C3B2]" />
+          <Checkbox className="data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]" />
           <div>
-            <p className="font-semibold text-[#0D2342]">{order.orderNumber}</p>
+            <p className="font-semibold text-[#0F172A]">{order.orderNumber}</p>
             <p className="text-xs text-slate-400">{getRelativeTime(order.createdAt)}</p>
           </div>
         </div>
@@ -984,12 +984,12 @@ const OrderRow = ({
               className="w-8 h-8 rounded-lg object-cover"
             />
           ) : (
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] flex items-center justify-center text-white text-xs font-bold">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white text-xs font-bold">
               {getInitials(order.customer.name)}
             </div>
           )}
           <div>
-            <p className="font-medium text-[#0D2342]">{order.customer.name}</p>
+            <p className="font-medium text-[#0F172A]">{order.customer.name}</p>
             <p className="text-xs text-slate-400">{order.customer.email}</p>
           </div>
         </div>
@@ -1012,7 +1012,7 @@ const OrderRow = ({
         </div>
       </TableCell>
       <TableCell>
-        <span className="font-semibold text-[#0D2342]">{formatCurrency(order.total)}</span>
+        <span className="font-semibold text-[#0F172A]">{formatCurrency(order.total)}</span>
       </TableCell>
       <TableCell>
         <span className={cn(
@@ -1091,10 +1091,10 @@ const TopProductsTable = ({ products }: { products: Product[] }) => {
       <div className="p-5 border-b border-slate-100">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-semibold text-[#0D2342]">Top Selling Products</h3>
+            <h3 className="font-semibold text-[#0F172A]">Top Selling Products</h3>
             <p className="text-sm text-slate-500">Best performers this month</p>
           </div>
-          <Button variant="ghost" size="sm" className="rounded-lg text-[#17C3B2]">
+          <Button variant="ghost" size="sm" className="rounded-lg text-[#23D3EE]">
             View All <ChevronRight size={14} className="ml-1" />
           </Button>
         </div>
@@ -1112,11 +1112,11 @@ const TopProductsTable = ({ products }: { products: Product[] }) => {
               className="w-12 h-12 rounded-xl object-cover"
             />
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-[#0D2342] truncate">{product.name}</p>
+              <p className="font-medium text-[#0F172A] truncate">{product.name}</p>
               <p className="text-sm text-slate-500">{product.sales} sales</p>
             </div>
             <div className="text-right">
-              <p className="font-semibold text-[#0D2342]">{formatCurrency(product.revenue)}</p>
+              <p className="font-semibold text-[#0F172A]">{formatCurrency(product.revenue)}</p>
               <p className="text-xs text-slate-400">Revenue</p>
             </div>
           </div>
@@ -1143,10 +1143,10 @@ const RecentOrdersTable = ({ orders }: { orders: Order[] }) => {
       <div className="p-5 border-b border-slate-100">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-semibold text-[#0D2342]">Recent Orders</h3>
+            <h3 className="font-semibold text-[#0F172A]">Recent Orders</h3>
             <p className="text-sm text-slate-500">Latest transactions</p>
           </div>
-          <Button variant="ghost" size="sm" className="rounded-lg text-[#17C3B2]">
+          <Button variant="ghost" size="sm" className="rounded-lg text-[#23D3EE]">
             View All <ChevronRight size={14} className="ml-1" />
           </Button>
         </div>
@@ -1165,17 +1165,17 @@ const RecentOrdersTable = ({ orders }: { orders: Order[] }) => {
                     className="w-10 h-10 rounded-xl object-cover"
                   />
                 ) : (
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] flex items-center justify-center text-white text-sm font-bold">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white text-sm font-bold">
                     {getInitials(order.customer.name)}
                   </div>
                 )}
                 <div>
-                  <p className="font-medium text-[#0D2342]">{order.customer.name}</p>
+                  <p className="font-medium text-[#0F172A]">{order.customer.name}</p>
                   <p className="text-sm text-slate-500">{order.orderNumber}</p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="font-semibold text-[#0D2342]">{formatCurrency(order.total)}</p>
+                <p className="font-semibold text-[#0F172A]">{formatCurrency(order.total)}</p>
                 <span className={cn(
                   "inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium",
                   statusColors.bg, statusColors.text
@@ -1215,7 +1215,7 @@ const LowStockAlert = ({ products }: { products: Product[] }) => {
             <AlertTriangle size={20} className="text-red-500" />
           </div>
           <div>
-            <h3 className="font-semibold text-[#0D2342]">Inventory Alerts</h3>
+            <h3 className="font-semibold text-[#0F172A]">Inventory Alerts</h3>
             <p className="text-sm text-slate-500">
               {outOfStockProducts.length} out of stock, {lowStockProducts.length} low stock
             </p>
@@ -1232,7 +1232,7 @@ const LowStockAlert = ({ products }: { products: Product[] }) => {
               className="w-10 h-10 rounded-lg object-cover"
             />
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-[#0D2342] truncate">{product.name}</p>
+              <p className="font-medium text-[#0F172A] truncate">{product.name}</p>
               <p className="text-xs text-red-500 font-semibold">Out of Stock</p>
             </div>
             <Button size="sm" variant="outline" className="rounded-lg text-red-500 border-red-200 hover:bg-red-50">
@@ -1248,7 +1248,7 @@ const LowStockAlert = ({ products }: { products: Product[] }) => {
               className="w-10 h-10 rounded-lg object-cover"
             />
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-[#0D2342] truncate">{product.name}</p>
+              <p className="font-medium text-[#0F172A] truncate">{product.name}</p>
               <p className="text-xs text-yellow-600 font-semibold">{product.stock} left in stock</p>
             </div>
             <Button size="sm" variant="outline" className="rounded-lg">
@@ -1277,7 +1277,7 @@ const RevenueChart = () => {
     >
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="font-semibold text-[#0D2342]">Revenue Overview</h3>
+          <h3 className="font-semibold text-[#0F172A]">Revenue Overview</h3>
           <p className="text-sm text-slate-500">Monthly revenue performance</p>
         </div>
         <Select defaultValue="7months">
@@ -1301,9 +1301,9 @@ const RevenueChart = () => {
               initial={{ height: 0 }}
               animate={{ height: `${(data.revenue / maxRevenue) * 100}%` }}
               transition={{ delay: 0.1 * index, duration: 0.5 }}
-              className="w-full bg-gradient-to-t from-[#17C3B2] to-[#17C3B2]/60 rounded-t-lg relative group cursor-pointer"
+              className="w-full bg-gradient-to-t from-[#23D3EE] to-[#23D3EE]/60 rounded-t-lg relative group cursor-pointer"
             >
-              <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-[#0D2342] text-white px-2 py-1 rounded-lg text-xs font-semibold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+              <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-[#0F172A] text-white px-2 py-1 rounded-lg text-xs font-semibold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                 {formatCurrency(data.revenue)}
               </div>
             </motion.div>
@@ -1316,11 +1316,11 @@ const RevenueChart = () => {
       <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-100">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-[#17C3B2]" />
+            <div className="w-3 h-3 rounded-full bg-[#23D3EE]" />
             <span className="text-sm text-slate-600">Revenue</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-[#C9A14A]" />
+            <div className="w-3 h-3 rounded-full bg-[#FBBF23]" />
             <span className="text-sm text-slate-600">Orders</span>
           </div>
         </div>
@@ -1350,7 +1350,7 @@ const CategoryCard = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
       whileHover={{ y: -4 }}
-      className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:border-[#17C3B2]/30 hover:shadow-xl hover:shadow-[#17C3B2]/5 transition-all cursor-pointer group"
+      className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5 transition-all cursor-pointer group"
     >
       <div className="relative h-32">
         {category.image ? (
@@ -1360,7 +1360,7 @@ const CategoryCard = ({
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-[#17C3B2]/20 to-[#C9A14A]/20 flex items-center justify-center">
+          <div className="w-full h-full bg-gradient-to-br from-[#23D3EE]/20 to-[#FBBF23]/20 flex items-center justify-center">
             <Grid3X3 size={32} className="text-slate-400" />
           </div>
         )}
@@ -1414,9 +1414,9 @@ const AddProductDialog = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px] p-0 rounded-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#17C3B2]/10 to-transparent sticky top-0 bg-white z-10">
+        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#23D3EE]/10 to-transparent sticky top-0 bg-white z-10">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-[#0D2342]">Add New Product</DialogTitle>
+            <DialogTitle className="text-xl font-bold text-[#0F172A]">Add New Product</DialogTitle>
             <DialogDescription className="text-slate-500">
               Add a new product to your inventory
             </DialogDescription>
@@ -1427,7 +1427,7 @@ const AddProductDialog = ({
           {/* Product Images */}
           <div className="space-y-2">
             <Label className="text-sm font-medium text-slate-600">Product Images</Label>
-            <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center hover:border-[#17C3B2] transition-colors cursor-pointer">
+            <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center hover:border-[#23D3EE] transition-colors cursor-pointer">
               <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-slate-100 flex items-center justify-center">
                 <ImageIcon size={24} className="text-slate-400" />
               </div>
@@ -1446,7 +1446,7 @@ const AddProductDialog = ({
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="Enter product name"
               required
-                            className="h-11 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+                            className="h-11 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
             />
           </div>
 
@@ -1458,7 +1458,7 @@ const AddProductDialog = ({
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               placeholder="Enter product description"
               rows={3}
-              className="rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20 resize-none"
+              className="rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20 resize-none"
             />
           </div>
 
@@ -1470,7 +1470,7 @@ const AddProductDialog = ({
                 value={formData.sku}
                 onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
                 placeholder="e.g., PROD-001"
-                className="h-11 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+                className="h-11 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
               />
             </div>
             <div className="space-y-2">
@@ -1510,7 +1510,7 @@ const AddProductDialog = ({
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                     placeholder="0.00"
                     required
-                    className="h-11 pl-9 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+                    className="h-11 pl-9 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
                   />
                 </div>
               </div>
@@ -1524,7 +1524,7 @@ const AddProductDialog = ({
                     value={formData.comparePrice}
                     onChange={(e) => setFormData({ ...formData, comparePrice: e.target.value })}
                     placeholder="0.00"
-                    className="h-11 pl-9 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+                    className="h-11 pl-9 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
                   />
                 </div>
               </div>
@@ -1538,7 +1538,7 @@ const AddProductDialog = ({
                     value={formData.cost}
                     onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
                     placeholder="0.00"
-                    className="h-11 pl-9 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+                    className="h-11 pl-9 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
                   />
                 </div>
               </div>
@@ -1556,7 +1556,7 @@ const AddProductDialog = ({
                   value={formData.stock}
                   onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
                   placeholder="0"
-                  className="h-11 pl-9 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+                  className="h-11 pl-9 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
                 />
               </div>
             </div>
@@ -1584,7 +1584,7 @@ const AddProductDialog = ({
             </Button>
             <Button
               type="submit"
-              className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl"
+              className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl"
             >
               <Plus size={16} className="mr-2" />
               Add Product
@@ -1628,11 +1628,11 @@ const OrderDetailsDialog = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[800px] p-0 rounded-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#17C3B2]/10 to-transparent sticky top-0 bg-white z-10">
+        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#23D3EE]/10 to-transparent sticky top-0 bg-white z-10">
           <DialogHeader>
             <div className="flex items-center justify-between">
               <div>
-                <DialogTitle className="text-xl font-bold text-[#0D2342]">
+                <DialogTitle className="text-xl font-bold text-[#0F172A]">
                   Order {order.orderNumber}
                 </DialogTitle>
                 <DialogDescription className="text-slate-500">
@@ -1661,7 +1661,7 @@ const OrderDetailsDialog = ({
           {/* Order Status Timeline */}
           {order.status !== "cancelled" && order.status !== "refunded" && (
             <div className="bg-slate-50 rounded-xl p-5">
-              <h4 className="font-semibold text-[#0D2342] mb-4">Order Progress</h4>
+              <h4 className="font-semibold text-[#0F172A] mb-4">Order Progress</h4>
               <div className="flex items-center justify-between">
                 {statusSteps.map((step, index) => {
                   const StepIcon = step.icon;
@@ -1674,14 +1674,14 @@ const OrderDetailsDialog = ({
                         <div className={cn(
                           "w-12 h-12 rounded-xl flex items-center justify-center mb-2 transition-all",
                           isCompleted
-                            ? "bg-[#17C3B2] text-white"
+                            ? "bg-[#23D3EE] text-white"
                             : "bg-slate-200 text-slate-400"
                         )}>
                           <StepIcon size={20} />
                         </div>
                         <span className={cn(
                           "text-xs font-medium",
-                          isCompleted ? "text-[#17C3B2]" : "text-slate-400"
+                          isCompleted ? "text-[#23D3EE]" : "text-slate-400"
                         )}>
                           {step.label}
                         </span>
@@ -1689,7 +1689,7 @@ const OrderDetailsDialog = ({
                       {index < statusSteps.length - 1 && (
                         <div className={cn(
                           "flex-1 h-1 rounded-full mx-2",
-                          index < currentStepIndex ? "bg-[#17C3B2]" : "bg-slate-200"
+                          index < currentStepIndex ? "bg-[#23D3EE]" : "bg-slate-200"
                         )} />
                       )}
                     </React.Fragment>
@@ -1702,7 +1702,7 @@ const OrderDetailsDialog = ({
           <div className="grid grid-cols-2 gap-6">
             {/* Customer Info */}
             <div className="space-y-4">
-              <h4 className="font-semibold text-[#0D2342]">Customer Information</h4>
+              <h4 className="font-semibold text-[#0F172A]">Customer Information</h4>
               <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl">
                 {order.customer.avatar ? (
                   <img
@@ -1711,12 +1711,12 @@ const OrderDetailsDialog = ({
                     className="w-12 h-12 rounded-xl object-cover"
                   />
                 ) : (
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] flex items-center justify-center text-white font-bold">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white font-bold">
                     {getInitials(order.customer.name)}
                   </div>
                 )}
                 <div>
-                  <p className="font-semibold text-[#0D2342]">{order.customer.name}</p>
+                  <p className="font-semibold text-[#0F172A]">{order.customer.name}</p>
                   <p className="text-sm text-slate-500">{order.customer.email}</p>
                 </div>
               </div>
@@ -1724,7 +1724,7 @@ const OrderDetailsDialog = ({
               <div className="space-y-3">
                 <div className="p-4 bg-slate-50 rounded-xl">
                   <p className="text-xs text-slate-500 mb-2">Shipping Address</p>
-                  <p className="text-sm text-[#0D2342] font-medium">{order.shippingAddress.name}</p>
+                  <p className="text-sm text-[#0F172A] font-medium">{order.shippingAddress.name}</p>
                   <p className="text-sm text-slate-600">{order.shippingAddress.line1}</p>
                   {order.shippingAddress.line2 && (
                     <p className="text-sm text-slate-600">{order.shippingAddress.line2}</p>
@@ -1742,11 +1742,11 @@ const OrderDetailsDialog = ({
 
             {/* Payment Info */}
             <div className="space-y-4">
-              <h4 className="font-semibold text-[#0D2342]">Payment Information</h4>
+              <h4 className="font-semibold text-[#0F172A]">Payment Information</h4>
               <div className="p-4 bg-slate-50 rounded-xl space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-slate-500">Payment Method</span>
-                  <span className="text-sm font-medium text-[#0D2342]">{order.paymentMethod}</span>
+                  <span className="text-sm font-medium text-[#0F172A]">{order.paymentMethod}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-slate-500">Payment Status</span>
@@ -1771,7 +1771,7 @@ const OrderDetailsDialog = ({
 
           {/* Order Items */}
           <div className="space-y-4">
-            <h4 className="font-semibold text-[#0D2342]">Order Items</h4>
+            <h4 className="font-semibold text-[#0F172A]">Order Items</h4>
             <div className="border border-slate-200 rounded-xl overflow-hidden">
               <Table>
                 <TableHeader>
@@ -1793,7 +1793,7 @@ const OrderDetailsDialog = ({
                             className="w-12 h-12 rounded-lg object-cover"
                           />
                           <div>
-                            <p className="font-medium text-[#0D2342]">{item.productName}</p>
+                            <p className="font-medium text-[#0F172A]">{item.productName}</p>
                             {item.variant && (
                               <p className="text-xs text-slate-500">{item.variant}</p>
                             )}
@@ -1815,15 +1815,15 @@ const OrderDetailsDialog = ({
             <div className="w-80 space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-slate-500">Subtotal</span>
-                <span className="text-[#0D2342]">{formatCurrency(order.subtotal)}</span>
+                <span className="text-[#0F172A]">{formatCurrency(order.subtotal)}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-slate-500">Tax</span>
-                <span className="text-[#0D2342]">{formatCurrency(order.tax)}</span>
+                <span className="text-[#0F172A]">{formatCurrency(order.tax)}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-slate-500">Shipping</span>
-                <span className="text-[#0D2342]">
+                <span className="text-[#0F172A]">
                   {order.shipping === 0 ? "Free" : formatCurrency(order.shipping)}
                 </span>
               </div>
@@ -1834,8 +1834,8 @@ const OrderDetailsDialog = ({
                 </div>
               )}
               <div className="flex items-center justify-between pt-3 border-t border-slate-200">
-                <span className="font-semibold text-[#0D2342]">Total</span>
-                <span className="text-xl font-bold text-[#0D2342]">{formatCurrency(order.total)}</span>
+                <span className="font-semibold text-[#0F172A]">Total</span>
+                <span className="text-xl font-bold text-[#0F172A]">{formatCurrency(order.total)}</span>
               </div>
             </div>
           </div>
@@ -1858,7 +1858,7 @@ const OrderDetailsDialog = ({
           {order.status === "processing" && (
             <Button
               onClick={() => onUpdateStatus("shipped")}
-              className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl"
+              className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl"
             >
               <Truck size={16} className="mr-2" />
               Mark as Shipped
@@ -1985,16 +1985,16 @@ const EcommercePage = () => {
                 <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
                   <span>Dashboard</span>
                   <ChevronRight size={14} />
-                  <span className="text-[#17C3B2] font-medium">Ecommerce</span>
+                  <span className="text-[#23D3EE] font-medium">Ecommerce</span>
                 </div>
-                <h1 className="text-2xl font-bold text-[#0D2342]">Ecommerce</h1>
+                <h1 className="text-2xl font-bold text-[#0F172A]">Ecommerce</h1>
               </div>
 
               {/* Header Actions */}
               <div className="flex items-center gap-3">
                 <Button
                   onClick={() => setShowAddProduct(true)}
-                  className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl"
+                  className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl"
                 >
                   <Plus size={18} className="mr-2" />
                   Add Product
@@ -2008,11 +2008,11 @@ const EcommercePage = () => {
                 </div>
 
                 <div className="flex items-center gap-3 pl-3 border-l border-slate-200">
-                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] flex items-center justify-center text-white font-bold shadow-lg shadow-[#17C3B2]/20">
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white font-bold shadow-lg shadow-[#23D3EE]/20">
                     SA
                   </div>
                   <div className="hidden sm:block">
-                    <p className="text-sm font-semibold text-[#0D2342]">SAdmin</p>
+                    <p className="text-sm font-semibold text-[#0F172A]">SAdmin</p>
                     <p className="text-xs text-slate-500">Administrator</p>
                   </div>
                   <ChevronDown size={16} className="text-slate-400" />
@@ -2037,7 +2037,7 @@ const EcommercePage = () => {
                   className={cn(
                     "flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all",
                     activeTab === tab.id
-                      ? "text-[#17C3B2] border-[#17C3B2]"
+                      ? "text-[#23D3EE] border-[#23D3EE]"
                       : "text-slate-500 border-transparent hover:text-slate-700"
                   )}
                 >
@@ -2119,7 +2119,7 @@ const EcommercePage = () => {
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Search products..."
-                    className="h-11 pl-11 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+                    className="h-11 pl-11 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
                   />
                 </div>
 
@@ -2156,7 +2156,7 @@ const EcommercePage = () => {
                       className={cn(
                         "p-2 rounded-lg transition-all",
                         viewMode === "grid"
-                          ? "bg-white text-[#17C3B2] shadow-sm"
+                          ? "bg-white text-[#23D3EE] shadow-sm"
                           : "text-slate-500"
                       )}
                     >
@@ -2167,7 +2167,7 @@ const EcommercePage = () => {
                       className={cn(
                         "p-2 rounded-lg transition-all",
                         viewMode === "list"
-                          ? "bg-white text-[#17C3B2] shadow-sm"
+                          ? "bg-white text-[#23D3EE] shadow-sm"
                           : "text-slate-500"
                       )}
                     >
@@ -2203,13 +2203,13 @@ const EcommercePage = () => {
                   <div className="w-20 h-20 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
                     <Package size={40} className="text-slate-300" />
                   </div>
-                  <h3 className="text-lg font-semibold text-[#0D2342] mb-2">No products found</h3>
+                  <h3 className="text-lg font-semibold text-[#0F172A] mb-2">No products found</h3>
                   <p className="text-slate-500 text-center mb-6">
                     {searchTerm ? `No products match "${searchTerm}"` : "Add your first product to get started"}
                   </p>
                   <Button
                     onClick={() => setShowAddProduct(true)}
-                    className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl"
+                    className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl"
                   >
                     <Plus size={16} className="mr-2" />
                     Add Product
@@ -2249,7 +2249,7 @@ const EcommercePage = () => {
               <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
                 <div className="p-5 border-b border-slate-100 flex items-center justify-between">
                   <div>
-                    <h3 className="font-semibold text-[#0D2342]">All Orders</h3>
+                    <h3 className="font-semibold text-[#0F172A]">All Orders</h3>
                     <p className="text-sm text-slate-500">{orderList.length} total orders</p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -2296,10 +2296,10 @@ const EcommercePage = () => {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold text-[#0D2342]">Product Categories</h2>
+                  <h2 className="text-lg font-semibold text-[#0F172A]">Product Categories</h2>
                   <p className="text-sm text-slate-500">{categories.length} categories</p>
                 </div>
-                <Button className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl">
+                <Button className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl">
                   <Plus size={16} className="mr-2" />
                   Add Category
                 </Button>
@@ -2318,10 +2318,10 @@ const EcommercePage = () => {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold text-[#0D2342]">Discount Coupons</h2>
+                  <h2 className="text-lg font-semibold text-[#0F172A]">Discount Coupons</h2>
                   <p className="text-sm text-slate-500">{coupons.length} active coupons</p>
                 </div>
-                <Button className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl">
+                <Button className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl">
                   <Plus size={16} className="mr-2" />
                   Create Coupon
                 </Button>
@@ -2341,18 +2341,18 @@ const EcommercePage = () => {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.1 }}
                       whileHover={{ y: -4 }}
-                      className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:border-[#17C3B2]/30 hover:shadow-xl hover:shadow-[#17C3B2]/5 transition-all"
+                      className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5 transition-all"
                     >
                       <div className="p-5">
                         <div className="flex items-start justify-between mb-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#17C3B2]/20 to-[#C9A14A]/20 flex items-center justify-center">
-                              {coupon.type === "percentage" && <Percent size={24} className="text-[#17C3B2]" />}
-                              {coupon.type === "fixed" && <DollarSign size={24} className="text-[#17C3B2]" />}
-                              {coupon.type === "free_shipping" && <Truck size={24} className="text-[#17C3B2]" />}
+                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#23D3EE]/20 to-[#FBBF23]/20 flex items-center justify-center">
+                              {coupon.type === "percentage" && <Percent size={24} className="text-[#23D3EE]" />}
+                              {coupon.type === "fixed" && <DollarSign size={24} className="text-[#23D3EE]" />}
+                              {coupon.type === "free_shipping" && <Truck size={24} className="text-[#23D3EE]" />}
                             </div>
                             <div>
-                              <h3 className="font-bold text-[#0D2342] font-mono">{coupon.code}</h3>
+                              <h3 className="font-bold text-[#0F172A] font-mono">{coupon.code}</h3>
                               <span className={cn(
                                 "inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium",
                                 statusColors.bg, statusColors.text
@@ -2385,7 +2385,7 @@ const EcommercePage = () => {
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-slate-500">Discount</span>
-                            <span className="font-bold text-[#0D2342]">
+                            <span className="font-bold text-[#0F172A]">
                               {coupon.type === "percentage" && `${coupon.value}% OFF`}
                               {coupon.type === "fixed" && `${formatCurrency(coupon.value)} OFF`}
                               {coupon.type === "free_shipping" && "Free Shipping"}
@@ -2395,13 +2395,13 @@ const EcommercePage = () => {
                           {coupon.minPurchase && (
                             <div className="flex items-center justify-between">
                               <span className="text-sm text-slate-500">Min. Purchase</span>
-                              <span className="text-sm text-[#0D2342]">{formatCurrency(coupon.minPurchase)}</span>
+                              <span className="text-sm text-[#0F172A]">{formatCurrency(coupon.minPurchase)}</span>
                             </div>
                           )}
 
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-slate-500">Valid Until</span>
-                            <span className="text-sm text-[#0D2342]">
+                            <span className="text-sm text-[#0F172A]">
                               {new Date(coupon.endDate).toLocaleDateString()}
                             </span>
                           </div>

@@ -44,7 +44,7 @@ interface MessageBubbleProps {
 function MessageStatus({ status }: { status: Message["status"] }) {
   if (status === "sent") return <Check size={14} className="text-gray-400" />;
   if (status === "delivered") return <CheckCheck size={14} className="text-gray-400" />;
-  return <CheckCheck size={14} className="text-[#17C3B2]" />;
+  return <CheckCheck size={14} className="text-[#23D3EE]" />;
 }
 
 export function MessageBubble({
@@ -70,7 +70,7 @@ export function MessageBubble({
           {showAvatar && (
             <Avatar className="w-8 h-8 rounded-lg">
               <AvatarImage src={senderAvatar} />
-              <AvatarFallback className="bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] text-white text-xs rounded-lg">
+              <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#6366F1] text-white text-xs rounded-lg">
                 {getInitials(senderName)}
               </AvatarFallback>
             </Avatar>
@@ -149,7 +149,7 @@ export function MessageBubble({
           className={cn(
             "rounded-2xl px-4 py-2.5 shadow-sm",
             isOwn
-              ? "bg-[#17C3B2] text-white rounded-br-md"
+              ? "bg-[#23D3EE] text-white rounded-br-md"
               : "bg-white text-gray-800 rounded-bl-md border border-gray-100"
           )}
         >
@@ -173,8 +173,8 @@ export function MessageBubble({
                         isOwn ? "bg-white/10" : "bg-gray-50"
                       )}
                     >
-                      <div className={cn("p-2 rounded-lg", isOwn ? "bg-white/20" : "bg-[#17C3B2]/10")}>
-                        <FileText size={20} className={isOwn ? "text-white" : "text-[#17C3B2]"} />
+                      <div className={cn("p-2 rounded-lg", isOwn ? "bg-white/20" : "bg-[#23D3EE]/10")}>
+                        <FileText size={20} className={isOwn ? "text-white" : "text-[#23D3EE]"} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p

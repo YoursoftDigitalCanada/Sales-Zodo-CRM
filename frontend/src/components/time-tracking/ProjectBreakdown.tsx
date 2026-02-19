@@ -34,7 +34,7 @@ export function ProjectBreakdown({ projects, onViewProject }: ProjectBreakdownPr
           <h3 className="text-lg font-semibold text-gray-800">Project Breakdown</h3>
           <p className="text-sm text-gray-500">{formatHoursMinutes(totalTracked * 3600)} total</p>
         </div>
-        <button className="text-sm text-[#17C3B2] font-medium hover:underline">
+        <button className="text-sm text-[#23D3EE] font-medium hover:underline">
           View All
         </button>
       </div>
@@ -62,14 +62,14 @@ export function ProjectBreakdown({ projects, onViewProject }: ProjectBreakdownPr
                     style={{
                       backgroundColor:
                         project.color === "teal"
-                          ? "#17C3B2"
+                          ? "#23D3EE"
                           : project.color === "gold"
-                          ? "#C9A14A"
+                          ? "#FBBF23"
                           : project.color,
                     }}
                   />
                   <div>
-                    <p className="font-medium text-gray-800 group-hover:text-[#17C3B2] transition-colors">
+                    <p className="font-medium text-gray-800 group-hover:text-[#23D3EE] transition-colors">
                       {project.name}
                     </p>
                     <p className="text-xs text-gray-500">{project.client}</p>
@@ -121,7 +121,7 @@ export function ProjectBreakdown({ projects, onViewProject }: ProjectBreakdownPr
                         ? "bg-red-500"
                         : progress >= 70
                         ? "bg-yellow-500"
-                        : "bg-[#17C3B2]"
+                        : "bg-[#23D3EE]"
                     )}
                   />
                 </div>

@@ -165,7 +165,7 @@ export const AttendanceSummaryCard: React.FC<AttendanceSummaryCardProps> = ({
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm text-gray-600">Attendance Rate</span>
-          <span className="text-2xl font-bold text-[#17C3B2]">{attendanceRate}%</span>
+          <span className="text-2xl font-bold text-[#23D3EE]">{attendanceRate}%</span>
         </div>
         <Progress value={attendanceRate} className="h-3" />
       </div>

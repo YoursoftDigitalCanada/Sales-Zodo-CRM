@@ -87,7 +87,7 @@ export function ChatSidebar({
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={onNewChat}
-                  className="p-2 bg-[#17C3B2] text-white rounded-lg hover:bg-[#17C3B2]/90 transition-all shadow-lg shadow-[#17C3B2]/20"
+                  className="p-2 bg-[#23D3EE] text-white rounded-lg hover:bg-[#23D3EE]/90 transition-all shadow-lg shadow-[#23D3EE]/20"
                 >
                   <Plus size={18} />
                 </motion.button>
@@ -135,7 +135,7 @@ export function ChatSidebar({
             placeholder="Search conversations..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 bg-gray-50 border-gray-200 focus:border-[#17C3B2] focus:ring-[#17C3B2]/20"
+            className="pl-10 bg-gray-50 border-gray-200 focus:border-[#23D3EE] focus:ring-[#23D3EE]/20"
           />
         </div>
 
@@ -150,7 +150,7 @@ export function ChatSidebar({
               className={cn(
                 "px-3 py-1.5 text-xs font-medium rounded-lg transition-all capitalize",
                 filterType === filter
-                  ? "bg-[#17C3B2] text-white shadow-lg shadow-[#17C3B2]/20"
+                  ? "bg-[#23D3EE] text-white shadow-lg shadow-[#23D3EE]/20"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               )}
             >
@@ -193,28 +193,28 @@ export function ChatSidebar({
                           className={cn(
                             "w-full flex items-start gap-3 p-3 rounded-xl transition-all text-left group relative",
                             isSelected
-                              ? "bg-[#17C3B2]/10 border border-[#17C3B2]/20"
+                              ? "bg-[#23D3EE]/10 border border-[#23D3EE]/20"
                               : "hover:bg-gray-50"
                           )}
                         >
                           {/* Pin indicator */}
                           {conversation.isPinned && (
                             <div className="absolute top-2 right-2">
-                              <Pin size={12} className="text-[#17C3B2]" />
+                              <Pin size={12} className="text-[#23D3EE]" />
                             </div>
                           )}
 
                           {/* Avatar */}
                           <div className="relative flex-shrink-0">
                             {conversation.type === "group" ? (
-                              <div className="w-12 h-12 bg-gradient-to-br from-[#17C3B2] to-[#17C3B2]/70 rounded-xl flex items-center justify-center">
+                              <div className="w-12 h-12 bg-gradient-to-br from-[#23D3EE] to-[#23D3EE]/70 rounded-xl flex items-center justify-center">
                                 <Users size={20} className="text-white" />
                               </div>
                             ) : (
                               <div className="relative">
                                 <Avatar className="w-12 h-12 rounded-xl">
                                   <AvatarImage src={otherParticipant.avatar} />
-                                  <AvatarFallback className="bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] text-white rounded-xl">
+                                  <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#6366F1] text-white rounded-xl">
                                     {getInitials(otherParticipant.name)}
                                   </AvatarFallback>
                                 </Avatar>
@@ -229,7 +229,7 @@ export function ChatSidebar({
                               <span
                                 className={cn(
                                   "font-semibold truncate",
-                                  isSelected ? "text-[#17C3B2]" : "text-gray-800"
+                                  isSelected ? "text-[#23D3EE]" : "text-gray-800"
                                 )}
                               >
                                 {displayName}
@@ -258,7 +258,7 @@ export function ChatSidebar({
                               <div className="flex items-center gap-2 flex-shrink-0">
                                 {conversation.isMuted && <BellOff size={14} className="text-gray-400" />}
                                 {conversation.unreadCount > 0 && (
-                                  <span className="min-w-[20px] h-5 bg-[#17C3B2] text-white text-xs font-bold rounded-full flex items-center justify-center px-1.5">
+                                  <span className="min-w-[20px] h-5 bg-[#23D3EE] text-white text-xs font-bold rounded-full flex items-center justify-center px-1.5">
                                     {conversation.unreadCount}
                                   </span>
                                 )}

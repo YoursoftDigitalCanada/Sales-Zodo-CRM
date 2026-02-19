@@ -84,22 +84,22 @@ interface Notification {
 
 const themeColors: Record<ThemeColor, { bg: string; text: string; light: string; gradient: string }> = {
   teal: {
-    bg: "bg-[#17C3B2]",
-    text: "text-[#17C3B2]",
-    light: "bg-[#17C3B2]/10",
-    gradient: "from-[#17C3B2] to-[#17C3B2]/70",
+    bg: "bg-[#23D3EE]",
+    text: "text-[#23D3EE]",
+    light: "bg-[#23D3EE]/10",
+    gradient: "from-[#23D3EE] to-[#23D3EE]/70",
   },
   gold: {
-    bg: "bg-[#C9A14A]",
-    text: "text-[#C9A14A]",
-    light: "bg-[#C9A14A]/10",
-    gradient: "from-[#C9A14A] to-[#C9A14A]/70",
+    bg: "bg-[#FBBF23]",
+    text: "text-[#FBBF23]",
+    light: "bg-[#FBBF23]/10",
+    gradient: "from-[#FBBF23] to-[#FBBF23]/70",
   },
   navy: {
-    bg: "bg-[#0D2342]",
-    text: "text-[#0D2342]",
-    light: "bg-[#0D2342]/10",
-    gradient: "from-[#0D2342] to-[#0D2342]/70",
+    bg: "bg-[#0F172A]",
+    text: "text-[#0F172A]",
+    light: "bg-[#0F172A]/10",
+    gradient: "from-[#0F172A] to-[#0F172A]/70",
   },
   green: {
     bg: "bg-emerald-500",
@@ -428,7 +428,7 @@ const Index = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onClick={() => setShowSearchModal(true)}
-                  className="w-80 h-11 pl-10 pr-16 rounded-xl bg-slate-100 dark:bg-slate-800 border-none text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#17C3B2]/20 focus:bg-white dark:focus:bg-slate-700 transition-all"
+                  className="w-80 h-11 pl-10 pr-16 rounded-xl bg-slate-100 dark:bg-slate-800 border-none text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#23D3EE]/20 focus:bg-white dark:focus:bg-slate-700 transition-all"
                 />
                 <kbd className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-0.5 rounded bg-white dark:bg-slate-700 text-[10px] text-slate-400 border border-slate-200 dark:border-slate-600 font-mono flex items-center gap-1">
                   <Command size={10} />K
@@ -443,7 +443,7 @@ const Index = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => navigate("/projects/new")}
-                className="flex items-center gap-2 px-4 py-2.5 bg-[#17C3B2] text-white text-sm font-medium rounded-xl shadow-lg shadow-[#17C3B2]/25 hover:bg-[#17C3B2]/90 transition-colors"
+                className="flex items-center gap-2 px-4 py-2.5 bg-[#23D3EE] text-white text-sm font-medium rounded-xl shadow-lg shadow-[#23D3EE]/25 hover:bg-[#23D3EE]/90 transition-colors"
               >
                 <Plus size={16} />
                 <span className="hidden sm:inline">Quick Add</span>
@@ -487,12 +487,12 @@ const Index = () => {
                     >
                       <div className="p-4 border-b border-slate-100 dark:border-slate-700">
                         <div className="flex items-center justify-between">
-                          <h4 className="font-semibold text-[#0D2342] dark:text-white">
+                          <h4 className="font-semibold text-[#0F172A] dark:text-white">
                             Notifications
                           </h4>
                           <button
                             onClick={handleMarkAllAsRead}
-                            className="text-xs text-[#17C3B2] font-medium cursor-pointer hover:underline"
+                            className="text-xs text-[#23D3EE] font-medium cursor-pointer hover:underline"
                           >
                             Mark all as read
                           </button>
@@ -506,7 +506,7 @@ const Index = () => {
                               key={notification.id}
                               className={cn(
                                 "p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer border-b border-slate-100 dark:border-slate-700 last:border-0",
-                                !notification.read && "bg-[#17C3B2]/5"
+                                !notification.read && "bg-[#23D3EE]/5"
                               )}
                             >
                               <div className="flex gap-3">
@@ -519,7 +519,7 @@ const Index = () => {
                                   <notification.icon size={18} className={colors.text} />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-[#0D2342] dark:text-white">
+                                  <p className="text-sm font-medium text-[#0F172A] dark:text-white">
                                     {notification.title}
                                   </p>
                                   <p className="text-sm text-slate-500 dark:text-slate-400">
@@ -530,7 +530,7 @@ const Index = () => {
                                   </p>
                                 </div>
                                 {!notification.read && (
-                                  <div className="w-2 h-2 rounded-full bg-[#17C3B2] flex-shrink-0 mt-2" />
+                                  <div className="w-2 h-2 rounded-full bg-[#23D3EE] flex-shrink-0 mt-2" />
                                 )}
                               </div>
                             </div>
@@ -540,7 +540,7 @@ const Index = () => {
                       <div className="p-3 bg-slate-50 dark:bg-slate-700/50 text-center">
                         <button
                           onClick={() => navigate("/notifications")}
-                          className="text-sm text-[#17C3B2] font-medium hover:underline"
+                          className="text-sm text-[#23D3EE] font-medium hover:underline"
                         >
                           View All Notifications
                         </button>
@@ -556,7 +556,7 @@ const Index = () => {
                 className="relative flex items-center gap-3 pl-3 ml-3 border-l border-slate-200 dark:border-slate-700"
               >
                 <div className="text-right hidden sm:block">
-                  <p className="text-sm font-semibold text-[#0D2342] dark:text-white">
+                  <p className="text-sm font-semibold text-[#0F172A] dark:text-white">
                     {user ? `${user.firstName} ${user.lastName}` : "Guest User"}
                   </p>
                   <p className="text-xs text-slate-400">
@@ -568,7 +568,7 @@ const Index = () => {
                   onClick={() => setShowProfileMenu(!showProfileMenu)}
                   className="relative cursor-pointer flex items-center gap-2"
                 >
-                  <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-[#17C3B2] via-[#17C3B2]/80 to-[#C9A14A] flex items-center justify-center text-white font-bold shadow-lg">
+                  <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-[#23D3EE] via-[#23D3EE]/80 to-[#FBBF23] flex items-center justify-center text-white font-bold shadow-lg">
                     {user
                       ? (user.firstName[0] + user.lastName[0]).toUpperCase()
                       : "GU"}
@@ -594,7 +594,7 @@ const Index = () => {
                       className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden z-50"
                     >
                       <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-                        <p className="font-semibold text-[#0D2342] dark:text-white">
+                        <p className="font-semibold text-[#0F172A] dark:text-white">
                           {user ? `${user.firstName} ${user.lastName}` : "Guest User"}
                         </p>
                         <p className="text-xs text-slate-400 truncate">
@@ -645,15 +645,15 @@ const Index = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#0D2342] via-[#0D2342] to-[#17C3B2]/30 p-8"
+            className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#0F172A] via-[#0F172A] to-[#23D3EE]/30 p-8"
           >
             {/* Background Decorations */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-[#17C3B2]/10 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 left-1/2 w-48 h-48 bg-[#C9A14A]/10 rounded-full blur-3xl" />
+            <div className="absolute top-0 right-0 w-64 h-64 bg-[#23D3EE]/10 rounded-full blur-3xl" />
+            <div className="absolute bottom-0 left-1/2 w-48 h-48 bg-[#FBBF23]/10 rounded-full blur-3xl" />
             <div
               className="absolute inset-0 opacity-5"
               style={{
-                backgroundImage: `radial-gradient(#17C3B2 1px, transparent 1px)`,
+                backgroundImage: `radial-gradient(#23D3EE 1px, transparent 1px)`,
                 backgroundSize: "20px 20px",
               }}
             />
@@ -666,8 +666,8 @@ const Index = () => {
                   transition={{ delay: 0.2 }}
                   className="flex items-center gap-2 mb-3"
                 >
-                  <Sparkles size={20} className="text-[#C9A14A]" />
-                  <span className="text-[#C9A14A] text-sm font-medium">
+                  <Sparkles size={20} className="text-[#FBBF23]" />
+                  <span className="text-[#FBBF23] text-sm font-medium">
                     {currentTime.toLocaleDateString("en-US", {
                       weekday: "long",
                       month: "long",
@@ -677,14 +677,14 @@ const Index = () => {
                 </motion.div>
                 <h1 className="text-3xl lg:text-4xl font-bold text-white mb-2">
                   {getGreeting()},{" "}
-                  <span className="text-[#17C3B2]">
+                  <span className="text-[#23D3EE]">
                     {user?.firstName || "Guest"}
                   </span>
                   ! 👋
                 </h1>
                 <p className="text-slate-300 text-lg max-w-xl">
                   Here's what's happening with your business today. You have{" "}
-                  <span className="text-[#17C3B2] font-semibold">
+                  <span className="text-[#23D3EE] font-semibold">
                     {stats.pendingTasks} tasks
                   </span>{" "}
                   pending.
@@ -715,7 +715,7 @@ const Index = () => {
                     className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-4 min-w-[140px]"
                   >
                     <div className="flex items-center gap-2 mb-2">
-                      <item.icon size={16} className="text-[#17C3B2]" />
+                      <item.icon size={16} className="text-[#23D3EE]" />
                       <span className="text-xs text-slate-400">{item.label}</span>
                     </div>
                     <div className="flex items-baseline gap-2">
@@ -745,7 +745,7 @@ const Index = () => {
                   whileHover={{ scale: 1.02, y: -4 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => handleQuickAction(action.path)}
-                  className="flex items-center gap-4 p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-[#17C3B2]/30 hover:shadow-lg hover:shadow-[#17C3B2]/5 transition-all group"
+                  className="flex items-center gap-4 p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-[#23D3EE]/30 hover:shadow-lg hover:shadow-[#23D3EE]/5 transition-all group"
                 >
                   <div
                     className={cn(
@@ -756,14 +756,14 @@ const Index = () => {
                     <action.icon size={22} className="text-white" />
                   </div>
                   <div className="text-left">
-                    <p className="font-semibold text-[#0D2342] dark:text-white group-hover:text-[#17C3B2] transition-colors">
+                    <p className="font-semibold text-[#0F172A] dark:text-white group-hover:text-[#23D3EE] transition-colors">
                       {action.title}
                     </p>
                     <p className="text-xs text-slate-400">{action.description}</p>
                   </div>
                   <ArrowUpRight
                     size={16}
-                    className="ml-auto text-slate-300 group-hover:text-[#17C3B2] transition-colors"
+                    className="ml-auto text-slate-300 group-hover:text-[#23D3EE] transition-colors"
                   />
                 </motion.button>
               );
@@ -845,11 +845,11 @@ const Index = () => {
               <div className="p-6 border-b border-slate-100 dark:border-slate-700">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#17C3B2]/10 flex items-center justify-center">
-                      <Zap size={18} className="text-[#17C3B2]" />
+                    <div className="w-10 h-10 rounded-xl bg-[#23D3EE]/10 flex items-center justify-center">
+                      <Zap size={18} className="text-[#23D3EE]" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-[#0D2342] dark:text-white">
+                      <h3 className="font-semibold text-[#0F172A] dark:text-white">
                         Recent Activity
                       </h3>
                       <p className="text-xs text-slate-400">Latest updates</p>
@@ -857,7 +857,7 @@ const Index = () => {
                   </div>
                   <button
                     onClick={() => navigate("/activity")}
-                    className="text-sm text-[#17C3B2] font-medium hover:underline"
+                    className="text-sm text-[#23D3EE] font-medium hover:underline"
                   >
                     View All
                   </button>
@@ -885,7 +885,7 @@ const Index = () => {
                           <activity.icon size={18} className={colors.text} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm text-[#0D2342] dark:text-white group-hover:text-[#17C3B2] transition-colors">
+                          <p className="text-sm text-[#0F172A] dark:text-white group-hover:text-[#23D3EE] transition-colors">
                             {activity.message}
                           </p>
                           <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
@@ -917,28 +917,28 @@ const Index = () => {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-slate-400">
             <div className="flex items-center gap-2">
               <span>© {new Date().getFullYear()}</span>
-              <span className="font-semibold text-[#0D2342] dark:text-white">
+              <span className="font-semibold text-[#0F172A] dark:text-white">
                 Yoursoft
               </span>
-              <span className="text-[#17C3B2] font-semibold">Digital</span>
+              <span className="text-[#23D3EE] font-semibold">Digital</span>
               <span>• All rights reserved</span>
             </div>
             <div className="flex items-center gap-4">
               <a
                 href="#"
-                className="hover:text-[#17C3B2] transition-colors"
+                className="hover:text-[#23D3EE] transition-colors"
               >
                 Privacy
               </a>
               <a
                 href="#"
-                className="hover:text-[#17C3B2] transition-colors"
+                className="hover:text-[#23D3EE] transition-colors"
               >
                 Terms
               </a>
               <a
                 href="#"
-                className="hover:text-[#17C3B2] transition-colors"
+                className="hover:text-[#23D3EE] transition-colors"
               >
                 Support
               </a>
@@ -1009,7 +1009,7 @@ const Index = () => {
                           <action.icon size={18} className={colors.text} />
                         </div>
                         <div className="text-left">
-                          <p className="text-sm font-medium text-[#0D2342] dark:text-white group-hover:text-[#17C3B2] transition-colors">
+                          <p className="text-sm font-medium text-[#0F172A] dark:text-white group-hover:text-[#23D3EE] transition-colors">
                             {action.title}
                           </p>
                           <p className="text-xs text-slate-400">
@@ -1018,7 +1018,7 @@ const Index = () => {
                         </div>
                         <ArrowUpRight
                           size={14}
-                          className="ml-auto text-slate-300 group-hover:text-[#17C3B2] transition-colors"
+                          className="ml-auto text-slate-300 group-hover:text-[#23D3EE] transition-colors"
                         />
                       </button>
                     );

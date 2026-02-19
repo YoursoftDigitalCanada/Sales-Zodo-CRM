@@ -82,8 +82,8 @@ export const EmployeeStats: React.FC<EmployeeStatsProps> = ({
     {
       title: 'Total Employees',
       value: totalEmployees,
-      icon: <Users className="w-6 h-6 text-[#17C3B2]" />,
-      color: 'bg-[#17C3B2]/10',
+      icon: <Users className="w-6 h-6 text-[#23D3EE]" />,
+      color: 'bg-[#23D3EE]/10',
       trend: { value: 12, isPositive: true },
     },
     {
@@ -134,8 +134,8 @@ export const DepartmentStats: React.FC<DepartmentStatsProps> = ({
     {
       title: 'Total Departments',
       value: totalDepartments,
-      icon: <Building2 className="w-6 h-6 text-[#17C3B2]" />,
-      color: 'bg-[#17C3B2]/10',
+      icon: <Building2 className="w-6 h-6 text-[#23D3EE]" />,
+      color: 'bg-[#23D3EE]/10',
     },
     {
       title: 'Total Employees',
@@ -255,8 +255,8 @@ export const LeaveStats: React.FC<LeaveStatsProps> = ({
     {
       title: 'Currently On Leave',
       value: employeesOnLeave,
-      icon: <Calendar className="w-6 h-6 text-[#17C3B2]" />,
-      color: 'bg-[#17C3B2]/10',
+      icon: <Calendar className="w-6 h-6 text-[#23D3EE]" />,
+      color: 'bg-[#23D3EE]/10',
     },
   ];
 

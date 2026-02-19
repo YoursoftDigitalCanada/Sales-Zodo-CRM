@@ -59,7 +59,7 @@ export const LeaveRequestCard: React.FC<LeaveRequestCardProps> = ({
           <div className="flex items-center gap-3">
             <Avatar className="h-12 w-12">
               <AvatarImage src={request.employeeAvatar} />
-              <AvatarFallback className="bg-[#17C3B2]/10 text-[#17C3B2]">
+              <AvatarFallback className="bg-[#23D3EE]/10 text-[#23D3EE]">
                 {getInitials(nameParts[0], nameParts[1] || '')}
               </AvatarFallback>
             </Avatar>
@@ -131,7 +131,7 @@ export const LeaveRequestCard: React.FC<LeaveRequestCardProps> = ({
             <div className="flex-1 px-4">
               <div className="border-t-2 border-dashed border-gray-300 relative">
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-50 px-2">
-                  <span className="text-sm font-medium text-[#17C3B2]">
+                  <span className="text-sm font-medium text-[#23D3EE]">
                     {request.totalDays} day{request.totalDays !== 1 ? 's' : ''}
                   </span>
                 </div>

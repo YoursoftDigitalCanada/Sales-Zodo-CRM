@@ -31,7 +31,7 @@ export function WeeklyOverview({ data, targetHours = 8 }: WeeklyOverviewProps) {
         </div>
         <div className="flex items-center gap-4 text-sm">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-[#17C3B2]" />
+            <div className="w-3 h-3 rounded-full bg-[#23D3EE]" />
             <span className="text-gray-600">Billable</span>
           </div>
           <div className="flex items-center gap-2">
@@ -54,7 +54,7 @@ export function WeeklyOverview({ data, targetHours = 8 }: WeeklyOverviewProps) {
                 {/* Target Line */}
                 {isToday && (
                   <div
-                    className="absolute w-full border-t-2 border-dashed border-[#C9A14A]/50"
+                    className="absolute w-full border-t-2 border-dashed border-[#FBBF23]/50"
                     style={{ bottom: `${(targetHours / maxHours) * 100}%` }}
                   />
                 )}
@@ -68,7 +68,7 @@ export function WeeklyOverview({ data, targetHours = 8 }: WeeklyOverviewProps) {
                       transition={{ duration: 0.5, delay: index * 0.1 }}
                       className={cn(
                         "w-full rounded-t-lg transition-all cursor-pointer hover:opacity-80",
-                        isToday ? "bg-[#17C3B2]" : "bg-[#17C3B2]/70"
+                        isToday ? "bg-[#23D3EE]" : "bg-[#23D3EE]/70"
                       )}
                       title={`${day.billable}h billable`}
                     />
@@ -101,7 +101,7 @@ export function WeeklyOverview({ data, targetHours = 8 }: WeeklyOverviewProps) {
                 <p
                   className={cn(
                     "text-sm font-medium",
-                    isToday ? "text-[#17C3B2]" : "text-gray-700"
+                    isToday ? "text-[#23D3EE]" : "text-gray-700"
                   )}
                 >
                   {day.day}
@@ -114,7 +114,7 @@ export function WeeklyOverview({ data, targetHours = 8 }: WeeklyOverviewProps) {
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="w-2 h-2 bg-[#17C3B2] rounded-full mt-1"
+                  className="w-2 h-2 bg-[#23D3EE] rounded-full mt-1"
                 />
               )}
             </div>

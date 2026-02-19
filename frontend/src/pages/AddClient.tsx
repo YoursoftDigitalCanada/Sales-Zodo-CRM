@@ -300,7 +300,7 @@ const StyledCard = ({
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay }}
     className={cn(
-      "bg-white rounded-2xl border border-slate-200 overflow-hidden hover:border-[#17C3B2]/30 hover:shadow-lg hover:shadow-[#17C3B2]/5 transition-all",
+      "bg-white rounded-2xl border border-slate-200 overflow-hidden hover:border-[#23D3EE]/30 hover:shadow-lg hover:shadow-[#23D3EE]/5 transition-all",
       className
     )}
   >
@@ -321,9 +321,9 @@ const StyledCardHeader = ({
   color?: "teal" | "gold" | "navy" | "purple";
 }) => {
   const colorClasses = {
-    teal: "bg-[#17C3B2]/10 text-[#17C3B2]",
-    gold: "bg-[#C9A14A]/10 text-[#C9A14A]",
-    navy: "bg-[#0D2342]/10 text-[#0D2342]",
+    teal: "bg-[#23D3EE]/10 text-[#23D3EE]",
+    gold: "bg-[#FBBF23]/10 text-[#FBBF23]",
+    navy: "bg-[#0F172A]/10 text-[#0F172A]",
     purple: "bg-purple-500/10 text-purple-500",
   };
 
@@ -339,7 +339,7 @@ const StyledCardHeader = ({
           <Icon size={18} />
         </div>
         <div>
-          <h3 className="font-semibold text-[#0D2342]">{title}</h3>
+          <h3 className="font-semibold text-[#0F172A]">{title}</h3>
           {subtitle && <p className="text-xs text-slate-400">{subtitle}</p>}
         </div>
       </div>
@@ -373,7 +373,7 @@ const StyledInput = ({
       <Input
         {...props}
         className={cn(
-          "h-11 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20 transition-all",
+          "h-11 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20 transition-all",
           Icon && "pl-10",
           props.className
         )}
@@ -404,7 +404,7 @@ const StyledSelect = ({
       {required && <span className="text-red-500 ml-1">*</span>}
     </Label>
     <Select value={value} onValueChange={onValueChange}>
-      <SelectTrigger className="h-11 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20">
+      <SelectTrigger className="h-11 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20">
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent className="rounded-xl border-slate-200">
@@ -412,7 +412,7 @@ const StyledSelect = ({
           <SelectItem
             key={option.value}
             value={option.value}
-            className="rounded-lg focus:bg-[#17C3B2]/10 focus:text-[#17C3B2]"
+            className="rounded-lg focus:bg-[#23D3EE]/10 focus:text-[#23D3EE]"
           >
             {option.label}
           </SelectItem>
@@ -566,8 +566,8 @@ const AddClientPage = () => {
             animate={{ opacity: 1, scale: 1 }}
             className="text-center"
           >
-            <div className="w-16 h-16 rounded-2xl bg-[#17C3B2]/10 flex items-center justify-center mx-auto mb-4">
-              <Loader2 className="w-8 h-8 text-[#17C3B2] animate-spin" />
+            <div className="w-16 h-16 rounded-2xl bg-[#23D3EE]/10 flex items-center justify-center mx-auto mb-4">
+              <Loader2 className="w-8 h-8 text-[#23D3EE] animate-spin" />
             </div>
             <p className="text-slate-500 font-medium">Loading client data...</p>
           </motion.div>
@@ -606,19 +606,19 @@ const AddClientPage = () => {
               <div className="hidden sm:flex items-center gap-2 text-sm">
                 <button
                   onClick={() => navigate("/dashboard")}
-                  className="text-slate-400 hover:text-[#17C3B2] transition-colors"
+                  className="text-slate-400 hover:text-[#23D3EE] transition-colors"
                 >
                   Dashboard
                 </button>
                 <ChevronRight size={14} className="text-slate-300" />
                 <button
                   onClick={() => navigate("/client-list")}
-                  className="text-slate-400 hover:text-[#17C3B2] transition-colors"
+                  className="text-slate-400 hover:text-[#23D3EE] transition-colors"
                 >
                   Clients
                 </button>
                 <ChevronRight size={14} className="text-slate-300" />
-                <span className="font-semibold text-[#17C3B2]">
+                <span className="font-semibold text-[#23D3EE]">
                   {isEditMode ? "Edit Client" : "New Client"}
                 </span>
               </div>
@@ -652,7 +652,7 @@ const AddClientPage = () => {
                 whileTap={{ scale: 0.95 }}
                 onClick={handleSubmit}
                 disabled={isLoading}
-                className="px-4 py-2.5 rounded-xl bg-[#17C3B2] text-white shadow-lg shadow-[#17C3B2]/25 hover:bg-[#17C3B2]/90 transition-colors flex items-center gap-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2.5 rounded-xl bg-[#23D3EE] text-white shadow-lg shadow-[#23D3EE]/25 hover:bg-[#23D3EE]/90 transition-colors flex items-center gap-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <Loader2 size={16} className="animate-spin" />
@@ -675,11 +675,11 @@ const AddClientPage = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#0D2342] via-[#0D2342] to-[#17C3B2]/30 p-8"
+            className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#0F172A] via-[#0F172A] to-[#23D3EE]/30 p-8"
           >
             {/* Background Decorations */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-[#17C3B2]/10 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 left-1/2 w-48 h-48 bg-[#C9A14A]/10 rounded-full blur-3xl" />
+            <div className="absolute top-0 right-0 w-64 h-64 bg-[#23D3EE]/10 rounded-full blur-3xl" />
+            <div className="absolute bottom-0 left-1/2 w-48 h-48 bg-[#FBBF23]/10 rounded-full blur-3xl" />
 
             <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
               <div>
@@ -689,8 +689,8 @@ const AddClientPage = () => {
                   transition={{ delay: 0.2 }}
                   className="flex items-center gap-2 mb-3"
                 >
-                  <Sparkles size={20} className="text-[#C9A14A]" />
-                  <span className="text-[#C9A14A] text-sm font-medium">
+                  <Sparkles size={20} className="text-[#FBBF23]" />
+                  <span className="text-[#FBBF23] text-sm font-medium">
                     Client Management
                   </span>
                 </motion.div>
@@ -698,13 +698,13 @@ const AddClientPage = () => {
                   {isEditMode ? (
                     <>
                       Edit{" "}
-                      <span className="text-[#17C3B2]">
+                      <span className="text-[#23D3EE]">
                         {formData.clientName || "Client"}
                       </span>
                     </>
                   ) : (
                     <>
-                      Add New <span className="text-[#17C3B2]">Client</span>
+                      Add New <span className="text-[#23D3EE]">Client</span>
                     </>
                   )}
                 </h1>
@@ -774,8 +774,8 @@ const AddClientPage = () => {
                           className={cn(
                             "w-24 h-24 rounded-2xl border-2 border-dashed flex items-center justify-center overflow-hidden bg-slate-50 transition-all cursor-pointer",
                             previewImage
-                              ? "border-[#17C3B2]"
-                              : "border-slate-200 hover:border-[#17C3B2]/50"
+                              ? "border-[#23D3EE]"
+                              : "border-slate-200 hover:border-[#23D3EE]/50"
                           )}
                         >
                           {previewImage ? (
@@ -794,12 +794,12 @@ const AddClientPage = () => {
                           onChange={handleImageChange}
                           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                         />
-                        <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-[#17C3B2] text-white rounded-xl shadow-lg shadow-[#17C3B2]/25 flex items-center justify-center pointer-events-none">
+                        <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-[#23D3EE] text-white rounded-xl shadow-lg shadow-[#23D3EE]/25 flex items-center justify-center pointer-events-none">
                           <Upload size={14} />
                         </div>
                       </div>
                       <div>
-                        <h3 className="font-semibold text-[#0D2342]">
+                        <h3 className="font-semibold text-[#0F172A]">
                           Client Logo / Photo
                         </h3>
                         <p className="text-sm text-slate-400 mt-1">
@@ -964,7 +964,7 @@ const AddClientPage = () => {
                           placeholder="Suite 100 (Optional)"
                           value={formData.billingAddressLine2}
                           onChange={handleInputChange}
-                          className="h-11 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+                          className="h-11 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
                         />
                       </div>
 
@@ -1036,7 +1036,7 @@ const AddClientPage = () => {
                         placeholder="Internal notes about this client..."
                         value={formData.notes}
                         onChange={handleInputChange}
-                        className="min-h-[120px] rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20 resize-none"
+                        className="min-h-[120px] rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20 resize-none"
                       />
                     </div>
                   </div>
@@ -1189,14 +1189,14 @@ const AddClientPage = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5 }}
-                    className="bg-[#17C3B2]/10 border border-[#17C3B2]/20 rounded-2xl p-5"
+                    className="bg-[#23D3EE]/10 border border-[#23D3EE]/20 rounded-2xl p-5"
                   >
                     <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-[#17C3B2]/20 flex items-center justify-center flex-shrink-0">
-                        <CheckCircle2 size={18} className="text-[#17C3B2]" />
+                      <div className="w-10 h-10 rounded-xl bg-[#23D3EE]/20 flex items-center justify-center flex-shrink-0">
+                        <CheckCircle2 size={18} className="text-[#23D3EE]" />
                       </div>
                       <div>
-                        <h4 className="font-semibold text-[#0D2342]">
+                        <h4 className="font-semibold text-[#0F172A]">
                           Editing Mode
                         </h4>
                         <p className="text-sm text-slate-500 mt-1">
@@ -1213,14 +1213,14 @@ const AddClientPage = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.6 }}
-                  className="bg-[#C9A14A]/10 border border-[#C9A14A]/20 rounded-2xl p-5"
+                  className="bg-[#FBBF23]/10 border border-[#FBBF23]/20 rounded-2xl p-5"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#C9A14A]/20 flex items-center justify-center flex-shrink-0">
-                      <Sparkles size={18} className="text-[#C9A14A]" />
+                    <div className="w-10 h-10 rounded-xl bg-[#FBBF23]/20 flex items-center justify-center flex-shrink-0">
+                      <Sparkles size={18} className="text-[#FBBF23]" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-[#0D2342]">
+                      <h4 className="font-semibold text-[#0F172A]">
                         Quick Tips
                       </h4>
                       <ul className="text-sm text-slate-500 mt-2 space-y-1">
@@ -1241,18 +1241,18 @@ const AddClientPage = () => {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-slate-400 max-w-7xl mx-auto">
             <div className="flex items-center gap-2">
               <span>© {new Date().getFullYear()}</span>
-              <span className="font-semibold text-[#0D2342]">Yoursoft</span>
-              <span className="text-[#17C3B2] font-semibold">Digital</span>
+              <span className="font-semibold text-[#0F172A]">Yoursoft</span>
+              <span className="text-[#23D3EE] font-semibold">Digital</span>
               <span>• All rights reserved</span>
             </div>
             <div className="flex items-center gap-4">
-              <a href="#" className="hover:text-[#17C3B2] transition-colors">
+              <a href="#" className="hover:text-[#23D3EE] transition-colors">
                 Privacy
               </a>
-              <a href="#" className="hover:text-[#17C3B2] transition-colors">
+              <a href="#" className="hover:text-[#23D3EE] transition-colors">
                 Terms
               </a>
-              <a href="#" className="hover:text-[#17C3B2] transition-colors">
+              <a href="#" className="hover:text-[#23D3EE] transition-colors">
                 Support
               </a>
             </div>

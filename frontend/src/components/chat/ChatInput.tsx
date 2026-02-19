@@ -79,10 +79,10 @@ export function ChatInput({ onSendMessage, replyingTo, onCancelReply, disabled }
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-3 p-3 bg-gray-50 rounded-lg border-l-4 border-[#17C3B2] flex items-center justify-between"
+            className="mb-3 p-3 bg-gray-50 rounded-lg border-l-4 border-[#23D3EE] flex items-center justify-between"
           >
             <div className="flex-1 min-w-0">
-              <p className="text-xs text-[#17C3B2] font-medium mb-1">Replying to message</p>
+              <p className="text-xs text-[#23D3EE] font-medium mb-1">Replying to message</p>
               <p className="text-sm text-gray-600 truncate">{replyingTo.content}</p>
             </div>
             <button onClick={onCancelReply} className="p-1 hover:bg-gray-200 rounded-lg ml-2">
@@ -106,11 +106,11 @@ export function ChatInput({ onSendMessage, replyingTo, onCancelReply, disabled }
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-48">
               <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
-                <ImageIcon size={16} className="mr-2 text-[#17C3B2]" />
+                <ImageIcon size={16} className="mr-2 text-[#23D3EE]" />
                 Photo & Video
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
-                <FileText size={16} className="mr-2 text-[#C9A14A]" />
+                <FileText size={16} className="mr-2 text-[#FBBF23]" />
                 Document
               </DropdownMenuItem>
               <DropdownMenuItem>
@@ -142,7 +142,7 @@ export function ChatInput({ onSendMessage, replyingTo, onCancelReply, disabled }
               onChange={(e) => setMessageInput(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={disabled}
-              className="pr-12 py-3 bg-gray-50 border-gray-200 rounded-xl focus:border-[#17C3B2] focus:ring-[#17C3B2]/20"
+              className="pr-12 py-3 bg-gray-50 border-gray-200 rounded-xl focus:border-[#23D3EE] focus:ring-[#23D3EE]/20"
             />
 
             {/* Emoji Button */}
@@ -178,7 +178,7 @@ export function ChatInput({ onSendMessage, replyingTo, onCancelReply, disabled }
               whileTap={{ scale: 0.95 }}
               onClick={handleSend}
               disabled={disabled}
-              className="p-3 bg-[#17C3B2] text-white rounded-xl hover:bg-[#17C3B2]/90 transition-all shadow-lg shadow-[#17C3B2]/20 disabled:opacity-50"
+              className="p-3 bg-[#23D3EE] text-white rounded-xl hover:bg-[#23D3EE]/90 transition-all shadow-lg shadow-[#23D3EE]/20 disabled:opacity-50"
             >
               <Send size={20} />
             </motion.button>

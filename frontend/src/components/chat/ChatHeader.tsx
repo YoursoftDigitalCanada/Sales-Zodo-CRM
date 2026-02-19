@@ -70,14 +70,14 @@ export function ChatHeader({
         {/* Avatar */}
         <div className="relative">
           {conversation.type === "group" ? (
-            <div className="w-11 h-11 bg-gradient-to-br from-[#17C3B2] to-[#17C3B2]/70 rounded-xl flex items-center justify-center">
+            <div className="w-11 h-11 bg-gradient-to-br from-[#23D3EE] to-[#23D3EE]/70 rounded-xl flex items-center justify-center">
               <Users size={20} className="text-white" />
             </div>
           ) : (
             <div className="relative">
               <Avatar className="w-11 h-11 rounded-xl">
                 <AvatarImage src={otherParticipant.avatar} />
-                <AvatarFallback className="bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] text-white rounded-xl">
+                <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#6366F1] text-white rounded-xl">
                   {getInitials(otherParticipant.name)}
                 </AvatarFallback>
               </Avatar>
@@ -142,7 +142,7 @@ export function ChatHeader({
               onClick={onToggleInfoPanel}
               className={cn(
                 "p-2.5 rounded-lg transition-all",
-                showInfoPanel ? "bg-[#17C3B2] text-white" : "hover:bg-gray-100 text-gray-500"
+                showInfoPanel ? "bg-[#23D3EE] text-white" : "hover:bg-gray-100 text-gray-500"
               )}
             >
               <Info size={18} />

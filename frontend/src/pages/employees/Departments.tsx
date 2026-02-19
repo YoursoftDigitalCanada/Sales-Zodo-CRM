@@ -170,7 +170,7 @@ const DepartmentsPage: React.FC = () => {
           </Button>
           <Button
             onClick={() => setIsAddDialogOpen(true)}
-            className="gap-2 bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white shadow-lg shadow-[#17C3B2]/20"
+            className="gap-2 bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white shadow-lg shadow-[#23D3EE]/20"
           >
             <Plus className="w-4 h-4" />
             Add Department
@@ -215,7 +215,7 @@ const DepartmentsPage: React.FC = () => {
           <Button
             variant={viewMode === 'grid' ? 'default' : 'ghost'}
             size="icon"
-            className={`h-8 w-8 ${viewMode === 'grid' ? 'bg-[#17C3B2] hover:bg-[#17C3B2]/90' : ''}`}
+            className={`h-8 w-8 ${viewMode === 'grid' ? 'bg-[#23D3EE] hover:bg-[#23D3EE]/90' : ''}`}
             onClick={() => setViewMode('grid')}
           >
             <LayoutGrid className="w-4 h-4" />
@@ -223,7 +223,7 @@ const DepartmentsPage: React.FC = () => {
           <Button
             variant={viewMode === 'list' ? 'default' : 'ghost'}
             size="icon"
-            className={`h-8 w-8 ${viewMode === 'list' ? 'bg-[#17C3B2] hover:bg-[#17C3B2]/90' : ''}`}
+            className={`h-8 w-8 ${viewMode === 'list' ? 'bg-[#23D3EE] hover:bg-[#23D3EE]/90' : ''}`}
             onClick={() => setViewMode('list')}
           >
             <List className="w-4 h-4" />

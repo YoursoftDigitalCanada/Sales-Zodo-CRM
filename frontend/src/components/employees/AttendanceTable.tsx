@@ -73,7 +73,7 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
                   <div className="flex items-center gap-3">
                     <Avatar className="h-9 w-9">
                       <AvatarImage src={record.employeeAvatar} />
-                      <AvatarFallback className="bg-[#17C3B2]/10 text-[#17C3B2] text-sm">
+                      <AvatarFallback className="bg-[#23D3EE]/10 text-[#23D3EE] text-sm">
                         {getInitials(nameParts[0], nameParts[1] || '')}
                       </AvatarFallback>
                     </Avatar>

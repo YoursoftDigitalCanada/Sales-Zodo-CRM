@@ -715,7 +715,7 @@ const statusConfig: Record<ApplicationStatus, { label: string; color: string; bg
   screening: { label: "Screening", color: "#8B5CF6", bgColor: "#F5F3FF", icon: FileSearch, description: "Initial review", order: 2 },
   reviewing: { label: "Reviewing", color: "#F59E0B", bgColor: "#FFFBEB", icon: Eye, description: "Under review", order: 3 },
   shortlisted: { label: "Shortlisted", color: "#10B981", bgColor: "#ECFDF5", icon: BookmarkCheck, description: "Selected for next stage", order: 4 },
-  interview: { label: "Interview", color: "#17C3B2", bgColor: "#F0FDFA", icon: CalendarDays, description: "Interview stage", order: 5 },
+  interview: { label: "Interview", color: "#23D3EE", bgColor: "#F0FDFA", icon: CalendarDays, description: "Interview stage", order: 5 },
   assessment: { label: "Assessment", color: "#6366F1", bgColor: "#EEF2FF", icon: ClipboardCheck, description: "Taking assessments", order: 6 },
   offer: { label: "Offer", color: "#EC4899", bgColor: "#FDF2F8", icon: FileCheck, description: "Offer extended", order: 7 },
   approved: { label: "Approved", color: "#22C55E", bgColor: "#F0FDF4", icon: CheckCircle2, description: "Application approved", order: 8 },
@@ -1167,8 +1167,8 @@ const StatCard = ({
       className={cn(
         "relative bg-white rounded-2xl p-5 border transition-all overflow-hidden group cursor-pointer",
         isActive 
-          ? "border-[#17C3B2] shadow-lg shadow-[#17C3B2]/10 ring-2 ring-[#17C3B2]/20" 
-          : "border-slate-200 hover:border-[#17C3B2]/30 hover:shadow-xl hover:shadow-[#17C3B2]/5"
+          ? "border-[#23D3EE] shadow-lg shadow-[#23D3EE]/10 ring-2 ring-[#23D3EE]/20" 
+          : "border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5"
       )}
     >
       <div
@@ -1178,7 +1178,7 @@ const StatCard = ({
       <div className="relative flex items-start justify-between">
         <div>
           <p className="text-sm text-slate-500 mb-1">{title}</p>
-          <p className="text-3xl font-bold text-[#0D2342]">{value}</p>
+          <p className="text-3xl font-bold text-[#0F172A]">{value}</p>
           {subtitle && <p className="text-xs text-slate-400 mt-1">{subtitle}</p>}
           {trend && (
             <div className="flex items-center gap-1 mt-2">
@@ -1473,7 +1473,7 @@ const EmptyState = ({
       <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
         <Icon size={28} className="text-slate-400" />
       </div>
-      <h3 className="text-lg font-semibold text-[#0D2342] mb-2">{title}</h3>
+      <h3 className="text-lg font-semibold text-[#0F172A] mb-2">{title}</h3>
       <p className="text-slate-500 max-w-md mb-6">{description}</p>
       {action}
     </motion.div>
@@ -1610,7 +1610,7 @@ const FilterPanel = ({
         <SheetHeader className="p-6 pb-4 border-b border-slate-100">
           <div className="flex items-center justify-between">
             <div>
-              <SheetTitle className="text-xl font-bold text-[#0D2342]">Filters</SheetTitle>
+              <SheetTitle className="text-xl font-bold text-[#0F172A]">Filters</SheetTitle>
               <SheetDescription>
                 {activeFilterCount > 0 ? `${activeFilterCount} filter${activeFilterCount > 1 ? 's' : ''} active` : 'Refine your search'}
               </SheetDescription>
@@ -1633,7 +1633,7 @@ const FilterPanel = ({
           <div className="space-y-6">
             {/* Application Type */}
             <div>
-              <Label className="text-sm font-semibold text-[#0D2342] mb-3 block">Application Type</Label>
+              <Label className="text-sm font-semibold text-[#0F172A] mb-3 block">Application Type</Label>
               <div className="flex flex-wrap gap-2">
                 {applicationTypes.map((type) => (
                   <button
@@ -1669,7 +1669,7 @@ const FilterPanel = ({
 
             {/* Status */}
             <div>
-              <Label className="text-sm font-semibold text-[#0D2342] mb-3 block">Status</Label>
+              <Label className="text-sm font-semibold text-[#0F172A] mb-3 block">Status</Label>
               <div className="grid grid-cols-2 gap-2">
                 {Object.entries(statusConfig).map(([key, config]) => (
                   <button
@@ -1705,7 +1705,7 @@ const FilterPanel = ({
 
             {/* Priority */}
             <div>
-              <Label className="text-sm font-semibold text-[#0D2342] mb-3 block">Priority</Label>
+              <Label className="text-sm font-semibold text-[#0F172A] mb-3 block">Priority</Label>
               <div className="flex flex-wrap gap-2">
                 {Object.entries(priorityConfig).map(([key, config]) => (
                   <button
@@ -1741,7 +1741,7 @@ const FilterPanel = ({
 
             {/* Source */}
             <div>
-              <Label className="text-sm font-semibold text-[#0D2342] mb-3 block">Source</Label>
+              <Label className="text-sm font-semibold text-[#0F172A] mb-3 block">Source</Label>
               <div className="flex flex-wrap gap-2">
                 {uniqueSources.map((source) => (
                   <button
@@ -1757,7 +1757,7 @@ const FilterPanel = ({
                     className={cn(
                       "px-3 py-1.5 rounded-lg text-sm font-medium transition-all",
                       localFilters.sources.includes(source)
-                        ? "bg-[#17C3B2] text-white shadow-sm"
+                        ? "bg-[#23D3EE] text-white shadow-sm"
                         : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                     )}
                   >
@@ -1771,7 +1771,7 @@ const FilterPanel = ({
 
             {/* Department */}
             <div>
-              <Label className="text-sm font-semibold text-[#0D2342] mb-3 block">Department</Label>
+              <Label className="text-sm font-semibold text-[#0F172A] mb-3 block">Department</Label>
               <Select
                 value={localFilters.departments[0] || ""}
                 onValueChange={(value) => {
@@ -1800,7 +1800,7 @@ const FilterPanel = ({
             {/* Rating */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <Label className="text-sm font-semibold text-[#0D2342]">Rating</Label>
+                <Label className="text-sm font-semibold text-[#0F172A]">Rating</Label>
                 <span className="text-sm text-slate-500">
                   {localFilters.rating[0]} - {localFilters.rating[1]} stars
                 </span>
@@ -1825,7 +1825,7 @@ const FilterPanel = ({
             {/* Score */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <Label className="text-sm font-semibold text-[#0D2342]">Overall Score</Label>
+                <Label className="text-sm font-semibold text-[#0F172A]">Overall Score</Label>
                 <span className="text-sm text-slate-500">
                   {localFilters.score[0]}% - {localFilters.score[1]}%
                 </span>
@@ -1849,7 +1849,7 @@ const FilterPanel = ({
 
             {/* Date Range */}
             <div>
-              <Label className="text-sm font-semibold text-[#0D2342] mb-3 block">Submitted Date</Label>
+              <Label className="text-sm font-semibold text-[#0F172A] mb-3 block">Submitted Date</Label>
               <div className="grid grid-cols-2 gap-3">
                 <Popover open={datePickerOpen === "from"} onOpenChange={(open) => setDatePickerOpen(open ? "from" : null)}>
                   <PopoverTrigger asChild>
@@ -1914,7 +1914,7 @@ const FilterPanel = ({
 
             {/* Quick Filters */}
             <div>
-              <Label className="text-sm font-semibold text-[#0D2342] mb-3 block">Quick Filters</Label>
+              <Label className="text-sm font-semibold text-[#0F172A] mb-3 block">Quick Filters</Label>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -1933,7 +1933,7 @@ const FilterPanel = ({
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <CalendarDays size={16} className="text-[#17C3B2]" />
+                    <CalendarDays size={16} className="text-[#23D3EE]" />
                     <span className="text-sm text-slate-600">Has interview scheduled</span>
                   </div>
                   <Switch
@@ -1983,7 +1983,7 @@ const FilterPanel = ({
 
             {/* Tags */}
             <div>
-              <Label className="text-sm font-semibold text-[#0D2342] mb-3 block">Tags</Label>
+              <Label className="text-sm font-semibold text-[#0F172A] mb-3 block">Tags</Label>
               <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
                 {uniqueTags.slice(0, 20).map((tag) => (
                   <button
@@ -1999,7 +1999,7 @@ const FilterPanel = ({
                     className={cn(
                       "px-2.5 py-1 rounded-full text-xs font-medium transition-all",
                       localFilters.tags.includes(tag)
-                        ? "bg-[#17C3B2] text-white"
+                        ? "bg-[#23D3EE] text-white"
                         : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                     )}
                   >
@@ -2022,7 +2022,7 @@ const FilterPanel = ({
             </Button>
             <Button
               onClick={handleApplyFilters}
-              className="flex-1 rounded-xl bg-[#17C3B2] hover:bg-[#14a89a] text-white"
+              className="flex-1 rounded-xl bg-[#23D3EE] hover:bg-[#14a89a] text-white"
             >
               Apply Filters
             </Button>
@@ -2070,8 +2070,8 @@ const ApplicationCard = ({
       className={cn(
         "relative bg-white rounded-2xl border overflow-hidden transition-all group",
         isSelected
-          ? "border-[#17C3B2] shadow-lg shadow-[#17C3B2]/10 ring-2 ring-[#17C3B2]/20"
-          : "border-slate-200 hover:border-[#17C3B2]/30 hover:shadow-xl hover:shadow-[#17C3B2]/5"
+          ? "border-[#23D3EE] shadow-lg shadow-[#23D3EE]/10 ring-2 ring-[#23D3EE]/20"
+          : "border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5"
       )}
     >
       {/* Selection checkbox */}
@@ -2080,7 +2080,7 @@ const ApplicationCard = ({
           checked={isSelected}
           onCheckedChange={onSelect}
           onClick={(e) => e.stopPropagation()}
-          className="data-[state=checked]:bg-[#17C3B2] data-[state=checked]:border-[#17C3B2] bg-white shadow-sm"
+          className="data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE] bg-white shadow-sm"
         />
       </div>
 
@@ -2132,12 +2132,12 @@ const ApplicationCard = ({
         <div className="flex items-start gap-3 mb-4">
           <Avatar className="h-12 w-12 border-2 border-white shadow-lg">
             <AvatarImage src={application.applicant.avatar} />
-            <AvatarFallback className="bg-gradient-to-br from-[#17C3B2] to-[#0D2342] text-white font-semibold">
+            <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#0F172A] text-white font-semibold">
               {getInitials(application.applicant.name)}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-[#0D2342] group-hover:text-[#17C3B2] transition-colors truncate">
+            <h3 className="font-semibold text-[#0F172A] group-hover:text-[#23D3EE] transition-colors truncate">
               {application.applicant.name}
             </h3>
             <p className="text-sm text-slate-500 truncate">{application.position}</p>
@@ -2211,7 +2211,7 @@ const ApplicationCard = ({
         {/* Alerts / Notifications */}
         <div className="flex items-center gap-2">
           {hasUpcomingInterview && (
-            <div className="flex items-center gap-1 px-2 py-1 bg-[#17C3B2]/10 text-[#17C3B2] text-xs rounded-lg">
+            <div className="flex items-center gap-1 px-2 py-1 bg-[#23D3EE]/10 text-[#23D3EE] text-xs rounded-lg">
               <CalendarDays size={12} />
               Interview scheduled
             </div>
@@ -2307,7 +2307,7 @@ const ApplicationCard = ({
                         <config.icon size={14} className="mr-2" style={{ color: config.color }} />
                         {config.label}
                         {application.status === key && (
-                          <Check size={14} className="ml-auto text-[#17C3B2]" />
+                          <Check size={14} className="ml-auto text-[#23D3EE]" />
                         )}
                       </DropdownMenuItem>
                     ))}
@@ -2327,7 +2327,7 @@ const ApplicationCard = ({
                       <config.icon size={14} className="mr-2" style={{ color: config.color }} />
                       {config.label}
                       {application.priority === key && (
-                        <Check size={14} className="ml-auto text-[#17C3B2]" />
+                        <Check size={14} className="ml-auto text-[#23D3EE]" />
                       )}
                     </DropdownMenuItem>
                   ))}
@@ -2392,7 +2392,7 @@ const ApplicationTableRow = ({
     <TableRow
       className={cn(
         "group hover:bg-slate-50 cursor-pointer transition-colors",
-        isSelected && "bg-[#17C3B2]/5"
+        isSelected && "bg-[#23D3EE]/5"
       )}
     >
       {visibleColumns.map((col) => {
@@ -2404,7 +2404,7 @@ const ApplicationTableRow = ({
                   checked={isSelected}
                   onCheckedChange={onSelect}
                   onClick={(e) => e.stopPropagation()}
-                  className="data-[state=checked]:bg-[#17C3B2] data-[state=checked]:border-[#17C3B2]"
+                  className="data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
                 />
               </TableCell>
             );
@@ -2435,20 +2435,20 @@ const ApplicationTableRow = ({
                 <div className="flex items-center gap-3">
                   <Avatar className="h-10 w-10 border border-slate-100">
                     <AvatarImage src={application.applicant.avatar} />
-                    <AvatarFallback className="text-sm bg-gradient-to-br from-[#17C3B2] to-[#0D2342] text-white">
+                    <AvatarFallback className="text-sm bg-gradient-to-br from-[#23D3EE] to-[#0F172A] text-white">
                       {getInitials(application.applicant.name)}
                     </AvatarFallback>
                   </Avatar>
                   <div>
                     <div className="flex items-center gap-2">
-                      <p className="font-medium text-[#0D2342] group-hover:text-[#17C3B2] transition-colors">
+                      <p className="font-medium text-[#0F172A] group-hover:text-[#23D3EE] transition-colors">
                         {application.applicant.name}
                       </p>
                       {application.aiMatchScore && application.aiMatchScore >= 80 && (
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger>
-                              <Sparkles size={14} className="text-[#17C3B2]" />
+                              <Sparkles size={14} className="text-[#23D3EE]" />
                             </TooltipTrigger>
                             <TooltipContent>High AI Match ({application.aiMatchScore}%)</TooltipContent>
                           </Tooltip>
@@ -2465,7 +2465,7 @@ const ApplicationTableRow = ({
             return (
               <TableCell key={col.id} onClick={onView}>
                 <div>
-                  <p className="font-medium text-[#0D2342]">{application.position}</p>
+                  <p className="font-medium text-[#0F172A]">{application.position}</p>
                   <p className="text-xs text-slate-500">{application.department}</p>
                 </div>
               </TableCell>
@@ -2497,7 +2497,7 @@ const ApplicationTableRow = ({
                           <config.icon size={14} className="mr-2" style={{ color: config.color }} />
                           {config.label}
                           {application.status === key && (
-                            <Check size={14} className="ml-auto text-[#17C3B2]" />
+                            <Check size={14} className="ml-auto text-[#23D3EE]" />
                           )}
                         </DropdownMenuItem>
                       ))}
@@ -2658,19 +2658,19 @@ const KanbanCard = ({
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
       whileHover={{ scale: 1.02 }}
-      className="bg-white rounded-xl border border-slate-200 p-4 cursor-grab active:cursor-grabbing hover:shadow-lg hover:border-[#17C3B2]/30 transition-all"
+      className="bg-white rounded-xl border border-slate-200 p-4 cursor-grab active:cursor-grabbing hover:shadow-lg hover:border-[#23D3EE]/30 transition-all"
       onClick={onView}
     >
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
           <Avatar className="h-9 w-9 border border-slate-100">
             <AvatarImage src={application.applicant.avatar} />
-            <AvatarFallback className="text-xs bg-gradient-to-br from-[#17C3B2] to-[#0D2342] text-white">
+            <AvatarFallback className="text-xs bg-gradient-to-br from-[#23D3EE] to-[#0F172A] text-white">
               {getInitials(application.applicant.name)}
             </AvatarFallback>
           </Avatar>
           <div>
-            <p className="font-medium text-sm text-[#0D2342] line-clamp-1">{application.applicant.name}</p>
+            <p className="font-medium text-sm text-[#0F172A] line-clamp-1">{application.applicant.name}</p>
             <p className="text-xs text-slate-500 line-clamp-1">{application.position}</p>
           </div>
         </div>
@@ -2715,7 +2715,7 @@ const KanbanCard = ({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>
-                  <CalendarDays size={14} className="text-[#17C3B2]" />
+                  <CalendarDays size={14} className="text-[#23D3EE]" />
                 </TooltipTrigger>
                 <TooltipContent>Interview Scheduled</TooltipContent>
               </Tooltip>
@@ -2739,7 +2739,7 @@ const KanbanCard = ({
 
       {hasUpcomingInterview && (
         <div className="mt-3 pt-3 border-t border-slate-100">
-          <div className="flex items-center gap-2 text-xs text-[#17C3B2]">
+          <div className="flex items-center gap-2 text-xs text-[#23D3EE]">
             <CalendarDays size={12} />
             {format(
               application.interviews.find((i) => i.status === "scheduled")!.scheduledAt,
@@ -2807,7 +2807,7 @@ const KanbanColumn = ({
         </div>
         {!isCollapsed && (
           <>
-            <h3 className="font-semibold text-[#0D2342] flex-1">{column.title}</h3>
+            <h3 className="font-semibold text-[#0F172A] flex-1">{column.title}</h3>
             <span
               className="px-2 py-0.5 rounded-full text-xs font-medium"
               style={{ backgroundColor: `${column.color}15`, color: column.color }}
@@ -2931,13 +2931,13 @@ const ApplicationDetailsSheet = ({
             <div className="flex items-center gap-4">
               <Avatar className="h-16 w-16 border-4 border-white shadow-lg">
                 <AvatarImage src={application.applicant.avatar} />
-                <AvatarFallback className="bg-gradient-to-br from-[#17C3B2] to-[#0D2342] text-white text-xl font-bold">
+                <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#0F172A] text-white text-xl font-bold">
                   {getInitials(application.applicant.name)}
                 </AvatarFallback>
               </Avatar>
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <h2 className="text-xl font-bold text-[#0D2342]">{application.applicant.name}</h2>
+                  <h2 className="text-xl font-bold text-[#0F172A]">{application.applicant.name}</h2>
                   <button onClick={onToggleStar}>
                     <Star
                       size={20}
@@ -3064,7 +3064,7 @@ const ApplicationDetailsSheet = ({
                     >
                       <config.icon size={14} className="mr-2" style={{ color: config.color }} />
                       {config.label}
-                      {application.status === key && <Check size={14} className="ml-auto text-[#17C3B2]" />}
+                      {application.status === key && <Check size={14} className="ml-auto text-[#23D3EE]" />}
                     </DropdownMenuItem>
                   ))}
               </DropdownMenuContent>
@@ -3087,14 +3087,14 @@ const ApplicationDetailsSheet = ({
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-4 p-3 bg-[#17C3B2]/10 border border-[#17C3B2]/20 rounded-xl flex items-center justify-between"
+              className="mt-4 p-3 bg-[#23D3EE]/10 border border-[#23D3EE]/20 rounded-xl flex items-center justify-between"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-[#17C3B2]/20 rounded-lg flex items-center justify-center">
-                  <CalendarDays size={20} className="text-[#17C3B2]" />
+                <div className="w-10 h-10 bg-[#23D3EE]/20 rounded-lg flex items-center justify-center">
+                  <CalendarDays size={20} className="text-[#23D3EE]" />
                 </div>
                 <div>
-                  <p className="font-semibold text-[#0D2342]">{upcomingInterview.title}</p>
+                  <p className="font-semibold text-[#0F172A]">{upcomingInterview.title}</p>
                   <p className="text-sm text-slate-600">
                     {format(upcomingInterview.scheduledAt, "EEEE, MMMM d 'at' h:mm a")}
                   </p>
@@ -3102,7 +3102,7 @@ const ApplicationDetailsSheet = ({
               </div>
               <div className="flex items-center gap-2">
                 {upcomingInterview.meetingLink && (
-                  <Button size="sm" className="rounded-lg bg-[#17C3B2] hover:bg-[#14a89a]">
+                  <Button size="sm" className="rounded-lg bg-[#23D3EE] hover:bg-[#14a89a]">
                     <Video size={14} className="mr-1" /> Join Meeting
                   </Button>
                 )}
@@ -3130,7 +3130,7 @@ const ApplicationDetailsSheet = ({
                 <TabsTrigger
                   key={tab.id}
                   value={tab.id}
-                  className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[#17C3B2] data-[state=active]:text-[#17C3B2] rounded-none px-4 gap-2"
+                  className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[#23D3EE] data-[state=active]:text-[#23D3EE] rounded-none px-4 gap-2"
                 >
                   <tab.icon size={14} />
                   {tab.label}
@@ -3154,17 +3154,17 @@ const ApplicationDetailsSheet = ({
                   <p className="text-xs text-slate-500 mt-2">Overall Score</p>
                 </div>
                 <div className="p-4 bg-slate-50 rounded-xl text-center">
-                  <p className="text-2xl font-bold text-[#0D2342]">{application.yearsOfExperience || 0}</p>
+                  <p className="text-2xl font-bold text-[#0F172A]">{application.yearsOfExperience || 0}</p>
                   <p className="text-xs text-slate-500 mt-1">Years Experience</p>
                 </div>
                 <div className="p-4 bg-slate-50 rounded-xl text-center">
-                  <p className="text-2xl font-bold text-[#17C3B2]">
+                  <p className="text-2xl font-bold text-[#23D3EE]">
                     {application.expectedSalary ? formatCurrency(application.expectedSalary.min) : "N/A"}
                   </p>
                   <p className="text-xs text-slate-500 mt-1">Expected Salary</p>
                 </div>
                 <div className="p-4 bg-slate-50 rounded-xl text-center">
-                  <p className="text-2xl font-bold text-[#0D2342]">{application.noticePeriod || "N/A"}</p>
+                  <p className="text-2xl font-bold text-[#0F172A]">{application.noticePeriod || "N/A"}</p>
                   <p className="text-xs text-slate-500 mt-1">Notice Period</p>
                 </div>
               </div>
@@ -3172,8 +3172,8 @@ const ApplicationDetailsSheet = ({
               {/* Contact Information */}
               <Card className="rounded-2xl border-slate-200">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold text-[#0D2342] flex items-center gap-2">
-                    <User size={16} className="text-[#17C3B2]" />
+                  <CardTitle className="text-base font-semibold text-[#0F172A] flex items-center gap-2">
+                    <User size={16} className="text-[#23D3EE]" />
                     Contact Information
                   </CardTitle>
                 </CardHeader>
@@ -3182,7 +3182,7 @@ const ApplicationDetailsSheet = ({
                     <Mail size={18} className="text-slate-400" />
                     <div className="min-w-0">
                       <p className="text-xs text-slate-400">Email</p>
-                      <p className="text-sm font-medium text-[#0D2342] truncate">{application.applicant.email}</p>
+                      <p className="text-sm font-medium text-[#0F172A] truncate">{application.applicant.email}</p>
                     </div>
                     <Button variant="ghost" size="icon" className="h-8 w-8 ml-auto flex-shrink-0">
                       <Copy size={14} className="text-slate-400" />
@@ -3192,21 +3192,21 @@ const ApplicationDetailsSheet = ({
                     <Phone size={18} className="text-slate-400" />
                     <div className="min-w-0">
                       <p className="text-xs text-slate-400">Phone</p>
-                      <p className="text-sm font-medium text-[#0D2342]">{application.applicant.phone || "N/A"}</p>
+                      <p className="text-sm font-medium text-[#0F172A]">{application.applicant.phone || "N/A"}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
                     <MapPin size={18} className="text-slate-400" />
                     <div className="min-w-0">
                       <p className="text-xs text-slate-400">Location</p>
-                      <p className="text-sm font-medium text-[#0D2342]">{application.applicant.location || "N/A"}</p>
+                      <p className="text-sm font-medium text-[#0F172A]">{application.applicant.location || "N/A"}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
                     <Building2 size={18} className="text-slate-400" />
                     <div className="min-w-0">
                       <p className="text-xs text-slate-400">Current Company</p>
-                      <p className="text-sm font-medium text-[#0D2342]">{application.applicant.company || "N/A"}</p>
+                      <p className="text-sm font-medium text-[#0F172A]">{application.applicant.company || "N/A"}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -3216,8 +3216,8 @@ const ApplicationDetailsSheet = ({
               {(application.applicant.linkedin || application.applicant.website || application.applicant.github) && (
                 <Card className="rounded-2xl border-slate-200">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-base font-semibold text-[#0D2342] flex items-center gap-2">
-                      <LinkIcon size={16} className="text-[#17C3B2]" />
+                    <CardTitle className="text-base font-semibold text-[#0F172A] flex items-center gap-2">
+                      <LinkIcon size={16} className="text-[#23D3EE]" />
                       Links & Profiles
                     </CardTitle>
                   </CardHeader>
@@ -3252,8 +3252,8 @@ const ApplicationDetailsSheet = ({
               {/* Evaluation Scores */}
               <Card className="rounded-2xl border-slate-200">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold text-[#0D2342] flex items-center gap-2">
-                    <Target size={16} className="text-[#17C3B2]" />
+                  <CardTitle className="text-base font-semibold text-[#0F172A] flex items-center gap-2">
+                    <Target size={16} className="text-[#23D3EE]" />
                     Evaluation Scores
                   </CardTitle>
                 </CardHeader>
@@ -3268,7 +3268,7 @@ const ApplicationDetailsSheet = ({
                     <div className="flex items-center gap-3">
                       <ScoreCircle score={application.scores.overall} size="large" showLabel={false} />
                       <div>
-                        <p className="font-semibold text-[#0D2342]">Overall Score</p>
+                        <p className="font-semibold text-[#0F172A]">Overall Score</p>
                         <p className="text-sm text-slate-500">{getScoreLabel(application.scores.overall)}</p>
                       </div>
                     </div>
@@ -3288,8 +3288,8 @@ const ApplicationDetailsSheet = ({
               {application.skills && application.skills.length > 0 && (
                 <Card className="rounded-2xl border-slate-200">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-base font-semibold text-[#0D2342] flex items-center gap-2">
-                      <Zap size={16} className="text-[#17C3B2]" />
+                    <CardTitle className="text-base font-semibold text-[#0F172A] flex items-center gap-2">
+                      <Zap size={16} className="text-[#23D3EE]" />
                       Skills
                     </CardTitle>
                   </CardHeader>
@@ -3303,7 +3303,7 @@ const ApplicationDetailsSheet = ({
                                 className={cn(
                                   "px-3 py-1.5 text-sm font-medium rounded-lg transition-colors",
                                   skill.level === "expert"
-                                    ? "bg-[#17C3B2]/20 text-[#17C3B2]"
+                                    ? "bg-[#23D3EE]/20 text-[#23D3EE]"
                                     : skill.level === "advanced"
                                     ? "bg-blue-100 text-blue-700"
                                     : skill.level === "intermediate"
@@ -3329,11 +3329,11 @@ const ApplicationDetailsSheet = ({
               <Card className="rounded-2xl border-slate-200">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-base font-semibold text-[#0D2342] flex items-center gap-2">
-                      <Tags size={16} className="text-[#17C3B2]" />
+                    <CardTitle className="text-base font-semibold text-[#0F172A] flex items-center gap-2">
+                      <Tags size={16} className="text-[#23D3EE]" />
                       Tags
                     </CardTitle>
-                    <Button variant="ghost" size="sm" className="rounded-lg text-[#17C3B2]">
+                    <Button variant="ghost" size="sm" className="rounded-lg text-[#23D3EE]">
                       <Plus size={14} className="mr-1" /> Add Tag
                     </Button>
                   </div>
@@ -3361,8 +3361,8 @@ const ApplicationDetailsSheet = ({
               {/* Assignment */}
               <Card className="rounded-2xl border-slate-200">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold text-[#0D2342] flex items-center gap-2">
-                    <UserCheck size={16} className="text-[#17C3B2]" />
+                  <CardTitle className="text-base font-semibold text-[#0F172A] flex items-center gap-2">
+                    <UserCheck size={16} className="text-[#23D3EE]" />
                     Assignment
                   </CardTitle>
                 </CardHeader>
@@ -3377,7 +3377,7 @@ const ApplicationDetailsSheet = ({
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="font-medium text-[#0D2342]">{application.assignedTo}</p>
+                          <p className="font-medium text-[#0F172A]">{application.assignedTo}</p>
                           <p className="text-xs text-slate-500">Recruiter</p>
                         </div>
                       </div>
@@ -3426,8 +3426,8 @@ const ApplicationDetailsSheet = ({
               {/* Meta Information */}
               <Card className="rounded-2xl border-slate-200">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold text-[#0D2342] flex items-center gap-2">
-                    <Info size={16} className="text-[#17C3B2]" />
+                  <CardTitle className="text-base font-semibold text-[#0F172A] flex items-center gap-2">
+                    <Info size={16} className="text-[#23D3EE]" />
                     Additional Information
                   </CardTitle>
                 </CardHeader>
@@ -3435,31 +3435,31 @@ const ApplicationDetailsSheet = ({
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="text-slate-400">Source</p>
-                      <p className="font-medium text-[#0D2342]">{application.source}</p>
+                      <p className="font-medium text-[#0F172A]">{application.source}</p>
                     </div>
                     <div>
                       <p className="text-slate-400">Department</p>
-                      <p className="font-medium text-[#0D2342]">{application.department || "N/A"}</p>
+                      <p className="font-medium text-[#0F172A]">{application.department || "N/A"}</p>
                     </div>
                     <div>
                       <p className="text-slate-400">Work Type</p>
-                      <p className="font-medium text-[#0D2342] capitalize">{application.workType || "N/A"}</p>
+                      <p className="font-medium text-[#0F172A] capitalize">{application.workType || "N/A"}</p>
                     </div>
                     <div>
                       <p className="text-slate-400">Employment Type</p>
-                      <p className="font-medium text-[#0D2342] capitalize">
+                      <p className="font-medium text-[#0F172A] capitalize">
                         {application.employmentType?.replace("_", " ") || "N/A"}
                       </p>
                     </div>
                     <div>
                       <p className="text-slate-400">Submitted</p>
-                      <p className="font-medium text-[#0D2342]">
+                      <p className="font-medium text-[#0F172A]">
                         {format(application.submittedAt, "MMM d, yyyy 'at' h:mm a")}
                       </p>
                     </div>
                     <div>
                       <p className="text-slate-400">Last Updated</p>
-                      <p className="font-medium text-[#0D2342]">
+                      <p className="font-medium text-[#0F172A]">
                         {format(application.lastUpdated, "MMM d, yyyy 'at' h:mm a")}
                       </p>
                     </div>
@@ -3471,10 +3471,10 @@ const ApplicationDetailsSheet = ({
             {/* Documents Tab */}
             <TabsContent value="documents" className="p-6 space-y-4 m-0">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-[#0D2342]">
+                <h3 className="font-semibold text-[#0F172A]">
                   Documents ({application.documents.length})
                 </h3>
-                <Button size="sm" className="rounded-lg bg-[#17C3B2] hover:bg-[#14a89a]">
+                <Button size="sm" className="rounded-lg bg-[#23D3EE] hover:bg-[#14a89a]">
                   <Upload size={14} className="mr-2" /> Upload
                 </Button>
               </div>
@@ -3512,7 +3512,7 @@ const ApplicationDetailsSheet = ({
                         />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-[#0D2342] truncate">{doc.name}</p>
+                        <p className="font-medium text-[#0F172A] truncate">{doc.name}</p>
                         <div className="flex items-center gap-2 text-xs text-slate-500">
                           <span className="capitalize">{doc.category.replace("_", " ")}</span>
                           <span>•</span>
@@ -3566,7 +3566,7 @@ const ApplicationDetailsSheet = ({
                   title="No documents"
                   description="No documents have been uploaded for this application yet."
                   action={
-                    <Button className="rounded-xl bg-[#17C3B2] hover:bg-[#14a89a]">
+                    <Button className="rounded-xl bg-[#23D3EE] hover:bg-[#14a89a]">
                       <Upload size={16} className="mr-2" /> Upload Document
                     </Button>
                   }
@@ -3577,10 +3577,10 @@ const ApplicationDetailsSheet = ({
             {/* Interviews Tab */}
             <TabsContent value="interviews" className="p-6 space-y-4 m-0">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-[#0D2342]">
+                <h3 className="font-semibold text-[#0F172A]">
                   Interviews ({application.interviews.length})
                 </h3>
-                <Button size="sm" className="rounded-lg bg-[#17C3B2] hover:bg-[#14a89a]">
+                <Button size="sm" className="rounded-lg bg-[#23D3EE] hover:bg-[#14a89a]">
                   <Plus size={14} className="mr-2" /> Schedule Interview
                 </Button>
               </div>
@@ -3593,7 +3593,7 @@ const ApplicationDetailsSheet = ({
                         className={cn(
                           "h-1",
                           interview.status === "scheduled" || interview.status === "confirmed"
-                            ? "bg-[#17C3B2]"
+                            ? "bg-[#23D3EE]"
                             : interview.status === "completed"
                             ? "bg-green-500"
                             : interview.status === "cancelled"
@@ -3627,7 +3627,7 @@ const ApplicationDetailsSheet = ({
                               )}
                             </div>
                             <div>
-                              <h4 className="font-semibold text-[#0D2342]">{interview.title}</h4>
+                              <h4 className="font-semibold text-[#0F172A]">{interview.title}</h4>
                               <p className="text-sm text-slate-500">
                                 {format(interview.scheduledAt, "EEEE, MMMM d, yyyy 'at' h:mm a")}
                               </p>
@@ -3638,7 +3638,7 @@ const ApplicationDetailsSheet = ({
                             className={cn(
                               "px-2 py-1 rounded-lg text-xs font-medium capitalize",
                               interview.status === "scheduled" || interview.status === "confirmed"
-                                ? "bg-[#17C3B2]/10 text-[#17C3B2]"
+                                ? "bg-[#23D3EE]/10 text-[#23D3EE]"
                                 : interview.status === "completed"
                                 ? "bg-green-100 text-green-700"
                                 : interview.status === "cancelled"
@@ -3682,7 +3682,7 @@ const ApplicationDetailsSheet = ({
                             {interview.feedback.map((fb) => (
                               <div key={fb.id} className="p-3 bg-slate-50 rounded-lg">
                                 <div className="flex items-center justify-between mb-2">
-                                  <span className="text-sm font-medium text-[#0D2342]">
+                                  <span className="text-sm font-medium text-[#0F172A]">
                                     {fb.interviewerName}
                                   </span>
                                   <div className="flex items-center gap-2">
@@ -3693,7 +3693,7 @@ const ApplicationDetailsSheet = ({
                                         fb.recommendation === "strong_yes"
                                           ? "bg-green-100 text-green-700"
                                           : fb.recommendation === "yes"
-                                          ? "bg-[#17C3B2]/10 text-[#17C3B2]"
+                                          ? "bg-[#23D3EE]/10 text-[#23D3EE]"
                                           : fb.recommendation === "neutral"
                                           ? "bg-amber-100 text-amber-700"
                                           : "bg-red-100 text-red-700"
@@ -3712,7 +3712,7 @@ const ApplicationDetailsSheet = ({
                         {/* Actions */}
                         <div className="mt-4 flex items-center gap-2">
                           {interview.meetingLink && interview.status === "scheduled" && (
-                            <Button size="sm" className="rounded-lg bg-[#17C3B2] hover:bg-[#14a89a]">
+                            <Button size="sm" className="rounded-lg bg-[#23D3EE] hover:bg-[#14a89a]">
                               <Video size={14} className="mr-1" /> Join
                             </Button>
                           )}
@@ -3735,7 +3735,7 @@ const ApplicationDetailsSheet = ({
                   title="No interviews scheduled"
                   description="No interviews have been scheduled for this application yet."
                   action={
-                    <Button className="rounded-xl bg-[#17C3B2] hover:bg-[#14a89a]">
+                    <Button className="rounded-xl bg-[#23D3EE] hover:bg-[#14a89a]">
                       <Plus size={16} className="mr-2" /> Schedule Interview
                     </Button>
                   }
@@ -3746,10 +3746,10 @@ const ApplicationDetailsSheet = ({
             {/* Assessments Tab */}
             <TabsContent value="assessments" className="p-6 space-y-4 m-0">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-[#0D2342]">
+                <h3 className="font-semibold text-[#0F172A]">
                   Assessments ({application.assessments.length})
                 </h3>
-                <Button size="sm" className="rounded-lg bg-[#17C3B2] hover:bg-[#14a89a]">
+                <Button size="sm" className="rounded-lg bg-[#23D3EE] hover:bg-[#14a89a]">
                   <Plus size={14} className="mr-2" /> Send Assessment
                 </Button>
               </div>
@@ -3787,7 +3787,7 @@ const ApplicationDetailsSheet = ({
                               />
                             </div>
                             <div>
-                              <h4 className="font-semibold text-[#0D2342]">{assessment.name}</h4>
+                              <h4 className="font-semibold text-[#0F172A]">{assessment.name}</h4>
                               {assessment.provider && (
                                 <p className="text-sm text-slate-500">via {assessment.provider}</p>
                               )}
@@ -3824,7 +3824,7 @@ const ApplicationDetailsSheet = ({
                               {assessment.percentile && (
                                 <div className="text-right">
                                   <p className="text-sm text-slate-500">Percentile</p>
-                                  <p className="text-2xl font-bold text-[#0D2342]">{assessment.percentile}%</p>
+                                  <p className="text-2xl font-bold text-[#0F172A]">{assessment.percentile}%</p>
                                 </div>
                               )}
                             </div>
@@ -3856,7 +3856,7 @@ const ApplicationDetailsSheet = ({
                   title="No assessments"
                   description="No assessments have been sent to this candidate yet."
                   action={
-                    <Button className="rounded-xl bg-[#17C3B2] hover:bg-[#14a89a]">
+                    <Button className="rounded-xl bg-[#23D3EE] hover:bg-[#14a89a]">
                       <Plus size={16} className="mr-2" /> Send Assessment
                     </Button>
                   }
@@ -3867,10 +3867,10 @@ const ApplicationDetailsSheet = ({
             {/* Notes Tab */}
             <TabsContent value="notes" className="p-6 space-y-4 m-0">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-[#0D2342]">Notes ({application.notes.length})</h3>
+                <h3 className="font-semibold text-[#0F172A]">Notes ({application.notes.length})</h3>
                 <Button
                   size="sm"
-                  className="rounded-lg bg-[#17C3B2] hover:bg-[#14a89a]"
+                  className="rounded-lg bg-[#23D3EE] hover:bg-[#14a89a]"
                   onClick={() => setIsAddingNote(true)}
                 >
                   <Plus size={14} className="mr-2" /> Add Note
@@ -3905,7 +3905,7 @@ const ApplicationDetailsSheet = ({
                         </Button>
                         <Button
                           size="sm"
-                          className="rounded-lg bg-[#17C3B2] hover:bg-[#14a89a]"
+                          className="rounded-lg bg-[#23D3EE] hover:bg-[#14a89a]"
                           onClick={handleAddNote}
                           disabled={!newNote.trim()}
                         >
@@ -3939,7 +3939,7 @@ const ApplicationDetailsSheet = ({
                           </Avatar>
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className="font-medium text-sm text-[#0D2342]">{note.author}</span>
+                              <span className="font-medium text-sm text-[#0F172A]">{note.author}</span>
                               {note.authorRole && (
                                 <span className="text-xs text-slate-400">{note.authorRole}</span>
                               )}
@@ -3990,7 +3990,7 @@ const ApplicationDetailsSheet = ({
                   description="No notes have been added to this application yet."
                   action={
                     <Button
-                      className="rounded-xl bg-[#17C3B2] hover:bg-[#14a89a]"
+                      className="rounded-xl bg-[#23D3EE] hover:bg-[#14a89a]"
                       onClick={() => setIsAddingNote(true)}
                     >
                       <Plus size={16} className="mr-2" /> Add Note
@@ -4002,7 +4002,7 @@ const ApplicationDetailsSheet = ({
 
             {/* Activity Tab */}
             <TabsContent value="activity" className="p-6 m-0">
-              <h3 className="font-semibold text-[#0D2342] mb-4">Activity Timeline</h3>
+              <h3 className="font-semibold text-[#0F172A] mb-4">Activity Timeline</h3>
               {application.activities.length > 0 ? (
                 <div className="relative">
                   <div className="absolute left-4 top-0 bottom-0 w-px bg-slate-200" />
@@ -4023,7 +4023,7 @@ const ApplicationDetailsSheet = ({
                               : activity.type === "note_added"
                               ? "bg-purple-100"
                               : activity.type === "interview_scheduled"
-                              ? "bg-[#17C3B2]/20"
+                              ? "bg-[#23D3EE]/20"
                               : activity.type === "document_uploaded"
                               ? "bg-amber-100"
                               : "bg-slate-100"
@@ -4034,7 +4034,7 @@ const ApplicationDetailsSheet = ({
                           ) : activity.type === "note_added" ? (
                             <MessageSquare size={14} className="text-purple-600" />
                           ) : activity.type === "interview_scheduled" ? (
-                            <CalendarDays size={14} className="text-[#17C3B2]" />
+                            <CalendarDays size={14} className="text-[#23D3EE]" />
                           ) : activity.type === "document_uploaded" ? (
                             <Upload size={14} className="text-amber-600" />
                           ) : (
@@ -4042,7 +4042,7 @@ const ApplicationDetailsSheet = ({
                           )}
                         </div>
                         <div className="flex-1 pb-6">
-                          <p className="text-sm text-[#0D2342]">{activity.description}</p>
+                          <p className="text-sm text-[#0F172A]">{activity.description}</p>
                           <div className="flex items-center gap-2 mt-1 text-xs text-slate-400">
                             <span>{activity.user}</span>
                             <span>•</span>
@@ -4077,10 +4077,10 @@ const ApplicationDetailsSheet = ({
             {/* Emails Tab */}
             <TabsContent value="emails" className="p-6 space-y-4 m-0">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-[#0D2342]">
+                <h3 className="font-semibold text-[#0F172A]">
                   Emails ({application.emailThreads.length})
                 </h3>
-                <Button size="sm" className="rounded-lg bg-[#17C3B2] hover:bg-[#14a89a]">
+                <Button size="sm" className="rounded-lg bg-[#23D3EE] hover:bg-[#14a89a]">
                   <Send size={14} className="mr-2" /> Compose Email
                 </Button>
               </div>
@@ -4091,8 +4091,8 @@ const ApplicationDetailsSheet = ({
                     <Card
                       key={thread.id}
                       className={cn(
-                        "rounded-xl border-slate-200 cursor-pointer hover:border-[#17C3B2]/30 transition-colors",
-                        !thread.isRead && "border-l-4 border-l-[#17C3B2]"
+                        "rounded-xl border-slate-200 cursor-pointer hover:border-[#23D3EE]/30 transition-colors",
+                        !thread.isRead && "border-l-4 border-l-[#23D3EE]"
                       )}
                     >
                       <CardContent className="p-4">
@@ -4103,7 +4103,7 @@ const ApplicationDetailsSheet = ({
                               <h4
                                 className={cn(
                                   "truncate",
-                                  thread.isRead ? "text-slate-600" : "font-semibold text-[#0D2342]"
+                                  thread.isRead ? "text-slate-600" : "font-semibold text-[#0F172A]"
                                 )}
                               >
                                 {thread.subject}
@@ -4136,7 +4136,7 @@ const ApplicationDetailsSheet = ({
                   title="No emails"
                   description="No emails have been exchanged with this candidate yet."
                   action={
-                    <Button className="rounded-xl bg-[#17C3B2] hover:bg-[#14a89a]">
+                    <Button className="rounded-xl bg-[#23D3EE] hover:bg-[#14a89a]">
                       <Send size={16} className="mr-2" /> Compose Email
                     </Button>
                   }
@@ -4157,7 +4157,7 @@ const ApplicationDetailsSheet = ({
             <Button variant="outline" className="rounded-xl">
               <Mail size={16} className="mr-2" /> Send Email
             </Button>
-            <Button className="rounded-xl bg-[#17C3B2] hover:bg-[#14a89a]">
+            <Button className="rounded-xl bg-[#23D3EE] hover:bg-[#14a89a]">
               <CalendarDays size={16} className="mr-2" /> Schedule Interview
             </Button>
           </div>
@@ -4184,9 +4184,9 @@ const BulkActionsBar = ({
       exit={{ opacity: 0, y: 20 }}
       className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50"
     >
-      <div className="bg-[#0D2342] text-white rounded-2xl px-6 py-3 shadow-2xl flex items-center gap-4">
+      <div className="bg-[#0F172A] text-white rounded-2xl px-6 py-3 shadow-2xl flex items-center gap-4">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-[#17C3B2] rounded-lg flex items-center justify-center font-semibold">
+          <div className="w-8 h-8 bg-[#23D3EE] rounded-lg flex items-center justify-center font-semibold">
             {selectedCount}
           </div>
           <span className="text-sm">selected</span>
@@ -4338,7 +4338,7 @@ const ColumnCustomizationDialog = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md rounded-2xl">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-[#0D2342]">Customize Columns</DialogTitle>
+          <DialogTitle className="text-xl font-bold text-[#0F172A]">Customize Columns</DialogTitle>
           <DialogDescription>
             Select which columns to display in the table view.
           </DialogDescription>
@@ -4355,7 +4355,7 @@ const ColumnCustomizationDialog = ({
                   >
                     <div className="flex items-center gap-3">
                       <GripVertical size={16} className="text-slate-400 cursor-grab" />
-                      <span className="text-sm font-medium text-[#0D2342]">{column.label}</span>
+                      <span className="text-sm font-medium text-[#0F172A]">{column.label}</span>
                     </div>
                     <Switch
                       checked={column.visible}
@@ -4370,7 +4370,7 @@ const ColumnCustomizationDialog = ({
           <Button variant="outline" onClick={handleReset} className="rounded-xl">
             Reset to Default
           </Button>
-          <Button onClick={handleApply} className="rounded-xl bg-[#17C3B2] hover:bg-[#14a89a]">
+          <Button onClick={handleApply} className="rounded-xl bg-[#23D3EE] hover:bg-[#14a89a]">
             Apply Changes
           </Button>
         </DialogFooter>
@@ -4411,7 +4411,7 @@ const SavedViewsDropdown = ({
         >
           <LayoutList size={14} className="mr-2" />
           All Applications
-          {!currentView && <Check size={14} className="ml-auto text-[#17C3B2]" />}
+          {!currentView && <Check size={14} className="ml-auto text-[#23D3EE]" />}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         {savedViews.length > 0 ? (
@@ -4423,7 +4423,7 @@ const SavedViewsDropdown = ({
             >
               <Bookmark size={14} className="mr-2" />
               <span className="flex-1">{view.name}</span>
-              {currentView === view.id && <Check size={14} className="ml-auto text-[#17C3B2]" />}
+              {currentView === view.id && <Check size={14} className="ml-auto text-[#23D3EE]" />}
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -4441,7 +4441,7 @@ const SavedViewsDropdown = ({
           </div>
         )}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={onSaveView} className="rounded-lg text-[#17C3B2]">
+        <DropdownMenuItem onClick={onSaveView} className="rounded-lg text-[#23D3EE]">
           <Plus size={14} className="mr-2" />
           Save Current View
         </DropdownMenuItem>
@@ -5109,7 +5109,7 @@ const Applications = () => {
         >
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-2xl font-bold text-[#0D2342]">Applications</h1>
+              <h1 className="text-2xl font-bold text-[#0F172A]">Applications</h1>
               <p className="text-slate-500 text-sm">
                 Manage and track all applications in one place
               </p>
@@ -5123,7 +5123,7 @@ const Applications = () => {
                 <Download size={16} />
                 Export
               </Button>
-              <Button className="rounded-xl gap-2 bg-[#17C3B2] hover:bg-[#14a89a]">
+              <Button className="rounded-xl gap-2 bg-[#23D3EE] hover:bg-[#14a89a]">
                 <Plus size={16} />
                 Add Application
               </Button>
@@ -5136,7 +5136,7 @@ const Applications = () => {
               title="Total"
               value={stats.total}
               icon={Files}
-              color="#0D2342"
+              color="#0F172A"
               isActive={statusFilter === "all"}
               onClick={() => setStatusFilter("all")}
               delay={0}
@@ -5232,7 +5232,7 @@ const Applications = () => {
                 placeholder="Search applications... (Press / to focus)"
                 value={filters.search}
                 onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
-                className="pl-10 pr-10 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-[#17C3B2]/20"
+                className="pl-10 pr-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-[#23D3EE]/20"
               />
               {filters.search && (
                 <button
@@ -5252,14 +5252,14 @@ const Applications = () => {
               variant="outline"
               className={cn(
                 "rounded-xl gap-2",
-                activeFilterCount > 0 && "border-[#17C3B2] text-[#17C3B2]"
+                activeFilterCount > 0 && "border-[#23D3EE] text-[#23D3EE]"
               )}
               onClick={() => setIsFilterPanelOpen(true)}
             >
               <Filter size={16} />
               Filters
               {activeFilterCount > 0 && (
-                <span className="w-5 h-5 bg-[#17C3B2] text-white text-xs rounded-full flex items-center justify-center">
+                <span className="w-5 h-5 bg-[#23D3EE] text-white text-xs rounded-full flex items-center justify-center">
                   {activeFilterCount}
                 </span>
               )}
@@ -5318,9 +5318,9 @@ const Applications = () => {
                     {sortField === item.field && (
                       <span className="ml-auto">
                         {sortOrder === "asc" ? (
-                          <ArrowUp size={14} className="text-[#17C3B2]" />
+                          <ArrowUp size={14} className="text-[#23D3EE]" />
                         ) : (
-                          <ArrowDown size={14} className="text-[#17C3B2]" />
+                          <ArrowDown size={14} className="text-[#23D3EE]" />
                         )}
                       </span>
                     )}
@@ -5363,7 +5363,7 @@ const Applications = () => {
                         className={cn(
                           "p-2 rounded-lg transition-all",
                           viewMode === mode
-                            ? "bg-white text-[#17C3B2] shadow-sm"
+                            ? "bg-white text-[#23D3EE] shadow-sm"
                             : "text-slate-400 hover:text-slate-600"
                         )}
                       >
@@ -5408,7 +5408,7 @@ const Applications = () => {
                   selectedApplications.size === filteredApplications.length
                 }
                 onCheckedChange={handleSelectAll}
-                className="data-[state=checked]:bg-[#17C3B2] data-[state=checked]:border-[#17C3B2]"
+                className="data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
               />
             )}
             <span className="text-sm text-slate-600">
@@ -5416,7 +5416,7 @@ const Applications = () => {
                 ? `${filteredApplications.length} applications`
                 : `${filteredApplications.length} of ${applications.filter((a) => !a.isArchived).length} applications`}
               {selectedApplications.size > 0 && (
-                <span className="text-[#17C3B2] font-medium ml-2">
+                <span className="text-[#23D3EE] font-medium ml-2">
                   ({selectedApplications.size} selected)
                 </span>
               )}
@@ -5450,7 +5450,7 @@ const Applications = () => {
                     <X size={16} className="mr-2" /> Clear Filters
                   </Button>
                 ) : (
-                  <Button className="rounded-xl bg-[#17C3B2] hover:bg-[#14a89a]">
+                  <Button className="rounded-xl bg-[#23D3EE] hover:bg-[#14a89a]">
                     <Plus size={16} className="mr-2" /> Add Application
                   </Button>
                 )
@@ -5503,7 +5503,7 @@ const Applications = () => {
                                 <TableHead
                                   key={col.id}
                                   className={cn(
-                                    "font-semibold text-[#0D2342]",
+                                    "font-semibold text-[#0F172A]",
                                     col.sortable && "cursor-pointer hover:bg-slate-100"
                                   )}
                                   style={{ width: col.width }}
@@ -5535,9 +5535,9 @@ const Applications = () => {
                                     {col.label}
                                     {col.sortable && sortField === col.id && (
                                       sortOrder === "asc" ? (
-                                        <ArrowUp size={14} className="text-[#17C3B2]" />
+                                        <ArrowUp size={14} className="text-[#23D3EE]" />
                                       ) : (
-                                        <ArrowDown size={14} className="text-[#17C3B2]" />
+                                        <ArrowDown size={14} className="text-[#23D3EE]" />
                                       )
                                     )}
                                   </div>

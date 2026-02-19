@@ -67,7 +67,7 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({
 
   const getColorForLeaveType = (leaveType: string): string => {
     const colors: Record<string, string> = {
-      annual: '#17C3B2',
+      annual: '#23D3EE',
       sick: '#EF4444',
       personal: '#8B5CF6',
       maternity: '#EC4899',
@@ -75,7 +75,7 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({
       unpaid: '#6B7280',
       bereavement: '#475569',
     };
-    return colors[leaveType] || '#17C3B2';
+    return colors[leaveType] || '#23D3EE';
   };
 
   return (
@@ -144,14 +144,14 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({
                   className={`
                     relative min-h-[80px] p-2 rounded-lg text-left transition-colors
                     ${!isCurrentMonth ? 'bg-gray-50 text-gray-300' : 'hover:bg-gray-50'}
-                    ${isCurrentDay ? 'ring-2 ring-[#17C3B2] ring-offset-1' : ''}
+                    ${isCurrentDay ? 'ring-2 ring-[#23D3EE] ring-offset-1' : ''}
                     ${hasRequests && isCurrentMonth ? 'bg-gray-50' : ''}
                   `}
                 >
                   <span
                     className={`
                       text-sm font-medium
-                      ${isCurrentDay ? 'text-[#17C3B2] font-bold' : ''}
+                      ${isCurrentDay ? 'text-[#23D3EE] font-bold' : ''}
                       ${!isCurrentMonth ? 'text-gray-300' : 'text-gray-700'}
                     `}
                   >

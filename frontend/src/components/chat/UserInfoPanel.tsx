@@ -76,7 +76,7 @@ export function UserInfoPanel({
                 <div className="relative inline-block mb-4">
                   <Avatar className="w-24 h-24 rounded-2xl">
                     <AvatarImage src={otherParticipant.avatar} />
-                    <AvatarFallback className="bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] text-white text-2xl rounded-2xl">
+                    <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#6366F1] text-white text-2xl rounded-2xl">
                       {getInitials(otherParticipant.name)}
                     </AvatarFallback>
                   </Avatar>
@@ -97,7 +97,7 @@ export function UserInfoPanel({
                       <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        className="p-3 bg-[#17C3B2]/10 text-[#17C3B2] rounded-xl hover:bg-[#17C3B2]/20 transition-all"
+                        className="p-3 bg-[#23D3EE]/10 text-[#23D3EE] rounded-xl hover:bg-[#23D3EE]/20 transition-all"
                       >
                         <Phone size={18} />
                       </motion.button>
@@ -109,7 +109,7 @@ export function UserInfoPanel({
                       <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        className="p-3 bg-[#17C3B2]/10 text-[#17C3B2] rounded-xl hover:bg-[#17C3B2]/20 transition-all"
+                        className="p-3 bg-[#23D3EE]/10 text-[#23D3EE] rounded-xl hover:bg-[#23D3EE]/20 transition-all"
                       >
                         <Video size={18} />
                       </motion.button>
@@ -121,7 +121,7 @@ export function UserInfoPanel({
                       <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        className="p-3 bg-[#17C3B2]/10 text-[#17C3B2] rounded-xl hover:bg-[#17C3B2]/20 transition-all"
+                        className="p-3 bg-[#23D3EE]/10 text-[#23D3EE] rounded-xl hover:bg-[#23D3EE]/20 transition-all"
                       >
                         <Mail size={18} />
                       </motion.button>
@@ -185,7 +185,7 @@ export function UserInfoPanel({
           ) : (
             /* Group Info */
             <div className="p-6 text-center border-b border-gray-100">
-              <div className="w-24 h-24 bg-gradient-to-br from-[#17C3B2] to-[#17C3B2]/70 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <div className="w-24 h-24 bg-gradient-to-br from-[#23D3EE] to-[#23D3EE]/70 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Users size={40} className="text-white" />
               </div>
               <h4 className="text-lg font-semibold text-gray-800">{conversation.name}</h4>
@@ -202,7 +202,7 @@ export function UserInfoPanel({
                       <div className="relative">
                         <Avatar className="w-10 h-10 rounded-xl">
                           <AvatarImage src={participant.avatar} />
-                          <AvatarFallback className="bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] text-white text-xs rounded-xl">
+                          <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#6366F1] text-white text-xs rounded-xl">
                             {getInitials(participant.name)}
                           </AvatarFallback>
                         </Avatar>
@@ -227,7 +227,7 @@ export function UserInfoPanel({
               <h5 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 Shared Media
               </h5>
-              <button className="text-xs text-[#17C3B2] font-medium hover:underline">See All</button>
+              <button className="text-xs text-[#23D3EE] font-medium hover:underline">See All</button>
             </div>
             <div className="grid grid-cols-3 gap-2">
               {[1, 2, 3, 4, 5, 6].map((item) => (
@@ -251,7 +251,7 @@ export function UserInfoPanel({
               <h5 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 Shared Files
               </h5>
-              <button className="text-xs text-[#17C3B2] font-medium hover:underline">See All</button>
+              <button className="text-xs text-[#23D3EE] font-medium hover:underline">See All</button>
             </div>
             <div className="space-y-2">
               {sharedFiles.map((file, index) => (
@@ -259,8 +259,8 @@ export function UserInfoPanel({
                   key={index}
                   className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
                 >
-                  <div className="p-2 bg-[#17C3B2]/10 rounded-lg">
-                    <FileText size={16} className="text-[#17C3B2]" />
+                  <div className="p-2 bg-[#23D3EE]/10 rounded-lg">
+                    <FileText size={16} className="text-[#23D3EE]" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-800 truncate">{file.name}</p>

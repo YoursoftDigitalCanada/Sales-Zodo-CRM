@@ -93,7 +93,7 @@ export function ActiveTimer({
       className={cn(
         "bg-white rounded-xl border-2 p-6 transition-all",
         timerState.isRunning
-          ? "border-[#17C3B2] shadow-lg shadow-[#17C3B2]/10"
+          ? "border-[#23D3EE] shadow-lg shadow-[#23D3EE]/10"
           : "border-gray-200"
       )}
     >
@@ -123,7 +123,7 @@ export function ActiveTimer({
                 <div className="flex items-center gap-2">
                   <div
                     className={cn("w-2 h-2 rounded-full")}
-                    style={{ backgroundColor: selectedProject.color === "teal" ? "#17C3B2" : selectedProject.color }}
+                    style={{ backgroundColor: selectedProject.color === "teal" ? "#23D3EE" : selectedProject.color }}
                   />
                   <span className="truncate">{selectedProject.name}</span>
                 </div>
@@ -144,7 +144,7 @@ export function ActiveTimer({
                 >
                   <div
                     className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: project.color === "teal" ? "#17C3B2" : project.color }}
+                    style={{ backgroundColor: project.color === "teal" ? "#23D3EE" : project.color }}
                   />
                   <span>{project.name}</span>
                 </DropdownMenuItem>
@@ -183,12 +183,12 @@ export function ActiveTimer({
         <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
           <DollarSign
             size={16}
-            className={timerState.isBillable ? "text-[#17C3B2]" : "text-gray-400"}
+            className={timerState.isBillable ? "text-[#23D3EE]" : "text-gray-400"}
           />
           <Switch
             checked={timerState.isBillable}
             onCheckedChange={(checked) => onUpdateTimer({ isBillable: checked })}
-            className="data-[state=checked]:bg-[#17C3B2]"
+            className="data-[state=checked]:bg-[#23D3EE]"
           />
         </div>
 
@@ -199,7 +199,7 @@ export function ActiveTimer({
             transition={{ repeat: Infinity, duration: 1 }}
             className={cn(
               "text-3xl font-mono font-bold min-w-[140px] text-center",
-              timerState.isRunning ? "text-[#17C3B2]" : "text-gray-400"
+              timerState.isRunning ? "text-[#23D3EE]" : "text-gray-400"
             )}
           >
             {formatDuration(elapsedTime)}
@@ -215,9 +215,9 @@ export function ActiveTimer({
                 "w-12 h-12 rounded-xl flex items-center justify-center transition-all",
                 timerState.isRunning
                   ? timerState.isPaused
-                    ? "bg-[#17C3B2] text-white shadow-lg shadow-[#17C3B2]/30"
+                    ? "bg-[#23D3EE] text-white shadow-lg shadow-[#23D3EE]/30"
                     : "bg-yellow-500 text-white shadow-lg shadow-yellow-500/30"
-                  : "bg-[#17C3B2] text-white shadow-lg shadow-[#17C3B2]/30"
+                  : "bg-[#23D3EE] text-white shadow-lg shadow-[#23D3EE]/30"
               )}
             >
               {timerState.isRunning ? (
@@ -260,7 +260,7 @@ export function ActiveTimer({
               <motion.div
                 animate={{ opacity: [1, 0.5, 1] }}
                 transition={{ repeat: Infinity, duration: 1.5 }}
-                className="w-2 h-2 bg-[#17C3B2] rounded-full"
+                className="w-2 h-2 bg-[#23D3EE] rounded-full"
               />
               <span className="text-sm text-gray-500">
                 Timer is running

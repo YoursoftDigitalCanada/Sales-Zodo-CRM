@@ -198,7 +198,7 @@ const leadStatuses = [
   { id: "new", name: "New", color: "#3B82F6", bgColor: "#EFF6FF" },
   { id: "contacted", name: "Contacted", color: "#8B5CF6", bgColor: "#F5F3FF" },
   { id: "qualified", name: "Qualified", color: "#F59E0B", bgColor: "#FFFBEB" },
-  { id: "proposal", name: "Proposal", color: "#17C3B2", bgColor: "#F0FDFA" },
+  { id: "proposal", name: "Proposal", color: "#23D3EE", bgColor: "#F0FDFA" },
   { id: "negotiation", name: "Negotiation", color: "#EC4899", bgColor: "#FDF2F8" },
   { id: "won", name: "Won", color: "#10B981", bgColor: "#ECFDF5" },
   { id: "lost", name: "Lost", color: "#EF4444", bgColor: "#FEF2F2" },
@@ -300,7 +300,7 @@ const StatCard = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
       whileHover={{ y: -4 }}
-      className="relative bg-white rounded-2xl p-5 border border-slate-200 hover:border-[#17C3B2]/30 hover:shadow-xl hover:shadow-[#17C3B2]/5 transition-all overflow-hidden group"
+      className="relative bg-white rounded-2xl p-5 border border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5 transition-all overflow-hidden group"
     >
       <div
         className="absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-10 group-hover:opacity-20 transition-all"
@@ -310,7 +310,7 @@ const StatCard = ({
       <div className="relative flex items-start justify-between">
         <div>
           <p className="text-sm text-slate-500 mb-1">{title}</p>
-          <p className="text-2xl font-bold text-[#0D2342]">
+          <p className="text-2xl font-bold text-[#0F172A]">
             {prefix}
             {typeof value === "number" ? value.toLocaleString() : value}
             {suffix}
@@ -383,8 +383,8 @@ const LeadCard = ({
       className={cn(
         "relative bg-white rounded-2xl border overflow-hidden transition-all group cursor-pointer",
         isSelected
-          ? "border-[#17C3B2] ring-2 ring-[#17C3B2]/20"
-          : "border-slate-200 hover:border-[#17C3B2]/30 hover:shadow-xl hover:shadow-[#17C3B2]/5"
+          ? "border-[#23D3EE] ring-2 ring-[#23D3EE]/20"
+          : "border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5"
       )}
       onClick={onView}
     >
@@ -397,7 +397,7 @@ const LeadCard = ({
             onSelect();
           }}
           onClick={(e) => e.stopPropagation()}
-          className="data-[state=checked]:bg-[#17C3B2] data-[state=checked]:border-[#17C3B2] bg-white"
+          className="data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE] bg-white"
         />
       </div>
 
@@ -454,7 +454,7 @@ const LeadCard = ({
           <div className="relative inline-block mb-3">
             <Avatar className="h-16 w-16 border-2 border-white shadow-lg">
               <AvatarImage src={lead.avatar} />
-              <AvatarFallback className="bg-gradient-to-br from-[#17C3B2] to-[#17C3B2]/70 text-white font-bold">
+              <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#23D3EE]/70 text-white font-bold">
                 {getInitials(lead.firstName, lead.lastName)}
               </AvatarFallback>
             </Avatar>
@@ -465,7 +465,7 @@ const LeadCard = ({
               <SourceIcon size={12} className="text-white" />
             </div>
           </div>
-          <h3 className="font-semibold text-[#0D2342] group-hover:text-[#17C3B2] transition-colors">
+          <h3 className="font-semibold text-[#0F172A] group-hover:text-[#23D3EE] transition-colors">
             {lead.firstName} {lead.lastName}
           </h3>
           <p className="text-sm text-slate-500">{lead.jobTitle}</p>
@@ -493,7 +493,7 @@ const LeadCard = ({
 
         {/* Value */}
         <div className="text-center mb-4">
-          <span className="text-2xl font-bold text-[#0D2342]">
+          <span className="text-2xl font-bold text-[#0F172A]">
             {formatCurrency(lead.value, lead.currency)}
           </span>
           <p className="text-xs text-slate-400">Potential Value</p>
@@ -588,7 +588,7 @@ const LeadRow = ({
         <Checkbox
           checked={isSelected}
           onCheckedChange={onSelect}
-          className="data-[state=checked]:bg-[#17C3B2] data-[state=checked]:border-[#17C3B2]"
+          className="data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
         />
       </TableCell>
       <TableCell>
@@ -596,7 +596,7 @@ const LeadRow = ({
           <div className="relative">
             <Avatar className="h-10 w-10">
               <AvatarImage src={lead.avatar} />
-              <AvatarFallback className="bg-gradient-to-br from-[#17C3B2] to-[#17C3B2]/70 text-white font-medium text-sm">
+              <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#23D3EE]/70 text-white font-medium text-sm">
                 {getInitials(lead.firstName, lead.lastName)}
               </AvatarFallback>
             </Avatar>
@@ -608,7 +608,7 @@ const LeadRow = ({
             </div>
           </div>
           <div>
-            <p className="font-medium text-[#0D2342] group-hover:text-[#17C3B2] transition-colors">
+            <p className="font-medium text-[#0F172A] group-hover:text-[#23D3EE] transition-colors">
               {lead.firstName} {lead.lastName}
             </p>
             <p className="text-sm text-slate-500">{lead.email}</p>
@@ -617,7 +617,7 @@ const LeadRow = ({
       </TableCell>
       <TableCell>
         <div>
-          <p className="font-medium text-[#0D2342]">{lead.company}</p>
+          <p className="font-medium text-[#0F172A]">{lead.company}</p>
           <p className="text-sm text-slate-500">{lead.jobTitle}</p>
         </div>
       </TableCell>
@@ -657,7 +657,7 @@ const LeadRow = ({
         </div>
       </TableCell>
       <TableCell>
-        <span className="font-semibold text-[#0D2342]">
+        <span className="font-semibold text-[#0F172A]">
           {formatCurrency(lead.value, lead.currency)}
         </span>
       </TableCell>
@@ -839,9 +839,9 @@ const LeadFormDialog = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[700px] p-0 rounded-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#17C3B2]/10 to-transparent sticky top-0 bg-white z-10">
+        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#23D3EE]/10 to-transparent sticky top-0 bg-white z-10">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-[#0D2342]">
+            <DialogTitle className="text-xl font-bold text-[#0F172A]">
               {lead ? "Edit Lead" : "Add New Lead"}
             </DialogTitle>
             <DialogDescription className="text-slate-500">
@@ -1122,7 +1122,7 @@ const LeadFormDialog = ({
             <Button
               type="submit"
               disabled={saving || !formData.firstName || !formData.lastName || !formData.email || !formData.company}
-              className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl"
+              className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl"
             >
               {saving ? (
                 <>
@@ -1172,12 +1172,12 @@ const LeadDetailsDialog = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px] p-0 rounded-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="relative p-6 border-b border-slate-100 bg-gradient-to-r from-[#17C3B2]/10 via-transparent to-[#C9A14A]/10">
+        <div className="relative p-6 border-b border-slate-100 bg-gradient-to-r from-[#23D3EE]/10 via-transparent to-[#FBBF23]/10">
           <div className="flex items-start gap-4">
             <div className="relative">
               <Avatar className="h-16 w-16 border-2 border-white shadow-lg">
                 <AvatarImage src={lead.avatar} />
-                <AvatarFallback className="bg-gradient-to-br from-[#17C3B2] to-[#17C3B2]/70 text-white font-bold text-lg">
+                <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#23D3EE]/70 text-white font-bold text-lg">
                   {getInitials(lead.firstName, lead.lastName)}
                 </AvatarFallback>
               </Avatar>
@@ -1190,7 +1190,7 @@ const LeadDetailsDialog = ({
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <h2 className="text-xl font-bold text-[#0D2342]">
+                <h2 className="text-xl font-bold text-[#0F172A]">
                   {lead.firstName} {lead.lastName}
                 </h2>
                 <span
@@ -1241,7 +1241,7 @@ const LeadDetailsDialog = ({
             </div>
             <div className="p-4 bg-slate-50 rounded-xl">
               <p className="text-xs text-slate-400 mb-2">Potential Value</p>
-              <span className="text-3xl font-bold text-[#0D2342]">
+              <span className="text-3xl font-bold text-[#0F172A]">
                 {formatCurrency(lead.value, lead.currency)}
               </span>
             </div>
@@ -1249,7 +1249,7 @@ const LeadDetailsDialog = ({
 
           {/* Contact Info */}
           <div>
-            <h3 className="text-sm font-semibold text-[#0D2342] mb-3">Contact Information</h3>
+            <h3 className="text-sm font-semibold text-[#0F172A] mb-3">Contact Information</h3>
             <div className="grid grid-cols-2 gap-3">
               <a
                 href={`mailto:${lead.email}`}
@@ -1260,7 +1260,7 @@ const LeadDetailsDialog = ({
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-slate-400">Email</p>
-                  <p className="text-sm font-medium text-[#0D2342] truncate">{lead.email}</p>
+                  <p className="text-sm font-medium text-[#0F172A] truncate">{lead.email}</p>
                 </div>
               </a>
               <a
@@ -1272,7 +1272,7 @@ const LeadDetailsDialog = ({
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-slate-400">Phone</p>
-                  <p className="text-sm font-medium text-[#0D2342] truncate">{lead.phone}</p>
+                  <p className="text-sm font-medium text-[#0F172A] truncate">{lead.phone}</p>
                 </div>
               </a>
               <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
@@ -1281,7 +1281,7 @@ const LeadDetailsDialog = ({
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-slate-400">Location</p>
-                  <p className="text-sm font-medium text-[#0D2342] truncate">{lead.location}</p>
+                  <p className="text-sm font-medium text-[#0F172A] truncate">{lead.location}</p>
                 </div>
               </div>
               {lead.website && (
@@ -1291,12 +1291,12 @@ const LeadDetailsDialog = ({
                   rel="noopener noreferrer"
                   className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-[#17C3B2]/10 flex items-center justify-center">
-                    <Globe size={18} className="text-[#17C3B2]" />
+                  <div className="w-10 h-10 rounded-lg bg-[#23D3EE]/10 flex items-center justify-center">
+                    <Globe size={18} className="text-[#23D3EE]" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs text-slate-400">Website</p>
-                    <p className="text-sm font-medium text-[#0D2342] truncate">{lead.website}</p>
+                    <p className="text-sm font-medium text-[#0F172A] truncate">{lead.website}</p>
                   </div>
                   <ExternalLink size={14} className="text-slate-400" />
                 </a>
@@ -1307,7 +1307,7 @@ const LeadDetailsDialog = ({
           {/* Social Links */}
           {lead.socialLinks && Object.keys(lead.socialLinks).length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold text-[#0D2342] mb-3">Social Profiles</h3>
+              <h3 className="text-sm font-semibold text-[#0F172A] mb-3">Social Profiles</h3>
               <div className="flex items-center gap-2">
                 {lead.socialLinks.linkedin && (
                   <a
@@ -1349,7 +1349,7 @@ const LeadDetailsDialog = ({
               <p className="text-xs text-slate-400 mb-1">Lead Source</p>
               <div className="flex items-center gap-2">
                 <SourceIcon size={16} style={{ color: sourceInfo.color }} />
-                <span className="font-medium text-[#0D2342]">{sourceInfo.name}</span>
+                <span className="font-medium text-[#0F172A]">{sourceInfo.name}</span>
               </div>
             </div>
             <div className="p-4 bg-slate-50 rounded-xl">
@@ -1359,7 +1359,7 @@ const LeadDetailsDialog = ({
                   <AvatarFallback className="text-xs bg-slate-200">{lead.assignedTo?.split(" ").map((n: string) => n[0]).join("") || "?"}</AvatarFallback>
 
                 </Avatar>
-                <span className="font-medium text-[#0D2342]">{lead.assignedTo}</span>
+                <span className="font-medium text-[#0F172A]">{lead.assignedTo}</span>
               </div>
             </div>
           </div>
@@ -1372,16 +1372,16 @@ const LeadDetailsDialog = ({
                   <p className="text-xs text-slate-400 mb-1">Last Contact</p>
                   <div className="flex items-center gap-2">
                     <Calendar size={16} className="text-slate-500" />
-                    <span className="font-medium text-[#0D2342]">{formatDate(lead.lastContact)}</span>
+                    <span className="font-medium text-[#0F172A]">{formatDate(lead.lastContact)}</span>
                   </div>
                 </div>
               )}
               {lead.nextFollowUp && (
-                <div className="p-4 bg-[#17C3B2]/10 rounded-xl border border-[#17C3B2]/20">
-                  <p className="text-xs text-[#17C3B2] mb-1">Next Follow-up</p>
+                <div className="p-4 bg-[#23D3EE]/10 rounded-xl border border-[#23D3EE]/20">
+                  <p className="text-xs text-[#23D3EE] mb-1">Next Follow-up</p>
                   <div className="flex items-center gap-2">
-                    <CalendarDays size={16} className="text-[#17C3B2]" />
-                    <span className="font-medium text-[#0D2342]">{formatDate(lead.nextFollowUp)}</span>
+                    <CalendarDays size={16} className="text-[#23D3EE]" />
+                    <span className="font-medium text-[#0F172A]">{formatDate(lead.nextFollowUp)}</span>
                   </div>
                 </div>
               )}
@@ -1391,12 +1391,12 @@ const LeadDetailsDialog = ({
           {/* Tags */}
           {lead.tags && lead.tags.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold text-[#0D2342] mb-3">Tags</h3>
+              <h3 className="text-sm font-semibold text-[#0F172A] mb-3">Tags</h3>
               <div className="flex flex-wrap gap-2">
                 {lead.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="px-3 py-1 bg-[#17C3B2]/10 text-[#17C3B2] rounded-lg text-sm font-medium"
+                    className="px-3 py-1 bg-[#23D3EE]/10 text-[#23D3EE] rounded-lg text-sm font-medium"
                   >
                     {tag}
                   </span>
@@ -1408,7 +1408,7 @@ const LeadDetailsDialog = ({
           {/* Notes */}
           {lead.notes && (
             <div>
-              <h3 className="text-sm font-semibold text-[#0D2342] mb-3">Notes</h3>
+              <h3 className="text-sm font-semibold text-[#0F172A] mb-3">Notes</h3>
               <div className="p-4 bg-slate-50 rounded-xl">
                 <p className="text-sm text-slate-600">{lead.notes}</p>
               </div>
@@ -1417,14 +1417,14 @@ const LeadDetailsDialog = ({
 
           {/* Activity Timeline */}
           <div>
-            <h3 className="text-sm font-semibold text-[#0D2342] mb-3">Activity</h3>
+            <h3 className="text-sm font-semibold text-[#0F172A] mb-3">Activity</h3>
             <div className="space-y-3">
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-[#17C3B2]/10 flex items-center justify-center flex-shrink-0">
-                  <Plus size={14} className="text-[#17C3B2]" />
+                <div className="w-8 h-8 rounded-full bg-[#23D3EE]/10 flex items-center justify-center flex-shrink-0">
+                  <Plus size={14} className="text-[#23D3EE]" />
                 </div>
                 <div>
-                  <p className="text-sm text-[#0D2342]">Lead created</p>
+                  <p className="text-sm text-[#0F172A]">Lead created</p>
                   <p className="text-xs text-slate-400">{getRelativeTime(lead.createdAt)}</p>
                 </div>
               </div>
@@ -1434,7 +1434,7 @@ const LeadDetailsDialog = ({
                     <MessageSquare size={14} className="text-blue-600" />
                   </div>
                   <div>
-                    <p className="text-sm text-[#0D2342]">Last contacted</p>
+                    <p className="text-sm text-[#0F172A]">Last contacted</p>
                     <p className="text-xs text-slate-400">{formatDate(lead.lastContact)}</p>
                   </div>
                 </div>
@@ -1452,7 +1452,7 @@ const LeadDetailsDialog = ({
             <Phone size={16} />
             Call
           </Button>
-          <Button onClick={onEdit} className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl gap-2">
+          <Button onClick={onEdit} className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl gap-2">
             <Pencil size={16} />
             Edit Lead
           </Button>
@@ -1770,13 +1770,13 @@ const AllLeads = () => {
             <div className="flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
-                  <Link to="/dashboard" className="hover:text-[#17C3B2]">
+                  <Link to="/dashboard" className="hover:text-[#23D3EE]">
                     Dashboard
                   </Link>
                   <ChevronRight size={14} />
-                  <span className="text-[#0D2342] font-medium">Leads</span>
+                  <span className="text-[#0F172A] font-medium">Leads</span>
                 </div>
-                <h1 className="text-2xl font-bold text-[#0D2342]">All Leads</h1>
+                <h1 className="text-2xl font-bold text-[#0F172A]">All Leads</h1>
               </div>
 
               <div className="flex items-center gap-3">
@@ -1804,7 +1804,7 @@ const AllLeads = () => {
                     setCurrentLead(null);
                     setIsFormOpen(true);
                   }}
-                  className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl gap-2"
+                  className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl gap-2"
                 >
                   <UserPlus size={18} />
                   Add Lead
@@ -1823,7 +1823,7 @@ const AllLeads = () => {
               change={12.5}
               changeLabel="vs last month"
               icon={Target}
-              color="#17C3B2"
+              color="#23D3EE"
             />
             <StatCard
               title="Hot Leads"
@@ -1853,7 +1853,7 @@ const AllLeads = () => {
               value={formatCurrency(totalValue)}
               change={15.2}
               icon={DollarSign}
-              color="#C9A14A"
+              color="#FBBF23"
               delay={0.4}
             />
           </div>
@@ -1998,7 +1998,7 @@ const AllLeads = () => {
                       >
                         <Calendar size={14} className="mr-2" />
                         Date Added
-                        {sortBy === "date" && <Check size={14} className="ml-auto text-[#17C3B2]" />}
+                        {sortBy === "date" && <Check size={14} className="ml-auto text-[#23D3EE]" />}
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => {
@@ -2009,7 +2009,7 @@ const AllLeads = () => {
                       >
                         <Target size={14} className="mr-2" />
                         Lead Score
-                        {sortBy === "score" && <Check size={14} className="ml-auto text-[#17C3B2]" />}
+                        {sortBy === "score" && <Check size={14} className="ml-auto text-[#23D3EE]" />}
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => {
@@ -2020,7 +2020,7 @@ const AllLeads = () => {
                       >
                         <DollarSign size={14} className="mr-2" />
                         Value
-                        {sortBy === "value" && <Check size={14} className="ml-auto text-[#17C3B2]" />}
+                        {sortBy === "value" && <Check size={14} className="ml-auto text-[#23D3EE]" />}
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => {
@@ -2031,7 +2031,7 @@ const AllLeads = () => {
                       >
                         <User size={14} className="mr-2" />
                         Name
-                        {sortBy === "name" && <Check size={14} className="ml-auto text-[#17C3B2]" />}
+                        {sortBy === "name" && <Check size={14} className="ml-auto text-[#23D3EE]" />}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -2042,9 +2042,9 @@ const AllLeads = () => {
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-3 mt-4 p-3 bg-[#17C3B2]/10 rounded-xl"
+                    className="flex items-center gap-3 mt-4 p-3 bg-[#23D3EE]/10 rounded-xl"
                   >
-                    <span className="text-sm font-medium text-[#0D2342]">
+                    <span className="text-sm font-medium text-[#0F172A]">
                       {selectedLeads.size} selected
                     </span>
                     <div className="flex-1" />
@@ -2096,7 +2096,7 @@ const AllLeads = () => {
                               selectedLeads.size === filteredLeads.length && filteredLeads.length > 0
                             }
                             onCheckedChange={toggleSelectAll}
-                            className="data-[state=checked]:bg-[#17C3B2] data-[state=checked]:border-[#17C3B2]"
+                            className="data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
                           />
                         </TableHead>
                         <TableHead>Lead</TableHead>

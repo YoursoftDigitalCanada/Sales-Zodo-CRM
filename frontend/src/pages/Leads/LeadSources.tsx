@@ -290,7 +290,7 @@ const StatCard = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
       whileHover={{ y: -4 }}
-      className="relative bg-white rounded-2xl p-5 border border-slate-200 hover:border-[#17C3B2]/30 hover:shadow-xl hover:shadow-[#17C3B2]/5 transition-all overflow-hidden group"
+      className="relative bg-white rounded-2xl p-5 border border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5 transition-all overflow-hidden group"
     >
       <div
         className="absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-10 group-hover:opacity-20 transition-all"
@@ -300,7 +300,7 @@ const StatCard = ({
       <div className="relative flex items-start justify-between">
         <div>
           <p className="text-sm text-slate-500 mb-1">{title}</p>
-          <p className="text-2xl font-bold text-[#0D2342]">
+          <p className="text-2xl font-bold text-[#0F172A]">
             {prefix}
             {typeof value === "number" ? formatNumber(value) : value}
             {suffix}
@@ -366,7 +366,7 @@ const SourceCard = ({
       className={cn(
         "relative bg-white rounded-2xl border overflow-hidden transition-all group cursor-pointer",
         source.isActive
-          ? "border-slate-200 hover:border-[#17C3B2]/30 hover:shadow-xl hover:shadow-[#17C3B2]/5"
+          ? "border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5"
           : "border-slate-200 opacity-60"
       )}
       onClick={onView}
@@ -396,7 +396,7 @@ const SourceCard = ({
             <SourceIcon size={28} style={{ color: source.color }} />
           </div>
           <div>
-            <h3 className="font-semibold text-[#0D2342] group-hover:text-[#17C3B2] transition-colors">
+            <h3 className="font-semibold text-[#0F172A] group-hover:text-[#23D3EE] transition-colors">
               {source.name}
             </h3>
             <span
@@ -412,15 +412,15 @@ const SourceCard = ({
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div className="p-3 bg-slate-50 rounded-lg">
             <p className="text-xs text-slate-400 mb-1">Total Leads</p>
-            <p className="text-lg font-bold text-[#0D2342]">{source.totalLeads}</p>
+            <p className="text-lg font-bold text-[#0F172A]">{source.totalLeads}</p>
           </div>
           <div className="p-3 bg-slate-50 rounded-lg">
             <p className="text-xs text-slate-400 mb-1">Conversion</p>
-            <p className="text-lg font-bold text-[#17C3B2]">{formatPercent(source.conversionRate)}</p>
+            <p className="text-lg font-bold text-[#23D3EE]">{formatPercent(source.conversionRate)}</p>
           </div>
           <div className="p-3 bg-slate-50 rounded-lg">
             <p className="text-xs text-slate-400 mb-1">Revenue</p>
-            <p className="text-lg font-bold text-[#0D2342]">{formatCurrency(source.totalRevenue)}</p>
+            <p className="text-lg font-bold text-[#0F172A]">{formatCurrency(source.totalRevenue)}</p>
           </div>
           <div className="p-3 bg-slate-50 rounded-lg">
             <p className="text-xs text-slate-400 mb-1">ROI</p>
@@ -526,7 +526,7 @@ const SourceRow = ({
             <SourceIcon size={20} style={{ color: source.color }} />
           </div>
           <div>
-            <p className="font-medium text-[#0D2342] group-hover:text-[#17C3B2] transition-colors">
+            <p className="font-medium text-[#0F172A] group-hover:text-[#23D3EE] transition-colors">
               {source.name}
             </p>
             <p className="text-xs text-slate-500">{source.description}</p>
@@ -542,7 +542,7 @@ const SourceRow = ({
         </span>
       </TableCell>
       <TableCell>
-        <span className="font-semibold text-[#0D2342]">{source.totalLeads}</span>
+        <span className="font-semibold text-[#0F172A]">{source.totalLeads}</span>
         <span className="text-slate-400 text-sm ml-1">
           ({source.convertedLeads} converted)
         </span>
@@ -560,13 +560,13 @@ const SourceRow = ({
               }
             />
           </div>
-          <span className="text-sm font-medium text-[#0D2342]">
+          <span className="text-sm font-medium text-[#0F172A]">
             {formatPercent(source.conversionRate)}
           </span>
         </div>
       </TableCell>
       <TableCell>
-        <span className="font-semibold text-[#0D2342]">{formatCurrency(source.totalRevenue)}</span>
+        <span className="font-semibold text-[#0F172A]">{formatCurrency(source.totalRevenue)}</span>
       </TableCell>
       <TableCell>
         <span className="text-sm text-slate-600">{formatCurrency(source.avgDealSize)}</span>
@@ -609,7 +609,7 @@ const SourceRow = ({
         <Switch
           checked={source.isActive}
           onCheckedChange={onToggle}
-          className="data-[state=checked]:bg-[#17C3B2]"
+          className="data-[state=checked]:bg-[#23D3EE]"
         />
       </TableCell>
       <TableCell>
@@ -733,9 +733,9 @@ const SourceFormDialog = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px] p-0 rounded-2xl overflow-hidden">
-        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#17C3B2]/10 to-transparent">
+        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#23D3EE]/10 to-transparent">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-[#0D2342]">
+            <DialogTitle className="text-xl font-bold text-[#0F172A]">
               {source ? "Edit Lead Source" : "Add Lead Source"}
             </DialogTitle>
             <DialogDescription className="text-slate-500">
@@ -817,7 +817,7 @@ const SourceFormDialog = ({
                   onClick={() => setFormData({ ...formData, color })}
                   className={cn(
                     "w-8 h-8 rounded-lg transition-all",
-                    formData.color === color && "ring-2 ring-offset-2 ring-[#17C3B2]"
+                    formData.color === color && "ring-2 ring-offset-2 ring-[#23D3EE]"
                   )}
                   style={{ backgroundColor: color }}
                 />
@@ -868,13 +868,13 @@ const SourceFormDialog = ({
           {/* Active Toggle */}
           <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
             <div>
-              <p className="font-medium text-[#0D2342]">Active Source</p>
+              <p className="font-medium text-[#0F172A]">Active Source</p>
               <p className="text-sm text-slate-500">Enable lead tracking for this source</p>
             </div>
             <Switch
               checked={formData.isActive}
               onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
-              className="data-[state=checked]:bg-[#17C3B2]"
+              className="data-[state=checked]:bg-[#23D3EE]"
             />
           </div>
 
@@ -885,7 +885,7 @@ const SourceFormDialog = ({
             <Button
               type="submit"
               disabled={!formData.name}
-              className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl"
+              className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl"
             >
               {source ? (
                 <>
@@ -1064,17 +1064,17 @@ const LeadSources = () => {
             <div className="flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
-                  <Link to="/dashboard" className="hover:text-[#17C3B2]">
+                  <Link to="/dashboard" className="hover:text-[#23D3EE]">
                     Dashboard
                   </Link>
                   <ChevronRight size={14} />
-                  <Link to="/leads" className="hover:text-[#17C3B2]">
+                  <Link to="/leads" className="hover:text-[#23D3EE]">
                     Leads
                   </Link>
                   <ChevronRight size={14} />
-                  <span className="text-[#0D2342] font-medium">Sources</span>
+                  <span className="text-[#0F172A] font-medium">Sources</span>
                 </div>
-                <h1 className="text-2xl font-bold text-[#0D2342]">Lead Sources</h1>
+                <h1 className="text-2xl font-bold text-[#0F172A]">Lead Sources</h1>
               </div>
 
               <div className="flex items-center gap-3">
@@ -1094,7 +1094,7 @@ const LeadSources = () => {
                     setCurrentSource(null);
                     setIsFormOpen(true);
                   }}
-                  className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl gap-2"
+                  className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl gap-2"
                 >
                   <Plus size={18} />
                   Add Source
@@ -1111,7 +1111,7 @@ const LeadSources = () => {
               title="Total Sources"
               value={stats.totalSources}
               icon={Target}
-              color="#17C3B2"
+              color="#23D3EE"
             />
             <StatCard
               title="Active Sources"
@@ -1141,7 +1141,7 @@ const LeadSources = () => {
               value={formatCurrency(stats.totalRevenue)}
               change={22.8}
               icon={DollarSign}
-              color="#C9A14A"
+              color="#FBBF23"
               delay={0.4}
             />
           </div>
@@ -1184,7 +1184,7 @@ const LeadSources = () => {
                       id="active-only"
                       checked={showActiveOnly}
                       onCheckedChange={setShowActiveOnly}
-                      className="data-[state=checked]:bg-[#17C3B2]"
+                      className="data-[state=checked]:bg-[#23D3EE]"
                     />
                     <Label htmlFor="active-only" className="text-sm text-slate-600 cursor-pointer">
                       Active only
@@ -1317,7 +1317,7 @@ const LeadSources = () => {
           >
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h3 className="font-semibold text-[#0D2342]">Source Performance</h3>
+                <h3 className="font-semibold text-[#0F172A]">Source Performance</h3>
                 <p className="text-sm text-slate-500">Lead generation by source over time</p>
               </div>
               <Select defaultValue="30">
@@ -1358,7 +1358,7 @@ const LeadSources = () => {
                       <SourceIcon size={20} style={{ color: source.color }} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-[#0D2342] truncate">
+                      <p className="text-sm font-medium text-[#0F172A] truncate">
                         {source.name}
                       </p>
                       <p className="text-xs text-slate-500">

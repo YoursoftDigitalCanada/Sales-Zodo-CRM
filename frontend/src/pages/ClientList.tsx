@@ -307,9 +307,9 @@ const StatCard = ({
   delay?: number;
 }) => {
   const colorClasses = {
-    teal: { bg: "bg-[#17C3B2]", light: "bg-[#17C3B2]/10", text: "text-[#17C3B2]" },
-    gold: { bg: "bg-[#C9A14A]", light: "bg-[#C9A14A]/10", text: "text-[#C9A14A]" },
-    navy: { bg: "bg-[#0D2342]", light: "bg-[#0D2342]/10", text: "text-[#0D2342]" },
+    teal: { bg: "bg-[#23D3EE]", light: "bg-[#23D3EE]/10", text: "text-[#23D3EE]" },
+    gold: { bg: "bg-[#FBBF23]", light: "bg-[#FBBF23]/10", text: "text-[#FBBF23]" },
+    navy: { bg: "bg-[#0F172A]", light: "bg-[#0F172A]/10", text: "text-[#0F172A]" },
     purple: { bg: "bg-purple-500", light: "bg-purple-500/10", text: "text-purple-500" },
     green: { bg: "bg-emerald-500", light: "bg-emerald-500/10", text: "text-emerald-500" },
     red: { bg: "bg-red-500", light: "bg-red-500/10", text: "text-red-500" },
@@ -323,14 +323,14 @@ const StatCard = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
       whileHover={{ y: -4 }}
-      className="relative bg-white rounded-2xl p-5 border border-slate-200 hover:border-[#17C3B2]/30 hover:shadow-xl hover:shadow-[#17C3B2]/5 transition-all overflow-hidden group"
+      className="relative bg-white rounded-2xl p-5 border border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5 transition-all overflow-hidden group"
     >
       <div className={cn("absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-10 group-hover:opacity-20 transition-all", colors.bg)} />
 
       <div className="relative flex items-start justify-between">
         <div>
           <p className="text-sm text-slate-500 mb-1">{title}</p>
-          <p className="text-2xl font-bold text-[#0D2342]">{value}</p>
+          <p className="text-2xl font-bold text-[#0F172A]">{value}</p>
           <p className="text-xs text-slate-400 mt-1">{subtitle}</p>
         </div>
         <div className="flex flex-col items-end gap-2">
@@ -386,7 +386,7 @@ const ClientRow = ({
       exit={{ opacity: 0 }}
       className={cn(
         "group hover:bg-slate-50/80 transition-colors cursor-pointer border-b border-slate-100 last:border-0",
-        isSelected && "bg-[#17C3B2]/5"
+        isSelected && "bg-[#23D3EE]/5"
       )}
       onClick={onView}
     >
@@ -395,7 +395,7 @@ const ClientRow = ({
         <Checkbox
           checked={isSelected}
           onCheckedChange={onSelect}
-          className="border-slate-300 data-[state=checked]:bg-[#17C3B2] data-[state=checked]:border-[#17C3B2]"
+          className="border-slate-300 data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
         />
       </td>
 
@@ -406,7 +406,7 @@ const ClientRow = ({
           className="p-1 rounded-lg hover:bg-slate-100 transition-colors"
         >
           {client.isFavorite ? (
-            <Star size={16} className="text-[#C9A14A] fill-[#C9A14A]" />
+            <Star size={16} className="text-[#FBBF23] fill-[#FBBF23]" />
           ) : (
             <StarOff size={16} className="text-slate-300 group-hover:text-slate-400" />
           )}
@@ -426,7 +426,7 @@ const ClientRow = ({
                   className="w-10 h-10 rounded-xl object-cover"
                 />
               ) : (
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#17C3B2] to-[#17C3B2]/70 flex items-center justify-center text-white font-semibold text-sm">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#23D3EE]/70 flex items-center justify-center text-white font-semibold text-sm">
                   {getInitials(client.clientName)}
                 </div>
               )}
@@ -435,12 +435,12 @@ const ClientRow = ({
                 className={cn(
                   "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white",
                   client.status === "Active" ? "bg-emerald-500" :
-                    client.status === "Pending" ? "bg-[#C9A14A]" : "bg-slate-400"
+                    client.status === "Pending" ? "bg-[#FBBF23]" : "bg-slate-400"
                 )}
               />
             </div>
             <div>
-              <div className="font-semibold text-[#0D2342] group-hover:text-[#17C3B2] transition-colors">
+              <div className="font-semibold text-[#0F172A] group-hover:text-[#23D3EE] transition-colors">
                 {client.clientName}
               </div>
               <div className="flex items-center gap-2 text-xs text-slate-400">
@@ -450,8 +450,8 @@ const ClientRow = ({
                     <span>•</span>
                     <span className={cn(
                       "px-1.5 py-0.5 rounded-full font-medium",
-                      client.clientCategory === "VIP" ? "bg-[#C9A14A]/10 text-[#C9A14A]" :
-                        client.clientCategory === "New" ? "bg-[#17C3B2]/10 text-[#17C3B2]" :
+                      client.clientCategory === "VIP" ? "bg-[#FBBF23]/10 text-[#FBBF23]" :
+                        client.clientCategory === "New" ? "bg-[#23D3EE]/10 text-[#23D3EE]" :
                           "bg-slate-100 text-slate-500"
                     )}>
                       {client.clientCategory}
@@ -493,7 +493,7 @@ const ClientRow = ({
       {/* Revenue */}
       {columns.find((c) => c.key === "totalRevenue")?.visible && (
         <td className="py-4 px-4">
-          <span className="font-medium text-[#0D2342]">
+          <span className="font-medium text-[#0F172A]">
             {formatCurrency(client.totalRevenue)}
           </span>
         </td>
@@ -525,7 +525,7 @@ const ClientRow = ({
               client.tags.split(",").slice(0, 2).map((tag, i) => (
                 <span
                   key={i}
-                  className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#17C3B2]/10 text-[#17C3B2]"
+                  className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#23D3EE]/10 text-[#23D3EE]"
                 >
                   {tag.trim()}
                 </span>
@@ -565,13 +565,13 @@ const ClientRow = ({
           <span className={cn(
             "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold",
             client.status === "Active" ? "bg-emerald-100 text-emerald-700" :
-              client.status === "Pending" ? "bg-[#C9A14A]/10 text-[#C9A14A]" :
+              client.status === "Pending" ? "bg-[#FBBF23]/10 text-[#FBBF23]" :
                 "bg-slate-100 text-slate-600"
           )}>
             <span className={cn(
               "w-1.5 h-1.5 rounded-full",
               client.status === "Active" ? "bg-emerald-500" :
-                client.status === "Pending" ? "bg-[#C9A14A]" :
+                client.status === "Pending" ? "bg-[#FBBF23]" :
                   "bg-slate-400"
             )} />
             {client.status}
@@ -586,7 +586,7 @@ const ClientRow = ({
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={onView}
-            className="p-2 rounded-lg hover:bg-[#17C3B2]/10 text-[#17C3B2] transition-colors"
+            className="p-2 rounded-lg hover:bg-[#23D3EE]/10 text-[#23D3EE] transition-colors"
             title="View"
           >
             <Eye size={16} />
@@ -595,7 +595,7 @@ const ClientRow = ({
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={onEdit}
-            className="p-2 rounded-lg hover:bg-[#C9A14A]/10 text-[#C9A14A] transition-colors"
+            className="p-2 rounded-lg hover:bg-[#FBBF23]/10 text-[#FBBF23] transition-colors"
             title="Edit"
           >
             <Pencil size={16} />
@@ -665,8 +665,8 @@ const ClientCard = ({
       whileHover={{ y: -4 }}
       className={cn(
         "bg-white rounded-2xl border border-slate-200 p-5 cursor-pointer group",
-        "hover:border-[#17C3B2]/30 hover:shadow-xl hover:shadow-[#17C3B2]/5 transition-all",
-        isSelected && "border-[#17C3B2] bg-[#17C3B2]/5"
+        "hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5 transition-all",
+        isSelected && "border-[#23D3EE] bg-[#23D3EE]/5"
       )}
       onClick={onView}
     >
@@ -677,7 +677,7 @@ const ClientCard = ({
             checked={isSelected}
             onCheckedChange={onSelect}
             onClick={(e) => e.stopPropagation()}
-            className="border-slate-300 data-[state=checked]:bg-[#17C3B2] data-[state=checked]:border-[#17C3B2]"
+            className="border-slate-300 data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
           />
           <div className="relative">
             {client.profileImage ? (
@@ -687,7 +687,7 @@ const ClientCard = ({
                 className="w-12 h-12 rounded-xl object-cover"
               />
             ) : (
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#17C3B2] to-[#17C3B2]/70 flex items-center justify-center text-white font-semibold">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#23D3EE]/70 flex items-center justify-center text-white font-semibold">
                 {getInitials(client.clientName)}
               </div>
             )}
@@ -695,7 +695,7 @@ const ClientCard = ({
               className={cn(
                 "absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white",
                 client.status === "Active" ? "bg-emerald-500" :
-                  client.status === "Pending" ? "bg-[#C9A14A]" : "bg-slate-400"
+                  client.status === "Pending" ? "bg-[#FBBF23]" : "bg-slate-400"
               )}
             />
           </div>
@@ -707,7 +707,7 @@ const ClientCard = ({
             className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
           >
             {client.isFavorite ? (
-              <Star size={16} className="text-[#C9A14A] fill-[#C9A14A]" />
+              <Star size={16} className="text-[#FBBF23] fill-[#FBBF23]" />
             ) : (
               <StarOff size={16} className="text-slate-300" />
             )}
@@ -742,7 +742,7 @@ const ClientCard = ({
 
       {/* Client Info */}
       <div className="mb-4">
-        <h3 className="font-semibold text-[#0D2342] group-hover:text-[#17C3B2] transition-colors mb-1">
+        <h3 className="font-semibold text-[#0F172A] group-hover:text-[#23D3EE] transition-colors mb-1">
           {client.clientName}
         </h3>
         <div className="flex items-center gap-2 text-xs text-slate-400">
@@ -752,8 +752,8 @@ const ClientCard = ({
               <span>•</span>
               <span className={cn(
                 "px-1.5 py-0.5 rounded-full font-medium",
-                client.clientCategory === "VIP" ? "bg-[#C9A14A]/10 text-[#C9A14A]" :
-                  client.clientCategory === "New" ? "bg-[#17C3B2]/10 text-[#17C3B2]" :
+                client.clientCategory === "VIP" ? "bg-[#FBBF23]/10 text-[#FBBF23]" :
+                  client.clientCategory === "New" ? "bg-[#23D3EE]/10 text-[#23D3EE]" :
                     "bg-slate-100 text-slate-500"
               )}>
                 {client.clientCategory}
@@ -787,7 +787,7 @@ const ClientCard = ({
           {client.tags.split(",").slice(0, 3).map((tag, i) => (
             <span
               key={i}
-              className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#17C3B2]/10 text-[#17C3B2]"
+              className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#23D3EE]/10 text-[#23D3EE]"
             >
               {tag.trim()}
             </span>
@@ -799,7 +799,7 @@ const ClientCard = ({
       <div className="flex items-center justify-between pt-4 border-t border-slate-100">
         <div>
           <p className="text-xs text-slate-400">Revenue</p>
-          <p className="font-semibold text-[#0D2342]">
+          <p className="font-semibold text-[#0F172A]">
             {formatCurrency(client.totalRevenue)}
           </p>
         </div>
@@ -1128,12 +1128,12 @@ const ClientListPage = () => {
             <div className="flex items-center gap-2 text-sm">
               <button
                 onClick={() => navigate("/dashboard")}
-                className="text-slate-400 hover:text-[#17C3B2] transition-colors"
+                className="text-slate-400 hover:text-[#23D3EE] transition-colors"
               >
                 Dashboard
               </button>
               <ChevronRight size={14} className="text-slate-300" />
-              <span className="font-semibold text-[#17C3B2]">Clients</span>
+              <span className="font-semibold text-[#23D3EE]">Clients</span>
             </div>
 
             {/* Right - Actions */}
@@ -1142,7 +1142,7 @@ const ClientListPage = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => navigate("/client-list/add")}
-                className="flex items-center gap-2 px-4 py-2.5 bg-[#17C3B2] text-white text-sm font-medium rounded-xl shadow-lg shadow-[#17C3B2]/25 hover:bg-[#17C3B2]/90 transition-colors"
+                className="flex items-center gap-2 px-4 py-2.5 bg-[#23D3EE] text-white text-sm font-medium rounded-xl shadow-lg shadow-[#23D3EE]/25 hover:bg-[#23D3EE]/90 transition-colors"
               >
                 <Plus size={16} />
                 <span>Add Client</span>
@@ -1162,12 +1162,12 @@ const ClientListPage = () => {
               {/* User */}
               <div className="flex items-center gap-3 pl-3 ml-3 border-l border-slate-200">
                 <div className="text-right hidden sm:block">
-                  <p className="text-sm font-semibold text-[#0D2342]">
+                  <p className="text-sm font-semibold text-[#0F172A]">
                     {user ? `${user.firstName} ${user.lastName}` : "Guest User"}
                   </p>
                   <p className="text-xs text-slate-400">Administrator</p>
                 </div>
-                <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-[#17C3B2] via-[#17C3B2]/80 to-[#C9A14A] flex items-center justify-center text-white font-bold shadow-lg">
+                <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-[#23D3EE] via-[#23D3EE]/80 to-[#FBBF23] flex items-center justify-center text-white font-bold shadow-lg">
                   {user ? (user.firstName[0] + user.lastName[0]).toUpperCase() : "GU"}
                 </div>
               </div>
@@ -1183,10 +1183,10 @@ const ClientListPage = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#0D2342] via-[#0D2342] to-[#17C3B2]/30 p-8"
+            className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#0F172A] via-[#0F172A] to-[#23D3EE]/30 p-8"
           >
-            <div className="absolute top-0 right-0 w-64 h-64 bg-[#17C3B2]/10 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 left-1/2 w-48 h-48 bg-[#C9A14A]/10 rounded-full blur-3xl" />
+            <div className="absolute top-0 right-0 w-64 h-64 bg-[#23D3EE]/10 rounded-full blur-3xl" />
+            <div className="absolute bottom-0 left-1/2 w-48 h-48 bg-[#FBBF23]/10 rounded-full blur-3xl" />
 
             <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
               <div>
@@ -1196,17 +1196,17 @@ const ClientListPage = () => {
                   transition={{ delay: 0.2 }}
                   className="flex items-center gap-2 mb-3"
                 >
-                  <Sparkles size={20} className="text-[#C9A14A]" />
-                  <span className="text-[#C9A14A] text-sm font-medium">
+                  <Sparkles size={20} className="text-[#FBBF23]" />
+                  <span className="text-[#FBBF23] text-sm font-medium">
                     Client Management
                   </span>
                 </motion.div>
                 <h1 className="text-3xl lg:text-4xl font-bold text-white mb-2">
-                  Client <span className="text-[#17C3B2]">Directory</span>
+                  Client <span className="text-[#23D3EE]">Directory</span>
                 </h1>
                 <p className="text-slate-300 text-lg max-w-xl">
                   Manage your client relationships. You have{" "}
-                  <span className="text-[#17C3B2] font-semibold">
+                  <span className="text-[#23D3EE] font-semibold">
                     {stats.total} clients
                   </span>{" "}
                   in your database.
@@ -1312,7 +1312,7 @@ const ClientListPage = () => {
                     placeholder="Search clients..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-64 h-10 pl-10 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+                    className="w-64 h-10 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
                   />
                 </div>
 
@@ -1357,13 +1357,13 @@ const ClientListPage = () => {
                   onClick={() => setShowFilters(!showFilters)}
                   className={cn(
                     "h-10 rounded-xl border-slate-200",
-                    showFilters && "border-[#17C3B2] bg-[#17C3B2]/5"
+                    showFilters && "border-[#23D3EE] bg-[#23D3EE]/5"
                   )}
                 >
                   <SlidersHorizontal size={14} className="mr-2" />
                   Filters
                   {activeFiltersCount > 0 && (
-                    <span className="ml-2 px-1.5 py-0.5 rounded-full bg-[#17C3B2] text-white text-[10px] font-bold">
+                    <span className="ml-2 px-1.5 py-0.5 rounded-full bg-[#23D3EE] text-white text-[10px] font-bold">
                       {activeFiltersCount}
                     </span>
                   )}
@@ -1392,9 +1392,9 @@ const ClientListPage = () => {
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.9 }}
-                      className="flex items-center gap-2 px-3 py-1.5 bg-[#17C3B2]/10 rounded-xl"
+                      className="flex items-center gap-2 px-3 py-1.5 bg-[#23D3EE]/10 rounded-xl"
                     >
-                      <span className="text-sm font-medium text-[#17C3B2]">
+                      <span className="text-sm font-medium text-[#23D3EE]">
                         {selectedClients.length} selected
                       </span>
                       <Button
@@ -1454,7 +1454,7 @@ const ClientListPage = () => {
                     className={cn(
                       "p-2 rounded-lg transition-colors",
                       viewMode === "table"
-                        ? "bg-white text-[#17C3B2] shadow-sm"
+                        ? "bg-white text-[#23D3EE] shadow-sm"
                         : "text-slate-400 hover:text-slate-600"
                     )}
                   >
@@ -1465,7 +1465,7 @@ const ClientListPage = () => {
                     className={cn(
                       "p-2 rounded-lg transition-colors",
                       viewMode === "grid"
-                        ? "bg-white text-[#17C3B2] shadow-sm"
+                        ? "bg-white text-[#23D3EE] shadow-sm"
                         : "text-slate-400 hover:text-slate-600"
                     )}
                   >
@@ -1496,7 +1496,7 @@ const ClientListPage = () => {
                   className="flex flex-wrap gap-2 pt-4 mt-4 border-t border-slate-100"
                 >
                   {searchTerm && (
-                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#17C3B2]/10 text-[#17C3B2] text-sm">
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#23D3EE]/10 text-[#23D3EE] text-sm">
                       Search: "{searchTerm}"
                       <button onClick={() => setSearchTerm("")}>
                         <X size={12} />
@@ -1504,7 +1504,7 @@ const ClientListPage = () => {
                     </span>
                   )}
                   {filters.status !== "all" && (
-                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#17C3B2]/10 text-[#17C3B2] text-sm">
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#23D3EE]/10 text-[#23D3EE] text-sm">
                       Status: {filters.status}
                       <button onClick={() => setFilters({ ...filters, status: "all" })}>
                         <X size={12} />
@@ -1512,7 +1512,7 @@ const ClientListPage = () => {
                     </span>
                   )}
                   {filters.category !== "all" && (
-                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#17C3B2]/10 text-[#17C3B2] text-sm">
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#23D3EE]/10 text-[#23D3EE] text-sm">
                       Category: {filters.category}
                       <button onClick={() => setFilters({ ...filters, category: "all" })}>
                         <X size={12} />
@@ -1533,8 +1533,8 @@ const ClientListPage = () => {
           >
             {isLoading ? (
               <div className="flex flex-col items-center justify-center py-20">
-                <div className="w-16 h-16 rounded-2xl bg-[#17C3B2]/10 flex items-center justify-center mb-4">
-                  <Loader2 className="w-8 h-8 text-[#17C3B2] animate-spin" />
+                <div className="w-16 h-16 rounded-2xl bg-[#23D3EE]/10 flex items-center justify-center mb-4">
+                  <Loader2 className="w-8 h-8 text-[#23D3EE] animate-spin" />
                 </div>
                 <p className="text-slate-500">Loading clients...</p>
               </div>
@@ -1543,7 +1543,7 @@ const ClientListPage = () => {
                 <div className="w-20 h-20 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
                   <Users size={32} className="text-slate-300" />
                 </div>
-                <h3 className="text-lg font-semibold text-[#0D2342] mb-2">
+                <h3 className="text-lg font-semibold text-[#0F172A] mb-2">
                   No clients found
                 </h3>
                 <p className="text-slate-500 mb-4">
@@ -1557,7 +1557,7 @@ const ClientListPage = () => {
                       ? clearFilters()
                       : navigate("/client-list/add")
                   }
-                  className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl"
+                  className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl"
                 >
                   {searchTerm || activeFiltersCount > 0 ? (
                     <>
@@ -1586,7 +1586,7 @@ const ClientListPage = () => {
                             selectedClients.length === paginatedClients.length
                           }
                           onCheckedChange={handleSelectAll}
-                          className="border-slate-300 data-[state=checked]:bg-[#17C3B2] data-[state=checked]:border-[#17C3B2]"
+                          className="border-slate-300 data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
                         />
                       </th>
 
@@ -1604,7 +1604,7 @@ const ClientListPage = () => {
                           {col.sortable ? (
                             <button
                               onClick={() => handleSort(col.key)}
-                              className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider hover:text-[#17C3B2] transition-colors group"
+                              className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider hover:text-[#23D3EE] transition-colors group"
                             >
                               {col.label}
                               <ArrowUpDown
@@ -1612,7 +1612,7 @@ const ClientListPage = () => {
                                 className={cn(
                                   "transition-colors",
                                   sortConfig?.key === col.key
-                                    ? "text-[#17C3B2]"
+                                    ? "text-[#23D3EE]"
                                     : "text-slate-300 group-hover:text-slate-400"
                                 )}
                               />
@@ -1688,15 +1688,15 @@ const ClientListPage = () => {
                 <div className="flex items-center gap-4">
                   <p className="text-sm text-slate-500">
                     Showing{" "}
-                    <span className="font-semibold text-[#0D2342]">
+                    <span className="font-semibold text-[#0F172A]">
                       {(currentPage - 1) * pageSize + 1}
                     </span>{" "}
                     to{" "}
-                    <span className="font-semibold text-[#0D2342]">
+                    <span className="font-semibold text-[#0F172A]">
                       {Math.min(currentPage * pageSize, filteredClients.length)}
                     </span>{" "}
                     of{" "}
-                    <span className="font-semibold text-[#0D2342]">
+                    <span className="font-semibold text-[#0F172A]">
                       {filteredClients.length}
                     </span>{" "}
                     results
@@ -1768,7 +1768,7 @@ const ClientListPage = () => {
                           className={cn(
                             "h-8 w-8 rounded-lg text-sm font-medium transition-colors",
                             currentPage === pageNum
-                              ? "bg-[#17C3B2] text-white"
+                              ? "bg-[#23D3EE] text-white"
                               : "text-slate-600 hover:bg-slate-100"
                           )}
                         >
@@ -1810,18 +1810,18 @@ const ClientListPage = () => {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-slate-400">
             <div className="flex items-center gap-2">
               <span>© {new Date().getFullYear()}</span>
-              <span className="font-semibold text-[#0D2342]">Yoursoft</span>
-              <span className="text-[#17C3B2] font-semibold">Digital</span>
+              <span className="font-semibold text-[#0F172A]">Yoursoft</span>
+              <span className="text-[#23D3EE] font-semibold">Digital</span>
               <span>• All rights reserved</span>
             </div>
             <div className="flex items-center gap-4">
-              <a href="#" className="hover:text-[#17C3B2] transition-colors">
+              <a href="#" className="hover:text-[#23D3EE] transition-colors">
                 Privacy
               </a>
-              <a href="#" className="hover:text-[#17C3B2] transition-colors">
+              <a href="#" className="hover:text-[#23D3EE] transition-colors">
                 Terms
               </a>
-              <a href="#" className="hover:text-[#17C3B2] transition-colors">
+              <a href="#" className="hover:text-[#23D3EE] transition-colors">
                 Support
               </a>
             </div>
@@ -1838,12 +1838,12 @@ const ClientListPage = () => {
             <div className="w-12 h-12 rounded-2xl bg-red-100 flex items-center justify-center mb-4">
               <Trash2 className="w-6 h-6 text-red-600" />
             </div>
-            <AlertDialogTitle className="text-xl font-bold text-[#0D2342]">
+            <AlertDialogTitle className="text-xl font-bold text-[#0F172A]">
               Delete Client
             </AlertDialogTitle>
             <AlertDialogDescription className="text-slate-500">
               Are you sure you want to delete{" "}
-              <span className="font-semibold text-[#0D2342]">
+              <span className="font-semibold text-[#0F172A]">
                 {clientToDelete?.clientName}
               </span>
               ? This action cannot be undone and will permanently remove all
@@ -1887,12 +1887,12 @@ const ClientListPage = () => {
             <div className="w-12 h-12 rounded-2xl bg-red-100 flex items-center justify-center mb-4">
               <Trash2 className="w-6 h-6 text-red-600" />
             </div>
-            <AlertDialogTitle className="text-xl font-bold text-[#0D2342]">
+            <AlertDialogTitle className="text-xl font-bold text-[#0F172A]">
               Delete {selectedClients.length} Clients
             </AlertDialogTitle>
             <AlertDialogDescription className="text-slate-500">
               Are you sure you want to delete{" "}
-              <span className="font-semibold text-[#0D2342]">
+              <span className="font-semibold text-[#0F172A]">
                 {selectedClients.length} clients
               </span>
               ? This action cannot be undone.
@@ -1937,8 +1937,8 @@ const ClientListPage = () => {
           {quickViewClient && (
             <>
               {/* Header */}
-              <div className="relative p-6 bg-gradient-to-r from-[#0D2342] to-[#17C3B2]/30">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-[#17C3B2]/10 rounded-full blur-2xl" />
+              <div className="relative p-6 bg-gradient-to-r from-[#0F172A] to-[#23D3EE]/30">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-[#23D3EE]/10 rounded-full blur-2xl" />
                 <div className="relative flex items-center gap-4">
                   {quickViewClient.profileImage ? (
                     <img
@@ -1976,7 +1976,7 @@ const ClientListPage = () => {
                         {quickViewClient.status}
                       </span>
                       {quickViewClient.clientCategory && (
-                        <span className="px-2 py-0.5 rounded-full bg-[#C9A14A]/20 text-[#C9A14A] text-xs font-semibold">
+                        <span className="px-2 py-0.5 rounded-full bg-[#FBBF23]/20 text-[#FBBF23] text-xs font-semibold">
                           {quickViewClient.clientCategory}
                         </span>
                       )}
@@ -1993,7 +1993,7 @@ const ClientListPage = () => {
                     <p className="text-xs text-slate-400 uppercase tracking-wider">
                       Primary Contact
                     </p>
-                    <p className="font-medium text-[#0D2342]">
+                    <p className="font-medium text-[#0F172A]">
                       {quickViewClient.primaryContactName || "-"}
                     </p>
                   </div>
@@ -2001,7 +2001,7 @@ const ClientListPage = () => {
                     <p className="text-xs text-slate-400 uppercase tracking-wider">
                       Email
                     </p>
-                    <p className="font-medium text-[#0D2342]">
+                    <p className="font-medium text-[#0F172A]">
                       {quickViewClient.primaryEmail}
                     </p>
                   </div>
@@ -2009,7 +2009,7 @@ const ClientListPage = () => {
                     <p className="text-xs text-slate-400 uppercase tracking-wider">
                       Phone
                     </p>
-                    <p className="font-medium text-[#0D2342]">
+                    <p className="font-medium text-[#0F172A]">
                       {quickViewClient.phone || "-"}
                     </p>
                   </div>
@@ -2017,7 +2017,7 @@ const ClientListPage = () => {
                     <p className="text-xs text-slate-400 uppercase tracking-wider">
                       Location
                     </p>
-                    <p className="font-medium text-[#0D2342]">
+                    <p className="font-medium text-[#0F172A]">
                       {quickViewClient.city}
                       {quickViewClient.state && `, ${quickViewClient.state}`}
                     </p>
@@ -2075,7 +2075,7 @@ const ClientListPage = () => {
                       {quickViewClient.tags.split(",").map((tag, i) => (
                         <span
                           key={i}
-                          className="px-3 py-1 rounded-full bg-[#17C3B2]/10 text-[#17C3B2] text-sm font-medium"
+                          className="px-3 py-1 rounded-full bg-[#23D3EE]/10 text-[#23D3EE] text-sm font-medium"
                         >
                           {tag.trim()}
                         </span>
@@ -2091,7 +2091,7 @@ const ClientListPage = () => {
                       setQuickViewClient(null);
                       navigate(`/client-list/${quickViewClient.id}`);
                     }}
-                    className="flex-1 bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl"
+                    className="flex-1 bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl"
                   >
                     <Eye size={16} className="mr-2" />
                     View Full Profile

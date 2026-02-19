@@ -171,14 +171,14 @@ interface AppUser {
 // ============================================
 
 const themeOptions: ThemeOption[] = [
-  { id: "default", name: "Default", primaryColor: "#17C3B2", secondaryColor: "#C9A14A", preview: "bg-gradient-to-br from-[#17C3B2] to-[#C9A14A]" },
+  { id: "default", name: "Default", primaryColor: "#23D3EE", secondaryColor: "#FBBF23", preview: "bg-gradient-to-br from-[#23D3EE] to-[#6366F1]" },
   { id: "ocean", name: "Ocean", primaryColor: "#0EA5E9", secondaryColor: "#06B6D4", preview: "bg-gradient-to-br from-sky-500 to-cyan-500" },
   { id: "forest", name: "Forest", primaryColor: "#22C55E", secondaryColor: "#10B981", preview: "bg-gradient-to-br from-green-500 to-emerald-500" },
   { id: "sunset", name: "Sunset", primaryColor: "#F97316", secondaryColor: "#EAB308", preview: "bg-gradient-to-br from-orange-500 to-yellow-500" },
   { id: "purple", name: "Purple", primaryColor: "#8B5CF6", secondaryColor: "#A855F7", preview: "bg-gradient-to-br from-violet-500 to-purple-500" },
   { id: "rose", name: "Rose", primaryColor: "#F43F5E", secondaryColor: "#EC4899", preview: "bg-gradient-to-br from-rose-500 to-pink-500" },
   { id: "slate", name: "Slate", primaryColor: "#64748B", secondaryColor: "#475569", preview: "bg-gradient-to-br from-slate-500 to-slate-600" },
-  { id: "midnight", name: "Midnight", primaryColor: "#0D2342", secondaryColor: "#1E3A5F", preview: "bg-gradient-to-br from-[#0D2342] to-[#1E3A5F]" },
+  { id: "midnight", name: "Midnight", primaryColor: "#0F172A", secondaryColor: "#1E3A5F", preview: "bg-gradient-to-br from-[#0F172A] to-[#1E3A5F]" },
 ];
 
 const layoutOptions: LayoutOption[] = [
@@ -249,9 +249,9 @@ const StatCard = ({
   delay?: number;
 }) => {
   const colorClasses = {
-    teal: { bg: "bg-[#17C3B2]", light: "bg-[#17C3B2]/10", text: "text-[#17C3B2]" },
-    gold: { bg: "bg-[#C9A14A]", light: "bg-[#C9A14A]/10", text: "text-[#C9A14A]" },
-    navy: { bg: "bg-[#0D2342]", light: "bg-[#0D2342]/10", text: "text-[#0D2342]" },
+    teal: { bg: "bg-[#23D3EE]", light: "bg-[#23D3EE]/10", text: "text-[#23D3EE]" },
+    gold: { bg: "bg-[#FBBF23]", light: "bg-[#FBBF23]/10", text: "text-[#FBBF23]" },
+    navy: { bg: "bg-[#0F172A]", light: "bg-[#0F172A]/10", text: "text-[#0F172A]" },
     purple: { bg: "bg-purple-500", light: "bg-purple-500/10", text: "text-purple-500" },
     green: { bg: "bg-green-500", light: "bg-green-500/10", text: "text-green-500" },
     blue: { bg: "bg-blue-500", light: "bg-blue-500/10", text: "text-blue-500" },
@@ -265,7 +265,7 @@ const StatCard = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
       whileHover={{ y: -4 }}
-      className="relative bg-white rounded-2xl p-5 border border-slate-200 hover:border-[#17C3B2]/30 hover:shadow-xl hover:shadow-[#17C3B2]/5 transition-all overflow-hidden group"
+      className="relative bg-white rounded-2xl p-5 border border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5 transition-all overflow-hidden group"
     >
       <div className={cn("absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-10 group-hover:opacity-20 transition-all", colors.bg)} />
 
@@ -273,7 +273,7 @@ const StatCard = ({
         <div>
           <p className="text-sm text-slate-500 mb-1">{title}</p>
           <div className="flex items-baseline gap-2">
-            <p className="text-2xl font-bold text-[#0D2342]">{value}</p>
+            <p className="text-2xl font-bold text-[#0F172A]">{value}</p>
             {trend && (
               <span className={cn(
                 "flex items-center text-xs font-semibold",
@@ -320,10 +320,10 @@ const WorkspaceBookingCard = ({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:border-[#17C3B2]/30 hover:shadow-xl hover:shadow-[#17C3B2]/5 transition-all"
+      className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5 transition-all"
     >
       {/* Header with gradient */}
-      <div className="relative h-24 bg-gradient-to-r from-[#17C3B2] to-[#C9A14A] p-5">
+      <div className="relative h-24 bg-gradient-to-r from-[#23D3EE] to-[#6366F1] p-5">
         <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-10" />
         <div className="relative flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -354,15 +354,15 @@ const WorkspaceBookingCard = ({
         {/* Quick Stats */}
         <div className="grid grid-cols-3 gap-3 mb-5">
           <div className="bg-slate-50 rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-[#0D2342]">{pages.length}</p>
+            <p className="text-2xl font-bold text-[#0F172A]">{pages.length}</p>
             <p className="text-xs text-slate-500">Event Types</p>
           </div>
           <div className="bg-slate-50 rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-[#17C3B2]">{totalViews}</p>
+            <p className="text-2xl font-bold text-[#23D3EE]">{totalViews}</p>
             <p className="text-xs text-slate-500">Total Views</p>
           </div>
           <div className="bg-slate-50 rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-[#C9A14A]">{totalBookings}</p>
+            <p className="text-2xl font-bold text-[#FBBF23]">{totalBookings}</p>
             <p className="text-xs text-slate-500">Bookings</p>
           </div>
         </div>
@@ -371,7 +371,7 @@ const WorkspaceBookingCard = ({
         <div className="flex gap-2 mb-5">
           <Button
             onClick={onOpenPage}
-            className="flex-1 bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl h-10"
+            className="flex-1 bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl h-10"
           >
             <ExternalLink size={16} className="mr-2" />
             Open Page
@@ -400,7 +400,7 @@ const WorkspaceBookingCard = ({
             value={searchTerm}
             onChange={(e) => onSearch(e.target.value)}
             placeholder="Search event types..."
-            className="h-10 pl-9 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+            className="h-10 pl-9 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
           />
         </div>
 
@@ -417,11 +417,11 @@ const WorkspaceBookingCard = ({
                   transition={{ delay: index * 0.05 }}
                   className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 cursor-pointer group transition-colors"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#17C3B2]/20 to-[#C9A14A]/20 flex items-center justify-center">
-                    <CalendarDays size={18} className="text-[#17C3B2]" />
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#23D3EE]/20 to-[#FBBF23]/20 flex items-center justify-center">
+                    <CalendarDays size={18} className="text-[#23D3EE]" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-[#0D2342] truncate group-hover:text-[#17C3B2] transition-colors">
+                    <p className="font-medium text-[#0F172A] truncate group-hover:text-[#23D3EE] transition-colors">
                       {page.title}
                     </p>
                     <p className="text-xs text-slate-400 truncate">
@@ -472,7 +472,7 @@ const UserBookingCard = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
       whileHover={{ y: -4 }}
-      className="bg-white rounded-2xl border border-slate-200 p-5 hover:border-[#17C3B2]/30 hover:shadow-xl hover:shadow-[#17C3B2]/5 transition-all group"
+      className="bg-white rounded-2xl border border-slate-200 p-5 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5 transition-all group"
     >
       <div className="flex items-start gap-4">
         {/* Avatar */}
@@ -484,7 +484,7 @@ const UserBookingCard = ({
               className="w-14 h-14 rounded-xl object-cover"
             />
           ) : (
-            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] flex items-center justify-center text-white font-bold text-lg">
+            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white font-bold text-lg">
               {getInitials(displayName)}
             </div>
           )}
@@ -496,7 +496,7 @@ const UserBookingCard = ({
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-semibold text-[#0D2342] truncate group-hover:text-[#17C3B2] transition-colors">
+            <h3 className="font-semibold text-[#0F172A] truncate group-hover:text-[#23D3EE] transition-colors">
               {displayName}
             </h3>
             {user.role && (
@@ -543,11 +543,11 @@ const UserBookingCard = ({
       {/* Stats Row */}
       <div className="flex items-center gap-4 mt-4 pt-4 border-t border-slate-100">
         <div className="flex items-center gap-1.5 text-sm">
-          <CalendarDays size={14} className="text-[#17C3B2]" />
+          <CalendarDays size={14} className="text-[#23D3EE]" />
           <span className="text-slate-600">{user.eventTypesCount || 0} Events</span>
         </div>
         <div className="flex items-center gap-1.5 text-sm">
-          <CalendarCheck size={14} className="text-[#C9A14A]" />
+          <CalendarCheck size={14} className="text-[#FBBF23]" />
           <span className="text-slate-600">{user.totalBookings || 0} Bookings</span>
         </div>
       </div>
@@ -557,7 +557,7 @@ const UserBookingCard = ({
         <Button
           onClick={onOpenPage}
           size="sm"
-          className="flex-1 bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl h-9"
+          className="flex-1 bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl h-9"
         >
           <ExternalLink size={14} className="mr-1.5" />
           Open Page
@@ -611,9 +611,9 @@ const ThemeCustomizationDialog = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[700px] p-0 rounded-2xl overflow-hidden">
         {/* Header */}
-        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#17C3B2]/10 to-transparent">
+        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#23D3EE]/10 to-transparent">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-[#0D2342]">
+            <DialogTitle className="text-xl font-bold text-[#0F172A]">
               Customize Booking Page
             </DialogTitle>
             <DialogDescription className="text-slate-500">
@@ -647,17 +647,17 @@ const ThemeCustomizationDialog = ({
                     className={cn(
                       "relative p-3 rounded-xl border-2 transition-all",
                       selectedTheme === theme.id
-                        ? "border-[#17C3B2] bg-[#17C3B2]/5"
+                        ? "border-[#23D3EE] bg-[#23D3EE]/5"
                         : "border-slate-200 hover:border-slate-300"
                     )}
                   >
                     <div className={cn("w-full h-12 rounded-lg mb-2", theme.preview)} />
-                    <p className="text-sm font-medium text-[#0D2342]">{theme.name}</p>
+                    <p className="text-sm font-medium text-[#0F172A]">{theme.name}</p>
                     {selectedTheme === theme.id && (
                       <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        className="absolute -top-2 -right-2 w-6 h-6 bg-[#17C3B2] rounded-full flex items-center justify-center"
+                        className="absolute -top-2 -right-2 w-6 h-6 bg-[#23D3EE] rounded-full flex items-center justify-center"
                       >
                         <CheckCircle2 size={14} className="text-white" />
                       </motion.div>
@@ -681,20 +681,20 @@ const ThemeCustomizationDialog = ({
                       className={cn(
                         "relative p-4 rounded-xl border-2 text-left transition-all",
                         selectedLayout === layout.id
-                          ? "border-[#17C3B2] bg-[#17C3B2]/5"
+                          ? "border-[#23D3EE] bg-[#23D3EE]/5"
                           : "border-slate-200 hover:border-slate-300"
                       )}
                     >
                       <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center mb-3">
                         <Icon size={20} className="text-slate-600" />
                       </div>
-                      <p className="font-medium text-[#0D2342] mb-1">{layout.name}</p>
+                      <p className="font-medium text-[#0F172A] mb-1">{layout.name}</p>
                       <p className="text-xs text-slate-500">{layout.description}</p>
                       {selectedLayout === layout.id && (
                         <motion.div
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
-                          className="absolute -top-2 -right-2 w-6 h-6 bg-[#17C3B2] rounded-full flex items-center justify-center"
+                          className="absolute -top-2 -right-2 w-6 h-6 bg-[#23D3EE] rounded-full flex items-center justify-center"
                         >
                           <CheckCircle2 size={14} className="text-white" />
                         </motion.div>
@@ -709,13 +709,13 @@ const ThemeCustomizationDialog = ({
           {/* Preview Section */}
           <div className="mt-6 pt-6 border-t border-slate-100">
             <div className="flex items-center justify-between mb-4">
-              <h4 className="font-semibold text-[#0D2342]">Preview</h4>
+              <h4 className="font-semibold text-[#0F172A]">Preview</h4>
               <div className="flex items-center p-1 bg-slate-100 rounded-lg">
                 <button
                   onClick={() => setPreviewMode("desktop")}
                   className={cn(
                     "p-1.5 rounded-md transition-all",
-                    previewMode === "desktop" ? "bg-white text-[#17C3B2] shadow-sm" : "text-slate-500"
+                    previewMode === "desktop" ? "bg-white text-[#23D3EE] shadow-sm" : "text-slate-500"
                   )}
                 >
                   <Monitor size={16} />
@@ -724,7 +724,7 @@ const ThemeCustomizationDialog = ({
                   onClick={() => setPreviewMode("mobile")}
                   className={cn(
                     "p-1.5 rounded-md transition-all",
-                    previewMode === "mobile" ? "bg-white text-[#17C3B2] shadow-sm" : "text-slate-500"
+                    previewMode === "mobile" ? "bg-white text-[#23D3EE] shadow-sm" : "text-slate-500"
                   )}
                 >
                   <Smartphone size={16} />
@@ -743,7 +743,7 @@ const ThemeCustomizationDialog = ({
                 {/* Mini Preview Header */}
                 <div className={cn(
                   "h-12",
-                  themeOptions.find(t => t.id === selectedTheme)?.preview || "bg-gradient-to-r from-[#17C3B2] to-[#C9A14A]"
+                  themeOptions.find(t => t.id === selectedTheme)?.preview || "bg-gradient-to-r from-[#23D3EE] to-[#6366F1]"
                 )} />
                 {/* Mini Preview Content */}
                 <div className="p-3">
@@ -770,7 +770,7 @@ const ThemeCustomizationDialog = ({
           </Button>
           <Button
             onClick={handleSave}
-            className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl"
+            className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl"
           >
             <Sparkles size={16} className="mr-2" />
             Save Changes
@@ -818,9 +818,9 @@ const ShareDialog = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[450px] p-0 rounded-2xl overflow-hidden">
-        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#17C3B2]/10 to-transparent">
+        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#23D3EE]/10 to-transparent">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-[#0D2342]">
+            <DialogTitle className="text-xl font-bold text-[#0F172A]">
               Share Booking Page
             </DialogTitle>
             <DialogDescription className="text-slate-500">
@@ -848,7 +848,7 @@ const ShareDialog = ({
                   "rounded-xl h-11 px-4 transition-all",
                   copied
                     ? "bg-green-500 hover:bg-green-500 text-white"
-                    : "bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white"
+                    : "bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white"
                 )}
               >
                 {copied ? (
@@ -876,7 +876,7 @@ const ShareDialog = ({
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={option.action}
-                  className="flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-200 hover:border-[#17C3B2]/30 hover:bg-[#17C3B2]/5 transition-all"
+                  className="flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-200 hover:border-[#23D3EE]/30 hover:bg-[#23D3EE]/5 transition-all"
                 >
                   <option.icon size={20} className="text-slate-600" />
                   <span className="text-sm text-slate-600">{option.name}</span>
@@ -890,7 +890,7 @@ const ShareDialog = ({
             <Label className="text-sm font-medium text-slate-600">QR Code</Label>
             <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl">
               <div className="w-24 h-24 bg-white rounded-lg border border-slate-200 flex items-center justify-center">
-                <QrCode size={60} className="text-[#0D2342]" />
+                <QrCode size={60} className="text-[#0F172A]" />
               </div>
               <div className="flex-1">
                 <p className="text-sm text-slate-600 mb-3">
@@ -955,9 +955,9 @@ const CreateBookingPageDialog = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px] p-0 rounded-2xl overflow-hidden">
-        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#17C3B2]/10 to-transparent">
+        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#23D3EE]/10 to-transparent">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-[#0D2342]">
+            <DialogTitle className="text-xl font-bold text-[#0F172A]">
               Create Booking Page
             </DialogTitle>
             <DialogDescription className="text-slate-500">
@@ -979,7 +979,7 @@ const CreateBookingPageDialog = ({
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="e.g., 30 Minute Meeting"
                 required
-                className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+                className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
               />
             </div>
           </div>
@@ -992,7 +992,7 @@ const CreateBookingPageDialog = ({
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               placeholder="Describe what this booking is for..."
               rows={3}
-              className="rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20 resize-none"
+              className="rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20 resize-none"
             />
           </div>
 
@@ -1010,7 +1010,7 @@ const CreateBookingPageDialog = ({
                 {users.map((user) => (
                   <SelectItem key={user.id} value={String(user.id)} className="rounded-lg">
                     <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] flex items-center justify-center text-white text-xs font-semibold">
+                      <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white text-xs font-semibold">
                         {getInitials(user.fullName || user.fullname || "")}
                       </div>
                       {user.fullName || user.fullname}
@@ -1032,7 +1032,7 @@ const CreateBookingPageDialog = ({
                 value={formData.slug}
                 onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") })}
                 placeholder={generateSlug(formData.title) || "custom-url"}
-                className="h-11 pl-14 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+                className="h-11 pl-14 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
               />
             </div>
           </div>
@@ -1051,7 +1051,7 @@ const CreateBookingPageDialog = ({
                   className={cn(
                     "relative p-2 rounded-lg border transition-all",
                     formData.themeName === theme.id
-                      ? "border-[#17C3B2] bg-[#17C3B2]/5"
+                      ? "border-[#23D3EE] bg-[#23D3EE]/5"
                       : "border-slate-200 hover:border-slate-300"
                   )}
                 >
@@ -1060,7 +1060,7 @@ const CreateBookingPageDialog = ({
                     <motion.div
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      className="absolute -top-1 -right-1 w-4 h-4 bg-[#17C3B2] rounded-full flex items-center justify-center"
+                      className="absolute -top-1 -right-1 w-4 h-4 bg-[#23D3EE] rounded-full flex items-center justify-center"
                     >
                       <CheckCircle2 size={10} className="text-white" />
                     </motion.div>
@@ -1077,7 +1077,7 @@ const CreateBookingPageDialog = ({
             <Button
               type="submit"
               disabled={isLoading || !formData.title.trim()}
-              className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl shadow-lg shadow-[#17C3B2]/25"
+              className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl shadow-lg shadow-[#23D3EE]/25"
             >
               {isLoading ? (
                 <Loader2 size={16} className="animate-spin mr-2" />
@@ -1103,16 +1103,16 @@ const EmptyState = ({ onAdd }: { onAdd: () => void }) => (
     animate={{ opacity: 1, y: 0 }}
     className="flex flex-col items-center justify-center py-16 px-4"
   >
-    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#17C3B2]/10 to-[#C9A14A]/10 flex items-center justify-center mb-6">
-      <CalendarDays size={40} className="text-[#17C3B2]" />
+    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#23D3EE]/10 to-[#FBBF23]/10 flex items-center justify-center mb-6">
+      <CalendarDays size={40} className="text-[#23D3EE]" />
     </div>
-    <h3 className="text-xl font-semibold text-[#0D2342] mb-2">No booking pages yet</h3>
+    <h3 className="text-xl font-semibold text-[#0F172A] mb-2">No booking pages yet</h3>
     <p className="text-slate-500 text-center max-w-sm mb-6">
       Create your first booking page to start accepting appointments and meetings from clients.
     </p>
     <Button
       onClick={onAdd}
-      className="bg-gradient-to-r from-[#17C3B2] to-[#17C3B2]/90 hover:from-[#17C3B2]/90 hover:to-[#17C3B2] text-white rounded-xl shadow-lg shadow-[#17C3B2]/25"
+      className="bg-gradient-to-r from-[#23D3EE] to-[#23D3EE]/90 hover:from-[#23D3EE]/90 hover:to-[#23D3EE] text-white rounded-xl shadow-lg shadow-[#23D3EE]/25"
     >
       <Plus size={18} className="mr-2" />
       Create Your First Booking Page
@@ -1307,7 +1307,7 @@ const BookingPagesPage = () => {
             <div className="flex items-center gap-2 text-sm">
               <span className="text-slate-400">Dashboard</span>
               <ChevronRight size={16} className="text-slate-300" />
-              <span className="font-medium text-[#0D2342]">Booking Pages</span>
+              <span className="font-medium text-[#0F172A]">Booking Pages</span>
             </div>
 
             <div className="flex items-center gap-3">
@@ -1317,11 +1317,11 @@ const BookingPagesPage = () => {
                 className="relative p-2 rounded-xl hover:bg-slate-100 text-slate-600 transition-colors"
               >
                 <Bell size={20} />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#17C3B2] rounded-full" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#23D3EE] rounded-full" />
               </motion.button>
 
               <div className="flex items-center gap-3 pl-3 border-l border-slate-200">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] flex items-center justify-center text-white font-semibold text-sm">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white font-semibold text-sm">
                   {user ? getInitials(`${user.firstName} ${user.lastName}`) : "?"}
                 </div>
               </div>
@@ -1340,11 +1340,11 @@ const BookingPagesPage = () => {
             className="flex items-center justify-between"
           >
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] flex items-center justify-center shadow-lg shadow-[#17C3B2]/25">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center shadow-lg shadow-[#23D3EE]/25">
                 <CalendarDays size={24} className="text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-[#0D2342]">Booking Pages</h1>
+                <h1 className="text-2xl font-bold text-[#0F172A]">Booking Pages</h1>
                 <p className="text-slate-500">Manage your scheduling pages and event types</p>
               </div>
             </div>
@@ -1361,7 +1361,7 @@ const BookingPagesPage = () => {
 
               <Button
                 onClick={() => setCreateDialogOpen(true)}
-                className="bg-gradient-to-r from-[#17C3B2] to-[#17C3B2]/90 hover:from-[#17C3B2]/90 hover:to-[#17C3B2] text-white rounded-xl shadow-lg shadow-[#17C3B2]/25 px-5"
+                className="bg-gradient-to-r from-[#23D3EE] to-[#23D3EE]/90 hover:from-[#23D3EE]/90 hover:to-[#23D3EE] text-white rounded-xl shadow-lg shadow-[#23D3EE]/25 px-5"
               >
                 <Plus size={18} className="mr-2" />
                 New Booking Page
@@ -1411,7 +1411,7 @@ const BookingPagesPage = () => {
           {/* Main Content */}
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-20">
-              <Loader2 size={40} className="animate-spin text-[#17C3B2] mb-4" />
+              <Loader2 size={40} className="animate-spin text-[#23D3EE] mb-4" />
               <p className="text-slate-500">Loading booking pages...</p>
             </div>
           ) : pages.length === 0 && users.length === 0 ? (
@@ -1431,7 +1431,7 @@ const BookingPagesPage = () => {
               {/* Right: User Booking Pages */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-lg font-semibold text-[#0D2342]">Team Members</h2>
+                  <h2 className="text-lg font-semibold text-[#0F172A]">Team Members</h2>
                   <span className="text-sm text-slate-400">{users.length} members</span>
                 </div>
 
@@ -1486,8 +1486,8 @@ const BookingPagesPage = () => {
             {/* Recent Bookings */}
             <div className="col-span-2 bg-white rounded-2xl border border-slate-200 p-5">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-[#0D2342]">Recent Bookings</h3>
-                <Button variant="ghost" size="sm" className="text-[#17C3B2] hover:text-[#17C3B2]/80">
+                <h3 className="font-semibold text-[#0F172A]">Recent Bookings</h3>
+                <Button variant="ghost" size="sm" className="text-[#23D3EE] hover:text-[#23D3EE]/80">
                   View All
                   <ChevronRight size={16} className="ml-1" />
                 </Button>
@@ -1507,12 +1507,12 @@ const BookingPagesPage = () => {
                     transition={{ delay: index * 0.1 }}
                     className="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors group"
                   >
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#17C3B2]/20 to-[#C9A14A]/20 flex items-center justify-center text-[#17C3B2] font-semibold text-sm">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#23D3EE]/20 to-[#FBBF23]/20 flex items-center justify-center text-[#23D3EE] font-semibold text-sm">
                       {getInitials(booking.name)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="font-medium text-[#0D2342] truncate">{booking.name}</p>
+                        <p className="font-medium text-[#0F172A] truncate">{booking.name}</p>
                         <span className={cn(
                           "px-2 py-0.5 rounded-full text-[10px] font-semibold",
                           booking.status === "confirmed"
@@ -1525,7 +1525,7 @@ const BookingPagesPage = () => {
                       <p className="text-sm text-slate-500">{booking.event}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium text-[#0D2342]">{booking.time.split(", ")[0]}</p>
+                      <p className="text-sm font-medium text-[#0F172A]">{booking.time.split(", ")[0]}</p>
                       <p className="text-xs text-slate-400">{booking.time.split(", ")[1]}</p>
                     </div>
                     <ChevronRight size={16} className="text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -1536,7 +1536,7 @@ const BookingPagesPage = () => {
 
             {/* Quick Links */}
             <div className="bg-white rounded-2xl border border-slate-200 p-5">
-              <h3 className="font-semibold text-[#0D2342] mb-4">Quick Actions</h3>
+              <h3 className="font-semibold text-[#0F172A] mb-4">Quick Actions</h3>
 
               <div className="space-y-2">
                 {[
@@ -1547,11 +1547,11 @@ const BookingPagesPage = () => {
                   { icon: BarChart3, label: "View Analytics", color: "gold", action: () => navigate("/analytics") },
                 ].map((action, index) => {
                   const colorClasses: Record<string, string> = {
-                    teal: "bg-[#17C3B2]/10 text-[#17C3B2]",
+                    teal: "bg-[#23D3EE]/10 text-[#23D3EE]",
                     purple: "bg-purple-500/10 text-purple-500",
                     blue: "bg-blue-500/10 text-blue-500",
                     slate: "bg-slate-100 text-slate-600",
-                    gold: "bg-[#C9A14A]/10 text-[#C9A14A]",
+                    gold: "bg-[#FBBF23]/10 text-[#FBBF23]",
                   };
 
                   return (
@@ -1564,7 +1564,7 @@ const BookingPagesPage = () => {
                       <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center", colorClasses[action.color])}>
                         <action.icon size={18} />
                       </div>
-                      <span className="font-medium text-slate-600 group-hover:text-[#0D2342] transition-colors">
+                      <span className="font-medium text-slate-600 group-hover:text-[#0F172A] transition-colors">
                         {action.label}
                       </span>
                       <ChevronRight size={16} className="ml-auto text-slate-300 group-hover:text-slate-500 transition-colors" />
@@ -1574,13 +1574,13 @@ const BookingPagesPage = () => {
               </div>
 
               {/* Pro Tip */}
-              <div className="mt-5 p-4 bg-gradient-to-br from-[#17C3B2]/5 to-[#C9A14A]/5 rounded-xl border border-[#17C3B2]/20">
+              <div className="mt-5 p-4 bg-gradient-to-br from-[#23D3EE]/5 to-[#FBBF23]/5 rounded-xl border border-[#23D3EE]/20">
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-[#17C3B2]/10 flex items-center justify-center flex-shrink-0">
-                    <Sparkles size={16} className="text-[#17C3B2]" />
+                  <div className="w-8 h-8 rounded-lg bg-[#23D3EE]/10 flex items-center justify-center flex-shrink-0">
+                    <Sparkles size={16} className="text-[#23D3EE]" />
                   </div>
                   <div>
-                    <p className="font-medium text-[#0D2342] text-sm mb-1">Pro Tip</p>
+                    <p className="font-medium text-[#0F172A] text-sm mb-1">Pro Tip</p>
                     <p className="text-xs text-slate-500 leading-relaxed">
                       Add your booking page link to your email signature to increase meeting requests by up to 40%.
                     </p>
@@ -1599,7 +1599,7 @@ const BookingPagesPage = () => {
           >
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h3 className="font-semibold text-[#0D2342]">Booking Analytics</h3>
+                <h3 className="font-semibold text-[#0F172A]">Booking Analytics</h3>
                 <p className="text-sm text-slate-500">Last 7 days performance</p>
               </div>
               <div className="flex items-center gap-2">
@@ -1625,19 +1625,19 @@ const BookingPagesPage = () => {
               {/* Mini Stat Cards */}
               <div className="bg-slate-50 rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <MousePointerClick size={16} className="text-[#17C3B2]" />
+                  <MousePointerClick size={16} className="text-[#23D3EE]" />
                   <span className="text-sm text-slate-500">Page Visits</span>
                 </div>
-                <p className="text-2xl font-bold text-[#0D2342]">1,247</p>
+                <p className="text-2xl font-bold text-[#0F172A]">1,247</p>
                 <span className="text-xs text-green-600">+18% vs last week</span>
               </div>
 
               <div className="bg-slate-50 rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <CalendarCheck size={16} className="text-[#C9A14A]" />
+                  <CalendarCheck size={16} className="text-[#FBBF23]" />
                   <span className="text-sm text-slate-500">Bookings</span>
                 </div>
-                <p className="text-2xl font-bold text-[#0D2342]">89</p>
+                <p className="text-2xl font-bold text-[#0F172A]">89</p>
                 <span className="text-xs text-green-600">+12% vs last week</span>
               </div>
 
@@ -1646,7 +1646,7 @@ const BookingPagesPage = () => {
                   <Timer size={16} className="text-purple-500" />
                   <span className="text-sm text-slate-500">Avg Duration</span>
                 </div>
-                <p className="text-2xl font-bold text-[#0D2342]">32m</p>
+                <p className="text-2xl font-bold text-[#0F172A]">32m</p>
                 <span className="text-xs text-slate-400">No change</span>
               </div>
 
@@ -1655,7 +1655,7 @@ const BookingPagesPage = () => {
                   <Activity size={16} className="text-blue-500" />
                   <span className="text-sm text-slate-500">Show Rate</span>
                 </div>
-                <p className="text-2xl font-bold text-[#0D2342]">94%</p>
+                <p className="text-2xl font-bold text-[#0F172A]">94%</p>
                 <span className="text-xs text-green-600">+2% vs last week</span>
               </div>
             </div>
@@ -1671,7 +1671,7 @@ const BookingPagesPage = () => {
 
             {/* Top Performing Events */}
             <div className="mt-6 pt-6 border-t border-slate-100">
-              <h4 className="font-medium text-[#0D2342] mb-4">Top Performing Event Types</h4>
+              <h4 className="font-medium text-[#0F172A] mb-4">Top Performing Event Types</h4>
               <div className="space-y-3">
                 {[
                   { name: "30 Minute Meeting", bookings: 45, percentage: 50 },
@@ -1679,12 +1679,12 @@ const BookingPagesPage = () => {
                   { name: "Consultation Call", bookings: 16, percentage: 18 },
                 ].map((event, index) => (
                   <div key={index} className="flex items-center gap-4">
-                    <div className="w-8 h-8 rounded-lg bg-[#17C3B2]/10 flex items-center justify-center text-[#17C3B2] font-semibold text-sm">
+                    <div className="w-8 h-8 rounded-lg bg-[#23D3EE]/10 flex items-center justify-center text-[#23D3EE] font-semibold text-sm">
                       {index + 1}
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium text-[#0D2342]">{event.name}</span>
+                        <span className="text-sm font-medium text-[#0F172A]">{event.name}</span>
                         <span className="text-sm text-slate-500">{event.bookings} bookings</span>
                       </div>
                       <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
@@ -1692,7 +1692,7 @@ const BookingPagesPage = () => {
                           initial={{ width: 0 }}
                           animate={{ width: `${event.percentage}%` }}
                           transition={{ duration: 0.5, delay: index * 0.1 }}
-                          className="h-full bg-gradient-to-r from-[#17C3B2] to-[#C9A14A] rounded-full"
+                          className="h-full bg-gradient-to-r from-[#23D3EE] to-[#6366F1] rounded-full"
                         />
                       </div>
                     </div>

@@ -54,8 +54,8 @@ export function ChatWindow({
     return (
       <div className="flex-1 flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="w-24 h-24 bg-[#17C3B2]/10 rounded-full flex items-center justify-center mx-auto mb-6">
-            <MessageSquare size={40} className="text-[#17C3B2]" />
+          <div className="w-24 h-24 bg-[#23D3EE]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <MessageSquare size={40} className="text-[#23D3EE]" />
           </div>
           <h3 className="text-xl font-semibold text-gray-800 mb-2">Welcome to Messages</h3>
           <p className="text-gray-500 max-w-sm">
@@ -65,7 +65,7 @@ export function ChatWindow({
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={onNewChat}
-            className="mt-6 px-6 py-3 bg-[#17C3B2] text-white rounded-xl font-medium hover:bg-[#17C3B2]/90 transition-all shadow-lg shadow-[#17C3B2]/20"
+            className="mt-6 px-6 py-3 bg-[#23D3EE] text-white rounded-xl font-medium hover:bg-[#23D3EE]/90 transition-all shadow-lg shadow-[#23D3EE]/20"
           >
             <Plus size={18} className="inline mr-2" />
             Start New Chat
@@ -129,7 +129,7 @@ export function ChatWindow({
               className="flex gap-3"
             >
               <Avatar className="w-8 h-8 rounded-lg">
-                <AvatarFallback className="bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] text-white text-xs rounded-lg">
+                <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#6366F1] text-white text-xs rounded-lg">
                   {getInitials(otherParticipant.name)}
                 </AvatarFallback>
               </Avatar>

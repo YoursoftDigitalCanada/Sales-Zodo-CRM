@@ -106,7 +106,7 @@ export function NewChatDialog({
                       <div className="relative">
                         <Avatar className="w-10 h-10 rounded-xl">
                           <AvatarImage src={user.avatar} />
-                          <AvatarFallback className="bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] text-white rounded-xl">
+                          <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#6366F1] text-white rounded-xl">
                             {getInitials(user.name)}
                           </AvatarFallback>
                         </Avatar>
@@ -139,12 +139,12 @@ export function NewChatDialog({
                   {selectedUsers.map((user) => (
                     <div
                       key={user.id}
-                      className="flex items-center gap-1 px-2 py-1 bg-[#17C3B2]/10 text-[#17C3B2] rounded-full text-sm"
+                      className="flex items-center gap-1 px-2 py-1 bg-[#23D3EE]/10 text-[#23D3EE] rounded-full text-sm"
                     >
                       <span>{user.name.split(" ")[0]}</span>
                       <button
                         onClick={() => toggleUserSelection(user)}
-                        className="w-4 h-4 flex items-center justify-center hover:bg-[#17C3B2]/20 rounded-full"
+                        className="w-4 h-4 flex items-center justify-center hover:bg-[#23D3EE]/20 rounded-full"
                       >
                         ×
                       </button>
@@ -175,13 +175,13 @@ export function NewChatDialog({
                         onClick={() => toggleUserSelection(user)}
                         className={cn(
                           "w-full flex items-center gap-3 p-3 rounded-xl transition-all",
-                          isSelected ? "bg-[#17C3B2]/10" : "hover:bg-gray-50"
+                          isSelected ? "bg-[#23D3EE]/10" : "hover:bg-gray-50"
                         )}
                       >
                         <div className="relative">
                           <Avatar className="w-8 h-8 rounded-lg">
                             <AvatarImage src={user.avatar} />
-                            <AvatarFallback className="bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] text-white text-xs rounded-lg">
+                            <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#6366F1] text-white text-xs rounded-lg">
                               {getInitials(user.name)}
                             </AvatarFallback>
                           </Avatar>
@@ -190,7 +190,7 @@ export function NewChatDialog({
                           {user.name}
                         </span>
                         {isSelected && (
-                          <div className="w-5 h-5 bg-[#17C3B2] rounded-full flex items-center justify-center">
+                          <div className="w-5 h-5 bg-[#23D3EE] rounded-full flex items-center justify-center">
                             <Check size={12} className="text-white" />
                           </div>
                         )}
@@ -203,7 +203,7 @@ export function NewChatDialog({
               <Button
                 onClick={handleCreateGroup}
                 disabled={!groupName.trim() || selectedUsers.length === 0}
-                className="w-full bg-[#17C3B2] hover:bg-[#17C3B2]/90 disabled:opacity-50"
+                className="w-full bg-[#23D3EE] hover:bg-[#23D3EE]/90 disabled:opacity-50"
               >
                 Create Group ({selectedUsers.length} selected)
               </Button>

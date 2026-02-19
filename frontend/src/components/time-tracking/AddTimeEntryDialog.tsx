@@ -160,7 +160,7 @@ export function AddTimeEntryDialog({
                           className="w-2 h-2 rounded-full"
                           style={{
                             backgroundColor:
-                              project.color === "teal" ? "#17C3B2" : project.color,
+                              project.color === "teal" ? "#23D3EE" : project.color,
                           }}
                         />
                         {project.name}
@@ -252,7 +252,7 @@ export function AddTimeEntryDialog({
           {/* Billable Toggle */}
           <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
             <div className="flex items-center gap-2">
-              <DollarSign size={18} className={formData.isBillable ? "text-[#17C3B2]" : "text-gray-400"} />
+              <DollarSign size={18} className={formData.isBillable ? "text-[#23D3EE]" : "text-gray-400"} />
               <div>
                 <p className="text-sm font-medium text-gray-700">Billable</p>
                 <p className="text-xs text-gray-500">Track this time as billable</p>
@@ -261,7 +261,7 @@ export function AddTimeEntryDialog({
             <Switch
               checked={formData.isBillable}
               onCheckedChange={(checked) => setFormData({ ...formData, isBillable: checked })}
-              className="data-[state=checked]:bg-[#17C3B2]"
+              className="data-[state=checked]:bg-[#23D3EE]"
             />
           </div>
 
@@ -282,7 +282,7 @@ export function AddTimeEntryDialog({
                 />
               </div>
               {earnings > 0 && (
-                <p className="text-sm text-[#17C3B2]">
+                <p className="text-sm text-[#23D3EE]">
                   Earnings: ${earnings.toFixed(2)}
                 </p>
               )}
@@ -297,7 +297,7 @@ export function AddTimeEntryDialog({
           <Button
             onClick={handleSubmit}
             disabled={!isValid}
-            className="bg-[#17C3B2] hover:bg-[#17C3B2]/90"
+            className="bg-[#23D3EE] hover:bg-[#23D3EE]/90"
           >
             {editingEntry ? "Update Entry" : "Add Entry"}
           </Button>

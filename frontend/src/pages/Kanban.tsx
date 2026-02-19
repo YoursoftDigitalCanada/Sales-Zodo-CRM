@@ -92,18 +92,18 @@ interface User {
 
 const columnColors = {
   teal: {
-    bg: "bg-[#17C3B2]/10",
-    border: "border-[#17C3B2]/20",
-    text: "text-[#17C3B2]",
-    dot: "bg-[#17C3B2]",
-    header: "from-[#17C3B2]/20 to-[#17C3B2]/5",
+    bg: "bg-[#23D3EE]/10",
+    border: "border-[#23D3EE]/20",
+    text: "text-[#23D3EE]",
+    dot: "bg-[#23D3EE]",
+    header: "from-[#23D3EE]/20 to-[#23D3EE]/5",
   },
   gold: {
-    bg: "bg-[#C9A14A]/10",
-    border: "border-[#C9A14A]/20",
-    text: "text-[#C9A14A]",
-    dot: "bg-[#C9A14A]",
-    header: "from-[#C9A14A]/20 to-[#C9A14A]/5",
+    bg: "bg-[#FBBF23]/10",
+    border: "border-[#FBBF23]/20",
+    text: "text-[#FBBF23]",
+    dot: "bg-[#FBBF23]",
+    header: "from-[#FBBF23]/20 to-[#FBBF23]/5",
   },
   purple: {
     bg: "bg-purple-500/10",
@@ -190,7 +190,7 @@ const TaskCard = ({
       onDragEnd={handleDragEnd}
       className={cn(
         "group bg-white rounded-xl border border-slate-200 p-4 cursor-grab active:cursor-grabbing",
-        "hover:border-[#17C3B2]/30 hover:shadow-lg hover:shadow-[#17C3B2]/5 transition-all",
+        "hover:border-[#23D3EE]/30 hover:shadow-lg hover:shadow-[#23D3EE]/5 transition-all",
         isDragging && "shadow-2xl rotate-2"
       )}
     >
@@ -231,7 +231,7 @@ const TaskCard = ({
               className="rounded-lg"
               disabled={task.status === "todo"}
             >
-              <Circle size={14} className="mr-2 text-[#17C3B2]" />
+              <Circle size={14} className="mr-2 text-[#23D3EE]" />
               Move to To Do
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -239,7 +239,7 @@ const TaskCard = ({
               className="rounded-lg"
               disabled={task.status === "in-progress"}
             >
-              <Timer size={14} className="mr-2 text-[#C9A14A]" />
+              <Timer size={14} className="mr-2 text-[#FBBF23]" />
               Move to In Progress
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -271,7 +271,7 @@ const TaskCard = ({
       </div>
 
       {/* Task Title */}
-      <h4 className="font-semibold text-[#0D2342] mb-2 line-clamp-2">
+      <h4 className="font-semibold text-[#0F172A] mb-2 line-clamp-2">
         {task.title}
       </h4>
 
@@ -310,7 +310,7 @@ const TaskCard = ({
         {/* Assignee */}
         {task.assignee ? (
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#17C3B2] to-[#C9A14A] flex items-center justify-center text-white text-[10px] font-bold">
+            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white text-[10px] font-bold">
               {task.assignee
                 .split(" ")
                 .map((n) => n[0])
@@ -417,7 +417,7 @@ const KanbanColumnComponent = ({
               <Icon size={18} className={colors.text} />
             </div>
             <div>
-              <h3 className="font-semibold text-[#0D2342]">{column.title}</h3>
+              <h3 className="font-semibold text-[#0F172A]">{column.title}</h3>
               <p className="text-xs text-slate-400">
                 {column.tasks.length} {column.tasks.length === 1 ? "task" : "tasks"}
               </p>
@@ -565,9 +565,9 @@ const TaskDialog = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px] rounded-2xl p-0 overflow-hidden">
         {/* Header */}
-        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#17C3B2]/10 to-transparent">
+        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#23D3EE]/10 to-transparent">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-[#0D2342]">
+            <DialogTitle className="text-xl font-bold text-[#0F172A]">
               {task ? "Edit Task" : "Create New Task"}
             </DialogTitle>
           </DialogHeader>
@@ -586,7 +586,7 @@ const TaskDialog = ({
               }
               placeholder="Enter task title..."
               required
-              className="h-11 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+              className="h-11 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
             />
           </div>
 
@@ -601,7 +601,7 @@ const TaskDialog = ({
                 setFormData({ ...formData, description: e.target.value })
               }
               placeholder="Add a description..."
-              className="min-h-[100px] rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20 resize-none"
+              className="min-h-[100px] rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20 resize-none"
             />
           </div>
 
@@ -621,13 +621,13 @@ const TaskDialog = ({
                 <SelectContent className="rounded-xl">
                   <SelectItem value="todo" className="rounded-lg">
                     <div className="flex items-center gap-2">
-                      <Circle size={12} className="text-[#17C3B2]" />
+                      <Circle size={12} className="text-[#23D3EE]" />
                       To Do
                     </div>
                   </SelectItem>
                   <SelectItem value="in-progress" className="rounded-lg">
                     <div className="flex items-center gap-2">
-                      <Timer size={12} className="text-[#C9A14A]" />
+                      <Timer size={12} className="text-[#FBBF23]" />
                       In Progress
                     </div>
                   </SelectItem>
@@ -689,7 +689,7 @@ const TaskDialog = ({
                   setFormData({ ...formData, assignee: e.target.value })
                 }
                 placeholder="Enter name..."
-                className="h-11 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+                className="h-11 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
               />
             </div>
 
@@ -701,7 +701,7 @@ const TaskDialog = ({
                 onChange={(e) =>
                   setFormData({ ...formData, dueDate: e.target.value })
                 }
-                className="h-11 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+                className="h-11 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
               />
             </div>
           </div>
@@ -717,7 +717,7 @@ const TaskDialog = ({
                 setFormData({ ...formData, tags: e.target.value })
               }
               placeholder="design, frontend, urgent..."
-              className="h-11 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-2 focus:ring-[#17C3B2]/20"
+              className="h-11 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
             />
           </div>
 
@@ -734,7 +734,7 @@ const TaskDialog = ({
             <Button
               type="submit"
               disabled={isLoading || !formData.title.trim()}
-              className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl shadow-lg shadow-[#17C3B2]/25"
+              className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl shadow-lg shadow-[#23D3EE]/25"
             >
               {isLoading ? (
                 <Loader2 size={16} className="animate-spin mr-2" />
@@ -1027,8 +1027,8 @@ const KanbanPage: React.FC = () => {
             animate={{ opacity: 1, scale: 1 }}
             className="text-center"
           >
-            <div className="w-16 h-16 rounded-2xl bg-[#17C3B2]/10 flex items-center justify-center mx-auto mb-4">
-              <Loader2 className="w-8 h-8 text-[#17C3B2] animate-spin" />
+            <div className="w-16 h-16 rounded-2xl bg-[#23D3EE]/10 flex items-center justify-center mx-auto mb-4">
+              <Loader2 className="w-8 h-8 text-[#23D3EE] animate-spin" />
             </div>
             <p className="text-slate-500 font-medium">Loading Kanban Board...</p>
           </motion.div>
@@ -1064,7 +1064,7 @@ const KanbanPage: React.FC = () => {
                   placeholder="Search tasks..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-64 h-11 pl-10 pr-4 rounded-xl bg-slate-100 border-none text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#17C3B2]/20 focus:bg-white transition-all"
+                  className="w-64 h-11 pl-10 pr-4 rounded-xl bg-slate-100 border-none text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#23D3EE]/20 focus:bg-white transition-all"
                 />
               </div>
 
@@ -1102,7 +1102,7 @@ const KanbanPage: React.FC = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => openAddDialog()}
-                className="flex items-center gap-2 px-4 py-2.5 bg-[#17C3B2] text-white text-sm font-medium rounded-xl shadow-lg shadow-[#17C3B2]/25 hover:bg-[#17C3B2]/90 transition-colors"
+                className="flex items-center gap-2 px-4 py-2.5 bg-[#23D3EE] text-white text-sm font-medium rounded-xl shadow-lg shadow-[#23D3EE]/25 hover:bg-[#23D3EE]/90 transition-colors"
               >
                 <Plus size={16} />
                 <span>Add Task</span>
@@ -1122,12 +1122,12 @@ const KanbanPage: React.FC = () => {
               {/* User Avatar */}
               <div className="flex items-center gap-3 pl-3 ml-3 border-l border-slate-200">
                 <div className="text-right hidden sm:block">
-                  <p className="text-sm font-semibold text-[#0D2342]">
+                  <p className="text-sm font-semibold text-[#0F172A]">
                     {user ? `${user.firstName} ${user.lastName}` : "Guest User"}
                   </p>
                   <p className="text-xs text-slate-400">Administrator</p>
                 </div>
-                <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-[#17C3B2] via-[#17C3B2]/80 to-[#C9A14A] flex items-center justify-center text-white font-bold shadow-lg">
+                <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-[#23D3EE] via-[#23D3EE]/80 to-[#FBBF23] flex items-center justify-center text-white font-bold shadow-lg">
                   {user
                     ? (user.firstName[0] + user.lastName[0]).toUpperCase()
                     : "GU"}
@@ -1145,11 +1145,11 @@ const KanbanPage: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#0D2342] via-[#0D2342] to-[#17C3B2]/30 p-8"
+            className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#0F172A] via-[#0F172A] to-[#23D3EE]/30 p-8"
           >
             {/* Background Decorations */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-[#17C3B2]/10 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 left-1/2 w-48 h-48 bg-[#C9A14A]/10 rounded-full blur-3xl" />
+            <div className="absolute top-0 right-0 w-64 h-64 bg-[#23D3EE]/10 rounded-full blur-3xl" />
+            <div className="absolute bottom-0 left-1/2 w-48 h-48 bg-[#FBBF23]/10 rounded-full blur-3xl" />
 
             <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
               <div>
@@ -1159,17 +1159,17 @@ const KanbanPage: React.FC = () => {
                   transition={{ delay: 0.2 }}
                   className="flex items-center gap-2 mb-3"
                 >
-                  <Sparkles size={20} className="text-[#C9A14A]" />
-                  <span className="text-[#C9A14A] text-sm font-medium">
+                  <Sparkles size={20} className="text-[#FBBF23]" />
+                  <span className="text-[#FBBF23] text-sm font-medium">
                     Project Management
                   </span>
                 </motion.div>
                 <h1 className="text-3xl lg:text-4xl font-bold text-white mb-2">
-                  Kanban <span className="text-[#17C3B2]">Board</span>
+                  Kanban <span className="text-[#23D3EE]">Board</span>
                 </h1>
                 <p className="text-slate-300 text-lg max-w-xl">
                   Drag and drop tasks to organize your workflow. You have{" "}
-                  <span className="text-[#17C3B2] font-semibold">
+                  <span className="text-[#23D3EE] font-semibold">
                     {totalTasks} tasks
                   </span>{" "}
                   across all columns.
@@ -1187,7 +1187,7 @@ const KanbanPage: React.FC = () => {
                     className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-4 min-w-[120px]"
                   >
                     <div className="flex items-center gap-2 mb-2">
-                      <col.icon size={14} className="text-[#17C3B2]" />
+                      <col.icon size={14} className="text-[#23D3EE]" />
                       <span className="text-xs text-slate-400">{col.title}</span>
                     </div>
                     <span className="text-2xl font-bold text-white">
@@ -1226,18 +1226,18 @@ const KanbanPage: React.FC = () => {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-slate-400">
             <div className="flex items-center gap-2">
               <span>© {new Date().getFullYear()}</span>
-              <span className="font-semibold text-[#0D2342]">Yoursoft</span>
-              <span className="text-[#17C3B2] font-semibold">Digital</span>
+              <span className="font-semibold text-[#0F172A]">Yoursoft</span>
+              <span className="text-[#23D3EE] font-semibold">Digital</span>
               <span>• All rights reserved</span>
             </div>
             <div className="flex items-center gap-4">
-              <a href="#" className="hover:text-[#17C3B2] transition-colors">
+              <a href="#" className="hover:text-[#23D3EE] transition-colors">
                 Privacy
               </a>
-              <a href="#" className="hover:text-[#17C3B2] transition-colors">
+              <a href="#" className="hover:text-[#23D3EE] transition-colors">
                 Terms
               </a>
-              <a href="#" className="hover:text-[#17C3B2] transition-colors">
+              <a href="#" className="hover:text-[#23D3EE] transition-colors">
                 Support
               </a>
             </div>

@@ -51,7 +51,7 @@ export const LeaveBalanceCard: React.FC<LeaveBalanceCardProps> = ({ balances }) 
               
               <div className="flex items-center gap-4 text-xs text-gray-500">
                 <div className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-[#17C3B2]" />
+                  <span className="w-2 h-2 rounded-full bg-[#23D3EE]" />
                   <span>Used: {balance.used}</span>
                 </div>
                 {balance.pending > 0 && (

@@ -234,7 +234,7 @@ const groupColors = [
   { id: "yellow", color: "#F59E0B", name: "Yellow" },
   { id: "red", color: "#EF4444", name: "Red" },
   { id: "pink", color: "#EC4899", name: "Pink" },
-  { id: "teal", color: "#17C3B2", name: "Teal" },
+  { id: "teal", color: "#23D3EE", name: "Teal" },
   { id: "orange", color: "#F97316", name: "Orange" },
   { id: "indigo", color: "#6366F1", name: "Indigo" },
   { id: "gray", color: "#64748B", name: "Gray" },
@@ -487,7 +487,7 @@ const initialGroups: ClientGroup[] = [
     id: "group_6",
     name: "New Clients (2024)",
     description: "Clients who joined in 2024",
-    color: "#17C3B2",
+    color: "#23D3EE",
     icon: "users",
     type: "segment",
     members: sampleClients.filter((c) => c.joinedDate >= new Date("2024-01-01")),
@@ -595,7 +595,7 @@ const StatCard = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
       whileHover={{ y: -4 }}
-      className="relative bg-white rounded-2xl p-5 border border-slate-200 hover:border-[#17C3B2]/30 hover:shadow-xl hover:shadow-[#17C3B2]/5 transition-all overflow-hidden group"
+      className="relative bg-white rounded-2xl p-5 border border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5 transition-all overflow-hidden group"
     >
       <div
         className="absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-10 group-hover:opacity-20 transition-all"
@@ -605,7 +605,7 @@ const StatCard = ({
       <div className="relative flex items-start justify-between">
         <div>
           <p className="text-sm text-slate-500 mb-1">{title}</p>
-          <p className="text-2xl font-bold text-[#0D2342]">
+          <p className="text-2xl font-bold text-[#0F172A]">
             {typeof value === "number" ? formatNumber(value) : value}
           </p>
           {subtitle && <p className="text-xs text-slate-400 mt-1">{subtitle}</p>}
@@ -667,7 +667,7 @@ const GroupCard = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
       whileHover={{ y: -4 }}
-      className="relative bg-white rounded-2xl border border-slate-200 overflow-hidden hover:border-[#17C3B2]/30 hover:shadow-xl hover:shadow-[#17C3B2]/5 transition-all group cursor-pointer"
+      className="relative bg-white rounded-2xl border border-slate-200 overflow-hidden hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5 transition-all group cursor-pointer"
       onClick={onClick}
     >
       {/* Color Header */}
@@ -737,7 +737,7 @@ const GroupCard = ({
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-semibold text-[#0D2342] truncate group-hover:text-[#17C3B2] transition-colors">
+              <h3 className="font-semibold text-[#0F172A] truncate group-hover:text-[#23D3EE] transition-colors">
                 {group.name}
               </h3>
               {group.isDefault && (
@@ -767,15 +767,15 @@ const GroupCard = ({
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3 mb-4">
           <div className="text-center p-3 bg-slate-50 rounded-xl">
-            <p className="text-lg font-bold text-[#0D2342]">{group.memberCount}</p>
+            <p className="text-lg font-bold text-[#0F172A]">{group.memberCount}</p>
             <p className="text-xs text-slate-500">Members</p>
           </div>
           <div className="text-center p-3 bg-slate-50 rounded-xl">
-            <p className="text-lg font-bold text-[#17C3B2]">{formatCurrency(group.totalRevenue)}</p>
+            <p className="text-lg font-bold text-[#23D3EE]">{formatCurrency(group.totalRevenue)}</p>
             <p className="text-xs text-slate-500">Total Revenue</p>
           </div>
           <div className="text-center p-3 bg-slate-50 rounded-xl">
-            <p className="text-lg font-bold text-[#C9A14A]">{formatCurrency(group.avgRevenue)}</p>
+            <p className="text-lg font-bold text-[#FBBF23]">{formatCurrency(group.avgRevenue)}</p>
             <p className="text-xs text-slate-500">Avg Revenue</p>
           </div>
         </div>
@@ -838,7 +838,7 @@ const GroupTableRow = ({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <p className="font-medium text-[#0D2342] group-hover:text-[#17C3B2] transition-colors">
+              <p className="font-medium text-[#0F172A] group-hover:text-[#23D3EE] transition-colors">
                 {group.name}
               </p>
               {group.isDefault && (
@@ -876,11 +876,11 @@ const GroupTableRow = ({
               </Avatar>
             ))}
           </div>
-          <span className="text-sm font-medium text-[#0D2342]">{group.memberCount}</span>
+          <span className="text-sm font-medium text-[#0F172A]">{group.memberCount}</span>
         </div>
       </TableCell>
       <TableCell>
-        <span className="font-semibold text-[#0D2342]">
+        <span className="font-semibold text-[#0F172A]">
           {formatCurrency(group.totalRevenue)}
         </span>
       </TableCell>
@@ -1016,9 +1016,9 @@ const GroupFormDialog = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px] p-0 rounded-2xl overflow-hidden">
-        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#17C3B2]/10 to-transparent">
+        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#23D3EE]/10 to-transparent">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-[#0D2342]">
+            <DialogTitle className="text-xl font-bold text-[#0F172A]">
               {group ? "Edit Group" : "Create New Group"}
             </DialogTitle>
             <DialogDescription className="text-slate-500">
@@ -1089,7 +1089,7 @@ const GroupFormDialog = ({
                   className={cn(
                     "w-10 h-10 rounded-lg flex items-center justify-center transition-all",
                     formData.icon === key
-                      ? "ring-2 ring-[#17C3B2] ring-offset-2"
+                      ? "ring-2 ring-[#23D3EE] ring-offset-2"
                       : "hover:bg-slate-100"
                   )}
                   style={{
@@ -1116,7 +1116,7 @@ const GroupFormDialog = ({
                   onClick={() => setFormData({ ...formData, color: c.color })}
                   className={cn(
                     "w-8 h-8 rounded-lg transition-all",
-                    formData.color === c.color && "ring-2 ring-offset-2 ring-[#17C3B2]"
+                    formData.color === c.color && "ring-2 ring-offset-2 ring-[#23D3EE]"
                   )}
                   style={{ backgroundColor: c.color }}
                   title={c.name}
@@ -1136,7 +1136,7 @@ const GroupFormDialog = ({
                 <SelectedIcon size={24} style={{ color: formData.color }} />
               </div>
               <div>
-                <p className="font-semibold text-[#0D2342]">
+                <p className="font-semibold text-[#0F172A]">
                   {formData.name || "Group Name"}
                 </p>
                 <span
@@ -1154,14 +1154,14 @@ const GroupFormDialog = ({
             <div className="flex items-center gap-3">
               <Zap size={18} className="text-yellow-500" />
               <div>
-                <p className="font-medium text-[#0D2342]">Auto-update Members</p>
+                <p className="font-medium text-[#0F172A]">Auto-update Members</p>
                 <p className="text-xs text-slate-500">Automatically add clients based on rules</p>
               </div>
             </div>
             <Switch
               checked={formData.isAutomatic}
               onCheckedChange={(checked) => setFormData({ ...formData, isAutomatic: checked })}
-              className="data-[state=checked]:bg-[#17C3B2]"
+              className="data-[state=checked]:bg-[#23D3EE]"
             />
           </div>
 
@@ -1172,7 +1172,7 @@ const GroupFormDialog = ({
             <Button
               type="submit"
               disabled={!formData.name.trim()}
-              className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl"
+              className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl"
             >
               {group ? (
                 <>
@@ -1264,7 +1264,7 @@ const ManageMembersDialog = ({
                 <IconComponent size={24} style={{ color: group.color }} />
               </div>
               <div>
-                <DialogTitle className="text-xl font-bold text-[#0D2342]">
+                <DialogTitle className="text-xl font-bold text-[#0F172A]">
                   Manage Members
                 </DialogTitle>
                 <DialogDescription className="text-slate-500">
@@ -1299,14 +1299,14 @@ const ManageMembersDialog = ({
                   className={cn(
                     "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all",
                     isSelected
-                      ? "bg-[#17C3B2]/10 border border-[#17C3B2]/30"
+                      ? "bg-[#23D3EE]/10 border border-[#23D3EE]/30"
                       : "hover:bg-slate-50 border border-transparent"
                   )}
                 >
                   <Checkbox
                     checked={isSelected}
                     onCheckedChange={() => toggleMember(client.id)}
-                    className="data-[state=checked]:bg-[#17C3B2] data-[state=checked]:border-[#17C3B2]"
+                    className="data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
                   />
                   <Avatar className="h-10 w-10">
                     <AvatarImage src={client.avatar} />
@@ -1315,11 +1315,11 @@ const ManageMembersDialog = ({
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-[#0D2342]">{client.name}</p>
+                    <p className="font-medium text-[#0F172A]">{client.name}</p>
                     <p className="text-sm text-slate-500 truncate">{client.company}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-medium text-[#0D2342]">
+                    <p className="text-sm font-medium text-[#0F172A]">
                       {formatCurrency(client.totalRevenue)}
                     </p>
                     <p className="text-xs text-slate-400">
@@ -1327,7 +1327,7 @@ const ManageMembersDialog = ({
                     </p>
                   </div>
                   {isSelected && (
-                    <Check size={16} className="text-[#17C3B2]" />
+                    <Check size={16} className="text-[#23D3EE]" />
                   )}
                 </div>
               );
@@ -1351,7 +1351,7 @@ const ManageMembersDialog = ({
           </Button>
           <Button
             onClick={handleSave}
-            className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl"
+            className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl"
           >
             <Check size={16} className="mr-2" />
             Save Changes
@@ -1408,7 +1408,7 @@ const GroupDetailsDialog = ({
               </div>
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <h2 className="text-2xl font-bold text-[#0D2342]">{group.name}</h2>
+                  <h2 className="text-2xl font-bold text-[#0F172A]">{group.name}</h2>
                   {group.isDefault && (
                     <span className="px-2 py-0.5 bg-slate-200 text-slate-600 text-xs font-medium rounded">
                       Default
@@ -1437,19 +1437,19 @@ const GroupDetailsDialog = ({
           {/* Stats Grid */}
           <div className="grid grid-cols-4 gap-4">
             <div className="p-4 bg-slate-50 rounded-xl text-center">
-              <p className="text-2xl font-bold text-[#0D2342]">{group.memberCount}</p>
+              <p className="text-2xl font-bold text-[#0F172A]">{group.memberCount}</p>
               <p className="text-sm text-slate-500">Total Members</p>
             </div>
             <div className="p-4 bg-green-50 rounded-xl text-center">
               <p className="text-2xl font-bold text-green-600">{activeMembers}</p>
               <p className="text-sm text-slate-500">Active</p>
             </div>
-            <div className="p-4 bg-[#17C3B2]/10 rounded-xl text-center">
-              <p className="text-2xl font-bold text-[#17C3B2]">{formatCurrency(group.totalRevenue)}</p>
+            <div className="p-4 bg-[#23D3EE]/10 rounded-xl text-center">
+              <p className="text-2xl font-bold text-[#23D3EE]">{formatCurrency(group.totalRevenue)}</p>
               <p className="text-sm text-slate-500">Total Revenue</p>
             </div>
-            <div className="p-4 bg-[#C9A14A]/10 rounded-xl text-center">
-              <p className="text-2xl font-bold text-[#C9A14A]">{avgProjects}</p>
+            <div className="p-4 bg-[#FBBF23]/10 rounded-xl text-center">
+              <p className="text-2xl font-bold text-[#FBBF23]">{avgProjects}</p>
               <p className="text-sm text-slate-500">Avg Projects</p>
             </div>
           </div>
@@ -1457,7 +1457,7 @@ const GroupDetailsDialog = ({
           {/* Auto Rules */}
           {group.isAutomatic && group.rules && group.rules.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold text-[#0D2342] mb-3 flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-[#0F172A] mb-3 flex items-center gap-2">
                 <Zap size={16} className="text-yellow-500" />
                 Automatic Membership Rules
               </h3>
@@ -1469,7 +1469,7 @@ const GroupDetailsDialog = ({
                   >
                     <span className="font-medium text-slate-700 capitalize">{rule.field}</span>
                     <span className="text-slate-500">{rule.operator.replace(/([A-Z])/g, ' $1').toLowerCase()}</span>
-                    <span className="font-medium text-[#0D2342]">{rule.value}</span>
+                    <span className="font-medium text-[#0F172A]">{rule.value}</span>
                   </div>
                 ))}
               </div>
@@ -1479,7 +1479,7 @@ const GroupDetailsDialog = ({
           {/* Members List */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-[#0D2342]">
+              <h3 className="text-sm font-semibold text-[#0F172A]">
                 Members ({group.memberCount})
               </h3>
               <Button
@@ -1515,13 +1515,13 @@ const GroupDetailsDialog = ({
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="font-medium text-[#0D2342]">{member.name}</p>
+                            <p className="font-medium text-[#0F172A]">{member.name}</p>
                             <p className="text-xs text-slate-500">{member.email}</p>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell className="text-sm text-slate-600">{member.company}</TableCell>
-                      <TableCell className="font-medium text-[#0D2342]">
+                      <TableCell className="font-medium text-[#0F172A]">
                         {formatCurrency(member.totalRevenue)}
                       </TableCell>
                       <TableCell className="text-sm text-slate-600">{member.projectsCount}</TableCell>
@@ -1555,11 +1555,11 @@ const GroupDetailsDialog = ({
           <div className="pt-4 border-t border-slate-100 grid grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-slate-400">Created by</p>
-              <p className="font-medium text-[#0D2342]">{group.createdBy}</p>
+              <p className="font-medium text-[#0F172A]">{group.createdBy}</p>
             </div>
             <div>
               <p className="text-slate-400">Created on</p>
-              <p className="font-medium text-[#0D2342]">{formatDate(group.createdAt)}</p>
+              <p className="font-medium text-[#0F172A]">{formatDate(group.createdAt)}</p>
             </div>
           </div>
         </div>
@@ -1575,7 +1575,7 @@ const GroupDetailsDialog = ({
           </Button>
           <Button
             onClick={onEdit}
-            className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl gap-2"
+            className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl gap-2"
           >
             <Pencil size={16} />
             Edit Group
@@ -1783,17 +1783,17 @@ return (
           <div className="flex items-center justify-between mb-6">
             <div>
               <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
-                <Link to="/dashboard" className="hover:text-[#17C3B2]">
+                <Link to="/dashboard" className="hover:text-[#23D3EE]">
                   Dashboard
                 </Link>
                 <ChevronRight size={14} />
-                <Link to="/clients" className="hover:text-[#17C3B2]">
+                <Link to="/clients" className="hover:text-[#23D3EE]">
                   Clients
                 </Link>
                 <ChevronRight size={14} />
-                <span className="text-[#0D2342]">Groups</span>
+                <span className="text-[#0F172A]">Groups</span>
               </div>
-              <h1 className="text-2xl font-bold text-[#0D2342]">Client Groups</h1>
+              <h1 className="text-2xl font-bold text-[#0F172A]">Client Groups</h1>
               <p className="text-slate-500 mt-1">
                 Organize and segment your clients for targeted management
               </p>
@@ -1810,7 +1810,7 @@ return (
               </Button>
               <Button
                 onClick={handleCreateGroup}
-                className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl gap-2"
+                className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl gap-2"
               >
                 <Plus size={16} />
                 Create Group
@@ -1846,7 +1846,7 @@ return (
               title="Total Revenue"
               value={formatCurrency(stats.totalRevenue)}
               icon={CircleDollarSign}
-              color="#17C3B2"
+              color="#23D3EE"
               trend={{ value: 12.5, label: "vs last month" }}
               delay={0.15}
             />
@@ -1855,7 +1855,7 @@ return (
               value={stats.topGroup}
               subtitle="by revenue"
               icon={Crown}
-              color="#C9A14A"
+              color="#FBBF23"
               delay={0.2}
             />
           </div>
@@ -1874,7 +1874,7 @@ return (
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search groups..."
-                className="pl-9 h-10 rounded-xl border-slate-200 focus:border-[#17C3B2] focus:ring-[#17C3B2]/20"
+                className="pl-9 h-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-[#23D3EE]/20"
               />
             </div>
 
@@ -1973,7 +1973,7 @@ return (
             <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4">
               <Folder size={32} className="text-slate-400" />
             </div>
-            <h3 className="text-lg font-semibold text-[#0D2342] mb-2">
+            <h3 className="text-lg font-semibold text-[#0F172A] mb-2">
               No groups found
             </h3>
             <p className="text-slate-500 mb-6 text-center max-w-md">
@@ -1983,7 +1983,7 @@ return (
             </p>
             <Button
               onClick={handleCreateGroup}
-              className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white rounded-xl gap-2"
+              className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl gap-2"
             >
               <Plus size={16} />
               Create Group

@@ -104,7 +104,7 @@ export function TypingIndicator({
                 delay: index * 0.15,
                 ease: "easeInOut",
               }}
-              className={cn(config.dot, "bg-[#17C3B2] rounded-full")}
+              className={cn(config.dot, "bg-[#23D3EE] rounded-full")}
             />
           ))}
         </div>
@@ -174,7 +174,7 @@ export function PulseTypingIndicator({ className }: PulseTypingIndicatorProps) {
       {[0, 1, 2].map((index) => (
         <motion.div
           key={index}
-          className="w-2 h-2 bg-[#17C3B2] rounded-full"
+          className="w-2 h-2 bg-[#23D3EE] rounded-full"
           animate={{
             scale: [1, 1.3, 1],
             opacity: [0.5, 1, 0.5],
@@ -200,7 +200,7 @@ interface WaveTypingIndicatorProps {
 }
 
 export function WaveTypingIndicator({ 
-  color = "#17C3B2", 
+  color = "#23D3EE", 
   className 
 }: WaveTypingIndicatorProps) {
   return (

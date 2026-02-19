@@ -140,7 +140,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
                   <div className="relative">
                     <Avatar className="w-24 h-24 border-4 border-gray-100">
                       <AvatarImage src="" />
-                      <AvatarFallback className="bg-[#17C3B2]/10 text-[#17C3B2] text-2xl">
+                      <AvatarFallback className="bg-[#23D3EE]/10 text-[#23D3EE] text-2xl">
                         <User className="w-10 h-10" />
                       </AvatarFallback>
                     </Avatar>
@@ -517,7 +517,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
               </Button>
               <Button 
                 type="submit"
-                className="bg-[#17C3B2] hover:bg-[#17C3B2]/90 text-white"
+                className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white"
               >
                 {editingEmployee ? 'Update Employee' : 'Add Employee'}
               </Button>

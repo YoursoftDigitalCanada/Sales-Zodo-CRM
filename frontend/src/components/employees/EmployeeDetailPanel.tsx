@@ -80,7 +80,7 @@ export const EmployeeDetailPanel: React.FC<EmployeeDetailPanelProps> = ({
                 <div 
                   className="h-32"
                   style={{ 
-                    background: `linear-gradient(135deg, #17C3B2 0%, #0D2342 100%)` 
+                    background: `linear-gradient(135deg, #23D3EE 0%, #0F172A 100%)` 
                   }}
                 />
                 <Button
@@ -95,7 +95,7 @@ export const EmployeeDetailPanel: React.FC<EmployeeDetailPanelProps> = ({
                 <div className="absolute -bottom-16 left-6">
                   <Avatar className="w-32 h-32 border-4 border-white shadow-lg">
                     <AvatarImage src={employee.avatar} />
-                    <AvatarFallback className="text-3xl bg-[#17C3B2] text-white">
+                    <AvatarFallback className="text-3xl bg-[#23D3EE] text-white">
                       {getInitials(employee.firstName, employee.lastName)}
                     </AvatarFallback>
                   </Avatar>
@@ -182,14 +182,14 @@ export const EmployeeDetailPanel: React.FC<EmployeeDetailPanelProps> = ({
                       <div className="grid grid-cols-2 gap-4">
                         <div className="bg-gray-50 rounded-lg p-3">
                           <div className="flex items-center gap-2 mb-1">
-                            <Building2 className="w-4 h-4 text-[#17C3B2]" />
+                            <Building2 className="w-4 h-4 text-[#23D3EE]" />
                             <span className="text-xs text-gray-500">Department</span>
                           </div>
                           <p className="font-medium text-gray-900">{employee.departmentName}</p>
                         </div>
                         <div className="bg-gray-50 rounded-lg p-3">
                           <div className="flex items-center gap-2 mb-1">
-                            <Calendar className="w-4 h-4 text-[#17C3B2]" />
+                            <Calendar className="w-4 h-4 text-[#23D3EE]" />
                             <span className="text-xs text-gray-500">Join Date</span>
                           </div>
                           <p className="font-medium text-gray-900">
@@ -198,7 +198,7 @@ export const EmployeeDetailPanel: React.FC<EmployeeDetailPanelProps> = ({
                         </div>
                         <div className="bg-gray-50 rounded-lg p-3">
                           <div className="flex items-center gap-2 mb-1">
-                            <DollarSign className="w-4 h-4 text-[#17C3B2]" />
+                            <DollarSign className="w-4 h-4 text-[#23D3EE]" />
                             <span className="text-xs text-gray-500">Salary</span>
                           </div>
                           <p className="font-medium text-gray-900">
@@ -207,7 +207,7 @@ export const EmployeeDetailPanel: React.FC<EmployeeDetailPanelProps> = ({
                         </div>
                         <div className="bg-gray-50 rounded-lg p-3">
                           <div className="flex items-center gap-2 mb-1">
-                            <User className="w-4 h-4 text-[#17C3B2]" />
+                            <User className="w-4 h-4 text-[#23D3EE]" />
                             <span className="text-xs text-gray-500">Manager</span>
                           </div>
                           <p className="font-medium text-gray-900">
@@ -262,7 +262,7 @@ export const EmployeeDetailPanel: React.FC<EmployeeDetailPanelProps> = ({
                           <Badge 
                             key={skill} 
                             variant="secondary"
-                            className="bg-[#17C3B2]/10 text-[#17C3B2] hover:bg-[#17C3B2]/20"
+                            className="bg-[#23D3EE]/10 text-[#23D3EE] hover:bg-[#23D3EE]/20"
                           >
                             {skill}
                           </Badge>
@@ -320,7 +320,7 @@ export const EmployeeDetailPanel: React.FC<EmployeeDetailPanelProps> = ({
                         >
                           <div className="flex items-center gap-3">
                             <div className="p-2 bg-white rounded-lg shadow-sm">
-                              <FileText className="w-5 h-5 text-[#17C3B2]" />
+                              <FileText className="w-5 h-5 text-[#23D3EE]" />
                             </div>
                             <div>
                               <p className="font-medium text-gray-900">{doc.name}</p>
@@ -351,7 +351,7 @@ export const EmployeeDetailPanel: React.FC<EmployeeDetailPanelProps> = ({
                     <Mail className="w-4 h-4" />
                     Send Email
                   </Button>
-                  <Button className="flex-1 gap-2 bg-[#17C3B2] hover:bg-[#17C3B2]/90">
+                  <Button className="flex-1 gap-2 bg-[#23D3EE] hover:bg-[#23D3EE]/90">
                     <Calendar className="w-4 h-4" />
                     Schedule Meeting
                   </Button>

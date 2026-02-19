@@ -224,7 +224,7 @@ export default function TimeTrackingPage() {
                   setEditingEntry(null);
                   setShowAddDialog(true);
                 }}
-                className="flex items-center gap-2 px-4 py-2 bg-[#17C3B2] text-white rounded-lg font-medium hover:bg-[#17C3B2]/90 transition-all shadow-lg shadow-[#17C3B2]/20"
+                className="flex items-center gap-2 px-4 py-2 bg-[#23D3EE] text-white rounded-lg font-medium hover:bg-[#23D3EE]/90 transition-all shadow-lg shadow-[#23D3EE]/20"
               >
                 <Plus size={18} />
                 Add Entry

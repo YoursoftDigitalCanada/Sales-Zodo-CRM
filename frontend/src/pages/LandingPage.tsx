@@ -1,1703 +1,670 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  ArrowRight, Check, ChevronDown, ChevronUp, 
-  Code, BarChart3, Bot, Users, Layers, 
-  Zap, MessageSquare, Shield, User, Menu, X, Globe,
-  Star, Play, ArrowUp, Sparkles, Clock, Award,
-  TrendingUp, Target, Headphones, CheckCircle2,
-  Mail, Phone, MapPin, Linkedin, Twitter, Github,
-  ChevronRight, ExternalLink, Send, Loader2,
-  Building2, Rocket, PieChart, Calendar, FileText,
-  MousePointer, Heart, Coffee, Briefcase,RefreshCw,  Smartphone as AppleIcon 
-} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import {
+  ArrowRight, Check, ChevronDown, ChevronUp,
+  BarChart3, Bot, Users, Layers, Zap, Shield,
+  Menu, X, Sparkles, TrendingUp, Target,
+  Globe, Clock, Award, Activity, PieChart,
+  Workflow, Mail, Building2, ArrowUpRight
+} from 'lucide-react';
+import logo from '../Images/Logo/logo.png';
 
 // ============================================
-// 🍁 DESIGN SYSTEM - BALANCED RED + NEUTRAL
+// DESIGN SYSTEM
 // ============================================
-
-// Color Strategy:
-// - Red (50%): Primary CTAs, key accents, featured elements, some icons
-// - Slate/Gray (50%): Backgrounds, secondary elements, text, borders
+const cx = (...classes: (string | false | undefined)[]) => classes.filter(Boolean).join(' ');
 
 // ============================================
-// 🧩 COMPONENTS
+// REUSABLE COMPONENTS
 // ============================================
 
-// Animated Counter
-const AnimatedCounter = ({ 
-  end, 
-  duration = 2000, 
-  suffix = '' 
-}: { 
-  end: number; 
-  duration?: number; 
-  suffix?: string;
-}) => {
-  const [count, setCount] = useState(0);
-  const [isVisible, setIsVisible] = useState(false);
+function FadeInSection({ children, className = '', delay = 0 }: {
+  children: React.ReactNode; className?: string; delay?: number;
+}) {
   const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    if (ref.current) {
-      observer.observe(ref.current);
-    }
-
-    return () => observer.disconnect();
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) { setVisible(true); obs.unobserve(el); }
+    }, { threshold: 0.15 });
+    obs.observe(el);
+    return () => obs.disconnect();
   }, []);
 
-  useEffect(() => {
-    if (!isVisible) return;
-
-    let startTime: number;
-    const animate = (currentTime: number) => {
-      if (!startTime) startTime = currentTime;
-      const progress = Math.min((currentTime - startTime) / duration, 1);
-      setCount(Math.floor(progress * end));
-      if (progress < 1) {
-        requestAnimationFrame(animate);
-      }
-    };
-    requestAnimationFrame(animate);
-  }, [isVisible, end, duration]);
-
-  return <div ref={ref}>{count}{suffix}</div>;
-};
-
-// Button - No Gradients, Balanced Colors
-const Button = ({ 
-  children, 
-  variant = 'primary', 
-  className = '', 
-  onClick,
-  loading = false,
-  icon,
-  size = 'default'
-}: { 
-  children: React.ReactNode; 
-  variant?: 'primary' | 'secondary' | 'outline' | 'text' | 'ghost' | 'dark' | 'white'; 
-  className?: string;
-  onClick?: () => void;
-  loading?: boolean;
-  icon?: React.ReactNode;
-  size?: 'sm' | 'default' | 'lg';
-}) => {
-  const baseStyle = "rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed";
-  
-  const sizes = {
-    sm: "px-4 py-2 text-sm",
-    default: "px-5 py-2.5 text-sm",
-    lg: "px-6 py-3 text-base"
-  };
-
-  // No gradients - flat colors only
-  const variants = {
-    primary: "bg-red-600 text-white hover:bg-red-700 shadow-sm",
-    secondary: "bg-slate-900 text-white hover:bg-slate-800 shadow-sm",
-    outline: "border border-slate-300 text-slate-700 hover:border-slate-400 hover:bg-slate-50 bg-white",
-    text: "text-red-600 hover:text-red-700 hover:bg-red-50",
-    ghost: "text-slate-600 hover:text-slate-900 hover:bg-slate-100",
-    dark: "bg-white text-slate-900 hover:bg-slate-100 shadow-sm",
-    white: "bg-white text-red-600 hover:bg-slate-50 shadow-sm"
-  };
-
   return (
-    <button 
-      onClick={onClick} 
-      disabled={loading}
-      className={`${baseStyle} ${sizes[size]} ${variants[variant]} ${className}`}
-    >
-      {loading ? (
-        <Loader2 className="animate-spin" size={18} />
-      ) : (
-        <>
-          {icon && <span>{icon}</span>}
-          {children}
-        </>
-      )}
-    </button>
-  );
-};
-
-// Card Component
-const Card = ({ 
-  children, 
-  className = '',
-  hover = true,
-  padding = true
-}: { 
-  children: React.ReactNode; 
-  className?: string;
-  hover?: boolean;
-  padding?: boolean;
-}) => (
-  <div className={`
-    bg-white border border-slate-200 rounded-xl
-    ${hover ? 'hover:shadow-lg hover:border-slate-300 transition-all duration-200' : 'shadow-sm'}
-    ${padding ? 'p-6' : ''}
-    ${className}
-  `}>
-    {children}
-  </div>
-);
-
-// Feature Card - Balanced Red Accent
-const FeatureCard = ({ 
-  icon: Icon, 
-  title, 
-  description,
-  accentRed = false,
-  delay = 0
-}: { 
-  icon: any; 
-  title: string; 
-  description: string;
-  accentRed?: boolean;
-  delay?: number;
-}) => {
-  const [isVisible, setIsVisible] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setTimeout(() => setIsVisible(true), delay);
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, [delay]);
-
-  return (
-    <div 
+    <div
       ref={ref}
-      className={`
-        group bg-white p-6 rounded-xl border border-slate-200 
-        hover:border-slate-300 hover:shadow-lg transition-all duration-300
-        ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}
-      `}
-      style={{ transitionDelay: `${delay}ms` }}
+      className={cx(className)}
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateY(0)' : 'translateY(20px)',
+        transition: `opacity 600ms cubic-bezier(0.4,0,0.2,1) ${delay}ms, transform 600ms cubic-bezier(0.4,0,0.2,1) ${delay}ms`,
+      }}
     >
-      <div className={`
-        w-12 h-12 rounded-lg flex items-center justify-center mb-4 transition-colors duration-200
-        ${accentRed 
-          ? 'bg-red-100 text-red-600 group-hover:bg-red-600 group-hover:text-white' 
-          : 'bg-slate-100 text-slate-600 group-hover:bg-slate-900 group-hover:text-white'
-        }
-      `}>
-        <Icon size={24} />
-      </div>
-      <h3 className="text-lg font-semibold text-slate-900 mb-2">{title}</h3>
-      <p className="text-slate-500 text-sm leading-relaxed">{description}</p>
-    </div>
-  );
-};
-
-// Section Container
-const Section = ({ 
-  children, 
-  className = "", 
-  id = "",
-  dark = false,
-  gray = false,
-  red = false
-}: { 
-  children: React.ReactNode; 
-  className?: string; 
-  id?: string;
-  dark?: boolean;
-  gray?: boolean;
-  red?: boolean;
-}) => (
-  <section 
-    id={id} 
-    className={`
-      py-16 md:py-24 px-6
-      ${dark ? 'bg-slate-900 text-white' : ''}
-      ${gray ? 'bg-slate-50' : ''}
-      ${red ? 'bg-red-600 text-white' : ''}
-      ${!dark && !gray && !red ? 'bg-white' : ''}
-      ${className}
-    `}
-  >
-    <div className="max-w-6xl mx-auto">
       {children}
     </div>
-  </section>
-);
-
-// Section Header
-const SectionHeader = ({ 
-  badge,
-  title, 
-  subtitle,
-  centered = true,
-  light = false,
-  redBadge = false
-}: { 
-  badge?: string;
-  title: string; 
-  subtitle?: string;
-  centered?: boolean;
-  light?: boolean;
-  redBadge?: boolean;
-}) => (
-  <div className={`mb-12 ${centered ? 'text-center max-w-2xl mx-auto' : ''}`}>
-    {badge && (
-      <span className={`
-        inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium mb-4
-        ${light 
-          ? 'bg-white/20 text-white' 
-          : redBadge 
-            ? 'bg-red-100 text-red-600'
-            : 'bg-slate-100 text-slate-600'
-        }
-      `}>
-        {badge}
-      </span>
-    )}
-    <h2 className={`text-3xl md:text-4xl font-semibold mb-4 leading-tight ${light ? 'text-white' : 'text-slate-900'}`}>
-      {title}
-    </h2>
-    {subtitle && (
-      <p className={`text-base md:text-lg ${light ? 'text-white/80' : 'text-slate-500'}`}>
-        {subtitle}
-      </p>
-    )}
-  </div>
-);
-
-// Testimonial Card
-const TestimonialCard = ({ 
-  quote, 
-  author, 
-  role, 
-  company,
-  rating = 5
-}: { 
-  quote: string; 
-  author: string; 
-  role: string; 
-  company: string;
-  rating?: number;
-}) => (
-  <Card className="h-full flex flex-col">
-    <div className="flex gap-0.5 mb-4">
-      {[...Array(rating)].map((_, i) => (
-        <Star key={i} size={16} className="fill-amber-400 text-amber-400" />
-      ))}
-    </div>
-    <p className="text-slate-600 mb-6 flex-1 leading-relaxed">"{quote}"</p>
-    <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
-      <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 font-medium text-sm">
-        {author.charAt(0)}
-      </div>
-      <div>
-        <div className="font-medium text-slate-900 text-sm">{author}</div>
-        <div className="text-xs text-slate-500">{role}, {company}</div>
-      </div>
-    </div>
-  </Card>
-);
-
-// Pricing Card
-const PricingCard = ({ 
-  name, 
-  price, 
-  period = '/month',
-  description, 
-  features, 
-  popular = false,
-  cta = 'Get Started'
-}: { 
-  name: string; 
-  price: string; 
-  period?: string;
-  description: string; 
-  features: string[];
-  popular?: boolean;
-  cta?: string;
-}) => (
-  <div className={`
-    relative p-6 rounded-xl transition-all duration-200
-    ${popular 
-      ? 'bg-red-600 text-white shadow-xl ring-2 ring-red-600' 
-      : 'bg-white border border-slate-200 hover:border-slate-300 hover:shadow-lg'
-    }
-  `}>
-    {popular && (
-      <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-slate-900 text-white text-xs font-medium rounded-full">
-        Most Popular
-      </span>
-    )}
-    
-    <h3 className={`text-lg font-semibold mb-1 ${popular ? 'text-white' : 'text-slate-900'}`}>{name}</h3>
-    <p className={`text-sm mb-4 ${popular ? 'text-red-100' : 'text-slate-500'}`}>{description}</p>
-    
-    <div className="mb-6">
-      <span className={`text-4xl font-semibold ${popular ? 'text-white' : 'text-slate-900'}`}>{price}</span>
-      <span className={`text-sm ${popular ? 'text-red-100' : 'text-slate-500'}`}>{period}</span>
-    </div>
-    
-    <ul className="space-y-3 mb-6">
-      {features.map((feature, i) => (
-        <li key={i} className="flex items-start gap-2 text-sm">
-          <Check size={16} className={`mt-0.5 flex-shrink-0 ${popular ? 'text-white' : 'text-green-600'}`} />
-          <span className={popular ? 'text-red-50' : 'text-slate-600'}>{feature}</span>
-        </li>
-      ))}
-    </ul>
-    
-    <Button 
-      variant={popular ? 'white' : 'outline'} 
-      className="w-full"
-    >
-      {cta}
-    </Button>
-  </div>
-);
-
-// FAQ Item
-const FAQItem = ({ 
-  question, 
-  answer, 
-  isOpen, 
-  onToggle 
-}: { 
-  question: string; 
-  answer: string; 
-  isOpen: boolean; 
-  onToggle: () => void;
-}) => (
-  <div className="border-b border-slate-100 last:border-0">
-    <button 
-      onClick={onToggle}
-      className="w-full py-5 flex items-center justify-between text-left group"
-    >
-      <span className="font-medium text-slate-900 group-hover:text-red-600 transition-colors pr-4">
-        {question}
-      </span>
-      <div className={`
-        w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200
-        ${isOpen ? 'bg-red-600 text-white' : 'bg-slate-100 text-slate-500'}
-      `}>
-        <ChevronDown size={16} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
-      </div>
-    </button>
-    <div className={`
-      overflow-hidden transition-all duration-200
-      ${isOpen ? 'max-h-96 opacity-100 pb-5' : 'max-h-0 opacity-0'}
-    `}>
-      <p className="text-slate-500 text-sm leading-relaxed">{answer}</p>
-    </div>
-  </div>
-);
-
-// Back to Top - Red Accent
-const BackToTop = () => {
-  const [show, setShow] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setShow(window.scrollY > 500);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  return (
-    <button 
-      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-      className={`
-        fixed bottom-6 right-6 z-50 w-10 h-10 rounded-lg 
-        bg-red-600 text-white shadow-lg
-        flex items-center justify-center
-        hover:bg-red-700 transition-all duration-200
-        ${show ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0'}
-      `}
-    >
-      <ArrowUp size={18} />
-    </button>
   );
-};
-
-// Announcement Banner
-const AnnouncementBanner = ({ onClose }: { onClose: () => void }) => (
-  <div className="bg-red-600 text-white py-2.5 px-6">
-    <div className="max-w-6xl mx-auto flex items-center justify-center gap-3 text-sm">
-      <span>🍁</span>
-      <span>New: AI Chatbot 2.0 is here with advanced features</span>
-      <a href="#" className="underline font-medium hover:no-underline">Learn more →</a>
-      <button onClick={onClose} className="ml-4 hover:opacity-70 transition-opacity">
-        <X size={14} />
-      </button>
-    </div>
-  </div>
-);
+}
 
 // ============================================
-// 🏠 MAIN LANDING PAGE
+// MAIN LANDING PAGE
 // ============================================
-
 export default function LandingPage() {
   const navigate = useNavigate();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [activeAccordion, setActiveAccordion] = useState<number | null>(0);
-  const [activeFAQ, setActiveFAQ] = useState<number | null>(0);
-  const [showBanner, setShowBanner] = useState(true);
-  const [isScrolled, setIsScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Navigation handler
-  const handleNavClick = (e: React.MouseEvent, item: { href: string; isRoute: boolean }) => {
-    e.preventDefault();
-    if (item.isRoute) {
-      navigate(item.href);
-    } else {
-      const element = document.querySelector(item.href);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth' });
-      }
-    }
-    setIsMobileMenuOpen(false);
+  const navItems = [
+    { label: 'Features', href: '#features' },
+    { label: 'AI Platform', href: '#ai' },
+    { label: 'Product', href: '#product' },
+    { label: 'Pricing', href: '#pricing' },
+  ];
+
+  const scrollTo = (id: string) => {
+    const el = document.querySelector(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+    setMobileMenuOpen(false);
   };
 
   // ==========================================
-  // NAVBAR
+  // RENDER
   // ==========================================
-  const Navbar = () => {
-    const navItems = [
-      { label: 'Services', href: '/ServicesPage', isRoute: true },
-      { label: 'CRM', href: '/crm', isRoute: true },
-      { label: 'AI Chatbot', href: '#chatbot', isRoute: false },
-      { label: 'Pricing', href: '#pricing', isRoute: false },
-    ];
+  return (
+    <div className="min-h-screen bg-[#F8FAFC]" style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif" }}>
 
-    return (
-      <nav className={`fixed w-full z-50 transition-all duration-200 ${
-        isScrolled 
-          ? 'bg-white shadow-sm border-b border-slate-100' 
+      {/* ========== NAVBAR ========== */}
+      <nav className={cx(
+        'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
+        scrolled
+          ? 'bg-white/90 backdrop-blur-md border-b border-[rgba(15,23,42,0.06)]'
           : 'bg-transparent'
-      }`}>
-        {showBanner && !isScrolled && <AnnouncementBanner onClose={() => setShowBanner(false)} />}
-        
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          {/* Logo */}
-          <div 
-            className="flex items-center gap-2 cursor-pointer"
-            onClick={() => navigate('/')}
-          >
-            <div className="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center">
-              <Layers className="text-white" size={18} />
-            </div>
-            <span className="font-semibold text-slate-900">Yoursoft</span>
-            <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-medium">CA</span>
+      )}>
+        <div className="max-w-6xl mx-auto px-6 flex items-center justify-between h-16">
+          <div className="flex items-center gap-2">
+            <img src={logo} alt="ZODO" className="h-8 w-auto" />
+            <span className="text-lg font-bold text-[#0F172A] tracking-tight">ZODO</span>
           </div>
-          
-          {/* Desktop Nav */}
-          <div className="hidden lg:flex items-center gap-8">
+
+          <div className="hidden md:flex items-center gap-8">
             {navItems.map(item => (
-              <a 
-                key={item.label} 
-                href={item.href}
-                onClick={(e) => handleNavClick(e, item)}
-                className="text-sm text-slate-600 hover:text-red-600 transition-colors"
+              <button
+                key={item.label}
+                onClick={() => scrollTo(item.href)}
+                className="text-sm text-[#475569] hover:text-[#0F172A] transition-colors font-medium"
               >
                 {item.label}
-              </a>
-            ))}
-            
-            {/* Dropdown */}
-            <div className="relative group">
-              <button className="text-sm text-slate-600 hover:text-red-600 flex items-center gap-1 transition-colors">
-                Resources
-                <ChevronDown size={14} className="group-hover:rotate-180 transition-transform duration-200" />
               </button>
-              
-              <div className="absolute top-full left-0 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
-                <div className="bg-white rounded-lg shadow-lg border border-slate-200 py-2 min-w-[160px]">
-                  {['Blog', 'Documentation', 'Help Center', 'API Reference'].map(item => (
-                    <a 
-                      key={item} 
-                      href="#" 
-                      className="block px-4 py-2 text-sm text-slate-600 hover:bg-red-50 hover:text-red-600 transition-colors"
-                    >
-                      {item}
-                    </a>
-                  ))}
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
 
-          {/* CTA Buttons */}
-          <div className="hidden lg:flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => navigate('/login')}>
+          <div className="hidden md:flex items-center gap-3">
+            <button
+              onClick={() => navigate('/login')}
+              className="text-sm font-medium text-[#475569] hover:text-[#0F172A] transition-colors px-4 py-2"
+            >
               Sign In
-            </Button>
-            <Button size="sm" onClick={() => navigate('/signup')}>
+            </button>
+            <button
+              onClick={() => navigate('/signup')}
+              className="text-sm font-semibold text-white bg-[#0F172A] hover:bg-[#1E293B] px-5 py-2.5 rounded-lg transition-all smooth-hover"
+            >
               Get Started
-              <ArrowRight size={14} />
-            </Button>
+            </button>
           </div>
 
-          {/* Mobile Menu Toggle */}
-          <button 
-            className="lg:hidden p-2 hover:bg-slate-100 rounded-lg transition-colors" 
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden p-2 text-[#475569]"
           >
-            {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
 
-        {/* Mobile Nav */}
-        {isMobileMenuOpen && (
-          <div className="lg:hidden bg-white border-t border-slate-100 shadow-lg">
-            <div className="px-6 py-4 space-y-1">
-              {navItems.map(item => (
-                <a 
-                  key={item.label} 
-                  href={item.href}
-                  onClick={(e) => handleNavClick(e, item)}
-                  className="block py-2.5 text-slate-600 hover:text-red-600 text-sm"
-                >
-                  {item.label}
-                </a>
-              ))}
-              <div className="pt-4 space-y-2 border-t border-slate-100 mt-4">
-                <Button variant="outline" className="w-full" size="sm" onClick={() => navigate('/login')}>
-                  Sign In
-                </Button>
-                <Button className="w-full" size="sm" onClick={() => navigate('/signup')}>
-                  Get Started
-                </Button>
-              </div>
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden bg-white border-t border-[rgba(15,23,42,0.06)] px-6 py-4 space-y-3">
+            {navItems.map(item => (
+              <button
+                key={item.label}
+                onClick={() => scrollTo(item.href)}
+                className="block w-full text-left text-sm text-[#475569] hover:text-[#0F172A] py-2 font-medium"
+              >
+                {item.label}
+              </button>
+            ))}
+            <div className="pt-3 border-t border-[rgba(15,23,42,0.06)] space-y-2">
+              <button onClick={() => navigate('/login')} className="block w-full text-left text-sm font-medium text-[#475569] py-2">Sign In</button>
+              <button onClick={() => navigate('/signup')} className="block w-full text-sm font-semibold text-white bg-[#0F172A] px-5 py-2.5 rounded-lg text-center">Get Started</button>
             </div>
           </div>
         )}
       </nav>
-    );
-  };
 
-  // ==========================================
-  // HERO
-  // ==========================================
-  const Hero = () => (
-    <div className="relative min-h-screen flex items-center pt-24 pb-16 overflow-hidden bg-slate-50">
-      {/* Subtle Pattern */}
-      <div 
-        className="absolute inset-0 opacity-[0.03]"
-        style={{
-          backgroundImage: `radial-gradient(circle at 1px 1px, #64748b 1px, transparent 0)`,
-          backgroundSize: '32px 32px'
-        }}
-      />
+      {/* ========== HERO ========== */}
+      <section className="relative pt-32 pb-20 overflow-hidden">
+        {/* Subtle hero background accent */}
+        <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full opacity-[0.03]"
+          style={{ background: 'radial-gradient(circle, #22D3EE 0%, transparent 70%)' }} />
 
-      <div className="max-w-6xl mx-auto px-6 relative z-10">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-          
-          {/* Left - Content */}
-          <div>
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-full shadow-sm mb-6">
-              <div className="flex -space-x-1.5">
-                {[...Array(3)].map((_, i) => (
-                  <div 
-                    key={i} 
-                    className="w-6 h-6 rounded-full border-2 border-white bg-red-100 flex items-center justify-center text-[10px] font-medium text-red-600"
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            {/* Left — Copy */}
+            <FadeInSection>
+              <div className="space-y-6">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#0891B2]/6 border border-[#0891B2]/10">
+                  <Sparkles size={13} className="text-[#0891B2]" />
+                  <span className="text-xs font-semibold text-[#0891B2] tracking-wide uppercase">AI-Powered CRM</span>
+                </div>
+
+                <h1 className="text-[3.2rem] leading-[1.08] font-extrabold text-[#0F172A] tracking-tight">
+                  The CRM That<br />
+                  <span style={{ color: '#0891B2' }}>Thinks</span>, Predicts<br />
+                  & Automates
+                </h1>
+
+                <p className="text-lg text-[#475569] leading-relaxed max-w-lg">
+                  ZODO unifies your leads, clients, revenue, and analytics into one
+                  intelligent platform. Built for teams that value data-driven decisions
+                  over busywork.
+                </p>
+
+                <div className="flex items-center gap-3 pt-2">
+                  <button
+                    onClick={() => navigate('/signup')}
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-white bg-[#0F172A] hover:bg-[#1E293B] px-7 py-3.5 rounded-lg transition-all smooth-hover"
                   >
-                    {['S', 'M', 'A'][i]}
-                  </div>
-                ))}
-              </div>
-              <span className="text-xs text-slate-600">
-                Trusted by <span className="font-semibold text-red-600">500+</span> companies
-              </span>
-            </div>
-            
-            {/* Heading */}
-            <h1 className="text-4xl sm:text-5xl font-semibold text-slate-900 leading-[1.15] mb-5">
-              Build. Manage. Automate.
-              <span className="block mt-2 text-red-600">
-                All in One Platform
-              </span>
-            </h1>
-            
-            {/* Subheading */}
-            <p className="text-lg text-slate-500 mb-8 max-w-md leading-relaxed">
-              The complete ecosystem for Canadian businesses. Custom development, powerful CRM, and 24/7 AI automation.
-            </p>
-            
-            {/* CTA */}
-            <div className="flex flex-col sm:flex-row gap-3 mb-8">
-              <Button size="lg" onClick={() => navigate('/signup')}>
-                Start Free Trial
-                <ArrowRight size={16} />
-              </Button>
-              <Button variant="outline" size="lg">
-                <Play size={16} className="text-red-600" />
-                Watch Demo
-              </Button>
-            </div>
-            
-            {/* Trust Indicators */}
-            <div className="flex flex-wrap items-center gap-6 text-sm text-slate-500">
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 size={16} className="text-green-600" />
-                <span>No credit card required</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Shield size={16} className="text-green-600" />
-                <span>PIPEDA Compliant</span>
-              </div>
-            </div>
-          </div>
-          
-          {/* Right - Dashboard Preview */}
-          <div className="relative">
-            {/* Main Card */}
-            <div className="bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden">
-              {/* Browser Header */}
-              <div className="bg-slate-50 px-4 py-2.5 flex items-center gap-2 border-b border-slate-100">
-                <div className="flex gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
-                  <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-                  <div className="w-2.5 h-2.5 rounded-full bg-green-400" />
+                    Start Free Trial
+                    <ArrowRight size={16} />
+                  </button>
+                  <button
+                    onClick={() => scrollTo('#product')}
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-[#475569] hover:text-[#0F172A] px-5 py-3.5 rounded-lg border border-[rgba(15,23,42,0.1)] hover:border-[rgba(15,23,42,0.2)] transition-all bg-white smooth-hover"
+                  >
+                    View Product
+                  </button>
                 </div>
-                <div className="flex-1 mx-2">
-                  <div className="bg-white rounded px-3 py-1 text-slate-400 text-xs border border-slate-200 max-w-[200px]">
-                    app.yoursoftdigital.ca
-                  </div>
-                </div>
-              </div>
-              
-              {/* Dashboard Content */}
-              <div className="p-5 bg-slate-50">
-                {/* Stats */}
-                <div className="grid grid-cols-3 gap-3 mb-4">
+
+                {/* Trust indicators */}
+                <div className="flex items-center gap-6 pt-4">
                   {[
-                    { label: 'Revenue', value: '$48.5K', change: '+12%' },
-                    { label: 'Leads', value: '2,847', change: '+8%' },
-                    { label: 'Conversion', value: '24%', change: '+4%' },
+                    { label: 'Active Users', value: '2,400+' },
+                    { label: 'Companies', value: '180+' },
+                    { label: 'Uptime', value: '99.9%' },
                   ].map((stat, i) => (
-                    <div key={i} className="bg-white rounded-lg p-3 border border-slate-100">
-                      <div className="text-slate-400 text-xs mb-1">{stat.label}</div>
-                      <div className="text-slate-900 text-lg font-semibold">{stat.value}</div>
-                      <div className="text-green-600 text-xs">{stat.change}</div>
+                    <div key={i} className="text-center">
+                      <p className="text-lg font-bold text-[#0F172A]">{stat.value}</p>
+                      <p className="text-[11px] text-[#94A3B8] uppercase tracking-wider font-medium">{stat.label}</p>
                     </div>
                   ))}
                 </div>
-                
-                {/* Chart */}
-                <div className="bg-white rounded-lg p-4 border border-slate-100 mb-4">
-                  <div className="text-sm font-medium text-slate-700 mb-3">Revenue Overview</div>
-                  <div className="h-24 flex items-end gap-1">
-                    {[35, 45, 30, 60, 45, 55, 70, 50, 65, 55, 80, 70].map((h, i) => (
-                      <div 
-                        key={i} 
-                        className="flex-1 bg-red-600 rounded-sm hover:bg-red-700 transition-colors cursor-pointer" 
-                        style={{ height: `${h}%` }} 
-                      />
-                    ))}
+              </div>
+            </FadeInSection>
+
+            {/* Right — Product Mockup */}
+            <FadeInSection delay={200}>
+              <div
+                className="relative"
+                style={{ animation: 'float 8s ease-in-out infinite' }}
+              >
+                <div className="bg-white rounded-xl p-5 border border-[rgba(15,23,42,0.06)]"
+                  style={{ boxShadow: '0 4px 24px rgba(15,23,42,0.08), 0 12px 48px rgba(15,23,42,0.04)' }}>
+                  {/* Mock Dashboard Header */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-md bg-[#0891B2]/8 flex items-center justify-center">
+                        <Sparkles size={14} className="text-[#0891B2]" />
+                      </div>
+                      <span className="text-xs font-semibold text-[#0F172A]">AI Business Overview</span>
+                      <span className="text-[9px] font-bold text-[#0891B2] bg-[#0891B2]/6 px-1.5 py-0.5 rounded uppercase tracking-wider">Live</span>
+                    </div>
                   </div>
-                </div>
-                
-                {/* Activity */}
-                <div className="bg-white rounded-lg p-4 border border-slate-100">
-                  <div className="text-sm font-medium text-slate-700 mb-3">Recent Activity</div>
-                  <div className="space-y-2">
+
+                  {/* Mock Intelligence Grid */}
+                  <div className="grid grid-cols-2 gap-3 mb-4">
                     {[
-                      { name: 'New lead from Toronto', time: '2m ago' },
-                      { name: 'Invoice #1234 paid', time: '15m ago' },
+                      { label: 'Pipeline Health', value: 'Strong', color: '#16A34A', icon: Activity },
+                      { label: 'Revenue Forecast', value: '+18%', color: '#0891B2', icon: TrendingUp },
+                      { label: 'Priority Alerts', value: '4', color: '#EA580C', icon: Target },
+                      { label: 'Automation Score', value: '92%', color: '#7C3AED', icon: Zap },
                     ].map((item, i) => (
-                      <div key={i} className="flex items-center justify-between text-sm">
-                        <span className="text-slate-600">{item.name}</span>
-                        <span className="text-slate-400 text-xs">{item.time}</span>
+                      <div key={i} className="p-3 rounded-lg bg-[#F8FAFC] border border-[rgba(15,23,42,0.04)]">
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <item.icon size={11} className="text-[#94A3B8]" />
+                          <span className="text-[10px] text-[#94A3B8] font-medium uppercase tracking-wider">{item.label}</span>
+                        </div>
+                        <span className="text-sm font-bold" style={{ color: item.color }}>{item.value}</span>
                       </div>
                     ))}
                   </div>
-                </div>
-              </div>
-            </div>
-            
-            {/* Floating Card - Growth */}
-            <div className="absolute -bottom-4 -right-4 bg-white rounded-lg shadow-lg border border-slate-200 p-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
-                  <TrendingUp size={16} className="text-green-600" />
-                </div>
-                <div>
-                  <div className="text-lg font-semibold text-slate-900">+127%</div>
-                  <div className="text-xs text-slate-500">Growth Rate</div>
-                </div>
-              </div>
-            </div>
-            
-            {/* Floating Card - AI Bot */}
-            <div className="absolute -bottom-4 -left-4 bg-white rounded-lg shadow-lg border border-slate-200 p-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
-                  <Bot size={16} className="text-red-600" />
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-slate-900">AI Active</div>
-                  <div className="text-xs text-green-600">Online 24/7</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* Logos */}
-        <div className="mt-16 pt-10 border-t border-slate-200">
-          <p className="text-center text-xs text-slate-400 mb-6 uppercase tracking-wider font-medium">
-            Trusted by leading Canadian companies
-          </p>
-          <div className="flex flex-wrap justify-center items-center gap-8">
-            {['Shopify', 'RBC', 'TD Bank', 'Air Canada', 'Lululemon'].map((brand) => (
-              <span 
-                key={brand} 
-                className="text-lg font-semibold text-slate-300 hover:text-slate-400 transition-colors"
-              >
-                {brand}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 
-  // ==========================================
-  // STATS - Red Background
-  // ==========================================
-  const StatsCounter = () => (
-    <Section className="!py-12" red>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-        {[
-          { value: 500, suffix: '+', label: 'Happy Clients' },
-          { value: 98, suffix: '%', label: 'Client Retention' },
-          { value: 50, suffix: 'M+', label: 'Messages Handled' },
-          { value: 24, suffix: '/7', label: 'Support Available' },
-        ].map((stat, i) => (
-          <div key={i} className="text-center">
-            <div className="text-3xl md:text-4xl font-semibold text-white mb-1">
-              <AnimatedCounter end={stat.value} suffix={stat.suffix} />
-            </div>
-            <div className="text-red-100 text-sm">{stat.label}</div>
-          </div>
-        ))}
-      </div>
-    </Section>
-  );
-
-  // ==========================================
-  // AUDIENCE
-  // ==========================================
-  const Audience = () => (
-    <Section gray>
-      <SectionHeader 
-        badge="Who We Help"
-        title="Built for Growth-Focused Teams"
-        subtitle="From startups to enterprises, we help Canadian businesses scale efficiently."
-        redBadge
-      />
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { icon: Rocket, title: "Startups", text: "Launch fast with MVP development and growth tools.", red: true },
-          { icon: Briefcase, title: "Agencies", text: "Manage clients, projects & invoices seamlessly.", red: false },
-          { icon: Building2, title: "Enterprises", text: "Scalable custom software ecosystems.", red: true },
-          { icon: Code, title: "SaaS Founders", text: "Accelerate product-market fit with AI.", red: false },
-        ].map((item, idx) => (
-          <FeatureCard 
-            key={idx} 
-            icon={item.icon} 
-            title={item.title} 
-            description={item.text}
-            accentRed={item.red}
-            delay={idx * 50}
-          />
-        ))}
-      </div>
-    </Section>
-  );
-
-  // ==========================================
-  // CORE OFFERINGS
-  // ==========================================
-  const CoreOfferings = () => (
-    <Section id="services">
-      <SectionHeader 
-        badge="Our Solutions"
-        title="Three Pillars of Business Growth"
-        subtitle="Everything you need to build, manage, and automate your operations."
-      />
-      
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Services - Slate */}
-        <Card className="group" padding={false}>
-          <div className="p-6">
-            <div className="w-12 h-12 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center mb-4 group-hover:bg-slate-900 group-hover:text-white transition-colors">
-              <Code size={24} />
-            </div>
-            
-            <h3 className="text-xl font-semibold mb-2 text-slate-900">Development Services</h3>
-            <p className="text-slate-500 text-sm mb-4">Custom software solutions tailored to your needs.</p>
-            
-            <ul className="space-y-2 mb-6">
-              {['Web Applications', 'Mobile Apps', 'UI/UX Design', 'API Integration'].map((item, i) => (
-                <li key={i} className="flex items-center gap-2 text-sm text-slate-600">
-                  <Check size={14} className="text-green-600" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-            
-            <Button variant="text" className="p-0">
-              Learn More 
-              <ArrowRight size={14} />
-            </Button>
-          </div>
-        </Card>
-
-        {/* CRM - Red Featured */}
-        <div className="bg-red-600 p-6 rounded-xl text-white relative shadow-lg">
-          <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-slate-900 text-white text-xs font-medium rounded-full">
-            🍁 Most Popular
-          </span>
-          
-          <div className="w-12 h-12 rounded-lg bg-white/20 text-white flex items-center justify-center mb-4">
-            <BarChart3 size={24} />
-          </div>
-          
-          <h3 className="text-xl font-semibold mb-2">CRM Platform</h3>
-          <p className="text-red-100 text-sm mb-4">All-in-one solution for managing your business.</p>
-          
-          <ul className="space-y-2 mb-6">
-            {['Lead Management', 'Project Tracking', 'Invoicing', 'Team Collaboration', 'Analytics'].map((item, i) => (
-              <li key={i} className="flex items-center gap-2 text-sm text-red-50">
-                <Check size={14} className="text-white" />
-                {item}
-              </li>
-            ))}
-          </ul>
-          
-          <Button variant="white" className="w-full" onClick={() => navigate('/crm')}>
-            Try CRM Free
-            <ArrowRight size={14} />
-          </Button>
-        </div>
-
-        {/* AI Chatbot - Slate */}
-        <Card className="group" padding={false}>
-          <div className="p-6">
-            <div className="w-12 h-12 rounded-lg bg-red-100 text-red-600 flex items-center justify-center mb-4 group-hover:bg-red-600 group-hover:text-white transition-colors">
-              <Bot size={24} />
-            </div>
-            
-            <h3 className="text-xl font-semibold mb-2 text-slate-900">AI Automation</h3>
-            <p className="text-slate-500 text-sm mb-4">Intelligent chatbots that work 24/7 for you.</p>
-            
-            <ul className="space-y-2 mb-6">
-              {['24/7 Support', 'Lead Capture', 'Knowledge Base', 'Multi-platform'].map((item, i) => (
-                <li key={i} className="flex items-center gap-2 text-sm text-slate-600">
-                  <Check size={14} className="text-green-600" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-            
-            <Button variant="text" className="p-0">
-              See Demo 
-              <ArrowRight size={14} />
-            </Button>
-          </div>
-        </Card>
-      </div>
-    </Section>
-  );
-
-  // ==========================================
-  // SERVICES DETAIL
-  // ==========================================
-  const ServicesDetail = () => {
-    const services = [
-      { id: 0, title: "Website Development", content: "High-performance React & Next.js websites built for conversion.", icon: Globe },
-      { id: 1, title: "Digital Marketing", content: "SEO, PPC, and content strategies that drive real traffic.", icon: TrendingUp },
-      { id: 2, title: "SEO & Analytics", content: "Data-driven insights to optimize conversions.", icon: PieChart },
-      { id: 3, title: "Automation Setup", content: "Workflows that save you 20+ hours a week.", icon: Zap },
-    ];
-
-    return (
-      <Section gray>
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          <div>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium mb-4 bg-red-100 text-red-600">
-              Expert Services
-            </span>
-            <h2 className="text-3xl md:text-4xl font-semibold mb-4 leading-tight text-slate-900">
-              We build the tech so you can focus on growth
-            </h2>
-            <p className="text-slate-500 mb-6 leading-relaxed">
-              Stop juggling freelancers. Our dedicated Canadian team handles everything from code to deployment.
-            </p>
-            
-            <div className="flex flex-wrap gap-2 mb-6">
-              {['React', 'Next.js', 'Node.js', 'AWS', 'Figma'].map(tech => (
-                <span key={tech} className="px-3 py-1.5 bg-white rounded-lg border border-slate-200 text-xs font-medium text-slate-600">
-                  {tech}
-                </span>
-              ))}
-            </div>
-            
-            <Button>
-              Get a Custom Quote
-              <ArrowRight size={14} />
-            </Button>
-          </div>
-          
-          <Card padding={false} hover={false}>
-            {services.map((s) => (
-              <div key={s.id} className="border-b border-slate-100 last:border-0">
-                <button 
-                  onClick={() => setActiveAccordion(activeAccordion === s.id ? null : s.id)}
-                  className="w-full px-5 py-4 flex items-center gap-3 text-left hover:bg-slate-50 transition-colors"
-                >
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${
-                    activeAccordion === s.id ? 'bg-red-600 text-white' : 'bg-slate-100 text-slate-500'
-                  }`}>
-                    <s.icon size={18} />
-                  </div>
-                  <span className="flex-1 font-medium text-slate-900 text-sm">{s.title}</span>
-                  <ChevronDown 
-                    size={16} 
-                    className={`text-slate-400 transition-transform ${activeAccordion === s.id ? 'rotate-180' : ''}`}
-                  />
-                </button>
-                <div className={`overflow-hidden transition-all duration-200 ${
-                  activeAccordion === s.id ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'
-                }`}>
-                  <div className="px-5 pb-4 pl-[72px] text-slate-500 text-sm">
-                    {s.content}
+                  {/* Mock Chart */}
+                  <div className="h-24 bg-[#F8FAFC] rounded-lg border border-[rgba(15,23,42,0.04)] flex items-end px-3 pb-2 gap-1">
+                    {[40, 55, 35, 65, 50, 75, 60, 80, 70, 90, 85, 95].map((h, i) => (
+                      <div key={i} className="flex-1 rounded-t" style={{
+                        height: `${h}%`,
+                        backgroundColor: i >= 10 ? '#0891B2' : i >= 8 ? '#22D3EE' : '#E2E8F0',
+                        transition: `height 800ms cubic-bezier(0.4,0,0.2,1) ${i * 60}ms`,
+                      }} />
+                    ))}
                   </div>
                 </div>
               </div>
-            ))}
-          </Card>
+            </FadeInSection>
+          </div>
         </div>
-      </Section>
-    );
-  };
+      </section>
 
-  // ==========================================
-  // CRM PRODUCT - Slate Dark
-  // ==========================================
-  const CRMProduct = () => (
-    <Section>
-      <div className="bg-slate-900 rounded-2xl p-8 md:p-12 overflow-hidden">
-        <div className="grid lg:grid-cols-2 gap-10 items-center">
-          <div>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium mb-4 bg-red-600 text-white">
-              🍁 CRM Platform
-            </span>
-            <h2 className="text-3xl md:text-4xl font-semibold mb-4 text-white leading-tight">
-              The Operating System for Your Business
+      {/* ========== TRUSTED BY ========== */}
+      <section className="py-12 border-y border-[rgba(15,23,42,0.04)]">
+        <div className="max-w-6xl mx-auto px-6">
+          <p className="text-center text-[11px] text-[#94A3B8] uppercase tracking-[0.2em] font-semibold mb-6">Trusted by forward-thinking teams</p>
+          <div className="flex items-center justify-center gap-12 flex-wrap opacity-40">
+            {['Acme Corp', 'TechFlow', 'DataSync', 'CloudNine', 'NextGen'].map(name => (
+              <span key={name} className="text-lg font-bold text-[#94A3B8] tracking-tight">{name}</span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ========== AI PLATFORM SECTION ========== */}
+      <section id="ai" className="py-24 bg-white">
+        <div className="max-w-6xl mx-auto px-6">
+          <FadeInSection className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#0891B2]/6 border border-[#0891B2]/10 mb-4">
+              <Bot size={13} className="text-[#0891B2]" />
+              <span className="text-xs font-semibold text-[#0891B2] tracking-wide uppercase">AI Intelligence</span>
+            </div>
+            <h2 className="text-3xl font-extrabold text-[#0F172A] tracking-tight mb-3">
+              Intelligence Built Into Every Workflow
             </h2>
-            <p className="text-slate-400 mb-6 leading-relaxed">
-              Manage clients, invoices, projects, and employees in one unified dashboard.
+            <p className="text-base text-[#64748B] max-w-2xl mx-auto leading-relaxed">
+              ZODO's AI engine analyzes your pipeline, predicts outcomes, and suggests
+              the next best action — all in real time.
             </p>
-            
-            <div className="flex flex-wrap gap-3 mb-8">
-              <Button>
-                Start Free Trial
-                <ArrowRight size={14} />
-              </Button>
-              <Button variant="outline" className="border-slate-600 text-white hover:bg-slate-800 hover:border-slate-500">
-                <Play size={14} />
-                Watch Demo
-              </Button>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-3">
-              {['Client Portal', 'Invoicing', 'Kanban Board', 'Analytics'].map(feat => (
-                <div key={feat} className="flex items-center gap-2 text-sm text-slate-300">
-                  <Check size={14} className="text-green-400" />
-                  {feat}
-                </div>
-              ))}
-            </div>
-          </div>
-          
-          {/* Dashboard Preview */}
-          <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
-            <div className="grid grid-cols-3 gap-3 mb-4">
-              {[
-                { label: 'Revenue', value: '$124.5K' },
-                { label: 'Leads', value: '2,847' },
-                { label: 'Conversion', value: '24.8%' },
-              ].map((stat, i) => (
-                <div key={i} className="bg-slate-700 rounded-lg p-3">
-                  <div className="text-slate-400 text-xs mb-1">{stat.label}</div>
-                  <div className="text-white font-semibold">{stat.value}</div>
-                </div>
-              ))}
-            </div>
-            <div className="bg-slate-700 rounded-lg p-4 h-32 flex items-end gap-1">
-              {[40, 55, 35, 70, 45, 80, 60, 90, 50, 75, 65, 85].map((h, i) => (
-                <div key={i} className="flex-1 bg-red-600 rounded-sm" style={{ height: `${h}%` }} />
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </Section>
-  );
+          </FadeInSection>
 
-  // ==========================================
-  // AI CHATBOT
-  // ==========================================
-  const AIChatbot = () => (
-    <Section id="chatbot" gray>
-      <SectionHeader 
-        badge="AI Automation"
-        title="Your 24/7 AI Sales Agent"
-        subtitle="Turn visitors into leads while you sleep."
-        redBadge
-      />
-      
-      <div className="grid lg:grid-cols-2 gap-10 items-center">
-        {/* Chat Demo */}
-        <Card hover={false}>
-          <div className="flex items-center gap-3 pb-4 border-b border-slate-100 mb-4">
-            <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center">
-              <Bot size={18} className="text-white" />
-            </div>
-            <div>
-              <div className="font-medium text-slate-900 text-sm">Yoursoft AI</div>
-              <div className="text-xs text-green-600 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 bg-green-500 rounded-full" /> Online
-              </div>
-            </div>
-          </div>
-          
-          <div className="space-y-3 mb-4">
-            <div className="flex gap-2">
-              <div className="w-7 h-7 rounded-full bg-red-600 flex items-center justify-center text-white flex-shrink-0">
-                <Bot size={12} />
-              </div>
-              <div className="bg-slate-100 p-3 rounded-xl rounded-tl-none text-slate-700 text-sm max-w-[240px]">
-                Hi! 👋 How can I help you today?
-              </div>
-            </div>
-            
-            <div className="flex gap-2 flex-row-reverse">
-              <div className="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 flex-shrink-0">
-                <User size={12} />
-              </div>
-              <div className="bg-red-600 p-3 rounded-xl rounded-tr-none text-white text-sm max-w-[240px]">
-                I need a CRM for my agency
-              </div>
-            </div>
-            
-            <div className="flex gap-2">
-              <div className="w-7 h-7 rounded-full bg-red-600 flex items-center justify-center text-white flex-shrink-0">
-                <Bot size={12} />
-              </div>
-              <div className="bg-slate-100 p-3 rounded-xl rounded-tl-none text-slate-700 text-sm max-w-[240px]">
-                Great choice! Our CRM includes client management, invoicing, and more. Want a demo?
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex flex-wrap gap-2 mb-4">
-            {['Yes, show me', 'Pricing?', 'Talk to sales'].map(reply => (
-              <button key={reply} className="px-3 py-1.5 bg-red-50 text-red-600 text-xs rounded-full hover:bg-red-100 transition-colors border border-red-100">
-                {reply}
-              </button>
-            ))}
-          </div>
-          
-          <div className="flex gap-2">
-            <input 
-              type="text" 
-              placeholder="Type a message..." 
-              className="flex-1 px-4 py-2.5 bg-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
-            />
-            <button className="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center text-white hover:bg-red-700 transition-colors">
-              <Send size={16} />
-            </button>
-          </div>
-        </Card>
-        
-        {/* Features */}
-        <div className="space-y-5">
-          {[
-            { icon: MessageSquare, title: "Instant Responses", desc: "Answer queries 24/7 in English & French.", red: true },
-            { icon: Target, title: "Lead Qualification", desc: "AI captures emails, names, and intent.", red: false },
-            { icon: Zap, title: "Easy Integration", desc: "Works with your website and social media.", red: true },
-            { icon: Shield, title: "Enterprise Security", desc: "SOC 2 compliant with Canadian data hosting.", red: false },
-          ].map((item, i) => (
-            <div key={i} className="flex gap-4 group">
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors flex-shrink-0 ${
-                item.red 
-                  ? 'bg-red-100 text-red-600 group-hover:bg-red-600 group-hover:text-white'
-                  : 'bg-slate-100 text-slate-600 group-hover:bg-slate-900 group-hover:text-white'
-              }`}>
-                <item.icon size={18} />
-              </div>
-              <div>
-                <h4 className="font-medium text-slate-900 mb-0.5">{item.title}</h4>
-                <p className="text-slate-500 text-sm">{item.desc}</p>
-              </div>
-            </div>
-          ))}
-          
-          <div className="pt-4">
-            <Button>
-              See AI in Action
-              <Play size={14} />
-            </Button>
-          </div>
-        </div>
-      </div>
-    </Section>
-  );
-
-  // ==========================================
-  // INTEGRATIONS
-  // ==========================================
-  const Integrations = () => {
-    const integrations = [
-      { name: 'Slack', icon: '💬' },
-      { name: 'Zapier', icon: '⚡' },
-      { name: 'HubSpot', icon: '🧡' },
-      { name: 'Salesforce', icon: '☁️' },
-      { name: 'Google', icon: '🔍' },
-      { name: 'Shopify', icon: '🛒' },
-      { name: 'Stripe', icon: '💳' },
-      { name: 'Notion', icon: '📓' },
-    ];
-
-    return (
-      <Section>
-        <SectionHeader 
-          badge="Integrations"
-          title="Works With Your Favorite Tools"
-          subtitle="Seamlessly connect with 100+ apps and services."
-        />
-        
-        <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
-          {integrations.map((item, i) => (
-            <div 
-              key={i}
-              className="bg-white p-4 rounded-xl border border-slate-200 hover:border-red-200 hover:shadow-md transition-all text-center group cursor-pointer"
-            >
-              <div className="text-2xl mb-1 group-hover:scale-110 transition-transform">{item.icon}</div>
-              <div className="text-xs text-slate-500 group-hover:text-red-600 transition-colors">{item.name}</div>
-            </div>
-          ))}
-        </div>
-        
-        <div className="text-center mt-8">
-          <Button variant="outline" size="sm">
-            View All Integrations
-            <ExternalLink size={14} />
-          </Button>
-        </div>
-      </Section>
-    );
-  };
-
-  // ==========================================
-  // PROCESS
-  // ==========================================
-  const Process = () => (
-    <Section gray>
-      <SectionHeader 
-        badge="Process"
-        title="From Idea to Launch in 4 Steps"
-        subtitle="Our proven methodology ensures your project exceeds expectations."
-        redBadge
-      />
-      
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {[
-          { step: "01", title: "Discovery", desc: "Deep dive into your requirements and goals.", icon: Target, red: true },
-          { step: "02", title: "Strategy", desc: "Design the perfect solution architecture.", icon: Layers, red: false },
-          { step: "03", title: "Build", desc: "Agile development with weekly demos.", icon: Code, red: true },
-          { step: "04", title: "Launch", desc: "Deploy, train, and scale with confidence.", icon: Rocket, red: false }
-        ].map((item, i) => (
-          <Card key={i} className="text-center group">
-            <div className={`w-12 h-12 mx-auto rounded-lg flex items-center justify-center mb-4 transition-colors ${
-              item.red 
-                ? 'bg-red-100 text-red-600 group-hover:bg-red-600 group-hover:text-white'
-                : 'bg-slate-100 text-slate-600 group-hover:bg-slate-900 group-hover:text-white'
-            }`}>
-              <item.icon size={22} />
-            </div>
-            <span className="inline-block px-2 py-0.5 bg-slate-100 text-slate-500 rounded text-xs font-medium mb-3">
-              Step {item.step}
-            </span>
-            <h3 className="font-semibold text-slate-900 mb-2">{item.title}</h3>
-            <p className="text-slate-500 text-sm">{item.desc}</p>
-          </Card>
-        ))}
-      </div>
-    </Section>
-  );
-
-  // ==========================================
-  // WHY US - Slate Dark
-  // ==========================================
-  const WhyUs = () => (
-    <Section dark>
-      <div className="grid lg:grid-cols-2 gap-12 items-center">
-        <div>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium mb-4 bg-red-600 text-white">
-            Why Choose Us
-          </span>
-          <h2 className="text-3xl md:text-4xl font-semibold text-white mb-4 leading-tight">
-            We Don't Just Build Software.
-            <span className="block text-slate-400">We Build Partnerships.</span>
-          </h2>
-          <p className="text-slate-400 mb-8 leading-relaxed">
-            Our hybrid approach of Services + SaaS ensures you're never left stuck.
-          </p>
-          
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
             {[
-              { icon: Shield, text: "99.9% Uptime SLA" },
-              { icon: Headphones, text: "Canadian Support" },
-              { icon: Globe, text: "PIPEDA Compliant" },
-              { icon: Zap, text: "Fast Delivery" }
+              { icon: BarChart3, title: 'Predictive Analytics', desc: 'Revenue forecasting and pipeline risk scoring powered by machine learning models.' },
+              { icon: Sparkles, title: 'AI Business Insights', desc: 'Real-time summaries of your business health with actionable recommendations.' },
+              { icon: Zap, title: 'Smart Automation', desc: 'Intelligent follow-up scheduling, lead scoring, and task prioritization.' },
+              { icon: Activity, title: 'Live Monitoring', desc: 'Continuous pipeline analysis with instant alerts when metrics deviate from targets.' },
             ].map((item, i) => (
-              <div key={i} className="flex items-center gap-3 text-slate-300 text-sm">
-                <item.icon size={16} className="text-red-400" />
-                {item.text}
-              </div>
+              <FadeInSection key={i} delay={i * 80}>
+                <div className="p-5 rounded-lg bg-[#F8FAFC] border border-[rgba(15,23,42,0.06)] card-interactive h-full">
+                  <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center mb-3"
+                    style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.08)' }}>
+                    <item.icon size={18} className="text-[#0891B2]" strokeWidth={1.75} />
+                  </div>
+                  <h3 className="text-sm font-semibold text-[#0F172A] mb-1.5">{item.title}</h3>
+                  <p className="text-[13px] text-[#64748B] leading-relaxed">{item.desc}</p>
+                </div>
+              </FadeInSection>
             ))}
           </div>
         </div>
-        
-        {/* Stats */}
-        <div className="grid grid-cols-2 gap-4">
-          {[
-            { value: "500+", label: "Projects Delivered", red: true },
-            { value: "98%", label: "Client Satisfaction", red: false },
-            { value: "50+", label: "Team Members", red: false },
-            { value: "12+", label: "Years Experience", red: true }
-          ].map((stat, i) => (
-            <div key={i} className={`rounded-xl p-6 text-center ${
-              stat.red ? 'bg-red-600' : 'bg-slate-800 border border-slate-700'
-            }`}>
-              <div className="text-3xl font-semibold text-white mb-1">{stat.value}</div>
-              <div className={stat.red ? 'text-red-100 text-sm' : 'text-slate-400 text-sm'}>{stat.label}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </Section>
-  );
+      </section>
 
-  // ==========================================
-  // TESTIMONIALS
-  // ==========================================
-  const Testimonials = () => {
-    const testimonials = [
-      {
-        quote: "Yoursoft transformed our business. The CRM alone saved us 20+ hours per week.",
-        author: "Sarah Thompson",
-        role: "CEO",
-        company: "TechStart Vancouver",
-        rating: 5
-      },
-      {
-        quote: "The AI chatbot reduced our support tickets by 40%. Customers love the instant responses.",
-        author: "Marc Leblanc",
-        role: "Head of Operations",
-        company: "GrowthLabs Montreal",
-        rating: 5
-      },
-      {
-        quote: "From concept to launch in just 6 weeks. Highly recommended for any Canadian business!",
-        author: "Emily Chen",
-        role: "Founder",
-        company: "DesignHub Toronto",
-        rating: 5
-      }
-    ];
-
-    return (
-      <Section gray>
-        <SectionHeader 
-          badge="Testimonials"
-          title="Loved by 500+ Canadian Companies"
-          subtitle="Don't just take our word for it."
-          redBadge
-        />
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {testimonials.map((testimonial, i) => (
-            <TestimonialCard key={i} {...testimonial} />
-          ))}
-        </div>
-      </Section>
-    );
-  };
-
-  // ==========================================
-  // PRICING (Continued)
-  // ==========================================
-  const Pricing = () => (
-    <Section id="pricing">
-      <SectionHeader 
-        badge="Pricing"
-        title="Simple, Transparent Pricing"
-        subtitle="No hidden fees. Cancel anytime. All prices in CAD."
-      />
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-        <PricingCard 
-          name="Starter"
-          price="$59"
-          description="Perfect for small teams"
-          features={[
-            'Up to 500 contacts',
-            'Basic CRM features',
-            'Email support',
-            '1 user included',
-          ]}
-          cta="Start Free Trial"
-        />
-        
-        <PricingCard 
-          name="Professional"
-          price="$179"
-          description="For growing businesses"
-          features={[
-            'Up to 5,000 contacts',
-            'Advanced automation',
-            'AI Chatbot (EN + FR)',
-            '10 users included',
-            'Priority support',
-          ]}
-          popular={true}
-          cta="Start Free Trial"
-        />
-        
-        <PricingCard 
-          name="Enterprise"
-          price="Custom"
-          period=""
-          description="For large organizations"
-          features={[
-            'Unlimited contacts',
-            'Full platform access',
-            'Dedicated manager',
-            'Custom development',
-          ]}
-          cta="Contact Sales"
-        />
-      </div>
-      
-      <div className="mt-8 text-center">
-        <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-100 rounded-full text-sm text-green-700">
-          <Shield size={16} />
-          30-day money-back guarantee
-        </div>
-      </div>
-    </Section>
-  );
-
-  // ==========================================
-  // FAQ
-  // ==========================================
-  const FAQ = () => {
-    const faqs = [
-      {
-        question: "How long does it take to get started?",
-        answer: "You can sign up and start using our CRM in minutes. For custom projects, we typically deliver MVPs within 4-8 weeks."
-      },
-      {
-        question: "Can I integrate with my existing tools?",
-        answer: "Yes! We integrate with 100+ popular tools including Slack, Zapier, HubSpot, Salesforce, and more."
-      },
-      {
-        question: "Is my data stored in Canada?",
-        answer: "Yes! We offer Canadian data residency options. Your data is stored in secure Canadian data centers."
-      },
-      {
-        question: "Do you support both English and French?",
-        answer: "Yes! Our platform, AI chatbot, and support team are fully bilingual."
-      },
-      {
-        question: "Can I cancel anytime?",
-        answer: "Yes, you can cancel your subscription at any time. No long-term contracts or cancellation fees."
-      }
-    ];
-
-    return (
-      <Section gray>
-        <SectionHeader 
-          badge="FAQ"
-          title="Frequently Asked Questions"
-          subtitle="Got questions? We've got answers."
-          redBadge
-        />
-        
-        <div className="max-w-2xl mx-auto">
-          <Card hover={false}>
-            {faqs.map((faq, i) => (
-              <FAQItem 
-                key={i}
-                question={faq.question}
-                answer={faq.answer}
-                isOpen={activeFAQ === i}
-                onToggle={() => setActiveFAQ(activeFAQ === i ? null : i)}
-              />
-            ))}
-          </Card>
-        </div>
-        
-        <div className="mt-8 text-center">
-          <p className="text-slate-500 text-sm mb-3">Still have questions?</p>
-          <Button variant="outline" size="sm">
-            <MessageSquare size={14} />
-            Chat with Us
-          </Button>
-        </div>
-      </Section>
-    );
-  };
-
-  // ==========================================
-  // NEWSLETTER - Red Background
-  // ==========================================
-  const Newsletter = () => (
-    <Section red>
-      <div className="text-center max-w-lg mx-auto">
-        <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-white/20 flex items-center justify-center">
-          <Mail size={24} className="text-white" />
-        </div>
-        <h2 className="text-2xl md:text-3xl font-semibold text-white mb-3">
-          Stay Ahead of the Curve
-        </h2>
-        <p className="text-red-100 mb-6 text-sm">
-          Get weekly insights on AI, automation, and business growth. Join 10,000+ subscribers.
-        </p>
-        
-        <form className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-          <input 
-            type="email"
-            placeholder="Enter your email"
-            className="flex-1 px-4 py-2.5 rounded-lg text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white/50"
-          />
-          <Button variant="secondary" className="whitespace-nowrap">
-            Subscribe
-            <ArrowRight size={14} />
-          </Button>
-        </form>
-        
-        <p className="text-red-200 text-xs mt-4">
-          No spam, ever. Unsubscribe anytime. 🇨🇦
-        </p>
-      </div>
-    </Section>
-  );
-
-  // ==========================================
-  // FINAL CTA
-  // ==========================================
-  const FinalCTA = () => (
-    <Section gray>
-      <div className="text-center max-w-2xl mx-auto">
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium mb-4 bg-red-100 text-red-600">
-          🍁 Ready to Get Started?
-        </span>
-        
-        <h2 className="text-3xl md:text-4xl font-semibold text-slate-900 mb-4 leading-tight">
-          Transform Your Business Today
-        </h2>
-        
-        <p className="text-slate-500 mb-8">
-          Join 500+ Canadian companies already using Yoursoft Digital to scale their operations.
-        </p>
-        
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-8">
-          <Button size="lg" onClick={() => navigate('/signup')}>
-            Start Free Trial
-            <ArrowRight size={16} />
-          </Button>
-          <Button variant="outline" size="lg">
-            <Calendar size={16} />
-            Schedule a Demo
-          </Button>
-        </div>
-        
-        <div className="flex flex-wrap justify-center gap-6 text-sm text-slate-500">
-          <div className="flex items-center gap-1.5">
-            <Check size={14} className="text-green-600" />
-            14-day free trial
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Check size={14} className="text-green-600" />
-            No credit card required
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Check size={14} className="text-green-600" />
-            Canadian data hosting
-          </div>
-        </div>
-      </div>
-    </Section>
-  );
-
-  // ==========================================
-  // FOOTER
-  // ==========================================
-  const Footer = () => (
-    <footer className="bg-slate-900 pt-16 pb-8">
-      <div className="max-w-6xl mx-auto px-6">
-        {/* Main Footer */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-12">
-          {/* Brand */}
-          <div className="col-span-2">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center">
-                <Layers size={16} className="text-white" />
-              </div>
-              <span className="font-semibold text-white">Yoursoft</span>
-            </div>
-            <p className="text-slate-400 text-sm mb-4 max-w-xs">
-              The complete ecosystem for Canadian businesses. Build, manage, and automate with confidence.
+      {/* ========== FEATURES GRID ========== */}
+      <section id="features" className="py-24 bg-[#F8FAFC]">
+        <div className="max-w-6xl mx-auto px-6">
+          <FadeInSection className="text-center mb-16">
+            <h2 className="text-3xl font-extrabold text-[#0F172A] tracking-tight mb-3">
+              Everything You Need to Scale
+            </h2>
+            <p className="text-base text-[#64748B] max-w-2xl mx-auto leading-relaxed">
+              A complete CRM platform with modules for every stage of your business — from first contact to revenue.
             </p>
-            <div className="flex gap-3">
-              {[Twitter, Linkedin, Github].map((Icon, i) => (
-                <a 
-                  key={i} 
-                  href="#" 
-                  className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 hover:bg-red-600 hover:text-white transition-colors"
-                >
-                  <Icon size={16} />
-                </a>
-              ))}
-            </div>
-          </div>
-          
-          {/* Links */}
-          <div>
-            <h4 className="font-medium text-white mb-4 text-sm">Product</h4>
-            <ul className="space-y-2">
-              {['CRM Platform', 'AI Chatbot', 'Integrations', 'Pricing'].map(item => (
-                <li key={item}>
-                  <a href="#" className="text-slate-400 hover:text-white transition-colors text-sm">{item}</a>
-                </li>
-              ))}
-            </ul>
-          </div>
-          
-          <div>
-            <h4 className="font-medium text-white mb-4 text-sm">Company</h4>
-            <ul className="space-y-2">
-              {['About Us', 'Careers', 'Blog', 'Contact'].map(item => (
-                <li key={item}>
-                  <a href="#" className="text-slate-400 hover:text-white transition-colors text-sm">{item}</a>
-                </li>
-              ))}
-            </ul>
-          </div>
-          
-          <div>
-            <h4 className="font-medium text-white mb-4 text-sm">Support</h4>
-            <ul className="space-y-2">
-              {['Help Center', 'Documentation', 'API', 'Status'].map(item => (
-                <li key={item}>
-                  <a href="#" className="text-slate-400 hover:text-white transition-colors text-sm">{item}</a>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-        
-        {/* Contact */}
-        <div className="flex flex-wrap gap-6 py-6 border-t border-slate-800 mb-6">
-          {[
-            { icon: Mail, text: "hello@yoursoftdigital.ca" },
-            { icon: Phone, text: "+1 (416) 555-0123" },
-            { icon: MapPin, text: "Toronto, ON" }
-          ].map((item, i) => (
-            <div key={i} className="flex items-center gap-2 text-slate-400 text-sm">
-              <item.icon size={14} className="text-red-500" />
-              <span>{item.text}</span>
-            </div>
-          ))}
-        </div>
-        
-        {/* Bottom */}
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4 pt-6 border-t border-slate-800">
-          <div className="text-slate-500 text-sm flex items-center gap-2">
-            <span>🇨🇦</span>
-            © {new Date().getFullYear()} Yoursoft Digital. Made in Canada.
-          </div>
-          <div className="flex gap-6 text-sm">
-            {['Privacy', 'Terms', 'Cookies'].map(item => (
-              <a key={item} href="#" className="text-slate-500 hover:text-white transition-colors">
-                {item}
-              </a>
+          </FadeInSection>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {[
+              { icon: Target, title: 'Leads Management', desc: 'Capture, score, and nurture leads through an intelligent pipeline with AI-driven prioritization.' },
+              { icon: Users, title: 'Clients & Contacts', desc: '360° client profiles with communication history, deal tracking, and relationship intelligence.' },
+              { icon: BarChart3, title: 'AI Dashboard', desc: 'Real-time business intelligence with predictive KPIs, trend analysis, and automated insights.' },
+              { icon: Workflow, title: 'Automation', desc: 'Design workflows that automate follow-ups, task assignments, and notifications without code.' },
+              { icon: PieChart, title: 'Reports & Analytics', desc: 'Custom reports with drill-down capabilities, export options, and scheduled delivery.' },
+              { icon: Building2, title: 'Multi-Tenant', desc: 'Enterprise-grade isolation with role-based access, audit logs, and team management.' },
+            ].map((item, i) => (
+              <FadeInSection key={i} delay={i * 60}>
+                <div className="p-6 rounded-lg bg-white border border-[rgba(15,23,42,0.06)] card-interactive h-full">
+                  <div className="w-10 h-10 rounded-lg bg-[#F1F5F9] flex items-center justify-center mb-4">
+                    <item.icon size={20} className="text-[#475569]" strokeWidth={1.75} />
+                  </div>
+                  <h3 className="text-sm font-semibold text-[#0F172A] mb-2">{item.title}</h3>
+                  <p className="text-[13px] text-[#64748B] leading-relaxed">{item.desc}</p>
+                </div>
+              </FadeInSection>
             ))}
           </div>
         </div>
-      </div>
-    </footer>
-  );
+      </section>
 
-  // ==========================================
-  // RENDER FULL PAGE
-  // ==========================================
-  return (
-    <div className="font-sans text-slate-900 bg-white antialiased">
-      <Navbar />
+      {/* ========== PRODUCT SHOWCASE ========== */}
+      <section id="product" className="py-24 bg-white">
+        <div className="max-w-6xl mx-auto px-6">
+          <FadeInSection className="text-center mb-16">
+            <h2 className="text-3xl font-extrabold text-[#0F172A] tracking-tight mb-3">
+              See ZODO in Action
+            </h2>
+            <p className="text-base text-[#64748B] max-w-2xl mx-auto leading-relaxed">
+              A clean, data-dense interface designed for all-day productivity —
+              not another cluttered admin panel.
+            </p>
+          </FadeInSection>
 
-      <main>
-        <Hero />
-        <StatsCounter />
-        <Audience />
-        <CoreOfferings />
-        <ServicesDetail />
-        <CRMProduct />
-        <AIChatbot />
-        <Integrations />
-        <Process />
-        <WhyUs />
-        <Testimonials />
-        <Pricing />
-        <FAQ />
-        <Newsletter />
-        <FinalCTA />
-      </main>
+          <FadeInSection>
+            <div className="bg-[#F8FAFC] rounded-2xl p-8 border border-[rgba(15,23,42,0.06)]"
+              style={{ boxShadow: '0 4px 24px rgba(15,23,42,0.06)' }}>
+              {/* Product Mock */}
+              <div className="bg-white rounded-xl overflow-hidden border border-[rgba(15,23,42,0.06)]"
+                style={{ boxShadow: '0 2px 12px rgba(15,23,42,0.06)' }}>
+                {/* Mock top bar */}
+                <div className="flex items-center gap-2 px-4 py-2.5 border-b border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]">
+                  <div className="flex gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#FCA5A5]" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#FDE68A]" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#86EFAC]" />
+                  </div>
+                  <div className="flex-1 mx-12">
+                    <div className="bg-white rounded-md px-3 py-1 text-[10px] text-[#94A3B8] border border-[rgba(15,23,42,0.06)] text-center">
+                      crm.zodo.ca/dashboard
+                    </div>
+                  </div>
+                </div>
 
-      <Footer />
-      <BackToTop />
+                {/* Mock dashboard content */}
+                <div className="flex">
+                  {/* Sidebar mock */}
+                  <div className="w-48 border-r border-[rgba(15,23,42,0.06)] p-3 space-y-1 hidden md:block">
+                    {['Dashboard', 'Leads', 'Clients', 'Projects', 'Tasks', 'Analytics'].map((item, i) => (
+                      <div key={i} className={cx(
+                        'flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[11px] font-medium',
+                        i === 0 ? 'bg-[#F0FDFA] text-[#0891B2]' : 'text-[#94A3B8]'
+                      )}>
+                        {i === 0 && <div className="w-0.5 h-3 bg-[#0891B2] rounded-full -ml-2.5 mr-1" />}
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Main content mock */}
+                  <div className="flex-1 p-4">
+                    {/* AI Hero mock */}
+                    <div className="border-l-2 border-[#0891B2] bg-[#F8FAFC] rounded-md p-3 mb-3">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Sparkles size={10} className="text-[#0891B2]" />
+                        <span className="text-[10px] font-semibold text-[#0F172A]">AI Business Overview</span>
+                        <span className="text-[8px] font-bold text-[#0891B2] bg-[#0891B2]/6 px-1 py-0.5 rounded uppercase">Live</span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2 mt-2">
+                        {['Strong', '+18%', '4 alerts', '92%'].map((v, i) => (
+                          <div key={i} className="text-center">
+                            <span className="text-[10px] font-bold text-[#0F172A]">{v}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* KPI mock */}
+                    <div className="grid grid-cols-4 gap-2 mb-3">
+                      {[
+                        { v: '24', c: '#0891B2' }, { v: '$8.2k', c: '#EA580C' },
+                        { v: '156', c: '#16A34A' }, { v: '7', c: '#7C3AED' }
+                      ].map((k, i) => (
+                        <div key={i} className="bg-white border border-[rgba(15,23,42,0.06)] rounded-md p-2 text-center">
+                          <span className="text-sm font-bold" style={{ color: k.c }}>{k.v}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Chart mock */}
+                    <div className="h-20 bg-[#F8FAFC] rounded-md border border-[rgba(15,23,42,0.04)] flex items-end px-2 pb-1.5 gap-0.5">
+                      {[30, 45, 35, 55, 40, 65, 50, 70, 55, 80, 75, 90].map((h, i) => (
+                        <div key={i} className="flex-1 rounded-t" style={{
+                          height: `${h}%`,
+                          backgroundColor: i >= 10 ? '#0891B2' : '#E2E8F0'
+                        }} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </FadeInSection>
+        </div>
+      </section>
+
+      {/* ========== ENTERPRISE TRUST ========== */}
+      <section className="py-24 bg-[#F8FAFC]">
+        <div className="max-w-6xl mx-auto px-6">
+          <FadeInSection className="text-center mb-16">
+            <h2 className="text-3xl font-extrabold text-[#0F172A] tracking-tight mb-3">
+              Enterprise Ready, Day One
+            </h2>
+            <p className="text-base text-[#64748B] max-w-2xl mx-auto leading-relaxed">
+              Built for scale with the security and reliability your business demands.
+            </p>
+          </FadeInSection>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              { icon: Shield, title: 'Secure by Design', desc: 'SOC 2 compliant infrastructure with end-to-end encryption, RBAC, and complete audit trail.' },
+              { icon: Globe, title: '99.9% Uptime SLA', desc: 'Globally distributed infrastructure with automatic failover and zero-downtime deployments.' },
+              { icon: Award, title: 'Dedicated Support', desc: 'Priority onboarding, dedicated success manager, and 24/7 technical support for enterprise plans.' },
+            ].map((item, i) => (
+              <FadeInSection key={i} delay={i * 100}>
+                <div className="text-center p-8 rounded-lg bg-white border border-[rgba(15,23,42,0.06)] card-interactive">
+                  <div className="w-12 h-12 rounded-xl bg-[#F1F5F9] flex items-center justify-center mx-auto mb-4">
+                    <item.icon size={22} className="text-[#475569]" strokeWidth={1.75} />
+                  </div>
+                  <h3 className="text-base font-semibold text-[#0F172A] mb-2">{item.title}</h3>
+                  <p className="text-[13px] text-[#64748B] leading-relaxed">{item.desc}</p>
+                </div>
+              </FadeInSection>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ========== PRICING ========== */}
+      <section id="pricing" className="py-24 bg-white">
+        <div className="max-w-6xl mx-auto px-6">
+          <FadeInSection className="text-center mb-16">
+            <h2 className="text-3xl font-extrabold text-[#0F172A] tracking-tight mb-3">
+              Simple, Transparent Pricing
+            </h2>
+            <p className="text-base text-[#64748B] max-w-2xl mx-auto leading-relaxed">
+              Start free. Upgrade as you grow. No hidden fees.
+            </p>
+          </FadeInSection>
+
+          <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            {[
+              {
+                name: 'Starter', price: '$0', period: '/month',
+                desc: 'For small teams getting started',
+                features: ['Up to 5 users', '500 contacts', 'Basic analytics', 'Email support'],
+                cta: 'Start Free', popular: false
+              },
+              {
+                name: 'Professional', price: '$49', period: '/user/month',
+                desc: 'For growing businesses',
+                features: ['Unlimited users', 'AI Business Insights', 'Advanced automation', 'Priority support', 'Custom reports'],
+                cta: 'Start Trial', popular: true
+              },
+              {
+                name: 'Enterprise', price: 'Custom', period: '',
+                desc: 'For large organizations',
+                features: ['Everything in Pro', 'Dedicated infrastructure', 'SSO & SAML', 'SLA guarantee', 'Custom integrations', 'Onboarding support'],
+                cta: 'Contact Sales', popular: false
+              },
+            ].map((plan, i) => (
+              <FadeInSection key={i} delay={i * 80}>
+                <div className={cx(
+                  'rounded-xl p-6 h-full flex flex-col',
+                  plan.popular
+                    ? 'bg-[#0F172A] text-white ring-1 ring-[#0F172A]'
+                    : 'bg-white border border-[rgba(15,23,42,0.08)] card-interactive'
+                )} style={plan.popular ? { boxShadow: '0 8px 32px rgba(15,23,42,0.12)' } : {}}>
+                  {plan.popular && (
+                    <span className="inline-block text-[10px] font-bold text-[#0891B2] bg-[#0891B2]/10 px-2 py-0.5 rounded uppercase tracking-wider mb-3 self-start">
+                      Most Popular
+                    </span>
+                  )}
+                  <h3 className={cx('text-lg font-bold mb-1', plan.popular ? 'text-white' : 'text-[#0F172A]')}>{plan.name}</h3>
+                  <p className={cx('text-xs mb-4', plan.popular ? 'text-[#94A3B8]' : 'text-[#64748B]')}>{plan.desc}</p>
+                  <div className="flex items-baseline gap-1 mb-5">
+                    <span className={cx('text-3xl font-extrabold', plan.popular ? 'text-white' : 'text-[#0F172A]')}>{plan.price}</span>
+                    {plan.period && <span className={cx('text-sm', plan.popular ? 'text-[#94A3B8]' : 'text-[#64748B]')}>{plan.period}</span>}
+                  </div>
+                  <ul className="space-y-2.5 mb-6 flex-1">
+                    {plan.features.map((f, fi) => (
+                      <li key={fi} className="flex items-center gap-2">
+                        <Check size={14} className={plan.popular ? 'text-[#22D3EE]' : 'text-[#0891B2]'} strokeWidth={2.5} />
+                        <span className={cx('text-[13px]', plan.popular ? 'text-[#CBD5E1]' : 'text-[#475569]')}>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    onClick={() => navigate('/signup')}
+                    className={cx(
+                      'w-full py-2.5 rounded-lg text-sm font-semibold transition-all smooth-hover',
+                      plan.popular
+                        ? 'bg-white text-[#0F172A] hover:bg-[#F1F5F9]'
+                        : 'bg-[#F1F5F9] text-[#0F172A] hover:bg-[#E2E8F0]'
+                    )}
+                  >
+                    {plan.cta}
+                  </button>
+                </div>
+              </FadeInSection>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ========== TESTIMONIALS ========== */}
+      <section className="py-24 bg-[#F8FAFC]">
+        <div className="max-w-6xl mx-auto px-6">
+          <FadeInSection className="text-center mb-16">
+            <h2 className="text-3xl font-extrabold text-[#0F172A] tracking-tight mb-3">
+              Trusted by Business Leaders
+            </h2>
+          </FadeInSection>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              { quote: 'ZODO replaced three tools for us. The AI insights alone save our team 10 hours per week on pipeline analysis.', name: 'Sarah Chen', role: 'VP Sales', company: 'TechFlow Inc.' },
+              { quote: 'Finally a CRM that understands enterprise needs. Clean interface, powerful automation, and the AI predictions are remarkably accurate.', name: 'Marcus Rivera', role: 'CEO', company: 'DataSync' },
+              { quote: 'The data density and analytical dashboard make it feel like a Bloomberg terminal for sales. Our team adopted it within a week.', name: 'Emily Park', role: 'Head of Revenue', company: 'CloudNine' },
+            ].map((t, i) => (
+              <FadeInSection key={i} delay={i * 80}>
+                <div className="p-6 rounded-lg bg-white border border-[rgba(15,23,42,0.06)] h-full flex flex-col">
+                  <p className="text-[13px] text-[#475569] leading-relaxed flex-1 mb-4">"{t.quote}"</p>
+                  <div className="border-t border-[rgba(15,23,42,0.06)] pt-4">
+                    <p className="text-sm font-semibold text-[#0F172A]">{t.name}</p>
+                    <p className="text-[12px] text-[#94A3B8]">{t.role} · {t.company}</p>
+                  </div>
+                </div>
+              </FadeInSection>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ========== FINAL CTA ========== */}
+      <section className="py-24 bg-white">
+        <div className="max-w-3xl mx-auto px-6 text-center">
+          <FadeInSection>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#0891B2]/6 border border-[#0891B2]/10 mb-6">
+              <Sparkles size={13} className="text-[#0891B2]" />
+              <span className="text-xs font-semibold text-[#0891B2] tracking-wide uppercase">Ready to upgrade?</span>
+            </div>
+            <h2 className="text-3xl font-extrabold text-[#0F172A] tracking-tight mb-4">
+              Start Making Intelligent<br />Decisions Today
+            </h2>
+            <p className="text-base text-[#64748B] mb-8 max-w-lg mx-auto leading-relaxed">
+              Join hundreds of teams already using ZODO to manage leads, close deals,
+              and grow revenue with AI-powered intelligence.
+            </p>
+            <div className="flex items-center justify-center gap-3">
+              <button
+                onClick={() => navigate('/signup')}
+                className="inline-flex items-center gap-2 text-sm font-semibold text-white bg-[#0F172A] hover:bg-[#1E293B] px-8 py-3.5 rounded-lg transition-all smooth-hover"
+              >
+                Start Free Trial
+                <ArrowRight size={16} />
+              </button>
+              <button
+                onClick={() => scrollTo('#pricing')}
+                className="inline-flex items-center gap-2 text-sm font-semibold text-[#475569] hover:text-[#0F172A] px-6 py-3.5 rounded-lg border border-[rgba(15,23,42,0.1)] hover:border-[rgba(15,23,42,0.2)] transition-all bg-white smooth-hover"
+              >
+                View Pricing
+              </button>
+            </div>
+          </FadeInSection>
+        </div>
+      </section>
+
+      {/* ========== FOOTER ========== */}
+      <footer className="py-12 bg-[#F8FAFC] border-t border-[rgba(15,23,42,0.06)]">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="grid md:grid-cols-4 gap-8 mb-8">
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <img src={logo} alt="ZODO" className="h-7 w-auto" />
+                <span className="text-base font-bold text-[#0F172A] tracking-tight">ZODO</span>
+              </div>
+              <p className="text-[13px] text-[#64748B] leading-relaxed">
+                AI-powered CRM platform for modern enterprises. Manage leads, clients, and revenue intelligently.
+              </p>
+            </div>
+            {[
+              { title: 'Product', links: ['Features', 'AI Platform', 'Pricing', 'Integrations'] },
+              { title: 'Company', links: ['About', 'Careers', 'Blog', 'Contact'] },
+              { title: 'Resources', links: ['Documentation', 'API Reference', 'Status', 'Security'] },
+            ].map((col, i) => (
+              <div key={i}>
+                <h4 className="text-xs font-semibold text-[#0F172A] uppercase tracking-wider mb-3">{col.title}</h4>
+                <ul className="space-y-2">
+                  {col.links.map(link => (
+                    <li key={link}>
+                      <a href="#" className="text-[13px] text-[#64748B] hover:text-[#0F172A] transition-colors">{link}</a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+          <div className="border-t border-[rgba(15,23,42,0.06)] pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-[12px] text-[#94A3B8]">© 2026 ZODO. All rights reserved.</p>
+            <div className="flex items-center gap-6">
+              <a href="#" className="text-[12px] text-[#94A3B8] hover:text-[#475569] transition-colors">Privacy</a>
+              <a href="#" className="text-[12px] text-[#94A3B8] hover:text-[#475569] transition-colors">Terms</a>
+              <a href="#" className="text-[12px] text-[#94A3B8] hover:text-[#475569] transition-colors">Cookies</a>
+            </div>
+          </div>
+        </div>
+      </footer>
+
+      {/* Float animation keyframe */}
+      <style>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-8px); }
+        }
+      `}</style>
     </div>
   );
 }

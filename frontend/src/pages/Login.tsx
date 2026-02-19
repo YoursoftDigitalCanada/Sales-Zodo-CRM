@@ -146,11 +146,11 @@ const LoginPage = () => {
             </p>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-white font-bold">
-                S
+                B
               </div>
               <div>
-                <div className="text-white font-semibold">Sarah Johnson</div>
-                <div className="text-white/60 text-sm">CEO, TechStart Inc</div>
+                <div className="text-white font-semibold">Bharti Dhawan</div>
+                <div className="text-white/60 text-sm">CEO, Zodo</div>
               </div>
             </div>
           </div>

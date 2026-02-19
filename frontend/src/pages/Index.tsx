@@ -135,7 +135,7 @@ const quickActions: QuickAction[] = [
     title: "New Project",
     icon: FolderKanban,
     color: "teal",
-    path: "/projects/new",
+    path: "/projects/add",
     description: "Create a new project",
   },
   {
@@ -453,7 +453,7 @@ const Index = () => {
 
               {/* Quick Add Button */}
               <button
-                onClick={() => navigate("/projects/new")}
+                onClick={() => navigate("/projects/add")}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0891B2] text-white text-xs font-medium rounded-md hover:bg-[#0891B2]/90 transition-colors"
               >
                 <Plus size={14} />

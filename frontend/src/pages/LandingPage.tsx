@@ -38,6 +38,116 @@ function FadeIn({ children, className = '', delay = 0 }: {
   );
 }
 
+// Mouse-following particles (hero only)
+function HeroParticles() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const particles = useRef<Array<{
+    x: number; y: number; vx: number; vy: number;
+    size: number; opacity: number; color: string; life: number; maxLife: number;
+  }>>([]);
+  const mouse = useRef({ x: -100, y: -100, active: false });
+  const raf = useRef<number>(0);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const colors = ['#2EC4C7', '#6BCB77', '#F6C945', '#F3722C'];
+    const MAX = 60;
+
+    const resize = () => {
+      const rect = canvas.parentElement?.getBoundingClientRect();
+      if (rect) {
+        canvas.width = rect.width * window.devicePixelRatio;
+        canvas.height = rect.height * window.devicePixelRatio;
+        canvas.style.width = rect.width + 'px';
+        canvas.style.height = rect.height + 'px';
+        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      }
+    };
+    resize();
+    window.addEventListener('resize', resize);
+
+    const handleMove = (e: MouseEvent) => {
+      const rect = canvas.parentElement?.getBoundingClientRect();
+      if (!rect) return;
+      mouse.current.x = e.clientX - rect.left;
+      mouse.current.y = e.clientY - rect.top;
+      mouse.current.active =
+        e.clientX >= rect.left && e.clientX <= rect.right &&
+        e.clientY >= rect.top && e.clientY <= rect.bottom;
+    };
+
+    const handleLeave = () => { mouse.current.active = false; };
+
+    window.addEventListener('mousemove', handleMove);
+    canvas.parentElement?.addEventListener('mouseleave', handleLeave);
+
+    let lastSpawn = 0;
+    const loop = (t: number) => {
+      const w = canvas.width / window.devicePixelRatio;
+      const h = canvas.height / window.devicePixelRatio;
+      ctx.clearRect(0, 0, w, h);
+
+      // Spawn particles near mouse
+      if (mouse.current.active && t - lastSpawn > 40 && particles.current.length < MAX) {
+        lastSpawn = t;
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 0.3 + Math.random() * 0.8;
+        particles.current.push({
+          x: mouse.current.x + (Math.random() - 0.5) * 20,
+          y: mouse.current.y + (Math.random() - 0.5) * 20,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 0.3,
+          size: 2 + Math.random() * 3,
+          opacity: 0.6 + Math.random() * 0.3,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          life: 0,
+          maxLife: 1000 + Math.random() * 600,
+        });
+      }
+
+      // Update & draw
+      particles.current = particles.current.filter(p => {
+        p.life += 16;
+        if (p.life >= p.maxLife) return false;
+        p.x += p.vx;
+        p.y += p.vy;
+        const progress = p.life / p.maxLife;
+        const alpha = p.opacity * (1 - progress);
+        const scale = 1 - progress * 0.5;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * scale, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = alpha;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        return true;
+      });
+
+      raf.current = requestAnimationFrame(loop);
+    };
+    raf.current = requestAnimationFrame(loop);
+
+    return () => {
+      cancelAnimationFrame(raf.current);
+      window.removeEventListener('resize', resize);
+      window.removeEventListener('mousemove', handleMove);
+      canvas.parentElement?.removeEventListener('mouseleave', handleLeave);
+    };
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="absolute inset-0 pointer-events-none z-[5]"
+      style={{ width: '100%', height: '100%' }}
+    />
+  );
+}
+
 // ============================================
 // LANDING PAGE
 // ============================================
@@ -136,6 +246,9 @@ export default function LandingPage() {
           <div className="absolute -bottom-20 right-1/4 w-[400px] h-[400px] rounded-full opacity-[0.05]"
             style={{ background: 'radial-gradient(circle, #F6C945 0%, transparent 65%)', filter: 'blur(100px)' }} />
         </div>
+
+        {/* Mouse-following particles */}
+        <HeroParticles />
 
         <div className="max-w-[1200px] mx-auto px-6 relative z-10">
           <div className="grid lg:grid-cols-2 gap-20 items-center">

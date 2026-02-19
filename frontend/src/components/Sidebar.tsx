@@ -605,15 +605,16 @@ export function Sidebar({
       <aside
         className={cn(
           "fixed top-0 left-0 h-screen z-40 transition-all duration-300 flex flex-col",
-          "bg-[#0F172A] border-r border-[#23D3EE]/10",
+          "bg-[#0F172A] border-r border-white/5",
           collapsed ? "w-20" : "w-72"
         )}
       >
-        {/* Decorative Background Elements */}
+        {/* Decorative Background Elements - using all 4 ZODO logo colors */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-20 -right-20 w-40 h-40 bg-[#23D3EE]/5 rounded-full blur-3xl" />
-          <div className="absolute bottom-20 -left-10 w-32 h-32 bg-[#FBBF23]/5 rounded-full blur-3xl" />
-          <div className="absolute top-1/2 right-0 w-24 h-24 bg-[#23D3EE]/3 rounded-full blur-2xl" />
+          <div className="absolute -top-10 -left-10 w-40 h-40 bg-[#4BDE80]/5 rounded-full blur-3xl" />
+          <div className="absolute top-1/3 -right-10 w-32 h-32 bg-[#23D3EE]/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/3 -left-10 w-36 h-36 bg-[#FBBF23]/4 rounded-full blur-3xl" />
+          <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-[#F97315]/5 rounded-full blur-3xl" />
         </div>
 
         {/* Header */}
@@ -624,18 +625,14 @@ export function Sidebar({
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className="flex items-center gap-3"
+                className="flex flex-col items-center flex-1"
               >
-                <div className="relative">
-                  <img
-                    src={logo}
-                    alt="ZODO"
-                    className="h-11 w-auto object-contain"
-                  />
-                </div>
-                <div>
-                  <p className="text-[10px] text-slate-400 -mt-0.5">Business Management Suite</p>
-                </div>
+                <img
+                  src={logo}
+                  alt="ZODO"
+                  className="h-14 w-auto object-contain"
+                />
+                <span className="text-[7px] text-slate-500 tracking-[0.2em] uppercase mt-0.5">One Stop Solution</span>
               </motion.div>
             ) : (
               <motion.div
@@ -643,9 +640,11 @@ export function Sidebar({
                 animate={{ opacity: 1, scale: 1 }}
                 className="mx-auto"
               >
-                <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-[#4BDE80] to-[#23D3EE] flex items-center justify-center shadow-lg shadow-[#23D3EE]/20">
-                  <span className="text-white font-bold text-lg">Z</span>
-                </div>
+                <img
+                  src={logo}
+                  alt="ZODO"
+                  className="h-10 w-10 object-contain rounded-xl"
+                />
               </motion.div>
             )}
           </AnimatePresence>

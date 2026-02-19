@@ -48,9 +48,9 @@ All colors MUST be HSL.
     --sidebar-foreground: 215 20% 75%;
     --sidebar-primary: 188 84% 54%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 33% 17%;
-    --sidebar-accent-foreground: 188 84% 58%;
-    --sidebar-border: 217 33% 17%;
+    --sidebar-accent: 217 30% 16%;
+    --sidebar-accent-foreground: 142 69% 62%;
+    --sidebar-border: 217 25% 18%;
     --sidebar-ring: 188 84% 54%;
 
     --chart-1: 188 84% 54%;
@@ -62,11 +62,11 @@ All colors MUST be HSL.
     --gradient-primary: linear-gradient(135deg, hsl(188 84% 54%), hsl(239 84% 67%));
     --gradient-secondary: linear-gradient(135deg, hsl(142 69% 58%), hsl(188 84% 54%));
     --gradient-accent: linear-gradient(135deg, hsl(25 95% 53%), hsl(43 96% 56%));
-    
+
     --shadow-sm: 0 2px 8px hsla(222, 47%, 11%, 0.06);
     --shadow-md: 0 4px 16px hsla(222, 47%, 11%, 0.1);
     --shadow-lg: 0 8px 32px hsla(222, 47%, 11%, 0.15);
-    
+
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
@@ -109,9 +109,9 @@ All colors MUST be HSL.
     --sidebar-foreground: 215 20% 75%;
     --sidebar-primary: 188 84% 58%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 33% 14%;
-    --sidebar-accent-foreground: 188 84% 62%;
-    --sidebar-border: 217 33% 16%;
+    --sidebar-accent: 217 28% 15%;
+    --sidebar-accent-foreground: 142 69% 65%;
+    --sidebar-border: 217 25% 16%;
     --sidebar-ring: 188 84% 58%;
   }
 }
@@ -121,18 +121,26 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  html {
+    font-size: 14px;
+  }
+
   body {
     @apply bg-background text-foreground;
   }
 }
+
 /* Hide scrollbar but keep functionality */
 .scrollbar-hide {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }
 
 .scrollbar-hide::-webkit-scrollbar {
-  display: none;  /* Chrome, Safari and Opera */
+  display: none;
+  /* Chrome, Safari and Opera */
 }
 
 /* Or show a thin scrollbar */

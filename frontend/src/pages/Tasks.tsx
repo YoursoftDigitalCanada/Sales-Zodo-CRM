@@ -1109,6 +1109,38 @@ const TaskFormDialog = ({
   const [selectedAssignees, setSelectedAssignees] = useState<Assignee[]>([]);
   const [subtasks, setSubtasks] = useState<SubTask[]>([]);
   const [newSubtask, setNewSubtask] = useState("");
+  const [availableUsers, setAvailableUsers] = useState<Assignee[]>([]);
+  const [assigneeSearch, setAssigneeSearch] = useState("");
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
+  // Fetch team members from API
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    const fetchUsers = async () => {
+      setLoadingUsers(true);
+      try {
+        const res = await axios.get("/users");
+        const data = res.data?.data || [];
+        if (!cancelled) {
+          setAvailableUsers(
+            data.map((u: any) => ({
+              id: String(u.id),
+              name: u.fullName || `${u.firstName || ""} ${u.lastName || ""}`.trim() || "Unknown",
+              email: u.email || "",
+              avatar: u.avatar || "",
+            }))
+          );
+        }
+      } catch {
+        // silently fail — just no users to pick from
+      } finally {
+        if (!cancelled) setLoadingUsers(false);
+      }
+    };
+    fetchUsers();
+    return () => { cancelled = true; };
+  }, [isOpen]);
 
   useEffect(() => {
     if (task) {
@@ -1401,9 +1433,69 @@ const TaskFormDialog = ({
                 </div>
               )}
 
-              {/* Available Members - will be populated from API */}
-              <div className="text-sm text-[#475569] py-2 text-center">
-                {selectedAssignees.length === 0 ? "No assignees selected" : ""}
+              {/* Search input */}
+              <div className="relative mb-2">
+                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
+                <input
+                  type="text"
+                  value={assigneeSearch}
+                  onChange={(e) => setAssigneeSearch(e.target.value)}
+                  placeholder="Search team members..."
+                  className="w-full h-8 pl-8 pr-3 rounded-md bg-[#F8FAFC] border border-[rgba(15,23,42,0.06)] text-xs text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-1 focus:ring-[#0891B2]/30 transition-colors"
+                />
+              </div>
+
+              {/* Available Members List */}
+              <div className="max-h-[160px] overflow-y-auto space-y-0.5">
+                {loadingUsers ? (
+                  <div className="flex items-center justify-center py-4">
+                    <RefreshCw size={14} className="animate-spin text-[#94A3B8] mr-2" />
+                    <span className="text-xs text-[#94A3B8]">Loading team members...</span>
+                  </div>
+                ) : (() => {
+                  const filtered = availableUsers.filter(
+                    (u) =>
+                      u.name.toLowerCase().includes(assigneeSearch.toLowerCase()) ||
+                      u.email.toLowerCase().includes(assigneeSearch.toLowerCase())
+                  );
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="text-xs text-[#94A3B8] py-3 text-center">
+                        {availableUsers.length === 0 ? "No team members found" : "No matching members"}
+                      </div>
+                    );
+                  }
+                  return filtered.map((user) => {
+                    const isSelected = selectedAssignees.some((a) => a.id === user.id);
+                    return (
+                      <button
+                        key={user.id}
+                        type="button"
+                        onClick={() => toggleAssignee(user)}
+                        className={cn(
+                          "flex items-center gap-3 w-full px-2.5 py-2 rounded-md text-left transition-colors",
+                          isSelected
+                            ? "bg-[#0891B2]/8 border border-[#22D3EE]/20"
+                            : "hover:bg-[#F8FAFC] border border-transparent"
+                        )}
+                      >
+                        <Avatar className="h-7 w-7">
+                          <AvatarImage src={user.avatar} />
+                          <AvatarFallback className="text-[10px] bg-slate-100">
+                            {getInitials(user.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-[#0F172A] truncate">{user.name}</p>
+                          <p className="text-[10px] text-[#94A3B8] truncate">{user.email}</p>
+                        </div>
+                        {isSelected && (
+                          <CheckCircle2 size={16} className="text-[#0891B2] flex-shrink-0" />
+                        )}
+                      </button>
+                    );
+                  });
+                })()}
               </div>
             </div>
           </div>

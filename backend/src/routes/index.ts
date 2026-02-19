@@ -50,6 +50,9 @@ import permissionsRoutes from '../modules/permissions/permissions.routes';
 // E-commerce modules
 import ecommerceRoutes from '../modules/ecommerce/ecommerce.routes';
 
+// AI modules
+import roofEstimatorRoutes from '../modules/roof-estimator/roof-estimator.routes';
+
 /**
  * Register all API routes
  */
@@ -117,6 +120,9 @@ export function registerRoutes(app: Application): void {
   // E-commerce
   apiRouter.use('/ecommerce', ecommerceRoutes);
 
+  // AI Modules
+  apiRouter.use('/roof-estimator', roofEstimatorRoutes);
+
   // =========================================================================
   // REGISTER API ROUTER
   // =========================================================================
@@ -174,6 +180,8 @@ export function registerRoutes(app: Application): void {
         permissions: `${apiPrefix}/permissions`,
         // E-commerce
         ecommerce: `${apiPrefix}/ecommerce`,
+        // AI Modules
+        roofEstimator: `${apiPrefix}/roof-estimator`,
       },
     });
   });

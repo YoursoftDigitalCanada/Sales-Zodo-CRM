@@ -261,6 +261,14 @@ const navigationItems: NavigationItem[] = [
       { title: "Templates", path: "/documents/templates", featureId: "documents" },
     ]
   },
+  {
+    title: "AI Roof Estimator",
+    icon: Zap,
+    path: "/roof-estimator",
+    featureId: "api",
+    badge: "AI",
+    badgeColor: "teal",
+  },
 
   // ===== COMMUNICATION =====
   { title: "Communication", isHeader: true },

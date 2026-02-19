@@ -189,6 +189,12 @@ export const PERMISSIONS = {
   // Audit Logs
   AUDIT_VIEW: 'audit.view',
   AUDIT_EXPORT: 'audit.export',
+
+  // Roof Estimator
+  ROOF_ESTIMATOR_VIEW: 'roof-estimator.view',
+  ROOF_ESTIMATOR_CREATE: 'roof-estimator.create',
+  ROOF_ESTIMATOR_DELETE: 'roof-estimator.delete',
+  ROOF_ESTIMATOR_SETTINGS: 'roof-estimator.settings',
 } as const;
 
 export type PermissionCode = typeof PERMISSIONS[keyof typeof PERMISSIONS];
@@ -391,6 +397,12 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   // Audit
   { code: PERMISSIONS.AUDIT_VIEW, name: 'View Audit Logs', description: 'View audit logs', module: 'audit', action: 'view' },
   { code: PERMISSIONS.AUDIT_EXPORT, name: 'Export Audit Logs', description: 'Export audit data', module: 'audit', action: 'export' },
+
+  // Roof Estimator
+  { code: PERMISSIONS.ROOF_ESTIMATOR_VIEW, name: 'View Roof Estimates', description: 'View roof estimates and AI results', module: 'roof-estimator', action: 'view' },
+  { code: PERMISSIONS.ROOF_ESTIMATOR_CREATE, name: 'Create Roof Estimates', description: 'Generate and save roof estimates', module: 'roof-estimator', action: 'create' },
+  { code: PERMISSIONS.ROOF_ESTIMATOR_DELETE, name: 'Delete Roof Estimates', description: 'Remove roof estimates', module: 'roof-estimator', action: 'delete' },
+  { code: PERMISSIONS.ROOF_ESTIMATOR_SETTINGS, name: 'Manage Estimator Settings', description: 'Configure pricing and company info for estimates', module: 'roof-estimator', action: 'settings' },
 ];
 
 // ============================================================================

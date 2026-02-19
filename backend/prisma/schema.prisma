@@ -288,6 +288,8 @@ model Tenant {
   leadSources           LeadSource[]
   tenantSettings        TenantSettings?
   tags                  Tag[]
+  roofEstimates         RoofEstimate[]
+  roofEstimateSettings  RoofEstimateSettings?
 
   @@index([status])
   @@index([slug])
@@ -644,6 +646,7 @@ model Client {
   orders                  Order[]
   bookings                Booking[]
   tasks                   Task[]
+  roofEstimates           RoofEstimate[]
 
   @@index([tenantId])
   @@index([status])
@@ -1946,5 +1949,69 @@ model UserPreferences {
   updatedAt       DateTime    @updatedAt
 }
 
-// Add the missing relation to User model
-// (This was implied but needs to be explicit)
+// ============================================================================
+// ROOF ESTIMATOR MODULE
+// ============================================================================
+
+model RoofEstimate {
+  id                String    @id @default(uuid())
+
+  // Address & Geo
+  address           String
+  latitude          Float
+  longitude         Float
+  satelliteImageUrl String?
+
+  // AI Results
+  roofAreaSqft      Float
+  confidence        Float     @default(0)
+  processingTimeSec Float     @default(0)
+  aiModel           String    @default("yolov8n-seg-cpu")
+
+  // Pricing
+  pricePerSqft      Float     @default(0)
+  manualAdjustment  Float     @default(0) // percentage adjustment
+  totalEstimate     Float     @default(0)
+
+  // Flags
+  snowMode          Boolean   @default(false)
+  notes             String?   @db.Text
+  pdfUrl            String?
+
+  // Relations
+  tenantId          String
+  tenant            Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  clientId          String?
+  client            Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  createdBy         String
+
+  // Timestamps
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([clientId])
+  @@index([createdAt])
+}
+
+model RoofEstimateSettings {
+  id                String    @id @default(uuid())
+
+  tenantId          String    @unique
+  tenant            Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  defaultPricePerSqft Float   @default(5.50)
+  currency          String    @default("CAD")
+  snowModeDefault   Boolean   @default(true)
+  companyName       String?   // For PDF branding
+  companyLogo       String?
+  companyPhone      String?
+  companyEmail      String?
+  companyAddress    String?
+  pdfFooterText     String?   @db.Text
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}

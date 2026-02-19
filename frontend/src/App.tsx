@@ -58,6 +58,9 @@ import DepartmentsPage from "./pages/employees/Departments";
 import AttendancePage from "./pages/employees/Attendance";
 import LeaveRequestsPage from "./pages/employees/LeaveRequests";
 
+// AI Modules
+import RoofEstimator from "./pages/RoofEstimator";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -380,6 +383,9 @@ const App = () => (
           {/* ========== SETTINGS ROUTES ========== */}
           {/* <Route path="/settings" element={<Settings />} /> */}
           <Route path="/onboarding" element={<Onboarding />} />
+
+          {/* ========== AI MODULES ========== */}
+          <Route path="/roof-estimator" element={<RoofEstimator />} />
 
           {/* ========== 404 CATCH-ALL ========== */}
           <Route path="*" element={<NotFound />} />

@@ -1,4 +1,4 @@
-const FALLBACK_API_ORIGIN = "http://localhost:3000";
+const FALLBACK_API_ORIGIN = "https://api.zodo.ca";
 const API_VERSION = "v1";
 
 const rawApiOrigin = import.meta.env.VITE_API_URL || FALLBACK_API_ORIGIN;

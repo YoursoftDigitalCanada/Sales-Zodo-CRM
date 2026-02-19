@@ -155,7 +155,7 @@ const Button = ({
   loading?: boolean;
   size?: 'sm' | 'default' | 'lg';
 }) => {
-  const baseStyle = "rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group";
+  const baseStyle = "rounded-md font-medium transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group";
   
   const sizes = {
     sm: "px-4 py-2 text-sm",
@@ -164,12 +164,12 @@ const Button = ({
   };
 
   const variants = {
-    primary: "bg-red-600 text-white hover:bg-red-700 shadow-sm hover:shadow-md",
-    secondary: "bg-slate-900 text-white hover:bg-slate-800 shadow-sm hover:shadow-md",
-    outline: "border border-slate-300 text-slate-700 hover:border-slate-400 hover:bg-slate-50 bg-white",
+    primary: "bg-red-600 text-[#0F172A] hover:bg-red-700 shadow-sm hover:shadow-md",
+    secondary: "bg-slate-900 text-[#0F172A] hover:bg-slate-800 shadow-sm hover:shadow-md",
+    outline: "border border-slate-300 text-slate-200 hover:border-slate-400 hover:bg-[#F8FAFC] bg-white",
     text: "text-red-600 hover:text-red-700 hover:bg-red-50",
-    ghost: "text-slate-600 hover:text-slate-900 hover:bg-slate-100",
-    white: "bg-white text-red-600 hover:bg-slate-50 shadow-sm hover:shadow-md"
+    ghost: "text-[#475569] hover:text-[#0F172A] hover:bg-white/10",
+    white: "bg-white text-red-600 hover:bg-[#F8FAFC] shadow-sm hover:shadow-md"
   };
 
   return (
@@ -181,7 +181,7 @@ const Button = ({
       whileTap={{ scale: 0.98 }}
     >
       {/* Shine effect */}
-      <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+      <span className="absolute inset-0 w-full h-full  from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
       {loading ? <Loader2 className="animate-spin" size={18} /> : children}
     </motion.button>
   );
@@ -201,7 +201,7 @@ const Card = ({
 }) => (
   <motion.div 
     className={`
-      bg-white border border-slate-200 rounded-xl
+      bg-white border border-[rgba(15,23,42,0.06)] rounded-md
       ${hover ? 'cursor-pointer' : ''}
       ${padding ? 'p-6' : ''}
       ${className}
@@ -233,9 +233,9 @@ const Section = ({
     id={id} 
     className={`
       py-16 md:py-24 px-6 overflow-hidden
-      ${dark ? 'bg-slate-900 text-white' : ''}
-      ${gray ? 'bg-slate-50' : ''}
-      ${red ? 'bg-red-600 text-white' : ''}
+      ${dark ? 'bg-slate-900 text-[#0F172A]' : ''}
+      ${gray ? 'bg-[#F8FAFC]' : ''}
+      ${red ? 'bg-red-600 text-[#0F172A]' : ''}
       ${!dark && !gray && !red ? 'bg-white' : ''}
       ${className}
     `}
@@ -279,10 +279,10 @@ const SectionHeader = ({
           className={`
             inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium mb-4
             ${light 
-              ? 'bg-white/20 text-white' 
+              ? 'bg-white/20 text-[#0F172A]' 
               : redBadge 
                 ? 'bg-red-100 text-red-600'
-                : 'bg-slate-100 text-slate-600'
+                : 'bg-white/5 text-[#475569]'
             }
           `}
         >
@@ -291,14 +291,14 @@ const SectionHeader = ({
       )}
       <motion.h2 
         variants={fadeInUp}
-        className={`text-3xl md:text-4xl font-semibold mb-4 leading-tight ${light ? 'text-white' : 'text-slate-900'}`}
+        className={`text-3xl md:text-4xl font-semibold mb-4 leading-tight ${light ? 'text-[#0F172A]' : 'text-[#0F172A]'}`}
       >
         {title}
       </motion.h2>
       {subtitle && (
         <motion.p 
           variants={fadeInUp}
-          className={`text-base md:text-lg ${light ? 'text-white/80' : 'text-slate-500'}`}
+          className={`text-base md:text-lg ${light ? 'text-[#0F172A]/80' : 'text-[#94A3B8]'}`}
         >
           {subtitle}
         </motion.p>
@@ -354,7 +354,7 @@ const FAQItem = ({
   index: number;
 }) => (
   <motion.div 
-    className="border-b border-slate-100 last:border-0"
+    className="border-b border-[rgba(15,23,42,0.06)] last:border-0"
     initial={{ opacity: 0, y: 20 }}
     whileInView={{ opacity: 1, y: 0 }}
     viewport={{ once: true }}
@@ -365,13 +365,13 @@ const FAQItem = ({
       className="w-full py-5 flex items-center justify-between text-left group"
       whileHover={{ x: 5 }}
     >
-      <span className="font-medium text-slate-900 group-hover:text-red-600 transition-colors pr-4">
+      <span className="font-medium text-[#0F172A] group-hover:text-red-600 transition-colors pr-4">
         {question}
       </span>
       <motion.div 
         className={`
           w-8 h-8 rounded-full flex items-center justify-center transition-colors
-          ${isOpen ? 'bg-red-600 text-white' : 'bg-slate-100 text-slate-500'}
+          ${isOpen ? 'bg-red-600 text-[#0F172A]' : 'bg-white/5 text-[#94A3B8]'}
         `}
         animate={{ rotate: isOpen ? 180 : 0 }}
         transition={{ duration: 0.3 }}
@@ -388,7 +388,7 @@ const FAQItem = ({
           transition={{ duration: 0.3 }}
           className="overflow-hidden"
         >
-          <p className="text-slate-500 text-sm leading-relaxed pb-5">{answer}</p>
+          <p className="text-[#94A3B8] text-sm leading-relaxed pb-5">{answer}</p>
         </motion.div>
       )}
     </AnimatePresence>
@@ -410,7 +410,7 @@ const BackToTop = () => {
       {show && (
         <motion.button 
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="fixed bottom-6 right-6 z-50 w-10 h-10 rounded-lg bg-red-600 text-white shadow-lg flex items-center justify-center hover:bg-red-700"
+          className="fixed bottom-6 right-6 z-50 w-10 h-10 rounded-md bg-red-600 text-[#0F172A] card-shadow flex items-center justify-center hover:bg-red-700"
           initial={{ opacity: 0, y: 20, scale: 0.8 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 20, scale: 0.8 }}
@@ -604,7 +604,7 @@ const Navbar = () => {
 
   return (
     <nav className={`fixed w-full z-50 transition-all duration-300 ${
-      isScrolled ? 'bg-white/95 backdrop-blur-sm shadow-sm border-b border-slate-100' : 'bg-white'
+      isScrolled ? 'bg-white/95 backdrop-blur-sm shadow-sm border-b border-[rgba(15,23,42,0.06)]' : 'bg-white'
     }`}>
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
         {/* Logo */}
@@ -612,10 +612,10 @@ const Navbar = () => {
           className="flex items-center gap-2 cursor-pointer" 
           onClick={() => navigate('/')}
         >
-          <div className="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center">
-            <Layers className="text-white" size={18} />
+          <div className="w-8 h-8 rounded-md bg-red-600 flex items-center justify-center">
+            <Layers className="text-[#0F172A]" size={18} />
           </div>
-          <span className="font-semibold text-slate-900">Yoursoft</span>
+          <span className="font-semibold text-[#0F172A]">Yoursoft</span>
           <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-medium">CA</span>
         </div>
         
@@ -627,7 +627,7 @@ const Navbar = () => {
               href={item.href}
               onClick={(e) => handleNavClick(e, item)}
               className={`text-sm transition-colors ${
-                item.label === 'Services' ? 'text-red-600 font-medium' : 'text-slate-600 hover:text-red-600'
+                item.label === 'Services' ? 'text-red-600 font-medium' : 'text-[#475569] hover:text-red-600'
               }`}
             >
               {item.label}
@@ -648,7 +648,7 @@ const Navbar = () => {
 
         {/* Mobile Menu */}
         <button 
-          className="lg:hidden p-2 hover:bg-slate-100 rounded-lg" 
+          className="lg:hidden p-2 hover:bg-white/10 rounded-md" 
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         >
           {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -657,19 +657,19 @@ const Navbar = () => {
 
       {/* Mobile Nav */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden bg-white border-t border-slate-100 shadow-lg">
+        <div className="lg:hidden bg-white border-t border-[rgba(15,23,42,0.06)] card-shadow">
           <div className="px-6 py-4 space-y-1">
             {navItems.map((item) => (
               <a 
                 key={item.label} 
                 href={item.href}
                 onClick={(e) => handleNavClick(e, item)}
-                className="block py-2.5 text-slate-600 hover:text-red-600 text-sm"
+                className="block py-2.5 text-[#475569] hover:text-red-600 text-sm"
               >
                 {item.label}
               </a>
             ))}
-            <div className="pt-4 space-y-2 border-t border-slate-100 mt-4">
+            <div className="pt-4 space-y-2 border-t border-[rgba(15,23,42,0.06)] mt-4">
               <Button variant="outline" className="w-full" size="sm">Sign In</Button>
               <Button className="w-full" size="sm">Get Started</Button>
             </div>
@@ -684,7 +684,7 @@ const Navbar = () => {
 // HERO - Left Aligned, No Animation on Text
 // ==========================================
 const Hero = () => (
-  <div className="relative pt-24 pb-16 bg-slate-50 overflow-hidden">
+  <div className="relative pt-24 pb-16 bg-[#F8FAFC] overflow-hidden">
     {/* Animated Background Elements */}
     <motion.div 
       className="absolute top-20 right-10 w-64 h-64 bg-red-200/30 rounded-full blur-3xl"
@@ -718,12 +718,12 @@ const Hero = () => (
         {/* Left Content - NO ANIMATION, LEFT ALIGNED */}
         <div>
           {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-sm text-slate-500 mb-6">
+          <div className="flex items-center gap-2 text-sm text-[#94A3B8] mb-6">
             <a href="/" onClick={(e) => { e.preventDefault(); navigate('/'); }} className="hover:text-red-600 transition-colors">
               Home
             </a>
             <span>/</span>
-            <span className="text-slate-900">Services</span>
+            <span className="text-[#0F172A]">Services</span>
           </div>
 
           {/* Badge */}
@@ -732,13 +732,13 @@ const Hero = () => (
           </span>
           
           {/* Heading - Left Aligned */}
-          <h1 className="text-4xl sm:text-5xl font-semibold text-slate-900 leading-tight mb-5">
+          <h1 className="text-4xl sm:text-5xl font-semibold text-[#0F172A] leading-tight mb-5">
             Expert Solutions for
             <span className="block text-red-600">Your Digital Growth</span>
           </h1>
           
           {/* Description - Left Aligned with max-width */}
-          <p className="text-lg text-slate-500 mb-8 max-w-md leading-relaxed">
+          <p className="text-lg text-[#94A3B8] mb-8 max-w-md leading-relaxed">
             From websites to apps, marketing to design — we deliver end-to-end digital solutions for Canadian businesses.
           </p>
           
@@ -755,12 +755,12 @@ const Hero = () => (
           </div>
           
           {/* Trust Indicators */}
-          <div className="flex items-center gap-6 mt-8 pt-8 border-t border-slate-200">
-            <div className="flex items-center gap-1.5 text-sm text-slate-500">
+          <div className="flex items-center gap-6 mt-8 pt-8 border-t border-[rgba(15,23,42,0.06)]">
+            <div className="flex items-center gap-1.5 text-sm text-[#94A3B8]">
               <CheckCircle2 size={16} className="text-green-600" />
               <span>500+ Projects</span>
             </div>
-            <div className="flex items-center gap-1.5 text-sm text-slate-500">
+            <div className="flex items-center gap-1.5 text-sm text-[#94A3B8]">
               <CheckCircle2 size={16} className="text-green-600" />
               <span>98% Satisfaction</span>
             </div>
@@ -786,18 +786,18 @@ const Hero = () => (
                   setActiveService(i);
                   document.getElementById('service-detail')?.scrollIntoView({ behavior: 'smooth' });
                 }}
-                className={`p-5 rounded-xl border transition-all cursor-pointer ${
+                className={`p-5 rounded-md border transition-all cursor-pointer ${
                   service.color === 'red' 
-                    ? 'bg-red-600 border-red-600 text-white hover:bg-red-700' 
-                    : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-lg'
+                    ? 'bg-red-600 border-red-600 text-[#0F172A] hover:bg-red-700' 
+                    : 'bg-white border-[rgba(15,23,42,0.06)] hover:border-slate-300 hover:shadow-lg'
                 }`}
               >
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 ${
-                  service.color === 'red' ? 'bg-white/20' : 'bg-slate-100'
+                <div className={`w-10 h-10 rounded-md flex items-center justify-center mb-3 ${
+                  service.color === 'red' ? 'bg-white/20' : 'bg-white/5'
                 }`}>
-                  <service.icon size={20} className={service.color === 'red' ? 'text-white' : 'text-slate-600'} />
+                  <service.icon size={20} className={service.color === 'red' ? 'text-[#0F172A]' : 'text-[#475569]'} />
                 </div>
-                <h3 className={`font-medium text-sm ${service.color === 'red' ? 'text-white' : 'text-slate-900'}`}>
+                <h3 className={`font-medium text-sm ${service.color === 'red' ? 'text-[#0F172A]' : 'text-[#0F172A]'}`}>
                   {service.title}
                 </h3>
               </motion.div>
@@ -815,14 +815,14 @@ const Hero = () => (
               setActiveService(i);
               document.getElementById('service-detail')?.scrollIntoView({ behavior: 'smooth' });
             }}
-            className={`p-4 rounded-xl border transition-all text-left ${
+            className={`p-4 rounded-md border transition-all text-left ${
               service.color === 'red' 
-                ? 'bg-red-600 border-red-600 text-white' 
-                : 'bg-white border-slate-200'
+                ? 'bg-red-600 border-red-600 text-[#0F172A]' 
+                : 'bg-white border-[rgba(15,23,42,0.06)]'
             }`}
           >
-            <service.icon size={20} className={service.color === 'red' ? 'text-white' : 'text-slate-600'} />
-            <span className={`block mt-2 text-sm font-medium ${service.color === 'red' ? 'text-white' : 'text-slate-900'}`}>
+            <service.icon size={20} className={service.color === 'red' ? 'text-[#0F172A]' : 'text-[#475569]'} />
+            <span className={`block mt-2 text-sm font-medium ${service.color === 'red' ? 'text-[#0F172A]' : 'text-[#0F172A]'}`}>
               {service.title}
             </span>
           </button>
@@ -840,17 +840,17 @@ const Hero = () => (
       <div className="flex flex-col lg:flex-row gap-12 items-start mb-16">
         <AnimatedSection className="lg:w-1/2">
           <motion.div 
-            className={`w-14 h-14 rounded-xl flex items-center justify-center mb-4 ${
-              currentService.color === 'red' ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-600'
+            className={`w-14 h-14 rounded-md flex items-center justify-center mb-4 ${
+              currentService.color === 'red' ? 'bg-red-100 text-red-600' : 'bg-white/5 text-[#475569]'
             }`}
             whileHover={{ rotate: 10, scale: 1.1 }}
           >
             <currentService.icon size={28} />
           </motion.div>
-          <h2 className="text-3xl md:text-4xl font-semibold text-slate-900 mb-4">
+          <h2 className="text-3xl md:text-4xl font-semibold text-[#0F172A] mb-4">
             {currentService.title}
           </h2>
-          <p className="text-lg text-slate-500 mb-6 leading-relaxed">
+          <p className="text-lg text-[#94A3B8] mb-6 leading-relaxed">
             {currentService.shortDesc}
           </p>
 
@@ -866,7 +866,7 @@ const Hero = () => (
               <motion.div 
                 key={i} 
                 variants={staggerItem}
-                className="flex items-center gap-2 text-sm text-slate-600"
+                className="flex items-center gap-2 text-sm text-[#475569]"
               >
                 <Check size={16} className="text-green-600 flex-shrink-0" />
                 {feature}
@@ -883,7 +883,7 @@ const Hero = () => (
         {/* Technologies */}
         <AnimatedSection className="lg:w-1/2" delay={0.2}>
           <Card hover={false}>
-            <h3 className="font-semibold text-slate-900 mb-4">Technologies We Use</h3>
+            <h3 className="font-semibold text-[#0F172A] mb-4">Technologies We Use</h3>
             <motion.div 
               className="flex flex-wrap gap-2 mb-6"
               variants={staggerContainer}
@@ -896,14 +896,14 @@ const Hero = () => (
                   key={i} 
                   variants={staggerItem}
                   whileHover={{ scale: 1.05, y: -2 }}
-                  className="px-3 py-1.5 bg-slate-100 rounded-lg text-sm font-medium text-slate-600 cursor-pointer hover:bg-slate-200 transition-colors"
+                  className="px-3 py-1.5 bg-white/5 rounded-md text-sm font-medium text-[#475569] cursor-pointer hover:bg-slate-200 transition-colors"
                 >
                   {tech}
                 </motion.span>
               ))}
             </motion.div>
 
-            <h3 className="font-semibold text-slate-900 mb-4">Why Choose Us</h3>
+            <h3 className="font-semibold text-[#0F172A] mb-4">Why Choose Us</h3>
             <motion.div 
               className="grid grid-cols-2 gap-4"
               variants={staggerContainer}
@@ -918,18 +918,18 @@ const Hero = () => (
                   className="flex gap-3 group"
                 >
                   <motion.div 
-                    className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
+                    className={`w-9 h-9 rounded-md flex items-center justify-center flex-shrink-0 transition-colors ${
                       i % 2 === 0 
-                        ? 'bg-red-100 text-red-600 group-hover:bg-red-600 group-hover:text-white' 
-                        : 'bg-slate-100 text-slate-600 group-hover:bg-slate-900 group-hover:text-white'
+                        ? 'bg-red-100 text-red-600 group-hover:bg-red-600 group-hover:text-[#0F172A]' 
+                        : 'bg-white/5 text-[#475569] group-hover:bg-slate-900 group-hover:text-[#0F172A]'
                     }`}
                     whileHover={{ rotate: 10 }}
                   >
                     <benefit.icon size={18} />
                   </motion.div>
                   <div>
-                    <div className="font-medium text-slate-900 text-sm">{benefit.text}</div>
-                    <div className="text-xs text-slate-500">{benefit.desc}</div>
+                    <div className="font-medium text-[#0F172A] text-sm">{benefit.text}</div>
+                    <div className="text-xs text-[#94A3B8]">{benefit.desc}</div>
                   </div>
                 </motion.div>
               ))}
@@ -949,10 +949,10 @@ const Hero = () => (
           <motion.button
             key={service.id}
             onClick={() => setActiveService(i)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+            className={`px-4 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-colors ${
               activeService === i 
-                ? 'bg-red-600 text-white' 
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                ? 'bg-red-600 text-[#0F172A]' 
+                : 'bg-white/5 text-[#475569] hover:bg-slate-200'
             }`}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -992,17 +992,17 @@ const Hero = () => (
               )}
               
               <motion.div 
-                className={`w-12 h-12 mx-auto rounded-lg flex items-center justify-center mb-4 transition-colors ${
+                className={`w-12 h-12 mx-auto rounded-md flex items-center justify-center mb-4 transition-colors ${
                   i % 2 === 0 
-                    ? 'bg-red-100 text-red-600 group-hover:bg-red-600 group-hover:text-white'
-                    : 'bg-slate-100 text-slate-600 group-hover:bg-slate-900 group-hover:text-white'
+                    ? 'bg-red-100 text-red-600 group-hover:bg-red-600 group-hover:text-[#0F172A]'
+                    : 'bg-white/5 text-[#475569] group-hover:bg-slate-900 group-hover:text-[#0F172A]'
                 }`}
                 whileHover={{ scale: 1.1, rotate: 5 }}
               >
                 <span className="font-semibold">{step.step}</span>
               </motion.div>
-              <h3 className="font-semibold text-slate-900 mb-2">{step.title}</h3>
-              <p className="text-slate-500 text-sm">{step.desc}</p>
+              <h3 className="font-semibold text-[#0F172A] mb-2">{step.title}</h3>
+              <p className="text-[#94A3B8] text-sm">{step.desc}</p>
             </Card>
           </motion.div>
         ))}
@@ -1033,15 +1033,15 @@ const Hero = () => (
             key={i}
             variants={staggerItem}
             whileHover={{ y: -10 }}
-            className={`p-6 rounded-xl transition-all duration-200 ${
+            className={`p-6 rounded-md transition-all duration-200 ${
               pkg.popular 
-                ? 'bg-red-600 text-white shadow-xl ring-2 ring-red-600' 
-                : 'bg-white border border-slate-200 hover:shadow-lg'
+                ? 'bg-red-600 text-[#0F172A] card-shadow ring-2 ring-red-600' 
+                : 'bg-white border border-[rgba(15,23,42,0.06)] hover:shadow-lg'
             }`}
           >
             {pkg.popular && (
               <motion.span 
-                className="inline-block px-3 py-1 bg-slate-900 text-white text-xs font-medium rounded-full mb-4"
+                className="inline-block px-3 py-1 bg-slate-900 text-[#0F172A] text-xs font-medium rounded-full mb-4"
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.5, type: "spring" }}
@@ -1050,11 +1050,11 @@ const Hero = () => (
               </motion.span>
             )}
             
-            <h3 className={`text-lg font-semibold mb-1 ${pkg.popular ? 'text-white' : 'text-slate-900'}`}>
+            <h3 className={`text-lg font-semibold mb-1 ${pkg.popular ? 'text-[#0F172A]' : 'text-[#0F172A]'}`}>
               {pkg.name}
             </h3>
             <div className="mb-4">
-              <span className={`text-3xl font-semibold ${pkg.popular ? 'text-white' : 'text-slate-900'}`}>
+              <span className={`text-3xl font-semibold ${pkg.popular ? 'text-[#0F172A]' : 'text-[#0F172A]'}`}>
                 {pkg.price}
               </span>
             </div>
@@ -1069,8 +1069,8 @@ const Hero = () => (
                   viewport={{ once: true }}
                   transition={{ delay: j * 0.1 }}
                 >
-                  <Check size={16} className={`mt-0.5 flex-shrink-0 ${pkg.popular ? 'text-white' : 'text-green-600'}`} />
-                  <span className={pkg.popular ? 'text-red-50' : 'text-slate-600'}>{feature}</span>
+                  <Check size={16} className={`mt-0.5 flex-shrink-0 ${pkg.popular ? 'text-[#0F172A]' : 'text-green-600'}`} />
+                  <span className={pkg.popular ? 'text-red-50' : 'text-[#475569]'}>{feature}</span>
                 </motion.li>
               ))}
             </ul>
@@ -1088,7 +1088,7 @@ const Hero = () => (
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
       >
-        <p className="text-slate-500 text-sm mb-3">Need something custom?</p>
+        <p className="text-[#94A3B8] text-sm mb-3">Need something custom?</p>
         <Button variant="text">
           Contact us for a custom quote
           <ArrowRight size={14} />
@@ -1121,7 +1121,7 @@ const Hero = () => (
             key={service.id}
             variants={staggerItem}
             whileHover={{ scale: 1.02, y: -5 }}
-            className={`p-6 rounded-xl border transition-all duration-200 cursor-pointer ${
+            className={`p-6 rounded-md border transition-all duration-200 cursor-pointer ${
               i % 2 === 0 
                 ? 'bg-red-600 border-red-600 hover:bg-red-700' 
                 : 'bg-slate-800 border-slate-700 hover:bg-slate-700'
@@ -1133,16 +1133,16 @@ const Hero = () => (
           >
             <div className="flex items-start gap-4">
               <motion.div 
-                className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                  i % 2 === 0 ? 'bg-white/20 text-white' : 'bg-slate-700 text-slate-300'
+                className={`w-12 h-12 rounded-md flex items-center justify-center flex-shrink-0 ${
+                  i % 2 === 0 ? 'bg-white/20 text-[#0F172A]' : 'bg-slate-700 text-[#475569]'
                 }`}
                 whileHover={{ rotate: 10 }}
               >
                 <service.icon size={24} />
               </motion.div>
               <div className="flex-1">
-                <h3 className="text-lg font-semibold text-white mb-2">{service.title}</h3>
-                <p className={`text-sm mb-4 ${i % 2 === 0 ? 'text-red-100' : 'text-slate-400'}`}>
+                <h3 className="text-lg font-semibold text-[#0F172A] mb-2">{service.title}</h3>
+                <p className={`text-sm mb-4 ${i % 2 === 0 ? 'text-red-100' : 'text-[#475569]'}`}>
                   {service.shortDesc}
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -1150,7 +1150,7 @@ const Hero = () => (
                     <span 
                       key={j} 
                       className={`px-2 py-1 rounded text-xs ${
-                        i % 2 === 0 ? 'bg-white/10 text-white' : 'bg-slate-700 text-slate-300'
+                        i % 2 === 0 ? 'bg-white/10 text-[#0F172A]' : 'bg-slate-700 text-[#475569]'
                       }`}
                     >
                       {feature}
@@ -1159,7 +1159,7 @@ const Hero = () => (
                 </div>
               </div>
               <motion.div whileHover={{ x: 5 }}>
-                <ArrowRight size={20} className="text-white/60" />
+                <ArrowRight size={20} className="text-[#0F172A]/60" />
               </motion.div>
             </div>
           </motion.div>
@@ -1213,7 +1213,7 @@ const Hero = () => (
           <motion.div key={i} variants={staggerItem}>
             <Card className="h-full flex flex-col">
               <span className={`text-xs font-medium mb-3 ${
-                i % 2 === 0 ? 'text-red-600' : 'text-slate-500'
+                i % 2 === 0 ? 'text-red-600' : 'text-[#94A3B8]'
               }`}>
                 {testimonial.service}
               </span>
@@ -1230,19 +1230,19 @@ const Hero = () => (
                   </motion.div>
                 ))}
               </div>
-              <p className="text-slate-600 mb-4 flex-1">"{testimonial.quote}"</p>
-              <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
+              <p className="text-[#475569] mb-4 flex-1">"{testimonial.quote}"</p>
+              <div className="flex items-center gap-3 pt-4 border-t border-[rgba(15,23,42,0.06)]">
                 <motion.div 
                   className={`w-10 h-10 rounded-full flex items-center justify-center font-medium text-sm ${
-                    i % 2 === 0 ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-600'
+                    i % 2 === 0 ? 'bg-red-100 text-red-600' : 'bg-white/5 text-[#475569]'
                   }`}
                   whileHover={{ scale: 1.1 }}
                 >
                   {testimonial.author.charAt(0)}
                 </motion.div>
                 <div>
-                  <div className="font-medium text-slate-900 text-sm">{testimonial.author}</div>
-                  <div className="text-xs text-slate-500">{testimonial.role}, {testimonial.company}</div>
+                  <div className="font-medium text-[#0F172A] text-sm">{testimonial.author}</div>
+                  <div className="text-xs text-[#94A3B8]">{testimonial.role}, {testimonial.company}</div>
                 </div>
               </div>
             </Card>
@@ -1319,14 +1319,14 @@ const Hero = () => (
       >
         <motion.span 
           variants={fadeInDown}
-          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium mb-4 bg-white/20 text-white"
+          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium mb-4 bg-white/20 text-[#0F172A]"
         >
           🍁 Let's Work Together
         </motion.span>
         
         <motion.h2 
           variants={fadeInUp}
-          className="text-3xl md:text-4xl font-semibold text-white mb-4 leading-tight"
+          className="text-3xl md:text-4xl font-semibold text-[#0F172A] mb-4 leading-tight"
         >
           Ready to Start Your Project?
         </motion.h2>
@@ -1343,7 +1343,7 @@ const Hero = () => (
             Get a Free Quote
             <ArrowRight size={16} />
           </Button>
-          <Button variant="outline" size="lg" className="border-white/30 text-white hover:bg-white/10">
+          <Button variant="outline" size="lg" className="border-white/30 text-[#0F172A] hover:bg-white/10">
             <Phone size={16} />
             +1 (416) 555-0123
           </Button>
@@ -1368,12 +1368,12 @@ const Hero = () => (
           {/* Brand */}
           <motion.div variants={staggerItem} className="col-span-2">
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center">
-                <Layers size={16} className="text-white" />
+              <div className="w-8 h-8 rounded-md bg-red-600 flex items-center justify-center">
+                <Layers size={16} className="text-[#0F172A]" />
               </div>
-              <span className="font-semibold text-white">Yoursoft</span>
+              <span className="font-semibold text-[#0F172A]">Yoursoft</span>
             </div>
-            <p className="text-slate-400 text-sm mb-4 max-w-xs">
+            <p className="text-[#475569] text-sm mb-4 max-w-xs">
               Expert digital solutions for Canadian businesses.
             </p>
             <div className="flex gap-3">
@@ -1381,7 +1381,7 @@ const Hero = () => (
                 <motion.a 
                   key={i} 
                   href="#" 
-                  className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 hover:bg-red-600 hover:text-white transition-colors"
+                  className="w-8 h-8 rounded-md bg-slate-800 flex items-center justify-center text-[#475569] hover:bg-red-600 hover:text-[#0F172A] transition-colors"
                   whileHover={{ scale: 1.1, y: -2 }}
                 >
                   <Icon size={16} />
@@ -1392,11 +1392,11 @@ const Hero = () => (
           
           {/* Services */}
           <motion.div variants={staggerItem}>
-            <h4 className="font-medium text-white mb-4 text-sm">Services</h4>
+            <h4 className="font-medium text-[#0F172A] mb-4 text-sm">Services</h4>
             <ul className="space-y-2">
               {services.map(service => (
                 <li key={service.id}>
-                  <a href="#" className="text-slate-400 hover:text-white transition-colors text-sm">
+                  <a href="#" className="text-[#475569] hover:text-[#0F172A] transition-colors text-sm">
                     {service.title}
                   </a>
                 </li>
@@ -1406,11 +1406,11 @@ const Hero = () => (
           
           {/* Company */}
           <motion.div variants={staggerItem}>
-            <h4 className="font-medium text-white mb-4 text-sm">Company</h4>
+            <h4 className="font-medium text-[#0F172A] mb-4 text-sm">Company</h4>
             <ul className="space-y-2">
               {['About Us', 'Portfolio', 'Careers', 'Contact'].map(item => (
                 <li key={item}>
-                  <a href="#" className="text-slate-400 hover:text-white transition-colors text-sm">{item}</a>
+                  <a href="#" className="text-[#475569] hover:text-[#0F172A] transition-colors text-sm">{item}</a>
                 </li>
               ))}
             </ul>
@@ -1418,17 +1418,17 @@ const Hero = () => (
           
           {/* Contact */}
           <motion.div variants={staggerItem}>
-            <h4 className="font-medium text-white mb-4 text-sm">Contact</h4>
+            <h4 className="font-medium text-[#0F172A] mb-4 text-sm">Contact</h4>
             <ul className="space-y-2">
-              <li className="flex items-center gap-2 text-slate-400 text-sm">
+              <li className="flex items-center gap-2 text-[#475569] text-sm">
                 <Mail size={14} className="text-red-500" />
                 hello@yoursoft.ca
               </li>
-              <li className="flex items-center gap-2 text-slate-400 text-sm">
+              <li className="flex items-center gap-2 text-[#475569] text-sm">
                 <Phone size={14} className="text-red-500" />
                 +1 (416) 555-0123
               </li>
-              <li className="flex items-center gap-2 text-slate-400 text-sm">
+              <li className="flex items-center gap-2 text-[#475569] text-sm">
                 <MapPin size={14} className="text-red-500" />
                 Toronto, ON
               </li>
@@ -1443,13 +1443,13 @@ const Hero = () => (
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
         >
-          <div className="text-slate-500 text-sm flex items-center gap-2">
+          <div className="text-[#94A3B8] text-sm flex items-center gap-2">
             <span>🇨🇦</span>
             © {new Date().getFullYear()} Yoursoft Digital. Made in Canada.
           </div>
           <div className="flex gap-6 text-sm">
             {['Privacy', 'Terms', 'Cookies'].map(item => (
-              <a key={item} href="#" className="text-slate-500 hover:text-white transition-colors">
+              <a key={item} href="#" className="text-[#94A3B8] hover:text-[#0F172A] transition-colors">
                 {item}
               </a>
             ))}
@@ -1466,7 +1466,7 @@ const Hero = () => (
   // RENDER (Continued)
   // ==========================================
   return (
-    <div className="font-sans text-slate-900 bg-white antialiased">
+    <div className="font-sans text-[#0F172A] bg-white antialiased">
       <Navbar />
       
       <main>

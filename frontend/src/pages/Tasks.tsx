@@ -346,7 +346,7 @@ const StatCard = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
       whileHover={{ y: -4 }}
-      className="relative bg-white rounded-2xl p-5 border border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5 transition-all overflow-hidden group"
+      className="relative bg-white rounded-md p-5 border border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg  transition-all overflow-hidden group"
     >
       <div
         className="absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-10 group-hover:opacity-20 transition-all"
@@ -355,9 +355,9 @@ const StatCard = ({
 
       <div className="relative flex items-start justify-between">
         <div>
-          <p className="text-sm text-slate-500 mb-1">{title}</p>
+          <p className="text-sm text-[#94A3B8] mb-1">{title}</p>
           <p className="text-2xl font-bold text-[#0F172A]">{value}</p>
-          {subtitle && <p className="text-xs text-slate-400 mt-1">{subtitle}</p>}
+          {subtitle && <p className="text-xs text-[#475569] mt-1">{subtitle}</p>}
           {trend && (
             <div className="flex items-center gap-1 mt-2">
               {trend.value >= 0 ? (
@@ -373,12 +373,12 @@ const StatCard = ({
               >
                 {Math.abs(trend.value)}%
               </span>
-              <span className="text-xs text-slate-400">{trend.label}</span>
+              <span className="text-xs text-[#475569]">{trend.label}</span>
             </div>
           )}
         </div>
         <div
-          className="w-12 h-12 rounded-xl flex items-center justify-center"
+          className="w-12 h-12 rounded-md flex items-center justify-center"
           style={{ backgroundColor: `${color}15` }}
         >
           <Icon size={22} style={{ color }} />
@@ -422,7 +422,7 @@ const TaskListItem = ({
       exit={{ opacity: 0, x: -20 }}
       whileHover={{ backgroundColor: "#F8FAFC" }}
       className={cn(
-        "group flex items-start gap-4 p-4 border-b border-slate-100 cursor-pointer transition-all",
+        "group flex items-start gap-4 p-4 border-b border-[rgba(15,23,42,0.06)] cursor-pointer transition-all",
         task.status === "completed" && "opacity-60"
       )}
       onClick={onClick}
@@ -434,8 +434,8 @@ const TaskListItem = ({
           className={cn(
             "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
             task.status === "completed"
-              ? "bg-green-500 border-green-500 text-white"
-              : "border-slate-300 hover:border-[#23D3EE]"
+              ? "bg-green-500 border-green-500 text-[#0F172A]"
+              : "border-slate-300 hover:border-[#22D3EE]"
           )}
         >
           {task.status === "completed" && <Check size={12} />}
@@ -451,7 +451,7 @@ const TaskListItem = ({
               <h3
                 className={cn(
                   "font-medium text-[#0F172A] truncate",
-                  task.status === "completed" && "line-through text-slate-400"
+                  task.status === "completed" && "line-through text-[#475569]"
                 )}
               >
                 {task.title}
@@ -466,11 +466,11 @@ const TaskListItem = ({
                 {task.isStarred ? (
                   <Star size={16} className="text-yellow-500 fill-yellow-500" />
                 ) : (
-                  <Star size={16} className="text-slate-300 hover:text-yellow-500" />
+                  <Star size={16} className="text-[#475569] hover:text-yellow-500" />
                 )}
               </button>
               {task.isRecurring && (
-                <Repeat size={14} className="text-slate-400" />
+                <Repeat size={14} className="text-[#475569]" />
               )}
             </div>
 
@@ -509,7 +509,7 @@ const TaskListItem = ({
                     "inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium",
                     overdue && "bg-red-100 text-red-600",
                     dueToday && !overdue && "bg-yellow-100 text-yellow-600",
-                    !overdue && !dueToday && "bg-slate-100 text-slate-600"
+                    !overdue && !dueToday && "bg-white/5 text-[#475569]"
                   )}
                 >
                   <CalendarIcon size={10} />
@@ -519,7 +519,7 @@ const TaskListItem = ({
 
               {/* Subtasks */}
               {task.subtasks && task.subtasks.length > 0 && (
-                <span className="inline-flex items-center gap-1 text-xs text-slate-500">
+                <span className="inline-flex items-center gap-1 text-xs text-[#94A3B8]">
                   <ListChecks size={12} />
                   {task.subtasks.filter((st) => st.completed).length}/{task.subtasks.length}
                 </span>
@@ -527,7 +527,7 @@ const TaskListItem = ({
 
               {/* Attachments */}
               {task.attachments && task.attachments > 0 && (
-                <span className="inline-flex items-center gap-1 text-xs text-slate-500">
+                <span className="inline-flex items-center gap-1 text-xs text-[#94A3B8]">
                   <Paperclip size={12} />
                   {task.attachments}
                 </span>
@@ -535,7 +535,7 @@ const TaskListItem = ({
 
               {/* Comments */}
               {task.comments && task.comments > 0 && (
-                <span className="inline-flex items-center gap-1 text-xs text-slate-500">
+                <span className="inline-flex items-center gap-1 text-xs text-[#94A3B8]">
                   <MessageSquare size={12} />
                   {task.comments}
                 </span>
@@ -564,7 +564,7 @@ const TaskListItem = ({
                   </Avatar>
                 ))}
                 {task.assignees.length > 3 && (
-                  <div className="h-7 w-7 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-xs font-medium text-slate-600">
+                  <div className="h-7 w-7 rounded-full bg-white/5 border-2 border-white flex items-center justify-center text-xs font-medium text-[#475569]">
                     +{task.assignees.length - 3}
                   </div>
                 )}
@@ -578,30 +578,30 @@ const TaskListItem = ({
             >
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md">
                     <MoreHorizontal size={16} />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 rounded-xl">
-                  <DropdownMenuItem onClick={onClick} className="rounded-lg">
+                <DropdownMenuContent align="end" className="w-48 rounded-md">
+                  <DropdownMenuItem onClick={onClick} className="rounded-md">
                     <Eye size={14} className="mr-2" /> View Details
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onEdit} className="rounded-lg">
+                  <DropdownMenuItem onClick={onEdit} className="rounded-md">
                     <Pencil size={14} className="mr-2" /> Edit Task
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onToggleStar} className="rounded-lg">
+                  <DropdownMenuItem onClick={onToggleStar} className="rounded-md">
                     <Star size={14} className="mr-2" />
                     {task.isStarred ? "Remove Star" : "Add Star"}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="rounded-lg">
+                  <DropdownMenuItem className="rounded-md">
                     <Copy size={14} className="mr-2" /> Duplicate
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="rounded-lg">
+                  <DropdownMenuItem className="rounded-md">
                     <Archive size={14} className="mr-2" /> Archive
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={onDelete} className="rounded-lg text-red-600">
+                  <DropdownMenuItem onClick={onDelete} className="rounded-md text-red-600">
                     <Trash2 size={14} className="mr-2" /> Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -650,10 +650,10 @@ const TaskCard = ({
       transition={{ delay }}
       whileHover={{ y: -4 }}
       className={cn(
-        "relative bg-white rounded-2xl border overflow-hidden transition-all group cursor-pointer",
+        "relative bg-white rounded-md border overflow-hidden transition-all group cursor-pointer",
         task.status === "completed"
-          ? "border-slate-200 opacity-70"
-          : "border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5"
+          ? "border-[rgba(15,23,42,0.06)] opacity-70"
+          : "border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg "
       )}
       onClick={onClick}
     >
@@ -670,29 +670,29 @@ const TaskCard = ({
       >
         <button
           onClick={onToggleStar}
-          className="p-1.5 rounded-lg bg-white/80 backdrop-blur-sm hover:bg-white"
+          className="p-1.5 rounded-md bg-white/80 backdrop-blur-sm hover:bg-white"
         >
           {task.isStarred ? (
             <Star size={14} className="text-yellow-500 fill-yellow-500" />
           ) : (
-            <Star size={14} className="text-slate-400" />
+            <Star size={14} className="text-[#475569]" />
           )}
         </button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg bg-white/80 backdrop-blur-sm hover:bg-white">
+            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md bg-white/80 backdrop-blur-sm hover:bg-white">
               <MoreHorizontal size={14} />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-44 rounded-xl">
-            <DropdownMenuItem onClick={onClick} className="rounded-lg text-sm">
+          <DropdownMenuContent align="end" className="w-44 rounded-md">
+            <DropdownMenuItem onClick={onClick} className="rounded-md text-sm">
               <Eye size={14} className="mr-2" /> View
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={onEdit} className="rounded-lg text-sm">
+            <DropdownMenuItem onClick={onEdit} className="rounded-md text-sm">
               <Pencil size={14} className="mr-2" /> Edit
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onDelete} className="rounded-lg text-sm text-red-600">
+            <DropdownMenuItem onClick={onDelete} className="rounded-md text-sm text-red-600">
               <Trash2 size={14} className="mr-2" /> Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -735,8 +735,8 @@ const TaskCard = ({
             className={cn(
               "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0 mt-0.5",
               task.status === "completed"
-                ? "bg-green-500 border-green-500 text-white"
-                : "border-slate-300 hover:border-[#23D3EE]"
+                ? "bg-green-500 border-green-500 text-[#0F172A]"
+                : "border-slate-300 hover:border-[#22D3EE]"
             )}
           >
             {task.status === "completed" && <Check size={12} />}
@@ -744,7 +744,7 @@ const TaskCard = ({
           <h3
             className={cn(
               "font-semibold text-[#0F172A] line-clamp-2",
-              task.status === "completed" && "line-through text-slate-400"
+              task.status === "completed" && "line-through text-[#475569]"
             )}
           >
             {task.title}
@@ -753,7 +753,7 @@ const TaskCard = ({
 
         {/* Description */}
         {task.description && (
-          <p className="text-sm text-slate-500 line-clamp-2 mb-3">
+          <p className="text-sm text-[#94A3B8] line-clamp-2 mb-3">
             {task.description}
           </p>
         )}
@@ -762,7 +762,7 @@ const TaskCard = ({
         {task.subtasks && task.subtasks.length > 0 && (
           <div className="mb-3">
             <div className="flex items-center justify-between text-xs mb-1">
-              <span className="text-slate-500">Subtasks</span>
+              <span className="text-[#94A3B8]">Subtasks</span>
               <span className="font-medium text-[#0F172A]">
                 {task.subtasks.filter((st) => st.completed).length}/{task.subtasks.length}
               </span>
@@ -776,10 +776,10 @@ const TaskCard = ({
           {task.dueDate && (
             <span
               className={cn(
-                "inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium",
+                "inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium",
                 overdue && "bg-red-100 text-red-600",
                 dueToday && !overdue && "bg-yellow-100 text-yellow-600",
-                !overdue && !dueToday && "bg-slate-100 text-slate-600"
+                !overdue && !dueToday && "bg-white/5 text-[#475569]"
               )}
             >
               <CalendarIcon size={12} />
@@ -787,7 +787,7 @@ const TaskCard = ({
             </span>
           )}
           <span
-            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium"
+            className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium"
             style={{
               backgroundColor: priorityInfo.bgColor,
               color: priorityInfo.color,
@@ -799,7 +799,7 @@ const TaskCard = ({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+        <div className="flex items-center justify-between pt-3 border-t border-[rgba(15,23,42,0.06)]">
           {/* Assignees */}
           <div className="flex -space-x-2">
             {task.assignees?.slice(0, 4).map((assignee) => (
@@ -811,14 +811,14 @@ const TaskCard = ({
               </Avatar>
             ))}
             {task.assignees && task.assignees.length > 4 && (
-              <div className="h-6 w-6 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-[10px] font-medium text-slate-600">
+              <div className="h-6 w-6 rounded-full bg-white/5 border-2 border-white flex items-center justify-center text-[10px] font-medium text-[#475569]">
                 +{task.assignees.length - 4}
               </div>
             )}
           </div>
 
           {/* Meta */}
-          <div className="flex items-center gap-3 text-slate-400">
+          <div className="flex items-center gap-3 text-[#475569]">
             {task.attachments && task.attachments > 0 && (
               <span className="flex items-center gap-1 text-xs">
                 <Paperclip size={12} />
@@ -871,18 +871,18 @@ const KanbanColumn = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              className="w-8 h-8 rounded-md flex items-center justify-center"
               style={{ backgroundColor: `${status.color}20` }}
             >
               <StatusIcon size={16} style={{ color: status.color }} />
             </div>
             <div>
               <h3 className="font-semibold text-[#0F172A] text-sm">{status.name}</h3>
-              <p className="text-xs text-slate-500">{tasks.length} tasks</p>
+              <p className="text-xs text-[#94A3B8]">{tasks.length} tasks</p>
             </div>
           </div>
           <span
-            className="px-2 py-1 rounded-lg text-xs font-bold"
+            className="px-2 py-1 rounded-md text-xs font-bold"
             style={{ backgroundColor: `${status.color}20`, color: status.color }}
           >
             {tasks.length}
@@ -892,7 +892,7 @@ const KanbanColumn = ({
 
       {/* Column Body */}
       <div
-        className="min-h-[400px] max-h-[calc(100vh-350px)] overflow-y-auto p-3 space-y-3 rounded-b-xl border border-t-0 bg-slate-50/50"
+        className="min-h-[400px] max-h-[calc(100vh-350px)] overflow-y-auto p-3 space-y-3 rounded-b-xl border border-t-0 bg-[#F8FAFC]/50"
         style={{ borderColor: `${status.color}20` }}
       >
         <AnimatePresence>
@@ -911,7 +911,7 @@ const KanbanColumn = ({
                 transition={{ delay: index * 0.05 }}
                 whileHover={{ y: -2 }}
                 onClick={() => onTaskClick(task)}
-                className="bg-white rounded-xl border border-slate-200 p-3 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-slate-300 transition-all group"
+                className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-3 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-slate-300 transition-all group"
               >
                 {/* Priority Bar */}
                 <div
@@ -929,8 +929,8 @@ const KanbanColumn = ({
                     className={cn(
                       "w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0 mt-0.5",
                       task.status === "completed"
-                        ? "bg-green-500 border-green-500 text-white"
-                        : "border-slate-300 hover:border-[#23D3EE]"
+                        ? "bg-green-500 border-green-500 text-[#0F172A]"
+                        : "border-slate-300 hover:border-[#22D3EE]"
                     )}
                   >
                     {task.status === "completed" && <Check size={10} />}
@@ -938,7 +938,7 @@ const KanbanColumn = ({
                   <h4
                     className={cn(
                       "font-medium text-[#0F172A] text-sm line-clamp-2",
-                      task.status === "completed" && "line-through text-slate-400"
+                      task.status === "completed" && "line-through text-[#475569]"
                     )}
                   >
                     {task.title}
@@ -967,7 +967,7 @@ const KanbanColumn = ({
                         "inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium",
                         overdue && "bg-red-100 text-red-600",
                         dueToday && !overdue && "bg-yellow-100 text-yellow-600",
-                        !overdue && !dueToday && "bg-slate-100 text-slate-500"
+                        !overdue && !dueToday && "bg-white/5 text-[#94A3B8]"
                       )}
                     >
                       <CalendarIcon size={10} />
@@ -979,7 +979,7 @@ const KanbanColumn = ({
                 {/* Subtasks */}
                 {task.subtasks && task.subtasks.length > 0 && (
                   <div className="mb-2">
-                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                    <div className="flex items-center gap-2 text-xs text-[#94A3B8]">
                       <ListChecks size={12} />
                       <span>
                         {task.subtasks.filter((st) => st.completed).length}/{task.subtasks.length}
@@ -993,7 +993,7 @@ const KanbanColumn = ({
                 )}
 
                 {/* Footer */}
-                <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                <div className="flex items-center justify-between pt-2 border-t border-[rgba(15,23,42,0.06)]">
                   {/* Assignees */}
                   <div className="flex -space-x-1">
                     {task.assignees?.slice(0, 3).map((assignee) => (
@@ -1013,25 +1013,25 @@ const KanbanColumn = ({
                         e.stopPropagation();
                         onToggleStar(task);
                       }}
-                      className="p-1 rounded hover:bg-slate-100"
+                      className="p-1 rounded hover:bg-white/10"
                     >
                       {task.isStarred ? (
                         <Star size={12} className="text-yellow-500 fill-yellow-500" />
                       ) : (
-                        <Star size={12} className="text-slate-400" />
+                        <Star size={12} className="text-[#475569]" />
                       )}
                     </button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <button className="p-1 rounded hover:bg-slate-100">
-                          <MoreHorizontal size={12} className="text-slate-400" />
+                        <button className="p-1 rounded hover:bg-white/10">
+                          <MoreHorizontal size={12} className="text-[#475569]" />
                         </button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-40 rounded-xl">
-                        <DropdownMenuItem onClick={() => onEdit(task)} className="rounded-lg text-sm">
+                      <DropdownMenuContent align="end" className="w-40 rounded-md">
+                        <DropdownMenuItem onClick={() => onEdit(task)} className="rounded-md text-sm">
                           <Pencil size={12} className="mr-2" /> Edit
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onDelete(task)} className="rounded-lg text-sm text-red-600">
+                        <DropdownMenuItem onClick={() => onDelete(task)} className="rounded-md text-sm text-red-600">
                           <Trash2 size={12} className="mr-2" /> Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -1045,8 +1045,8 @@ const KanbanColumn = ({
 
         {tasks.length === 0 && (
           <div className="flex flex-col items-center justify-center py-8 text-center">
-            <StatusIcon size={24} className="text-slate-300 mb-2" />
-            <p className="text-sm text-slate-500">No tasks</p>
+            <StatusIcon size={24} className="text-[#475569] mb-2" />
+            <p className="text-sm text-[#94A3B8]">No tasks</p>
           </div>
         )}
       </div>
@@ -1168,13 +1168,13 @@ const TaskFormDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] p-0 rounded-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#23D3EE]/10 to-transparent sticky top-0 bg-white z-10">
+      <DialogContent className="sm:max-w-[600px] p-0 rounded-md overflow-hidden max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-[rgba(15,23,42,0.06)] bg-[#F0FDFA] sticky top-0 bg-white z-10">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-[#0F172A]">
               {task ? "Edit Task" : "Create Task"}
             </DialogTitle>
-            <DialogDescription className="text-slate-500">
+            <DialogDescription className="text-[#94A3B8]">
               {task ? "Update task details" : "Add a new task to your list"}
             </DialogDescription>
           </DialogHeader>
@@ -1183,7 +1183,7 @@ const TaskFormDialog = ({
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {/* Title */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-600">
+            <Label className="text-sm font-medium text-[#475569]">
               Task Title <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -1191,36 +1191,36 @@ const TaskFormDialog = ({
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               placeholder="Enter task title"
               required
-              className="h-11 rounded-xl"
+              className="h-11 rounded-md"
             />
           </div>
 
           {/* Description */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-600">Description</Label>
+            <Label className="text-sm font-medium text-[#475569]">Description</Label>
             <Textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               placeholder="Add task description..."
               rows={3}
-              className="rounded-xl resize-none"
+              className="rounded-md resize-none"
             />
           </div>
 
           {/* Status & Priority */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-600">Status</Label>
+              <Label className="text-sm font-medium text-[#475569]">Status</Label>
               <Select
                 value={formData.status}
                 onValueChange={(val) => setFormData({ ...formData, status: val as Task["status"] })}
               >
-                <SelectTrigger className="h-11 rounded-xl">
+                <SelectTrigger className="h-11 rounded-md">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl">
+                <SelectContent className="rounded-md">
                   {taskStatuses.map((status) => (
-                    <SelectItem key={status.id} value={status.id} className="rounded-lg">
+                    <SelectItem key={status.id} value={status.id} className="rounded-md">
                       <div className="flex items-center gap-2">
                         <status.icon size={14} style={{ color: status.color }} />
                         {status.name}
@@ -1231,17 +1231,17 @@ const TaskFormDialog = ({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-600">Priority</Label>
+              <Label className="text-sm font-medium text-[#475569]">Priority</Label>
               <Select
                 value={formData.priority}
                 onValueChange={(val) => setFormData({ ...formData, priority: val as Task["priority"] })}
               >
-                <SelectTrigger className="h-11 rounded-xl">
+                <SelectTrigger className="h-11 rounded-md">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl">
+                <SelectContent className="rounded-md">
                   {taskPriorities.map((priority) => (
-                    <SelectItem key={priority.id} value={priority.id} className="rounded-lg">
+                    <SelectItem key={priority.id} value={priority.id} className="rounded-md">
                       <div className="flex items-center gap-2">
                         <Flag size={14} style={{ color: priority.color }} />
                         {priority.name}
@@ -1256,18 +1256,18 @@ const TaskFormDialog = ({
           {/* Project & Category */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-600">Project</Label>
+              <Label className="text-sm font-medium text-[#475569]">Project</Label>
               <Select
                 value={formData.project}
                 onValueChange={(val) => setFormData({ ...formData, project: val })}
               >
-                <SelectTrigger className="h-11 rounded-xl">
+                <SelectTrigger className="h-11 rounded-md">
                   <SelectValue placeholder="Select project" />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  <SelectItem value="none" className="rounded-lg">No Project</SelectItem>
+                <SelectContent className="rounded-md">
+                  <SelectItem value="none" className="rounded-md">No Project</SelectItem>
                   {projects.map((project) => (
-                    <SelectItem key={project.id} value={project.id} className="rounded-lg">
+                    <SelectItem key={project.id} value={project.id} className="rounded-md">
                       <div className="flex items-center gap-2">
                         <div
                           className="w-3 h-3 rounded-full"
@@ -1281,17 +1281,17 @@ const TaskFormDialog = ({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-600">Category</Label>
+              <Label className="text-sm font-medium text-[#475569]">Category</Label>
               <Select
                 value={formData.category}
                 onValueChange={(val) => setFormData({ ...formData, category: val })}
               >
-                <SelectTrigger className="h-11 rounded-xl">
+                <SelectTrigger className="h-11 rounded-md">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl">
+                <SelectContent className="rounded-md">
                   {taskCategories.map((category) => (
-                    <SelectItem key={category.id} value={category.id} className="rounded-lg">
+                    <SelectItem key={category.id} value={category.id} className="rounded-md">
                       <div className="flex items-center gap-2">
                         <category.icon size={14} style={{ color: category.color }} />
                         {category.name}
@@ -1306,13 +1306,13 @@ const TaskFormDialog = ({
           {/* Due Date & Estimated Time */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-600">Due Date</Label>
+              <Label className="text-sm font-medium text-[#475569]">Due Date</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className={cn(
-                      "h-11 w-full justify-start text-left font-normal rounded-xl",
+                      "h-11 w-full justify-start text-left font-normal rounded-md",
                       !formData.dueDate && "text-muted-foreground"
                     )}
                   >
@@ -1320,7 +1320,7 @@ const TaskFormDialog = ({
                     {formData.dueDate ? format(formData.dueDate, "PPP") : "Select date"}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 rounded-xl" align="start">
+                <PopoverContent className="w-auto p-0 rounded-md" align="start">
                   <Calendar
                     mode="single"
                     selected={formData.dueDate}
@@ -1331,15 +1331,15 @@ const TaskFormDialog = ({
               </Popover>
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-600">Estimated Time (minutes)</Label>
+              <Label className="text-sm font-medium text-[#475569]">Estimated Time (minutes)</Label>
               <div className="relative">
-                <Clock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Clock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                 <Input
                   type="number"
                   value={formData.estimatedTime}
                   onChange={(e) => setFormData({ ...formData, estimatedTime: e.target.value })}
                   placeholder="e.g., 120"
-                  className="h-11 pl-10 rounded-xl"
+                  className="h-11 pl-10 rounded-md"
                 />
               </div>
             </div>
@@ -1347,15 +1347,15 @@ const TaskFormDialog = ({
 
           {/* Assignees */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-600">Assignees</Label>
-            <div className="border border-slate-200 rounded-xl p-3">
+            <Label className="text-sm font-medium text-[#475569]">Assignees</Label>
+            <div className="border border-[rgba(15,23,42,0.06)] rounded-md p-3">
               {/* Selected Assignees */}
               {selectedAssignees.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-3">
                   {selectedAssignees.map((assignee) => (
                     <div
                       key={assignee.id}
-                      className="flex items-center gap-2 px-2 py-1 bg-[#23D3EE]/10 rounded-lg"
+                      className="flex items-center gap-2 px-2 py-1 bg-[#0891B2]/10 rounded-md"
                     >
                       <Avatar className="h-5 w-5">
                         <AvatarImage src={assignee.avatar} />
@@ -1367,7 +1367,7 @@ const TaskFormDialog = ({
                       <button
                         type="button"
                         onClick={() => toggleAssignee(assignee)}
-                        className="text-slate-400 hover:text-red-500"
+                        className="text-[#475569] hover:text-red-500"
                       >
                         <X size={14} />
                       </button>
@@ -1377,7 +1377,7 @@ const TaskFormDialog = ({
               )}
 
               {/* Available Members - will be populated from API */}
-              <div className="text-sm text-slate-400 py-2 text-center">
+              <div className="text-sm text-[#475569] py-2 text-center">
                 {selectedAssignees.length === 0 ? "No assignees selected" : ""}
               </div>
             </div>
@@ -1385,15 +1385,15 @@ const TaskFormDialog = ({
 
           {/* Subtasks */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-600">Subtasks</Label>
-            <div className="border border-slate-200 rounded-xl p-3">
+            <Label className="text-sm font-medium text-[#475569]">Subtasks</Label>
+            <div className="border border-[rgba(15,23,42,0.06)] rounded-md p-3">
               {/* Existing Subtasks */}
               {subtasks.length > 0 && (
                 <div className="space-y-2 mb-3">
                   {subtasks.map((subtask) => (
                     <div
                       key={subtask.id}
-                      className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg"
+                      className="flex items-center gap-3 p-2 bg-[#F8FAFC] rounded-md"
                     >
                       <button
                         type="button"
@@ -1401,7 +1401,7 @@ const TaskFormDialog = ({
                         className={cn(
                           "w-4 h-4 rounded border flex items-center justify-center transition-all",
                           subtask.completed
-                            ? "bg-green-500 border-green-500 text-white"
+                            ? "bg-green-500 border-green-500 text-[#0F172A]"
                             : "border-slate-300"
                         )}
                       >
@@ -1410,7 +1410,7 @@ const TaskFormDialog = ({
                       <span
                         className={cn(
                           "flex-1 text-sm",
-                          subtask.completed && "line-through text-slate-400"
+                          subtask.completed && "line-through text-[#475569]"
                         )}
                       >
                         {subtask.title}
@@ -1418,7 +1418,7 @@ const TaskFormDialog = ({
                       <button
                         type="button"
                         onClick={() => removeSubtask(subtask.id)}
-                        className="text-slate-400 hover:text-red-500"
+                        className="text-[#475569] hover:text-red-500"
                       >
                         <X size={14} />
                       </button>
@@ -1433,7 +1433,7 @@ const TaskFormDialog = ({
                   value={newSubtask}
                   onChange={(e) => setNewSubtask(e.target.value)}
                   placeholder="Add a subtask..."
-                  className="h-9 rounded-lg"
+                  className="h-9 rounded-md"
                   onKeyPress={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
@@ -1446,7 +1446,7 @@ const TaskFormDialog = ({
                   variant="outline"
                   size="sm"
                   onClick={addSubtask}
-                  className="rounded-lg"
+                  className="rounded-md"
                 >
                   <Plus size={14} />
                 </Button>
@@ -1456,42 +1456,42 @@ const TaskFormDialog = ({
 
           {/* Tags */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-600">Tags</Label>
+            <Label className="text-sm font-medium text-[#475569]">Tags</Label>
             <div className="relative">
-              <Tag size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Tag size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
               <Input
                 value={formData.tags}
                 onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
                 placeholder="Enter tags separated by commas"
-                className="h-11 pl-10 rounded-xl"
+                className="h-11 pl-10 rounded-md"
               />
             </div>
           </div>
 
           {/* Recurring Toggle */}
-          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+          <div className="flex items-center justify-between p-3 bg-[#F8FAFC] rounded-md">
             <div className="flex items-center gap-3">
-              <Repeat size={18} className="text-slate-500" />
+              <Repeat size={18} className="text-[#94A3B8]" />
               <div>
                 <span className="font-medium text-[#0F172A]">Recurring Task</span>
-                <p className="text-xs text-slate-500">This task repeats on a schedule</p>
+                <p className="text-xs text-[#94A3B8]">This task repeats on a schedule</p>
               </div>
             </div>
             <Switch
               checked={formData.isRecurring}
               onCheckedChange={(checked) => setFormData({ ...formData, isRecurring: checked })}
-              className="data-[state=checked]:bg-[#23D3EE]"
+              className="data-[state=checked]:bg-[#0891B2]"
             />
           </div>
 
           <DialogFooter className="pt-4 gap-3">
-            <Button type="button" variant="outline" onClick={onClose} className="rounded-xl">
+            <Button type="button" variant="outline" onClick={onClose} className="rounded-md">
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={!formData.title.trim()}
-              className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl"
+              className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
             >
               {task ? (
                 <>
@@ -1545,9 +1545,9 @@ const TaskDetailsDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] p-0 rounded-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[600px] p-0 rounded-md overflow-hidden max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#23D3EE]/10 to-transparent">
+        <div className="p-6 border-b border-[rgba(15,23,42,0.06)] bg-[#F0FDFA]">
           <div className="flex items-start justify-between">
             <div className="flex items-start gap-4">
               <button
@@ -1555,8 +1555,8 @@ const TaskDetailsDialog = ({
                 className={cn(
                   "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all mt-1",
                   task.status === "completed"
-                    ? "bg-green-500 border-green-500 text-white"
-                    : "border-slate-300 hover:border-[#23D3EE]"
+                    ? "bg-green-500 border-green-500 text-[#0F172A]"
+                    : "border-slate-300 hover:border-[#22D3EE]"
                 )}
               >
                 {task.status === "completed" && <Check size={14} />}
@@ -1565,21 +1565,21 @@ const TaskDetailsDialog = ({
                 <h2
                   className={cn(
                     "text-xl font-bold text-[#0F172A]",
-                    task.status === "completed" && "line-through text-slate-400"
+                    task.status === "completed" && "line-through text-[#475569]"
                   )}
                 >
                   {task.title}
                 </h2>
                 <div className="flex items-center gap-2 mt-2">
                   <span
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium"
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium"
                     style={{ backgroundColor: statusInfo.bgColor, color: statusInfo.color }}
                   >
                     <StatusIcon size={12} />
                     {statusInfo.name}
                   </span>
                   <span
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium"
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium"
                     style={{ backgroundColor: priorityInfo.bgColor, color: priorityInfo.color }}
                   >
                     <Flag size={12} />
@@ -1590,12 +1590,12 @@ const TaskDetailsDialog = ({
             </div>
             <button
               onClick={onToggleStar}
-              className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+              className="p-2 rounded-md hover:bg-white/10 transition-colors"
             >
               {task.isStarred ? (
                 <Star size={20} className="text-yellow-500 fill-yellow-500" />
               ) : (
-                <Star size={20} className="text-slate-400" />
+                <Star size={20} className="text-[#475569]" />
               )}
             </button>
           </div>
@@ -1606,7 +1606,7 @@ const TaskDetailsDialog = ({
           {task.description && (
             <div>
               <h3 className="text-sm font-semibold text-[#0F172A] mb-2">Description</h3>
-              <p className="text-sm text-slate-600 whitespace-pre-wrap">{task.description}</p>
+              <p className="text-sm text-[#475569] whitespace-pre-wrap">{task.description}</p>
             </div>
           )}
 
@@ -1614,8 +1614,8 @@ const TaskDetailsDialog = ({
           <div className="grid grid-cols-2 gap-4">
             {/* Project */}
             {task.project && (
-              <div className="p-4 bg-slate-50 rounded-xl">
-                <p className="text-xs text-slate-400 mb-1">Project</p>
+              <div className="p-4 bg-[#F8FAFC] rounded-md">
+                <p className="text-xs text-[#475569] mb-1">Project</p>
                 <div className="flex items-center gap-2">
                   <div
                     className="w-3 h-3 rounded-full"
@@ -1627,8 +1627,8 @@ const TaskDetailsDialog = ({
             )}
 
             {/* Category */}
-            <div className="p-4 bg-slate-50 rounded-xl">
-              <p className="text-xs text-slate-400 mb-1">Category</p>
+            <div className="p-4 bg-[#F8FAFC] rounded-md">
+              <p className="text-xs text-[#475569] mb-1">Category</p>
               <div className="flex items-center gap-2">
                 <CategoryIcon size={16} style={{ color: categoryInfo.color }} />
                 <span className="font-medium text-[#0F172A]">{categoryInfo.name}</span>
@@ -1639,15 +1639,15 @@ const TaskDetailsDialog = ({
             {task.dueDate && (
               <div
                 className={cn(
-                  "p-4 rounded-xl",
-                  overdue ? "bg-red-50 border border-red-100" : "bg-slate-50"
+                  "p-4 rounded-md",
+                  overdue ? "bg-red-50 border border-red-100" : "bg-[#F8FAFC]"
                 )}
               >
-                <p className={cn("text-xs mb-1", overdue ? "text-red-500" : "text-slate-400")}>
+                <p className={cn("text-xs mb-1", overdue ? "text-red-500" : "text-[#475569]")}>
                   Due Date
                 </p>
                 <div className="flex items-center gap-2">
-                  <CalendarIcon size={16} className={overdue ? "text-red-500" : "text-slate-500"} />
+                  <CalendarIcon size={16} className={overdue ? "text-red-500" : "text-[#94A3B8]"} />
                   <span className={cn("font-medium", overdue ? "text-red-600" : "text-[#0F172A]")}>
                     {formatDate(task.dueDate)}
                     {overdue && " (Overdue)"}
@@ -1658,15 +1658,15 @@ const TaskDetailsDialog = ({
 
             {/* Estimated Time */}
             {task.estimatedTime && (
-              <div className="p-4 bg-slate-50 rounded-xl">
-                <p className="text-xs text-slate-400 mb-1">Estimated Time</p>
+              <div className="p-4 bg-[#F8FAFC] rounded-md">
+                <p className="text-xs text-[#475569] mb-1">Estimated Time</p>
                 <div className="flex items-center gap-2">
-                  <Clock size={16} className="text-slate-500" />
+                  <Clock size={16} className="text-[#94A3B8]" />
                   <span className="font-medium text-[#0F172A]">
                     {formatTime(task.estimatedTime)}
                   </span>
                   {task.actualTime && (
-                    <span className="text-sm text-slate-400">
+                    <span className="text-sm text-[#475569]">
                       ({formatTime(task.actualTime)} spent)
                     </span>
                   )}
@@ -1685,7 +1685,7 @@ const TaskDetailsDialog = ({
                 {task.assignees.map((assignee) => (
                   <div
                     key={assignee.id}
-                    className="flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-xl"
+                    className="flex items-center gap-2 px-3 py-2 bg-[#F8FAFC] rounded-md"
                   >
                     <Avatar className="h-7 w-7">
                       <AvatarImage src={assignee.avatar} />
@@ -1695,7 +1695,7 @@ const TaskDetailsDialog = ({
                     </Avatar>
                     <div>
                       <p className="text-sm font-medium text-[#0F172A]">{assignee.name}</p>
-                      <p className="text-xs text-slate-500">{assignee.email}</p>
+                      <p className="text-xs text-[#94A3B8]">{assignee.email}</p>
                     </div>
                   </div>
                 ))}
@@ -1710,7 +1710,7 @@ const TaskDetailsDialog = ({
                 <h3 className="text-sm font-semibold text-[#0F172A]">
                   Subtasks ({task.subtasks.filter((st) => st.completed).length}/{task.subtasks.length})
                 </h3>
-                <span className="text-sm text-[#23D3EE] font-medium">{subtaskProgress}%</span>
+                <span className="text-sm text-[#0891B2] font-medium">{subtaskProgress}%</span>
               </div>
               <Progress value={subtaskProgress} className="h-2 mb-3" />
               <div className="space-y-2">
@@ -1718,13 +1718,13 @@ const TaskDetailsDialog = ({
                   <div
                     key={subtask.id}
                     onClick={() => onToggleSubtask(subtask.id)}
-                    className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors"
+                    className="flex items-center gap-3 p-3 bg-[#F8FAFC] rounded-md cursor-pointer hover:bg-white/10 transition-colors"
                   >
                     <div
                       className={cn(
                         "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
                         subtask.completed
-                          ? "bg-green-500 border-green-500 text-white"
+                          ? "bg-green-500 border-green-500 text-[#0F172A]"
                           : "border-slate-300"
                       )}
                     >
@@ -1733,7 +1733,7 @@ const TaskDetailsDialog = ({
                     <span
                       className={cn(
                         "flex-1 text-sm",
-                        subtask.completed && "line-through text-slate-400"
+                        subtask.completed && "line-through text-[#475569]"
                       )}
                     >
                       {subtask.title}
@@ -1752,7 +1752,7 @@ const TaskDetailsDialog = ({
                 {task.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="px-3 py-1 bg-[#23D3EE]/10 text-[#23D3EE] rounded-lg text-sm font-medium"
+                    className="px-3 py-1 bg-[#0891B2]/10 text-[#0891B2] rounded-md text-sm font-medium"
                   >
                     #{tag}
                   </span>
@@ -1762,8 +1762,8 @@ const TaskDetailsDialog = ({
           )}
 
           {/* Activity Info */}
-          <div className="pt-4 border-t border-slate-100">
-            <div className="flex items-center justify-between text-sm text-slate-500">
+          <div className="pt-4 border-t border-[rgba(15,23,42,0.06)]">
+            <div className="flex items-center justify-between text-sm text-[#94A3B8]">
               <span>Created by {task.createdBy}</span>
               <span>{formatDate(task.createdAt)}</span>
             </div>
@@ -1775,18 +1775,18 @@ const TaskDetailsDialog = ({
           </div>
         </div>
 
-        <DialogFooter className="p-6 pt-0 gap-3 border-t border-slate-100">
+        <DialogFooter className="p-6 pt-0 gap-3 border-t border-[rgba(15,23,42,0.06)]">
           <Button
             variant="outline"
             onClick={onDelete}
-            className="rounded-xl text-red-600 border-red-200 hover:bg-red-50"
+            className="rounded-md text-red-600 border-red-200 hover:bg-red-50"
           >
             <Trash2 size={16} className="mr-2" />
             Delete
           </Button>
           <Button
             onClick={onEdit}
-            className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl"
+            className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
           >
             <Pencil size={16} className="mr-2" />
             Edit Task
@@ -1832,7 +1832,7 @@ const TaskSidebar = ({
   return (
     <div className="space-y-6">
       {/* Quick Filters */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-4">
+      <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4">
         <h3 className="font-semibold text-[#0F172A] mb-3">Quick Filters</h3>
         <div className="space-y-1">
           <button
@@ -1841,10 +1841,10 @@ const TaskSidebar = ({
               onSelectCategory("");
             }}
             className={cn(
-              "w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors",
+              "w-full flex items-center justify-between px-3 py-2 rounded-md transition-colors",
               !selectedProject && !selectedCategory
-                ? "bg-[#23D3EE]/10 text-[#23D3EE]"
-                : "hover:bg-slate-50 text-slate-600"
+                ? "bg-[#0891B2]/10 text-[#0891B2]"
+                : "hover:bg-[#F8FAFC] text-[#475569]"
             )}
           >
             <div className="flex items-center gap-2">
@@ -1856,10 +1856,10 @@ const TaskSidebar = ({
           <button
             onClick={onToggleStarredOnly}
             className={cn(
-              "w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors",
+              "w-full flex items-center justify-between px-3 py-2 rounded-md transition-colors",
               showStarredOnly
                 ? "bg-yellow-50 text-yellow-600"
-                : "hover:bg-slate-50 text-slate-600"
+                : "hover:bg-[#F8FAFC] text-[#475569]"
             )}
           >
             <div className="flex items-center gap-2">
@@ -1868,21 +1868,21 @@ const TaskSidebar = ({
             </div>
             <span className="text-sm">{taskCounts.starred}</span>
           </button>
-          <button className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-50 text-slate-600 transition-colors">
+          <button className="w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-[#F8FAFC] text-[#475569] transition-colors">
             <div className="flex items-center gap-2">
               <CalendarIcon size={16} />
               <span className="font-medium">Today</span>
             </div>
             <span className="text-sm">{taskCounts.today}</span>
           </button>
-          <button className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-50 text-slate-600 transition-colors">
+          <button className="w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-[#F8FAFC] text-[#475569] transition-colors">
             <div className="flex items-center gap-2">
               <CalendarDays size={16} />
               <span className="font-medium">Upcoming</span>
             </div>
             <span className="text-sm">{taskCounts.upcoming}</span>
           </button>
-          <button className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-red-50 text-red-600 transition-colors">
+          <button className="w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-red-50 text-red-600 transition-colors">
             <div className="flex items-center gap-2">
               <AlertCircle size={16} />
               <span className="font-medium">Overdue</span>
@@ -1893,10 +1893,10 @@ const TaskSidebar = ({
       </div>
 
       {/* Projects */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-4">
+      <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-[#0F172A]">Projects</h3>
-          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg">
+          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md">
             <Plus size={14} />
           </Button>
         </div>
@@ -1906,10 +1906,10 @@ const TaskSidebar = ({
               key={project.id}
               onClick={() => onSelectProject(project.id === selectedProject ? "" : project.id)}
               className={cn(
-                "w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors",
+                "w-full flex items-center justify-between px-3 py-2 rounded-md transition-colors",
                 selectedProject === project.id
-                  ? "bg-[#23D3EE]/10 text-[#23D3EE]"
-                  : "hover:bg-slate-50 text-slate-600"
+                  ? "bg-[#0891B2]/10 text-[#0891B2]"
+                  : "hover:bg-[#F8FAFC] text-[#475569]"
               )}
             >
               <div className="flex items-center gap-2">
@@ -1919,14 +1919,14 @@ const TaskSidebar = ({
                 />
                 <span className="font-medium text-sm truncate">{project.name}</span>
               </div>
-              <span className="text-xs text-slate-400">{project.taskCount}</span>
+              <span className="text-xs text-[#475569]">{project.taskCount}</span>
             </button>
           ))}
         </div>
       </div>
 
       {/* Categories */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-4">
+      <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4">
         <h3 className="font-semibold text-[#0F172A] mb-3">Categories</h3>
         <div className="space-y-1">
           {taskCategories.map((category) => (
@@ -1934,10 +1934,10 @@ const TaskSidebar = ({
               key={category.id}
               onClick={() => onSelectCategory(category.id === selectedCategory ? "" : category.id)}
               className={cn(
-                "w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors",
+                "w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors",
                 selectedCategory === category.id
-                  ? "bg-[#23D3EE]/10 text-[#23D3EE]"
-                  : "hover:bg-slate-50 text-slate-600"
+                  ? "bg-[#0891B2]/10 text-[#0891B2]"
+                  : "hover:bg-[#F8FAFC] text-[#475569]"
               )}
             >
               <category.icon size={16} style={{ color: category.color }} />
@@ -1948,15 +1948,15 @@ const TaskSidebar = ({
       </div>
 
       {/* Options */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-4">
+      <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4">
         <h3 className="font-semibold text-[#0F172A] mb-3">Options</h3>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-600">Show Completed</span>
+            <span className="text-sm text-[#475569]">Show Completed</span>
             <Switch
               checked={showCompleted}
               onCheckedChange={onToggleShowCompleted}
-              className="data-[state=checked]:bg-[#23D3EE]"
+              className="data-[state=checked]:bg-[#0891B2]"
             />
           </div>
         </div>
@@ -2332,21 +2332,21 @@ const TasksPage = () => {
 
       <main className="flex-1 ml-0">
         {/* Header */}
-        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-slate-200">
+        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-[rgba(15,23,42,0.06)]">
           <div className="px-8 py-4">
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-[#0F172A]">Tasks</h1>
-                <p className="text-slate-500">Manage and track your tasks</p>
+                <p className="text-[#94A3B8]">Manage and track your tasks</p>
               </div>
 
               <div className="flex items-center gap-3">
                 {/* View Mode Toggle */}
-                <div className="flex items-center bg-slate-100 rounded-xl p-1">
+                <div className="flex items-center bg-white/5 rounded-md p-1">
                   <Button
                     variant={viewMode === "list" ? "secondary" : "ghost"}
                     size="sm"
-                    className="rounded-lg"
+                    className="rounded-md"
                     onClick={() => setViewMode("list")}
                   >
                     <List size={16} className="mr-1" />
@@ -2355,7 +2355,7 @@ const TasksPage = () => {
                   <Button
                     variant={viewMode === "grid" ? "secondary" : "ghost"}
                     size="sm"
-                    className="rounded-lg"
+                    className="rounded-md"
                     onClick={() => setViewMode("grid")}
                   >
                     <LayoutGrid size={16} className="mr-1" />
@@ -2364,7 +2364,7 @@ const TasksPage = () => {
                   <Button
                     variant={viewMode === "kanban" ? "secondary" : "ghost"}
                     size="sm"
-                    className="rounded-lg"
+                    className="rounded-md"
                     onClick={() => setViewMode("kanban")}
                   >
                     <KanbanSquare size={16} className="mr-1" />
@@ -2377,7 +2377,7 @@ const TasksPage = () => {
                     setCurrentTask(null);
                     setIsFormOpen(true);
                   }}
-                  className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl gap-2"
+                  className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md gap-2"
                 >
                   <Plus size={18} />
                   Add Task
@@ -2395,7 +2395,7 @@ const TasksPage = () => {
               value={tasks.length}
               subtitle={`${taskCounts.completed} completed`}
               icon={ListTodo}
-              color="#23D3EE"
+              color="#22D3EE"
             />
             <StatCard
               title="To Do"
@@ -2449,26 +2449,26 @@ const TasksPage = () => {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-2xl border border-slate-200 overflow-hidden"
+                className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden"
               >
                 {/* Tabs & Filters */}
-                <div className="p-4 border-b border-slate-100">
+                <div className="p-4 border-b border-[rgba(15,23,42,0.06)]">
                   <Tabs value={activeTab} onValueChange={setActiveTab}>
                     <div className="flex items-center justify-between mb-4">
-                      <TabsList className="bg-slate-100 rounded-xl p-1">
-                        <TabsTrigger value="all" className="rounded-lg data-[state=active]:bg-white">
+                      <TabsList className="bg-white/5 rounded-md p-1">
+                        <TabsTrigger value="all" className="rounded-md data-[state=active]:bg-white">
                           All ({filteredTasks.length})
                         </TabsTrigger>
-                        <TabsTrigger value="todo" className="rounded-lg data-[state=active]:bg-white">
+                        <TabsTrigger value="todo" className="rounded-md data-[state=active]:bg-white">
                           To Do ({todoCount})
                         </TabsTrigger>
-                        <TabsTrigger value="in_progress" className="rounded-lg data-[state=active]:bg-white">
+                        <TabsTrigger value="in_progress" className="rounded-md data-[state=active]:bg-white">
                           In Progress ({inProgressCount})
                         </TabsTrigger>
-                        <TabsTrigger value="in_review" className="rounded-lg data-[state=active]:bg-white">
+                        <TabsTrigger value="in_review" className="rounded-md data-[state=active]:bg-white">
                           In Review ({inReviewCount})
                         </TabsTrigger>
-                        <TabsTrigger value="completed" className="rounded-lg data-[state=active]:bg-white">
+                        <TabsTrigger value="completed" className="rounded-md data-[state=active]:bg-white">
                           Completed ({completedCount})
                         </TabsTrigger>
                       </TabsList>
@@ -2477,57 +2477,57 @@ const TasksPage = () => {
                     {/* Search & Sort */}
                     <div className="flex items-center gap-3">
                       <div className="relative flex-1">
-                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                         <Input
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
                           placeholder="Search tasks..."
-                          className="pl-9 h-10 rounded-xl border-slate-200"
+                          className="pl-9 h-10 rounded-md border-[rgba(15,23,42,0.06)]"
                         />
                       </div>
 
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="outline" className="rounded-xl gap-2">
+                          <Button variant="outline" className="rounded-md gap-2">
                             {sortOrder === "asc" ? <SortAsc size={16} /> : <SortDesc size={16} />}
                             Sort
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48 rounded-xl">
+                        <DropdownMenuContent align="end" className="w-48 rounded-md">
                           <DropdownMenuLabel>Sort by</DropdownMenuLabel>
                           <DropdownMenuSeparator />
                           <DropdownMenuCheckboxItem
                             checked={sortBy === "dueDate"}
                             onCheckedChange={() => setSortBy("dueDate")}
-                            className="rounded-lg"
+                            className="rounded-md"
                           >
                             Due Date
                           </DropdownMenuCheckboxItem>
                           <DropdownMenuCheckboxItem
                             checked={sortBy === "priority"}
                             onCheckedChange={() => setSortBy("priority")}
-                            className="rounded-lg"
+                            className="rounded-md"
                           >
                             Priority
                           </DropdownMenuCheckboxItem>
                           <DropdownMenuCheckboxItem
                             checked={sortBy === "created"}
                             onCheckedChange={() => setSortBy("created")}
-                            className="rounded-lg"
+                            className="rounded-md"
                           >
                             Created Date
                           </DropdownMenuCheckboxItem>
                           <DropdownMenuCheckboxItem
                             checked={sortBy === "title"}
                             onCheckedChange={() => setSortBy("title")}
-                            className="rounded-lg"
+                            className="rounded-md"
                           >
                             Title
                           </DropdownMenuCheckboxItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-                            className="rounded-lg"
+                            className="rounded-md"
                           >
                             {sortOrder === "asc" ? "Descending" : "Ascending"}
                           </DropdownMenuItem>
@@ -2548,9 +2548,9 @@ const TasksPage = () => {
                     >
                       {filteredTasks.length === 0 ? (
                         <div className="p-12 text-center">
-                          <ListTodo size={48} className="text-slate-300 mx-auto mb-3" />
-                          <p className="text-slate-500 font-medium">No tasks found</p>
-                          <p className="text-slate-400 text-sm">Try adjusting your filters or create a new task</p>
+                          <ListTodo size={48} className="text-[#475569] mx-auto mb-3" />
+                          <p className="text-[#94A3B8] font-medium">No tasks found</p>
+                          <p className="text-[#475569] text-sm">Try adjusting your filters or create a new task</p>
                         </div>
                       ) : (
                         <div>
@@ -2589,9 +2589,9 @@ const TasksPage = () => {
                     >
                       {filteredTasks.length === 0 ? (
                         <div className="text-center py-12">
-                          <ListTodo size={48} className="text-slate-300 mx-auto mb-3" />
-                          <p className="text-slate-500 font-medium">No tasks found</p>
-                          <p className="text-slate-400 text-sm">Try adjusting your filters</p>
+                          <ListTodo size={48} className="text-[#475569] mx-auto mb-3" />
+                          <p className="text-[#94A3B8] font-medium">No tasks found</p>
+                          <p className="text-[#475569] text-sm">Try adjusting your filters</p>
                         </div>
                       ) : (
                         <div className="grid grid-cols-2 gap-4">
@@ -2701,7 +2701,7 @@ const TasksPage = () => {
       />
 
       <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
-        <AlertDialogContent className="rounded-2xl">
+        <AlertDialogContent className="rounded-md">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Task</AlertDialogTitle>
             <AlertDialogDescription>
@@ -2709,10 +2709,10 @@ const TasksPage = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-md">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteTask}
-              className="bg-red-500 hover:bg-red-600 rounded-xl"
+              className="bg-red-500 hover:bg-red-600 rounded-md"
             >
               Delete
             </AlertDialogAction>

@@ -199,7 +199,7 @@ const expenseCategories: ExpenseCategory[] = [
   { id: "travel", name: "Travel & Transport", icon: Plane, color: "#3B82F6", budget: 5000, spent: 3200 },
   { id: "meals", name: "Meals & Entertainment", icon: Utensils, color: "#F97316", budget: 2000, spent: 1450 },
   { id: "office", name: "Office Supplies", icon: Briefcase, color: "#8B5CF6", budget: 1500, spent: 890 },
-  { id: "software", name: "Software & Tools", icon: Monitor, color: "#23D3EE", budget: 3000, spent: 2100 },
+  { id: "software", name: "Software & Tools", icon: Monitor, color: "#22D3EE", budget: 3000, spent: 2100 },
   { id: "utilities", name: "Utilities", icon: Zap, color: "#EAB308", budget: 1000, spent: 750 },
   { id: "marketing", name: "Marketing", icon: TrendingUp, color: "#EC4899", budget: 4000, spent: 2800 },
   { id: "rent", name: "Rent & Facilities", icon: Building2, color: "#6B7280", budget: 8000, spent: 8000 },
@@ -432,9 +432,9 @@ const getStatusColor = (status: string) => {
     case "rejected":
       return { bg: "bg-red-50", text: "text-red-600", dot: "bg-red-500" };
     case "reimbursed":
-      return { bg: "bg-blue-50", text: "text-blue-600", dot: "bg-blue-500" };
+      return { bg: "bg-blue-50", text: "text-[#0891B2]", dot: "bg-[#0891B2]" };
     default:
-      return { bg: "bg-slate-50", text: "text-slate-600", dot: "bg-slate-500" };
+      return { bg: "bg-[#F8FAFC]", text: "text-[#475569]", dot: "bg-[#F8FAFC]0" };
   }
 };
 
@@ -472,12 +472,12 @@ const StatCard = ({
   trend?: "up" | "down";
 }) => {
   const colorClasses = {
-    teal: { bg: "bg-[#23D3EE]", light: "bg-[#23D3EE]/10", text: "text-[#23D3EE]" },
-    gold: { bg: "bg-[#FBBF23]", light: "bg-[#FBBF23]/10", text: "text-[#FBBF23]" },
-    navy: { bg: "bg-[#0F172A]", light: "bg-[#0F172A]/10", text: "text-[#0F172A]" },
+    teal: { bg: "bg-[#0891B2]", light: "bg-[#0891B2]/10", text: "text-[#0891B2]" },
+    gold: { bg: "bg-[#D97706]", light: "bg-[#D97706]/10", text: "text-[#D97706]" },
+    navy: { bg: "bg-[#F8FAFC]", light: "bg-[#F8FAFC]/10", text: "text-[#0F172A]" },
     purple: { bg: "bg-purple-500", light: "bg-purple-500/10", text: "text-purple-500" },
     green: { bg: "bg-green-500", light: "bg-green-500/10", text: "text-green-500" },
-    blue: { bg: "bg-blue-500", light: "bg-blue-500/10", text: "text-blue-500" },
+    blue: { bg: "bg-[#0891B2]", light: "bg-[#0891B2]/10", text: "text-blue-500" },
     red: { bg: "bg-red-500", light: "bg-red-500/10", text: "text-red-500" },
   };
 
@@ -489,13 +489,13 @@ const StatCard = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
       whileHover={{ y: -4 }}
-      className="relative bg-white rounded-2xl p-5 border border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5 transition-all overflow-hidden group"
+      className="relative bg-white rounded-md p-5 border border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg  transition-all overflow-hidden group"
     >
       <div className={cn("absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-10 group-hover:opacity-20 transition-all", colors.bg)} />
 
       <div className="relative flex items-start justify-between">
         <div>
-          <p className="text-sm text-slate-500 mb-1">{title}</p>
+          <p className="text-sm text-[#94A3B8] mb-1">{title}</p>
           <p className="text-2xl font-bold text-[#0F172A]">
             {prefix}{typeof value === "number" ? value.toLocaleString() : value}
           </p>
@@ -512,11 +512,11 @@ const StatCard = ({
               )}>
                 {Math.abs(change)}%
               </span>
-              {changeLabel && <span className="text-xs text-slate-400">{changeLabel}</span>}
+              {changeLabel && <span className="text-xs text-[#475569]">{changeLabel}</span>}
             </div>
           )}
         </div>
-        <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center", colors.light)}>
+        <div className={cn("w-12 h-12 rounded-md flex items-center justify-center", colors.light)}>
           <Icon size={22} className={colors.text} />
         </div>
       </div>
@@ -550,40 +550,40 @@ const ExpenseRow = ({
   const CategoryIcon = categoryInfo.icon;
 
   return (
-    <TableRow className="group hover:bg-slate-50">
+    <TableRow className="group hover:bg-[#F8FAFC]">
       <TableCell>
         <Checkbox
           checked={isSelected}
           onCheckedChange={onSelect}
-          className="data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
+          className="data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
         />
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-3 cursor-pointer" onClick={onView}>
           <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center"
+            className="w-10 h-10 rounded-md flex items-center justify-center"
             style={{ backgroundColor: `${categoryInfo.color}15` }}
           >
             <CategoryIcon size={18} style={{ color: categoryInfo.color }} />
           </div>
           <div>
-            <p className="font-medium text-[#0F172A] group-hover:text-[#23D3EE] transition-colors">
+            <p className="font-medium text-[#0F172A] group-hover:text-[#0891B2] transition-colors">
               {expense.item}
             </p>
-            <p className="text-sm text-slate-500">{expense.vendor}</p>
+            <p className="text-sm text-[#94A3B8]">{expense.vendor}</p>
           </div>
         </div>
       </TableCell>
       <TableCell>
         <span
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium"
           style={{ backgroundColor: `${categoryInfo.color}15`, color: categoryInfo.color }}
         >
           {categoryInfo.name}
         </span>
       </TableCell>
       <TableCell>
-        <span className="text-sm text-slate-600">{formatDate(expense.date)}</span>
+        <span className="text-sm text-[#475569]">{formatDate(expense.date)}</span>
       </TableCell>
       <TableCell>
         <span className="font-semibold text-[#0F172A]">
@@ -592,7 +592,7 @@ const ExpenseRow = ({
       </TableCell>
       <TableCell>
         <span className={cn(
-          "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium capitalize",
+          "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium capitalize",
           statusColors.bg, statusColors.text
         )}>
           <span className={cn("w-1.5 h-1.5 rounded-full", statusColors.dot)} />
@@ -600,23 +600,23 @@ const ExpenseRow = ({
         </span>
       </TableCell>
       <TableCell>
-        <span className="text-sm text-slate-500">{expense.submittedBy}</span>
+        <span className="text-sm text-[#94A3B8]">{expense.submittedBy}</span>
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={onView}>
-                  <Eye size={16} className="text-slate-400" />
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" onClick={onView}>
+                  <Eye size={16} className="text-[#475569]" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>View Details</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={onEdit}>
-                  <Pencil size={16} className="text-slate-400" />
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" onClick={onEdit}>
+                  <Pencil size={16} className="text-[#475569]" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Edit</TooltipContent>
@@ -624,21 +624,21 @@ const ExpenseRow = ({
           </TooltipProvider>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
-                <MoreVertical size={16} className="text-slate-400" />
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md">
+                <MoreVertical size={16} className="text-[#475569]" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 rounded-xl">
-              <DropdownMenuItem onClick={onView} className="rounded-lg">
+            <DropdownMenuContent align="end" className="w-48 rounded-md">
+              <DropdownMenuItem onClick={onView} className="rounded-md">
                 <Eye size={14} className="mr-2" /> View Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onEdit} className="rounded-lg">
+              <DropdownMenuItem onClick={onEdit} className="rounded-md">
                 <Pencil size={14} className="mr-2" /> Edit
               </DropdownMenuItem>
-              <DropdownMenuItem className="rounded-lg">
+              <DropdownMenuItem className="rounded-md">
                 <Copy size={14} className="mr-2" /> Duplicate
               </DropdownMenuItem>
-              <DropdownMenuItem className="rounded-lg">
+              <DropdownMenuItem className="rounded-md">
                 <Receipt size={14} className="mr-2" /> View Receipt
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -646,20 +646,20 @@ const ExpenseRow = ({
                 <>
                   <DropdownMenuItem
                     onClick={() => onStatusChange("approved")}
-                    className="rounded-lg text-green-600"
+                    className="rounded-md text-green-600"
                   >
                     <CheckCircle2 size={14} className="mr-2" /> Approve
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => onStatusChange("rejected")}
-                    className="rounded-lg text-red-600"
+                    className="rounded-md text-red-600"
                   >
                     <X size={14} className="mr-2" /> Reject
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                 </>
               )}
-              <DropdownMenuItem onClick={onDelete} className="rounded-lg text-red-600 focus:text-red-600">
+              <DropdownMenuItem onClick={onDelete} className="rounded-md text-red-600 focus:text-red-600">
                 <Trash2 size={14} className="mr-2" /> Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -704,10 +704,10 @@ const ExpenseCard = ({
       transition={{ delay }}
       whileHover={{ y: -4 }}
       className={cn(
-        "relative bg-white rounded-2xl border overflow-hidden transition-all group cursor-pointer",
+        "relative bg-white rounded-md border overflow-hidden transition-all group cursor-pointer",
         isSelected
-          ? "border-[#23D3EE] ring-2 ring-[#23D3EE]/20"
-          : "border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5"
+          ? "border-[#22D3EE] ring-2 ring-[#22D3EE]/20"
+          : "border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg "
       )}
       onClick={onView}
     >
@@ -719,7 +719,7 @@ const ExpenseCard = ({
         <Checkbox
           checked={isSelected}
           onCheckedChange={onSelect}
-          className="data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE] bg-white"
+          className="data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE] bg-white"
         />
       </div>
 
@@ -733,16 +733,16 @@ const ExpenseCard = ({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 rounded-lg bg-white/80 backdrop-blur-sm hover:bg-white"
+              className="h-8 w-8 rounded-md bg-white/80 backdrop-blur-sm hover:bg-white"
             >
               <MoreHorizontal size={16} />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48 rounded-xl">
-            <DropdownMenuItem onClick={onView} className="rounded-lg">
+          <DropdownMenuContent align="end" className="w-48 rounded-md">
+            <DropdownMenuItem onClick={onView} className="rounded-md">
               <Eye size={14} className="mr-2" /> View Details
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={onEdit} className="rounded-lg">
+            <DropdownMenuItem onClick={onEdit} className="rounded-md">
               <Pencil size={14} className="mr-2" /> Edit
             </DropdownMenuItem>
             {expense.status === "pending" && (
@@ -750,20 +750,20 @@ const ExpenseCard = ({
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => onStatusChange("approved")}
-                  className="rounded-lg text-green-600"
+                  className="rounded-md text-green-600"
                 >
                   <CheckCircle2 size={14} className="mr-2" /> Approve
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => onStatusChange("rejected")}
-                  className="rounded-lg text-red-600"
+                  className="rounded-md text-red-600"
                 >
                   <X size={14} className="mr-2" /> Reject
                 </DropdownMenuItem>
               </>
             )}
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onDelete} className="rounded-lg text-red-600 focus:text-red-600">
+            <DropdownMenuItem onClick={onDelete} className="rounded-md text-red-600 focus:text-red-600">
               <Trash2 size={14} className="mr-2" /> Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -775,16 +775,16 @@ const ExpenseCard = ({
         {/* Header */}
         <div className="flex items-start gap-4 mb-4">
           <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+            className="w-12 h-12 rounded-md flex items-center justify-center flex-shrink-0"
             style={{ backgroundColor: `${categoryInfo.color}15` }}
           >
             <CategoryIcon size={24} style={{ color: categoryInfo.color }} />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-[#0F172A] truncate group-hover:text-[#23D3EE] transition-colors">
+            <h3 className="font-semibold text-[#0F172A] truncate group-hover:text-[#0891B2] transition-colors">
               {expense.item}
             </h3>
-            <p className="text-sm text-slate-500 truncate">{expense.vendor}</p>
+            <p className="text-sm text-[#94A3B8] truncate">{expense.vendor}</p>
           </div>
         </div>
 
@@ -804,18 +804,18 @@ const ExpenseCard = ({
             <span className={cn("w-1.5 h-1.5 rounded-full", statusColors.dot)} />
             {expense.status}
           </span>
-          <span className="text-xs text-slate-400">{formatDate(expense.date)}</span>
+          <span className="text-xs text-[#475569]">{formatDate(expense.date)}</span>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+        <div className="flex items-center justify-between pt-4 border-t border-[rgba(15,23,42,0.06)]">
           <span
             className="text-xs font-medium px-2 py-1 rounded-md"
             style={{ backgroundColor: `${categoryInfo.color}10`, color: categoryInfo.color }}
           >
             {categoryInfo.name}
           </span>
-          <span className="text-xs text-slate-400">{expense.submittedBy}</span>
+          <span className="text-xs text-[#475569]">{expense.submittedBy}</span>
         </div>
 
         {/* Tags */}
@@ -824,7 +824,7 @@ const ExpenseCard = ({
             {expense.tags.slice(0, 3).map((tag) => (
               <span
                 key={tag}
-                className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded-md text-xs"
+                className="px-2 py-0.5 bg-white/5 text-[#94A3B8] rounded-md text-xs"
               >
                 {tag}
               </span>
@@ -927,13 +927,13 @@ const ExpenseFormDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] p-0 rounded-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#23D3EE]/10 to-transparent sticky top-0 bg-white z-10">
+      <DialogContent className="sm:max-w-[600px] p-0 rounded-md overflow-hidden max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-[rgba(15,23,42,0.06)] bg-[#F0FDFA] sticky top-0 bg-white z-10">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-[#0F172A]">
               {expense ? "Edit Expense" : "Add New Expense"}
             </DialogTitle>
-            <DialogDescription className="text-slate-500">
+            <DialogDescription className="text-[#94A3B8]">
               {expense ? "Update expense details" : "Record a new business expense"}
             </DialogDescription>
           </DialogHeader>
@@ -942,41 +942,41 @@ const ExpenseFormDialog = ({
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {/* Item Name */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-600">
+            <Label className="text-sm font-medium text-[#475569]">
               Expense Item <span className="text-red-500">*</span>
             </Label>
             <div className="relative">
-              <Receipt size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Receipt size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
               <Input
                 value={formData.item}
                 onChange={(e) => setFormData({ ...formData, item: e.target.value })}
                 placeholder="e.g., Office Supplies, Travel, Software"
                 required
-                className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
+                className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
               />
             </div>
           </div>
 
           {/* Description */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-600">Description</Label>
+            <Label className="text-sm font-medium text-[#475569]">Description</Label>
             <Textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               placeholder="Add details about this expense..."
               rows={2}
-              className="rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20 resize-none"
+              className="rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 resize-none"
             />
           </div>
 
           {/* Amount & Date */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-600">
+              <Label className="text-sm font-medium text-[#475569]">
                 Amount <span className="text-red-500">*</span>
               </Label>
               <div className="relative">
-                <DollarSign size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <DollarSign size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                 <Input
                   type="number"
                   step="0.01"
@@ -984,22 +984,22 @@ const ExpenseFormDialog = ({
                   onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                   placeholder="0.00"
                   required
-                  className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
+                  className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-600">
+              <Label className="text-sm font-medium text-[#475569]">
                 Date <span className="text-red-500">*</span>
               </Label>
               <div className="relative">
-                <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                 <Input
                   type="date"
                   value={formData.date}
                   onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                   required
-                  className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
+                  className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
                 />
               </div>
             </div>
@@ -1008,32 +1008,32 @@ const ExpenseFormDialog = ({
           {/* Vendor & Category */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-600">
+              <Label className="text-sm font-medium text-[#475569]">
                 Vendor <span className="text-red-500">*</span>
               </Label>
               <div className="relative">
-                <Building2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Building2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                 <Input
                   value={formData.vendor}
                   onChange={(e) => setFormData({ ...formData, vendor: e.target.value })}
                   placeholder="Company or vendor name"
                   required
-                  className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
+                  className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-600">Category</Label>
+              <Label className="text-sm font-medium text-[#475569]">Category</Label>
               <Select
                 value={formData.category}
                 onValueChange={(val) => setFormData({ ...formData, category: val })}
               >
-                <SelectTrigger className="h-11 rounded-xl border-slate-200">
+                <SelectTrigger className="h-11 rounded-md border-[rgba(15,23,42,0.06)]">
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl">
+                <SelectContent className="rounded-md">
                   {expenseCategories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id} className="rounded-lg">
+                    <SelectItem key={cat.id} value={cat.id} className="rounded-md">
                       <div className="flex items-center gap-2">
                         <cat.icon size={14} style={{ color: cat.color }} />
                         {cat.name}
@@ -1048,19 +1048,19 @@ const ExpenseFormDialog = ({
           {/* Payment Method & Currency */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-600">Payment Method</Label>
+              <Label className="text-sm font-medium text-[#475569]">Payment Method</Label>
               <Select
                 value={formData.paymentMethod}
                 onValueChange={(val) => setFormData({ ...formData, paymentMethod: val })}
               >
-                <SelectTrigger className="h-11 rounded-xl border-slate-200">
+                <SelectTrigger className="h-11 rounded-md border-[rgba(15,23,42,0.06)]">
                   <SelectValue placeholder="Select method" />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl">
+                <SelectContent className="rounded-md">
                   {paymentMethods.map((method) => (
-                    <SelectItem key={method.id} value={method.id} className="rounded-lg">
+                    <SelectItem key={method.id} value={method.id} className="rounded-md">
                       <div className="flex items-center gap-2">
-                        <method.icon size={14} className="text-slate-500" />
+                        <method.icon size={14} className="text-[#94A3B8]" />
                         {method.name}
                       </div>
                     </SelectItem>
@@ -1069,19 +1069,19 @@ const ExpenseFormDialog = ({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-600">Currency</Label>
+              <Label className="text-sm font-medium text-[#475569]">Currency</Label>
               <Select
                 value={formData.currency}
                 onValueChange={(val) => setFormData({ ...formData, currency: val })}
               >
-                <SelectTrigger className="h-11 rounded-xl border-slate-200">
+                <SelectTrigger className="h-11 rounded-md border-[rgba(15,23,42,0.06)]">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  <SelectItem value="CAD" className="rounded-lg">CAD - Canadian Dollar</SelectItem>
-                  <SelectItem value="USD" className="rounded-lg">USD - US Dollar</SelectItem>
-                  <SelectItem value="EUR" className="rounded-lg">EUR - Euro</SelectItem>
-                  <SelectItem value="GBP" className="rounded-lg">GBP - British Pound</SelectItem>
+                <SelectContent className="rounded-md">
+                  <SelectItem value="CAD" className="rounded-md">CAD - Canadian Dollar</SelectItem>
+                  <SelectItem value="USD" className="rounded-md">USD - US Dollar</SelectItem>
+                  <SelectItem value="EUR" className="rounded-md">EUR - Euro</SelectItem>
+                  <SelectItem value="GBP" className="rounded-md">GBP - British Pound</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1090,26 +1090,26 @@ const ExpenseFormDialog = ({
           {/* Project & Client */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-600">Project (Optional)</Label>
+              <Label className="text-sm font-medium text-[#475569]">Project (Optional)</Label>
               <div className="relative">
-                <Briefcase size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Briefcase size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                 <Input
                   value={formData.project}
                   onChange={(e) => setFormData({ ...formData, project: e.target.value })}
                   placeholder="Associated project"
-                  className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
+                  className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-600">Client (Optional)</Label>
+              <Label className="text-sm font-medium text-[#475569]">Client (Optional)</Label>
               <div className="relative">
-                <Users size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Users size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                 <Input
                   value={formData.client}
                   onChange={(e) => setFormData({ ...formData, client: e.target.value })}
                   placeholder="Associated client"
-                  className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
+                  className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
                 />
               </div>
             </div>
@@ -1117,30 +1117,30 @@ const ExpenseFormDialog = ({
 
           {/* Tags */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-600">Tags</Label>
+            <Label className="text-sm font-medium text-[#475569]">Tags</Label>
             <div className="relative">
-              <Tag size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Tag size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
               <Input
                 value={formData.tags}
                 onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
                 placeholder="Add tags separated by commas"
-                className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
+                className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
               />
             </div>
           </div>
 
           {/* Receipt Upload */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-600">Receipt</Label>
-            <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:border-[#23D3EE] transition-colors cursor-pointer">
+            <Label className="text-sm font-medium text-[#475569]">Receipt</Label>
+            <div className="border-2 border-dashed border-[rgba(15,23,42,0.06)] rounded-md p-6 text-center hover:border-[#22D3EE] transition-colors cursor-pointer">
               <label className="cursor-pointer">
-                <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-slate-100 flex items-center justify-center">
-                  <Paperclip size={24} className="text-slate-400" />
+                <div className="w-12 h-12 mx-auto mb-3 rounded-md bg-white/5 flex items-center justify-center">
+                  <Paperclip size={24} className="text-[#475569]" />
                 </div>
-                <p className="text-sm text-slate-600 mb-1">
+                <p className="text-sm text-[#475569] mb-1">
                   {receiptFile ? receiptFile.name : "Click to upload receipt"}
                 </p>
-                <p className="text-xs text-slate-400">PNG, JPG, PDF up to 10MB</p>
+                <p className="text-xs text-[#475569]">PNG, JPG, PDF up to 10MB</p>
                 <input
                   type="file"
                   className="hidden"
@@ -1153,24 +1153,24 @@ const ExpenseFormDialog = ({
 
           {/* Notes */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-600">Notes</Label>
+            <Label className="text-sm font-medium text-[#475569]">Notes</Label>
             <Textarea
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               placeholder="Additional notes..."
               rows={2}
-              className="rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20 resize-none"
+              className="rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 resize-none"
             />
           </div>
 
           <DialogFooter className="pt-4 gap-3">
-            <Button type="button" variant="outline" onClick={onClose} className="rounded-xl">
+            <Button type="button" variant="outline" onClick={onClose} className="rounded-md">
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={saving || !formData.item || !formData.amount || !formData.vendor}
-              className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl"
+              className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
             >
               {saving ? (
                 <>
@@ -1218,15 +1218,15 @@ const ExpenseDetailsDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] p-0 rounded-2xl overflow-hidden">
-        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#23D3EE]/10 to-transparent">
+      <DialogContent className="sm:max-w-[600px] p-0 rounded-md overflow-hidden">
+        <div className="p-6 border-b border-[rgba(15,23,42,0.06)] bg-[#F0FDFA]">
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle className="text-xl font-bold text-[#0F172A]">
                 Expense Details
               </DialogTitle>
               <span className={cn(
-                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium capitalize",
+                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium capitalize",
                 statusColors.bg, statusColors.text
               )}>
                 <span className={cn("w-2 h-2 rounded-full", statusColors.dot)} />
@@ -1240,48 +1240,48 @@ const ExpenseDetailsDialog = ({
           {/* Header */}
           <div className="flex items-start gap-4">
             <div
-              className="w-14 h-14 rounded-xl flex items-center justify-center"
+              className="w-14 h-14 rounded-md flex items-center justify-center"
               style={{ backgroundColor: `${categoryInfo.color}15` }}
             >
               <CategoryIcon size={28} style={{ color: categoryInfo.color }} />
             </div>
             <div className="flex-1">
               <h3 className="text-lg font-semibold text-[#0F172A]">{expense.item}</h3>
-              <p className="text-slate-500">{expense.vendor}</p>
+              <p className="text-[#94A3B8]">{expense.vendor}</p>
               {expense.description && (
-                <p className="text-sm text-slate-400 mt-1">{expense.description}</p>
+                <p className="text-sm text-[#475569] mt-1">{expense.description}</p>
               )}
             </div>
             <div className="text-right">
               <p className="text-2xl font-bold text-[#0F172A]">
                 {formatCurrency(expense.amount, expense.currency)}
               </p>
-              <p className="text-sm text-slate-400">{formatDate(expense.date)}</p>
+              <p className="text-sm text-[#475569]">{formatDate(expense.date)}</p>
             </div>
           </div>
 
           {/* Details Grid */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 bg-slate-50 rounded-xl">
-              <p className="text-xs text-slate-400 mb-1">Category</p>
+            <div className="p-4 bg-[#F8FAFC] rounded-md">
+              <p className="text-xs text-[#475569] mb-1">Category</p>
               <div className="flex items-center gap-2">
                 <CategoryIcon size={16} style={{ color: categoryInfo.color }} />
                 <span className="font-medium text-[#0F172A]">{categoryInfo.name}</span>
               </div>
             </div>
-            <div className="p-4 bg-slate-50 rounded-xl">
-              <p className="text-xs text-slate-400 mb-1">Payment Method</p>
+            <div className="p-4 bg-[#F8FAFC] rounded-md">
+              <p className="text-xs text-[#475569] mb-1">Payment Method</p>
               <div className="flex items-center gap-2">
-                <PaymentIcon size={16} className="text-slate-500" />
+                <PaymentIcon size={16} className="text-[#94A3B8]" />
                 <span className="font-medium text-[#0F172A]">{paymentInfo.name}</span>
               </div>
             </div>
-            <div className="p-4 bg-slate-50 rounded-xl">
-              <p className="text-xs text-slate-400 mb-1">Submitted By</p>
+            <div className="p-4 bg-[#F8FAFC] rounded-md">
+              <p className="text-xs text-[#475569] mb-1">Submitted By</p>
               <span className="font-medium text-[#0F172A]">{expense.submittedBy}</span>
             </div>
-            <div className="p-4 bg-slate-50 rounded-xl">
-              <p className="text-xs text-slate-400 mb-1">Approved By</p>
+            <div className="p-4 bg-[#F8FAFC] rounded-md">
+              <p className="text-xs text-[#475569] mb-1">Approved By</p>
               <span className="font-medium text-[#0F172A]">
                 {expense.approvedBy || "Pending"}
               </span>
@@ -1292,19 +1292,19 @@ const ExpenseDetailsDialog = ({
           {(expense.project || expense.client) && (
             <div className="grid grid-cols-2 gap-4">
               {expense.project && (
-                <div className="p-4 bg-slate-50 rounded-xl">
-                  <p className="text-xs text-slate-400 mb-1">Project</p>
+                <div className="p-4 bg-[#F8FAFC] rounded-md">
+                  <p className="text-xs text-[#475569] mb-1">Project</p>
                   <div className="flex items-center gap-2">
-                    <Briefcase size={16} className="text-[#23D3EE]" />
+                    <Briefcase size={16} className="text-[#0891B2]" />
                     <span className="font-medium text-[#0F172A]">{expense.project}</span>
                   </div>
                 </div>
               )}
               {expense.client && (
-                <div className="p-4 bg-slate-50 rounded-xl">
-                  <p className="text-xs text-slate-400 mb-1">Client</p>
+                <div className="p-4 bg-[#F8FAFC] rounded-md">
+                  <p className="text-xs text-[#475569] mb-1">Client</p>
                   <div className="flex items-center gap-2">
-                    <Users size={16} className="text-[#FBBF23]" />
+                    <Users size={16} className="text-[#D97706]" />
                     <span className="font-medium text-[#0F172A]">{expense.client}</span>
                   </div>
                 </div>
@@ -1315,12 +1315,12 @@ const ExpenseDetailsDialog = ({
           {/* Tags */}
           {expense.tags && expense.tags.length > 0 && (
             <div>
-              <p className="text-xs text-slate-400 mb-2">Tags</p>
+              <p className="text-xs text-[#475569] mb-2">Tags</p>
               <div className="flex flex-wrap gap-2">
                 {expense.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="px-3 py-1 bg-[#23D3EE]/10 text-[#23D3EE] rounded-lg text-sm font-medium"
+                    className="px-3 py-1 bg-[#0891B2]/10 text-[#0891B2] rounded-md text-sm font-medium"
                   >
                     {tag}
                   </span>
@@ -1331,45 +1331,45 @@ const ExpenseDetailsDialog = ({
 
           {/* Notes */}
           {expense.notes && (
-            <div className="p-4 bg-yellow-50 rounded-xl border border-yellow-100">
+            <div className="p-4 bg-yellow-50 rounded-md border border-yellow-100">
               <p className="text-xs text-yellow-600 font-medium mb-1">Notes</p>
               <p className="text-sm text-yellow-800">{expense.notes}</p>
             </div>
           )}
 
           {/* Receipt */}
-          <div className="p-4 bg-slate-50 rounded-xl">
-            <p className="text-xs text-slate-400 mb-2">Receipt</p>
+          <div className="p-4 bg-[#F8FAFC] rounded-md">
+            <p className="text-xs text-[#475569] mb-2">Receipt</p>
             {expense.receiptUrl ? (
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center border border-slate-200">
-                  <ImageIcon size={20} className="text-slate-400" />
+                <div className="w-12 h-12 bg-white rounded-md flex items-center justify-center border border-[rgba(15,23,42,0.06)]">
+                  <ImageIcon size={20} className="text-[#475569]" />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-medium text-[#0F172A]">receipt.pdf</p>
-                  <p className="text-xs text-slate-400">Uploaded on {formatDate(expense.createdAt)}</p>
+                  <p className="text-xs text-[#475569]">Uploaded on {formatDate(expense.createdAt)}</p>
                 </div>
-                <Button variant="outline" size="sm" className="rounded-lg">
+                <Button variant="outline" size="sm" className="rounded-md">
                   <Download size={14} className="mr-1" />
                   Download
                 </Button>
               </div>
             ) : (
-              <p className="text-sm text-slate-500">No receipt attached</p>
+              <p className="text-sm text-[#94A3B8]">No receipt attached</p>
             )}
           </div>
 
           {/* Timeline */}
           <div>
-            <p className="text-xs text-slate-400 mb-3">Activity</p>
+            <p className="text-xs text-[#475569] mb-3">Activity</p>
             <div className="space-y-3">
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-[#23D3EE]/10 flex items-center justify-center flex-shrink-0">
-                  <Plus size={14} className="text-[#23D3EE]" />
+                <div className="w-8 h-8 rounded-full bg-[#0891B2]/10 flex items-center justify-center flex-shrink-0">
+                  <Plus size={14} className="text-[#0891B2]" />
                 </div>
                 <div>
                   <p className="text-sm text-[#0F172A]">Expense created</p>
-                  <p className="text-xs text-slate-400">{getRelativeTime(expense.createdAt)}</p>
+                  <p className="text-xs text-[#475569]">{getRelativeTime(expense.createdAt)}</p>
                 </div>
               </div>
               {expense.status === "approved" && expense.approvedBy && (
@@ -1379,7 +1379,7 @@ const ExpenseDetailsDialog = ({
                   </div>
                   <div>
                     <p className="text-sm text-[#0F172A]">Approved by {expense.approvedBy}</p>
-                    <p className="text-xs text-slate-400">{getRelativeTime(expense.updatedAt || expense.createdAt)}</p>
+                    <p className="text-xs text-[#475569]">{getRelativeTime(expense.updatedAt || expense.createdAt)}</p>
                   </div>
                 </div>
               )}
@@ -1387,27 +1387,27 @@ const ExpenseDetailsDialog = ({
           </div>
         </div>
 
-        <DialogFooter className="p-6 pt-0 gap-3 border-t border-slate-100">
+        <DialogFooter className="p-6 pt-0 gap-3 border-t border-[rgba(15,23,42,0.06)]">
           {expense.status === "pending" && (
             <>
               <Button
                 variant="outline"
                 onClick={() => onStatusChange("rejected")}
-                className="rounded-xl text-red-600 border-red-200 hover:bg-red-50"
+                className="rounded-md text-red-600 border-red-200 hover:bg-red-50"
               >
                 <X size={16} className="mr-2" />
                 Reject
               </Button>
               <Button
                 onClick={() => onStatusChange("approved")}
-                className="bg-green-500 hover:bg-green-600 text-white rounded-xl"
+                className="bg-green-500 hover:bg-green-600 text-[#0F172A] rounded-md"
               >
                 <CheckCircle2 size={16} className="mr-2" />
                 Approve
               </Button>
             </>
           )}
-          <Button variant="outline" onClick={onEdit} className="rounded-xl">
+          <Button variant="outline" onClick={onEdit} className="rounded-md">
             <Pencil size={16} className="mr-2" />
             Edit
           </Button>
@@ -1442,21 +1442,21 @@ const BudgetOverview = () => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-2xl border border-slate-200 p-6"
+        className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-6"
       >
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="font-semibold text-[#0F172A]">Monthly Budget Overview</h3>
-            <p className="text-sm text-slate-500">January 2024</p>
+            <p className="text-sm text-[#94A3B8]">January 2024</p>
           </div>
           <div className="text-right">
             <p className="text-2xl font-bold text-[#0F172A]">{formatCurrency(totalSpent)}</p>
-            <p className="text-sm text-slate-500">of {formatCurrency(totalBudget)}</p>
+            <p className="text-sm text-[#94A3B8]">of {formatCurrency(totalBudget)}</p>
           </div>
         </div>
 
         <div className="relative mb-6">
-          <div className="w-full h-4 bg-slate-100 rounded-full overflow-hidden">
+          <div className="w-full h-4 bg-white/5 rounded-full overflow-hidden">
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${totalPercentage}%` }}
@@ -1464,15 +1464,15 @@ const BudgetOverview = () => {
               className={cn(
                 "h-full rounded-full",
                 totalPercentage > 90
-                  ? "bg-gradient-to-r from-red-500 to-red-400"
+                  ? " from-red-500 to-red-400"
                   : totalPercentage > 75
-                    ? "bg-gradient-to-r from-yellow-500 to-yellow-400"
-                    : "bg-gradient-to-r from-[#23D3EE] to-[#23D3EE]/80"
+                    ? " from-yellow-500 to-yellow-400"
+                    : "bg-[#F1F5F9]/80"
               )}
             />
           </div>
           <div className="flex items-center justify-between mt-2 text-sm">
-            <span className="text-slate-500">{totalPercentage}% used</span>
+            <span className="text-[#94A3B8]">{totalPercentage}% used</span>
             <span className={cn(
               "font-medium",
               totalSpent > totalBudget ? "text-red-600" : "text-green-600"
@@ -1497,7 +1497,7 @@ const BudgetOverview = () => {
                 className="flex items-center gap-4"
               >
                 <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                  className="w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0"
                   style={{ backgroundColor: `${category.color}15` }}
                 >
                   <category.icon size={18} style={{ color: category.color }} />
@@ -1507,11 +1507,11 @@ const BudgetOverview = () => {
                     <span className="text-sm font-medium text-[#0F172A] truncate">
                       {item.category}
                     </span>
-                    <span className="text-sm text-slate-500">
+                    <span className="text-sm text-[#94A3B8]">
                       {formatCurrency(item.spent)} / {formatCurrency(item.budget)}
                     </span>
                   </div>
-                  <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${Math.min(item.percentage, 100)}%` }}
@@ -1525,7 +1525,7 @@ const BudgetOverview = () => {
                 </div>
                 <span
                   className={cn(
-                    "text-xs font-medium px-2 py-1 rounded-lg",
+                    "text-xs font-medium px-2 py-1 rounded-md",
                     isOverBudget
                       ? "bg-red-50 text-red-600"
                       : item.percentage > 75
@@ -1817,19 +1817,19 @@ const Expenses = () => {
 
       <main className="flex-1 ml-0">
         {/* Header */}
-        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-slate-200">
+        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-[rgba(15,23,42,0.06)]">
           <div className="px-8 py-4">
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-[#0F172A]">Expenses</h1>
-                <p className="text-slate-500">Track and manage business expenses</p>
+                <p className="text-[#94A3B8]">Track and manage business expenses</p>
               </div>
 
               <div className="flex items-center gap-3">
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="outline" size="icon" className="rounded-xl">
+                      <Button variant="outline" size="icon" className="rounded-md">
                         <Download size={18} />
                       </Button>
                     </TooltipTrigger>
@@ -1842,7 +1842,7 @@ const Expenses = () => {
                     setCurrentExpense(null);
                     setIsFormOpen(true);
                   }}
-                  className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl gap-2"
+                  className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md gap-2"
                 >
                   <Plus size={18} />
                   Add Expense
@@ -1897,34 +1897,34 @@ const Expenses = () => {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-2xl border border-slate-200 overflow-hidden"
+                className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden"
               >
                 {/* Tabs & Filters */}
-                <div className="p-4 border-b border-slate-100">
+                <div className="p-4 border-b border-[rgba(15,23,42,0.06)]">
                   <Tabs value={activeTab} onValueChange={setActiveTab}>
                     <div className="flex items-center justify-between mb-4">
-                      <TabsList className="bg-slate-100 rounded-xl p-1">
+                      <TabsList className="bg-white/5 rounded-md p-1">
                         <TabsTrigger
                           value="all"
-                          className="rounded-lg data-[state=active]:bg-white"
+                          className="rounded-md data-[state=active]:bg-white"
                         >
                           All ({expenses.length})
                         </TabsTrigger>
                         <TabsTrigger
                           value="pending"
-                          className="rounded-lg data-[state=active]:bg-white"
+                          className="rounded-md data-[state=active]:bg-white"
                         >
                           Pending ({pendingCount})
                         </TabsTrigger>
                         <TabsTrigger
                           value="approved"
-                          className="rounded-lg data-[state=active]:bg-white"
+                          className="rounded-md data-[state=active]:bg-white"
                         >
                           Approved ({approvedCount})
                         </TabsTrigger>
                         <TabsTrigger
                           value="rejected"
-                          className="rounded-lg data-[state=active]:bg-white"
+                          className="rounded-md data-[state=active]:bg-white"
                         >
                           Rejected ({rejectedCount})
                         </TabsTrigger>
@@ -1934,7 +1934,7 @@ const Expenses = () => {
                         <Button
                           variant={viewMode === "list" ? "secondary" : "ghost"}
                           size="icon"
-                          className="rounded-lg h-9 w-9"
+                          className="rounded-md h-9 w-9"
                           onClick={() => setViewMode("list")}
                         >
                           <List size={16} />
@@ -1942,7 +1942,7 @@ const Expenses = () => {
                         <Button
                           variant={viewMode === "grid" ? "secondary" : "ghost"}
                           size="icon"
-                          className="rounded-lg h-9 w-9"
+                          className="rounded-md h-9 w-9"
                           onClick={() => setViewMode("grid")}
                         >
                           <LayoutGrid size={16} />
@@ -1955,26 +1955,26 @@ const Expenses = () => {
                       <div className="relative flex-1">
                         <Search
                           size={16}
-                          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]"
                         />
                         <Input
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
                           placeholder="Search expenses..."
-                          className="pl-9 h-10 rounded-xl border-slate-200"
+                          className="pl-9 h-10 rounded-md border-[rgba(15,23,42,0.06)]"
                         />
                       </div>
 
                       <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                        <SelectTrigger className="w-[160px] h-10 rounded-xl border-slate-200">
+                        <SelectTrigger className="w-[160px] h-10 rounded-md border-[rgba(15,23,42,0.06)]">
                           <SelectValue placeholder="Category" />
                         </SelectTrigger>
-                        <SelectContent className="rounded-xl">
-                          <SelectItem value="all" className="rounded-lg">
+                        <SelectContent className="rounded-md">
+                          <SelectItem value="all" className="rounded-md">
                             All Categories
                           </SelectItem>
                           {expenseCategories.map((cat) => (
-                            <SelectItem key={cat.id} value={cat.id} className="rounded-lg">
+                            <SelectItem key={cat.id} value={cat.id} className="rounded-md">
                               {cat.name}
                             </SelectItem>
                           ))}
@@ -1983,7 +1983,7 @@ const Expenses = () => {
 
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="outline" className="rounded-xl gap-2">
+                          <Button variant="outline" className="rounded-md gap-2">
                             <Filter size={16} />
                             Sort
                             {sortOrder === "asc" ? (
@@ -1993,18 +1993,18 @@ const Expenses = () => {
                             )}
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48 rounded-xl">
+                        <DropdownMenuContent align="end" className="w-48 rounded-md">
                           <DropdownMenuItem
                             onClick={() => {
                               setSortBy("date");
                               setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
                             }}
-                            className="rounded-lg"
+                            className="rounded-md"
                           >
                             <Calendar size={14} className="mr-2" />
                             Date
                             {sortBy === "date" && (
-                              <Check size={14} className="ml-auto text-[#23D3EE]" />
+                              <Check size={14} className="ml-auto text-[#0891B2]" />
                             )}
                           </DropdownMenuItem>
                           <DropdownMenuItem
@@ -2012,12 +2012,12 @@ const Expenses = () => {
                               setSortBy("amount");
                               setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
                             }}
-                            className="rounded-lg"
+                            className="rounded-md"
                           >
                             <DollarSign size={14} className="mr-2" />
                             Amount
                             {sortBy === "amount" && (
-                              <Check size={14} className="ml-auto text-[#23D3EE]" />
+                              <Check size={14} className="ml-auto text-[#0891B2]" />
                             )}
                           </DropdownMenuItem>
                           <DropdownMenuItem
@@ -2025,12 +2025,12 @@ const Expenses = () => {
                               setSortBy("status");
                               setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
                             }}
-                            className="rounded-lg"
+                            className="rounded-md"
                           >
                             <Activity size={14} className="mr-2" />
                             Status
                             {sortBy === "status" && (
-                              <Check size={14} className="ml-auto text-[#23D3EE]" />
+                              <Check size={14} className="ml-auto text-[#0891B2]" />
                             )}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -2042,7 +2042,7 @@ const Expenses = () => {
                       <motion.div
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="flex items-center gap-3 mt-4 p-3 bg-[#23D3EE]/10 rounded-xl"
+                        className="flex items-center gap-3 mt-4 p-3 bg-[#0891B2]/10 rounded-md"
                       >
                         <span className="text-sm font-medium text-[#0F172A]">
                           {selectedExpenses.size} selected
@@ -2052,7 +2052,7 @@ const Expenses = () => {
                           size="sm"
                           variant="outline"
                           onClick={() => handleBulkAction("approve")}
-                          className="rounded-lg text-green-600 border-green-200 hover:bg-green-50"
+                          className="rounded-md text-green-600 border-green-200 hover:bg-green-50"
                         >
                           <CheckCircle2 size={14} className="mr-1" />
                           Approve
@@ -2061,7 +2061,7 @@ const Expenses = () => {
                           size="sm"
                           variant="outline"
                           onClick={() => handleBulkAction("reject")}
-                          className="rounded-lg text-red-600 border-red-200 hover:bg-red-50"
+                          className="rounded-md text-red-600 border-red-200 hover:bg-red-50"
                         >
                           <X size={14} className="mr-1" />
                           Reject
@@ -2070,7 +2070,7 @@ const Expenses = () => {
                           size="sm"
                           variant="outline"
                           onClick={() => handleBulkAction("delete")}
-                          className="rounded-lg text-red-600 border-red-200 hover:bg-red-50"
+                          className="rounded-md text-red-600 border-red-200 hover:bg-red-50"
                         >
                           <Trash2 size={14} className="mr-1" />
                           Delete
@@ -2094,7 +2094,7 @@ const Expenses = () => {
                                   filteredExpenses.length > 0
                                 }
                                 onCheckedChange={toggleSelectAll}
-                                className="data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
+                                className="data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
                               />
                             </TableHead>
                             <TableHead>Expense</TableHead>
@@ -2111,9 +2111,9 @@ const Expenses = () => {
                             <TableRow>
                               <TableCell colSpan={8} className="text-center py-12">
                                 <div className="flex flex-col items-center">
-                                  <Receipt size={48} className="text-slate-300 mb-3" />
-                                  <p className="text-slate-500 font-medium">No expenses found</p>
-                                  <p className="text-slate-400 text-sm">
+                                  <Receipt size={48} className="text-[#475569] mb-3" />
+                                  <p className="text-[#94A3B8] font-medium">No expenses found</p>
+                                  <p className="text-[#475569] text-sm">
                                     Try adjusting your filters
                                   </p>
                                 </div>
@@ -2149,9 +2149,9 @@ const Expenses = () => {
                     <div className="p-4 grid grid-cols-2 gap-4">
                       {filteredExpenses.length === 0 ? (
                         <div className="col-span-2 text-center py-12">
-                          <Receipt size={48} className="text-slate-300 mx-auto mb-3" />
-                          <p className="text-slate-500 font-medium">No expenses found</p>
-                          <p className="text-slate-400 text-sm">Try adjusting your filters</p>
+                          <Receipt size={48} className="text-[#475569] mx-auto mb-3" />
+                          <p className="text-[#94A3B8] font-medium">No expenses found</p>
+                          <p className="text-[#475569] text-sm">Try adjusting your filters</p>
                         </div>
                       ) : (
                         filteredExpenses.map((expense, index) => (
@@ -2221,7 +2221,7 @@ const Expenses = () => {
       />
 
       <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
-        <AlertDialogContent className="rounded-2xl">
+        <AlertDialogContent className="rounded-md">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Expense</AlertDialogTitle>
             <AlertDialogDescription>
@@ -2229,10 +2229,10 @@ const Expenses = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-md">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteExpense}
-              className="bg-red-500 hover:bg-red-600 rounded-xl"
+              className="bg-red-500 hover:bg-red-600 rounded-md"
             >
               Delete
             </AlertDialogAction>

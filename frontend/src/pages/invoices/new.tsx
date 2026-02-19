@@ -45,13 +45,13 @@ export default function InvoiceCreate() {
   );
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <div className="bg-white rounded-lg shadow p-6 max-w-6xl mx-auto">
+    <div className="p-6 bg-[#F8FAFC] min-h-screen">
+      <div className="bg-white rounded-md shadow p-6 max-w-6xl mx-auto">
 
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-xl font-semibold">Invoice</h1>
-          <div className="border-dashed border rounded p-4 text-sm text-gray-400">
+          <div className="border-dashed border rounded p-4 text-sm text-[#94A3B8]">
             Add Business Logo
           </div>
         </div>
@@ -81,7 +81,7 @@ export default function InvoiceCreate() {
 
         {/* Items */}
         <table className="w-full border mb-4">
-          <thead className="bg-purple-600 text-white text-sm">
+          <thead className="bg-purple-600 text-[#0F172A] text-sm">
             <tr>
               <th className="p-2">Item</th>
               <th>Qty</th>
@@ -116,7 +116,7 @@ export default function InvoiceCreate() {
 
         {/* Summary */}
         <div className="flex justify-end">
-          <div className="w-80 bg-gray-50 p-4 rounded">
+          <div className="w-80 bg-[#F8FAFC] p-4 rounded">
             <div className="flex justify-between"><span>Subtotal</span><span>₹ {summary.sub}</span></div>
             <div className="flex justify-between"><span>CGST</span><span>₹ {summary.cgst}</span></div>
             <div className="flex justify-between"><span>SGST</span><span>₹ {summary.sgst}</span></div>
@@ -126,7 +126,7 @@ export default function InvoiceCreate() {
         </div>
 
         <div className="flex justify-end mt-6">
-          <button className="bg-pink-600 text-white px-6 py-2 rounded">
+          <button className="bg-pink-600 text-[#0F172A] px-6 py-2 rounded">
             Save & Continue
           </button>
         </div>

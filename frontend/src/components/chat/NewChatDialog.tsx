@@ -81,7 +81,7 @@ export function NewChatDialog({
           {/* Direct Message Tab */}
           <TabsContent value="direct" className="mt-4">
             <div className="relative mb-4">
-              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
               <Input
                 type="text"
                 placeholder="Search contacts..."
@@ -94,27 +94,27 @@ export function NewChatDialog({
             <ScrollArea className="h-64">
               <div className="space-y-1">
                 {filteredUsers.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">No contacts found</div>
+                  <div className="text-center py-8 text-[#475569]">No contacts found</div>
                 ) : (
                   filteredUsers.map((user) => (
                     <motion.button
                       key={user.id}
                       whileHover={{ x: 4 }}
                       onClick={() => handleSelectUser(user)}
-                      className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-all"
+                      className="w-full flex items-center gap-3 p-3 rounded-md hover:bg-white/5 transition-all"
                     >
                       <div className="relative">
-                        <Avatar className="w-10 h-10 rounded-xl">
+                        <Avatar className="w-10 h-10 rounded-md">
                           <AvatarImage src={user.avatar} />
-                          <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#6366F1] text-white rounded-xl">
+                          <AvatarFallback className="bg-[#F1F5F9] text-[#0F172A] rounded-md">
                             {getInitials(user.name)}
                           </AvatarFallback>
                         </Avatar>
                         <StatusBadge status={user.status} size="sm" />
                       </div>
                       <div className="flex-1 text-left">
-                        <p className="font-medium text-gray-800">{user.name}</p>
-                        <p className="text-sm text-gray-500">{user.email}</p>
+                        <p className="font-medium text-[#0F172A]">{user.name}</p>
+                        <p className="text-sm text-[#475569]">{user.email}</p>
                       </div>
                     </motion.button>
                   ))
@@ -135,16 +135,16 @@ export function NewChatDialog({
 
               {/* Selected Users Preview */}
               {selectedUsers.length > 0 && (
-                <div className="flex flex-wrap gap-2 p-2 bg-gray-50 rounded-lg">
+                <div className="flex flex-wrap gap-2 p-2 bg-white/5 rounded-md">
                   {selectedUsers.map((user) => (
                     <div
                       key={user.id}
-                      className="flex items-center gap-1 px-2 py-1 bg-[#23D3EE]/10 text-[#23D3EE] rounded-full text-sm"
+                      className="flex items-center gap-1 px-2 py-1 bg-[#0891B2]/10 text-[#0891B2] rounded-full text-sm"
                     >
                       <span>{user.name.split(" ")[0]}</span>
                       <button
                         onClick={() => toggleUserSelection(user)}
-                        className="w-4 h-4 flex items-center justify-center hover:bg-[#23D3EE]/20 rounded-full"
+                        className="w-4 h-4 flex items-center justify-center hover:bg-[#0891B2]/20 rounded-full"
                       >
                         ×
                       </button>
@@ -154,7 +154,7 @@ export function NewChatDialog({
               )}
 
               <div className="relative">
-                <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
                 <Input
                   type="text"
                   placeholder="Add participants..."
@@ -174,24 +174,24 @@ export function NewChatDialog({
                         whileHover={{ x: 4 }}
                         onClick={() => toggleUserSelection(user)}
                         className={cn(
-                          "w-full flex items-center gap-3 p-3 rounded-xl transition-all",
-                          isSelected ? "bg-[#23D3EE]/10" : "hover:bg-gray-50"
+                          "w-full flex items-center gap-3 p-3 rounded-md transition-all",
+                          isSelected ? "bg-[#0891B2]/10" : "hover:bg-white/5"
                         )}
                       >
                         <div className="relative">
-                          <Avatar className="w-8 h-8 rounded-lg">
+                          <Avatar className="w-8 h-8 rounded-md">
                             <AvatarImage src={user.avatar} />
-                            <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#6366F1] text-white text-xs rounded-lg">
+                            <AvatarFallback className="bg-[#F1F5F9] text-[#0F172A] text-xs rounded-md">
                               {getInitials(user.name)}
                             </AvatarFallback>
                           </Avatar>
                         </div>
-                        <span className="flex-1 text-left text-sm font-medium text-gray-800">
+                        <span className="flex-1 text-left text-sm font-medium text-[#0F172A]">
                           {user.name}
                         </span>
                         {isSelected && (
-                          <div className="w-5 h-5 bg-[#23D3EE] rounded-full flex items-center justify-center">
-                            <Check size={12} className="text-white" />
+                          <div className="w-5 h-5 bg-[#0891B2] rounded-full flex items-center justify-center">
+                            <Check size={12} className="text-[#0F172A]" />
                           </div>
                         )}
                       </motion.button>
@@ -203,7 +203,7 @@ export function NewChatDialog({
               <Button
                 onClick={handleCreateGroup}
                 disabled={!groupName.trim() || selectedUsers.length === 0}
-                className="w-full bg-[#23D3EE] hover:bg-[#23D3EE]/90 disabled:opacity-50"
+                className="w-full bg-[#0891B2] hover:bg-[#0891B2]/90 disabled:opacity-50"
               >
                 Create Group ({selectedUsers.length} selected)
               </Button>

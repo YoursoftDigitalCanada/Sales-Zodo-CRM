@@ -40,14 +40,14 @@ const StatCard: React.FC<StatCardProps> = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay }}
       whileHover={{ y: -2 }}
-      className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm"
+      className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-6 shadow-sm"
     >
       <div className="flex items-start justify-between">
         <div className="space-y-2">
-          <p className="text-sm font-medium text-gray-500">{title}</p>
-          <p className="text-3xl font-bold text-gray-900">{value}</p>
+          <p className="text-sm font-medium text-[#475569]">{title}</p>
+          <p className="text-3xl font-bold text-[#0F172A]">{value}</p>
           {subtitle && (
-            <p className="text-sm text-gray-500">{subtitle}</p>
+            <p className="text-sm text-[#475569]">{subtitle}</p>
           )}
           {trend && (
             <div className={`flex items-center gap-1 text-sm ${
@@ -58,7 +58,7 @@ const StatCard: React.FC<StatCardProps> = ({
             </div>
           )}
         </div>
-        <div className={`p-3 rounded-xl ${color}`}>
+        <div className={`p-3 rounded-md ${color}`}>
           {icon}
         </div>
       </div>
@@ -157,66 +157,66 @@ export const AttendanceSummaryCard: React.FC<AttendanceSummaryCardProps> = ({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm"
+      className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-6 shadow-sm"
     >
-      <h3 className="text-lg font-semibold text-gray-900 mb-6">Monthly Summary</h3>
+      <h3 className="text-lg font-semibold text-[#0F172A] mb-6">Monthly Summary</h3>
 
       {/* Attendance Rate */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm text-gray-600">Attendance Rate</span>
-          <span className="text-2xl font-bold text-[#23D3EE]">{attendanceRate}%</span>
+          <span className="text-sm text-[#475569]">Attendance Rate</span>
+          <span className="text-2xl font-bold text-[#0891B2]">{attendanceRate}%</span>
         </div>
         <Progress value={attendanceRate} className="h-3" />
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="bg-emerald-50 rounded-lg p-4">
+        <div className="bg-emerald-50 rounded-md p-4">
           <div className="flex items-center gap-2 mb-1">
             <UserCheck className="w-4 h-4 text-emerald-600" />
-            <span className="text-xs text-gray-500">Present</span>
+            <span className="text-xs text-[#475569]">Present</span>
           </div>
-          <p className="text-xl font-bold text-gray-900">{presentDays} days</p>
+          <p className="text-xl font-bold text-[#0F172A]">{presentDays} days</p>
         </div>
 
-        <div className="bg-red-50 rounded-lg p-4">
+        <div className="bg-red-50 rounded-md p-4">
           <div className="flex items-center gap-2 mb-1">
             <UserX className="w-4 h-4 text-red-600" />
-            <span className="text-xs text-gray-500">Absent</span>
+            <span className="text-xs text-[#475569]">Absent</span>
           </div>
-          <p className="text-xl font-bold text-gray-900">{absentDays} days</p>
+          <p className="text-xl font-bold text-[#0F172A]">{absentDays} days</p>
         </div>
 
-        <div className="bg-amber-50 rounded-lg p-4">
+        <div className="bg-amber-50 rounded-md p-4">
           <div className="flex items-center gap-2 mb-1">
             <Clock className="w-4 h-4 text-amber-600" />
-            <span className="text-xs text-gray-500">Late</span>
+            <span className="text-xs text-[#475569]">Late</span>
           </div>
-          <p className="text-xl font-bold text-gray-900">{lateDays} days</p>
+          <p className="text-xl font-bold text-[#0F172A]">{lateDays} days</p>
         </div>
 
-        <div className="bg-orange-50 rounded-lg p-4">
+        <div className="bg-orange-50 rounded-md p-4">
           <div className="flex items-center gap-2 mb-1">
             <Timer className="w-4 h-4 text-orange-600" />
-            <span className="text-xs text-gray-500">Half Days</span>
+            <span className="text-xs text-[#475569]">Half Days</span>
           </div>
-          <p className="text-xl font-bold text-gray-900">{halfDays} days</p>
+          <p className="text-xl font-bold text-[#0F172A]">{halfDays} days</p>
         </div>
       </div>
 
       {/* Additional Stats */}
-      <div className="mt-6 pt-6 border-t border-gray-100 space-y-4">
+      <div className="mt-6 pt-6 border-t border-[rgba(15,23,42,0.06)] space-y-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-gray-600">
+          <div className="flex items-center gap-2 text-[#475569]">
             <Clock className="w-4 h-4" />
             <span className="text-sm">Average Work Hours</span>
           </div>
-          <span className="font-semibold text-gray-900">{averageWorkHours.toFixed(1)}h / day</span>
+          <span className="font-semibold text-[#0F172A]">{averageWorkHours.toFixed(1)}h / day</span>
         </div>
 
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-gray-600">
+          <div className="flex items-center gap-2 text-[#475569]">
             <TrendingUp className="w-4 h-4" />
             <span className="text-sm">Total Overtime</span>
           </div>
@@ -224,11 +224,11 @@ export const AttendanceSummaryCard: React.FC<AttendanceSummaryCardProps> = ({
         </div>
 
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-gray-600">
+          <div className="flex items-center gap-2 text-[#475569]">
             <Calendar className="w-4 h-4" />
             <span className="text-sm">Working Days</span>
           </div>
-          <span className="font-semibold text-gray-900">{totalWorkingDays} days</span>
+          <span className="font-semibold text-[#0F172A]">{totalWorkingDays} days</span>
         </div>
       </div>
     </motion.div>

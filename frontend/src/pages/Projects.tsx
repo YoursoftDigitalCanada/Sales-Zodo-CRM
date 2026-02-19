@@ -208,9 +208,9 @@ const isOverdue = (dateString?: string) => {
 
 const getStatusConfig = (status: string) => {
   const configs: Record<string, { bg: string; text: string; dot: string; icon: React.ElementType }> = {
-    not_started: { bg: "bg-slate-100", text: "text-slate-600", dot: "bg-slate-400", icon: CircleDot },
-    planning: { bg: "bg-blue-100", text: "text-blue-600", dot: "bg-blue-500", icon: Target },
-    in_progress: { bg: "bg-[#23D3EE]/10", text: "text-[#23D3EE]", dot: "bg-[#23D3EE]", icon: PlayCircle },
+    not_started: { bg: "bg-white/5", text: "text-[#475569]", dot: "bg-slate-400", icon: CircleDot },
+    planning: { bg: "bg-blue-100", text: "text-[#0891B2]", dot: "bg-[#0891B2]", icon: Target },
+    in_progress: { bg: "bg-[#0891B2]/10", text: "text-[#0891B2]", dot: "bg-[#0891B2]", icon: PlayCircle },
     on_hold: { bg: "bg-amber-100", text: "text-amber-600", dot: "bg-amber-500", icon: PauseCircle },
     completed: { bg: "bg-green-100", text: "text-green-600", dot: "bg-green-500", icon: CheckCircle2 },
     cancelled: { bg: "bg-red-100", text: "text-red-600", dot: "bg-red-500", icon: XCircle },
@@ -220,8 +220,8 @@ const getStatusConfig = (status: string) => {
 
 const getPriorityConfig = (priority: string) => {
   const configs: Record<string, { bg: string; text: string; border: string }> = {
-    low: { bg: "bg-slate-100", text: "text-slate-600", border: "border-slate-200" },
-    medium: { bg: "bg-blue-100", text: "text-blue-600", border: "border-blue-200" },
+    low: { bg: "bg-white/5", text: "text-[#475569]", border: "border-[rgba(15,23,42,0.06)]" },
+    medium: { bg: "bg-blue-100", text: "text-[#0891B2]", border: "border-blue-200" },
     high: { bg: "bg-amber-100", text: "text-amber-600", border: "border-amber-200" },
     critical: { bg: "bg-red-100", text: "text-red-600", border: "border-red-200" },
   };
@@ -231,8 +231,8 @@ const getPriorityConfig = (priority: string) => {
 const getProgressColor = (progress: number) => {
   if (progress < 25) return "bg-slate-400";
   if (progress < 50) return "bg-amber-500";
-  if (progress < 75) return "bg-blue-500";
-  return "bg-[#23D3EE]";
+  if (progress < 75) return "bg-[#0891B2]";
+  return "bg-[#0891B2]";
 };
 
 const formatCurrency = (amount?: number) => {
@@ -267,9 +267,9 @@ const StatCard = ({
   delay?: number;
 }) => {
   const colorClasses = {
-    teal: { bg: "bg-[#23D3EE]", light: "bg-[#23D3EE]/10", text: "text-[#23D3EE]" },
-    gold: { bg: "bg-[#FBBF23]", light: "bg-[#FBBF23]/10", text: "text-[#FBBF23]" },
-    navy: { bg: "bg-[#0F172A]", light: "bg-[#0F172A]/10", text: "text-[#0F172A]" },
+    teal: { bg: "bg-[#0891B2]", light: "bg-[#0891B2]/10", text: "text-[#0891B2]" },
+    gold: { bg: "bg-[#D97706]", light: "bg-[#D97706]/10", text: "text-[#D97706]" },
+    navy: { bg: "bg-[#F8FAFC]", light: "bg-[#F8FAFC]/10", text: "text-[#0F172A]" },
     purple: { bg: "bg-purple-500", light: "bg-purple-500/10", text: "text-purple-500" },
     green: { bg: "bg-green-500", light: "bg-green-500/10", text: "text-green-500" },
     red: { bg: "bg-red-500", light: "bg-red-500/10", text: "text-red-500" },
@@ -283,13 +283,13 @@ const StatCard = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
       whileHover={{ y: -4 }}
-      className="relative bg-white rounded-2xl p-5 border border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5 transition-all overflow-hidden group"
+      className="relative bg-white rounded-md p-5 border border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg  transition-all overflow-hidden group"
     >
       <div className={cn("absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-10 group-hover:opacity-20 transition-all", colors.bg)} />
 
       <div className="relative flex items-start justify-between">
         <div>
-          <p className="text-sm text-slate-500 mb-1">{title}</p>
+          <p className="text-sm text-[#94A3B8] mb-1">{title}</p>
           <div className="flex items-baseline gap-2">
             <p className="text-2xl font-bold text-[#0F172A]">{value}</p>
             {trend && (
@@ -302,9 +302,9 @@ const StatCard = ({
               </span>
             )}
           </div>
-          <p className="text-xs text-slate-400 mt-1">{subtitle}</p>
+          <p className="text-xs text-[#475569] mt-1">{subtitle}</p>
         </div>
-        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", colors.light)}>
+        <div className={cn("w-10 h-10 rounded-md flex items-center justify-center", colors.light)}>
           <Icon size={18} className={colors.text} />
         </div>
       </div>
@@ -348,8 +348,8 @@ const ProjectRow = ({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className={cn(
-        "group hover:bg-slate-50/80 transition-colors cursor-pointer border-b border-slate-100 last:border-0",
-        isSelected && "bg-[#23D3EE]/5"
+        "group hover:bg-[#F8FAFC]/80 transition-colors cursor-pointer border-b border-[rgba(15,23,42,0.06)] last:border-0",
+        isSelected && "bg-[#0891B2]/5"
       )}
       onClick={onView}
     >
@@ -358,7 +358,7 @@ const ProjectRow = ({
         <Checkbox
           checked={isSelected}
           onCheckedChange={onSelect}
-          className="border-slate-300 data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
+          className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
         />
       </td>
 
@@ -366,12 +366,12 @@ const ProjectRow = ({
       <td className="py-4 px-2" onClick={(e) => e.stopPropagation()}>
         <button
           onClick={onToggleFavorite}
-          className="p-1 rounded-lg hover:bg-slate-100 transition-colors"
+          className="p-1 rounded-md hover:bg-white/10 transition-colors"
         >
           {project.isFavorite ? (
-            <Star size={16} className="text-[#FBBF23] fill-[#FBBF23]" />
+            <Star size={16} className="text-[#D97706] fill-[#FBBF24]" />
           ) : (
-            <StarOff size={16} className="text-slate-300 group-hover:text-slate-400" />
+            <StarOff size={16} className="text-[#475569] group-hover:text-[#475569]" />
           )}
         </button>
       </td>
@@ -381,26 +381,26 @@ const ProjectRow = ({
         <td className="py-4 px-4">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white font-semibold text-sm">
+              <div className="w-11 h-11 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] font-semibold text-sm">
                 {getInitials(project.name)}
               </div>
               {project.progress === 100 && (
                 <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                  <CheckCircle2 size={12} className="text-white" />
+                  <CheckCircle2 size={12} className="text-[#0F172A]" />
                 </div>
               )}
             </div>
             <div>
-              <div className="font-semibold text-[#0F172A] group-hover:text-[#23D3EE] transition-colors flex items-center gap-2">
+              <div className="font-semibold text-[#0F172A] group-hover:text-[#0891B2] transition-colors flex items-center gap-2">
                 {project.name}
                 {project.category && (
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-500">
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-white/5 text-[#94A3B8]">
                     {project.category}
                   </span>
                 )}
               </div>
               {project.description && (
-                <div className="text-xs text-slate-400 truncate max-w-[200px]">
+                <div className="text-xs text-[#475569] truncate max-w-[200px]">
                   {project.description}
                 </div>
               )}
@@ -413,8 +413,8 @@ const ProjectRow = ({
       {columns.find((c) => c.key === "clientName")?.visible && (
         <td className="py-4 px-4">
           <div className="flex items-center gap-2">
-            <Building2 size={14} className="text-slate-400" />
-            <span className="text-sm text-slate-600">
+            <Building2 size={14} className="text-[#475569]" />
+            <span className="text-sm text-[#475569]">
               {project.clientName || "-"}
             </span>
           </div>
@@ -425,10 +425,10 @@ const ProjectRow = ({
       {columns.find((c) => c.key === "projectManager")?.visible && (
         <td className="py-4 px-4">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-[#0F172A]/10 flex items-center justify-center text-[#0F172A] text-xs font-semibold">
+            <div className="w-7 h-7 rounded-md bg-[#F8FAFC]/10 flex items-center justify-center text-[#0F172A] text-xs font-semibold">
               {getInitials(project.projectManager)}
             </div>
-            <span className="text-sm text-slate-600">
+            <span className="text-sm text-[#475569]">
               {project.projectManager || "-"}
             </span>
           </div>
@@ -469,7 +469,7 @@ const ProjectRow = ({
         <td className="py-4 px-4">
           <div className="flex items-center gap-3">
             <div className="flex-1 min-w-[80px]">
-              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-2 bg-white/5 rounded-full overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${project.progress}%` }}
@@ -480,7 +480,7 @@ const ProjectRow = ({
             </div>
             <span className={cn(
               "text-xs font-semibold min-w-[36px]",
-              project.progress >= 75 ? "text-[#23D3EE]" : "text-slate-500"
+              project.progress >= 75 ? "text-[#0891B2]" : "text-[#94A3B8]"
             )}>
               {project.progress}%
             </span>
@@ -493,14 +493,14 @@ const ProjectRow = ({
         <td className="py-4 px-4">
           <div className={cn(
             "flex items-center gap-2 text-sm",
-            overdue ? "text-red-600" : "text-slate-600"
+            overdue ? "text-red-600" : "text-[#475569]"
           )}>
-            <CalendarDays size={14} className={overdue ? "text-red-400" : "text-slate-400"} />
+            <CalendarDays size={14} className={overdue ? "text-red-400" : "text-[#475569]"} />
             <div>
               <div>{new Date(project.dueDate).toLocaleDateString()}</div>
               <div className={cn(
                 "text-xs",
-                overdue ? "text-red-500 font-semibold" : "text-slate-400"
+                overdue ? "text-red-500 font-semibold" : "text-[#475569]"
               )}>
                 {getRelativeTime(project.dueDate)}
               </div>
@@ -521,7 +521,7 @@ const ProjectRow = ({
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={onView}
-            className="p-2 rounded-lg hover:bg-[#23D3EE]/10 text-[#23D3EE] transition-colors"
+            className="p-2 rounded-md hover:bg-[#0891B2]/10 text-[#0891B2] transition-colors"
             title="View Project"
           >
             <Eye size={16} />
@@ -530,7 +530,7 @@ const ProjectRow = ({
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={onEdit}
-            className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"
+            className="p-2 rounded-md hover:bg-white/10 text-[#94A3B8] transition-colors"
             title="Edit Project"
           >
             <Pencil size={16} />
@@ -538,35 +538,35 @@ const ProjectRow = ({
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors">
+              <button className="p-2 rounded-md hover:bg-white/10 text-[#475569] transition-colors">
                 <MoreVertical size={16} />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 rounded-xl">
-              <DropdownMenuItem onClick={onView} className="rounded-lg">
+            <DropdownMenuContent align="end" className="w-48 rounded-md">
+              <DropdownMenuItem onClick={onView} className="rounded-md">
                 <Eye size={14} className="mr-2" />
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onEdit} className="rounded-lg">
+              <DropdownMenuItem onClick={onEdit} className="rounded-md">
                 <Pencil size={14} className="mr-2" />
                 Edit Project
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onDuplicate} className="rounded-lg">
+              <DropdownMenuItem onClick={onDuplicate} className="rounded-md">
                 <Copy size={14} className="mr-2" />
                 Duplicate
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="rounded-lg">
+              <DropdownMenuItem className="rounded-md">
                 <Share2 size={14} className="mr-2" />
                 Share
               </DropdownMenuItem>
-              <DropdownMenuItem className="rounded-lg">
+              <DropdownMenuItem className="rounded-md">
                 <Archive size={14} className="mr-2" />
                 Archive
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                className="rounded-lg text-red-600 focus:text-red-600 focus:bg-red-50"
+                className="rounded-md text-red-600 focus:text-red-600 focus:bg-red-50"
                 onClick={onDelete}
               >
                 <Trash2 size={14} className="mr-2" />
@@ -613,14 +613,14 @@ const ProjectCard = ({
       exit={{ opacity: 0, scale: 0.9 }}
       whileHover={{ y: -4 }}
       className={cn(
-        "bg-white rounded-2xl border border-slate-200 overflow-hidden cursor-pointer group",
-        "hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5 transition-all",
-        isSelected && "border-[#23D3EE] bg-[#23D3EE]/5"
+        "bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden cursor-pointer group",
+        "hover:border-[#22D3EE]/30 hover:shadow-lg  transition-all",
+        isSelected && "border-[#22D3EE] bg-[#0891B2]/5"
       )}
       onClick={onView}
     >
       {/* Progress Bar Top */}
-      <div className="h-1 bg-slate-100">
+      <div className="h-1 bg-white/5">
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${project.progress}%` }}
@@ -636,9 +636,9 @@ const ProjectCard = ({
               checked={isSelected}
               onCheckedChange={onSelect}
               onClick={(e) => e.stopPropagation()}
-              className="border-slate-300 data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
+              className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
             />
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white font-bold text-sm">
+            <div className="w-12 h-12 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] font-bold text-sm">
               {getInitials(project.name)}
             </div>
           </div>
@@ -646,32 +646,32 @@ const ProjectCard = ({
           <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={onToggleFavorite}
-              className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+              className="p-1.5 rounded-md hover:bg-white/10 transition-colors"
             >
               {project.isFavorite ? (
-                <Star size={16} className="text-[#FBBF23] fill-[#FBBF23]" />
+                <Star size={16} className="text-[#D97706] fill-[#FBBF24]" />
               ) : (
-                <StarOff size={16} className="text-slate-300" />
+                <StarOff size={16} className="text-[#475569]" />
               )}
             </button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400">
+                <button className="p-1.5 rounded-md hover:bg-white/10 text-[#475569]">
                   <MoreHorizontal size={16} />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 rounded-xl">
-                <DropdownMenuItem onClick={onView} className="rounded-lg">
+              <DropdownMenuContent align="end" className="w-48 rounded-md">
+                <DropdownMenuItem onClick={onView} className="rounded-md">
                   <Eye size={14} className="mr-2" />
                   View Details
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={onEdit} className="rounded-lg">
+                <DropdownMenuItem onClick={onEdit} className="rounded-md">
                   <Pencil size={14} className="mr-2" />
                   Edit
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  className="rounded-lg text-red-600"
+                  className="rounded-md text-red-600"
                   onClick={onDelete}
                 >
                   <Trash2 size={14} className="mr-2" />
@@ -684,16 +684,16 @@ const ProjectCard = ({
 
         {/* Project Info */}
         <div className="mb-4">
-          <h3 className="font-semibold text-[#0F172A] group-hover:text-[#23D3EE] transition-colors mb-1 line-clamp-1">
+          <h3 className="font-semibold text-[#0F172A] group-hover:text-[#0891B2] transition-colors mb-1 line-clamp-1">
             {project.name}
           </h3>
           {project.description && (
-            <p className="text-sm text-slate-500 line-clamp-2 mb-2">
+            <p className="text-sm text-[#94A3B8] line-clamp-2 mb-2">
               {project.description}
             </p>
           )}
           {project.clientName && (
-            <div className="flex items-center gap-2 text-xs text-slate-400">
+            <div className="flex items-center gap-2 text-xs text-[#475569]">
               <Building2 size={12} />
               {project.clientName}
             </div>
@@ -724,15 +724,15 @@ const ProjectCard = ({
         {/* Progress */}
         <div className="mb-4">
           <div className="flex items-center justify-between text-sm mb-2">
-            <span className="text-slate-500">Progress</span>
+            <span className="text-[#94A3B8]">Progress</span>
             <span className={cn(
               "font-semibold",
-              project.progress >= 75 ? "text-[#23D3EE]" : "text-slate-600"
+              project.progress >= 75 ? "text-[#0891B2]" : "text-[#475569]"
             )}>
               {project.progress}%
             </span>
           </div>
-          <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+          <div className="h-2 bg-white/5 rounded-full overflow-hidden">
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${project.progress}%` }}
@@ -742,16 +742,16 @@ const ProjectCard = ({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+        <div className="flex items-center justify-between pt-4 border-t border-[rgba(15,23,42,0.06)]">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-[#0F172A]/10 flex items-center justify-center text-[#0F172A] text-[10px] font-semibold">
+            <div className="w-6 h-6 rounded-md bg-[#F8FAFC]/10 flex items-center justify-center text-[#0F172A] text-[10px] font-semibold">
               {getInitials(project.projectManager)}
             </div>
-            <span className="text-xs text-slate-500">{project.projectManager}</span>
+            <span className="text-xs text-[#94A3B8]">{project.projectManager}</span>
           </div>
           <div className={cn(
             "flex items-center gap-1 text-xs",
-            overdue ? "text-red-600" : "text-slate-400"
+            overdue ? "text-red-600" : "text-[#475569]"
           )}>
             <CalendarDays size={12} />
             <span>{getRelativeTime(project.dueDate)}</span>
@@ -772,16 +772,16 @@ const EmptyState = ({ onAdd }: { onAdd: () => void }) => (
     animate={{ opacity: 1, y: 0 }}
     className="flex flex-col items-center justify-center py-16 px-4"
   >
-    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#23D3EE]/10 to-[#FBBF23]/10 flex items-center justify-center mb-6">
-      <FolderOpen size={40} className="text-[#23D3EE]" />
+    <div className="w-20 h-20 rounded-md bg-[#F1F5F9] flex items-center justify-center mb-6">
+      <FolderOpen size={40} className="text-[#0891B2]" />
     </div>
     <h3 className="text-xl font-semibold text-[#0F172A] mb-2">No projects yet</h3>
-    <p className="text-slate-500 text-center max-w-sm mb-6">
+    <p className="text-[#94A3B8] text-center max-w-sm mb-6">
       Get started by creating your first project. Track progress, manage teams, and deliver on time.
     </p>
     <Button
       onClick={onAdd}
-      className="bg-gradient-to-r from-[#23D3EE] to-[#23D3EE]/90 hover:from-[#23D3EE]/90 hover:to-[#23D3EE] text-white rounded-xl shadow-lg shadow-[#23D3EE]/25"
+      className="bg-[#F1F5F9]/90 hover:from-[#22D3EE]/90 hover:to-[#22D3EE] text-[#0F172A] rounded-md "
     >
       <Plus size={18} className="mr-2" />
       Create Your First Project
@@ -1096,7 +1096,7 @@ const ProjectsPage = () => {
   // ============================================
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
+    <div className="flex min-h-screen bg-[#F8FAFC]">
       <Sidebar collapsed={sidebarCollapsed} onCollapse={setSidebarCollapsed} />
 
       <main
@@ -1108,11 +1108,11 @@ const ProjectsPage = () => {
         {/* ============================================ */}
         {/* HEADER */}
         {/* ============================================ */}
-        <header className="sticky top-0 z-30 backdrop-blur-xl bg-white/80 border-b border-slate-200/50">
+        <header className="sticky top-0 z-30 backdrop-blur-xl bg-white/80 border-b border-[rgba(15,23,42,0.06)]/50">
           <div className="flex h-16 items-center justify-between px-6">
             <div className="flex items-center gap-2 text-sm">
-              <span className="text-slate-400">Dashboard</span>
-              <ChevronRight size={16} className="text-slate-300" />
+              <span className="text-[#475569]">Dashboard</span>
+              <ChevronRight size={16} className="text-[#475569]" />
               <span className="font-medium text-[#0F172A]">Projects</span>
             </div>
 
@@ -1120,14 +1120,14 @@ const ProjectsPage = () => {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="relative p-2 rounded-xl hover:bg-slate-100 text-slate-600 transition-colors"
+                className="relative p-2 rounded-md hover:bg-white/10 text-[#475569] transition-colors"
               >
                 <Bell size={20} />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#23D3EE] rounded-full" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#0891B2] rounded-full" />
               </motion.button>
 
-              <div className="flex items-center gap-3 pl-3 border-l border-slate-200">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white font-semibold text-sm">
+              <div className="flex items-center gap-3 pl-3 border-l border-[rgba(15,23,42,0.06)]">
+                <div className="w-9 h-9 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] font-semibold text-sm">
                   {user ? getInitials(`${user.firstName} ${user.lastName}`) : "?"}
                 </div>
               </div>
@@ -1146,12 +1146,12 @@ const ProjectsPage = () => {
             className="flex items-center justify-between"
           >
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center shadow-lg shadow-[#23D3EE]/25">
-                <Briefcase size={24} className="text-white" />
+              <div className="w-12 h-12 rounded-md bg-[#F1F5F9] flex items-center justify-center ">
+                <Briefcase size={24} className="text-[#0F172A]" />
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-[#0F172A]">Projects</h1>
-                <p className="text-slate-500">
+                <p className="text-[#94A3B8]">
                   Manage and track all your projects
                 </p>
               </div>
@@ -1162,7 +1162,7 @@ const ProjectsPage = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={fetchProjects}
-                className="p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 transition-colors"
+                className="p-2.5 rounded-md border border-[rgba(15,23,42,0.06)] hover:bg-[#F8FAFC] text-[#475569] transition-colors"
               >
                 <RefreshCw size={18} />
               </motion.button>
@@ -1171,7 +1171,7 @@ const ProjectsPage = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleExport}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 transition-colors"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-md border border-[rgba(15,23,42,0.06)] hover:bg-[#F8FAFC] text-[#475569] transition-colors"
               >
                 <Download size={18} />
                 <span className="font-medium">Export</span>
@@ -1179,7 +1179,7 @@ const ProjectsPage = () => {
 
               <Button
                 onClick={() => navigate("/projects/add")}
-                className="bg-gradient-to-r from-[#23D3EE] to-[#23D3EE]/90 hover:from-[#23D3EE]/90 hover:to-[#23D3EE] text-white rounded-xl shadow-lg shadow-[#23D3EE]/25 px-5"
+                className="bg-[#F1F5F9]/90 hover:from-[#22D3EE]/90 hover:to-[#22D3EE] text-[#0F172A] rounded-md  px-5"
               >
                 <Plus size={18} className="mr-2" />
                 New Project
@@ -1236,7 +1236,7 @@ const ProjectsPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-white rounded-2xl border border-slate-200 p-4"
+            className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4"
           >
             <div className="flex items-center justify-between gap-4">
               {/* Left Side - Search & Filters */}
@@ -1245,18 +1245,18 @@ const ProjectsPage = () => {
                 <div className="relative max-w-md flex-1">
                   <Search
                     size={18}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]"
                   />
                   <Input
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Search projects..."
-                    className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
+                    className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
                   />
                   {searchTerm && (
                     <button
                       onClick={() => setSearchTerm("")}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#475569] hover:text-[#475569]"
                     >
                       <X size={16} />
                     </button>
@@ -1265,15 +1265,15 @@ const ProjectsPage = () => {
 
                 {/* Status Filter */}
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="h-11 w-[160px] rounded-xl border-slate-200">
+                  <SelectTrigger className="h-11 w-[160px] rounded-md border-[rgba(15,23,42,0.06)]">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
-                  <SelectContent className="rounded-xl">
+                  <SelectContent className="rounded-md">
                     {statusOptions.map((opt) => (
                       <SelectItem
                         key={opt.value}
                         value={opt.value}
-                        className="rounded-lg"
+                        className="rounded-md"
                       >
                         {opt.label}
                       </SelectItem>
@@ -1283,15 +1283,15 @@ const ProjectsPage = () => {
 
                 {/* Priority Filter */}
                 <Select value={filterPriority} onValueChange={setFilterPriority}>
-                  <SelectTrigger className="h-11 w-[160px] rounded-xl border-slate-200">
+                  <SelectTrigger className="h-11 w-[160px] rounded-md border-[rgba(15,23,42,0.06)]">
                     <SelectValue placeholder="Priority" />
                   </SelectTrigger>
-                  <SelectContent className="rounded-xl">
+                  <SelectContent className="rounded-md">
                     {priorityOptions.map((opt) => (
                       <SelectItem
                         key={opt.value}
                         value={opt.value}
-                        className="rounded-lg"
+                        className="rounded-md"
                       >
                         {opt.label}
                       </SelectItem>
@@ -1309,7 +1309,7 @@ const ProjectsPage = () => {
                       setFilterStatus("all");
                       setFilterPriority("all");
                     }}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-slate-500 hover:text-[#23D3EE] hover:bg-[#23D3EE]/5 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-md text-sm text-[#94A3B8] hover:text-[#0891B2] hover:bg-[#0891B2]/5 transition-colors"
                   >
                     <X size={14} />
                     Clear
@@ -1326,16 +1326,16 @@ const ProjectsPage = () => {
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 20 }}
-                      className="flex items-center gap-2 pr-3 mr-3 border-r border-slate-200"
+                      className="flex items-center gap-2 pr-3 mr-3 border-r border-[rgba(15,23,42,0.06)]"
                     >
-                      <span className="text-sm text-slate-500">
+                      <span className="text-sm text-[#94A3B8]">
                         {selectedProjects.length} selected
                       </span>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={handleBulkDelete}
-                        className="h-9 rounded-lg border-red-200 text-red-600 hover:bg-red-50"
+                        className="h-9 rounded-md border-red-200 text-red-600 hover:bg-red-50"
                       >
                         <Trash2 size={14} className="mr-1" />
                         Delete
@@ -1347,12 +1347,12 @@ const ProjectsPage = () => {
                 {/* Column Toggle */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 transition-colors">
+                    <button className="p-2.5 rounded-md border border-[rgba(15,23,42,0.06)] hover:bg-[#F8FAFC] text-[#475569] transition-colors">
                       <Columns size={18} />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48 rounded-xl">
-                    <DropdownMenuLabel className="text-xs text-slate-400 font-medium">
+                  <DropdownMenuContent align="end" className="w-48 rounded-md">
+                    <DropdownMenuLabel className="text-xs text-[#475569] font-medium">
                       Toggle Columns
                     </DropdownMenuLabel>
                     {columns.map((col) => (
@@ -1360,7 +1360,7 @@ const ProjectsPage = () => {
                         key={col.key}
                         checked={col.visible}
                         onCheckedChange={() => toggleColumn(col.key)}
-                        className="rounded-lg"
+                        className="rounded-md"
                       >
                         {col.label}
                       </DropdownMenuCheckboxItem>
@@ -1369,14 +1369,14 @@ const ProjectsPage = () => {
                 </DropdownMenu>
 
                 {/* View Toggle */}
-                <div className="flex items-center p-1 bg-slate-100 rounded-xl">
+                <div className="flex items-center p-1 bg-white/5 rounded-md">
                   <button
                     onClick={() => setViewMode("table")}
                     className={cn(
-                      "p-2 rounded-lg transition-all",
+                      "p-2 rounded-md transition-all",
                       viewMode === "table"
-                        ? "bg-white text-[#23D3EE] shadow-sm"
-                        : "text-slate-500 hover:text-slate-700"
+                        ? "bg-white text-[#0891B2] shadow-sm"
+                        : "text-[#94A3B8] hover:text-slate-200"
                     )}
                   >
                     <List size={18} />
@@ -1384,10 +1384,10 @@ const ProjectsPage = () => {
                   <button
                     onClick={() => setViewMode("grid")}
                     className={cn(
-                      "p-2 rounded-lg transition-all",
+                      "p-2 rounded-md transition-all",
                       viewMode === "grid"
-                        ? "bg-white text-[#23D3EE] shadow-sm"
-                        : "text-slate-500 hover:text-slate-700"
+                        ? "bg-white text-[#0891B2] shadow-sm"
+                        : "text-[#94A3B8] hover:text-slate-200"
                     )}
                   >
                     <LayoutGrid size={18} />
@@ -1402,12 +1402,12 @@ const ProjectsPage = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="bg-white rounded-2xl border border-slate-200 overflow-hidden"
+            className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden"
           >
             {isLoading ? (
               <div className="flex flex-col items-center justify-center py-20">
-                <Loader2 size={40} className="animate-spin text-[#23D3EE] mb-4" />
-                <p className="text-slate-500">Loading projects...</p>
+                <Loader2 size={40} className="animate-spin text-[#0891B2] mb-4" />
+                <p className="text-[#94A3B8]">Loading projects...</p>
               </div>
             ) : filteredProjects.length === 0 ? (
               <EmptyState onAdd={() => navigate("/projects/add")} />
@@ -1417,7 +1417,7 @@ const ProjectsPage = () => {
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="border-b border-slate-100 bg-slate-50/50">
+                      <tr className="border-b border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]/50">
                         <th className="py-4 px-4 text-left">
                           <Checkbox
                             checked={
@@ -1425,27 +1425,27 @@ const ProjectsPage = () => {
                               paginatedProjects.length > 0
                             }
                             onCheckedChange={handleSelectAll}
-                            className="border-slate-300 data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
+                            className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
                           />
                         </th>
                         <th className="py-4 px-2 text-left w-10"></th>
                         {columns.filter((c) => c.visible).map((col) => (
                           <th
                             key={col.key}
-                            className="py-4 px-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider"
+                            className="py-4 px-4 text-left text-xs font-semibold text-[#94A3B8] uppercase tracking-wider"
                           >
                             {col.sortable ? (
                               <button
                                 onClick={() => handleSort(col.key)}
-                                className="flex items-center gap-1.5 hover:text-[#23D3EE] transition-colors"
+                                className="flex items-center gap-1.5 hover:text-[#0891B2] transition-colors"
                               >
                                 {col.label}
                                 <ArrowUpDown
                                   size={14}
                                   className={cn(
                                     sortConfig?.key === col.key
-                                      ? "text-[#23D3EE]"
-                                      : "text-slate-300"
+                                      ? "text-[#0891B2]"
+                                      : "text-[#475569]"
                                   )}
                                 />
                               </button>
@@ -1454,7 +1454,7 @@ const ProjectsPage = () => {
                             )}
                           </th>
                         ))}
-                        <th className="py-4 px-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                        <th className="py-4 px-4 text-right text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">
                           Actions
                         </th>
                       </tr>
@@ -1484,8 +1484,8 @@ const ProjectsPage = () => {
                 </div>
 
                 {/* Pagination */}
-                <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100">
-                  <div className="flex items-center gap-2 text-sm text-slate-500">
+                <div className="flex items-center justify-between px-6 py-4 border-t border-[rgba(15,23,42,0.06)]">
+                  <div className="flex items-center gap-2 text-sm text-[#94A3B8]">
                     <span>
                       Showing {((currentPage - 1) * pageSize) + 1} to{" "}
                       {Math.min(currentPage * pageSize, filteredProjects.length)} of{" "}
@@ -1498,12 +1498,12 @@ const ProjectsPage = () => {
                         setCurrentPage(1);
                       }}
                     >
-                      <SelectTrigger className="h-8 w-[70px] rounded-lg text-xs">
+                      <SelectTrigger className="h-8 w-[70px] rounded-md text-xs">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="rounded-xl">
+                      <SelectContent className="rounded-md">
                         {[10, 20, 50, 100].map((size) => (
-                          <SelectItem key={size} value={String(size)} className="rounded-lg">
+                          <SelectItem key={size} value={String(size)} className="rounded-md">
                             {size}
                           </SelectItem>
                         ))}
@@ -1518,7 +1518,7 @@ const ProjectsPage = () => {
                       size="sm"
                       onClick={() => setCurrentPage(1)}
                       disabled={currentPage === 1}
-                      className="h-9 w-9 p-0 rounded-lg"
+                      className="h-9 w-9 p-0 rounded-md"
                     >
                       <ChevronsLeft size={16} />
                     </Button>
@@ -1527,7 +1527,7 @@ const ProjectsPage = () => {
                       size="sm"
                       onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                       disabled={currentPage === 1}
-                      className="h-9 w-9 p-0 rounded-lg"
+                      className="h-9 w-9 p-0 rounded-md"
                     >
                       <ChevronLeft size={16} />
                     </Button>
@@ -1550,10 +1550,10 @@ const ProjectsPage = () => {
                             key={pageNum}
                             onClick={() => setCurrentPage(pageNum)}
                             className={cn(
-                              "h-9 w-9 rounded-lg text-sm font-medium transition-all",
+                              "h-9 w-9 rounded-md text-sm font-medium transition-all",
                               currentPage === pageNum
-                                ? "bg-[#23D3EE] text-white shadow-lg shadow-[#23D3EE]/25"
-                                : "text-slate-600 hover:bg-slate-100"
+                                ? "bg-[#0891B2] text-white "
+                                : "text-[#475569] hover:bg-white/10"
                             )}
                           >
                             {pageNum}
@@ -1567,7 +1567,7 @@ const ProjectsPage = () => {
                       size="sm"
                       onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                       disabled={currentPage === totalPages}
-                      className="h-9 w-9 p-0 rounded-lg"
+                      className="h-9 w-9 p-0 rounded-md"
                     >
                       <ChevronRight size={16} />
                     </Button>
@@ -1576,7 +1576,7 @@ const ProjectsPage = () => {
                       size="sm"
                       onClick={() => setCurrentPage(totalPages)}
                       disabled={currentPage === totalPages}
-                      className="h-9 w-9 p-0 rounded-lg"
+                      className="h-9 w-9 p-0 rounded-md"
                     >
                       <ChevronsRight size={16} />
                     </Button>
@@ -1619,7 +1619,7 @@ const ProjectsPage = () => {
                     size="sm"
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="rounded-xl"
+                    className="rounded-md"
                   >
                     <ChevronLeft size={16} className="mr-1" />
                     Previous
@@ -1642,10 +1642,10 @@ const ProjectsPage = () => {
                           key={pageNum}
                           onClick={() => setCurrentPage(pageNum)}
                           className={cn(
-                            "h-9 w-9 rounded-lg text-sm font-medium transition-all",
+                            "h-9 w-9 rounded-md text-sm font-medium transition-all",
                             currentPage === pageNum
-                              ? "bg-[#23D3EE] text-white shadow-lg shadow-[#23D3EE]/25"
-                              : "text-slate-600 hover:bg-slate-100"
+                              ? "bg-[#0891B2] text-white "
+                              : "text-[#475569] hover:bg-white/10"
                           )}
                         >
                           {pageNum}
@@ -1659,7 +1659,7 @@ const ProjectsPage = () => {
                     size="sm"
                     onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
-                    className="rounded-xl"
+                    className="rounded-md"
                   >
                     Next
                     <ChevronRight size={16} className="ml-1" />
@@ -1677,10 +1677,10 @@ const ProjectsPage = () => {
             className="grid grid-cols-4 gap-4"
           >
             {/* Status Distribution */}
-            <div className="col-span-2 bg-white rounded-2xl border border-slate-200 p-5">
+            <div className="col-span-2 bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-5">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-[#0F172A]">Status Distribution</h3>
-                <PieChart size={18} className="text-slate-400" />
+                <PieChart size={18} className="text-[#475569]" />
               </div>
               <div className="space-y-3">
                 {statusOptions.slice(1).map((status) => {
@@ -1693,16 +1693,16 @@ const ProjectsPage = () => {
                   return (
                     <div key={status.value} className="flex items-center gap-3">
                       <div className={cn("w-3 h-3 rounded-full", config.dot)} />
-                      <span className="text-sm text-slate-600 flex-1">{status.label}</span>
+                      <span className="text-sm text-[#475569] flex-1">{status.label}</span>
                       <span className="text-sm font-semibold text-[#0F172A]">{count}</span>
-                      <div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="w-24 h-2 bg-white/5 rounded-full overflow-hidden">
                         <motion.div
                           initial={{ width: 0 }}
                           animate={{ width: `${percentage}%` }}
                           className={cn("h-full rounded-full", config.dot)}
                         />
                       </div>
-                      <span className="text-xs text-slate-400 w-10 text-right">
+                      <span className="text-xs text-[#475569] w-10 text-right">
                         {percentage.toFixed(0)}%
                       </span>
                     </div>
@@ -1712,10 +1712,10 @@ const ProjectsPage = () => {
             </div>
 
             {/* Recent Activity */}
-            <div className="col-span-2 bg-white rounded-2xl border border-slate-200 p-5">
+            <div className="col-span-2 bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-5">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-[#0F172A]">Recent Activity</h3>
-                <Activity size={18} className="text-slate-400" />
+                <Activity size={18} className="text-[#475569]" />
               </div>
               <div className="space-y-3">
                 {projects.slice(0, 5).map((project, index) => (
@@ -1724,21 +1724,21 @@ const ProjectsPage = () => {
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.1 }}
-                    className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors"
+                    className="flex items-center gap-3 p-2 rounded-md hover:bg-[#F8FAFC] cursor-pointer transition-colors"
                     onClick={() => navigate(`/projects/${project.id}`)}
                   >
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#23D3EE]/20 to-[#FBBF23]/20 flex items-center justify-center text-[#23D3EE] text-xs font-semibold">
+                    <div className="w-8 h-8 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0891B2] text-xs font-semibold">
                       {getInitials(project.name)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-[#0F172A] truncate">
                         {project.name}
                       </p>
-                      <p className="text-xs text-slate-400">
+                      <p className="text-xs text-[#475569]">
                         Progress updated to {project.progress}%
                       </p>
                     </div>
-                    <span className="text-xs text-slate-400">Just now</span>
+                    <span className="text-xs text-[#475569]">Just now</span>
                   </motion.div>
                 ))}
               </div>
@@ -1750,7 +1750,7 @@ const ProjectsPage = () => {
         {/* DELETE CONFIRMATION DIALOG */}
         {/* ============================================ */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent className="rounded-2xl">
+          <AlertDialogContent className="rounded-md">
             <AlertDialogHeader>
               <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
                 <Trash2 size={24} className="text-red-600" />
@@ -1767,11 +1767,11 @@ const ProjectsPage = () => {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="gap-3 sm:justify-center">
-              <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+              <AlertDialogCancel className="rounded-md">Cancel</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleDeleteProject}
                 disabled={isDeleting}
-                className="bg-red-600 hover:bg-red-700 rounded-xl"
+                className="bg-red-600 hover:bg-red-700 rounded-md"
               >
                 {isDeleting ? (
                   <>

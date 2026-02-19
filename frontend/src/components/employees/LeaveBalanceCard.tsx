@@ -13,9 +13,9 @@ export const LeaveBalanceCard: React.FC<LeaveBalanceCardProps> = ({ balances }) 
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-xl border border-gray-200 p-6"
+      className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-6"
     >
-      <h3 className="text-lg font-semibold text-gray-900 mb-6">Leave Balance</h3>
+      <h3 className="text-lg font-semibold text-[#0F172A] mb-6">Leave Balance</h3>
       
       <div className="space-y-5">
         {balances.map((balance) => {
@@ -28,13 +28,13 @@ export const LeaveBalanceCard: React.FC<LeaveBalanceCardProps> = ({ balances }) 
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-lg">{config.icon}</span>
-                  <span className="font-medium text-gray-700">{config.label}</span>
+                  <span className="font-medium text-slate-200">{config.label}</span>
                 </div>
                 <div className="text-right">
-                  <span className="text-lg font-bold text-gray-900">
+                  <span className="text-lg font-bold text-[#0F172A]">
                     {balance.available}
                   </span>
-                  <span className="text-gray-400 text-sm"> / {balance.total} days</span>
+                  <span className="text-[#94A3B8] text-sm"> / {balance.total} days</span>
                 </div>
               </div>
               
@@ -49,9 +49,9 @@ export const LeaveBalanceCard: React.FC<LeaveBalanceCardProps> = ({ balances }) 
                 />
               </div>
               
-              <div className="flex items-center gap-4 text-xs text-gray-500">
+              <div className="flex items-center gap-4 text-xs text-[#475569]">
                 <div className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-[#23D3EE]" />
+                  <span className="w-2 h-2 rounded-full bg-[#0891B2]" />
                   <span>Used: {balance.used}</span>
                 </div>
                 {balance.pending > 0 && (

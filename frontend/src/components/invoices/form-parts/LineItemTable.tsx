@@ -36,7 +36,7 @@ export default function LineItemTable() {
   return (
     <div className="mt-8">
       {/* Purple Header */}
-      <div className="bg-[#6366F1] text-white p-3 rounded-t-lg grid grid-cols-12 gap-4 text-xs font-semibold uppercase tracking-wider">
+      <div className="bg-[#6366F1] text-[#0F172A] p-3 rounded-t-lg grid grid-cols-12 gap-4 text-xs font-semibold uppercase tracking-wider">
         <div className="col-span-3">Item</div>
         <div className="col-span-1 text-center">SKU/HSN</div> {/* Changed to SKU */}
         <div className="col-span-1 text-center">Tax %</div>
@@ -50,22 +50,22 @@ export default function LineItemTable() {
       </div>
 
       {/* Rows */}
-      <div className="border border-t-0 border-gray-200 rounded-b-lg bg-white">
+      <div className="border border-t-0 border-[rgba(15,23,42,0.06)] rounded-b-lg bg-white">
         {fields.map((field, index) => (
-          <div key={field.id} className="grid grid-cols-12 gap-4 p-4 border-b border-gray-100 items-start text-sm">
+          <div key={field.id} className="grid grid-cols-12 gap-4 p-4 border-b border-[rgba(15,23,42,0.06)] items-start text-sm">
             
             {/* Item Name */}
             <div className="col-span-3 space-y-2">
               <input
                 {...register(`items.${index}.name`)}
                 placeholder="Item Name"
-                className="w-full p-1.5 border-b border-gray-300 focus:outline-none focus:border-indigo-500 bg-transparent"
+                className="w-full p-1.5 border-b border-[rgba(15,23,42,0.06)] focus:outline-none focus:border-indigo-500 bg-transparent"
               />
-              <div className="flex gap-2 text-xs text-gray-400">
-                <button type="button" className="flex items-center hover:text-indigo-600">
+              <div className="flex gap-2 text-xs text-[#94A3B8]">
+                <button type="button" className="flex items-center hover:text-[#0891B2]">
                   <Type size={12} className="mr-1" /> Add Desc
                 </button>
-                <button type="button" className="flex items-center hover:text-indigo-600">
+                <button type="button" className="flex items-center hover:text-[#0891B2]">
                   <Image size={12} className="mr-1" /> Add Image
                 </button>
               </div>
@@ -73,12 +73,12 @@ export default function LineItemTable() {
             
             {/* SKU */}
             <div className="col-span-1">
-              <input {...register(`items.${index}.hsn`)} placeholder="#" className="w-full text-center p-1 border-b border-gray-200" />
+              <input {...register(`items.${index}.hsn`)} placeholder="#" className="w-full text-center p-1 border-b border-[rgba(15,23,42,0.06)]" />
             </div>
             
             {/* Tax Rate - CANADIAN DEFAULTS */}
             <div className="col-span-1">
-              <select {...register(`items.${index}.gstRate`)} className="w-full text-center p-1 border-b border-gray-200 bg-white">
+              <select {...register(`items.${index}.gstRate`)} className="w-full text-center p-1 border-b border-[rgba(15,23,42,0.06)] bg-white">
                 <option value="13">13% (HST)</option>
                 <option value="5">5% (GST)</option>
                 <option value="15">15% (HST)</option>
@@ -92,7 +92,7 @@ export default function LineItemTable() {
               <input 
                 type="number" 
                 {...register(`items.${index}.quantity`)} 
-                className="w-full text-center p-1 border-b border-gray-200" 
+                className="w-full text-center p-1 border-b border-[rgba(15,23,42,0.06)]" 
               />
             </div>
             
@@ -101,21 +101,21 @@ export default function LineItemTable() {
               <input 
                 type="number" 
                 {...register(`items.${index}.rate`)} 
-                className="w-full text-right p-1 border-b border-gray-200" 
+                className="w-full text-right p-1 border-b border-[rgba(15,23,42,0.06)]" 
               />
             </div>
             
             {/* Read Only Calculated Fields (Converted to $) */}
-            <div className="col-span-1 text-right text-gray-600 pt-1">
+            <div className="col-span-1 text-right text-[#475569] pt-1">
               ${items[index]?.amount?.toFixed(2) || '0.00'}
             </div>
-            <div className="col-span-1 text-right text-xs text-gray-500 pt-2">
+            <div className="col-span-1 text-right text-xs text-[#475569] pt-2">
               ${items[index]?.cgst?.toFixed(2) || '0.00'}
             </div>
-            <div className="col-span-1 text-right text-xs text-gray-500 pt-2">
+            <div className="col-span-1 text-right text-xs text-[#475569] pt-2">
               ${items[index]?.sgst?.toFixed(2) || '0.00'}
             </div>
-            <div className="col-span-1 text-right font-semibold text-gray-800 pt-1">
+            <div className="col-span-1 text-right font-semibold text-[#0F172A] pt-1">
               ${items[index]?.total?.toFixed(2) || '0.00'}
             </div>
             
@@ -136,7 +136,7 @@ export default function LineItemTable() {
         <button
           type="button"
           onClick={() => append({ name: '', quantity: 1, rate: 0, gstRate: 13, amount: 0, cgst: 0, sgst: 0, total: 0 })}
-          className="w-full py-3 text-indigo-600 font-medium text-sm border-dashed border-t border-gray-200 hover:bg-gray-50 flex items-center justify-center gap-2"
+          className="w-full py-3 text-[#0891B2] font-medium text-sm border-dashed border-t border-[rgba(15,23,42,0.06)] hover:bg-white/5 flex items-center justify-center gap-2"
         >
           <Plus size={16} /> Add New Line
         </button>

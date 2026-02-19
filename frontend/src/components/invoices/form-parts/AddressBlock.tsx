@@ -8,8 +8,8 @@ interface AddressBlockProps {
 
 export default function AddressBlock({ title, prefix, register }: AddressBlockProps) {
   return (
-    <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
-      <h3 className="text-sm font-bold text-gray-700 mb-3 border-b border-gray-200 pb-2 border-dashed">
+    <div className="bg-white/5 p-4 rounded-md border border-[rgba(15,23,42,0.06)]">
+      <h3 className="text-sm font-bold text-slate-200 mb-3 border-b border-[rgba(15,23,42,0.06)] pb-2 border-dashed">
         {title}
       </h3>
       <div className="space-y-3">

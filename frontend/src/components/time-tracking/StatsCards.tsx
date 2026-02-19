@@ -32,8 +32,8 @@ export function StatsCards({
       subtitle: "Hours tracked",
       icon: Clock,
       color: "teal",
-      bgColor: "bg-[#23D3EE]/10",
-      iconColor: "text-[#23D3EE]",
+      bgColor: "bg-[#0891B2]/10",
+      iconColor: "text-[#0891B2]",
     },
     {
       title: "This Week",
@@ -69,8 +69,8 @@ export function StatsCards({
       subtitle: "This week",
       icon: DollarSign,
       color: "gold",
-      bgColor: "bg-[#FBBF23]/10",
-      iconColor: "text-[#FBBF23]",
+      bgColor: "bg-[#D97706]/10",
+      iconColor: "text-[#D97706]",
     },
   ];
 
@@ -82,25 +82,25 @@ export function StatsCards({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: index * 0.1 }}
-          className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-lg transition-shadow"
+          className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-5 hover:shadow-lg transition-shadow"
         >
           <div className="flex items-start justify-between mb-3">
-            <div className={cn("p-2.5 rounded-xl", stat.bgColor)}>
+            <div className={cn("p-2.5 rounded-md", stat.bgColor)}>
               <stat.icon size={20} className={stat.iconColor} />
             </div>
             {stat.progress !== undefined && (
-              <span className="text-xs font-medium text-gray-500">
+              <span className="text-xs font-medium text-[#475569]">
                 {stat.progress.toFixed(0)}%
               </span>
             )}
           </div>
           
-          <h3 className="text-2xl font-bold text-gray-800 mb-1">{stat.value}</h3>
-          <p className="text-sm text-gray-500">{stat.title}</p>
+          <h3 className="text-2xl font-bold text-[#0F172A] mb-1">{stat.value}</h3>
+          <p className="text-sm text-[#475569]">{stat.title}</p>
           
           {stat.progress !== undefined && (
             <div className="mt-3">
-              <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${stat.progress}%` }}
@@ -111,7 +111,7 @@ export function StatsCards({
             </div>
           )}
           
-          <p className="text-xs text-gray-400 mt-2">{stat.subtitle}</p>
+          <p className="text-xs text-[#94A3B8] mt-2">{stat.subtitle}</p>
         </motion.div>
       ))}
     </div>

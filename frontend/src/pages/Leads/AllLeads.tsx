@@ -198,7 +198,7 @@ const leadStatuses = [
   { id: "new", name: "New", color: "#3B82F6", bgColor: "#EFF6FF" },
   { id: "contacted", name: "Contacted", color: "#8B5CF6", bgColor: "#F5F3FF" },
   { id: "qualified", name: "Qualified", color: "#F59E0B", bgColor: "#FFFBEB" },
-  { id: "proposal", name: "Proposal", color: "#23D3EE", bgColor: "#F0FDFA" },
+  { id: "proposal", name: "Proposal", color: "#22D3EE", bgColor: "#F0FDFA" },
   { id: "negotiation", name: "Negotiation", color: "#EC4899", bgColor: "#FDF2F8" },
   { id: "won", name: "Won", color: "#10B981", bgColor: "#ECFDF5" },
   { id: "lost", name: "Lost", color: "#EF4444", bgColor: "#FEF2F2" },
@@ -300,7 +300,7 @@ const StatCard = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
       whileHover={{ y: -4 }}
-      className="relative bg-white rounded-2xl p-5 border border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5 transition-all overflow-hidden group"
+      className="relative bg-white rounded-md p-5 border border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg  transition-all overflow-hidden group"
     >
       <div
         className="absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-10 group-hover:opacity-20 transition-all"
@@ -309,7 +309,7 @@ const StatCard = ({
 
       <div className="relative flex items-start justify-between">
         <div>
-          <p className="text-sm text-slate-500 mb-1">{title}</p>
+          <p className="text-sm text-[#94A3B8] mb-1">{title}</p>
           <p className="text-2xl font-bold text-[#0F172A]">
             {prefix}
             {typeof value === "number" ? value.toLocaleString() : value}
@@ -330,12 +330,12 @@ const StatCard = ({
               >
                 {Math.abs(change)}%
               </span>
-              {changeLabel && <span className="text-xs text-slate-400">{changeLabel}</span>}
+              {changeLabel && <span className="text-xs text-[#475569]">{changeLabel}</span>}
             </div>
           )}
         </div>
         <div
-          className="w-12 h-12 rounded-xl flex items-center justify-center"
+          className="w-12 h-12 rounded-md flex items-center justify-center"
           style={{ backgroundColor: `${color}15` }}
         >
           <Icon size={22} style={{ color }} />
@@ -381,10 +381,10 @@ const LeadCard = ({
       transition={{ delay }}
       whileHover={{ y: -4 }}
       className={cn(
-        "relative bg-white rounded-2xl border overflow-hidden transition-all group cursor-pointer",
+        "relative bg-white rounded-md border overflow-hidden transition-all group cursor-pointer",
         isSelected
-          ? "border-[#23D3EE] ring-2 ring-[#23D3EE]/20"
-          : "border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5"
+          ? "border-[#22D3EE] ring-2 ring-[#22D3EE]/20"
+          : "border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg "
       )}
       onClick={onView}
     >
@@ -397,7 +397,7 @@ const LeadCard = ({
             onSelect();
           }}
           onClick={(e) => e.stopPropagation()}
-          className="data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE] bg-white"
+          className="data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE] bg-white"
         />
       </div>
 
@@ -410,26 +410,26 @@ const LeadCard = ({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 rounded-lg bg-white/80 backdrop-blur-sm hover:bg-white"
+              className="h-8 w-8 rounded-md bg-white/80 backdrop-blur-sm hover:bg-white"
             >
               <MoreHorizontal size={16} />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48 rounded-xl">
-            <DropdownMenuItem onClick={onView} className="rounded-lg">
+          <DropdownMenuContent align="end" className="w-48 rounded-md">
+            <DropdownMenuItem onClick={onView} className="rounded-md">
               <Eye size={14} className="mr-2" /> View Details
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={onEdit} className="rounded-lg">
+            <DropdownMenuItem onClick={onEdit} className="rounded-md">
               <Pencil size={14} className="mr-2" /> Edit Lead
             </DropdownMenuItem>
-            <DropdownMenuItem className="rounded-lg">
+            <DropdownMenuItem className="rounded-md">
               <Mail size={14} className="mr-2" /> Send Email
             </DropdownMenuItem>
-            <DropdownMenuItem className="rounded-lg">
+            <DropdownMenuItem className="rounded-md">
               <Phone size={14} className="mr-2" /> Call
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onDelete} className="rounded-lg text-red-600 focus:text-red-600">
+            <DropdownMenuItem onClick={onDelete} className="rounded-md text-red-600 focus:text-red-600">
               <Trash2 size={14} className="mr-2" /> Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -452,9 +452,9 @@ const LeadCard = ({
         {/* Avatar & Basic Info */}
         <div className="text-center mb-4">
           <div className="relative inline-block mb-3">
-            <Avatar className="h-16 w-16 border-2 border-white shadow-lg">
+            <Avatar className="h-16 w-16 border-2 border-white card-shadow">
               <AvatarImage src={lead.avatar} />
-              <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#23D3EE]/70 text-white font-bold">
+              <AvatarFallback className="bg-[#F1F5F9]/70 text-[#0F172A] font-bold">
                 {getInitials(lead.firstName, lead.lastName)}
               </AvatarFallback>
             </Avatar>
@@ -462,25 +462,25 @@ const LeadCard = ({
               className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center border-2 border-white"
               style={{ backgroundColor: sourceInfo.color }}
             >
-              <SourceIcon size={12} className="text-white" />
+              <SourceIcon size={12} className="text-[#0F172A]" />
             </div>
           </div>
-          <h3 className="font-semibold text-[#0F172A] group-hover:text-[#23D3EE] transition-colors">
+          <h3 className="font-semibold text-[#0F172A] group-hover:text-[#0891B2] transition-colors">
             {lead.firstName} {lead.lastName}
           </h3>
-          <p className="text-sm text-slate-500">{lead.jobTitle}</p>
-          <p className="text-xs text-slate-400">{lead.company}</p>
+          <p className="text-sm text-[#94A3B8]">{lead.jobTitle}</p>
+          <p className="text-xs text-[#475569]">{lead.company}</p>
         </div>
 
         {/* Score */}
         <div className="mb-4">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-xs text-slate-500">Lead Score</span>
+            <span className="text-xs text-[#94A3B8]">Lead Score</span>
             <span className="text-sm font-bold" style={{ color: getScoreColor(lead.score) }}>
               {lead.score}%
             </span>
           </div>
-          <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+          <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${lead.score}%` }}
@@ -496,13 +496,13 @@ const LeadCard = ({
           <span className="text-2xl font-bold text-[#0F172A]">
             {formatCurrency(lead.value, lead.currency)}
           </span>
-          <p className="text-xs text-slate-400">Potential Value</p>
+          <p className="text-xs text-[#475569]">Potential Value</p>
         </div>
 
         {/* Status */}
         <div className="flex items-center justify-center mb-4">
           <span
-            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium"
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium"
             style={{ backgroundColor: statusInfo.bgColor, color: statusInfo.color }}
           >
             <span
@@ -515,12 +515,12 @@ const LeadCard = ({
 
         {/* Contact Info */}
         <div className="space-y-2 mb-4">
-          <div className="flex items-center gap-2 text-sm text-slate-500">
-            <Mail size={14} className="text-slate-400" />
+          <div className="flex items-center gap-2 text-sm text-[#94A3B8]">
+            <Mail size={14} className="text-[#475569]" />
             <span className="truncate">{lead.email}</span>
           </div>
-          <div className="flex items-center gap-2 text-sm text-slate-500">
-            <MapPin size={14} className="text-slate-400" />
+          <div className="flex items-center gap-2 text-sm text-[#94A3B8]">
+            <MapPin size={14} className="text-[#475569]" />
             <span className="truncate">{lead.location}</span>
           </div>
         </div>
@@ -531,7 +531,7 @@ const LeadCard = ({
             {lead.tags.slice(0, 3).map((tag) => (
               <span
                 key={tag}
-                className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded-md text-xs"
+                className="px-2 py-0.5 bg-white/5 text-[#94A3B8] rounded-md text-xs"
               >
                 {tag}
               </span>
@@ -540,15 +540,15 @@ const LeadCard = ({
         )}
 
         {/* Footer */}
-        <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+        <div className="flex items-center justify-between pt-4 border-t border-[rgba(15,23,42,0.06)]">
           <div className="flex items-center gap-2">
             <Avatar className="h-6 w-6">
-              <AvatarFallback className="text-xs bg-slate-100">{lead.assignedTo?.split(" ").map((n: string) => n[0]).join("") || "?"}</AvatarFallback>
+              <AvatarFallback className="text-xs bg-white/5">{lead.assignedTo?.split(" ").map((n: string) => n[0]).join("") || "?"}</AvatarFallback>
 
             </Avatar>
-            <span className="text-xs text-slate-400">{lead.assignedTo}</span>
+            <span className="text-xs text-[#475569]">{lead.assignedTo}</span>
           </div>
-          <span className="text-xs text-slate-400">{getRelativeTime(lead.createdAt)}</span>
+          <span className="text-xs text-[#475569]">{getRelativeTime(lead.createdAt)}</span>
         </div>
       </div>
     </motion.div>
@@ -583,12 +583,12 @@ const LeadRow = ({
   const SourceIcon = sourceInfo.icon;
 
   return (
-    <TableRow className="group hover:bg-slate-50">
+    <TableRow className="group hover:bg-[#F8FAFC]">
       <TableCell>
         <Checkbox
           checked={isSelected}
           onCheckedChange={onSelect}
-          className="data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
+          className="data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
         />
       </TableCell>
       <TableCell>
@@ -596,7 +596,7 @@ const LeadRow = ({
           <div className="relative">
             <Avatar className="h-10 w-10">
               <AvatarImage src={lead.avatar} />
-              <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#23D3EE]/70 text-white font-medium text-sm">
+              <AvatarFallback className="bg-[#F1F5F9]/70 text-[#0F172A] font-medium text-sm">
                 {getInitials(lead.firstName, lead.lastName)}
               </AvatarFallback>
             </Avatar>
@@ -604,26 +604,26 @@ const LeadRow = ({
               className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center border border-white"
               style={{ backgroundColor: sourceInfo.color }}
             >
-              <SourceIcon size={10} className="text-white" />
+              <SourceIcon size={10} className="text-[#0F172A]" />
             </div>
           </div>
           <div>
-            <p className="font-medium text-[#0F172A] group-hover:text-[#23D3EE] transition-colors">
+            <p className="font-medium text-[#0F172A] group-hover:text-[#0891B2] transition-colors">
               {lead.firstName} {lead.lastName}
             </p>
-            <p className="text-sm text-slate-500">{lead.email}</p>
+            <p className="text-sm text-[#94A3B8]">{lead.email}</p>
           </div>
         </div>
       </TableCell>
       <TableCell>
         <div>
           <p className="font-medium text-[#0F172A]">{lead.company}</p>
-          <p className="text-sm text-slate-500">{lead.jobTitle}</p>
+          <p className="text-sm text-[#94A3B8]">{lead.jobTitle}</p>
         </div>
       </TableCell>
       <TableCell>
         <span
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium"
           style={{ backgroundColor: statusInfo.bgColor, color: statusInfo.color }}
         >
           <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: statusInfo.color }} />
@@ -638,7 +638,7 @@ const LeadRow = ({
                 {lead.score}
               </span>
             </div>
-            <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+            <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
               <div
                 className="h-full rounded-full transition-all"
                 style={{
@@ -664,38 +664,38 @@ const LeadRow = ({
       <TableCell>
         <div className="flex items-center gap-2">
           <Avatar className="h-6 w-6">
-            <AvatarFallback className="text-xs bg-slate-100">{lead.assignedTo?.split(" ").map((n: string) => n[0]).join("") || "?"}</AvatarFallback>
+            <AvatarFallback className="text-xs bg-white/5">{lead.assignedTo?.split(" ").map((n: string) => n[0]).join("") || "?"}</AvatarFallback>
 
           </Avatar>
-          <span className="text-sm text-slate-600">{lead.assignedTo}</span>
+          <span className="text-sm text-[#475569]">{lead.assignedTo}</span>
         </div>
       </TableCell>
       <TableCell>
-        <span className="text-sm text-slate-500">{getRelativeTime(lead.createdAt)}</span>
+        <span className="text-sm text-[#94A3B8]">{getRelativeTime(lead.createdAt)}</span>
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={onView}>
-                  <Eye size={16} className="text-slate-400" />
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" onClick={onView}>
+                  <Eye size={16} className="text-[#475569]" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>View Details</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={onEdit}>
-                  <Pencil size={16} className="text-slate-400" />
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" onClick={onEdit}>
+                  <Pencil size={16} className="text-[#475569]" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Edit</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
-                  <Mail size={16} className="text-slate-400" />
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md">
+                  <Mail size={16} className="text-[#475569]" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Send Email</TooltipContent>
@@ -703,32 +703,32 @@ const LeadRow = ({
           </TooltipProvider>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
-                <MoreVertical size={16} className="text-slate-400" />
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md">
+                <MoreVertical size={16} className="text-[#475569]" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 rounded-xl">
-              <DropdownMenuItem onClick={onView} className="rounded-lg">
+            <DropdownMenuContent align="end" className="w-48 rounded-md">
+              <DropdownMenuItem onClick={onView} className="rounded-md">
                 <Eye size={14} className="mr-2" /> View Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onEdit} className="rounded-lg">
+              <DropdownMenuItem onClick={onEdit} className="rounded-md">
                 <Pencil size={14} className="mr-2" /> Edit
               </DropdownMenuItem>
-              <DropdownMenuItem className="rounded-lg">
+              <DropdownMenuItem className="rounded-md">
                 <Copy size={14} className="mr-2" /> Duplicate
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="rounded-lg">
+              <DropdownMenuItem className="rounded-md">
                 <Mail size={14} className="mr-2" /> Send Email
               </DropdownMenuItem>
-              <DropdownMenuItem className="rounded-lg">
+              <DropdownMenuItem className="rounded-md">
                 <Phone size={14} className="mr-2" /> Call
               </DropdownMenuItem>
-              <DropdownMenuItem className="rounded-lg">
+              <DropdownMenuItem className="rounded-md">
                 <CalendarDays size={14} className="mr-2" /> Schedule Follow-up
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onDelete} className="rounded-lg text-red-600 focus:text-red-600">
+              <DropdownMenuItem onClick={onDelete} className="rounded-md text-red-600 focus:text-red-600">
                 <Trash2 size={14} className="mr-2" /> Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -838,13 +838,13 @@ const LeadFormDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[700px] p-0 rounded-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#23D3EE]/10 to-transparent sticky top-0 bg-white z-10">
+      <DialogContent className="sm:max-w-[700px] p-0 rounded-md overflow-hidden max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-[rgba(15,23,42,0.06)] bg-[#F0FDFA] sticky top-0 bg-white z-10">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-[#0F172A]">
               {lead ? "Edit Lead" : "Add New Lead"}
             </DialogTitle>
-            <DialogDescription className="text-slate-500">
+            <DialogDescription className="text-[#94A3B8]">
               {lead ? "Update lead information" : "Capture a new potential customer"}
             </DialogDescription>
           </DialogHeader>
@@ -852,14 +852,14 @@ const LeadFormDialog = ({
 
         <form onSubmit={handleSubmit} className="p-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="bg-slate-100 rounded-xl p-1 mb-6">
-              <TabsTrigger value="basic" className="rounded-lg data-[state=active]:bg-white">
+            <TabsList className="bg-white/5 rounded-md p-1 mb-6">
+              <TabsTrigger value="basic" className="rounded-md data-[state=active]:bg-white">
                 Basic Info
               </TabsTrigger>
-              <TabsTrigger value="company" className="rounded-lg data-[state=active]:bg-white">
+              <TabsTrigger value="company" className="rounded-md data-[state=active]:bg-white">
                 Company
               </TabsTrigger>
-              <TabsTrigger value="details" className="rounded-lg data-[state=active]:bg-white">
+              <TabsTrigger value="details" className="rounded-md data-[state=active]:bg-white">
                 Lead Details
               </TabsTrigger>
             </TabsList>
@@ -867,7 +867,7 @@ const LeadFormDialog = ({
             <TabsContent value="basic" className="space-y-4 mt-0">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-slate-600">
+                  <Label className="text-sm font-medium text-[#475569]">
                     First Name <span className="text-red-500">*</span>
                   </Label>
                   <Input
@@ -875,11 +875,11 @@ const LeadFormDialog = ({
                     onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                     placeholder="John"
                     required
-                    className="h-11 rounded-xl"
+                    className="h-11 rounded-md"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-slate-600">
+                  <Label className="text-sm font-medium text-[#475569]">
                     Last Name <span className="text-red-500">*</span>
                   </Label>
                   <Input
@@ -887,50 +887,50 @@ const LeadFormDialog = ({
                     onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                     placeholder="Doe"
                     required
-                    className="h-11 rounded-xl"
+                    className="h-11 rounded-md"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-slate-600">
+                <Label className="text-sm font-medium text-[#475569]">
                   Email Address <span className="text-red-500">*</span>
                 </Label>
                 <div className="relative">
-                  <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                   <Input
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     placeholder="john@company.com"
                     required
-                    className="h-11 pl-10 rounded-xl"
+                    className="h-11 pl-10 rounded-md"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-slate-600">Phone Number</Label>
+                <Label className="text-sm font-medium text-[#475569]">Phone Number</Label>
                 <div className="relative">
-                  <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                   <Input
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     placeholder="+1 (416) 555-0123"
-                    className="h-11 pl-10 rounded-xl"
+                    className="h-11 pl-10 rounded-md"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-slate-600">Location</Label>
+                <Label className="text-sm font-medium text-[#475569]">Location</Label>
                 <div className="relative">
-                  <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                   <Input
                     value={formData.location}
                     onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                     placeholder="Toronto, ON"
-                    className="h-11 pl-10 rounded-xl"
+                    className="h-11 pl-10 rounded-md"
                   />
                 </div>
               </div>
@@ -938,43 +938,43 @@ const LeadFormDialog = ({
 
             <TabsContent value="company" className="space-y-4 mt-0">
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-slate-600">
+                <Label className="text-sm font-medium text-[#475569]">
                   Company Name <span className="text-red-500">*</span>
                 </Label>
                 <div className="relative">
-                  <Building2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <Building2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                   <Input
                     value={formData.company}
                     onChange={(e) => setFormData({ ...formData, company: e.target.value })}
                     placeholder="Acme Inc."
                     required
-                    className="h-11 pl-10 rounded-xl"
+                    className="h-11 pl-10 rounded-md"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-slate-600">Job Title</Label>
+                <Label className="text-sm font-medium text-[#475569]">Job Title</Label>
                 <div className="relative">
-                  <Briefcase size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <Briefcase size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                   <Input
                     value={formData.jobTitle}
                     onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
                     placeholder="VP of Sales"
-                    className="h-11 pl-10 rounded-xl"
+                    className="h-11 pl-10 rounded-md"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-slate-600">Website</Label>
+                <Label className="text-sm font-medium text-[#475569]">Website</Label>
                 <div className="relative">
-                  <Globe size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <Globe size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                   <Input
                     value={formData.website}
                     onChange={(e) => setFormData({ ...formData, website: e.target.value })}
                     placeholder="https://company.com"
-                    className="h-11 pl-10 rounded-xl"
+                    className="h-11 pl-10 rounded-md"
                   />
                 </div>
               </div>
@@ -983,17 +983,17 @@ const LeadFormDialog = ({
             <TabsContent value="details" className="space-y-4 mt-0">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-slate-600">Lead Source</Label>
+                  <Label className="text-sm font-medium text-[#475569]">Lead Source</Label>
                   <Select
                     value={formData.source}
                     onValueChange={(val) => setFormData({ ...formData, source: val })}
                   >
-                    <SelectTrigger className="h-11 rounded-xl">
+                    <SelectTrigger className="h-11 rounded-md">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl">
+                    <SelectContent className="rounded-md">
                       {leadSources.map((source) => (
-                        <SelectItem key={source.id} value={source.id} className="rounded-lg">
+                        <SelectItem key={source.id} value={source.id} className="rounded-md">
                           <div className="flex items-center gap-2">
                             <source.icon size={14} style={{ color: source.color }} />
                             {source.name}
@@ -1005,17 +1005,17 @@ const LeadFormDialog = ({
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-slate-600">Status</Label>
+                  <Label className="text-sm font-medium text-[#475569]">Status</Label>
                   <Select
                     value={formData.status}
                     onValueChange={(val) => setFormData({ ...formData, status: val as Lead["status"] })}
                   >
-                    <SelectTrigger className="h-11 rounded-xl">
+                    <SelectTrigger className="h-11 rounded-md">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl">
+                    <SelectContent className="rounded-md">
                       {leadStatuses.map((status) => (
-                        <SelectItem key={status.id} value={status.id} className="rounded-lg">
+                        <SelectItem key={status.id} value={status.id} className="rounded-md">
                           <div className="flex items-center gap-2">
                             <span
                               className="w-2 h-2 rounded-full"
@@ -1032,26 +1032,26 @@ const LeadFormDialog = ({
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-slate-600">Temperature</Label>
+                  <Label className="text-sm font-medium text-[#475569]">Temperature</Label>
                   <Select
                     value={formData.temperature}
                     onValueChange={(val) => setFormData({ ...formData, temperature: val as Lead["temperature"] })}
                   >
-                    <SelectTrigger className="h-11 rounded-xl">
+                    <SelectTrigger className="h-11 rounded-md">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl">
-                      <SelectItem value="hot" className="rounded-lg">
+                    <SelectContent className="rounded-md">
+                      <SelectItem value="hot" className="rounded-md">
                         <div className="flex items-center gap-2">
                           <Flame size={14} className="text-red-500" /> Hot
                         </div>
                       </SelectItem>
-                      <SelectItem value="warm" className="rounded-lg">
+                      <SelectItem value="warm" className="rounded-md">
                         <div className="flex items-center gap-2">
                           <ThermometerSun size={14} className="text-yellow-500" /> Warm
                         </div>
                       </SelectItem>
-                      <SelectItem value="cold" className="rounded-lg">
+                      <SelectItem value="cold" className="rounded-md">
                         <div className="flex items-center gap-2">
                           <Snowflake size={14} className="text-blue-500" /> Cold
                         </div>
@@ -1061,68 +1061,68 @@ const LeadFormDialog = ({
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-slate-600">Potential Value</Label>
+                  <Label className="text-sm font-medium text-[#475569]">Potential Value</Label>
                   <div className="relative">
-                    <DollarSign size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <DollarSign size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                     <Input
                       type="number"
                       value={formData.value}
                       onChange={(e) => setFormData({ ...formData, value: e.target.value })}
                       placeholder="50000"
-                      className="h-11 pl-10 rounded-xl"
+                      className="h-11 pl-10 rounded-md"
                     />
                   </div>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-slate-600">Assigned To</Label>
+                <Label className="text-sm font-medium text-[#475569]">Assigned To</Label>
                 <div className="relative">
-                  <Users size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <Users size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                   <Input
                     value={formData.assignedTo}
                     onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
                     placeholder="Enter assignee name"
-                    className="h-11 pl-10 rounded-xl"
+                    className="h-11 pl-10 rounded-md"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-slate-600">Tags</Label>
+                <Label className="text-sm font-medium text-[#475569]">Tags</Label>
                 <div className="relative">
-                  <Tag size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <Tag size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                   <Input
                     value={formData.tags}
                     onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
                     placeholder="enterprise, priority, tech"
-                    className="h-11 pl-10 rounded-xl"
+                    className="h-11 pl-10 rounded-md"
                   />
                 </div>
-                <p className="text-xs text-slate-400">Separate tags with commas</p>
+                <p className="text-xs text-[#475569]">Separate tags with commas</p>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-slate-600">Notes</Label>
+                <Label className="text-sm font-medium text-[#475569]">Notes</Label>
                 <Textarea
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   placeholder="Add any relevant notes about this lead..."
                   rows={3}
-                  className="rounded-xl resize-none"
+                  className="rounded-md resize-none"
                 />
               </div>
             </TabsContent>
           </Tabs>
 
           <DialogFooter className="pt-6 gap-3">
-            <Button type="button" variant="outline" onClick={onClose} className="rounded-xl">
+            <Button type="button" variant="outline" onClick={onClose} className="rounded-md">
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={saving || !formData.firstName || !formData.lastName || !formData.email || !formData.company}
-              className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl"
+              className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
             >
               {saving ? (
                 <>
@@ -1170,14 +1170,14 @@ const LeadDetailsDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] p-0 rounded-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[600px] p-0 rounded-md overflow-hidden max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="relative p-6 border-b border-slate-100 bg-gradient-to-r from-[#23D3EE]/10 via-transparent to-[#FBBF23]/10">
+        <div className="relative p-6 border-b border-[rgba(15,23,42,0.06)] /10 via-transparent/10">
           <div className="flex items-start gap-4">
             <div className="relative">
-              <Avatar className="h-16 w-16 border-2 border-white shadow-lg">
+              <Avatar className="h-16 w-16 border-2 border-white card-shadow">
                 <AvatarImage src={lead.avatar} />
-                <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#23D3EE]/70 text-white font-bold text-lg">
+                <AvatarFallback className="bg-[#F1F5F9]/70 text-[#0F172A] font-bold text-lg">
                   {getInitials(lead.firstName, lead.lastName)}
                 </AvatarFallback>
               </Avatar>
@@ -1185,7 +1185,7 @@ const LeadDetailsDialog = ({
                 className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center border-2 border-white"
                 style={{ backgroundColor: sourceInfo.color }}
               >
-                <SourceIcon size={12} className="text-white" />
+                <SourceIcon size={12} className="text-[#0F172A]" />
               </div>
             </div>
             <div className="flex-1">
@@ -1201,11 +1201,11 @@ const LeadDetailsDialog = ({
                   {tempInfo.label}
                 </span>
               </div>
-              <p className="text-slate-600">{lead.jobTitle}</p>
-              <p className="text-sm text-slate-500">{lead.company}</p>
+              <p className="text-[#475569]">{lead.jobTitle}</p>
+              <p className="text-sm text-[#94A3B8]">{lead.company}</p>
             </div>
             <span
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium"
               style={{ backgroundColor: statusInfo.bgColor, color: statusInfo.color }}
             >
               <span className="w-2 h-2 rounded-full" style={{ backgroundColor: statusInfo.color }} />
@@ -1217,8 +1217,8 @@ const LeadDetailsDialog = ({
         <div className="p-6 space-y-6">
           {/* Score & Value */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 bg-slate-50 rounded-xl">
-              <p className="text-xs text-slate-400 mb-2">Lead Score</p>
+            <div className="p-4 bg-[#F8FAFC] rounded-md">
+              <p className="text-xs text-[#475569] mb-2">Lead Score</p>
               <div className="flex items-center gap-3">
                 <span
                   className="text-3xl font-bold"
@@ -1239,8 +1239,8 @@ const LeadDetailsDialog = ({
                 </div>
               </div>
             </div>
-            <div className="p-4 bg-slate-50 rounded-xl">
-              <p className="text-xs text-slate-400 mb-2">Potential Value</p>
+            <div className="p-4 bg-[#F8FAFC] rounded-md">
+              <p className="text-xs text-[#475569] mb-2">Potential Value</p>
               <span className="text-3xl font-bold text-[#0F172A]">
                 {formatCurrency(lead.value, lead.currency)}
               </span>
@@ -1253,34 +1253,34 @@ const LeadDetailsDialog = ({
             <div className="grid grid-cols-2 gap-3">
               <a
                 href={`mailto:${lead.email}`}
-                className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors"
+                className="flex items-center gap-3 p-3 bg-[#F8FAFC] rounded-md hover:bg-white/10 transition-colors"
               >
-                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                  <Mail size={18} className="text-blue-600" />
+                <div className="w-10 h-10 rounded-md bg-blue-100 flex items-center justify-center">
+                  <Mail size={18} className="text-[#0891B2]" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-slate-400">Email</p>
+                  <p className="text-xs text-[#475569]">Email</p>
                   <p className="text-sm font-medium text-[#0F172A] truncate">{lead.email}</p>
                 </div>
               </a>
               <a
                 href={`tel:${lead.phone}`}
-                className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors"
+                className="flex items-center gap-3 p-3 bg-[#F8FAFC] rounded-md hover:bg-white/10 transition-colors"
               >
-                <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-md bg-green-100 flex items-center justify-center">
                   <Phone size={18} className="text-green-600" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-slate-400">Phone</p>
+                  <p className="text-xs text-[#475569]">Phone</p>
                   <p className="text-sm font-medium text-[#0F172A] truncate">{lead.phone}</p>
                 </div>
               </a>
-              <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
-                <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+              <div className="flex items-center gap-3 p-3 bg-[#F8FAFC] rounded-md">
+                <div className="w-10 h-10 rounded-md bg-purple-100 flex items-center justify-center">
                   <MapPin size={18} className="text-purple-600" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-slate-400">Location</p>
+                  <p className="text-xs text-[#475569]">Location</p>
                   <p className="text-sm font-medium text-[#0F172A] truncate">{lead.location}</p>
                 </div>
               </div>
@@ -1289,16 +1289,16 @@ const LeadDetailsDialog = ({
                   href={lead.website}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors"
+                  className="flex items-center gap-3 p-3 bg-[#F8FAFC] rounded-md hover:bg-white/10 transition-colors"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-[#23D3EE]/10 flex items-center justify-center">
-                    <Globe size={18} className="text-[#23D3EE]" />
+                  <div className="w-10 h-10 rounded-md bg-[#0891B2]/10 flex items-center justify-center">
+                    <Globe size={18} className="text-[#0891B2]" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-slate-400">Website</p>
+                    <p className="text-xs text-[#475569]">Website</p>
                     <p className="text-sm font-medium text-[#0F172A] truncate">{lead.website}</p>
                   </div>
-                  <ExternalLink size={14} className="text-slate-400" />
+                  <ExternalLink size={14} className="text-[#475569]" />
                 </a>
               )}
             </div>
@@ -1314,7 +1314,7 @@ const LeadDetailsDialog = ({
                     href={lead.socialLinks.linkedin}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-2 bg-[#0A66C2]/10 rounded-lg hover:bg-[#0A66C2]/20 transition-colors"
+                    className="p-2 bg-[#0A66C2]/10 rounded-md hover:bg-[#0A66C2]/20 transition-colors"
                   >
                     <Linkedin size={20} className="text-[#0A66C2]" />
                   </a>
@@ -1324,7 +1324,7 @@ const LeadDetailsDialog = ({
                     href={lead.socialLinks.twitter}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-2 bg-[#1DA1F2]/10 rounded-lg hover:bg-[#1DA1F2]/20 transition-colors"
+                    className="p-2 bg-[#1DA1F2]/10 rounded-md hover:bg-[#1DA1F2]/20 transition-colors"
                   >
                     <Twitter size={20} className="text-[#1DA1F2]" />
                   </a>
@@ -1334,7 +1334,7 @@ const LeadDetailsDialog = ({
                     href={lead.socialLinks.facebook}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-2 bg-[#1877F2]/10 rounded-lg hover:bg-[#1877F2]/20 transition-colors"
+                    className="p-2 bg-[#1877F2]/10 rounded-md hover:bg-[#1877F2]/20 transition-colors"
                   >
                     <Facebook size={20} className="text-[#1877F2]" />
                   </a>
@@ -1345,15 +1345,15 @@ const LeadDetailsDialog = ({
 
           {/* Lead Details */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 bg-slate-50 rounded-xl">
-              <p className="text-xs text-slate-400 mb-1">Lead Source</p>
+            <div className="p-4 bg-[#F8FAFC] rounded-md">
+              <p className="text-xs text-[#475569] mb-1">Lead Source</p>
               <div className="flex items-center gap-2">
                 <SourceIcon size={16} style={{ color: sourceInfo.color }} />
                 <span className="font-medium text-[#0F172A]">{sourceInfo.name}</span>
               </div>
             </div>
-            <div className="p-4 bg-slate-50 rounded-xl">
-              <p className="text-xs text-slate-400 mb-1">Assigned To</p>
+            <div className="p-4 bg-[#F8FAFC] rounded-md">
+              <p className="text-xs text-[#475569] mb-1">Assigned To</p>
               <div className="flex items-center gap-2">
                 <Avatar className="h-5 w-5">
                   <AvatarFallback className="text-xs bg-slate-200">{lead.assignedTo?.split(" ").map((n: string) => n[0]).join("") || "?"}</AvatarFallback>
@@ -1368,19 +1368,19 @@ const LeadDetailsDialog = ({
           {(lead.lastContact || lead.nextFollowUp) && (
             <div className="grid grid-cols-2 gap-4">
               {lead.lastContact && (
-                <div className="p-4 bg-slate-50 rounded-xl">
-                  <p className="text-xs text-slate-400 mb-1">Last Contact</p>
+                <div className="p-4 bg-[#F8FAFC] rounded-md">
+                  <p className="text-xs text-[#475569] mb-1">Last Contact</p>
                   <div className="flex items-center gap-2">
-                    <Calendar size={16} className="text-slate-500" />
+                    <Calendar size={16} className="text-[#94A3B8]" />
                     <span className="font-medium text-[#0F172A]">{formatDate(lead.lastContact)}</span>
                   </div>
                 </div>
               )}
               {lead.nextFollowUp && (
-                <div className="p-4 bg-[#23D3EE]/10 rounded-xl border border-[#23D3EE]/20">
-                  <p className="text-xs text-[#23D3EE] mb-1">Next Follow-up</p>
+                <div className="p-4 bg-[#0891B2]/10 rounded-md border border-[#22D3EE]/20">
+                  <p className="text-xs text-[#0891B2] mb-1">Next Follow-up</p>
                   <div className="flex items-center gap-2">
-                    <CalendarDays size={16} className="text-[#23D3EE]" />
+                    <CalendarDays size={16} className="text-[#0891B2]" />
                     <span className="font-medium text-[#0F172A]">{formatDate(lead.nextFollowUp)}</span>
                   </div>
                 </div>
@@ -1396,7 +1396,7 @@ const LeadDetailsDialog = ({
                 {lead.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="px-3 py-1 bg-[#23D3EE]/10 text-[#23D3EE] rounded-lg text-sm font-medium"
+                    className="px-3 py-1 bg-[#0891B2]/10 text-[#0891B2] rounded-md text-sm font-medium"
                   >
                     {tag}
                   </span>
@@ -1409,8 +1409,8 @@ const LeadDetailsDialog = ({
           {lead.notes && (
             <div>
               <h3 className="text-sm font-semibold text-[#0F172A] mb-3">Notes</h3>
-              <div className="p-4 bg-slate-50 rounded-xl">
-                <p className="text-sm text-slate-600">{lead.notes}</p>
+              <div className="p-4 bg-[#F8FAFC] rounded-md">
+                <p className="text-sm text-[#475569]">{lead.notes}</p>
               </div>
             </div>
           )}
@@ -1420,22 +1420,22 @@ const LeadDetailsDialog = ({
             <h3 className="text-sm font-semibold text-[#0F172A] mb-3">Activity</h3>
             <div className="space-y-3">
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-[#23D3EE]/10 flex items-center justify-center flex-shrink-0">
-                  <Plus size={14} className="text-[#23D3EE]" />
+                <div className="w-8 h-8 rounded-full bg-[#0891B2]/10 flex items-center justify-center flex-shrink-0">
+                  <Plus size={14} className="text-[#0891B2]" />
                 </div>
                 <div>
                   <p className="text-sm text-[#0F172A]">Lead created</p>
-                  <p className="text-xs text-slate-400">{getRelativeTime(lead.createdAt)}</p>
+                  <p className="text-xs text-[#475569]">{getRelativeTime(lead.createdAt)}</p>
                 </div>
               </div>
               {lead.lastContact && (
                 <div className="flex items-start gap-3">
                   <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                    <MessageSquare size={14} className="text-blue-600" />
+                    <MessageSquare size={14} className="text-[#0891B2]" />
                   </div>
                   <div>
                     <p className="text-sm text-[#0F172A]">Last contacted</p>
-                    <p className="text-xs text-slate-400">{formatDate(lead.lastContact)}</p>
+                    <p className="text-xs text-[#475569]">{formatDate(lead.lastContact)}</p>
                   </div>
                 </div>
               )}
@@ -1443,16 +1443,16 @@ const LeadDetailsDialog = ({
           </div>
         </div>
 
-        <DialogFooter className="p-6 pt-0 gap-3 border-t border-slate-100">
-          <Button variant="outline" className="rounded-xl gap-2">
+        <DialogFooter className="p-6 pt-0 gap-3 border-t border-[rgba(15,23,42,0.06)]">
+          <Button variant="outline" className="rounded-md gap-2">
             <Mail size={16} />
             Send Email
           </Button>
-          <Button variant="outline" className="rounded-xl gap-2">
+          <Button variant="outline" className="rounded-md gap-2">
             <Phone size={16} />
             Call
           </Button>
-          <Button onClick={onEdit} className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl gap-2">
+          <Button onClick={onEdit} className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md gap-2">
             <Pencil size={16} />
             Edit Lead
           </Button>
@@ -1765,12 +1765,12 @@ const AllLeads = () => {
 
       <main className="flex-1 ml-0">
         {/* Header */}
-        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-slate-200">
+        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-[rgba(15,23,42,0.06)]">
           <div className="px-8 py-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
-                  <Link to="/dashboard" className="hover:text-[#23D3EE]">
+                <div className="flex items-center gap-2 text-sm text-[#94A3B8] mb-1">
+                  <Link to="/dashboard" className="hover:text-[#0891B2]">
                     Dashboard
                   </Link>
                   <ChevronRight size={14} />
@@ -1783,7 +1783,7 @@ const AllLeads = () => {
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="outline" size="icon" className="rounded-xl">
+                      <Button variant="outline" size="icon" className="rounded-md">
                         <Upload size={18} />
                       </Button>
                     </TooltipTrigger>
@@ -1791,7 +1791,7 @@ const AllLeads = () => {
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="outline" size="icon" className="rounded-xl">
+                      <Button variant="outline" size="icon" className="rounded-md">
                         <Download size={18} />
                       </Button>
                     </TooltipTrigger>
@@ -1804,7 +1804,7 @@ const AllLeads = () => {
                     setCurrentLead(null);
                     setIsFormOpen(true);
                   }}
-                  className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl gap-2"
+                  className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md gap-2"
                 >
                   <UserPlus size={18} />
                   Add Lead
@@ -1823,7 +1823,7 @@ const AllLeads = () => {
               change={12.5}
               changeLabel="vs last month"
               icon={Target}
-              color="#23D3EE"
+              color="#22D3EE"
             />
             <StatCard
               title="Hot Leads"
@@ -1853,7 +1853,7 @@ const AllLeads = () => {
               value={formatCurrency(totalValue)}
               change={15.2}
               icon={DollarSign}
-              color="#FBBF23"
+              color="#FBBF24"
               delay={0.4}
             />
           </div>
@@ -1862,30 +1862,30 @@ const AllLeads = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-2xl border border-slate-200 overflow-hidden"
+            className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden"
           >
             {/* Tabs & Filters */}
-            <div className="p-4 border-b border-slate-100">
+            <div className="p-4 border-b border-[rgba(15,23,42,0.06)]">
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <div className="flex items-center justify-between mb-4">
-                  <TabsList className="bg-slate-100 rounded-xl p-1">
-                    <TabsTrigger value="all" className="rounded-lg data-[state=active]:bg-white">
+                  <TabsList className="bg-white/5 rounded-md p-1">
+                    <TabsTrigger value="all" className="rounded-md data-[state=active]:bg-white">
                       All ({leads.length})
                     </TabsTrigger>
-                    <TabsTrigger value="new" className="rounded-lg data-[state=active]:bg-white">
+                    <TabsTrigger value="new" className="rounded-md data-[state=active]:bg-white">
                       New ({newCount})
                     </TabsTrigger>
-                    <TabsTrigger value="qualified" className="rounded-lg data-[state=active]:bg-white">
+                    <TabsTrigger value="qualified" className="rounded-md data-[state=active]:bg-white">
                       Qualified ({qualifiedCount})
                     </TabsTrigger>
-                    <TabsTrigger value="hot" className="rounded-lg data-[state=active]:bg-white">
+                    <TabsTrigger value="hot" className="rounded-md data-[state=active]:bg-white">
                       <Flame size={14} className="mr-1 text-red-500" />
                       Hot ({hotCount})
                     </TabsTrigger>
-                    <TabsTrigger value="won" className="rounded-lg data-[state=active]:bg-white">
+                    <TabsTrigger value="won" className="rounded-md data-[state=active]:bg-white">
                       Won ({wonCount})
                     </TabsTrigger>
-                    <TabsTrigger value="lost" className="rounded-lg data-[state=active]:bg-white">
+                    <TabsTrigger value="lost" className="rounded-md data-[state=active]:bg-white">
                       Lost ({lostCount})
                     </TabsTrigger>
                   </TabsList>
@@ -1894,7 +1894,7 @@ const AllLeads = () => {
                     <Button
                       variant={viewMode === "list" ? "secondary" : "ghost"}
                       size="icon"
-                      className="rounded-lg h-9 w-9"
+                      className="rounded-md h-9 w-9"
                       onClick={() => setViewMode("list")}
                     >
                       <List size={16} />
@@ -1902,7 +1902,7 @@ const AllLeads = () => {
                     <Button
                       variant={viewMode === "grid" ? "secondary" : "ghost"}
                       size="icon"
-                      className="rounded-lg h-9 w-9"
+                      className="rounded-md h-9 w-9"
                       onClick={() => setViewMode("grid")}
                     >
                       <LayoutGrid size={16} />
@@ -1913,23 +1913,23 @@ const AllLeads = () => {
                 {/* Search & Filters */}
                 <div className="flex items-center gap-3">
                   <div className="relative flex-1 max-w-md">
-                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                     <Input
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Search leads..."
-                      className="pl-9 h-10 rounded-xl border-slate-200"
+                      className="pl-9 h-10 rounded-md border-[rgba(15,23,42,0.06)]"
                     />
                   </div>
 
                   <Select value={selectedSource} onValueChange={setSelectedSource}>
-                    <SelectTrigger className="w-[150px] h-10 rounded-xl border-slate-200">
+                    <SelectTrigger className="w-[150px] h-10 rounded-md border-[rgba(15,23,42,0.06)]">
                       <SelectValue placeholder="Source" />
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl">
-                      <SelectItem value="all" className="rounded-lg">All Sources</SelectItem>
+                    <SelectContent className="rounded-md">
+                      <SelectItem value="all" className="rounded-md">All Sources</SelectItem>
                       {leadSources.map((source) => (
-                        <SelectItem key={source.id} value={source.id} className="rounded-lg">
+                        <SelectItem key={source.id} value={source.id} className="rounded-md">
                           <div className="flex items-center gap-2">
                             <source.icon size={14} style={{ color: source.color }} />
                             {source.name}
@@ -1940,13 +1940,13 @@ const AllLeads = () => {
                   </Select>
 
                   <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                    <SelectTrigger className="w-[140px] h-10 rounded-xl border-slate-200">
+                    <SelectTrigger className="w-[140px] h-10 rounded-md border-[rgba(15,23,42,0.06)]">
                       <SelectValue placeholder="Status" />
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl">
-                      <SelectItem value="all" className="rounded-lg">All Statuses</SelectItem>
+                    <SelectContent className="rounded-md">
+                      <SelectItem value="all" className="rounded-md">All Statuses</SelectItem>
                       {leadStatuses.map((status) => (
-                        <SelectItem key={status.id} value={status.id} className="rounded-lg">
+                        <SelectItem key={status.id} value={status.id} className="rounded-md">
                           <div className="flex items-center gap-2">
                             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: status.color }} />
                             {status.name}
@@ -1957,22 +1957,22 @@ const AllLeads = () => {
                   </Select>
 
                   <Select value={selectedTemperature} onValueChange={setSelectedTemperature}>
-                    <SelectTrigger className="w-[130px] h-10 rounded-xl border-slate-200">
+                    <SelectTrigger className="w-[130px] h-10 rounded-md border-[rgba(15,23,42,0.06)]">
                       <SelectValue placeholder="Temperature" />
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl">
-                      <SelectItem value="all" className="rounded-lg">All</SelectItem>
-                      <SelectItem value="hot" className="rounded-lg">
+                    <SelectContent className="rounded-md">
+                      <SelectItem value="all" className="rounded-md">All</SelectItem>
+                      <SelectItem value="hot" className="rounded-md">
                         <div className="flex items-center gap-2">
                           <Flame size={14} className="text-red-500" /> Hot
                         </div>
                       </SelectItem>
-                      <SelectItem value="warm" className="rounded-lg">
+                      <SelectItem value="warm" className="rounded-md">
                         <div className="flex items-center gap-2">
                           <ThermometerSun size={14} className="text-yellow-500" /> Warm
                         </div>
                       </SelectItem>
-                      <SelectItem value="cold" className="rounded-lg">
+                      <SelectItem value="cold" className="rounded-md">
                         <div className="flex items-center gap-2">
                           <Snowflake size={14} className="text-blue-500" /> Cold
                         </div>
@@ -1982,56 +1982,56 @@ const AllLeads = () => {
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="rounded-xl gap-2">
+                      <Button variant="outline" className="rounded-md gap-2">
                         <Filter size={16} />
                         Sort
                         {sortOrder === "asc" ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48 rounded-xl">
+                    <DropdownMenuContent align="end" className="w-48 rounded-md">
                       <DropdownMenuItem
                         onClick={() => {
                           setSortBy("date");
                           setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
                         }}
-                        className="rounded-lg"
+                        className="rounded-md"
                       >
                         <Calendar size={14} className="mr-2" />
                         Date Added
-                        {sortBy === "date" && <Check size={14} className="ml-auto text-[#23D3EE]" />}
+                        {sortBy === "date" && <Check size={14} className="ml-auto text-[#0891B2]" />}
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => {
                           setSortBy("score");
                           setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
                         }}
-                        className="rounded-lg"
+                        className="rounded-md"
                       >
                         <Target size={14} className="mr-2" />
                         Lead Score
-                        {sortBy === "score" && <Check size={14} className="ml-auto text-[#23D3EE]" />}
+                        {sortBy === "score" && <Check size={14} className="ml-auto text-[#0891B2]" />}
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => {
                           setSortBy("value");
                           setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
                         }}
-                        className="rounded-lg"
+                        className="rounded-md"
                       >
                         <DollarSign size={14} className="mr-2" />
                         Value
-                        {sortBy === "value" && <Check size={14} className="ml-auto text-[#23D3EE]" />}
+                        {sortBy === "value" && <Check size={14} className="ml-auto text-[#0891B2]" />}
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => {
                           setSortBy("name");
                           setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
                         }}
-                        className="rounded-lg"
+                        className="rounded-md"
                       >
                         <User size={14} className="mr-2" />
                         Name
-                        {sortBy === "name" && <Check size={14} className="ml-auto text-[#23D3EE]" />}
+                        {sortBy === "name" && <Check size={14} className="ml-auto text-[#0891B2]" />}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -2042,28 +2042,28 @@ const AllLeads = () => {
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-3 mt-4 p-3 bg-[#23D3EE]/10 rounded-xl"
+                    className="flex items-center gap-3 mt-4 p-3 bg-[#0891B2]/10 rounded-md"
                   >
                     <span className="text-sm font-medium text-[#0F172A]">
                       {selectedLeads.size} selected
                     </span>
                     <div className="flex-1" />
-                    <Button size="sm" variant="outline" className="rounded-lg">
+                    <Button size="sm" variant="outline" className="rounded-md">
                       <Mail size={14} className="mr-1" />
                       Email
                     </Button>
-                    <Button size="sm" variant="outline" className="rounded-lg">
+                    <Button size="sm" variant="outline" className="rounded-md">
                       <Tag size={14} className="mr-1" />
                       Add Tags
                     </Button>
-                    <Button size="sm" variant="outline" className="rounded-lg">
+                    <Button size="sm" variant="outline" className="rounded-md">
                       <UserCheck size={14} className="mr-1" />
                       Assign
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
-                      className="rounded-lg text-red-600 border-red-200 hover:bg-red-50"
+                      className="rounded-md text-red-600 border-red-200 hover:bg-red-50"
                       onClick={() => {
                         // Delete selected leads
                         setLeads((prev) => prev.filter((l) => !selectedLeads.has(l.id)));
@@ -2096,7 +2096,7 @@ const AllLeads = () => {
                               selectedLeads.size === filteredLeads.length && filteredLeads.length > 0
                             }
                             onCheckedChange={toggleSelectAll}
-                            className="data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
+                            className="data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
                           />
                         </TableHead>
                         <TableHead>Lead</TableHead>
@@ -2114,9 +2114,9 @@ const AllLeads = () => {
                         <TableRow>
                           <TableCell colSpan={9} className="text-center py-12">
                             <div className="flex flex-col items-center">
-                              <Target size={48} className="text-slate-300 mb-3" />
-                              <p className="text-slate-500 font-medium">No leads found</p>
-                              <p className="text-slate-400 text-sm">Try adjusting your filters</p>
+                              <Target size={48} className="text-[#475569] mb-3" />
+                              <p className="text-[#94A3B8] font-medium">No leads found</p>
+                              <p className="text-[#475569] text-sm">Try adjusting your filters</p>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -2150,9 +2150,9 @@ const AllLeads = () => {
                 <div className="p-6 grid grid-cols-3 gap-6">
                   {filteredLeads.length === 0 ? (
                     <div className="col-span-3 text-center py-12">
-                      <Target size={48} className="text-slate-300 mx-auto mb-3" />
-                      <p className="text-slate-500 font-medium">No leads found</p>
-                      <p className="text-slate-400 text-sm">Try adjusting your filters</p>
+                      <Target size={48} className="text-[#475569] mx-auto mb-3" />
+                      <p className="text-[#94A3B8] font-medium">No leads found</p>
+                      <p className="text-[#475569] text-sm">Try adjusting your filters</p>
                     </div>
                   ) : (
                     filteredLeads.map((lead, index) => (
@@ -2215,7 +2215,7 @@ const AllLeads = () => {
       />
 
       <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
-        <AlertDialogContent className="rounded-2xl">
+        <AlertDialogContent className="rounded-md">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Lead</AlertDialogTitle>
             <AlertDialogDescription>
@@ -2223,10 +2223,10 @@ const AllLeads = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-md">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteLead}
-              className="bg-red-500 hover:bg-red-600 rounded-xl"
+              className="bg-red-500 hover:bg-red-600 rounded-md"
             >
               Delete
             </AlertDialogAction>

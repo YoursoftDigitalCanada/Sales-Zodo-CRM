@@ -47,10 +47,10 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
   onViewDetails,
 }) => {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden">
       <Table>
         <TableHeader>
-          <TableRow className="bg-gray-50/50">
+          <TableRow className="bg-white/5/50">
             <TableHead>Employee</TableHead>
             <TableHead>Date</TableHead>
             <TableHead>Check In</TableHead>
@@ -73,45 +73,45 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
                   <div className="flex items-center gap-3">
                     <Avatar className="h-9 w-9">
                       <AvatarImage src={record.employeeAvatar} />
-                      <AvatarFallback className="bg-[#23D3EE]/10 text-[#23D3EE] text-sm">
+                      <AvatarFallback className="bg-[#0891B2]/10 text-[#0891B2] text-sm">
                         {getInitials(nameParts[0], nameParts[1] || '')}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="font-medium text-gray-900">
+                    <span className="font-medium text-[#0F172A]">
                       {record.employeeName}
                     </span>
                   </div>
                 </TableCell>
-                <TableCell className="text-gray-600">
+                <TableCell className="text-[#475569]">
                   {format(record.date, 'MMM d, yyyy')}
                 </TableCell>
                 <TableCell>
                   {record.checkIn ? (
-                    <div className="flex items-center gap-1.5 text-gray-700">
+                    <div className="flex items-center gap-1.5 text-slate-200">
                       <Clock className="w-4 h-4 text-emerald-500" />
                       {format(record.checkIn, 'h:mm a')}
                     </div>
                   ) : (
-                    <span className="text-gray-400">—</span>
+                    <span className="text-[#94A3B8]">—</span>
                   )}
                 </TableCell>
                 <TableCell>
                   {record.checkOut ? (
-                    <div className="flex items-center gap-1.5 text-gray-700">
+                    <div className="flex items-center gap-1.5 text-slate-200">
                       <Clock className="w-4 h-4 text-red-500" />
                       {format(record.checkOut, 'h:mm a')}
                     </div>
                   ) : (
-                    <span className="text-gray-400">—</span>
+                    <span className="text-[#94A3B8]">—</span>
                   )}
                 </TableCell>
                 <TableCell>
                   {record.workHours > 0 ? (
-                    <span className="font-medium text-gray-900">
+                    <span className="font-medium text-[#0F172A]">
                       {formatWorkHours(record.workHours)}
                     </span>
                   ) : (
-                    <span className="text-gray-400">—</span>
+                    <span className="text-[#94A3B8]">—</span>
                   )}
                 </TableCell>
                 <TableCell>
@@ -120,7 +120,7 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
                       +{formatWorkHours(record.overtime)}
                     </Badge>
                   ) : (
-                    <span className="text-gray-400">—</span>
+                    <span className="text-[#94A3B8]">—</span>
                   )}
                 </TableCell>
                 <TableCell>
@@ -138,7 +138,7 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
                             <span className="text-sm">Remote</span>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-1.5 text-gray-600">
+                          <div className="flex items-center gap-1.5 text-[#475569]">
                             <Building2 className="w-4 h-4" />
                             <span className="text-sm">Office</span>
                           </div>

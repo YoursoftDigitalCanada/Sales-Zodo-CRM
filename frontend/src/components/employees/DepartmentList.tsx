@@ -64,12 +64,12 @@ export const DepartmentList: React.FC<DepartmentListProps> = ({
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.3, delay: index * 0.05 }}
-              className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow"
+              className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-5 hover:shadow-md transition-shadow"
             >
               <div className="flex items-center gap-4">
                 {/* Department Icon/Color */}
                 <div
-                  className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0"
+                  className="w-14 h-14 rounded-md flex items-center justify-center flex-shrink-0"
                   style={{ backgroundColor: `${department.color}20` }}
                 >
                   <span
@@ -83,20 +83,20 @@ export const DepartmentList: React.FC<DepartmentListProps> = ({
                 {/* Department Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-semibold text-gray-900 truncate">
+                    <h3 className="font-semibold text-[#0F172A] truncate">
                       {department.name}
                     </h3>
                     <Badge
                       variant={department.isActive ? 'default' : 'secondary'}
                       className={department.isActive
                         ? 'bg-emerald-100 text-emerald-700 border-0'
-                        : 'bg-gray-100 text-gray-600'
+                        : 'bg-white/5 text-[#475569]'
                       }
                     >
                       {department.isActive ? 'Active' : 'Inactive'}
                     </Badge>
                   </div>
-                  <p className="text-sm text-gray-500 truncate mb-2">
+                  <p className="text-sm text-[#475569] truncate mb-2">
                     {department.description}
                   </p>
                   
@@ -106,7 +106,7 @@ export const DepartmentList: React.FC<DepartmentListProps> = ({
                       value={employeePercentage}
                       className="h-2 flex-1 max-w-xs"
                     />
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-[#475569]">
                       {employeePercentage}% of workforce
                     </span>
                   </div>
@@ -115,28 +115,28 @@ export const DepartmentList: React.FC<DepartmentListProps> = ({
                 {/* Stats */}
                 <div className="flex items-center gap-6 flex-shrink-0">
                   <div className="text-center">
-                    <div className="flex items-center gap-1 text-gray-400 mb-1">
+                    <div className="flex items-center gap-1 text-[#94A3B8] mb-1">
                       <Users className="w-4 h-4" />
                     </div>
-                    <p className="text-lg font-bold text-gray-900">
+                    <p className="text-lg font-bold text-[#0F172A]">
                       {department.employeeCount}
                     </p>
-                    <p className="text-xs text-gray-500">Employees</p>
+                    <p className="text-xs text-[#475569]">Employees</p>
                   </div>
 
                   <div className="text-center">
-                    <div className="flex items-center gap-1 text-gray-400 mb-1">
+                    <div className="flex items-center gap-1 text-[#94A3B8] mb-1">
                       <DollarSign className="w-4 h-4" />
                     </div>
-                    <p className="text-lg font-bold text-gray-900">
+                    <p className="text-lg font-bold text-[#0F172A]">
                       {formatCurrency(department.budget / 1000)}k
                     </p>
-                    <p className="text-xs text-gray-500">Budget</p>
+                    <p className="text-xs text-[#475569]">Budget</p>
                   </div>
 
                   {/* Department Head */}
                   {department.headId && (
-                    <div className="flex items-center gap-2 pl-4 border-l border-gray-200">
+                    <div className="flex items-center gap-2 pl-4 border-l border-[rgba(15,23,42,0.06)]">
                       <Avatar className="h-10 w-10">
                         <AvatarImage src={department.headAvatar} />
                         <AvatarFallback
@@ -155,10 +155,10 @@ export const DepartmentList: React.FC<DepartmentListProps> = ({
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="text-sm font-medium text-gray-900">
+                        <p className="text-sm font-medium text-[#0F172A]">
                           {department.headName}
                         </p>
-                        <p className="text-xs text-gray-500">Head</p>
+                        <p className="text-xs text-[#475569]">Head</p>
                       </div>
                     </div>
                   )}
@@ -211,10 +211,10 @@ export const DepartmentList: React.FC<DepartmentListProps> = ({
 
   // Table View
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden">
       <Table>
         <TableHeader>
-          <TableRow className="bg-gray-50/50">
+          <TableRow className="bg-white/5/50">
             <TableHead>Department</TableHead>
             <TableHead>Head</TableHead>
             <TableHead className="text-center">Employees</TableHead>
@@ -235,7 +235,7 @@ export const DepartmentList: React.FC<DepartmentListProps> = ({
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <div
-                      className="w-10 h-10 rounded-lg flex items-center justify-center"
+                      className="w-10 h-10 rounded-md flex items-center justify-center"
                       style={{ backgroundColor: `${department.color}20` }}
                     >
                       <span
@@ -246,8 +246,8 @@ export const DepartmentList: React.FC<DepartmentListProps> = ({
                       </span>
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">{department.name}</p>
-                      <p className="text-sm text-gray-500 truncate max-w-[200px]">
+                      <p className="font-medium text-[#0F172A]">{department.name}</p>
+                      <p className="text-sm text-[#475569] truncate max-w-[200px]">
                         {department.description}
                       </p>
                     </div>
@@ -268,28 +268,28 @@ export const DepartmentList: React.FC<DepartmentListProps> = ({
                           }
                         </AvatarFallback>
                       </Avatar>
-                      <span className="text-sm text-gray-700">
+                      <span className="text-sm text-slate-200">
                         {department.headName}
                       </span>
                     </div>
                   ) : (
-                    <span className="text-sm text-gray-400">Not assigned</span>
+                    <span className="text-sm text-[#94A3B8]">Not assigned</span>
                   )}
                 </TableCell>
                 <TableCell className="text-center">
-                  <span className="font-semibold text-gray-900">
+                  <span className="font-semibold text-[#0F172A]">
                     {department.employeeCount}
                   </span>
                 </TableCell>
                 <TableCell className="text-center">
-                  <span className="font-semibold text-gray-900">
+                  <span className="font-semibold text-[#0F172A]">
                     {formatCurrency(department.budget)}
                   </span>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <Progress value={employeePercentage} className="h-2 w-20" />
-                    <span className="text-sm text-gray-500">{employeePercentage}%</span>
+                    <span className="text-sm text-[#475569]">{employeePercentage}%</span>
                   </div>
                 </TableCell>
                 <TableCell className="text-center">
@@ -297,7 +297,7 @@ export const DepartmentList: React.FC<DepartmentListProps> = ({
                     variant={department.isActive ? 'default' : 'secondary'}
                     className={department.isActive
                       ? 'bg-emerald-100 text-emerald-700 border-0'
-                      : 'bg-gray-100 text-gray-600'
+                      : 'bg-white/5 text-[#475569]'
                     }
                   >
                     {department.isActive ? 'Active' : 'Inactive'}

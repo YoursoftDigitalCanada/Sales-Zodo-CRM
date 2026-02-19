@@ -91,10 +91,10 @@ export function ActiveTimer({
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
-        "bg-white rounded-xl border-2 p-6 transition-all",
+        "bg-white rounded-md border-2 p-6 transition-all",
         timerState.isRunning
-          ? "border-[#23D3EE] shadow-lg shadow-[#23D3EE]/10"
-          : "border-gray-200"
+          ? "border-[#22D3EE] "
+          : "border-[rgba(15,23,42,0.06)]"
       )}
     >
       <div className="flex flex-col lg:flex-row lg:items-center gap-4">
@@ -105,7 +105,7 @@ export function ActiveTimer({
             placeholder="What are you working on?"
             value={timerState.description}
             onChange={(e) => onUpdateTimer({ description: e.target.value })}
-            className="text-lg border-0 shadow-none focus-visible:ring-0 px-0 placeholder:text-gray-400"
+            className="text-lg border-0 shadow-none focus-visible:ring-0 px-0 placeholder:text-[#94A3B8]"
           />
         </div>
 
@@ -123,14 +123,14 @@ export function ActiveTimer({
                 <div className="flex items-center gap-2">
                   <div
                     className={cn("w-2 h-2 rounded-full")}
-                    style={{ backgroundColor: selectedProject.color === "teal" ? "#23D3EE" : selectedProject.color }}
+                    style={{ backgroundColor: selectedProject.color === "teal" ? "#22D3EE" : selectedProject.color }}
                   />
                   <span className="truncate">{selectedProject.name}</span>
                 </div>
               ) : (
-                <span className="text-gray-400">Select Project</span>
+                <span className="text-[#94A3B8]">Select Project</span>
               )}
-              <ChevronDown size={16} className="ml-2 text-gray-400" />
+              <ChevronDown size={16} className="ml-2 text-[#94A3B8]" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
@@ -144,7 +144,7 @@ export function ActiveTimer({
                 >
                   <div
                     className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: project.color === "teal" ? "#23D3EE" : project.color }}
+                    style={{ backgroundColor: project.color === "teal" ? "#22D3EE" : project.color }}
                   />
                   <span>{project.name}</span>
                 </DropdownMenuItem>
@@ -161,9 +161,9 @@ export function ActiveTimer({
                 {selectedTask ? (
                   <span className="truncate">{selectedTask.name}</span>
                 ) : (
-                  <span className="text-gray-400">Select Task</span>
+                  <span className="text-[#94A3B8]">Select Task</span>
                 )}
-                <ChevronDown size={16} className="ml-2 text-gray-400" />
+                <ChevronDown size={16} className="ml-2 text-[#94A3B8]" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
@@ -180,15 +180,15 @@ export function ActiveTimer({
         )}
 
         {/* Billable Toggle */}
-        <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
+        <div className="flex items-center gap-2 px-3 py-2 bg-white/5 rounded-md">
           <DollarSign
             size={16}
-            className={timerState.isBillable ? "text-[#23D3EE]" : "text-gray-400"}
+            className={timerState.isBillable ? "text-[#0891B2]" : "text-[#94A3B8]"}
           />
           <Switch
             checked={timerState.isBillable}
             onCheckedChange={(checked) => onUpdateTimer({ isBillable: checked })}
-            className="data-[state=checked]:bg-[#23D3EE]"
+            className="data-[state=checked]:bg-[#0891B2]"
           />
         </div>
 
@@ -199,7 +199,7 @@ export function ActiveTimer({
             transition={{ repeat: Infinity, duration: 1 }}
             className={cn(
               "text-3xl font-mono font-bold min-w-[140px] text-center",
-              timerState.isRunning ? "text-[#23D3EE]" : "text-gray-400"
+              timerState.isRunning ? "text-[#0891B2]" : "text-[#94A3B8]"
             )}
           >
             {formatDuration(elapsedTime)}
@@ -212,12 +212,12 @@ export function ActiveTimer({
               whileTap={{ scale: 0.95 }}
               onClick={handleStartStop}
               className={cn(
-                "w-12 h-12 rounded-xl flex items-center justify-center transition-all",
+                "w-12 h-12 rounded-md flex items-center justify-center transition-all",
                 timerState.isRunning
                   ? timerState.isPaused
-                    ? "bg-[#23D3EE] text-white shadow-lg shadow-[#23D3EE]/30"
-                    : "bg-yellow-500 text-white shadow-lg shadow-yellow-500/30"
-                  : "bg-[#23D3EE] text-white shadow-lg shadow-[#23D3EE]/30"
+                    ? "bg-[#0891B2] text-white "
+                    : "bg-yellow-500 text-[#0F172A] card-shadow shadow-yellow-500/30"
+                  : "bg-[#0891B2] text-white "
               )}
             >
               {timerState.isRunning ? (
@@ -238,7 +238,7 @@ export function ActiveTimer({
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={onStop}
-                className="w-12 h-12 rounded-xl bg-red-500 text-white flex items-center justify-center shadow-lg shadow-red-500/30"
+                className="w-12 h-12 rounded-md bg-red-500 text-[#0F172A] flex items-center justify-center card-shadow shadow-red-500/30"
               >
                 <Square size={18} />
               </motion.button>
@@ -254,15 +254,15 @@ export function ActiveTimer({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="mt-4 pt-4 border-t border-gray-100"
+            className="mt-4 pt-4 border-t border-[rgba(15,23,42,0.06)]"
           >
             <div className="flex items-center gap-2">
               <motion.div
                 animate={{ opacity: [1, 0.5, 1] }}
                 transition={{ repeat: Infinity, duration: 1.5 }}
-                className="w-2 h-2 bg-[#23D3EE] rounded-full"
+                className="w-2 h-2 bg-[#0891B2] rounded-full"
               />
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-[#475569]">
                 Timer is running
                 {selectedProject && ` for ${selectedProject.name}`}
                 {selectedTask && ` - ${selectedTask.name}`}

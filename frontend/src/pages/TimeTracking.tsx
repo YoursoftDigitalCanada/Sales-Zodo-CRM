@@ -168,22 +168,22 @@ export default function TimeTrackingPage() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-[#F8FAFC]">
       <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
 
       <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
         {/* Header */}
-        <header className="bg-white border-b border-gray-200 px-6 py-4">
+        <header className="bg-white border-b border-[rgba(15,23,42,0.06)] px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-800">Time Tracking</h1>
-              <p className="text-sm text-gray-500 mt-1">Track and manage your work hours</p>
+              <h1 className="text-2xl font-bold text-[#0F172A]">Time Tracking</h1>
+              <p className="text-sm text-[#475569] mt-1">Track and manage your work hours</p>
             </div>
 
             <div className="flex items-center gap-3">
               {/* View Toggle */}
               <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
-                <TabsList className="bg-gray-100">
+                <TabsList className="bg-[#F8FAFC]">
                   <TabsTrigger value="list" className="gap-2">
                     <List size={16} />
                     List
@@ -224,7 +224,7 @@ export default function TimeTrackingPage() {
                   setEditingEntry(null);
                   setShowAddDialog(true);
                 }}
-                className="flex items-center gap-2 px-4 py-2 bg-[#23D3EE] text-white rounded-lg font-medium hover:bg-[#23D3EE]/90 transition-all shadow-lg shadow-[#23D3EE]/20"
+                className="flex items-center gap-2 px-4 py-2 bg-[#0891B2] text-white rounded-md font-medium hover:bg-[#0891B2]/90 transition-all "
               >
                 <Plus size={18} />
                 Add Entry

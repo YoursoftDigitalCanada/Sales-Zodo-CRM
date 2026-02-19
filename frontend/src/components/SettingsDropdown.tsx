@@ -96,29 +96,29 @@ export const SettingsDropdown: React.FC<SettingsDropdownProps> = ({
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="relative h-10 w-10 rounded-full ring-2 ring-white shadow-sm hover:ring-[#23D3EE]/20"
+          className="relative h-10 w-10 rounded-full ring-2 ring-white shadow-sm hover:ring-[#22D3EE]/20"
         >
           <Avatar className="h-10 w-10">
             <AvatarImage src={user.avatar} alt={user.name} />
-            <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#0F172A] text-white font-semibold">
+            <AvatarFallback className="bg-[#F1F5F9] text-[#0F172A] font-semibold">
               {getInitials(user.name)}
             </AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-80 rounded-2xl p-2" align="end" forceMount>
+      <DropdownMenuContent className="w-80 rounded-md p-2" align="end" forceMount>
         {/* User Info */}
         <div className="flex items-center gap-3 p-3 mb-2">
           <Avatar className="h-12 w-12 border-2 border-white shadow-md">
             <AvatarImage src={user.avatar} alt={user.name} />
-            <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#0F172A] text-white font-semibold">
+            <AvatarFallback className="bg-[#F1F5F9] text-[#0F172A] font-semibold">
               {getInitials(user.name)}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-[#0F172A] truncate">{user.name}</p>
-            <p className="text-sm text-slate-500 truncate">{user.email}</p>
-            <p className="text-xs text-[#23D3EE] font-medium">{user.role}</p>
+            <p className="text-sm text-[#94A3B8] truncate">{user.email}</p>
+            <p className="text-xs text-[#0891B2] font-medium">{user.role}</p>
           </div>
         </div>
 
@@ -127,53 +127,53 @@ export const SettingsDropdown: React.FC<SettingsDropdownProps> = ({
         {/* Quick Actions */}
         <div className="grid grid-cols-3 gap-2 p-2">
           <button
-            className="flex flex-col items-center gap-1 p-3 rounded-xl hover:bg-slate-50 transition-colors"
+            className="flex flex-col items-center gap-1 p-3 rounded-md hover:bg-white/5 transition-colors"
             onClick={() => navigate("/profile")}
           >
-            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-blue-100 rounded-md flex items-center justify-center">
               <User size={18} className="text-blue-600" />
             </div>
-            <span className="text-xs text-slate-600">Profile</span>
+            <span className="text-xs text-[#475569]">Profile</span>
           </button>
           <button
-            className="flex flex-col items-center gap-1 p-3 rounded-xl hover:bg-slate-50 transition-colors"
+            className="flex flex-col items-center gap-1 p-3 rounded-md hover:bg-white/5 transition-colors"
             onClick={() => navigate("/settings?section=general")}
           >
-            <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-purple-100 rounded-md flex items-center justify-center">
               <Bell size={18} className="text-purple-600" />
             </div>
-            <span className="text-xs text-slate-600">Notifications</span>
+            <span className="text-xs text-[#475569]">Notifications</span>
           </button>
-          <button className="flex flex-col items-center gap-1 p-3 rounded-xl hover:bg-slate-50 transition-colors">
-            <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
+          <button className="flex flex-col items-center gap-1 p-3 rounded-md hover:bg-white/5 transition-colors">
+            <div className="w-10 h-10 bg-amber-100 rounded-md flex items-center justify-center">
               <Sun size={18} className="text-amber-600" />
             </div>
-            <span className="text-xs text-slate-600">Theme</span>
+            <span className="text-xs text-[#475569]">Theme</span>
           </button>
         </div>
 
         <DropdownMenuSeparator />
 
         {/* Settings Menu */}
-        <DropdownMenuLabel className="text-xs text-slate-400 font-normal px-3 py-2">
+        <DropdownMenuLabel className="text-xs text-[#475569] font-normal px-3 py-2">
           Settings
         </DropdownMenuLabel>
         <DropdownMenuGroup>
           {settingsItems.map((item) => (
             <DropdownMenuItem
               key={item.path}
-              className="rounded-xl p-3 cursor-pointer"
+              className="rounded-md p-3 cursor-pointer"
               onClick={() => navigate(item.path)}
             >
               <div className="flex items-center gap-3 flex-1">
-                <div className="w-9 h-9 bg-slate-100 rounded-lg flex items-center justify-center">
-                  <item.icon size={16} className="text-slate-500" />
+                <div className="w-9 h-9 bg-white/5 rounded-md flex items-center justify-center">
+                  <item.icon size={16} className="text-[#94A3B8]" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-[#0F172A]">{item.label}</p>
-                  <p className="text-xs text-slate-400 truncate">{item.description}</p>
+                  <p className="text-xs text-[#475569] truncate">{item.description}</p>
                 </div>
-                <ChevronRight size={16} className="text-slate-300" />
+                <ChevronRight size={16} className="text-[#475569]" />
               </div>
             </DropdownMenuItem>
           ))}
@@ -183,14 +183,14 @@ export const SettingsDropdown: React.FC<SettingsDropdownProps> = ({
 
         {/* Help & Support */}
         <DropdownMenuGroup>
-          <DropdownMenuItem className="rounded-xl p-3 cursor-pointer">
-            <HelpCircle size={16} className="mr-3 text-slate-400" />
+          <DropdownMenuItem className="rounded-md p-3 cursor-pointer">
+            <HelpCircle size={16} className="mr-3 text-[#475569]" />
             <span className="text-sm">Help & Support</span>
           </DropdownMenuItem>
-          <DropdownMenuItem className="rounded-xl p-3 cursor-pointer">
-            <Keyboard size={16} className="mr-3 text-slate-400" />
+          <DropdownMenuItem className="rounded-md p-3 cursor-pointer">
+            <Keyboard size={16} className="mr-3 text-[#475569]" />
             <span className="text-sm">Keyboard Shortcuts</span>
-            <span className="ml-auto text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
+            <span className="ml-auto text-xs text-[#475569] bg-white/5 px-2 py-0.5 rounded">
               ⌘K
             </span>
           </DropdownMenuItem>
@@ -199,7 +199,7 @@ export const SettingsDropdown: React.FC<SettingsDropdownProps> = ({
         <DropdownMenuSeparator />
 
         {/* Logout */}
-        <DropdownMenuItem className="rounded-xl p-3 cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50">
+        <DropdownMenuItem className="rounded-md p-3 cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50">
           <LogOut size={16} className="mr-3" />
           <span className="text-sm font-medium">Log out</span>
         </DropdownMenuItem>

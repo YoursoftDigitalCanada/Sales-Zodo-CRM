@@ -39,14 +39,14 @@ const StatCard: React.FC<StatCardProps> = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay }}
       whileHover={{ y: -2 }}
-      className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm"
+      className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-6 shadow-sm"
     >
       <div className="flex items-start justify-between">
         <div className="space-y-2">
-          <p className="text-sm font-medium text-gray-500">{title}</p>
-          <p className="text-3xl font-bold text-gray-900">{value}</p>
+          <p className="text-sm font-medium text-[#475569]">{title}</p>
+          <p className="text-3xl font-bold text-[#0F172A]">{value}</p>
           {subtitle && (
-            <p className="text-sm text-gray-500">{subtitle}</p>
+            <p className="text-sm text-[#475569]">{subtitle}</p>
           )}
           {trend && (
             <div className={`flex items-center gap-1 text-sm ${
@@ -57,7 +57,7 @@ const StatCard: React.FC<StatCardProps> = ({
             </div>
           )}
         </div>
-        <div className={`p-3 rounded-xl ${color}`}>
+        <div className={`p-3 rounded-md ${color}`}>
           {icon}
         </div>
       </div>
@@ -82,8 +82,8 @@ export const EmployeeStats: React.FC<EmployeeStatsProps> = ({
     {
       title: 'Total Employees',
       value: totalEmployees,
-      icon: <Users className="w-6 h-6 text-[#23D3EE]" />,
-      color: 'bg-[#23D3EE]/10',
+      icon: <Users className="w-6 h-6 text-[#0891B2]" />,
+      color: 'bg-[#0891B2]/10',
       trend: { value: 12, isPositive: true },
     },
     {
@@ -134,8 +134,8 @@ export const DepartmentStats: React.FC<DepartmentStatsProps> = ({
     {
       title: 'Total Departments',
       value: totalDepartments,
-      icon: <Building2 className="w-6 h-6 text-[#23D3EE]" />,
-      color: 'bg-[#23D3EE]/10',
+      icon: <Building2 className="w-6 h-6 text-[#0891B2]" />,
+      color: 'bg-[#0891B2]/10',
     },
     {
       title: 'Total Employees',
@@ -255,8 +255,8 @@ export const LeaveStats: React.FC<LeaveStatsProps> = ({
     {
       title: 'Currently On Leave',
       value: employeesOnLeave,
-      icon: <Calendar className="w-6 h-6 text-[#23D3EE]" />,
-      color: 'bg-[#23D3EE]/10',
+      icon: <Calendar className="w-6 h-6 text-[#0891B2]" />,
+      color: 'bg-[#0891B2]/10',
     },
   ];
 

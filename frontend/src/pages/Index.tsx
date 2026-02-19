@@ -84,40 +84,40 @@ interface Notification {
 
 const themeColors: Record<ThemeColor, { bg: string; text: string; light: string; gradient: string }> = {
   teal: {
-    bg: "bg-[#23D3EE]",
-    text: "text-[#23D3EE]",
-    light: "bg-[#23D3EE]/10",
-    gradient: "from-[#23D3EE] to-[#23D3EE]/70",
+    bg: "bg-[#0891B2]",
+    text: "text-[#0891B2]",
+    light: "bg-[#0891B2]/10",
+    gradient: "from-[#22D3EE]",
   },
   gold: {
-    bg: "bg-[#FBBF23]",
-    text: "text-[#FBBF23]",
-    light: "bg-[#FBBF23]/10",
-    gradient: "from-[#FBBF23] to-[#FBBF23]/70",
+    bg: "bg-[#D97706]",
+    text: "text-[#D97706]",
+    light: "bg-[#D97706]/10",
+    gradient: "from-[#FBBF24]",
   },
   navy: {
-    bg: "bg-[#0F172A]",
-    text: "text-[#0F172A]",
-    light: "bg-[#0F172A]/10",
-    gradient: "from-[#0F172A] to-[#0F172A]/70",
+    bg: "bg-[#EA580C]",
+    text: "text-[#EA580C]",
+    light: "bg-[#EA580C]/10",
+    gradient: "from-[#F97316]",
   },
   green: {
-    bg: "bg-emerald-500",
-    text: "text-emerald-500",
-    light: "bg-emerald-500/10",
-    gradient: "from-emerald-500 to-emerald-400",
+    bg: "bg-[#16A34A]",
+    text: "text-[#16A34A]",
+    light: "bg-[#16A34A]/10",
+    gradient: "from-[#4ADE80]",
   },
   blue: {
-    bg: "bg-blue-500",
-    text: "text-blue-500",
-    light: "bg-blue-500/10",
-    gradient: "from-blue-500 to-blue-400",
+    bg: "bg-[#0891B2]",
+    text: "text-[#0891B2]",
+    light: "bg-[#0891B2]/10",
+    gradient: "from-[#22D3EE]",
   },
   purple: {
-    bg: "bg-purple-500",
-    text: "text-purple-500",
-    light: "bg-purple-500/10",
-    gradient: "from-purple-500 to-purple-400",
+    bg: "bg-[#EA580C]",
+    text: "text-[#EA580C]",
+    light: "bg-[#EA580C]/10",
+    gradient: "from-[#F97316]",
   },
 };
 
@@ -405,7 +405,7 @@ const Index = () => {
   // ============================================
 
   return (
-    <div className={cn("flex min-h-screen w-full", isDarkMode ? "dark bg-slate-900" : "bg-slate-50")}>
+    <div className={cn("flex min-h-screen w-full bg-[#F8FAFC]")}>
       {/* Sidebar */}
       <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
 
@@ -416,21 +416,21 @@ const Index = () => {
         {/* ============================================ */}
         {/* HEADER */}
         {/* ============================================ */}
-        <header className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-700/50">
-          <div className="flex h-20 items-center justify-between px-6">
+        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-[rgba(15,23,42,0.06)]">
+          <div className="flex h-12 items-center justify-between px-5">
             {/* Left Section - Search */}
             <div className="flex items-center gap-6">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#475569]" />
                 <input
                   type="text"
                   placeholder="Search anything..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onClick={() => setShowSearchModal(true)}
-                  className="w-80 h-11 pl-10 pr-16 rounded-xl bg-slate-100 dark:bg-slate-800 border-none text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#23D3EE]/20 focus:bg-white dark:focus:bg-slate-700 transition-all"
+                  className="w-64 h-8 pl-9 pr-14 rounded-md bg-white border border-[rgba(15,23,42,0.06)] text-xs text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-1 focus:ring-[#22D3EE]/30 transition-colors"
                 />
-                <kbd className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-0.5 rounded bg-white dark:bg-slate-700 text-[10px] text-slate-400 border border-slate-200 dark:border-slate-600 font-mono flex items-center gap-1">
+                <kbd className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-0.5 rounded bg-[#F1F5F9] text-[10px] text-[#475569] border border-[rgba(15,23,42,0.06)] font-mono flex items-center gap-1">
                   <Command size={10} />K
                 </kbd>
               </div>
@@ -439,41 +439,35 @@ const Index = () => {
             {/* Right Section */}
             <div className="flex items-center gap-3">
               {/* Quick Add Button */}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+              <button
                 onClick={() => navigate("/projects/new")}
-                className="flex items-center gap-2 px-4 py-2.5 bg-[#23D3EE] text-white text-sm font-medium rounded-xl shadow-lg shadow-[#23D3EE]/25 hover:bg-[#23D3EE]/90 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0891B2] text-white text-xs font-medium rounded-md hover:bg-[#0891B2]/90 transition-colors"
               >
-                <Plus size={16} />
-                <span className="hidden sm:inline">Quick Add</span>
-              </motion.button>
+                <Plus size={14} />
+                <span className="hidden sm:inline">New</span>
+              </button>
 
               {/* Theme Toggle */}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+              <button
                 onClick={toggleDarkMode}
-                className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                className="p-2 rounded-md bg-white border border-[rgba(15,23,42,0.06)] text-[#94A3B8] hover:text-[#475569] transition-colors"
               >
-                {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-              </motion.button>
+                {isDarkMode ? <Sun size={15} /> : <Moon size={15} />}
+              </button>
 
               {/* Notifications */}
               <div ref={notificationRef} className="relative">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                <button
                   onClick={() => setShowNotifications(!showNotifications)}
-                  className="relative p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                  className="relative p-2 rounded-md bg-white border border-[rgba(15,23,42,0.06)] text-[#94A3B8] hover:text-[#475569] transition-colors"
                 >
-                  <Bell size={18} />
+                  <Bell size={15} />
                   {unreadNotificationsCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900">
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#EA580C] text-white text-[9px] font-bold rounded-full flex items-center justify-center border border-[#F8FAFC]">
                       {unreadNotificationsCount}
                     </span>
                   )}
-                </motion.button>
+                </button>
 
                 {/* Notifications Dropdown */}
                 <AnimatePresence>
@@ -483,16 +477,16 @@ const Index = () => {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden z-50"
+                      className="absolute right-0 mt-2 w-80 bg-white border border-[rgba(15,23,42,0.06)] card-shadow rounded-md overflow-hidden z-50"
                     >
-                      <div className="p-4 border-b border-slate-100 dark:border-slate-700">
+                      <div className="p-4 border-b border-[rgba(15,23,42,0.06)]">
                         <div className="flex items-center justify-between">
-                          <h4 className="font-semibold text-[#0F172A] dark:text-white">
+                          <h4 className="font-semibold text-[#0F172A]">
                             Notifications
                           </h4>
                           <button
                             onClick={handleMarkAllAsRead}
-                            className="text-xs text-[#23D3EE] font-medium cursor-pointer hover:underline"
+                            className="text-xs text-[#0891B2] font-medium cursor-pointer hover:underline"
                           >
                             Mark all as read
                           </button>
@@ -505,42 +499,42 @@ const Index = () => {
                             <div
                               key={notification.id}
                               className={cn(
-                                "p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer border-b border-slate-100 dark:border-slate-700 last:border-0",
-                                !notification.read && "bg-[#23D3EE]/5"
+                                "p-4 hover:bg-white transition-colors cursor-pointer border-b border-[rgba(15,23,42,0.06)] last:border-0",
+                                !notification.read && "bg-[#0891B2]/5"
                               )}
                             >
                               <div className="flex gap-3">
                                 <div
                                   className={cn(
-                                    "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
+                                    "w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0",
                                     colors.light
                                   )}
                                 >
                                   <notification.icon size={18} className={colors.text} />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-[#0F172A] dark:text-white">
+                                  <p className="text-sm font-medium text-[#0F172A]">
                                     {notification.title}
                                   </p>
-                                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                                  <p className="text-sm text-[#475569]">
                                     {notification.message}
                                   </p>
-                                  <p className="text-xs text-slate-400 mt-1">
+                                  <p className="text-xs text-[#475569] mt-1">
                                     {notification.time}
                                   </p>
                                 </div>
                                 {!notification.read && (
-                                  <div className="w-2 h-2 rounded-full bg-[#23D3EE] flex-shrink-0 mt-2" />
+                                  <div className="w-2 h-2 rounded-full bg-[#0891B2] flex-shrink-0 mt-2" />
                                 )}
                               </div>
                             </div>
                           );
                         })}
                       </div>
-                      <div className="p-3 bg-slate-50 dark:bg-slate-700/50 text-center">
+                      <div className="p-3 bg-white text-center border-t border-[rgba(15,23,42,0.06)]">
                         <button
                           onClick={() => navigate("/notifications")}
-                          className="text-sm text-[#23D3EE] font-medium hover:underline"
+                          className="text-sm text-[#0891B2] font-medium hover:underline"
                         >
                           View All Notifications
                         </button>
@@ -553,13 +547,13 @@ const Index = () => {
               {/* Profile */}
               <div
                 ref={profileRef}
-                className="relative flex items-center gap-3 pl-3 ml-3 border-l border-slate-200 dark:border-slate-700"
+                className="relative flex items-center gap-3 pl-3 ml-3 border-l border-[rgba(15,23,42,0.06)]"
               >
                 <div className="text-right hidden sm:block">
-                  <p className="text-sm font-semibold text-[#0F172A] dark:text-white">
+                  <p className="text-sm font-semibold text-[#0F172A]">
                     {user ? `${user.firstName} ${user.lastName}` : "Guest User"}
                   </p>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-[#94A3B8]">
                     {user?.role || "Administrator"}
                   </p>
                 </div>
@@ -568,17 +562,17 @@ const Index = () => {
                   onClick={() => setShowProfileMenu(!showProfileMenu)}
                   className="relative cursor-pointer flex items-center gap-2"
                 >
-                  <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-[#23D3EE] via-[#23D3EE]/80 to-[#FBBF23] flex items-center justify-center text-white font-bold shadow-lg">
+                  <div className="h-8 w-8 rounded-md bg-[#0891B2] flex items-center justify-center text-white text-xs font-bold">
                     {user
                       ? (user.firstName[0] + user.lastName[0]).toUpperCase()
                       : "GU"}
                   </div>
-                  <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white dark:border-slate-900" />
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-[#F8FAFC]" />
                 </motion.button>
                 <ChevronDown
                   size={16}
                   className={cn(
-                    "text-slate-400 transition-transform",
+                    "text-[#475569] transition-transform",
                     showProfileMenu && "rotate-180"
                   )}
                 />
@@ -591,40 +585,40 @@ const Index = () => {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden z-50"
+                      className="absolute right-0 top-full mt-2 w-56 bg-white border border-[rgba(15,23,42,0.06)] card-shadow rounded-md overflow-hidden z-50"
                     >
-                      <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-                        <p className="font-semibold text-[#0F172A] dark:text-white">
+                      <div className="p-4 border-b border-[rgba(15,23,42,0.06)]">
+                        <p className="font-semibold text-[#0F172A]">
                           {user ? `${user.firstName} ${user.lastName}` : "Guest User"}
                         </p>
-                        <p className="text-xs text-slate-400 truncate">
+                        <p className="text-xs text-[#475569] truncate">
                           {user?.email || "guest@yoursoft.ca"}
                         </p>
                       </div>
                       <div className="p-2">
                         <button
                           onClick={() => navigate("/settings/profile")}
-                          className="w-full px-3 py-2 text-left text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                          className="w-full px-3 py-2 text-left text-sm text-[#475569] hover:bg-white hover:text-[#0F172A] rounded-md transition-colors"
                         >
                           Profile Settings
                         </button>
                         <button
                           onClick={() => navigate("/settings")}
-                          className="w-full px-3 py-2 text-left text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                          className="w-full px-3 py-2 text-left text-sm text-[#475569] hover:bg-white hover:text-[#0F172A] rounded-md transition-colors"
                         >
                           Account Settings
                         </button>
                         <button
                           onClick={() => navigate("/help")}
-                          className="w-full px-3 py-2 text-left text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                          className="w-full px-3 py-2 text-left text-sm text-[#475569] hover:bg-white hover:text-[#0F172A] rounded-md transition-colors"
                         >
                           Help & Support
                         </button>
                       </div>
-                      <div className="p-2 border-t border-slate-100 dark:border-slate-700">
+                      <div className="p-2 border-t border-[rgba(15,23,42,0.06)]">
                         <button
                           onClick={handleLogout}
-                          className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                          className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 rounded-md transition-colors"
                         >
                           Sign Out
                         </button>
@@ -641,96 +635,54 @@ const Index = () => {
         {/* MAIN CONTENT */}
         {/* ============================================ */}
         <div className="p-6 space-y-6">
-          {/* Welcome Banner */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#0F172A] via-[#0F172A] to-[#23D3EE]/30 p-8"
-          >
-            {/* Background Decorations */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-[#23D3EE]/10 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 left-1/2 w-48 h-48 bg-[#FBBF23]/10 rounded-full blur-3xl" />
-            <div
-              className="absolute inset-0 opacity-5"
-              style={{
-                backgroundImage: `radial-gradient(#23D3EE 1px, transparent 1px)`,
-                backgroundSize: "20px 20px",
-              }}
-            />
-
-            <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          {/* AI Insights Panel */}
+          <div className="space-y-4">
+            {/* Header Row */}
+            <div className="flex items-center justify-between">
               <div>
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="flex items-center gap-2 mb-3"
-                >
-                  <Sparkles size={20} className="text-[#FBBF23]" />
-                  <span className="text-[#FBBF23] text-sm font-medium">
-                    {currentTime.toLocaleDateString("en-US", {
-                      weekday: "long",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </span>
-                </motion.div>
-                <h1 className="text-3xl lg:text-4xl font-bold text-white mb-2">
-                  {getGreeting()},{" "}
-                  <span className="text-[#23D3EE]">
-                    {user?.firstName || "Guest"}
-                  </span>
-                  ! 👋
+                <h1 className="text-lg font-semibold text-[#0F172A]">
+                  {getGreeting()}, {user?.firstName || "Guest"}
                 </h1>
-                <p className="text-slate-300 text-lg max-w-xl">
-                  Here's what's happening with your business today. You have{" "}
-                  <span className="text-[#23D3EE] font-semibold">
-                    {stats.pendingTasks} tasks
-                  </span>{" "}
-                  pending.
+                <p className="text-xs text-[#94A3B8]">
+                  {currentTime.toLocaleDateString("en-US", {
+                    weekday: "long",
+                    month: "long",
+                    day: "numeric",
+                  })}
                 </p>
               </div>
-
-              {/* Quick Stats Mini */}
-              <div className="flex gap-4">
+              <div className="flex items-center gap-3">
                 {[
-                  {
-                    label: "Today's Revenue",
-                    value: "$1,250",
-                    icon: TrendingUp,
-                    trend: "+12%",
-                  },
-                  {
-                    label: "New Leads",
-                    value: "8",
-                    icon: Target,
-                    trend: "+3",
-                  },
-                ].map((item, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 + i * 0.1 }}
-                    className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-4 min-w-[140px]"
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <item.icon size={16} className="text-[#23D3EE]" />
-                      <span className="text-xs text-slate-400">{item.label}</span>
-                    </div>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-2xl font-bold text-white">
-                        {item.value}
-                      </span>
-                      <span className="text-xs text-green-400 font-medium">
-                        {item.trend}
-                      </span>
-                    </div>
-                  </motion.div>
+                  { label: "Tasks", value: stats.pendingTasks, color: "#22D3EE" },
+                  { label: "Projects", value: stats.activeProjects, color: "#4ADE80" },
+                  { label: "Revenue", value: "$8.2k", color: "#F97316" },
+                ].map((kpi, i) => (
+                  <div key={i} className="text-center px-4 py-2 rounded-md bg-white card-shadow">
+                    <p className="metric-value" style={{ color: kpi.color }}>{kpi.value}</p>
+                    <p className="metric-label">{kpi.label}</p>
+                  </div>
                 ))}
               </div>
             </div>
-          </motion.div>
+
+            {/* AI Summary Card */}
+            <div className="ai-highlight rounded-md p-3 flex items-start gap-3">
+              <div className="w-7 h-7 rounded-md bg-[#0891B2]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Sparkles size={14} className="text-[#0891B2]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-medium text-[#0F172A]">AI Summary</span>
+                  <span className="ai-tag">Live</span>
+                </div>
+                <p className="text-xs text-[#475569] leading-relaxed">
+                  Pipeline risk detected — <span className="text-[#EA580C]">3 leads</span> need follow-up within 48h.
+                  <span className="text-[#16A34A]"> Revenue is trending +12% </span>
+                  vs last week. {stats.pendingTasks} tasks are overdue.
+                </p>
+              </div>
+            </div>
+          </div>
 
           {/* Quick Actions */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -742,28 +694,23 @@ const Index = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 * index }}
-                  whileHover={{ scale: 1.02, y: -4 }}
-                  whileTap={{ scale: 0.98 }}
+                  whileHover={{ scale: 1.01, y: -2 }}
+                  whileTap={{ scale: 0.99 }}
                   onClick={() => handleQuickAction(action.path)}
-                  className="flex items-center gap-4 p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-[#23D3EE]/30 hover:shadow-lg hover:shadow-[#23D3EE]/5 transition-all group"
+                  className="flex items-center gap-4 p-4 bg-white rounded-md card-shadow hover:shadow-md transition-all group"
                 >
-                  <div
-                    className={cn(
-                      "w-12 h-12 rounded-xl flex items-center justify-center transition-all bg-gradient-to-br",
-                      colors.gradient
-                    )}
-                  >
-                    <action.icon size={22} className="text-white" />
+                  <div className="w-10 h-10 rounded-md bg-[#F1F5F9] flex items-center justify-center">
+                    <action.icon size={20} className="text-[#475569]" />
                   </div>
                   <div className="text-left">
-                    <p className="font-semibold text-[#0F172A] dark:text-white group-hover:text-[#23D3EE] transition-colors">
+                    <p className="font-semibold text-[#0F172A] group-hover:text-[#0891B2] transition-colors">
                       {action.title}
                     </p>
-                    <p className="text-xs text-slate-400">{action.description}</p>
+                    <p className="text-xs text-[#475569]">{action.description}</p>
                   </div>
                   <ArrowUpRight
                     size={16}
-                    className="ml-auto text-slate-300 group-hover:text-[#23D3EE] transition-colors"
+                    className="ml-auto text-[#94A3B8] group-hover:text-[#0891B2] transition-colors"
                   />
                 </motion.button>
               );
@@ -771,14 +718,14 @@ const Index = () => {
           </div>
 
           {/* Stats Grid - Using StatCard Component */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
               title="Active Projects"
               value={stats.projectsCount}
               subtitle="Total projects"
               trend={10}
               icon={FolderKanban}
-              color="teal"
+              color="cyan"
               isLoading={isLoading}
               delay={0}
             />
@@ -788,7 +735,7 @@ const Index = () => {
               subtitle="Paid invoices"
               trend={25}
               icon={DollarSign}
-              color="gold"
+              color="orange"
               isLoading={isLoading}
               delay={0.1}
             />
@@ -798,7 +745,7 @@ const Index = () => {
               subtitle="Active clients"
               trend={5}
               icon={Users}
-              color="navy"
+              color="green"
               isLoading={isLoading}
               delay={0.2}
             />
@@ -840,31 +787,31 @@ const Index = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
-              className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden"
+              className="bg-white border border-[rgba(15,23,42,0.06)] rounded-md overflow-hidden"
             >
-              <div className="p-6 border-b border-slate-100 dark:border-slate-700">
+              <div className="p-6 border-b border-[rgba(15,23,42,0.06)]">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#23D3EE]/10 flex items-center justify-center">
-                      <Zap size={18} className="text-[#23D3EE]" />
+                    <div className="w-10 h-10 rounded-md bg-[#0891B2]/10 flex items-center justify-center">
+                      <Zap size={18} className="text-[#0891B2]" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-[#0F172A] dark:text-white">
+                      <h3 className="font-semibold text-[#0F172A]">
                         Recent Activity
                       </h3>
-                      <p className="text-xs text-slate-400">Latest updates</p>
+                      <p className="text-xs text-[#475569]">Latest updates</p>
                     </div>
                   </div>
                   <button
                     onClick={() => navigate("/activity")}
-                    className="text-sm text-[#23D3EE] font-medium hover:underline"
+                    className="text-sm text-[#0891B2] font-medium hover:underline"
                   >
                     View All
                   </button>
                 </div>
               </div>
 
-              <div className="divide-y divide-slate-100 dark:divide-slate-700">
+              <div className="divide-y divide-[rgba(15,23,42,0.06)]">
                 {recentActivity.map((activity, index) => {
                   const colors = getColorClasses(activity.color);
                   return (
@@ -873,22 +820,22 @@ const Index = () => {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.1 * index }}
-                      className="p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer group"
+                      className="p-4 hover:bg-white transition-colors cursor-pointer group"
                     >
                       <div className="flex items-start gap-3">
                         <div
                           className={cn(
-                            "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
+                            "w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0",
                             colors.light
                           )}
                         >
                           <activity.icon size={18} className={colors.text} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm text-[#0F172A] dark:text-white group-hover:text-[#23D3EE] transition-colors">
+                          <p className="text-sm text-[#0F172A] group-hover:text-[#0891B2] transition-colors">
                             {activity.message}
                           </p>
-                          <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
+                          <p className="text-xs text-[#475569] mt-1 flex items-center gap-1">
                             <Clock size={10} />
                             {activity.time}
                           </p>
@@ -913,32 +860,32 @@ const Index = () => {
         </div>
 
         {/* Footer */}
-        <footer className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-slate-400">
+        <footer className="px-6 py-4 bg-[#F8FAFC] border-b border-[rgba(15,23,42,0.06)]">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-[#94A3B8]">
             <div className="flex items-center gap-2">
               <span>© {new Date().getFullYear()}</span>
-              <span className="font-semibold text-[#0F172A] dark:text-white">
-                Yoursoft
+              <span className="font-semibold text-[#0F172A]">
+                ZODO
               </span>
-              <span className="text-[#23D3EE] font-semibold">Digital</span>
+              <span className="text-[#0891B2] font-semibold">CRM</span>
               <span>• All rights reserved</span>
             </div>
             <div className="flex items-center gap-4">
               <a
                 href="#"
-                className="hover:text-[#23D3EE] transition-colors"
+                className="hover:text-[#0891B2] transition-colors"
               >
                 Privacy
               </a>
               <a
                 href="#"
-                className="hover:text-[#23D3EE] transition-colors"
+                className="hover:text-[#0891B2] transition-colors"
               >
                 Terms
               </a>
               <a
                 href="#"
-                className="hover:text-[#23D3EE] transition-colors"
+                className="hover:text-[#0891B2] transition-colors"
               >
                 Support
               </a>
@@ -956,7 +903,7 @@ const Index = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 bg-black/60 backdrop-blur-md"
             onClick={() => setShowSearchModal(false)}
           >
             <motion.div
@@ -964,28 +911,28 @@ const Index = () => {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -20, scale: 0.95 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-2xl bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden"
+              className="w-full max-w-2xl bg-white border border-[rgba(15,23,42,0.06)] card-shadow rounded-md overflow-hidden"
             >
-              <div className="flex items-center gap-3 p-4 border-b border-slate-200 dark:border-slate-700">
-                <Search size={20} className="text-slate-400" />
+              <div className="flex items-center gap-3 p-4 border-b border-[rgba(15,23,42,0.06)]">
+                <Search size={20} className="text-[#475569]" />
                 <input
                   ref={searchInputRef}
                   type="text"
                   placeholder="Search projects, clients, invoices..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex-1 bg-transparent text-lg text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none"
+                  className="flex-1 bg-transparent text-lg text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none"
                 />
                 <button
                   onClick={() => setShowSearchModal(false)}
-                  className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 transition-colors"
+                  className="p-1.5 rounded-md hover:bg-[#F1F5F9] text-[#475569] transition-colors"
                 >
                   <X size={18} />
                 </button>
               </div>
 
               <div className="p-4">
-                <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-3">
+                <p className="text-xs font-medium text-[#475569] uppercase tracking-wider mb-3">
                   Quick Actions
                 </p>
                 <div className="space-y-1">
@@ -998,27 +945,27 @@ const Index = () => {
                           handleQuickAction(action.path);
                           setShowSearchModal(false);
                         }}
-                        className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors group"
+                        className="w-full flex items-center gap-3 p-3 rounded-md hover:bg-white transition-colors group"
                       >
                         <div
                           className={cn(
-                            "w-10 h-10 rounded-lg flex items-center justify-center",
+                            "w-10 h-10 rounded-md flex items-center justify-center",
                             colors.light
                           )}
                         >
                           <action.icon size={18} className={colors.text} />
                         </div>
                         <div className="text-left">
-                          <p className="text-sm font-medium text-[#0F172A] dark:text-white group-hover:text-[#23D3EE] transition-colors">
+                          <p className="text-sm font-medium text-[#0F172A] group-hover:text-[#0891B2] transition-colors">
                             {action.title}
                           </p>
-                          <p className="text-xs text-slate-400">
+                          <p className="text-xs text-[#475569]">
                             {action.description}
                           </p>
                         </div>
                         <ArrowUpRight
                           size={14}
-                          className="ml-auto text-slate-300 group-hover:text-[#23D3EE] transition-colors"
+                          className="ml-auto text-[#94A3B8] group-hover:text-[#0891B2] transition-colors"
                         />
                       </button>
                     );
@@ -1026,23 +973,23 @@ const Index = () => {
                 </div>
               </div>
 
-              <div className="px-4 py-3 bg-slate-50 dark:bg-slate-700/50 border-t border-slate-200 dark:border-slate-700">
-                <div className="flex items-center justify-between text-xs text-slate-400">
+              <div className="px-4 py-3 bg-white border-t border-[rgba(15,23,42,0.06)]">
+                <div className="flex items-center justify-between text-xs text-[#475569]">
                   <div className="flex items-center gap-4">
                     <span className="flex items-center gap-1">
-                      <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 font-mono">
+                      <kbd className="px-1.5 py-0.5 rounded bg-[#F1F5F9] border border-[rgba(15,23,42,0.06)] font-mono">
                         ↵
                       </kbd>
                       to select
                     </span>
                     <span className="flex items-center gap-1">
-                      <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 font-mono">
+                      <kbd className="px-1.5 py-0.5 rounded bg-[#F1F5F9] border border-[rgba(15,23,42,0.06)] font-mono">
                         esc
                       </kbd>
                       to close
                     </span>
                   </div>
-                  <span>Powered by Yoursoft Digital</span>
+                  <span>Powered by ZODO CRM</span>
                 </div>
               </div>
             </motion.div>

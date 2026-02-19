@@ -162,7 +162,7 @@ export default function NewAppointmentModal({ apiBase, onClose }: { apiBase: str
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="w-[760px] max-w-full bg-white rounded p-6 shadow-lg">
+      <div className="w-[760px] max-w-full bg-white rounded p-6 card-shadow">
         <h3 className="text-lg font-semibold mb-4">New Appointment</h3>
 
         {loading ? (
@@ -207,7 +207,7 @@ export default function NewAppointmentModal({ apiBase, onClose }: { apiBase: str
 
             <div className="col-span-2 flex justify-end gap-2 mt-3">
               <button className="px-4 py-2 border rounded" onClick={onClose} disabled={saving}>Cancel</button>
-              <button className="px-4 py-2 bg-primary text-white rounded" onClick={handleSave} disabled={saving}>
+              <button className="px-4 py-2 bg-primary text-[#0F172A] rounded" onClick={handleSave} disabled={saving}>
                 {saving ? "Saving..." : "Create Appointment"}
               </button>
             </div>

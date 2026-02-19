@@ -119,7 +119,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold text-gray-900">
+          <DialogTitle className="text-xl font-semibold text-[#0F172A]">
             {editingEmployee ? 'Edit Employee' : 'Add New Employee'}
           </DialogTitle>
         </DialogHeader>
@@ -138,9 +138,9 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
                 {/* Avatar Upload */}
                 <div className="flex justify-center">
                   <div className="relative">
-                    <Avatar className="w-24 h-24 border-4 border-gray-100">
+                    <Avatar className="w-24 h-24 border-4 border-[rgba(15,23,42,0.06)]">
                       <AvatarImage src="" />
-                      <AvatarFallback className="bg-[#23D3EE]/10 text-[#23D3EE] text-2xl">
+                      <AvatarFallback className="bg-[#0891B2]/10 text-[#0891B2] text-2xl">
                         <User className="w-10 h-10" />
                       </AvatarFallback>
                     </Avatar>
@@ -164,7 +164,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
                         <FormLabel>First Name</FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
                             <Input {...field} className="pl-10" placeholder="John" />
                           </div>
                         </FormControl>
@@ -196,7 +196,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
                       <FormLabel>Email</FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
                           <Input {...field} className="pl-10" placeholder="john.doe@company.com" />
                         </div>
                       </FormControl>
@@ -213,7 +213,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
                       <FormLabel>Phone</FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
                           <Input {...field} className="pl-10" placeholder="+1 (555) 123-4567" />
                         </div>
                       </FormControl>
@@ -251,7 +251,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
                       <FormLabel>Position</FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
                           <Input {...field} className="pl-10" placeholder="Senior Developer" />
                         </div>
                       </FormControl>
@@ -269,7 +269,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <Building2 className="w-4 h-4 text-gray-400 mr-2" />
+                            <Building2 className="w-4 h-4 text-[#94A3B8] mr-2" />
                             <SelectValue placeholder="Select department" />
                           </SelectTrigger>
                         </FormControl>
@@ -345,7 +345,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
                         <FormLabel>Join Date</FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
                             <Input {...field} type="date" className="pl-10" />
                           </div>
                         </FormControl>
@@ -362,7 +362,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
                         <FormLabel>Annual Salary</FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
                             <Input {...field} type="number" className="pl-10" placeholder="75000" />
                           </div>
                         </FormControl>
@@ -382,7 +382,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
                       <FormLabel>Street Address</FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
                           <Input {...field} className="pl-10" placeholder="123 Main Street" />
                         </div>
                       </FormControl>
@@ -453,7 +453,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
               </TabsContent>
 
               <TabsContent value="emergency" className="space-y-4 mt-4">
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+                <div className="bg-amber-50 border border-amber-200 rounded-md p-4 mb-4">
                   <p className="text-sm text-amber-800">
                     Emergency contact information is important for workplace safety. 
                     Please provide accurate details.
@@ -496,7 +496,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
                       <FormLabel>Phone Number</FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
                           <Input {...field} className="pl-10" placeholder="+1 (555) 987-6543" />
                         </div>
                       </FormControl>
@@ -517,7 +517,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
               </Button>
               <Button 
                 type="submit"
-                className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white"
+                className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white"
               >
                 {editingEmployee ? 'Update Employee' : 'Add Employee'}
               </Button>

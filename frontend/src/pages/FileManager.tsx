@@ -158,8 +158,8 @@ interface StorageInfo {
 // ============================================
 
 const folderColors = [
-  { id: "default", color: "#23D3EE", name: "Teal" },
-  { id: "gold", color: "#FBBF23", name: "Gold" },
+  { id: "default", color: "#22D3EE", name: "Teal" },
+  { id: "gold", color: "#FBBF24", name: "Gold" },
   { id: "blue", color: "#3B82F6", name: "Blue" },
   { id: "purple", color: "#8B5CF6", name: "Purple" },
   { id: "pink", color: "#EC4899", name: "Pink" },
@@ -172,7 +172,7 @@ const tags = [
   { id: "important", name: "Important", color: "#EF4444" },
   { id: "work", name: "Work", color: "#3B82F6" },
   { id: "personal", name: "Personal", color: "#8B5CF6" },
-  { id: "client", name: "Client", color: "#23D3EE" },
+  { id: "client", name: "Client", color: "#22D3EE" },
   { id: "archive", name: "Archive", color: "#6B7280" },
 ];
 
@@ -192,7 +192,7 @@ const initialFolders: FileItem[] = [
     starred: true,
     tags: ["work"],
     path: "/Projects",
-    color: "#23D3EE",
+    color: "#22D3EE",
     filesCount: 45,
   },
   {
@@ -209,7 +209,7 @@ const initialFolders: FileItem[] = [
     starred: false,
     tags: ["client", "important"],
     path: "/Clients",
-    color: "#FBBF23",
+    color: "#FBBF24",
     filesCount: 12,
   },
   {
@@ -490,7 +490,7 @@ const getFileTypeColor = (fileType?: string): string => {
     case "archive":
       return "#6B7280";
     default:
-      return "#23D3EE";
+      return "#22D3EE";
   }
 };
 
@@ -535,12 +535,12 @@ const StatCard = ({
   delay?: number;
 }) => {
   const colorClasses = {
-    teal: { bg: "bg-[#23D3EE]", light: "bg-[#23D3EE]/10", text: "text-[#23D3EE]" },
-    gold: { bg: "bg-[#FBBF23]", light: "bg-[#FBBF23]/10", text: "text-[#FBBF23]" },
-    navy: { bg: "bg-[#0F172A]", light: "bg-[#0F172A]/10", text: "text-[#0F172A]" },
+    teal: { bg: "bg-[#0891B2]", light: "bg-[#0891B2]/10", text: "text-[#0891B2]" },
+    gold: { bg: "bg-[#D97706]", light: "bg-[#D97706]/10", text: "text-[#D97706]" },
+    navy: { bg: "bg-[#F8FAFC]", light: "bg-[#F8FAFC]/10", text: "text-[#0F172A]" },
     purple: { bg: "bg-purple-500", light: "bg-purple-500/10", text: "text-purple-500" },
     green: { bg: "bg-green-500", light: "bg-green-500/10", text: "text-green-500" },
-    blue: { bg: "bg-blue-500", light: "bg-blue-500/10", text: "text-blue-500" },
+    blue: { bg: "bg-[#0891B2]", light: "bg-[#0891B2]/10", text: "text-blue-500" },
   };
 
   const colors = colorClasses[color];
@@ -551,13 +551,13 @@ const StatCard = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
       whileHover={{ y: -4 }}
-      className="relative bg-white rounded-2xl p-5 border border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5 transition-all overflow-hidden group"
+      className="relative bg-white rounded-md p-5 border border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg  transition-all overflow-hidden group"
     >
       <div className={cn("absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-10 group-hover:opacity-20 transition-all", colors.bg)} />
 
       <div className="relative flex items-start justify-between">
         <div>
-          <p className="text-sm text-slate-500 mb-1">{title}</p>
+          <p className="text-sm text-[#94A3B8] mb-1">{title}</p>
           <div className="flex items-baseline gap-2">
             <p className="text-2xl font-bold text-[#0F172A]">{value}</p>
             {trend && (
@@ -570,9 +570,9 @@ const StatCard = ({
               </span>
             )}
           </div>
-          <p className="text-xs text-slate-400 mt-1">{subtitle}</p>
+          <p className="text-xs text-[#475569] mt-1">{subtitle}</p>
         </div>
-        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", colors.light)}>
+        <div className={cn("w-10 h-10 rounded-md flex items-center justify-center", colors.light)}>
           <Icon size={18} className={colors.text} />
         </div>
       </div>
@@ -614,10 +614,10 @@ const FolderCard = ({
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay }}
         className={cn(
-          "flex items-center gap-4 p-4 rounded-xl border transition-all cursor-pointer group",
+          "flex items-center gap-4 p-4 rounded-md border transition-all cursor-pointer group",
           isSelected
-            ? "bg-[#23D3EE]/5 border-[#23D3EE]"
-            : "bg-white border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-lg hover:shadow-[#23D3EE]/5"
+            ? "bg-[#0891B2]/5 border-[#22D3EE]"
+            : "bg-white border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg "
         )}
         onClick={onOpen}
       >
@@ -625,12 +625,12 @@ const FolderCard = ({
           <Checkbox
             checked={isSelected}
             onCheckedChange={onSelect}
-            className="data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
+            className="data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
           />
         </div>
 
         <div
-          className="w-12 h-12 rounded-xl flex items-center justify-center"
+          className="w-12 h-12 rounded-md flex items-center justify-center"
           style={{ backgroundColor: `${folder.color}20` }}
         >
           <Folder size={24} style={{ color: folder.color }} />
@@ -638,48 +638,48 @@ const FolderCard = ({
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-[#0F172A] truncate group-hover:text-[#23D3EE] transition-colors">
+            <h3 className="font-semibold text-[#0F172A] truncate group-hover:text-[#0891B2] transition-colors">
               {folder.name}
             </h3>
-            {folder.starred && <Star size={14} className="text-[#FBBF23] fill-[#FBBF23]" />}
+            {folder.starred && <Star size={14} className="text-[#D97706] fill-[#FBBF24]" />}
             {folder.shared && (
-              <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-600 text-xs">Shared</span>
+              <span className="px-2 py-0.5 rounded-md bg-blue-50 text-[#0891B2] text-xs">Shared</span>
             )}
           </div>
-          <p className="text-sm text-slate-500">{folder.filesCount} files • {folder.sizeFormatted}</p>
+          <p className="text-sm text-[#94A3B8]">{folder.filesCount} files • {folder.sizeFormatted}</p>
         </div>
 
-        <div className="text-sm text-slate-400">{folder.modified}</div>
+        <div className="text-sm text-[#475569]">{folder.modified}</div>
 
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={onStar}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" onClick={onStar}>
             {folder.starred ? (
-              <Star size={16} className="text-[#FBBF23] fill-[#FBBF23]" />
+              <Star size={16} className="text-[#D97706] fill-[#FBBF24]" />
             ) : (
-              <StarOff size={16} className="text-slate-400" />
+              <StarOff size={16} className="text-[#475569]" />
             )}
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
-                <MoreVertical size={16} className="text-slate-400" />
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md">
+                <MoreVertical size={16} className="text-[#475569]" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 rounded-xl">
-              <DropdownMenuItem onClick={onOpen} className="rounded-lg">
+            <DropdownMenuContent align="end" className="w-48 rounded-md">
+              <DropdownMenuItem onClick={onOpen} className="rounded-md">
                 <FolderOpen size={14} className="mr-2" /> Open
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onShare} className="rounded-lg">
+              <DropdownMenuItem onClick={onShare} className="rounded-md">
                 <Share2 size={14} className="mr-2" /> Share
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onRename} className="rounded-lg">
+              <DropdownMenuItem onClick={onRename} className="rounded-md">
                 <Pencil size={14} className="mr-2" /> Rename
               </DropdownMenuItem>
-              <DropdownMenuItem className="rounded-lg">
+              <DropdownMenuItem className="rounded-md">
                 <Move size={14} className="mr-2" /> Move to
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onDelete} className="rounded-lg text-red-600 focus:text-red-600">
+              <DropdownMenuItem onClick={onDelete} className="rounded-md text-red-600 focus:text-red-600">
                 <Trash2 size={14} className="mr-2" /> Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -696,10 +696,10 @@ const FolderCard = ({
       transition={{ delay }}
       whileHover={{ y: -4 }}
       className={cn(
-        "relative bg-white rounded-2xl p-5 border transition-all cursor-pointer group",
+        "relative bg-white rounded-md p-5 border transition-all cursor-pointer group",
         isSelected
-          ? "border-[#23D3EE] ring-2 ring-[#23D3EE]/20"
-          : "border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5"
+          ? "border-[#22D3EE] ring-2 ring-[#22D3EE]/20"
+          : "border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg "
       )}
       onClick={onOpen}
     >
@@ -711,7 +711,7 @@ const FolderCard = ({
         <Checkbox
           checked={isSelected}
           onCheckedChange={onSelect}
-          className="data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
+          className="data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
         />
       </div>
 
@@ -722,25 +722,25 @@ const FolderCard = ({
       >
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg bg-white/80 backdrop-blur-sm">
-              <MoreHorizontal size={16} className="text-slate-400" />
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md bg-white/80 backdrop-blur-sm">
+              <MoreHorizontal size={16} className="text-[#475569]" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48 rounded-xl">
-            <DropdownMenuItem onClick={onOpen} className="rounded-lg">
+          <DropdownMenuContent align="end" className="w-48 rounded-md">
+            <DropdownMenuItem onClick={onOpen} className="rounded-md">
               <FolderOpen size={14} className="mr-2" /> Open
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={onShare} className="rounded-lg">
+            <DropdownMenuItem onClick={onShare} className="rounded-md">
               <Share2 size={14} className="mr-2" /> Share
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={onRename} className="rounded-lg">
+            <DropdownMenuItem onClick={onRename} className="rounded-md">
               <Pencil size={14} className="mr-2" /> Rename
             </DropdownMenuItem>
-            <DropdownMenuItem className="rounded-lg">
+            <DropdownMenuItem className="rounded-md">
               <Move size={14} className="mr-2" /> Move to
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onDelete} className="rounded-lg text-red-600 focus:text-red-600">
+            <DropdownMenuItem onClick={onDelete} className="rounded-md text-red-600 focus:text-red-600">
               <Trash2 size={14} className="mr-2" /> Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -750,7 +750,7 @@ const FolderCard = ({
       {/* Folder Icon */}
       <div className="flex items-center justify-between mb-4">
         <div
-          className="w-14 h-14 rounded-xl flex items-center justify-center"
+          className="w-14 h-14 rounded-md flex items-center justify-center"
           style={{ backgroundColor: `${folder.color}15` }}
         >
           <Folder size={28} style={{ color: folder.color }} />
@@ -760,24 +760,24 @@ const FolderCard = ({
             e.stopPropagation();
             onStar();
           }}
-          className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+          className="p-2 rounded-md hover:bg-white/10 transition-colors"
         >
           {folder.starred ? (
-            <Star size={18} className="text-[#FBBF23] fill-[#FBBF23]" />
+            <Star size={18} className="text-[#D97706] fill-[#FBBF24]" />
           ) : (
-            <Star size={18} className="text-slate-300 group-hover:text-slate-400" />
+            <Star size={18} className="text-[#475569] group-hover:text-[#475569]" />
           )}
         </button>
       </div>
 
       {/* Folder Info */}
       <div>
-        <h3 className="font-semibold text-[#0F172A] truncate group-hover:text-[#23D3EE] transition-colors mb-1">
+        <h3 className="font-semibold text-[#0F172A] truncate group-hover:text-[#0891B2] transition-colors mb-1">
           {folder.name}
         </h3>
-        <p className="text-sm text-slate-500">{folder.filesCount} files</p>
-        <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
-          <span className="text-xs text-slate-400">{folder.sizeFormatted}</span>
+        <p className="text-sm text-[#94A3B8]">{folder.filesCount} files</p>
+        <div className="flex items-center justify-between mt-3 pt-3 border-t border-[rgba(15,23,42,0.06)]">
+          <span className="text-xs text-[#475569]">{folder.sizeFormatted}</span>
           <div className="flex items-center gap-1">
             {folder.shared && (
               <span className="p-1 rounded bg-blue-50">
@@ -848,10 +848,10 @@ const FileCard = ({
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay }}
         className={cn(
-          "flex items-center gap-4 p-4 rounded-xl border transition-all cursor-pointer group",
+          "flex items-center gap-4 p-4 rounded-md border transition-all cursor-pointer group",
           isSelected
-            ? "bg-[#23D3EE]/5 border-[#23D3EE]"
-            : "bg-white border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-lg hover:shadow-[#23D3EE]/5"
+            ? "bg-[#0891B2]/5 border-[#22D3EE]"
+            : "bg-white border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg "
         )}
         onClick={onOpen}
       >
@@ -859,7 +859,7 @@ const FileCard = ({
           <Checkbox
             checked={isSelected}
             onCheckedChange={onSelect}
-            className="data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
+            className="data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
           />
         </div>
 
@@ -867,11 +867,11 @@ const FileCard = ({
           <img
             src={file.thumbnail}
             alt={file.name}
-            className="w-12 h-12 rounded-xl object-cover"
+            className="w-12 h-12 rounded-md object-cover"
           />
         ) : (
           <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center"
+            className="w-12 h-12 rounded-md flex items-center justify-center"
             style={{ backgroundColor: `${iconColor}15` }}
           >
             <Icon size={24} style={{ color: iconColor }} />
@@ -880,52 +880,52 @@ const FileCard = ({
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h3 className="font-medium text-[#0F172A] truncate group-hover:text-[#23D3EE] transition-colors">
+            <h3 className="font-medium text-[#0F172A] truncate group-hover:text-[#0891B2] transition-colors">
               {file.name}
             </h3>
-            {file.starred && <Star size={14} className="text-[#FBBF23] fill-[#FBBF23]" />}
+            {file.starred && <Star size={14} className="text-[#D97706] fill-[#FBBF24]" />}
           </div>
-          <p className="text-sm text-slate-500">{file.fileType?.toUpperCase()} • {file.sizeFormatted}</p>
+          <p className="text-sm text-[#94A3B8]">{file.fileType?.toUpperCase()} • {file.sizeFormatted}</p>
         </div>
 
-        <div className="text-sm text-slate-400">{file.modified}</div>
-        <div className="text-sm text-slate-400">{file.owner}</div>
+        <div className="text-sm text-[#475569]">{file.modified}</div>
+        <div className="text-sm text-[#475569]">{file.owner}</div>
 
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={onDownload}>
-            <Download size={16} className="text-slate-400" />
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" onClick={onDownload}>
+            <Download size={16} className="text-[#475569]" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={onStar}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" onClick={onStar}>
             {file.starred ? (
-              <Star size={16} className="text-[#FBBF23] fill-[#FBBF23]" />
+              <Star size={16} className="text-[#D97706] fill-[#FBBF24]" />
             ) : (
-              <StarOff size={16} className="text-slate-400" />
+              <StarOff size={16} className="text-[#475569]" />
             )}
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
-                <MoreVertical size={16} className="text-slate-400" />
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md">
+                <MoreVertical size={16} className="text-[#475569]" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 rounded-xl">
-              <DropdownMenuItem onClick={onOpen} className="rounded-lg">
+            <DropdownMenuContent align="end" className="w-48 rounded-md">
+              <DropdownMenuItem onClick={onOpen} className="rounded-md">
                 <Eye size={14} className="mr-2" /> Preview
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onDownload} className="rounded-lg">
+              <DropdownMenuItem onClick={onDownload} className="rounded-md">
                 <Download size={14} className="mr-2" /> Download
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onShare} className="rounded-lg">
+              <DropdownMenuItem onClick={onShare} className="rounded-md">
                 <Share2 size={14} className="mr-2" /> Share
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onRename} className="rounded-lg">
+              <DropdownMenuItem onClick={onRename} className="rounded-md">
                 <Pencil size={14} className="mr-2" /> Rename
               </DropdownMenuItem>
-              <DropdownMenuItem className="rounded-lg">
+              <DropdownMenuItem className="rounded-md">
                 <Move size={14} className="mr-2" /> Move to
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onDelete} className="rounded-lg text-red-600 focus:text-red-600">
+              <DropdownMenuItem onClick={onDelete} className="rounded-md text-red-600 focus:text-red-600">
                 <Trash2 size={14} className="mr-2" /> Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -942,15 +942,15 @@ const FileCard = ({
       transition={{ delay }}
       whileHover={{ y: -4 }}
       className={cn(
-        "relative bg-white rounded-2xl border overflow-hidden transition-all cursor-pointer group",
+        "relative bg-white rounded-md border overflow-hidden transition-all cursor-pointer group",
         isSelected
-          ? "border-[#23D3EE] ring-2 ring-[#23D3EE]/20"
-          : "border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5"
+          ? "border-[#22D3EE] ring-2 ring-[#22D3EE]/20"
+          : "border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg "
       )}
       onClick={onOpen}
     >
       {/* Thumbnail/Preview */}
-      <div className="relative h-32 bg-slate-50 flex items-center justify-center">
+      <div className="relative h-32 bg-[#F8FAFC] flex items-center justify-center">
         {file.thumbnail ? (
           <img
             src={file.thumbnail}
@@ -969,7 +969,7 @@ const FileCard = ({
           <Checkbox
             checked={isSelected}
             onCheckedChange={onSelect}
-            className="data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE] bg-white"
+            className="data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE] bg-white"
           />
         </div>
 
@@ -981,36 +981,36 @@ const FileCard = ({
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 rounded-lg bg-white/90 backdrop-blur-sm hover:bg-white"
+            className="h-8 w-8 rounded-md bg-white/90 backdrop-blur-sm hover:bg-white"
             onClick={onDownload}
           >
-            <Download size={14} className="text-slate-600" />
+            <Download size={14} className="text-[#475569]" />
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 rounded-lg bg-white/90 backdrop-blur-sm hover:bg-white"
+                className="h-8 w-8 rounded-md bg-white/90 backdrop-blur-sm hover:bg-white"
               >
-                <MoreHorizontal size={14} className="text-slate-600" />
+                <MoreHorizontal size={14} className="text-[#475569]" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 rounded-xl">
-              <DropdownMenuItem onClick={onOpen} className="rounded-lg">
+            <DropdownMenuContent align="end" className="w-48 rounded-md">
+              <DropdownMenuItem onClick={onOpen} className="rounded-md">
                 <Eye size={14} className="mr-2" /> Preview
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onDownload} className="rounded-lg">
+              <DropdownMenuItem onClick={onDownload} className="rounded-md">
                 <Download size={14} className="mr-2" /> Download
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onShare} className="rounded-lg">
+              <DropdownMenuItem onClick={onShare} className="rounded-md">
                 <Share2 size={14} className="mr-2" /> Share
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onRename} className="rounded-lg">
+              <DropdownMenuItem onClick={onRename} className="rounded-md">
                 <Pencil size={14} className="mr-2" /> Rename
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onDelete} className="rounded-lg text-red-600 focus:text-red-600">
+              <DropdownMenuItem onClick={onDelete} className="rounded-md text-red-600 focus:text-red-600">
                 <Trash2 size={14} className="mr-2" /> Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -1020,7 +1020,7 @@ const FileCard = ({
         {/* File Type Badge */}
         <div className="absolute bottom-3 left-3">
           <span
-            className="px-2 py-1 rounded-lg text-xs font-semibold text-white"
+            className="px-2 py-1 rounded-md text-xs font-semibold text-[#0F172A]"
             style={{ backgroundColor: iconColor }}
           >
             {file.fileType?.toUpperCase()}
@@ -1031,7 +1031,7 @@ const FileCard = ({
       {/* File Info */}
       <div className="p-4">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-medium text-[#0F172A] truncate group-hover:text-[#23D3EE] transition-colors flex-1">
+          <h3 className="font-medium text-[#0F172A] truncate group-hover:text-[#0891B2] transition-colors flex-1">
             {file.name}
           </h3>
           <button
@@ -1042,15 +1042,15 @@ const FileCard = ({
             className="flex-shrink-0"
           >
             {file.starred ? (
-              <Star size={16} className="text-[#FBBF23] fill-[#FBBF23]" />
+              <Star size={16} className="text-[#D97706] fill-[#FBBF24]" />
             ) : (
-              <Star size={16} className="text-slate-300 hover:text-slate-400" />
+              <Star size={16} className="text-[#475569] hover:text-[#475569]" />
             )}
           </button>
         </div>
         <div className="flex items-center justify-between mt-2">
-          <span className="text-xs text-slate-400">{file.sizeFormatted}</span>
-          <span className="text-xs text-slate-400">{file.modified}</span>
+          <span className="text-xs text-[#475569]">{file.sizeFormatted}</span>
+          <span className="text-xs text-[#475569]">{file.modified}</span>
         </div>
       </div>
     </motion.div>
@@ -1079,22 +1079,22 @@ const UploadProgress = ({
       initial={{ opacity: 0, y: 100 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 100 }}
-      className="fixed bottom-6 right-6 w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden z-50"
+      className="fixed bottom-6 right-6 w-96 bg-white rounded-md card-shadow border border-[rgba(15,23,42,0.06)] overflow-hidden z-50"
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-gradient-to-r from-[#23D3EE]/10 to-transparent">
+      <div className="flex items-center justify-between p-4 border-b border-[rgba(15,23,42,0.06)] bg-[#F0FDFA]">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#23D3EE]/10 flex items-center justify-center">
-            <CloudUpload size={20} className="text-[#23D3EE]" />
+          <div className="w-10 h-10 rounded-md bg-[#0891B2]/10 flex items-center justify-center">
+            <CloudUpload size={20} className="text-[#0891B2]" />
           </div>
           <div>
             <h3 className="font-semibold text-[#0F172A]">
               {allCompleted ? "Upload Complete" : "Uploading Files"}
             </h3>
-            <p className="text-xs text-slate-500">{files.length} file(s)</p>
+            <p className="text-xs text-[#94A3B8]">{files.length} file(s)</p>
           </div>
         </div>
-        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={onClose}>
+        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" onClick={onClose}>
           <X size={16} />
         </Button>
       </div>
@@ -1103,8 +1103,8 @@ const UploadProgress = ({
       <div className="max-h-64 overflow-y-auto p-4 space-y-3">
         {files.map((file) => (
           <div key={file.id} className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
-              <FileText size={18} className="text-slate-500" />
+            <div className="w-10 h-10 rounded-md bg-white/5 flex items-center justify-center">
+              <FileText size={18} className="text-[#94A3B8]" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-[#0F172A] truncate">{file.name}</p>
@@ -1112,7 +1112,7 @@ const UploadProgress = ({
                 {file.status === "uploading" && (
                   <>
                     <Progress value={file.progress} className="h-1.5 flex-1" />
-                    <span className="text-xs text-slate-500">{file.progress}%</span>
+                    <span className="text-xs text-[#94A3B8]">{file.progress}%</span>
                   </>
                 )}
                 {file.status === "completed" && (
@@ -1133,7 +1133,7 @@ const UploadProgress = ({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 rounded-lg"
+                className="h-8 w-8 rounded-md"
                 onClick={() => onCancel(file.id)}
               >
                 <X size={14} />
@@ -1174,11 +1174,11 @@ const CreateFolderDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px] p-0 rounded-2xl overflow-hidden">
-        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#23D3EE]/10 to-transparent">
+      <DialogContent className="sm:max-w-[425px] p-0 rounded-md overflow-hidden">
+        <div className="p-6 border-b border-[rgba(15,23,42,0.06)] bg-[#F0FDFA]">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-[#0F172A]">Create New Folder</DialogTitle>
-            <DialogDescription className="text-slate-500">
+            <DialogDescription className="text-[#94A3B8]">
               Add a new folder to organize your files
             </DialogDescription>
           </DialogHeader>
@@ -1186,21 +1186,21 @@ const CreateFolderDialog = ({
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-600">Folder Name</Label>
+            <Label className="text-sm font-medium text-[#475569]">Folder Name</Label>
             <div className="relative">
               <Folder size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: selectedColor }} />
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Enter folder name..."
-                className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
+                className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
                 autoFocus
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-600">Folder Color</Label>
+            <Label className="text-sm font-medium text-[#475569]">Folder Color</Label>
             <div className="flex flex-wrap gap-2">
               {folderColors.map((color) => (
                 <button
@@ -1208,7 +1208,7 @@ const CreateFolderDialog = ({
                   type="button"
                   onClick={() => setSelectedColor(color.color)}
                   className={cn(
-                    "w-10 h-10 rounded-xl flex items-center justify-center transition-all",
+                    "w-10 h-10 rounded-md flex items-center justify-center transition-all",
                     selectedColor === color.color
                       ? "ring-2 ring-offset-2"
                       : "hover:scale-110"
@@ -1225,13 +1225,13 @@ const CreateFolderDialog = ({
           </div>
 
           <DialogFooter className="pt-4 gap-3">
-            <Button type="button" variant="outline" onClick={onClose} className="rounded-xl">
+            <Button type="button" variant="outline" onClick={onClose} className="rounded-md">
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={!name.trim()}
-              className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl"
+              className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
             >
               <FolderPlus size={16} className="mr-2" />
               Create Folder
@@ -1275,11 +1275,11 @@ const ShareDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px] p-0 rounded-2xl overflow-hidden">
-        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#23D3EE]/10 to-transparent">
+      <DialogContent className="sm:max-w-[500px] p-0 rounded-md overflow-hidden">
+        <div className="p-6 border-b border-[rgba(15,23,42,0.06)] bg-[#F0FDFA]">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-[#0F172A]">Share "{item.name}"</DialogTitle>
-            <DialogDescription className="text-slate-500">
+            <DialogDescription className="text-[#94A3B8]">
               Share this {item.type} with others
             </DialogDescription>
           </DialogHeader>
@@ -1288,23 +1288,23 @@ const ShareDialog = ({
         <div className="p-6 space-y-5">
           {/* Share Link */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-600">Share Link</Label>
+            <Label className="text-sm font-medium text-[#475569]">Share Link</Label>
             <div className="flex gap-2">
               <div className="flex-1 relative">
-                <Link2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Link2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                 <Input
                   value={`https://crm.yoursoft.ca/files/${item.id}`}
                   readOnly
-                  className="h-11 pl-10 rounded-xl border-slate-200 bg-slate-50"
+                  className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]"
                 />
               </div>
               <Button
                 onClick={handleCopy}
                 className={cn(
-                  "rounded-xl h-11 px-4",
+                  "rounded-md h-11 px-4",
                   copied
                     ? "bg-green-500 hover:bg-green-500"
-                    : "bg-[#23D3EE] hover:bg-[#23D3EE]/90"
+                    : "bg-[#0891B2] hover:bg-[#0891B2]/90"
                 )}
               >
                 {copied ? <Check size={16} /> : <Copy size={16} />}
@@ -1314,7 +1314,7 @@ const ShareDialog = ({
 
           {/* Access Type */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-600">Access Type</Label>
+            <Label className="text-sm font-medium text-[#475569]">Access Type</Label>
             <div className="grid grid-cols-3 gap-3">
               {[
                 { id: "view", icon: Eye, label: "View Only" },
@@ -1325,14 +1325,14 @@ const ShareDialog = ({
                   key={option.id}
                   onClick={() => setAccessType(option.id)}
                   className={cn(
-                    "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all",
+                    "flex flex-col items-center gap-2 p-4 rounded-md border-2 transition-all",
                     accessType === option.id
-                      ? "border-[#23D3EE] bg-[#23D3EE]/5"
-                      : "border-slate-200 hover:border-slate-300"
+                      ? "border-[#22D3EE] bg-[#0891B2]/5"
+                      : "border-[rgba(15,23,42,0.06)] hover:border-slate-300"
                   )}
                 >
-                  <option.icon size={20} className={accessType === option.id ? "text-[#23D3EE]" : "text-slate-400"} />
-                  <span className={cn("text-xs font-medium", accessType === option.id ? "text-[#23D3EE]" : "text-slate-600")}>
+                  <option.icon size={20} className={accessType === option.id ? "text-[#0891B2]" : "text-[#475569]"} />
+                  <span className={cn("text-xs font-medium", accessType === option.id ? "text-[#0891B2]" : "text-[#475569]")}>
                     {option.label}
                   </span>
                 </button>
@@ -1342,18 +1342,18 @@ const ShareDialog = ({
 
           {/* Share with People */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-600">Share with People</Label>
+            <Label className="text-sm font-medium text-[#475569]">Share with People</Label>
             <div className="relative">
-              <Users size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Users size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
               <Input
                 placeholder="Enter email addresses..."
-                className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
+                className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
               />
             </div>
           </div>
 
           {/* Privacy Settings */}
-          <div className="p-4 rounded-xl bg-slate-50 space-y-3">
+          <div className="p-4 rounded-md bg-[#F8FAFC] space-y-3">
             <h4 className="text-sm font-medium text-[#0F172A]">Privacy Settings</h4>
             <div className="space-y-2">
               {[
@@ -1363,13 +1363,13 @@ const ShareDialog = ({
               ].map((option, index) => (
                 <label
                   key={index}
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-white cursor-pointer transition-colors"
+                  className="flex items-center gap-3 p-3 rounded-md hover:bg-white cursor-pointer transition-colors"
                 >
-                  <input type="radio" name="privacy" className="text-[#23D3EE]" defaultChecked={index === 0} />
-                  <option.icon size={18} className="text-slate-400" />
+                  <input type="radio" name="privacy" className="text-[#0891B2]" defaultChecked={index === 0} />
+                  <option.icon size={18} className="text-[#475569]" />
                   <div>
                     <p className="text-sm font-medium text-[#0F172A]">{option.label}</p>
-                    <p className="text-xs text-slate-500">{option.desc}</p>
+                    <p className="text-xs text-[#94A3B8]">{option.desc}</p>
                   </div>
                 </label>
               ))}
@@ -1378,10 +1378,10 @@ const ShareDialog = ({
         </div>
 
         <DialogFooter className="p-6 pt-0 gap-3">
-          <Button variant="outline" onClick={onClose} className="rounded-xl">
+          <Button variant="outline" onClick={onClose} className="rounded-md">
             Cancel
           </Button>
-          <Button className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl">
+          <Button className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md">
             <Share2 size={16} className="mr-2" />
             Share
           </Button>
@@ -1651,7 +1651,7 @@ const FileManagerPage = () => {
   const storagePercentage = Math.round((storageInfo.used / storageInfo.total) * 100);
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen bg-[#F8FAFC]">
       <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
 
       <main
@@ -1670,33 +1670,33 @@ const FileManagerPage = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 bg-[#23D3EE]/10 backdrop-blur-sm flex items-center justify-center"
+              className="fixed inset-0 z-50 bg-[#0891B2]/10 backdrop-blur-sm flex items-center justify-center"
             >
               <motion.div
                 initial={{ scale: 0.9 }}
                 animate={{ scale: 1 }}
-                className="bg-white rounded-3xl p-12 shadow-2xl border-2 border-dashed border-[#23D3EE] text-center"
+                className="bg-white rounded-3xl p-12 card-shadow border-2 border-dashed border-[#22D3EE] text-center"
               >
-                <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-[#23D3EE]/10 flex items-center justify-center">
-                  <CloudUpload size={40} className="text-[#23D3EE]" />
+                <div className="w-20 h-20 mx-auto mb-6 rounded-md bg-[#0891B2]/10 flex items-center justify-center">
+                  <CloudUpload size={40} className="text-[#0891B2]" />
                 </div>
                 <h2 className="text-2xl font-bold text-[#0F172A] mb-2">Drop files here</h2>
-                <p className="text-slate-500">Release to upload your files</p>
+                <p className="text-[#94A3B8]">Release to upload your files</p>
               </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
 
         {/* Header */}
-        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200">
+        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-[rgba(15,23,42,0.06)]">
           <div className="px-6 py-4">
             <div className="flex items-center justify-between">
               {/* Title & Breadcrumb */}
               <div>
-                <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
+                <div className="flex items-center gap-2 text-sm text-[#94A3B8] mb-1">
                   <span>Dashboard</span>
                   <ChevronRight size={14} />
-                  <span className="text-[#23D3EE] font-medium">File Manager</span>
+                  <span className="text-[#0891B2] font-medium">File Manager</span>
                 </div>
                 <h1 className="text-2xl font-bold text-[#0F172A]">File Manager</h1>
               </div>
@@ -1705,28 +1705,28 @@ const FileManagerPage = () => {
               <div className="flex items-center gap-3">
                 <Button
                   variant="outline"
-                  className="rounded-xl border-slate-200 hover:border-[#23D3EE] hover:text-[#23D3EE]"
+                  className="rounded-md border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE] hover:text-[#0891B2]"
                 >
                   <RefreshCw size={16} className="mr-2" />
                   Sync
                 </Button>
 
                 <div className="relative">
-                  <button className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors relative">
-                    <Bell size={20} className="text-slate-600" />
+                  <button className="p-2.5 rounded-md bg-white/5 hover:bg-slate-200 transition-colors relative">
+                    <Bell size={20} className="text-[#475569]" />
                     <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
                   </button>
                 </div>
 
-                <div className="flex items-center gap-3 pl-3 border-l border-slate-200">
-                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white font-bold shadow-lg shadow-[#23D3EE]/20">
+                <div className="flex items-center gap-3 pl-3 border-l border-[rgba(15,23,42,0.06)]">
+                  <div className="h-10 w-10 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] font-bold ">
                     SA
                   </div>
                   <div className="hidden sm:block">
                     <p className="text-sm font-semibold text-[#0F172A]">SAdmin</p>
-                    <p className="text-xs text-slate-500">Administrator</p>
+                    <p className="text-xs text-[#94A3B8]">Administrator</p>
                   </div>
-                  <ChevronDown size={16} className="text-slate-400" />
+                  <ChevronDown size={16} className="text-[#475569]" />
                 </div>
               </div>
             </div>
@@ -1735,11 +1735,11 @@ const FileManagerPage = () => {
 
         <div className="flex h-[calc(100vh-81px)]">
           {/* Left Sidebar */}
-          <aside className="w-72 border-r border-slate-200 bg-white p-5 flex flex-col">
+          <aside className="w-72 border-r border-[rgba(15,23,42,0.06)] bg-white p-5 flex flex-col">
             {/* Upload Button */}
             <Button
               onClick={handleUploadClick}
-              className="w-full h-12 bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl shadow-lg shadow-[#23D3EE]/20 mb-6"
+              className="w-full h-12 bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md  mb-6"
             >
               <Upload size={18} className="mr-2" />
               Upload Files
@@ -1756,7 +1756,7 @@ const FileManagerPage = () => {
             <Button
               variant="outline"
               onClick={() => setShowCreateFolder(true)}
-              className="w-full h-10 rounded-xl border-dashed border-slate-300 text-slate-600 hover:border-[#23D3EE] hover:text-[#23D3EE] hover:bg-[#23D3EE]/5 mb-6"
+              className="w-full h-10 rounded-md border-dashed border-slate-300 text-[#475569] hover:border-[#22D3EE] hover:text-[#0891B2] hover:bg-[#0891B2]/5 mb-6"
             >
               <FolderPlus size={16} className="mr-2" />
               New Folder
@@ -1776,22 +1776,22 @@ const FileManagerPage = () => {
                   whileHover={{ x: 4 }}
                   onClick={() => setActiveTab(item.id)}
                   className={cn(
-                    "w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all",
+                    "w-full flex items-center justify-between px-4 py-3 rounded-md transition-all",
                     activeTab === item.id
-                      ? "bg-[#23D3EE]/10 text-[#23D3EE]"
-                      : "text-slate-600 hover:bg-slate-50"
+                      ? "bg-[#0891B2]/10 text-[#0891B2]"
+                      : "text-[#475569] hover:bg-[#F8FAFC]"
                   )}
                 >
                   <div className="flex items-center gap-3">
-                    <item.icon size={18} className={activeTab === item.id ? "text-[#23D3EE]" : "text-slate-400"} />
+                    <item.icon size={18} className={activeTab === item.id ? "text-[#0891B2]" : "text-[#475569]"} />
                     <span className="font-medium">{item.label}</span>
                   </div>
                   {item.count !== null && (
                     <span className={cn(
                       "px-2 py-0.5 rounded-md text-xs font-semibold",
                       activeTab === item.id
-                        ? "bg-[#23D3EE]/20 text-[#23D3EE]"
-                        : "bg-slate-100 text-slate-500"
+                        ? "bg-[#0891B2]/20 text-[#0891B2]"
+                        : "bg-white/5 text-[#94A3B8]"
                     )}>
                       {item.count}
                     </span>
@@ -1801,18 +1801,18 @@ const FileManagerPage = () => {
             </nav>
 
             {/* Tags Section */}
-            <div className="py-4 border-t border-slate-100">
+            <div className="py-4 border-t border-[rgba(15,23,42,0.06)]">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Tags</h3>
+                <h3 className="text-xs font-bold text-[#475569] uppercase tracking-wider">Tags</h3>
                 <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md">
-                  <Plus size={14} className="text-slate-400" />
+                  <Plus size={14} className="text-[#475569]" />
                 </Button>
               </div>
               <div className="space-y-1">
                 {tags.map((tag) => (
                   <button
                     key={tag.id}
-                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-[#475569] hover:bg-[#F8FAFC] transition-colors"
                   >
                     <span
                       className="w-3 h-3 rounded-full"
@@ -1825,15 +1825,15 @@ const FileManagerPage = () => {
             </div>
 
             {/* Storage Info */}
-            <div className="pt-4 border-t border-slate-100">
+            <div className="pt-4 border-t border-[rgba(15,23,42,0.06)]">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Storage</h3>
-                <span className="text-xs text-[#23D3EE] font-semibold">{storagePercentage}%</span>
+                <h3 className="text-xs font-bold text-[#475569] uppercase tracking-wider">Storage</h3>
+                <span className="text-xs text-[#0891B2] font-semibold">{storagePercentage}%</span>
               </div>
               <Progress value={storagePercentage} className="h-2 mb-3" />
               <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-500">{formatBytes(storageInfo.used)} used</span>
-                <span className="text-slate-400">of {formatBytes(storageInfo.total)}</span>
+                <span className="text-[#94A3B8]">{formatBytes(storageInfo.used)} used</span>
+                <span className="text-[#475569]">of {formatBytes(storageInfo.total)}</span>
               </div>
 
               {/* Storage Breakdown */}
@@ -1844,7 +1844,7 @@ const FileManagerPage = () => {
                   { label: "Videos", value: storageInfo.breakdown.videos, color: "#EC4899" },
                   { label: "Other", value: storageInfo.breakdown.other, color: "#6B7280" },
                 ].map((item) => (
-                  <div key={item.label} className="flex items-center gap-2 text-xs text-slate-500">
+                  <div key={item.label} className="flex items-center gap-2 text-xs text-[#94A3B8]">
                     <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
                     <span>{item.label}</span>
                     <span className="ml-auto font-medium">{item.value}%</span>
@@ -1854,7 +1854,7 @@ const FileManagerPage = () => {
 
               <Button
                 variant="outline"
-                className="w-full mt-4 rounded-xl border-[#FBBF23]/30 text-[#FBBF23] hover:bg-[#FBBF23]/10 hover:border-[#FBBF23]"
+                className="w-full mt-4 rounded-md border-[#FBBF24]/30 text-[#D97706] hover:bg-[#D97706]/10 hover:border-[#FBBF24]"
               >
                 <Zap size={14} className="mr-2" />
                 Upgrade Storage
@@ -1865,23 +1865,23 @@ const FileManagerPage = () => {
           {/* Main Content */}
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Toolbar */}
-            <div className="px-6 py-4 bg-white border-b border-slate-200">
+            <div className="px-6 py-4 bg-white border-b border-[rgba(15,23,42,0.06)]">
               <div className="flex items-center justify-between gap-4">
                 {/* Search */}
                 <div className="relative flex-1 max-w-md">
-                  <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#475569]" />
                   <Input
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Search files and folders..."
-                    className="h-11 pl-11 pr-4 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
+                    className="h-11 pl-11 pr-4 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
                   />
                   {searchTerm && (
                     <button
                       onClick={() => setSearchTerm("")}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-slate-100"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-white/10"
                     >
-                      <X size={14} className="text-slate-400" />
+                      <X size={14} className="text-[#475569]" />
                     </button>
                   )}
                 </div>
@@ -1893,24 +1893,24 @@ const FileManagerPage = () => {
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.95 }}
-                      className="flex items-center gap-2 px-4 py-2 bg-[#23D3EE]/10 rounded-xl"
+                      className="flex items-center gap-2 px-4 py-2 bg-[#0891B2]/10 rounded-md"
                     >
-                      <span className="text-sm font-medium text-[#23D3EE]">
+                      <span className="text-sm font-medium text-[#0891B2]">
                         {selectedItems.length} selected
                       </span>
-                      <div className="h-4 w-px bg-[#23D3EE]/30" />
-                      <Button variant="ghost" size="sm" className="h-8 rounded-lg text-[#23D3EE]">
+                      <div className="h-4 w-px bg-[#0891B2]/30" />
+                      <Button variant="ghost" size="sm" className="h-8 rounded-md text-[#0891B2]">
                         <Download size={14} className="mr-1" />
                         Download
                       </Button>
-                      <Button variant="ghost" size="sm" className="h-8 rounded-lg text-[#23D3EE]">
+                      <Button variant="ghost" size="sm" className="h-8 rounded-md text-[#0891B2]">
                         <Share2 size={14} className="mr-1" />
                         Share
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-8 rounded-lg text-red-500 hover:text-red-600 hover:bg-red-50"
+                        className="h-8 rounded-md text-red-500 hover:text-red-600 hover:bg-red-50"
                         onClick={handleBulkDelete}
                       >
                         <Trash2 size={14} className="mr-1" />
@@ -1918,9 +1918,9 @@ const FileManagerPage = () => {
                       </Button>
                       <button
                         onClick={() => setSelectedItems([])}
-                        className="p-1 rounded-md hover:bg-[#23D3EE]/20"
+                        className="p-1 rounded-md hover:bg-[#0891B2]/20"
                       >
-                        <X size={14} className="text-[#23D3EE]" />
+                        <X size={14} className="text-[#0891B2]" />
                       </button>
                     </motion.div>
                   )}
@@ -1931,16 +1931,16 @@ const FileManagerPage = () => {
                   {/* Filter */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="h-10 rounded-xl border-slate-200">
+                      <Button variant="outline" className="h-10 rounded-md border-[rgba(15,23,42,0.06)]">
                         <Filter size={16} className="mr-2" />
                         Filter
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56 rounded-xl">
+                    <DropdownMenuContent align="end" className="w-56 rounded-md">
                       <div className="p-2">
-                        <p className="text-xs font-semibold text-slate-400 uppercase mb-2">File Type</p>
+                        <p className="text-xs font-semibold text-[#475569] uppercase mb-2">File Type</p>
                         {["All Files", "Documents", "Images", "Videos", "Audio"].map((type) => (
-                          <DropdownMenuItem key={type} className="rounded-lg">
+                          <DropdownMenuItem key={type} className="rounded-md">
                             {type}
                           </DropdownMenuItem>
                         ))}
@@ -1951,12 +1951,12 @@ const FileManagerPage = () => {
                   {/* Sort */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="h-10 rounded-xl border-slate-200">
+                      <Button variant="outline" className="h-10 rounded-md border-[rgba(15,23,42,0.06)]">
                         {sortOrder === "asc" ? <SortAsc size={16} /> : <SortDesc size={16} />}
                         <span className="ml-2 capitalize">{sortBy}</span>
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48 rounded-xl">
+                    <DropdownMenuContent align="end" className="w-48 rounded-md">
                       {[
                         { id: "modified", label: "Date Modified" },
                         { id: "name", label: "Name" },
@@ -1972,11 +1972,11 @@ const FileManagerPage = () => {
                               setSortOrder("desc");
                             }
                           }}
-                          className="rounded-lg justify-between"
+                          className="rounded-md justify-between"
                         >
                           {option.label}
                           {sortBy === option.id && (
-                            <Check size={14} className="text-[#23D3EE]" />
+                            <Check size={14} className="text-[#0891B2]" />
                           )}
                         </DropdownMenuItem>
                       ))}
@@ -1984,14 +1984,14 @@ const FileManagerPage = () => {
                   </DropdownMenu>
 
                   {/* View Toggle */}
-                  <div className="flex items-center p-1 bg-slate-100 rounded-xl">
+                  <div className="flex items-center p-1 bg-white/5 rounded-md">
                     <button
                       onClick={() => setViewMode("grid")}
                       className={cn(
-                        "p-2 rounded-lg transition-all",
+                        "p-2 rounded-md transition-all",
                         viewMode === "grid"
-                          ? "bg-white text-[#23D3EE] shadow-sm"
-                          : "text-slate-500 hover:text-slate-700"
+                          ? "bg-white text-[#0891B2] shadow-sm"
+                          : "text-[#94A3B8] hover:text-slate-200"
                       )}
                     >
                       <LayoutGrid size={18} />
@@ -1999,10 +1999,10 @@ const FileManagerPage = () => {
                     <button
                       onClick={() => setViewMode("list")}
                       className={cn(
-                        "p-2 rounded-lg transition-all",
+                        "p-2 rounded-md transition-all",
                         viewMode === "list"
-                          ? "bg-white text-[#23D3EE] shadow-sm"
-                          : "text-slate-500 hover:text-slate-700"
+                          ? "bg-white text-[#0891B2] shadow-sm"
+                          : "text-[#94A3B8] hover:text-slate-200"
                       )}
                     >
                       <List size={18} />
@@ -2057,7 +2057,7 @@ const FileManagerPage = () => {
                 <div className="mb-8">
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-lg font-semibold text-[#0F172A]">Folders</h2>
-                    <span className="text-sm text-slate-500">{filteredFolders.length} folders</span>
+                    <span className="text-sm text-[#94A3B8]">{filteredFolders.length} folders</span>
                   </div>
 
                   {viewMode === "grid" ? (
@@ -2119,7 +2119,7 @@ const FileManagerPage = () => {
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-lg font-semibold text-[#0F172A]">Files</h2>
-                    <span className="text-sm text-slate-500">{filteredFiles.length} files</span>
+                    <span className="text-sm text-[#94A3B8]">{filteredFiles.length} files</span>
                   </div>
 
                   {viewMode === "grid" ? (
@@ -2185,11 +2185,11 @@ const FileManagerPage = () => {
                   animate={{ opacity: 1, y: 0 }}
                   className="flex flex-col items-center justify-center py-20"
                 >
-                  <div className="w-24 h-24 rounded-3xl bg-slate-100 flex items-center justify-center mb-6">
-                    <Folder size={48} className="text-slate-300" />
+                  <div className="w-24 h-24 rounded-3xl bg-white/5 flex items-center justify-center mb-6">
+                    <Folder size={48} className="text-[#475569]" />
                   </div>
                   <h3 className="text-xl font-semibold text-[#0F172A] mb-2">No files found</h3>
-                  <p className="text-slate-500 text-center max-w-md mb-6">
+                  <p className="text-[#94A3B8] text-center max-w-md mb-6">
                     {searchTerm
                       ? `No files match "${searchTerm}". Try a different search term.`
                       : "This folder is empty. Upload files or create a new folder to get started."}
@@ -2197,7 +2197,7 @@ const FileManagerPage = () => {
                   <div className="flex gap-3">
                     <Button
                       onClick={handleUploadClick}
-                      className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl"
+                      className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
                     >
                       <Upload size={16} className="mr-2" />
                       Upload Files
@@ -2205,7 +2205,7 @@ const FileManagerPage = () => {
                     <Button
                       variant="outline"
                       onClick={() => setShowCreateFolder(true)}
-                      className="rounded-xl"
+                      className="rounded-md"
                     >
                       <FolderPlus size={16} className="mr-2" />
                       New Folder
@@ -2252,7 +2252,7 @@ const FileManagerPage = () => {
 
       {/* Delete Confirmation */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent className="rounded-2xl">
+        <AlertDialogContent className="rounded-md">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-[#0F172A]">Delete {deleteItem?.type}?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -2260,10 +2260,10 @@ const FileManagerPage = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-md">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              className="bg-red-500 hover:bg-red-600 text-white rounded-xl"
+              className="bg-red-500 hover:bg-red-600 text-[#0F172A] rounded-md"
             >
               <Trash2 size={16} className="mr-2" />
               Delete

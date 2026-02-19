@@ -62,32 +62,32 @@ export const CheckInOutCard: React.FC<CheckInOutCardProps> = ({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden"
+      className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] shadow-sm overflow-hidden"
     >
       {/* Header */}
       <div 
         className={`p-6 ${
           isCheckedIn 
-            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600' 
-            : 'bg-gradient-to-r from-gray-100 to-gray-200'
+            ? ' from-emerald-500 to-emerald-600' 
+            : ' from-gray-100 to-gray-200'
         }`}
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 className={`font-semibold ${isCheckedIn ? 'text-white' : 'text-gray-700'}`}>
+          <h3 className={`font-semibold ${isCheckedIn ? 'text-[#0F172A]' : 'text-slate-200'}`}>
             {isCheckedIn ? 'Currently Working' : 'Not Checked In'}
           </h3>
           {isCheckedIn && (
-            <Badge className="bg-white/20 text-white border-0">
+            <Badge className="bg-white/20 text-[#0F172A] border-0">
               {isOnBreak ? 'On Break' : 'Active'}
             </Badge>
           )}
         </div>
         
-        <div className={`text-4xl font-mono font-bold ${isCheckedIn ? 'text-white' : 'text-gray-400'}`}>
+        <div className={`text-4xl font-mono font-bold ${isCheckedIn ? 'text-[#0F172A]' : 'text-[#94A3B8]'}`}>
           {isCheckedIn ? elapsedTime : format(currentTime, 'HH:mm:ss')}
         </div>
         
-        <p className={`text-sm mt-2 ${isCheckedIn ? 'text-white/80' : 'text-gray-500'}`}>
+        <p className={`text-sm mt-2 ${isCheckedIn ? 'text-[#0F172A]/80' : 'text-[#475569]'}`}>
           {format(currentTime, 'EEEE, MMMM d, yyyy')}
         </p>
       </div>
@@ -97,14 +97,14 @@ export const CheckInOutCard: React.FC<CheckInOutCardProps> = ({
         {!isCheckedIn ? (
           <>
             {/* Remote Toggle */}
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between p-3 bg-white/5 rounded-md">
               <div className="flex items-center gap-2">
                 {isRemote ? (
                   <Home className="w-5 h-5 text-blue-500" />
                 ) : (
-                  <Building2 className="w-5 h-5 text-gray-500" />
+                  <Building2 className="w-5 h-5 text-[#475569]" />
                 )}
-                <Label htmlFor="remote-toggle" className="text-sm text-gray-700">
+                <Label htmlFor="remote-toggle" className="text-sm text-slate-200">
                   {isRemote ? 'Working Remotely' : 'Working from Office'}
                 </Label>
               </div>
@@ -118,7 +118,7 @@ export const CheckInOutCard: React.FC<CheckInOutCardProps> = ({
             {/* Check In Button */}
             <Button
               onClick={() => onCheckIn(isRemote)}
-              className="w-full h-14 text-lg bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white shadow-lg shadow-[#23D3EE]/20"
+              className="w-full h-14 text-lg bg-[#0891B2] hover:bg-[#0891B2]/90 text-white "
             >
               <LogIn className="w-5 h-5 mr-2" />
               Check In
@@ -127,12 +127,12 @@ export const CheckInOutCard: React.FC<CheckInOutCardProps> = ({
         ) : (
           <>
             {/* Check In Info */}
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-2 text-gray-600">
+            <div className="flex items-center justify-between p-3 bg-white/5 rounded-md">
+              <div className="flex items-center gap-2 text-[#475569]">
                 <Clock className="w-4 h-4" />
                 <span className="text-sm">Checked in at</span>
               </div>
-              <span className="font-medium text-gray-900">
+              <span className="font-medium text-[#0F172A]">
                 {checkInTime && format(checkInTime, 'h:mm a')}
               </span>
             </div>

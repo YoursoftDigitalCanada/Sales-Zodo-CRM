@@ -354,15 +354,15 @@ const SectionCard = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
-        "bg-white rounded-2xl border border-slate-200 overflow-hidden",
-        "hover:border-[#23D3EE]/30 hover:shadow-lg hover:shadow-[#23D3EE]/5 transition-all",
+        "bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden",
+        "hover:border-[#22D3EE]/30 hover:shadow-lg  transition-all",
         className
       )}
     >
-      <div className="flex items-center justify-between p-5 border-b border-slate-100">
+      <div className="flex items-center justify-between p-5 border-b border-[rgba(15,23,42,0.06)]">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#23D3EE]/10 to-[#FBBF23]/10 flex items-center justify-center">
-            <Icon size={20} className="text-[#23D3EE]" />
+          <div className="w-10 h-10 rounded-md bg-[#F1F5F9] flex items-center justify-center">
+            <Icon size={20} className="text-[#0891B2]" />
           </div>
           <h3 className="font-semibold text-[#0F172A]">{title}</h3>
         </div>
@@ -410,25 +410,25 @@ const AddressBlock = ({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h4 className="font-medium text-[#0F172A] flex items-center gap-2">
-          {isBilledTo ? <Users size={16} className="text-[#FBBF23]" /> : <Building2 size={16} className="text-[#23D3EE]" />}
+          {isBilledTo ? <Users size={16} className="text-[#D97706]" /> : <Building2 size={16} className="text-[#0891B2]" />}
           {title}
         </h4>
         {showClientSelector && (
           <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="rounded-lg text-xs">
+              <Button variant="outline" size="sm" className="rounded-md text-xs">
                 <Search size={12} className="mr-1" />
                 Select Client
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80 rounded-xl p-2">
+            <DropdownMenuContent align="end" className="w-80 rounded-md p-2">
               <div className="relative mb-2">
-                <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-[#475569]" />
                 <Input
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search clients..."
-                  className="h-8 pl-7 text-xs rounded-lg"
+                  className="h-8 pl-7 text-xs rounded-md"
                 />
               </div>
               <div className="max-h-48 overflow-y-auto">
@@ -439,25 +439,25 @@ const AddressBlock = ({
                       onSelectClient?.(client);
                       setIsDropdownOpen(false);
                     }}
-                    className="rounded-lg cursor-pointer"
+                    className="rounded-md cursor-pointer"
                   >
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white text-xs font-semibold">
+                      <div className="w-8 h-8 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] text-xs font-semibold">
                         {getInitials(client.businessName)}
                       </div>
                       <div>
                         <p className="text-sm font-medium">{client.businessName}</p>
-                        <p className="text-xs text-slate-400">{client.email}</p>
+                        <p className="text-xs text-[#475569]">{client.email}</p>
                       </div>
                     </div>
                   </DropdownMenuItem>
                 ))}
                 {filteredClients.length === 0 && (
-                  <p className="text-xs text-slate-400 text-center py-4">No clients found</p>
+                  <p className="text-xs text-[#475569] text-center py-4">No clients found</p>
                 )}
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="rounded-lg text-[#23D3EE]">
+              <DropdownMenuItem className="rounded-md text-[#0891B2]">
                 <PlusCircle size={14} className="mr-2" />
                 Add New Client
               </DropdownMenuItem>
@@ -468,14 +468,14 @@ const AddressBlock = ({
 
       <div className="grid grid-cols-2 gap-3">
         <div className="col-span-2 space-y-1">
-          <Label className="text-xs text-slate-500">Business Name *</Label>
+          <Label className="text-xs text-[#94A3B8]">Business Name *</Label>
           <div className="relative">
-            <Building2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Building2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
             <Input
               {...register(`${prefix}.businessName`)}
               placeholder="Business Name"
               className={cn(
-                "h-10 pl-9 rounded-xl border-slate-200 text-sm",
+                "h-10 pl-9 rounded-md border-[rgba(15,23,42,0.06)] text-sm",
                 errors?.[prefix]?.businessName && "border-red-500"
               )}
             />
@@ -486,64 +486,64 @@ const AddressBlock = ({
         </div>
 
         <div className="space-y-1">
-          <Label className="text-xs text-slate-500">Email</Label>
+          <Label className="text-xs text-[#94A3B8]">Email</Label>
           <div className="relative">
-            <AtSign size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <AtSign size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
             <Input
               {...register(`${prefix}.email`)}
               type="email"
               placeholder="email@example.com"
-              className="h-10 pl-9 rounded-xl border-slate-200 text-sm"
+              className="h-10 pl-9 rounded-md border-[rgba(15,23,42,0.06)] text-sm"
             />
           </div>
         </div>
 
         <div className="space-y-1">
-          <Label className="text-xs text-slate-500">Phone</Label>
+          <Label className="text-xs text-[#94A3B8]">Phone</Label>
           <div className="relative">
-            <Phone size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Phone size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
             <Input
               {...register(`${prefix}.phone`)}
               placeholder="+1 (000) 000-0000"
-              className="h-10 pl-9 rounded-xl border-slate-200 text-sm"
+              className="h-10 pl-9 rounded-md border-[rgba(15,23,42,0.06)] text-sm"
             />
           </div>
         </div>
 
         <div className="col-span-2 space-y-1">
-          <Label className="text-xs text-slate-500">Address</Label>
+          <Label className="text-xs text-[#94A3B8]">Address</Label>
           <div className="relative">
-            <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
             <Input
               {...register(`${prefix}.address`)}
               placeholder="Street Address"
-              className="h-10 pl-9 rounded-xl border-slate-200 text-sm"
+              className="h-10 pl-9 rounded-md border-[rgba(15,23,42,0.06)] text-sm"
             />
           </div>
         </div>
 
         <div className="space-y-1">
-          <Label className="text-xs text-slate-500">City</Label>
+          <Label className="text-xs text-[#94A3B8]">City</Label>
           <Input
             {...register(`${prefix}.city`)}
             placeholder="City"
-            className="h-10 rounded-xl border-slate-200 text-sm"
+            className="h-10 rounded-md border-[rgba(15,23,42,0.06)] text-sm"
           />
         </div>
 
         <div className="space-y-1">
-          <Label className="text-xs text-slate-500">Province</Label>
+          <Label className="text-xs text-[#94A3B8]">Province</Label>
           <Controller
             name={`${prefix}.province`}
             control={control}
             render={({ field }) => (
               <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger className="h-10 rounded-xl border-slate-200 text-sm">
+                <SelectTrigger className="h-10 rounded-md border-[rgba(15,23,42,0.06)] text-sm">
                   <SelectValue placeholder="Select Province" />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl">
+                <SelectContent className="rounded-md">
                   {canadianProvinces.map((prov) => (
-                    <SelectItem key={prov.code} value={prov.code} className="rounded-lg">
+                    <SelectItem key={prov.code} value={prov.code} className="rounded-md">
                       {prov.name}
                     </SelectItem>
                   ))}
@@ -554,20 +554,20 @@ const AddressBlock = ({
         </div>
 
         <div className="space-y-1">
-          <Label className="text-xs text-slate-500">Postal Code</Label>
+          <Label className="text-xs text-[#94A3B8]">Postal Code</Label>
           <Input
             {...register(`${prefix}.postalCode`)}
             placeholder="A1A 1A1"
-            className="h-10 rounded-xl border-slate-200 text-sm"
+            className="h-10 rounded-md border-[rgba(15,23,42,0.06)] text-sm"
           />
         </div>
 
         <div className="space-y-1">
-          <Label className="text-xs text-slate-500">GST/HST Number</Label>
+          <Label className="text-xs text-[#94A3B8]">GST/HST Number</Label>
           <Input
             {...register(`${prefix}.gstNumber`)}
             placeholder="123456789RT0001"
-            className="h-10 rounded-xl border-slate-200 text-sm"
+            className="h-10 rounded-md border-[rgba(15,23,42,0.06)] text-sm"
           />
         </div>
       </div>
@@ -627,11 +627,11 @@ const LineItemRow = ({
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="group border-b border-slate-100 last:border-0 hover:bg-slate-50/50"
+      className="group border-b border-[rgba(15,23,42,0.06)] last:border-0 hover:bg-white/5/50"
     >
       {/* Drag Handle */}
       <td className="py-3 px-2 w-8">
-        <GripVertical size={16} className="text-slate-300 cursor-grab opacity-0 group-hover:opacity-100 transition-opacity" />
+        <GripVertical size={16} className="text-[#475569] cursor-grab opacity-0 group-hover:opacity-100 transition-opacity" />
       </td>
 
       {/* Item Name */}
@@ -642,7 +642,7 @@ const LineItemRow = ({
               {...register(`items.${index}.name`)}
               placeholder="Item name"
               className={cn(
-                "h-9 rounded-lg border-slate-200 text-sm",
+                "h-9 rounded-md border-[rgba(15,23,42,0.06)] text-sm",
                 errors?.items?.[index]?.name && "border-red-500"
               )}
             />
@@ -650,7 +650,7 @@ const LineItemRow = ({
           <Input
             {...register(`items.${index}.description`)}
             placeholder="Description (optional)"
-            className="h-8 rounded-lg border-slate-100 text-xs text-slate-500"
+            className="h-8 rounded-md border-[rgba(15,23,42,0.06)] text-xs text-[#94A3B8]"
           />
         </div>
       </td>
@@ -661,32 +661,32 @@ const LineItemRow = ({
           type="number"
           {...register(`items.${index}.quantity`)}
           min={1}
-          className="h-9 rounded-lg border-slate-200 text-sm text-center"
+          className="h-9 rounded-md border-[rgba(15,23,42,0.06)] text-sm text-center"
         />
       </td>
 
       {/* Rate */}
       <td className="py-3 px-2 w-32">
         <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569] text-sm">$</span>
           <Input
             type="number"
             step="0.01"
             {...register(`items.${index}.rate`)}
             min={0}
-            className="h-9 pl-7 rounded-lg border-slate-200 text-sm"
+            className="h-9 pl-7 rounded-md border-[rgba(15,23,42,0.06)] text-sm"
           />
         </div>
       </td>
 
       {/* Amount */}
       <td className="py-3 px-2 w-28 text-right">
-        <span className="text-sm font-medium text-slate-700">{formatCurrency(amount)}</span>
+        <span className="text-sm font-medium text-slate-200">{formatCurrency(amount)}</span>
       </td>
 
       {/* Tax */}
       <td className="py-3 px-2 w-28 text-right">
-        <span className="text-sm text-slate-500">
+        <span className="text-sm text-[#94A3B8]">
           {taxRates.hst > 0 
             ? formatCurrency(hst) 
             : formatCurrency(gst + pst)
@@ -706,7 +706,7 @@ const LineItemRow = ({
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={remove}
-          className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+          className="p-1.5 rounded-md text-[#475569] hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
         >
           <Trash2 size={14} />
         </motion.button>
@@ -767,7 +767,7 @@ const LineItemsTable = ({
     <div className="space-y-4">
       {/* Quick Add Products */}
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs text-slate-500">Quick Add:</span>
+        <span className="text-xs text-[#94A3B8]">Quick Add:</span>
         {products.slice(0, 5).map((product) => (
           <motion.button
             key={product.id}
@@ -789,7 +789,7 @@ const LineItemsTable = ({
                 total: 0,
               });
             }}
-            className="px-3 py-1.5 rounded-lg bg-slate-100 text-xs text-slate-600 hover:bg-[#23D3EE]/10 hover:text-[#23D3EE] transition-colors"
+            className="px-3 py-1.5 rounded-md bg-white/5 text-xs text-[#475569] hover:bg-[#0891B2]/10 hover:text-[#0891B2] transition-colors"
           >
             + {product.name}
           </motion.button>
@@ -797,27 +797,27 @@ const LineItemsTable = ({
       </div>
 
       {/* Table */}
-      <div className="border border-slate-200 rounded-xl overflow-hidden">
+      <div className="border border-[rgba(15,23,42,0.06)] rounded-md overflow-hidden">
         <table className="w-full">
           <thead>
-            <tr className="bg-slate-50/80 border-b border-slate-200">
+            <tr className="bg-white/5/80 border-b border-[rgba(15,23,42,0.06)]">
               <th className="py-3 px-2 w-8"></th>
-              <th className="py-3 px-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              <th className="py-3 px-2 text-left text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">
                 Item Description
               </th>
-              <th className="py-3 px-2 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider w-24">
+              <th className="py-3 px-2 text-center text-xs font-semibold text-[#94A3B8] uppercase tracking-wider w-24">
                 Qty
               </th>
-              <th className="py-3 px-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider w-32">
+              <th className="py-3 px-2 text-left text-xs font-semibold text-[#94A3B8] uppercase tracking-wider w-32">
                 Rate
               </th>
-              <th className="py-3 px-2 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider w-28">
+              <th className="py-3 px-2 text-right text-xs font-semibold text-[#94A3B8] uppercase tracking-wider w-28">
                 Amount
               </th>
-              <th className="py-3 px-2 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider w-28">
+              <th className="py-3 px-2 text-right text-xs font-semibold text-[#94A3B8] uppercase tracking-wider w-28">
                 {taxRates.hst > 0 ? "HST" : taxRates.pst > 0 ? "Tax" : "GST"}
               </th>
-              <th className="py-3 px-2 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider w-32">
+              <th className="py-3 px-2 text-right text-xs font-semibold text-[#94A3B8] uppercase tracking-wider w-32">
                 Total
               </th>
               <th className="py-3 px-2 w-12"></th>
@@ -846,13 +846,13 @@ const LineItemsTable = ({
         </table>
 
         {/* Add Item Button */}
-        <div className="p-3 border-t border-slate-100">
+        <div className="p-3 border-t border-[rgba(15,23,42,0.06)]">
           <motion.button
             type="button"
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.99 }}
             onClick={handleAddItem}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-slate-200 text-slate-500 hover:border-[#23D3EE] hover:text-[#23D3EE] hover:bg-[#23D3EE]/5 transition-all"
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-md border-2 border-dashed border-[rgba(15,23,42,0.06)] text-[#94A3B8] hover:border-[#22D3EE] hover:text-[#0891B2] hover:bg-[#0891B2]/5 transition-all"
           >
             <PlusCircle size={18} />
             <span className="font-medium">Add Line Item</span>
@@ -877,56 +877,56 @@ const InvoicePreview = ({
   taxRates: { gst: number; pst: number; hst: number; taxType: string };
 }) => {
   return (
-    <div className="bg-white rounded-xl shadow-lg p-8 max-w-2xl mx-auto">
+    <div className="bg-white rounded-md card-shadow p-8 max-w-2xl mx-auto">
       {/* Header */}
       <div className="flex justify-between items-start mb-8">
         <div>
           <h1 className="text-3xl font-bold text-[#0F172A]">INVOICE</h1>
-          <p className="text-slate-500 mt-1">{data.invoiceNumber}</p>
+          <p className="text-[#94A3B8] mt-1">{data.invoiceNumber}</p>
         </div>
         <div className="text-right">
-          <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white font-bold text-xl">
+          <div className="w-16 h-16 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] font-bold text-xl">
             {getInitials(data.billedBy.businessName || "YB")}
           </div>
         </div>
       </div>
 
       {/* Dates */}
-      <div className="grid grid-cols-3 gap-4 mb-8 p-4 bg-slate-50 rounded-xl">
+      <div className="grid grid-cols-3 gap-4 mb-8 p-4 bg-white/5 rounded-md">
         <div>
-          <p className="text-xs text-slate-500 uppercase">Invoice Date</p>
+          <p className="text-xs text-[#94A3B8] uppercase">Invoice Date</p>
           <p className="font-semibold text-[#0F172A]">{data.invoiceDate}</p>
         </div>
         <div>
-          <p className="text-xs text-slate-500 uppercase">Due Date</p>
+          <p className="text-xs text-[#94A3B8] uppercase">Due Date</p>
           <p className="font-semibold text-[#0F172A]">{data.dueDate}</p>
         </div>
         <div>
-          <p className="text-xs text-slate-500 uppercase">Amount Due</p>
-          <p className="font-bold text-[#23D3EE] text-lg">{formatCurrency(totals.total, data.currency)}</p>
+          <p className="text-xs text-[#94A3B8] uppercase">Amount Due</p>
+          <p className="font-bold text-[#0891B2] text-lg">{formatCurrency(totals.total, data.currency)}</p>
         </div>
       </div>
 
       {/* Addresses */}
       <div className="grid grid-cols-2 gap-8 mb-8">
         <div>
-          <p className="text-xs text-slate-500 uppercase mb-2">From</p>
+          <p className="text-xs text-[#94A3B8] uppercase mb-2">From</p>
           <p className="font-semibold text-[#0F172A]">{data.billedBy.businessName}</p>
-          <p className="text-sm text-slate-600">{data.billedBy.address}</p>
-          <p className="text-sm text-slate-600">{data.billedBy.city}, {data.billedBy.province} {data.billedBy.postalCode}</p>
-          <p className="text-sm text-slate-600">{data.billedBy.email}</p>
+          <p className="text-sm text-[#475569]">{data.billedBy.address}</p>
+          <p className="text-sm text-[#475569]">{data.billedBy.city}, {data.billedBy.province} {data.billedBy.postalCode}</p>
+          <p className="text-sm text-[#475569]">{data.billedBy.email}</p>
           {data.billedBy.gstNumber && (
-            <p className="text-xs text-slate-500 mt-1">GST/HST: {data.billedBy.gstNumber}</p>
+            <p className="text-xs text-[#94A3B8] mt-1">GST/HST: {data.billedBy.gstNumber}</p>
           )}
         </div>
         <div>
-          <p className="text-xs text-slate-500 uppercase mb-2">Bill To</p>
+          <p className="text-xs text-[#94A3B8] uppercase mb-2">Bill To</p>
           <p className="font-semibold text-[#0F172A]">{data.billedTo.businessName}</p>
-          <p className="text-sm text-slate-600">{data.billedTo.address}</p>
-          <p className="text-sm text-slate-600">{data.billedTo.city}, {data.billedTo.province} {data.billedTo.postalCode}</p>
-          <p className="text-sm text-slate-600">{data.billedTo.email}</p>
+          <p className="text-sm text-[#475569]">{data.billedTo.address}</p>
+          <p className="text-sm text-[#475569]">{data.billedTo.city}, {data.billedTo.province} {data.billedTo.postalCode}</p>
+          <p className="text-sm text-[#475569]">{data.billedTo.email}</p>
           {data.billedTo.gstNumber && (
-            <p className="text-xs text-slate-500 mt-1">GST/HST: {data.billedTo.gstNumber}</p>
+            <p className="text-xs text-[#94A3B8] mt-1">GST/HST: {data.billedTo.gstNumber}</p>
           )}
         </div>
       </div>
@@ -934,22 +934,22 @@ const InvoicePreview = ({
       {/* Items Table */}
       <table className="w-full mb-8">
         <thead>
-          <tr className="border-b-2 border-[#23D3EE]">
-            <th className="py-3 text-left text-xs font-semibold text-slate-500 uppercase">Description</th>
-            <th className="py-3 text-center text-xs font-semibold text-slate-500 uppercase w-16">Qty</th>
-            <th className="py-3 text-right text-xs font-semibold text-slate-500 uppercase w-24">Rate</th>
-            <th className="py-3 text-right text-xs font-semibold text-slate-500 uppercase w-28">Amount</th>
+          <tr className="border-b-2 border-[#22D3EE]">
+            <th className="py-3 text-left text-xs font-semibold text-[#94A3B8] uppercase">Description</th>
+            <th className="py-3 text-center text-xs font-semibold text-[#94A3B8] uppercase w-16">Qty</th>
+            <th className="py-3 text-right text-xs font-semibold text-[#94A3B8] uppercase w-24">Rate</th>
+            <th className="py-3 text-right text-xs font-semibold text-[#94A3B8] uppercase w-28">Amount</th>
           </tr>
         </thead>
         <tbody>
           {data.items.map((item, index) => (
-            <tr key={index} className="border-b border-slate-100">
+            <tr key={index} className="border-b border-[rgba(15,23,42,0.06)]">
               <td className="py-3">
                 <p className="font-medium text-[#0F172A]">{item.name}</p>
-                {item.description && <p className="text-xs text-slate-500">{item.description}</p>}
+                {item.description && <p className="text-xs text-[#94A3B8]">{item.description}</p>}
               </td>
-              <td className="py-3 text-center text-slate-600">{item.quantity}</td>
-              <td className="py-3 text-right text-slate-600">{formatCurrency(item.rate)}</td>
+              <td className="py-3 text-center text-[#475569]">{item.quantity}</td>
+              <td className="py-3 text-right text-[#475569]">{formatCurrency(item.rate)}</td>
               <td className="py-3 text-right font-medium text-[#0F172A]">{formatCurrency(item.amount)}</td>
             </tr>
           ))}
@@ -960,8 +960,8 @@ const InvoicePreview = ({
       <div className="flex justify-end">
         <div className="w-72 space-y-2">
           <div className="flex justify-between text-sm">
-            <span className="text-slate-500">Subtotal</span>
-            <span className="text-slate-700">{formatCurrency(totals.subtotal)}</span>
+            <span className="text-[#94A3B8]">Subtotal</span>
+            <span className="text-slate-200">{formatCurrency(totals.subtotal)}</span>
           </div>
           {totals.discount > 0 && (
             <div className="flex justify-between text-sm text-red-600">
@@ -971,38 +971,38 @@ const InvoicePreview = ({
           )}
           {taxRates.hst > 0 ? (
             <div className="flex justify-between text-sm">
-              <span className="text-slate-500">HST ({taxRates.hst}%)</span>
-              <span className="text-slate-700">{formatCurrency(totals.hst)}</span>
+              <span className="text-[#94A3B8]">HST ({taxRates.hst}%)</span>
+              <span className="text-slate-200">{formatCurrency(totals.hst)}</span>
             </div>
           ) : (
             <>
               {taxRates.gst > 0 && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">GST ({taxRates.gst}%)</span>
-                  <span className="text-slate-700">{formatCurrency(totals.gst)}</span>
+                  <span className="text-[#94A3B8]">GST ({taxRates.gst}%)</span>
+                  <span className="text-slate-200">{formatCurrency(totals.gst)}</span>
                 </div>
               )}
               {taxRates.pst > 0 && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">
+                  <span className="text-[#94A3B8]">
                     {data.clientProvince === "QC" ? "QST" : "PST"} ({taxRates.pst}%)
                   </span>
-                  <span className="text-slate-700">{formatCurrency(totals.pst)}</span>
+                  <span className="text-slate-200">{formatCurrency(totals.pst)}</span>
                 </div>
               )}
             </>
           )}
-          <div className="flex justify-between pt-2 border-t border-slate-200">
+          <div className="flex justify-between pt-2 border-t border-[rgba(15,23,42,0.06)]">
             <span className="font-bold text-[#0F172A]">Total ({data.currency})</span>
-            <span className="font-bold text-xl text-[#23D3EE]">{formatCurrency(totals.total, data.currency)}</span>
+            <span className="font-bold text-xl text-[#0891B2]">{formatCurrency(totals.total, data.currency)}</span>
           </div>
         </div>
       </div>
 
       {/* Total in Words */}
-      <div className="mt-6 p-4 bg-slate-50 rounded-xl">
-        <p className="text-xs text-slate-500 uppercase mb-1">Amount in Words</p>
-        <p className="text-sm text-slate-700 italic">{numberToWords(totals.total)}</p>
+      <div className="mt-6 p-4 bg-white/5 rounded-md">
+        <p className="text-xs text-[#94A3B8] uppercase mb-1">Amount in Words</p>
+        <p className="text-sm text-slate-200 italic">{numberToWords(totals.total)}</p>
       </div>
 
       {/* Notes & Terms */}
@@ -1010,22 +1010,22 @@ const InvoicePreview = ({
         <div className="mt-6 grid grid-cols-2 gap-6">
           {data.notes && (
             <div>
-              <p className="text-xs text-slate-500 uppercase mb-1">Notes</p>
-              <p className="text-sm text-slate-600">{data.notes}</p>
+              <p className="text-xs text-[#94A3B8] uppercase mb-1">Notes</p>
+              <p className="text-sm text-[#475569]">{data.notes}</p>
             </div>
           )}
           {data.terms && (
             <div>
-              <p className="text-xs text-slate-500 uppercase mb-1">Terms & Conditions</p>
-              <p className="text-sm text-slate-600">{data.terms}</p>
+              <p className="text-xs text-[#94A3B8] uppercase mb-1">Terms & Conditions</p>
+              <p className="text-sm text-[#475569]">{data.terms}</p>
             </div>
           )}
         </div>
       )}
 
       {/* Footer */}
-      <div className="mt-8 pt-6 border-t border-slate-200 text-center">
-        <p className="text-sm text-slate-500">Thank you for your business!</p>
+      <div className="mt-8 pt-6 border-t border-[rgba(15,23,42,0.06)] text-center">
+        <p className="text-sm text-[#94A3B8]">Thank you for your business!</p>
       </div>
     </div>
   );
@@ -1280,7 +1280,7 @@ const CreateInvoicePage = () => {
   // ============================================
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
+    <div className="flex min-h-screen r from-slate-50 via-white to-slate-50">
       <Sidebar collapsed={sidebarCollapsed} onCollapse={setSidebarCollapsed} />
 
       <main
@@ -1292,21 +1292,21 @@ const CreateInvoicePage = () => {
         {/* ============================================ */}
         {/* HEADER */}
         {/* ============================================ */}
-        <header className="sticky top-0 z-30 backdrop-blur-xl bg-white/80 border-b border-slate-200/50">
+        <header className="sticky top-0 z-30 backdrop-blur-xl bg-white/80 border-b border-[rgba(15,23,42,0.06)]/50">
           <div className="flex h-16 items-center justify-between px-6">
             <div className="flex items-center gap-4">
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => navigate("/invoice")}
-                className="p-2 rounded-xl hover:bg-slate-100 text-slate-600 transition-colors"
+                className="p-2 rounded-md hover:bg-white/10 text-[#475569] transition-colors"
               >
                 <ArrowLeft size={20} />
               </motion.button>
 
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-slate-400">Invoices</span>
-                <ChevronRight size={16} className="text-slate-300" />
+                <span className="text-[#475569]">Invoices</span>
+                <ChevronRight size={16} className="text-[#475569]" />
                 <span className="font-medium text-[#0F172A]">Create Invoice</span>
               </div>
             </div>
@@ -1318,10 +1318,10 @@ const CreateInvoicePage = () => {
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setShowPreview(!showPreview)}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-xl border transition-colors",
+                  "flex items-center gap-2 px-4 py-2 rounded-md border transition-colors",
                   showPreview
-                    ? "bg-[#23D3EE]/10 border-[#23D3EE] text-[#23D3EE]"
-                    : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                    ? "bg-[#0891B2]/10 border-[#22D3EE] text-[#0891B2]"
+                    : "border-[rgba(15,23,42,0.06)] text-[#475569] hover:bg-white/5"
                 )}
               >
                 <Eye size={18} />
@@ -1333,7 +1333,7 @@ const CreateInvoicePage = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleDownloadPDF}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 rounded-md border border-[rgba(15,23,42,0.06)] text-[#475569] hover:bg-white/5 transition-colors"
               >
                 <Download size={18} />
                 <span className="font-medium">PDF</span>
@@ -1345,7 +1345,7 @@ const CreateInvoicePage = () => {
                 variant="outline"
                 onClick={handleSubmit(onSave)}
                 disabled={isSaving}
-                className="rounded-xl border-slate-200"
+                className="rounded-md border-[rgba(15,23,42,0.06)]"
               >
                 {isSaving ? (
                   <Loader2 size={16} className="animate-spin mr-2" />
@@ -1360,7 +1360,7 @@ const CreateInvoicePage = () => {
                 type="button"
                 onClick={handleSaveAndSend}
                 disabled={isSaving}
-                className="bg-gradient-to-r from-[#23D3EE] to-[#23D3EE]/90 hover:from-[#23D3EE]/90 hover:to-[#23D3EE] text-white rounded-xl shadow-lg shadow-[#23D3EE]/25"
+                className="bg-[#F1F5F9]/90 hover:from-[#22D3EE]/90 hover:to-[#22D3EE] text-[#0F172A] rounded-md "
               >
                 <Send size={16} className="mr-2" />
                 Save & Send
@@ -1384,12 +1384,12 @@ const CreateInvoicePage = () => {
                     animate={{ opacity: 1, y: 0 }}
                     className="flex items-center gap-4"
                   >
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center shadow-lg shadow-[#23D3EE]/25">
-                      <FilePlus size={24} className="text-white" />
+                    <div className="w-12 h-12 rounded-md bg-[#F1F5F9] flex items-center justify-center ">
+                      <FilePlus size={24} className="text-[#0F172A]" />
                     </div>
                     <div>
                       <h1 className="text-2xl font-bold text-[#0F172A]">Create Invoice</h1>
-                      <p className="text-slate-500">Fill in the details to generate a new invoice</p>
+                      <p className="text-[#94A3B8]">Fill in the details to generate a new invoice</p>
                     </div>
                   </motion.div>
 
@@ -1398,43 +1398,43 @@ const CreateInvoicePage = () => {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       {/* Invoice Number */}
                       <div className="space-y-1">
-                        <Label className="text-xs text-slate-500">Invoice Number *</Label>
+                        <Label className="text-xs text-[#94A3B8]">Invoice Number *</Label>
                         <div className="relative">
-                          <Hash size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                          <Hash size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                           <Input
                             {...register("invoiceNumber")}
-                            className="h-10 pl-9 rounded-xl border-slate-200 text-sm font-medium"
+                            className="h-10 pl-9 rounded-md border-[rgba(15,23,42,0.06)] text-sm font-medium"
                           />
                         </div>
                       </div>
 
                       {/* Invoice Date */}
                       <div className="space-y-1">
-                        <Label className="text-xs text-slate-500">Invoice Date *</Label>
+                        <Label className="text-xs text-[#94A3B8]">Invoice Date *</Label>
                         <div className="relative">
-                          <CalendarDays size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                          <CalendarDays size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                           <Input
                             type="date"
                             {...register("invoiceDate")}
-                            className="h-10 pl-9 rounded-xl border-slate-200 text-sm"
+                            className="h-10 pl-9 rounded-md border-[rgba(15,23,42,0.06)] text-sm"
                           />
                         </div>
                       </div>
 
                       {/* Payment Terms */}
                       <div className="space-y-1">
-                        <Label className="text-xs text-slate-500">Payment Terms</Label>
+                        <Label className="text-xs text-[#94A3B8]">Payment Terms</Label>
                         <Controller
                           name="paymentTerms"
                           control={control}
                           render={({ field }) => (
                             <Select value={field.value} onValueChange={field.onChange}>
-                              <SelectTrigger className="h-10 rounded-xl border-slate-200 text-sm">
+                              <SelectTrigger className="h-10 rounded-md border-[rgba(15,23,42,0.06)] text-sm">
                                 <SelectValue />
                               </SelectTrigger>
-                              <SelectContent className="rounded-xl">
+                              <SelectContent className="rounded-md">
                                 {paymentTermsOptions.map((term) => (
-                                  <SelectItem key={term.value} value={term.value} className="rounded-lg">
+                                  <SelectItem key={term.value} value={term.value} className="rounded-md">
                                     {term.label}
                                   </SelectItem>
                                 ))}
@@ -1446,31 +1446,31 @@ const CreateInvoicePage = () => {
 
                       {/* Due Date */}
                       <div className="space-y-1">
-                        <Label className="text-xs text-slate-500">Due Date *</Label>
+                        <Label className="text-xs text-[#94A3B8]">Due Date *</Label>
                         <div className="relative">
-                          <CalendarDays size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                          <CalendarDays size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                           <Input
                             type="date"
                             {...register("dueDate")}
-                            className="h-10 pl-9 rounded-xl border-slate-200 text-sm"
+                            className="h-10 pl-9 rounded-md border-[rgba(15,23,42,0.06)] text-sm"
                           />
                         </div>
                       </div>
 
                       {/* Currency */}
                       <div className="space-y-1">
-                        <Label className="text-xs text-slate-500">Currency</Label>
+                        <Label className="text-xs text-[#94A3B8]">Currency</Label>
                         <Controller
                           name="currency"
                           control={control}
                                                     render={({ field }) => (
                             <Select value={field.value} onValueChange={field.onChange}>
-                              <SelectTrigger className="h-10 rounded-xl border-slate-200 text-sm">
+                              <SelectTrigger className="h-10 rounded-md border-[rgba(15,23,42,0.06)] text-sm">
                                 <SelectValue />
                               </SelectTrigger>
-                              <SelectContent className="rounded-xl">
+                              <SelectContent className="rounded-md">
                                 {currencyOptions.map((currency) => (
-                                  <SelectItem key={currency.value} value={currency.value} className="rounded-lg">
+                                  <SelectItem key={currency.value} value={currency.value} className="rounded-md">
                                     {currency.label}
                                   </SelectItem>
                                 ))}
@@ -1482,11 +1482,11 @@ const CreateInvoicePage = () => {
 
                       {/* Client Province (for tax calculation) */}
                       <div className="space-y-1">
-                        <Label className="text-xs text-slate-500 flex items-center gap-1">
+                        <Label className="text-xs text-[#94A3B8] flex items-center gap-1">
                           Tax Province
                           <span className="relative group">
-                            <HelpCircle size={12} className="text-slate-400 cursor-help" />
-                            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                            <HelpCircle size={12} className="text-[#475569] cursor-help" />
+                            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-800 text-[#0F172A] text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                               Province used for tax calculation
                             </span>
                           </span>
@@ -1496,15 +1496,15 @@ const CreateInvoicePage = () => {
                           control={control}
                           render={({ field }) => (
                             <Select value={field.value} onValueChange={field.onChange}>
-                              <SelectTrigger className="h-10 rounded-xl border-slate-200 text-sm">
+                              <SelectTrigger className="h-10 rounded-md border-[rgba(15,23,42,0.06)] text-sm">
                                 <SelectValue />
                               </SelectTrigger>
-                              <SelectContent className="rounded-xl max-h-60">
+                              <SelectContent className="rounded-md max-h-60">
                                 {canadianProvinces.map((prov) => (
-                                  <SelectItem key={prov.code} value={prov.code} className="rounded-lg">
+                                  <SelectItem key={prov.code} value={prov.code} className="rounded-md">
                                     <div className="flex items-center justify-between w-full">
                                       <span>{prov.name}</span>
-                                      <span className="text-xs text-slate-400 ml-2">
+                                      <span className="text-xs text-[#475569] ml-2">
                                         {prov.taxType}
                                       </span>
                                     </div>
@@ -1517,21 +1517,21 @@ const CreateInvoicePage = () => {
                       </div>
 
                       {/* Tax Rate Display */}
-                      <div className="col-span-2 p-3 bg-[#23D3EE]/5 rounded-xl border border-[#23D3EE]/20">
+                      <div className="col-span-2 p-3 bg-[#0891B2]/5 rounded-md border border-[#22D3EE]/20">
                         <div className="flex items-center gap-2 mb-1">
-                          <Percent size={14} className="text-[#23D3EE]" />
-                          <span className="text-xs font-medium text-[#23D3EE]">Tax Rates Applied</span>
+                          <Percent size={14} className="text-[#0891B2]" />
+                          <span className="text-xs font-medium text-[#0891B2]">Tax Rates Applied</span>
                         </div>
                         <div className="flex items-center gap-4 text-sm">
                           {taxRates.hst > 0 ? (
-                            <span className="text-slate-600">HST: <strong>{taxRates.hst}%</strong></span>
+                            <span className="text-[#475569]">HST: <strong>{taxRates.hst}%</strong></span>
                           ) : (
                             <>
                               {taxRates.gst > 0 && (
-                                <span className="text-slate-600">GST: <strong>{taxRates.gst}%</strong></span>
+                                <span className="text-[#475569]">GST: <strong>{taxRates.gst}%</strong></span>
                               )}
                               {taxRates.pst > 0 && (
-                                <span className="text-slate-600">
+                                <span className="text-[#475569]">
                                   {clientProvince === "QC" ? "QST" : "PST"}: <strong>{taxRates.pst}%</strong>
                                 </span>
                               )}
@@ -1565,7 +1565,7 @@ const CreateInvoicePage = () => {
                           variant="ghost"
                           size="sm"
                           onClick={() => navigate("/clients/add")}
-                          className="text-[#23D3EE] hover:text-[#23D3EE]/80 hover:bg-[#23D3EE]/5"
+                          className="text-[#0891B2] hover:text-[#0891B2]/80 hover:bg-[#0891B2]/5"
                         >
                           <PlusCircle size={14} className="mr-1" />
                           New Client
@@ -1604,21 +1604,21 @@ const CreateInvoicePage = () => {
                     <SectionCard title="Notes & Terms" icon={FileText}>
                       <div className="space-y-4">
                         <div className="space-y-1">
-                          <Label className="text-xs text-slate-500">Notes to Client</Label>
+                          <Label className="text-xs text-[#94A3B8]">Notes to Client</Label>
                           <Textarea
                             {...register("notes")}
                             placeholder="Add any notes for your client (e.g., thank you message, special instructions)..."
                             rows={3}
-                            className="rounded-xl border-slate-200 text-sm resize-none"
+                            className="rounded-md border-[rgba(15,23,42,0.06)] text-sm resize-none"
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-xs text-slate-500">Terms & Conditions</Label>
+                          <Label className="text-xs text-[#94A3B8]">Terms & Conditions</Label>
                           <Textarea
                             {...register("terms")}
                             placeholder="Payment terms, late fees, etc..."
                             rows={3}
-                            className="rounded-xl border-slate-200 text-sm resize-none"
+                            className="rounded-md border-[rgba(15,23,42,0.06)] text-sm resize-none"
                           />
                         </div>
                       </div>
@@ -1630,26 +1630,26 @@ const CreateInvoicePage = () => {
                         {/* Discount */}
                         <div className="flex items-center gap-3">
                           <div className="flex-1 space-y-1">
-                            <Label className="text-xs text-slate-500">Discount</Label>
+                            <Label className="text-xs text-[#94A3B8]">Discount</Label>
                             <div className="flex gap-2">
                               <Input
                                 type="number"
                                 step="0.01"
                                 {...register("discount")}
                                 placeholder="0.00"
-                                className="h-10 rounded-xl border-slate-200 text-sm"
+                                className="h-10 rounded-md border-[rgba(15,23,42,0.06)] text-sm"
                               />
                               <Controller
                                 name="discountType"
                                 control={control}
                                 render={({ field }) => (
                                   <Select value={field.value} onValueChange={field.onChange}>
-                                    <SelectTrigger className="h-10 w-24 rounded-xl border-slate-200 text-sm">
+                                    <SelectTrigger className="h-10 w-24 rounded-md border-[rgba(15,23,42,0.06)] text-sm">
                                       <SelectValue />
                                     </SelectTrigger>
-                                    <SelectContent className="rounded-xl">
-                                      <SelectItem value="fixed" className="rounded-lg">$</SelectItem>
-                                      <SelectItem value="percentage" className="rounded-lg">%</SelectItem>
+                                    <SelectContent className="rounded-md">
+                                      <SelectItem value="fixed" className="rounded-md">$</SelectItem>
+                                      <SelectItem value="percentage" className="rounded-md">%</SelectItem>
                                     </SelectContent>
                                   </Select>
                                 )}
@@ -1659,10 +1659,10 @@ const CreateInvoicePage = () => {
                         </div>
 
                         {/* Totals */}
-                        <div className="p-4 bg-slate-50 rounded-xl space-y-3">
+                        <div className="p-4 bg-white/5 rounded-md space-y-3">
                           <div className="flex justify-between text-sm">
-                            <span className="text-slate-500">Subtotal</span>
-                            <span className="font-medium text-slate-700">{formatCurrency(totals.subtotal)}</span>
+                            <span className="text-[#94A3B8]">Subtotal</span>
+                            <span className="font-medium text-slate-200">{formatCurrency(totals.subtotal)}</span>
                           </div>
 
                           {totals.discount > 0 && (
@@ -1674,32 +1674,32 @@ const CreateInvoicePage = () => {
 
                           {taxRates.hst > 0 ? (
                             <div className="flex justify-between text-sm">
-                              <span className="text-slate-500">HST ({taxRates.hst}%)</span>
-                              <span className="font-medium text-slate-700">{formatCurrency(totals.hst)}</span>
+                              <span className="text-[#94A3B8]">HST ({taxRates.hst}%)</span>
+                              <span className="font-medium text-slate-200">{formatCurrency(totals.hst)}</span>
                             </div>
                           ) : (
                             <>
                               {taxRates.gst > 0 && (
                                 <div className="flex justify-between text-sm">
-                                  <span className="text-slate-500">GST ({taxRates.gst}%)</span>
-                                  <span className="font-medium text-slate-700">{formatCurrency(totals.gst)}</span>
+                                  <span className="text-[#94A3B8]">GST ({taxRates.gst}%)</span>
+                                  <span className="font-medium text-slate-200">{formatCurrency(totals.gst)}</span>
                                 </div>
                               )}
                               {taxRates.pst > 0 && (
                                 <div className="flex justify-between text-sm">
-                                  <span className="text-slate-500">
+                                  <span className="text-[#94A3B8]">
                                     {clientProvince === "QC" ? "QST" : "PST"} ({taxRates.pst}%)
                                   </span>
-                                  <span className="font-medium text-slate-700">{formatCurrency(totals.pst)}</span>
+                                  <span className="font-medium text-slate-200">{formatCurrency(totals.pst)}</span>
                                 </div>
                               )}
                             </>
                           )}
 
-                          <div className="pt-3 border-t border-slate-200">
+                          <div className="pt-3 border-t border-[rgba(15,23,42,0.06)]">
                             <div className="flex justify-between items-center">
                               <span className="font-bold text-[#0F172A]">Total ({watch("currency")})</span>
-                              <span className="text-2xl font-bold text-[#23D3EE]">
+                              <span className="text-2xl font-bold text-[#0891B2]">
                                 {formatCurrency(totals.total, watch("currency"))}
                               </span>
                             </div>
@@ -1707,8 +1707,8 @@ const CreateInvoicePage = () => {
                         </div>
 
                         {/* Amount in Words */}
-                        <div className="p-3 bg-[#23D3EE]/5 rounded-xl border border-[#23D3EE]/20">
-                          <p className="text-xs text-slate-500 uppercase mb-1">Amount in Words</p>
+                        <div className="p-3 bg-[#0891B2]/5 rounded-md border border-[#22D3EE]/20">
+                          <p className="text-xs text-[#94A3B8] uppercase mb-1">Amount in Words</p>
                           <p className="text-sm text-[#0F172A] font-medium italic">
                             {numberToWords(totals.total)}
                           </p>
@@ -1721,14 +1721,14 @@ const CreateInvoicePage = () => {
                   <SectionCard title="Additional Options" icon={Settings}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* Send Reminder */}
-                      <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+                      <div className="flex items-center justify-between p-4 bg-white/5 rounded-md">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-[#FBBF23]/10 flex items-center justify-center">
-                            <Bell size={18} className="text-[#FBBF23]" />
+                          <div className="w-10 h-10 rounded-md bg-[#D97706]/10 flex items-center justify-center">
+                            <Bell size={18} className="text-[#D97706]" />
                           </div>
                           <div>
                             <p className="font-medium text-[#0F172A] text-sm">Payment Reminders</p>
-                            <p className="text-xs text-slate-500">Send automatic reminders before due date</p>
+                            <p className="text-xs text-[#94A3B8]">Send automatic reminders before due date</p>
                           </div>
                         </div>
                         <Controller
@@ -1738,7 +1738,7 @@ const CreateInvoicePage = () => {
                             <Checkbox
                               checked={field.value}
                               onCheckedChange={field.onChange}
-                              className="border-slate-300 data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
+                              className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
                             />
                           )}
                         />
@@ -1746,14 +1746,14 @@ const CreateInvoicePage = () => {
 
                       {/* Recurring Invoice */}
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+                        <div className="flex items-center justify-between p-4 bg-white/5 rounded-md">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                            <div className="w-10 h-10 rounded-md bg-purple-500/10 flex items-center justify-center">
                               <Repeat size={18} className="text-purple-500" />
                             </div>
                             <div>
                               <p className="font-medium text-[#0F172A] text-sm">Recurring Invoice</p>
-                              <p className="text-xs text-slate-500">Automatically generate this invoice</p>
+                              <p className="text-xs text-[#94A3B8]">Automatically generate this invoice</p>
                             </div>
                           </div>
                           <Controller
@@ -1763,7 +1763,7 @@ const CreateInvoicePage = () => {
                               <Checkbox
                                 checked={field.value}
                                 onCheckedChange={field.onChange}
-                                className="border-slate-300 data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
+                                className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
                               />
                             )}
                           />
@@ -1776,21 +1776,21 @@ const CreateInvoicePage = () => {
                             exit={{ opacity: 0, height: 0 }}
                             className="space-y-1 pl-4"
                           >
-                            <Label className="text-xs text-slate-500">Frequency</Label>
+                            <Label className="text-xs text-[#94A3B8]">Frequency</Label>
                             <Controller
                               name="recurringFrequency"
                               control={control}
                               render={({ field }) => (
                                 <Select value={field.value} onValueChange={field.onChange}>
-                                  <SelectTrigger className="h-10 rounded-xl border-slate-200 text-sm">
+                                  <SelectTrigger className="h-10 rounded-md border-[rgba(15,23,42,0.06)] text-sm">
                                     <SelectValue />
                                   </SelectTrigger>
-                                  <SelectContent className="rounded-xl">
-                                    <SelectItem value="weekly" className="rounded-lg">Weekly</SelectItem>
-                                    <SelectItem value="biweekly" className="rounded-lg">Bi-weekly</SelectItem>
-                                    <SelectItem value="monthly" className="rounded-lg">Monthly</SelectItem>
-                                    <SelectItem value="quarterly" className="rounded-lg">Quarterly</SelectItem>
-                                    <SelectItem value="yearly" className="rounded-lg">Yearly</SelectItem>
+                                  <SelectContent className="rounded-md">
+                                    <SelectItem value="weekly" className="rounded-md">Weekly</SelectItem>
+                                    <SelectItem value="biweekly" className="rounded-md">Bi-weekly</SelectItem>
+                                    <SelectItem value="monthly" className="rounded-md">Monthly</SelectItem>
+                                    <SelectItem value="quarterly" className="rounded-md">Quarterly</SelectItem>
+                                    <SelectItem value="yearly" className="rounded-md">Yearly</SelectItem>
                                   </SelectContent>
                                 </Select>
                               )}
@@ -1805,20 +1805,20 @@ const CreateInvoicePage = () => {
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-white rounded-2xl border border-slate-200 p-6"
+                    className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-6"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <h3 className="font-semibold text-[#0F172A] mb-1">Digital Signature</h3>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-[#94A3B8]">
                           Add your signature to make this invoice official
                         </p>
                       </div>
                       <div className="w-64">
                         <div className="h-20 border-b-2 border-dashed border-slate-300 mb-2 flex items-end justify-center pb-2">
-                          <span className="text-slate-300 text-sm italic">Sign here</span>
+                          <span className="text-[#475569] text-sm italic">Sign here</span>
                         </div>
-                        <p className="text-xs text-slate-500 text-right">Authorized Signature</p>
+                        <p className="text-xs text-[#94A3B8] text-right">Authorized Signature</p>
                       </div>
                     </div>
                   </motion.div>
@@ -1829,14 +1829,14 @@ const CreateInvoicePage = () => {
                       type="button"
                       variant="outline"
                       onClick={() => navigate("/invoice")}
-                      className="flex-1 rounded-xl"
+                      className="flex-1 rounded-md"
                     >
                       Cancel
                     </Button>
                     <Button
                       type="submit"
                       disabled={isSaving}
-                      className="flex-1 bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl"
+                      className="flex-1 bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
                     >
                       {isSaving ? (
                         <Loader2 size={16} className="animate-spin mr-2" />
@@ -1856,19 +1856,19 @@ const CreateInvoicePage = () => {
                     exit={{ opacity: 0, x: 20 }}
                     className="sticky top-24"
                   >
-                    <div className="bg-slate-100 rounded-2xl p-4">
+                    <div className="bg-white/5 rounded-md p-4">
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="font-semibold text-[#0F172A]">Live Preview</h3>
                         <div className="flex items-center gap-2">
-                          <button className="p-2 rounded-lg bg-white text-slate-500 hover:text-[#23D3EE]">
+                          <button className="p-2 rounded-md bg-white text-[#94A3B8] hover:text-[#0891B2]">
                             <Printer size={16} />
                           </button>
-                          <button className="p-2 rounded-lg bg-white text-slate-500 hover:text-[#23D3EE]">
+                          <button className="p-2 rounded-md bg-white text-[#94A3B8] hover:text-[#0891B2]">
                             <Download size={16} />
                           </button>
                         </div>
                       </div>
-                      <div className="max-h-[calc(100vh-200px)] overflow-y-auto rounded-xl">
+                      <div className="max-h-[calc(100vh-200px)] overflow-y-auto rounded-md">
                         <InvoicePreview
                           data={getValues()}
                           totals={totals}

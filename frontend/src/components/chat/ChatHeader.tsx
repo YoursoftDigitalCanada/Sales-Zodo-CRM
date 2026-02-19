@@ -58,11 +58,11 @@ export function ChatHeader({
   const displayName = getConversationName(conversation, currentUser.id);
 
   return (
-    <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+    <div className="bg-white border-b border-[rgba(15,23,42,0.06)] px-6 py-4 flex items-center justify-between">
       <div className="flex items-center gap-4">
         {/* Mobile back button */}
         {onBack && (
-          <button onClick={onBack} className="lg:hidden p-2 hover:bg-gray-100 rounded-lg">
+          <button onClick={onBack} className="lg:hidden p-2 hover:bg-white/10 rounded-md">
             <ArrowLeft size={20} />
           </button>
         )}
@@ -70,14 +70,14 @@ export function ChatHeader({
         {/* Avatar */}
         <div className="relative">
           {conversation.type === "group" ? (
-            <div className="w-11 h-11 bg-gradient-to-br from-[#23D3EE] to-[#23D3EE]/70 rounded-xl flex items-center justify-center">
-              <Users size={20} className="text-white" />
+            <div className="w-11 h-11 bg-[#F1F5F9]/70 rounded-md flex items-center justify-center">
+              <Users size={20} className="text-[#0F172A]" />
             </div>
           ) : (
             <div className="relative">
-              <Avatar className="w-11 h-11 rounded-xl">
+              <Avatar className="w-11 h-11 rounded-md">
                 <AvatarImage src={otherParticipant.avatar} />
-                <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#6366F1] text-white rounded-xl">
+                <AvatarFallback className="bg-[#F1F5F9] text-[#0F172A] rounded-md">
                   {getInitials(otherParticipant.name)}
                 </AvatarFallback>
               </Avatar>
@@ -88,8 +88,8 @@ export function ChatHeader({
 
         {/* Info */}
         <div>
-          <h2 className="font-semibold text-gray-800">{displayName}</h2>
-          <p className="text-sm text-gray-500">
+          <h2 className="font-semibold text-[#0F172A]">{displayName}</h2>
+          <p className="text-sm text-[#475569]">
             {conversation.type === "group" ? (
               `${conversation.participants.length} members`
             ) : otherParticipant.status === "online" ? (
@@ -112,9 +112,9 @@ export function ChatHeader({
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={onVoiceCall}
-              className="p-2.5 hover:bg-gray-100 rounded-lg transition-all"
+              className="p-2.5 hover:bg-white/10 rounded-md transition-all"
             >
-              <Phone size={18} className="text-gray-500" />
+              <Phone size={18} className="text-[#475569]" />
             </motion.button>
           </TooltipTrigger>
           <TooltipContent>Voice Call</TooltipContent>
@@ -126,9 +126,9 @@ export function ChatHeader({
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={onVideoCall}
-              className="p-2.5 hover:bg-gray-100 rounded-lg transition-all"
+              className="p-2.5 hover:bg-white/10 rounded-md transition-all"
             >
-              <Video size={18} className="text-gray-500" />
+              <Video size={18} className="text-[#475569]" />
             </motion.button>
           </TooltipTrigger>
           <TooltipContent>Video Call</TooltipContent>
@@ -141,8 +141,8 @@ export function ChatHeader({
               whileTap={{ scale: 0.95 }}
               onClick={onToggleInfoPanel}
               className={cn(
-                "p-2.5 rounded-lg transition-all",
-                showInfoPanel ? "bg-[#23D3EE] text-white" : "hover:bg-gray-100 text-gray-500"
+                "p-2.5 rounded-md transition-all",
+                showInfoPanel ? "bg-[#0891B2] text-white" : "hover:bg-white/10 text-[#475569]"
               )}
             >
               <Info size={18} />
@@ -156,9 +156,9 @@ export function ChatHeader({
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="p-2.5 hover:bg-gray-100 rounded-lg transition-all"
+              className="p-2.5 hover:bg-white/10 rounded-md transition-all"
             >
-              <MoreVertical size={18} className="text-gray-500" />
+              <MoreVertical size={18} className="text-[#475569]" />
             </motion.button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">

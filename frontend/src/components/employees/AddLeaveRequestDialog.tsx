@@ -91,7 +91,7 @@ export const AddLeaveRequestDialog: React.FC<AddLeaveRequestDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold text-gray-900">
+          <DialogTitle className="text-xl font-semibold text-[#0F172A]">
             Request Time Off
           </DialogTitle>
         </DialogHeader>
@@ -150,7 +150,7 @@ export const AddLeaveRequestDialog: React.FC<AddLeaveRequestDialogProps> = ({
                     <FormLabel>Start Date</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
                         <Input 
                           {...field} 
                           type="date" 
@@ -172,7 +172,7 @@ export const AddLeaveRequestDialog: React.FC<AddLeaveRequestDialogProps> = ({
                     <FormLabel>End Date</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
                         <Input 
                           {...field} 
                           type="date" 
@@ -189,10 +189,10 @@ export const AddLeaveRequestDialog: React.FC<AddLeaveRequestDialogProps> = ({
 
             {/* Duration Summary */}
             {totalDays > 0 && (
-              <div className="bg-[#23D3EE]/10 rounded-lg p-4">
+              <div className="bg-[#0891B2]/10 rounded-md p-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-700">Total Duration</span>
-                  <span className="text-xl font-bold text-[#23D3EE]">
+                  <span className="text-slate-200">Total Duration</span>
+                  <span className="text-xl font-bold text-[#0891B2]">
                     {totalDays} business day{totalDays !== 1 ? 's' : ''}
                   </span>
                 </div>
@@ -225,12 +225,12 @@ export const AddLeaveRequestDialog: React.FC<AddLeaveRequestDialogProps> = ({
             />
 
             {/* File Upload */}
-            <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center hover:border-[#23D3EE] transition-colors cursor-pointer">
-              <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-              <p className="text-sm text-gray-600">
+            <div className="border-2 border-dashed border-[rgba(15,23,42,0.06)] rounded-md p-6 text-center hover:border-[#22D3EE] transition-colors cursor-pointer">
+              <Upload className="w-8 h-8 text-[#94A3B8] mx-auto mb-2" />
+              <p className="text-sm text-[#475569]">
                 Drag and drop supporting documents here
               </p>
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-[#94A3B8] mt-1">
                 PDF, DOC, or images up to 5MB
               </p>
             </div>
@@ -245,7 +245,7 @@ export const AddLeaveRequestDialog: React.FC<AddLeaveRequestDialogProps> = ({
               </Button>
               <Button 
                 type="submit"
-                className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white"
+                className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white"
                 disabled={selectedBalance && totalDays > selectedBalance.available}
               >
                 Submit Request

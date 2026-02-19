@@ -154,12 +154,12 @@ const DepartmentsPage: React.FC = () => {
   };
 
   return (
-    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
+    <div className="p-6 space-y-6 bg-[#F8FAFC] min-h-screen">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Departments</h1>
-          <p className="text-gray-500 mt-1">
+          <h1 className="text-2xl font-bold text-[#0F172A]">Departments</h1>
+          <p className="text-[#475569] mt-1">
             Manage organizational structure and departments
           </p>
         </div>
@@ -170,7 +170,7 @@ const DepartmentsPage: React.FC = () => {
           </Button>
           <Button
             onClick={() => setIsAddDialogOpen(true)}
-            className="gap-2 bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white shadow-lg shadow-[#23D3EE]/20"
+            className="gap-2 bg-[#0891B2] hover:bg-[#0891B2]/90 text-white "
           >
             <Plus className="w-4 h-4" />
             Add Department
@@ -189,7 +189,7 @@ const DepartmentsPage: React.FC = () => {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
           <Input
             placeholder="Search departments..."
             value={searchQuery}
@@ -211,11 +211,11 @@ const DepartmentsPage: React.FC = () => {
         </Select>
 
         {/* View Mode Toggle */}
-        <div className="flex rounded-lg border border-gray-200 bg-white p-1">
+        <div className="flex rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-1">
           <Button
             variant={viewMode === 'grid' ? 'default' : 'ghost'}
             size="icon"
-            className={`h-8 w-8 ${viewMode === 'grid' ? 'bg-[#23D3EE] hover:bg-[#23D3EE]/90' : ''}`}
+            className={`h-8 w-8 ${viewMode === 'grid' ? 'bg-[#0891B2] hover:bg-[#0891B2]/90' : ''}`}
             onClick={() => setViewMode('grid')}
           >
             <LayoutGrid className="w-4 h-4" />
@@ -223,7 +223,7 @@ const DepartmentsPage: React.FC = () => {
           <Button
             variant={viewMode === 'list' ? 'default' : 'ghost'}
             size="icon"
-            className={`h-8 w-8 ${viewMode === 'list' ? 'bg-[#23D3EE] hover:bg-[#23D3EE]/90' : ''}`}
+            className={`h-8 w-8 ${viewMode === 'list' ? 'bg-[#0891B2] hover:bg-[#0891B2]/90' : ''}`}
             onClick={() => setViewMode('list')}
           >
             <List className="w-4 h-4" />
@@ -260,11 +260,11 @@ const DepartmentsPage: React.FC = () => {
       {/* Empty State */}
       {filteredDepartments.length === 0 && (
         <div className="text-center py-12">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Building2 className="w-8 h-8 text-gray-400" />
+          <div className="w-16 h-16 bg-[#F8FAFC] rounded-full flex items-center justify-center mx-auto mb-4">
+            <Building2 className="w-8 h-8 text-[#94A3B8]" />
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-1">No departments found</h3>
-          <p className="text-gray-500">
+          <h3 className="text-lg font-medium text-[#0F172A] mb-1">No departments found</h3>
+          <p className="text-[#475569]">
             {searchQuery
               ? 'Try adjusting your search'
               : 'Create your first department to get started'}

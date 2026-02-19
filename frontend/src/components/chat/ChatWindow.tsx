@@ -52,20 +52,20 @@ export function ChatWindow({
   // No conversation selected state
   if (!conversation) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-gray-50">
+      <div className="flex-1 flex items-center justify-center bg-white/5">
         <div className="text-center">
-          <div className="w-24 h-24 bg-[#23D3EE]/10 rounded-full flex items-center justify-center mx-auto mb-6">
-            <MessageSquare size={40} className="text-[#23D3EE]" />
+          <div className="w-24 h-24 bg-[#0891B2]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <MessageSquare size={40} className="text-[#0891B2]" />
           </div>
-          <h3 className="text-xl font-semibold text-gray-800 mb-2">Welcome to Messages</h3>
-          <p className="text-gray-500 max-w-sm">
+          <h3 className="text-xl font-semibold text-[#0F172A] mb-2">Welcome to Messages</h3>
+          <p className="text-[#475569] max-w-sm">
             Select a conversation from the left or start a new chat to begin messaging.
           </p>
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={onNewChat}
-            className="mt-6 px-6 py-3 bg-[#23D3EE] text-white rounded-xl font-medium hover:bg-[#23D3EE]/90 transition-all shadow-lg shadow-[#23D3EE]/20"
+            className="mt-6 px-6 py-3 bg-[#0891B2] text-white rounded-md font-medium hover:bg-[#0891B2]/90 transition-all "
           >
             <Plus size={18} className="inline mr-2" />
             Start New Chat
@@ -78,7 +78,7 @@ export function ChatWindow({
   const otherParticipant = getOtherParticipant(conversation, currentUser.id);
 
   return (
-    <div className="flex-1 flex flex-col bg-gray-50">
+    <div className="flex-1 flex flex-col bg-white/5">
       {/* Header */}
       <ChatHeader
         conversation={conversation}
@@ -95,7 +95,7 @@ export function ChatWindow({
         <div className="max-w-3xl mx-auto space-y-4">
           {/* Date Separator */}
           <div className="flex items-center justify-center my-4">
-            <div className="bg-white px-4 py-1.5 rounded-full text-xs text-gray-500 shadow-sm border border-gray-100">
+            <div className="bg-white px-4 py-1.5 rounded-full text-xs text-[#475569] shadow-sm border border-[rgba(15,23,42,0.06)]">
               Today
             </div>
           </div>
@@ -128,12 +128,12 @@ export function ChatWindow({
               animate={{ opacity: 1, y: 0 }}
               className="flex gap-3"
             >
-              <Avatar className="w-8 h-8 rounded-lg">
-                <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#6366F1] text-white text-xs rounded-lg">
+              <Avatar className="w-8 h-8 rounded-md">
+                <AvatarFallback className="bg-[#F1F5F9] text-[#0F172A] text-xs rounded-md">
                   {getInitials(otherParticipant.name)}
                 </AvatarFallback>
               </Avatar>
-              <div className="bg-white rounded-2xl rounded-bl-md px-4 py-3 shadow-sm border border-gray-100">
+              <div className="bg-white rounded-md rounded-bl-md px-4 py-3 shadow-sm border border-[rgba(15,23,42,0.06)]">
                 <TypingIndicator />
               </div>
             </motion.div>

@@ -57,14 +57,14 @@ export function UserInfoPanel({
       animate={{ width: 320, opacity: 1 }}
       exit={{ width: 0, opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="bg-white border-l border-gray-200 overflow-hidden"
+      className="bg-white border-l border-[rgba(15,23,42,0.06)] overflow-hidden"
     >
       <div className="w-80 h-full flex flex-col">
         {/* Header */}
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-          <h3 className="font-semibold text-gray-800">Contact Info</h3>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg transition-all">
-            <X size={18} className="text-gray-500" />
+        <div className="p-4 border-b border-[rgba(15,23,42,0.06)] flex items-center justify-between">
+          <h3 className="font-semibold text-[#0F172A]">Contact Info</h3>
+          <button onClick={onClose} className="p-1.5 hover:bg-white/10 rounded-md transition-all">
+            <X size={18} className="text-[#475569]" />
           </button>
         </div>
 
@@ -72,19 +72,19 @@ export function UserInfoPanel({
           {conversation.type === "direct" ? (
             <>
               {/* Profile Section */}
-              <div className="p-6 text-center border-b border-gray-100">
+              <div className="p-6 text-center border-b border-[rgba(15,23,42,0.06)]">
                 <div className="relative inline-block mb-4">
-                  <Avatar className="w-24 h-24 rounded-2xl">
+                  <Avatar className="w-24 h-24 rounded-md">
                     <AvatarImage src={otherParticipant.avatar} />
-                    <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#6366F1] text-white text-2xl rounded-2xl">
+                    <AvatarFallback className="bg-[#F1F5F9] text-[#0F172A] text-2xl rounded-md">
                       {getInitials(otherParticipant.name)}
                     </AvatarFallback>
                   </Avatar>
                   <StatusBadge status={otherParticipant.status} size="lg" />
                 </div>
-                <h4 className="text-lg font-semibold text-gray-800">{otherParticipant.name}</h4>
-                <p className="text-sm text-gray-500">{otherParticipant.role}</p>
-                <p className="text-xs text-gray-400 mt-1">
+                <h4 className="text-lg font-semibold text-[#0F172A]">{otherParticipant.name}</h4>
+                <p className="text-sm text-[#475569]">{otherParticipant.role}</p>
+                <p className="text-xs text-[#94A3B8] mt-1">
                   {otherParticipant.status === "online"
                     ? "Active now"
                     : formatLastSeen(otherParticipant.lastSeen)}
@@ -97,7 +97,7 @@ export function UserInfoPanel({
                       <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        className="p-3 bg-[#23D3EE]/10 text-[#23D3EE] rounded-xl hover:bg-[#23D3EE]/20 transition-all"
+                        className="p-3 bg-[#0891B2]/10 text-[#0891B2] rounded-md hover:bg-[#0891B2]/20 transition-all"
                       >
                         <Phone size={18} />
                       </motion.button>
@@ -109,7 +109,7 @@ export function UserInfoPanel({
                       <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        className="p-3 bg-[#23D3EE]/10 text-[#23D3EE] rounded-xl hover:bg-[#23D3EE]/20 transition-all"
+                        className="p-3 bg-[#0891B2]/10 text-[#0891B2] rounded-md hover:bg-[#0891B2]/20 transition-all"
                       >
                         <Video size={18} />
                       </motion.button>
@@ -121,7 +121,7 @@ export function UserInfoPanel({
                       <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        className="p-3 bg-[#23D3EE]/10 text-[#23D3EE] rounded-xl hover:bg-[#23D3EE]/20 transition-all"
+                        className="p-3 bg-[#0891B2]/10 text-[#0891B2] rounded-md hover:bg-[#0891B2]/20 transition-all"
                       >
                         <Mail size={18} />
                       </motion.button>
@@ -132,50 +132,50 @@ export function UserInfoPanel({
               </div>
 
               {/* Contact Details */}
-              <div className="p-4 border-b border-gray-100">
-                <h5 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+              <div className="p-4 border-b border-[rgba(15,23,42,0.06)]">
+                <h5 className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider mb-3">
                   Contact Details
                 </h5>
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-gray-100 rounded-lg">
-                      <Mail size={16} className="text-gray-500" />
+                    <div className="p-2 bg-white/5 rounded-md">
+                      <Mail size={16} className="text-[#475569]" />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-400">Email</p>
-                      <p className="text-sm text-gray-800">{otherParticipant.email}</p>
+                      <p className="text-xs text-[#94A3B8]">Email</p>
+                      <p className="text-sm text-[#0F172A]">{otherParticipant.email}</p>
                     </div>
                   </div>
                   {otherParticipant.phone && (
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-gray-100 rounded-lg">
-                        <PhoneIcon size={16} className="text-gray-500" />
+                      <div className="p-2 bg-white/5 rounded-md">
+                        <PhoneIcon size={16} className="text-[#475569]" />
                       </div>
                       <div>
-                        <p className="text-xs text-gray-400">Phone</p>
-                        <p className="text-sm text-gray-800">{otherParticipant.phone}</p>
+                        <p className="text-xs text-[#94A3B8]">Phone</p>
+                        <p className="text-sm text-[#0F172A]">{otherParticipant.phone}</p>
                       </div>
                     </div>
                   )}
                   {otherParticipant.company && (
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-gray-100 rounded-lg">
-                        <Building2 size={16} className="text-gray-500" />
+                      <div className="p-2 bg-white/5 rounded-md">
+                        <Building2 size={16} className="text-[#475569]" />
                       </div>
                       <div>
-                        <p className="text-xs text-gray-400">Company</p>
-                        <p className="text-sm text-gray-800">{otherParticipant.company}</p>
+                        <p className="text-xs text-[#94A3B8]">Company</p>
+                        <p className="text-sm text-[#0F172A]">{otherParticipant.company}</p>
                       </div>
                     </div>
                   )}
                   {otherParticipant.location && (
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-gray-100 rounded-lg">
-                        <MapPin size={16} className="text-gray-500" />
+                      <div className="p-2 bg-white/5 rounded-md">
+                        <MapPin size={16} className="text-[#475569]" />
                       </div>
                       <div>
-                        <p className="text-xs text-gray-400">Location</p>
-                        <p className="text-sm text-gray-800">{otherParticipant.location}</p>
+                        <p className="text-xs text-[#94A3B8]">Location</p>
+                        <p className="text-sm text-[#0F172A]">{otherParticipant.location}</p>
                       </div>
                     </div>
                   )}
@@ -184,35 +184,35 @@ export function UserInfoPanel({
             </>
           ) : (
             /* Group Info */
-            <div className="p-6 text-center border-b border-gray-100">
-              <div className="w-24 h-24 bg-gradient-to-br from-[#23D3EE] to-[#23D3EE]/70 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Users size={40} className="text-white" />
+            <div className="p-6 text-center border-b border-[rgba(15,23,42,0.06)]">
+              <div className="w-24 h-24 bg-[#F1F5F9]/70 rounded-md flex items-center justify-center mx-auto mb-4">
+                <Users size={40} className="text-[#0F172A]" />
               </div>
-              <h4 className="text-lg font-semibold text-gray-800">{conversation.name}</h4>
-              <p className="text-sm text-gray-500">{conversation.participants.length} members</p>
+              <h4 className="text-lg font-semibold text-[#0F172A]">{conversation.name}</h4>
+              <p className="text-sm text-[#475569]">{conversation.participants.length} members</p>
 
               {/* Group Members */}
               <div className="mt-4 text-left">
-                <h5 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                <h5 className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider mb-3">
                   Members
                 </h5>
                 <div className="space-y-2">
                   {conversation.participants.map((participant) => (
-                    <div key={participant.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50">
+                    <div key={participant.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-white/5">
                       <div className="relative">
-                        <Avatar className="w-10 h-10 rounded-xl">
+                        <Avatar className="w-10 h-10 rounded-md">
                           <AvatarImage src={participant.avatar} />
-                          <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#6366F1] text-white text-xs rounded-xl">
+                          <AvatarFallback className="bg-[#F1F5F9] text-[#0F172A] text-xs rounded-md">
                             {getInitials(participant.name)}
                           </AvatarFallback>
                         </Avatar>
                         <StatusBadge status={participant.status} size="sm" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-800 truncate">
+                        <p className="text-sm font-medium text-[#0F172A] truncate">
                           {participant.id === currentUser.id ? "You" : participant.name}
                         </p>
-                        <p className="text-xs text-gray-500 truncate">{participant.role || participant.email}</p>
+                        <p className="text-xs text-[#475569] truncate">{participant.role || participant.email}</p>
                       </div>
                     </div>
                   ))}
@@ -222,18 +222,18 @@ export function UserInfoPanel({
           )}
 
           {/* Shared Media */}
-          <div className="p-4 border-b border-gray-100">
+          <div className="p-4 border-b border-[rgba(15,23,42,0.06)]">
             <div className="flex items-center justify-between mb-3">
-              <h5 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+              <h5 className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">
                 Shared Media
               </h5>
-              <button className="text-xs text-[#23D3EE] font-medium hover:underline">See All</button>
+              <button className="text-xs text-[#0891B2] font-medium hover:underline">See All</button>
             </div>
             <div className="grid grid-cols-3 gap-2">
               {[1, 2, 3, 4, 5, 6].map((item) => (
                 <div
                   key={item}
-                  className="aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                  className="aspect-square bg-white/5 rounded-md overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
                 >
                   <img
                     src={`https://picsum.photos/100/100?random=${item}`}
@@ -246,30 +246,30 @@ export function UserInfoPanel({
           </div>
 
           {/* Shared Files */}
-          <div className="p-4 border-b border-gray-100">
+          <div className="p-4 border-b border-[rgba(15,23,42,0.06)]">
             <div className="flex items-center justify-between mb-3">
-              <h5 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+              <h5 className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">
                 Shared Files
               </h5>
-              <button className="text-xs text-[#23D3EE] font-medium hover:underline">See All</button>
+              <button className="text-xs text-[#0891B2] font-medium hover:underline">See All</button>
             </div>
             <div className="space-y-2">
               {sharedFiles.map((file, index) => (
                 <div
                   key={index}
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                  className="flex items-center gap-3 p-2 rounded-md hover:bg-white/5 cursor-pointer transition-colors"
                 >
-                  <div className="p-2 bg-[#23D3EE]/10 rounded-lg">
-                    <FileText size={16} className="text-[#23D3EE]" />
+                  <div className="p-2 bg-[#0891B2]/10 rounded-md">
+                    <FileText size={16} className="text-[#0891B2]" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-800 truncate">{file.name}</p>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-sm font-medium text-[#0F172A] truncate">{file.name}</p>
+                    <p className="text-xs text-[#94A3B8]">
                       {file.size} • {file.date}
                     </p>
                   </div>
-                  <button className="p-1.5 hover:bg-gray-200 rounded-lg">
-                    <Download size={14} className="text-gray-500" />
+                  <button className="p-1.5 hover:bg-gray-200 rounded-md">
+                    <Download size={14} className="text-[#475569]" />
                   </button>
                 </div>
               ))}
@@ -278,33 +278,33 @@ export function UserInfoPanel({
 
           {/* Chat Settings */}
           <div className="p-4">
-            <h5 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+            <h5 className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider mb-3">
               Chat Settings
             </h5>
             <div className="space-y-1">
               <button
                 onClick={onMute}
-                className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                className="w-full flex items-center gap-3 p-3 rounded-md hover:bg-white/5 transition-colors"
               >
-                <BellOff size={18} className="text-gray-500" />
-                <span className="text-sm text-gray-700">
+                <BellOff size={18} className="text-[#475569]" />
+                <span className="text-sm text-slate-200">
                   {conversation.isMuted ? "Unmute Notifications" : "Mute Notifications"}
                 </span>
               </button>
-              <button className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                <Star size={18} className="text-gray-500" />
-                <span className="text-sm text-gray-700">Starred Messages</span>
+              <button className="w-full flex items-center gap-3 p-3 rounded-md hover:bg-white/5 transition-colors">
+                <Star size={18} className="text-[#475569]" />
+                <span className="text-sm text-slate-200">Starred Messages</span>
               </button>
               <button
                 onClick={onArchive}
-                className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                className="w-full flex items-center gap-3 p-3 rounded-md hover:bg-white/5 transition-colors"
               >
-                <Archive size={18} className="text-gray-500" />
-                <span className="text-sm text-gray-700">Archive Chat</span>
+                <Archive size={18} className="text-[#475569]" />
+                <span className="text-sm text-slate-200">Archive Chat</span>
               </button>
               <button
                 onClick={onDelete}
-                className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-red-50 transition-colors text-red-600"
+                className="w-full flex items-center gap-3 p-3 rounded-md hover:bg-red-50 transition-colors text-red-600"
               >
                 <Trash2 size={18} />
                 <span className="text-sm">Delete Chat</span>

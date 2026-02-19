@@ -50,7 +50,7 @@ interface AddDepartmentDialogProps {
 }
 
 const colorOptions = [
-  { value: '#23D3EE', label: 'Teal' },
+  { value: '#22D3EE', label: 'Teal' },
   { value: '#8B5CF6', label: 'Purple' },
   { value: '#F59E0B', label: 'Amber' },
   { value: '#EC4899', label: 'Pink' },
@@ -58,7 +58,7 @@ const colorOptions = [
   { value: '#3B82F6', label: 'Blue' },
   { value: '#EF4444', label: 'Red' },
   { value: '#6366F1', label: 'Indigo' },
-  { value: '#FBBF23', label: 'Gold' },
+  { value: '#FBBF24', label: 'Gold' },
 ];
 
 export const AddDepartmentDialog: React.FC<AddDepartmentDialogProps> = ({
@@ -76,7 +76,7 @@ export const AddDepartmentDialog: React.FC<AddDepartmentDialogProps> = ({
       description: editingDepartment?.description || '',
       headId: editingDepartment?.headId || '',
       budget: editingDepartment?.budget?.toString() || '',
-      color: editingDepartment?.color || '#23D3EE',
+      color: editingDepartment?.color || '#22D3EE',
     },
   });
 
@@ -96,7 +96,7 @@ export const AddDepartmentDialog: React.FC<AddDepartmentDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold text-gray-900">
+          <DialogTitle className="text-xl font-semibold text-[#0F172A]">
             {editingDepartment ? 'Edit Department' : 'Create New Department'}
           </DialogTitle>
         </DialogHeader>
@@ -112,7 +112,7 @@ export const AddDepartmentDialog: React.FC<AddDepartmentDialogProps> = ({
                     <FormLabel>Department Name</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
                         <Input {...field} className="pl-10" placeholder="Engineering" />
                       </div>
                     </FormControl>
@@ -170,7 +170,7 @@ export const AddDepartmentDialog: React.FC<AddDepartmentDialogProps> = ({
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <User className="w-4 h-4 text-gray-400 mr-2" />
+                        <User className="w-4 h-4 text-[#94A3B8] mr-2" />
                         <SelectValue placeholder="Select department head" />
                       </SelectTrigger>
                     </FormControl>
@@ -199,7 +199,7 @@ export const AddDepartmentDialog: React.FC<AddDepartmentDialogProps> = ({
                   <FormLabel>Annual Budget</FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
                       <Input {...field} type="number" className="pl-10" placeholder="500000" />
                     </div>
                   </FormControl>
@@ -221,7 +221,7 @@ export const AddDepartmentDialog: React.FC<AddDepartmentDialogProps> = ({
                           key={color.value}
                           type="button"
                           onClick={() => field.onChange(color.value)}
-                          className={`w-10 h-10 rounded-lg border-2 transition-all ${
+                          className={`w-10 h-10 rounded-md border-2 transition-all ${
                             field.value === color.value 
                               ? 'border-gray-900 scale-110' 
                               : 'border-transparent hover:scale-105'
@@ -247,7 +247,7 @@ export const AddDepartmentDialog: React.FC<AddDepartmentDialogProps> = ({
               </Button>
               <Button 
                 type="submit"
-                className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white"
+                className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white"
               >
                 {editingDepartment ? 'Update Department' : 'Create Department'}
               </Button>

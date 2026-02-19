@@ -51,7 +51,7 @@ export function AddInvoiceDialog({ onSuccess }: Props) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="bg-cyan-500 text-white px-4 py-2 rounded-md"
+        className="bg-cyan-500 text-[#0F172A] px-4 py-2 rounded-md"
       >
         + Add Invoice
       </button>
@@ -60,7 +60,7 @@ export function AddInvoiceDialog({ onSuccess }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white w-[700px] rounded-lg p-6">
+      <div className="bg-white w-[700px] rounded-md p-6">
         <h2 className="text-lg font-semibold mb-4">Create Invoice</h2>
 
         {/* Client */}
@@ -102,7 +102,7 @@ export function AddInvoiceDialog({ onSuccess }: Props) {
               />
               <input
                 disabled
-                className="border p-2 rounded bg-gray-100"
+                className="border p-2 rounded bg-white/5"
                 value={item.total}
               />
             </div>
@@ -125,7 +125,7 @@ export function AddInvoiceDialog({ onSuccess }: Props) {
             </button>
             <button
               onClick={submit}
-              className="px-4 py-2 bg-cyan-500 text-white rounded"
+              className="px-4 py-2 bg-cyan-500 text-[#0F172A] rounded"
             >
               Save Invoice
             </button>

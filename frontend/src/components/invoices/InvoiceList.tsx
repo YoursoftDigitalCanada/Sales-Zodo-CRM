@@ -70,22 +70,22 @@ export default function InvoiceList() {
 
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h2 className="text-3xl font-bold text-gray-800">Invoices</h2>
-          <p className="text-gray-500 mt-1">Manage your billing and payments</p>
+          <h2 className="text-3xl font-bold text-[#0F172A]">Invoices</h2>
+          <p className="text-[#475569] mt-1">Manage your billing and payments</p>
         </div>
         <button 
           onClick={(e) => { e.stopPropagation(); navigate('/invoice/create'); }}
-          className="bg-red-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-red-700 shadow-sm transition-colors"
+          className="bg-red-600 text-[#0F172A] px-4 py-2 rounded-md flex items-center gap-2 hover:bg-red-700 shadow-sm transition-colors"
         >
           <Plus size={20} /> Create New Invoice
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-visible"> 
+      <div className="bg-white rounded-md shadow-sm border border-[rgba(15,23,42,0.06)] overflow-visible"> 
         {/* overflow-visible is important for dropdowns to show! */}
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-gray-50/50 text-gray-600 text-sm border-b border-gray-200">
+            <tr className="bg-white/5/50 text-[#475569] text-sm border-b border-[rgba(15,23,42,0.06)]">
               <th className="p-4 font-semibold">Invoice #</th>
               <th className="p-4 font-semibold">Client</th>
               <th className="p-4 font-semibold">Date</th>
@@ -96,16 +96,16 @@ export default function InvoiceList() {
           </thead>
           <tbody>
             {invoices.map((inv) => (
-              <tr key={inv.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                <td className="p-4 font-medium text-indigo-600">{inv.invoiceNumber}</td>
-                <td className="p-4 text-gray-800">{inv.clientName}</td>
-                <td className="p-4 text-gray-500 text-sm">{new Date(inv.invoiceDate).toLocaleDateString()}</td>
+              <tr key={inv.id} className="border-b border-[rgba(15,23,42,0.06)] hover:bg-white/5 transition-colors">
+                <td className="p-4 font-medium text-[#0891B2]">{inv.invoiceNumber}</td>
+                <td className="p-4 text-[#0F172A]">{inv.clientName}</td>
+                <td className="p-4 text-[#475569] text-sm">{new Date(inv.invoiceDate).toLocaleDateString()}</td>
                 <td className="p-4">
                   <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
                     {inv.status || 'Saved'}
                   </span>
                 </td>
-                <td className="p-4 text-right font-semibold text-gray-900">
+                <td className="p-4 text-right font-semibold text-[#0F172A]">
                   {new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(inv.total)}
                 </td>
                 
@@ -115,7 +115,7 @@ export default function InvoiceList() {
                     {/* Download Icon */}
                     <button 
                       onClick={(e) => { e.stopPropagation(); handleDownload(inv); }}
-                      className="p-2 text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                      className="p-2 text-[#0891B2] hover:bg-[#0891B2]/10 rounded transition-colors"
                     >
                       <Download size={18} />
                     </button>
@@ -127,18 +127,18 @@ export default function InvoiceList() {
                           e.stopPropagation(); // Prevent closing immediately
                           setOpenMenuId(openMenuId === inv.id ? null : inv.id);
                         }}
-                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                        className="p-2 text-[#94A3B8] hover:text-[#475569] hover:bg-white/10 rounded transition-colors"
                       >
                         <MoreVertical size={18} />
                       </button>
 
                       {/* --- THE DROPDOWN MENU --- */}
                       {openMenuId === inv.id && (
-                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 border border-gray-100 animate-in fade-in zoom-in-95 duration-100 origin-top-right">
+                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-md card-shadow z-50 border border-[rgba(15,23,42,0.06)] animate-in fade-in zoom-in-95 duration-100 origin-top-right">
                           <div className="py-1">
                             <button
                               onClick={(e) => { e.stopPropagation(); handleEdit(inv.id); }}
-                              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center"
+                              className="w-full text-left px-4 py-2 text-sm text-slate-200 hover:bg-white/5 flex items-center"
                             >
                               <Edit size={16} className="mr-2 text-blue-500" /> Update
                             </button>

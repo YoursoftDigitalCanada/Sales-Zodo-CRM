@@ -99,7 +99,7 @@ const pipelineStageConfig: Omit<PipelineStage, "leads">[] = [
   { id: "new", name: "New Leads", color: "#3B82F6", bgColor: "#EFF6FF", icon: Sparkles },
   { id: "contacted", name: "Contacted", color: "#8B5CF6", bgColor: "#F5F3FF", icon: Mail },
   { id: "qualified", name: "Qualified", color: "#F59E0B", bgColor: "#FFFBEB", icon: Target },
-  { id: "proposal", name: "Proposal Sent", color: "#23D3EE", bgColor: "#F0FDFA", icon: Clock },
+  { id: "proposal", name: "Proposal Sent", color: "#22D3EE", bgColor: "#F0FDFA", icon: Clock },
   { id: "negotiation", name: "Negotiation", color: "#EC4899", bgColor: "#FDF2F8", icon: TrendingUp },
   { id: "won", name: "Won", color: "#10B981", bgColor: "#ECFDF5", icon: CheckCircle2 },
   { id: "lost", name: "Lost", color: "#EF4444", bgColor: "#FEF2F2", icon: XCircle },
@@ -210,7 +210,7 @@ const PipelineLeadCard = ({
       draggable
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
-      className="bg-white rounded-xl border border-slate-200 p-4 cursor-grab active:cursor-grabbing hover:shadow-lg hover:border-slate-300 transition-all group"
+      className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4 cursor-grab active:cursor-grabbing hover:shadow-lg hover:border-slate-300 transition-all group"
       onClick={onView}
     >
       {/* Header */}
@@ -218,15 +218,15 @@ const PipelineLeadCard = ({
         <div className="flex items-center gap-3">
           <Avatar className="h-10 w-10 border-2 border-white shadow">
             <AvatarImage src={lead.avatar} />
-            <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#23D3EE]/70 text-white font-medium text-sm">
+            <AvatarFallback className="bg-[#F1F5F9]/70 text-[#0F172A] font-medium text-sm">
               {getInitials(lead.firstName, lead.lastName)}
             </AvatarFallback>
           </Avatar>
           <div>
-            <h4 className="font-semibold text-[#0F172A] text-sm group-hover:text-[#23D3EE] transition-colors">
+            <h4 className="font-semibold text-[#0F172A] text-sm group-hover:text-[#0891B2] transition-colors">
               {lead.firstName} {lead.lastName}
             </h4>
-            <p className="text-xs text-slate-500">{lead.company}</p>
+            <p className="text-xs text-[#94A3B8]">{lead.company}</p>
           </div>
         </div>
 
@@ -243,15 +243,15 @@ const PipelineLeadCard = ({
                 <MoreVertical size={14} />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40 rounded-xl">
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onView(); }} className="rounded-lg text-sm">
+            <DropdownMenuContent align="end" className="w-40 rounded-md">
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onView(); }} className="rounded-md text-sm">
                 <Eye size={14} className="mr-2" /> View
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }} className="rounded-lg text-sm">
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }} className="rounded-md text-sm">
                 <Pencil size={14} className="mr-2" /> Edit
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="rounded-lg text-sm text-red-600">
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="rounded-md text-sm text-red-600">
                 <Trash2 size={14} className="mr-2" /> Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -269,12 +269,12 @@ const PipelineLeadCard = ({
       {/* Score Bar */}
       <div className="mb-3">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-xs text-slate-400">Score</span>
+          <span className="text-xs text-[#475569]">Score</span>
           <span className="text-xs font-semibold" style={{ color: getScoreColor(lead.score) }}>
             {lead.score}%
           </span>
         </div>
-        <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+        <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
           <div
             className="h-full rounded-full transition-all"
             style={{ width: `${lead.score}%`, backgroundColor: getScoreColor(lead.score) }}
@@ -284,11 +284,11 @@ const PipelineLeadCard = ({
 
       {/* Meta */}
       <div className="flex items-center justify-between text-xs">
-        <div className="flex items-center gap-1 text-slate-400">
+        <div className="flex items-center gap-1 text-[#475569]">
           <User size={12} />
           <span className="truncate max-w-[100px]">{lead.assignedTo}</span>
         </div>
-        <div className="flex items-center gap-1 text-slate-400">
+        <div className="flex items-center gap-1 text-[#475569]">
           <Clock size={12} />
           <span>{lead.daysInStage}d</span>
         </div>
@@ -346,15 +346,15 @@ const PipelineColumn = ({
       >
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${stage.color}20` }}>
+            <div className="w-8 h-8 rounded-md flex items-center justify-center" style={{ backgroundColor: `${stage.color}20` }}>
               <StageIcon size={16} style={{ color: stage.color }} />
             </div>
             <div>
               <h3 className="font-semibold text-[#0F172A] text-sm">{stage.name}</h3>
-              <p className="text-xs text-slate-500">{stage.leads.length} leads</p>
+              <p className="text-xs text-[#94A3B8]">{stage.leads.length} leads</p>
             </div>
           </div>
-          <span className="px-2 py-1 rounded-lg text-xs font-bold" style={{ backgroundColor: `${stage.color}20`, color: stage.color }}>
+          <span className="px-2 py-1 rounded-md text-xs font-bold" style={{ backgroundColor: `${stage.color}20`, color: stage.color }}>
             {stage.leads.length}
           </span>
         </div>
@@ -363,7 +363,7 @@ const PipelineColumn = ({
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button size="icon" variant="ghost" className="h-7 w-7 rounded-lg hover:bg-white/50" onClick={() => onAddLead(stage.id)}>
+                <Button size="icon" variant="ghost" className="h-7 w-7 rounded-md hover:bg-white/50" onClick={() => onAddLead(stage.id)}>
                   <Plus size={14} style={{ color: stage.color }} />
                 </Button>
               </TooltipTrigger>
@@ -379,7 +379,7 @@ const PipelineColumn = ({
           "min-h-[500px] max-h-[calc(100vh-350px)] overflow-y-auto p-3 space-y-3 rounded-b-xl border border-t-0 transition-all duration-200",
           isDragOver
             ? "bg-blue-50/80 border-blue-300 ring-2 ring-blue-200 ring-inset"
-            : "bg-slate-50/50"
+            : "bg-[#F8FAFC]/50"
         )}
         style={{ borderColor: isDragOver ? undefined : `${stage.color}20` }}
         onDragOver={handleDragOver}
@@ -387,7 +387,7 @@ const PipelineColumn = ({
         onDrop={handleDrop}
       >
         {isDragOver && (
-          <div className="flex items-center justify-center py-3 px-4 bg-blue-100/60 rounded-lg border-2 border-dashed border-blue-300 text-blue-600 text-sm font-medium">
+          <div className="flex items-center justify-center py-3 px-4 bg-blue-100/60 rounded-md border-2 border-dashed border-blue-300 text-[#0891B2] text-sm font-medium">
             Drop here to move to {stage.name}
           </div>
         )}
@@ -410,8 +410,8 @@ const PipelineColumn = ({
             <div className="w-12 h-12 rounded-full flex items-center justify-center mb-3" style={{ backgroundColor: `${stage.color}10` }}>
               <StageIcon size={20} style={{ color: stage.color }} />
             </div>
-            <p className="text-sm text-slate-500 mb-2">No leads in this stage</p>
-            <Button size="sm" variant="outline" className="rounded-lg text-xs" onClick={() => onAddLead(stage.id)}>
+            <p className="text-sm text-[#94A3B8] mb-2">No leads in this stage</p>
+            <Button size="sm" variant="outline" className="rounded-md text-xs" onClick={() => onAddLead(stage.id)}>
               <Plus size={12} className="mr-1" />
               Add Lead
             </Button>
@@ -436,13 +436,13 @@ const LeadDetailPanel = ({ lead, onClose, stageColor }: { lead: Lead; onClose: (
       animate={{ x: 0 }}
       exit={{ x: "100%" }}
       transition={{ type: "spring", damping: 25, stiffness: 300 }}
-      className="fixed top-0 right-0 h-full w-[420px] bg-white shadow-2xl border-l border-slate-200 z-50 flex flex-col"
+      className="fixed top-0 right-0 h-full w-[420px] glass-2xl border-l border-[rgba(15,23,42,0.06)] z-50 flex flex-col"
     >
       {/* Header */}
-      <div className="p-6 border-b border-slate-100" style={{ background: `linear-gradient(135deg, ${stageColor}10, transparent)` }}>
+      <div className="p-6 border-b border-[rgba(15,23,42,0.06)]" style={{ background: `linear-gradient(135deg, ${stageColor}10, transparent)` }}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-[#0F172A]">Lead Details</h2>
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={onClose}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" onClick={onClose}>
             <X size={18} />
           </Button>
         </div>
@@ -450,13 +450,13 @@ const LeadDetailPanel = ({ lead, onClose, stageColor }: { lead: Lead; onClose: (
         <div className="flex items-center gap-4">
           <Avatar className="h-16 w-16 border-2 shadow-md" style={{ borderColor: stageColor }}>
             <AvatarImage src={lead.avatar} />
-            <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#23D3EE]/70 text-white font-bold text-xl">
+            <AvatarFallback className="bg-[#F1F5F9]/70 text-[#0F172A] font-bold text-xl">
               {getInitials(lead.firstName, lead.lastName)}
             </AvatarFallback>
           </Avatar>
           <div>
             <h3 className="text-xl font-bold text-[#0F172A]">{lead.firstName} {lead.lastName}</h3>
-            <p className="text-sm text-slate-500">{lead.jobTitle}</p>
+            <p className="text-sm text-[#94A3B8]">{lead.jobTitle}</p>
             <div className="flex items-center gap-2 mt-1">
               <Badge variant="outline" className="text-xs capitalize px-2 py-0.5 rounded-full" style={{ borderColor: stageColor, color: stageColor }}>
                 {lead.status}
@@ -473,17 +473,17 @@ const LeadDetailPanel = ({ lead, onClose, stageColor }: { lead: Lead; onClose: (
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {/* Value & Score */}
         <div className="grid grid-cols-2 gap-4">
-          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border border-green-100">
+          <div className="r from-green-50 to-emerald-50 rounded-md p-4 border border-green-100">
             <div className="flex items-center gap-2 mb-1">
               <DollarSign size={14} className="text-green-600" />
               <span className="text-xs text-green-600 font-medium">Deal Value</span>
             </div>
             <p className="text-xl font-bold text-green-700">{formatCurrency(lead.value, lead.currency)}</p>
           </div>
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
+          <div className="r from-blue-50 to-indigo-50 rounded-md p-4 border border-blue-100">
             <div className="flex items-center gap-2 mb-1">
-              <Target size={14} className="text-blue-600" />
-              <span className="text-xs text-blue-600 font-medium">Lead Score</span>
+              <Target size={14} className="text-[#0891B2]" />
+              <span className="text-xs text-[#0891B2] font-medium">Lead Score</span>
             </div>
             <p className="text-xl font-bold" style={{ color: getScoreColor(lead.score) }}>{lead.score}%</p>
           </div>
@@ -494,37 +494,37 @@ const LeadDetailPanel = ({ lead, onClose, stageColor }: { lead: Lead; onClose: (
           <h4 className="text-sm font-semibold text-[#0F172A] mb-3">Contact Information</h4>
           <div className="space-y-3">
             {lead.email && (
-              <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                <Mail size={16} className="text-slate-400 flex-shrink-0" />
+              <div className="flex items-center gap-3 p-3 bg-[#F8FAFC] rounded-md">
+                <Mail size={16} className="text-[#475569] flex-shrink-0" />
                 <div>
-                  <p className="text-xs text-slate-400">Email</p>
-                  <a href={`mailto:${lead.email}`} className="text-sm text-[#23D3EE] hover:underline">{lead.email}</a>
+                  <p className="text-xs text-[#475569]">Email</p>
+                  <a href={`mailto:${lead.email}`} className="text-sm text-[#0891B2] hover:underline">{lead.email}</a>
                 </div>
               </div>
             )}
             {lead.phone && (
-              <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                <Phone size={16} className="text-slate-400 flex-shrink-0" />
+              <div className="flex items-center gap-3 p-3 bg-[#F8FAFC] rounded-md">
+                <Phone size={16} className="text-[#475569] flex-shrink-0" />
                 <div>
-                  <p className="text-xs text-slate-400">Phone</p>
+                  <p className="text-xs text-[#475569]">Phone</p>
                   <a href={`tel:${lead.phone}`} className="text-sm text-[#0F172A]">{lead.phone}</a>
                 </div>
               </div>
             )}
             {lead.company && (
-              <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                <Building2 size={16} className="text-slate-400 flex-shrink-0" />
+              <div className="flex items-center gap-3 p-3 bg-[#F8FAFC] rounded-md">
+                <Building2 size={16} className="text-[#475569] flex-shrink-0" />
                 <div>
-                  <p className="text-xs text-slate-400">Company</p>
+                  <p className="text-xs text-[#475569]">Company</p>
                   <p className="text-sm text-[#0F172A]">{lead.company}</p>
                 </div>
               </div>
             )}
             {lead.jobTitle && (
-              <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                <Briefcase size={16} className="text-slate-400 flex-shrink-0" />
+              <div className="flex items-center gap-3 p-3 bg-[#F8FAFC] rounded-md">
+                <Briefcase size={16} className="text-[#475569] flex-shrink-0" />
                 <div>
-                  <p className="text-xs text-slate-400">Job Title</p>
+                  <p className="text-xs text-[#475569]">Job Title</p>
                   <p className="text-sm text-[#0F172A]">{lead.jobTitle}</p>
                 </div>
               </div>
@@ -537,32 +537,32 @@ const LeadDetailPanel = ({ lead, onClose, stageColor }: { lead: Lead; onClose: (
           <h4 className="text-sm font-semibold text-[#0F172A] mb-3">Details</h4>
           <div className="space-y-3">
             {lead.source && (
-              <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                <Globe size={16} className="text-slate-400 flex-shrink-0" />
+              <div className="flex items-center gap-3 p-3 bg-[#F8FAFC] rounded-md">
+                <Globe size={16} className="text-[#475569] flex-shrink-0" />
                 <div>
-                  <p className="text-xs text-slate-400">Lead Source</p>
+                  <p className="text-xs text-[#475569]">Lead Source</p>
                   <p className="text-sm text-[#0F172A] capitalize">{lead.source}</p>
                 </div>
               </div>
             )}
-            <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-              <User size={16} className="text-slate-400 flex-shrink-0" />
+            <div className="flex items-center gap-3 p-3 bg-[#F8FAFC] rounded-md">
+              <User size={16} className="text-[#475569] flex-shrink-0" />
               <div>
-                <p className="text-xs text-slate-400">Assigned To</p>
+                <p className="text-xs text-[#475569]">Assigned To</p>
                 <p className="text-sm text-[#0F172A]">{lead.assignedTo}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-              <Calendar size={16} className="text-slate-400 flex-shrink-0" />
+            <div className="flex items-center gap-3 p-3 bg-[#F8FAFC] rounded-md">
+              <Calendar size={16} className="text-[#475569] flex-shrink-0" />
               <div>
-                <p className="text-xs text-slate-400">Created</p>
+                <p className="text-xs text-[#475569]">Created</p>
                 <p className="text-sm text-[#0F172A]">{formatDate(lead.createdAt)}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-              <Clock size={16} className="text-slate-400 flex-shrink-0" />
+            <div className="flex items-center gap-3 p-3 bg-[#F8FAFC] rounded-md">
+              <Clock size={16} className="text-[#475569] flex-shrink-0" />
               <div>
-                <p className="text-xs text-slate-400">Days in Stage</p>
+                <p className="text-xs text-[#475569]">Days in Stage</p>
                 <p className="text-sm text-[#0F172A]">{lead.daysInStage} days</p>
               </div>
             </div>
@@ -571,11 +571,11 @@ const LeadDetailPanel = ({ lead, onClose, stageColor }: { lead: Lead; onClose: (
       </div>
 
       {/* Footer Actions */}
-      <div className="p-4 border-t border-slate-100 flex gap-3">
-        <Button className="flex-1 bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl gap-2">
+      <div className="p-4 border-t border-[rgba(15,23,42,0.06)] flex gap-3">
+        <Button className="flex-1 bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md gap-2">
           <Mail size={16} /> Send Email
         </Button>
-        <Button variant="outline" className="flex-1 rounded-xl gap-2">
+        <Button variant="outline" className="flex-1 rounded-md gap-2">
           <Phone size={16} /> Call
         </Button>
       </div>
@@ -627,8 +627,8 @@ const Pipeline = () => {
 
   // Find the stage color for the selected lead
   const selectedLeadStageColor = selectedLead
-    ? pipeline.find((s) => s.leads.some((l) => l.id === selectedLead.id))?.color || "#23D3EE"
-    : "#23D3EE";
+    ? pipeline.find((s) => s.leads.some((l) => l.id === selectedLead.id))?.color || "#22D3EE"
+    : "#22D3EE";
 
   const handleLeadView = (lead: Lead) => {
     setSelectedLead(lead);
@@ -719,57 +719,57 @@ const Pipeline = () => {
 
       <main className="flex-1 ml-0">
         {/* Header */}
-        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-slate-200">
+        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-[rgba(15,23,42,0.06)]">
           <div className="px-8 py-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
-                  <Link to="/dashboard" className="hover:text-[#23D3EE]">Dashboard</Link>
+                <div className="flex items-center gap-2 text-sm text-[#94A3B8] mb-1">
+                  <Link to="/dashboard" className="hover:text-[#0891B2]">Dashboard</Link>
                   <ChevronRight size={14} />
-                  <Link to="/leads" className="hover:text-[#23D3EE]">Leads</Link>
+                  <Link to="/leads" className="hover:text-[#0891B2]">Leads</Link>
                   <ChevronRight size={14} />
                   <span className="text-[#0F172A] font-medium">Pipeline</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <h1 className="text-2xl font-bold text-[#0F172A]">Sales Pipeline</h1>
-                  <span className="px-2 py-1 bg-[#23D3EE]/10 text-[#23D3EE] text-xs font-bold rounded-lg">LIVE</span>
+                  <span className="px-2 py-1 bg-[#0891B2]/10 text-[#0891B2] text-xs font-bold rounded-md">LIVE</span>
                 </div>
               </div>
 
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-4 mr-4">
                   <div className="text-center">
-                    <p className="text-xs text-slate-500">Total Leads</p>
+                    <p className="text-xs text-[#94A3B8]">Total Leads</p>
                     <p className="text-lg font-bold text-[#0F172A]">{totalLeads}</p>
                   </div>
                   <div className="w-px h-8 bg-slate-200" />
                   <div className="text-center">
-                    <p className="text-xs text-slate-500">Pipeline Value</p>
-                    <p className="text-lg font-bold text-[#23D3EE]">{formatCurrency(totalValue)}</p>
+                    <p className="text-xs text-[#94A3B8]">Pipeline Value</p>
+                    <p className="text-lg font-bold text-[#0891B2]">{formatCurrency(totalValue)}</p>
                   </div>
                   <div className="w-px h-8 bg-slate-200" />
                   <div className="text-center">
-                    <p className="text-xs text-slate-500">Won</p>
+                    <p className="text-xs text-[#94A3B8]">Won</p>
                     <p className="text-lg font-bold text-green-500">{formatCurrency(wonValue)}</p>
                   </div>
                 </div>
 
                 <div className="relative">
-                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                   <Input
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search leads..."
-                    className="pl-9 h-10 w-64 rounded-xl border-slate-200"
+                    className="pl-9 h-10 w-64 rounded-md border-[rgba(15,23,42,0.06)]"
                   />
                 </div>
 
-                <Button variant="outline" className="rounded-xl gap-2">
+                <Button variant="outline" className="rounded-md gap-2">
                   <Filter size={16} />
                   Filter
                 </Button>
 
-                <Button className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl gap-2">
+                <Button className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md gap-2">
                   <Plus size={18} />
                   Add Lead
                 </Button>
@@ -782,18 +782,18 @@ const Pipeline = () => {
         <div className="p-8">
           {/* Pipeline Flow Indicator */}
           <div className="mb-6 flex items-center justify-center">
-            <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl border border-slate-200 shadow-sm">
+            <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-md border border-[rgba(15,23,42,0.06)] shadow-sm">
               {pipeline.map((stage, index) => (
                 <React.Fragment key={stage.id}>
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: stage.color }} />
-                    <span className="text-xs font-medium text-slate-600">{stage.name}</span>
+                    <span className="text-xs font-medium text-[#475569]">{stage.name}</span>
                     <span className="text-xs font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: `${stage.color}20`, color: stage.color }}>
                       {stage.leads.length}
                     </span>
                   </div>
                   {index < pipeline.length - 1 && (
-                    <ArrowRight size={14} className="text-slate-300 mx-1" />
+                    <ArrowRight size={14} className="text-[#475569] mx-1" />
                   )}
                 </React.Fragment>
               ))}

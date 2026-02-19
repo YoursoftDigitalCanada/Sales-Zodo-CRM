@@ -81,52 +81,52 @@ export function CalendarWidget() {
   const getColorClasses = (color: string, variant: 'bg' | 'text' | 'border' | 'gradient') => {
     const colors: Record<string, Record<string, string>> = {
       teal: {
-        bg: 'bg-[#23D3EE]',
-        text: 'text-[#23D3EE]',
-        border: 'border-[#23D3EE]',
-        gradient: 'from-[#23D3EE] to-[#23D3EE]/70'
+        bg: 'bg-[#0891B2]',
+        text: 'text-[#0891B2]',
+        border: 'border-[#22D3EE]',
+        gradient: 'from-[#22D3EE]/70'
       },
       gold: {
-        bg: 'bg-[#FBBF23]',
-        text: 'text-[#FBBF23]',
-        border: 'border-[#FBBF23]',
-        gradient: 'from-[#FBBF23] to-[#FBBF23]/70'
+        bg: 'bg-[#D97706]',
+        text: 'text-[#D97706]',
+        border: 'border-[#FBBF24]',
+        gradient: 'from-[#FBBF24]/70'
       },
       navy: {
-        bg: 'bg-[#0F172A]',
+        bg: 'bg-[#1a1a2e]',
         text: 'text-[#0F172A]',
-        border: 'border-[#0F172A]',
-        gradient: 'from-[#0F172A] to-[#0F172A]/70'
+        border: 'border-[#1a1a2e]',
+        gradient: 'from-[#1a1a2e]/70'
       }
     };
     return colors[color]?.[variant] || colors.teal[variant];
   };
 
   return (
-    <Card className="overflow-hidden border-none shadow-xl bg-white">
+    <Card className="overflow-hidden border-none card-shadow bg-white/5">
       {/* Header */}
-      <div className="bg-gradient-to-r from-[#0F172A] to-[#0F172A]/90 p-6 relative overflow-hidden">
+      <div className="bg-[#F1F5F9]/90 p-6 relative overflow-hidden">
         {/* Decorative Elements */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-[#23D3EE]/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-24 h-24 bg-[#FBBF23]/10 rounded-full blur-2xl" />
+        <div className="absolute top-0 right-0 w-32 h-32 bg-[#0891B2]/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-24 h-24 bg-[#D97706]/10 rounded-full blur-2xl" />
         
         <div className="relative flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <motion.div 
               whileHover={{ rotate: 10 }}
-              className="h-10 w-10 rounded-xl bg-[#23D3EE]/20 flex items-center justify-center"
+              className="h-10 w-10 rounded-md bg-[#0891B2]/20 flex items-center justify-center"
             >
-              <CalendarDays className="h-5 w-5 text-[#23D3EE]" />
+              <CalendarDays className="h-5 w-5 text-[#0891B2]" />
             </motion.div>
             <div>
-              <h3 className="text-lg font-bold text-white">Calendar</h3>
-              <p className="text-xs text-slate-400">Manage your schedule</p>
+              <h3 className="text-lg font-bold text-[#0F172A]">Calendar</h3>
+              <p className="text-xs text-[#475569]">Manage your schedule</p>
             </div>
           </div>
           <motion.button 
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="flex items-center gap-2 px-3 py-1.5 bg-[#23D3EE] text-white text-xs font-medium rounded-lg shadow-lg shadow-[#23D3EE]/25 hover:bg-[#23D3EE]/90 transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 bg-[#0891B2] text-white text-xs font-medium rounded-md  hover:bg-[#0891B2]/90 transition-colors"
           >
             <Plus size={14} />
             Add Event
@@ -139,7 +139,7 @@ export function CalendarWidget() {
             whileHover={{ scale: 1.1, x: -2 }}
             whileTap={{ scale: 0.9 }}
             onClick={prevMonth}
-            className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+            className="p-2 rounded-md bg-white/5/10 hover:bg-white/5/20 text-[#0F172A] transition-colors"
           >
             <ChevronLeft size={18} />
           </motion.button>
@@ -149,10 +149,10 @@ export function CalendarWidget() {
             animate={{ opacity: 1, y: 0 }}
             className="text-center"
           >
-            <span className="text-xl font-bold text-white">
+            <span className="text-xl font-bold text-[#0F172A]">
               {monthNames[currentDate.getMonth()]}
             </span>
-            <span className="text-xl font-light text-[#23D3EE] ml-2">
+            <span className="text-xl font-light text-[#0891B2] ml-2">
               {currentDate.getFullYear()}
             </span>
           </motion.div>
@@ -160,7 +160,7 @@ export function CalendarWidget() {
             whileHover={{ scale: 1.1, x: 2 }}
             whileTap={{ scale: 0.9 }}
             onClick={nextMonth}
-            className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+            className="p-2 rounded-md bg-white/5/10 hover:bg-white/5/20 text-[#0F172A] transition-colors"
           >
             <ChevronRight size={18} />
           </motion.button>
@@ -174,7 +174,7 @@ export function CalendarWidget() {
           <div className="grid grid-cols-7 gap-1 mb-2">
             {days.map((day) => (
               <div key={day} className="text-center">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                <span className="text-[10px] font-bold text-[#475569] uppercase tracking-wider">
                   {day}
                 </span>
               </div>
@@ -204,19 +204,19 @@ export function CalendarWidget() {
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setSelectedDate(date)}
                   className={cn(
-                    "h-10 w-full flex flex-col items-center justify-center rounded-xl text-sm font-medium transition-all relative",
+                    "h-10 w-full flex flex-col items-center justify-center rounded-md text-sm font-medium transition-all relative",
                     isSelected 
-                      ? "bg-[#23D3EE] text-white shadow-lg shadow-[#23D3EE]/30" 
+                      ? "bg-[#0891B2] text-white " 
                       : isToday
-                        ? "bg-[#0F172A] text-white"
-                        : "text-slate-600 hover:bg-slate-100"
+                        ? "bg-[#1a1a2e] text-[#0F172A]"
+                        : "text-[#475569] hover:bg-white/5"
                   )}
                 >
                   {date}
                   {hasMeeting && !isSelected && (
                     <div className="absolute bottom-1.5 flex gap-0.5">
-                      <div className="w-1 h-1 rounded-full bg-[#23D3EE]" />
-                      <div className="w-1 h-1 rounded-full bg-[#FBBF23]" />
+                      <div className="w-1 h-1 rounded-full bg-[#0891B2]" />
+                      <div className="w-1 h-1 rounded-full bg-[#D97706]" />
                     </div>
                   )}
                 </motion.button>
@@ -227,9 +227,9 @@ export function CalendarWidget() {
 
         {/* Divider */}
         <div className="flex items-center gap-3 mb-4">
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-          <span className="text-xs font-medium text-slate-400">Today's Schedule</span>
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+          <div className="h-px flex-1  from-transparent via-slate-200 to-transparent" />
+          <span className="text-xs font-medium text-[#475569]">Today's Schedule</span>
+          <div className="h-px flex-1  from-transparent via-slate-200 to-transparent" />
         </div>
 
         {/* Upcoming Meetings */}
@@ -247,9 +247,9 @@ export function CalendarWidget() {
                   onHoverStart={() => setHoveredMeeting(meeting.id)}
                   onHoverEnd={() => setHoveredMeeting(null)}
                   className={cn(
-                    "relative flex items-start gap-4 p-4 rounded-2xl transition-all cursor-pointer group",
-                    "bg-slate-50 hover:bg-white hover:shadow-lg hover:shadow-slate-200/50",
-                    "border border-transparent hover:border-slate-200"
+                    "relative flex items-start gap-4 p-4 rounded-md transition-all cursor-pointer group",
+                    "bg-white/5 hover:bg-white/5 hover:shadow-lg hover:shadow-slate-200/50",
+                    "border border-transparent hover:border-[rgba(15,23,42,0.06)]"
                   )}
                 >
                   {/* Color Indicator */}
@@ -263,7 +263,7 @@ export function CalendarWidget() {
                   <motion.div 
                     whileHover={{ scale: 1.1, rotate: 5 }}
                     className={cn(
-                      "h-12 w-12 rounded-xl flex items-center justify-center text-white text-sm font-bold shadow-lg flex-shrink-0 bg-gradient-to-br",
+                      "h-12 w-12 rounded-md flex items-center justify-center text-[#0F172A] text-sm font-bold card-shadow flex-shrink-0 r",
                       getColorClasses(meeting.color, 'gradient')
                     )}
                   >
@@ -273,12 +273,12 @@ export function CalendarWidget() {
                   {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between mb-2">
-                      <h4 className="font-semibold text-[#0F172A] group-hover:text-[#23D3EE] transition-colors">
+                      <h4 className="font-semibold text-[#0F172A] group-hover:text-[#0891B2] transition-colors">
                         {meeting.title}
                       </h4>
                       <motion.button 
                         whileHover={{ scale: 1.1 }}
-                        className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 opacity-0 group-hover:opacity-100 transition-all"
+                        className="p-1 rounded-md hover:bg-white/5 text-[#475569] opacity-0 group-hover:opacity-100 transition-all"
                       >
                         <MoreHorizontal size={16} />
                       </motion.button>
@@ -286,10 +286,10 @@ export function CalendarWidget() {
 
                     <div className="flex flex-wrap items-center gap-3 text-xs">
                       {/* Time */}
-                      <div className="flex items-center gap-1.5 text-slate-500">
+                      <div className="flex items-center gap-1.5 text-[#94A3B8]">
                         <Clock className="h-3.5 w-3.5" />
                         <span className="font-medium">{meeting.time}</span>
-                        <span className="text-slate-300">-</span>
+                        <span className="text-[#475569]">-</span>
                         <span className="font-medium">{meeting.endTime}</span>
                       </div>
 
@@ -299,9 +299,9 @@ export function CalendarWidget() {
                       {/* Meeting Type */}
                       <div className={cn(
                         "flex items-center gap-1.5 px-2 py-0.5 rounded-full",
-                        meeting.type === 'video' && "bg-[#23D3EE]/10 text-[#23D3EE]",
-                        meeting.type === 'phone' && "bg-[#FBBF23]/10 text-[#FBBF23]",
-                        meeting.type === 'in-person' && "bg-[#0F172A]/10 text-[#0F172A]"
+                        meeting.type === 'video' && "bg-[#0891B2]/10 text-[#0891B2]",
+                        meeting.type === 'phone' && "bg-[#D97706]/10 text-[#D97706]",
+                        meeting.type === 'in-person' && "bg-[#1a1a2e]/10 text-[#0F172A]"
                       )}>
                         <MeetingIcon size={12} />
                         <span className="font-medium capitalize">{meeting.type.replace('-', ' ')}</span>
@@ -311,7 +311,7 @@ export function CalendarWidget() {
                       <div className="w-1 h-1 rounded-full bg-slate-300" />
 
                       {/* Lead */}
-                      <div className="flex items-center gap-1.5 text-slate-500">
+                      <div className="flex items-center gap-1.5 text-[#94A3B8]">
                         <User className="h-3.5 w-3.5" />
                         <span>with</span>
                         <span className={cn("font-semibold", getColorClasses(meeting.color, 'text'))}>
@@ -326,8 +326,8 @@ export function CalendarWidget() {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     className={cn(
-                      "flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold transition-all flex-shrink-0",
-                      "bg-[#23D3EE]/10 text-[#23D3EE] hover:bg-[#23D3EE] hover:text-white",
+                      "flex items-center gap-1 px-3 py-2 rounded-md text-xs font-semibold transition-all flex-shrink-0",
+                      "bg-[#0891B2]/10 text-[#0891B2] hover:bg-[#0891B2] hover:text-[#0F172A]",
                       "opacity-0 group-hover:opacity-100"
                     )}
                   >
@@ -344,7 +344,7 @@ export function CalendarWidget() {
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          className="w-full mt-4 py-3 rounded-xl border-2 border-dashed border-slate-200 text-slate-500 text-sm font-medium hover:border-[#23D3EE] hover:text-[#23D3EE] hover:bg-[#23D3EE]/5 transition-all flex items-center justify-center gap-2"
+          className="w-full mt-4 py-3 rounded-md border-2 border-dashed border-[rgba(15,23,42,0.06)] text-[#94A3B8] text-sm font-medium hover:border-[#22D3EE] hover:text-[#0891B2] hover:bg-[#0891B2]/5 transition-all flex items-center justify-center gap-2"
         >
           View All Meetings
           <ArrowRight size={14} />

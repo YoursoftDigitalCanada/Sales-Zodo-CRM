@@ -69,13 +69,13 @@ export default function EventTypeGrid({ api }: { api: string }) {
         <h2 className="text-lg font-semibold">All Event Types</h2>
         <div className="flex items-center gap-3">
           <input placeholder="Search Service" className="border rounded px-3 py-2 w-64" />
-          <button className="px-3 py-2 rounded bg-primary text-white">+ New Event Type</button>
+          <button className="px-3 py-2 rounded bg-primary text-[#0F172A]">+ New Event Type</button>
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
         {types.map(et => (
-          <div key={et.id} className="p-4 rounded-lg bg-white shadow-sm border">
+          <div key={et.id} className="p-4 rounded-md bg-white shadow-sm border">
             <div className="flex justify-between items-start">
               <div>
                 <div className="text-lg font-bold">{et.title}</div>

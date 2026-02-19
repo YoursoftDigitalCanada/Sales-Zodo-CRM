@@ -72,7 +72,7 @@ export const EmployeeDetailPanel: React.FC<EmployeeDetailPanelProps> = ({
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed right-0 top-0 h-full w-full max-w-lg bg-white shadow-2xl z-50 overflow-hidden"
+            className="fixed right-0 top-0 h-full w-full max-w-lg bg-white card-shadow z-50 overflow-hidden"
           >
             <div className="flex flex-col h-full">
               {/* Header */}
@@ -80,22 +80,22 @@ export const EmployeeDetailPanel: React.FC<EmployeeDetailPanelProps> = ({
                 <div 
                   className="h-32"
                   style={{ 
-                    background: `linear-gradient(135deg, #23D3EE 0%, #0F172A 100%)` 
+                    background: `linear-gradient(135deg, #22D3EE 0%, #1a1a2e 100%)` 
                   }}
                 />
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="absolute top-4 right-4 text-white hover:bg-white/20"
+                  className="absolute top-4 right-4 text-[#0F172A] hover:bg-white/20"
                   onClick={onClose}
                 >
                   <X className="w-5 h-5" />
                 </Button>
 
                 <div className="absolute -bottom-16 left-6">
-                  <Avatar className="w-32 h-32 border-4 border-white shadow-lg">
+                  <Avatar className="w-32 h-32 border-4 border-white card-shadow">
                     <AvatarImage src={employee.avatar} />
-                    <AvatarFallback className="text-3xl bg-[#23D3EE] text-white">
+                    <AvatarFallback className="text-3xl bg-[#0891B2] text-white">
                       {getInitials(employee.firstName, employee.lastName)}
                     </AvatarFallback>
                   </Avatar>
@@ -106,11 +106,11 @@ export const EmployeeDetailPanel: React.FC<EmployeeDetailPanelProps> = ({
               <div className="flex-1 overflow-y-auto pt-20 px-6 pb-6">
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900">
+                    <h2 className="text-2xl font-bold text-[#0F172A]">
                       {employee.firstName} {employee.lastName}
                     </h2>
-                    <p className="text-gray-500">{employee.position}</p>
-                    <p className="text-sm text-gray-400">{employee.employeeId}</p>
+                    <p className="text-[#475569]">{employee.position}</p>
+                    <p className="text-sm text-[#94A3B8]">{employee.employeeId}</p>
                   </div>
                   <div className="flex gap-2">
                     <Button 
@@ -151,20 +151,20 @@ export const EmployeeDetailPanel: React.FC<EmployeeDetailPanelProps> = ({
                   <TabsContent value="overview" className="space-y-6">
                     {/* Contact Info */}
                     <div className="space-y-3">
-                      <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">
+                      <h3 className="text-sm font-semibold text-[#0F172A] uppercase tracking-wider">
                         Contact Information
                       </h3>
                       <div className="space-y-2">
-                        <div className="flex items-center gap-3 text-gray-600">
-                          <Mail className="w-4 h-4 text-gray-400" />
+                        <div className="flex items-center gap-3 text-[#475569]">
+                          <Mail className="w-4 h-4 text-[#94A3B8]" />
                           <span>{employee.email}</span>
                         </div>
-                        <div className="flex items-center gap-3 text-gray-600">
-                          <Phone className="w-4 h-4 text-gray-400" />
+                        <div className="flex items-center gap-3 text-[#475569]">
+                          <Phone className="w-4 h-4 text-[#94A3B8]" />
                           <span>{employee.phone}</span>
                         </div>
-                        <div className="flex items-center gap-3 text-gray-600">
-                          <MapPin className="w-4 h-4 text-gray-400" />
+                        <div className="flex items-center gap-3 text-[#475569]">
+                          <MapPin className="w-4 h-4 text-[#94A3B8]" />
                           <span>
                             {employee.address.city}, {employee.address.state}
                           </span>
@@ -176,41 +176,41 @@ export const EmployeeDetailPanel: React.FC<EmployeeDetailPanelProps> = ({
 
                     {/* Work Info */}
                     <div className="space-y-3">
-                      <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">
+                      <h3 className="text-sm font-semibold text-[#0F172A] uppercase tracking-wider">
                         Work Information
                       </h3>
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-gray-50 rounded-lg p-3">
+                        <div className="bg-white/5 rounded-md p-3">
                           <div className="flex items-center gap-2 mb-1">
-                            <Building2 className="w-4 h-4 text-[#23D3EE]" />
-                            <span className="text-xs text-gray-500">Department</span>
+                            <Building2 className="w-4 h-4 text-[#0891B2]" />
+                            <span className="text-xs text-[#475569]">Department</span>
                           </div>
-                          <p className="font-medium text-gray-900">{employee.departmentName}</p>
+                          <p className="font-medium text-[#0F172A]">{employee.departmentName}</p>
                         </div>
-                        <div className="bg-gray-50 rounded-lg p-3">
+                        <div className="bg-white/5 rounded-md p-3">
                           <div className="flex items-center gap-2 mb-1">
-                            <Calendar className="w-4 h-4 text-[#23D3EE]" />
-                            <span className="text-xs text-gray-500">Join Date</span>
+                            <Calendar className="w-4 h-4 text-[#0891B2]" />
+                            <span className="text-xs text-[#475569]">Join Date</span>
                           </div>
-                          <p className="font-medium text-gray-900">
+                          <p className="font-medium text-[#0F172A]">
                             {format(employee.joinDate, 'MMM d, yyyy')}
                           </p>
                         </div>
-                        <div className="bg-gray-50 rounded-lg p-3">
+                        <div className="bg-white/5 rounded-md p-3">
                           <div className="flex items-center gap-2 mb-1">
-                            <DollarSign className="w-4 h-4 text-[#23D3EE]" />
-                            <span className="text-xs text-gray-500">Salary</span>
+                            <DollarSign className="w-4 h-4 text-[#0891B2]" />
+                            <span className="text-xs text-[#475569]">Salary</span>
                           </div>
-                          <p className="font-medium text-gray-900">
+                          <p className="font-medium text-[#0F172A]">
                             {formatCurrency(employee.salary)}/yr
                           </p>
                         </div>
-                        <div className="bg-gray-50 rounded-lg p-3">
+                        <div className="bg-white/5 rounded-md p-3">
                           <div className="flex items-center gap-2 mb-1">
-                            <User className="w-4 h-4 text-[#23D3EE]" />
-                            <span className="text-xs text-gray-500">Manager</span>
+                            <User className="w-4 h-4 text-[#0891B2]" />
+                            <span className="text-xs text-[#475569]">Manager</span>
                           </div>
-                          <p className="font-medium text-gray-900">
+                          <p className="font-medium text-[#0F172A]">
                             {employee.managerName || 'None'}
                           </p>
                         </div>
@@ -222,25 +222,25 @@ export const EmployeeDetailPanel: React.FC<EmployeeDetailPanelProps> = ({
                     {/* Performance */}
                     {employee.performance.rating > 0 && (
                       <div className="space-y-3">
-                        <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">
+                        <h3 className="text-sm font-semibold text-[#0F172A] uppercase tracking-wider">
                           Performance
                         </h3>
-                        <div className="bg-gradient-to-r from-amber-50 to-amber-100/50 rounded-lg p-4">
+                        <div className=" from-amber-50 to-amber-100/50 rounded-md p-4">
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-gray-700">Overall Rating</span>
+                            <span className="text-slate-200">Overall Rating</span>
                             <div className="flex items-center gap-1">
                               <Star className="w-5 h-5 text-amber-400 fill-amber-400" />
-                              <span className="text-xl font-bold text-gray-900">
+                              <span className="text-xl font-bold text-[#0F172A]">
                                 {employee.performance.rating.toFixed(1)}
                               </span>
-                              <span className="text-gray-400">/5.0</span>
+                              <span className="text-[#94A3B8]">/5.0</span>
                             </div>
                           </div>
                           <Progress 
                             value={(employee.performance.rating / 5) * 100} 
                             className="h-2"
                           />
-                          <div className="flex justify-between mt-3 text-sm text-gray-500">
+                          <div className="flex justify-between mt-3 text-sm text-[#475569]">
                             <span>
                               Last review: {format(employee.performance.lastReviewDate, 'MMM d, yyyy')}
                             </span>
@@ -254,7 +254,7 @@ export const EmployeeDetailPanel: React.FC<EmployeeDetailPanelProps> = ({
 
                     {/* Skills */}
                     <div className="space-y-3">
-                      <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">
+                      <h3 className="text-sm font-semibold text-[#0F172A] uppercase tracking-wider">
                         Skills
                       </h3>
                       <div className="flex flex-wrap gap-2">
@@ -262,7 +262,7 @@ export const EmployeeDetailPanel: React.FC<EmployeeDetailPanelProps> = ({
                           <Badge 
                             key={skill} 
                             variant="secondary"
-                            className="bg-[#23D3EE]/10 text-[#23D3EE] hover:bg-[#23D3EE]/20"
+                            className="bg-[#0891B2]/10 text-[#0891B2] hover:bg-[#0891B2]/20"
                           >
                             {skill}
                           </Badge>
@@ -274,15 +274,15 @@ export const EmployeeDetailPanel: React.FC<EmployeeDetailPanelProps> = ({
                   <TabsContent value="details" className="space-y-6">
                     {/* Full Address */}
                     <div className="space-y-3">
-                      <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">
+                      <h3 className="text-sm font-semibold text-[#0F172A] uppercase tracking-wider">
                         Address
                       </h3>
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <p className="text-gray-700">{employee.address.street}</p>
-                        <p className="text-gray-700">
+                      <div className="bg-white/5 rounded-md p-4">
+                        <p className="text-slate-200">{employee.address.street}</p>
+                        <p className="text-slate-200">
                           {employee.address.city}, {employee.address.state} {employee.address.zipCode}
                         </p>
-                        <p className="text-gray-700">{employee.address.country}</p>
+                        <p className="text-slate-200">{employee.address.country}</p>
                       </div>
                     </div>
 
@@ -290,21 +290,21 @@ export const EmployeeDetailPanel: React.FC<EmployeeDetailPanelProps> = ({
 
                     {/* Emergency Contact */}
                     <div className="space-y-3">
-                      <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">
+                      <h3 className="text-sm font-semibold text-[#0F172A] uppercase tracking-wider">
                         Emergency Contact
                       </h3>
-                      <div className="bg-red-50 rounded-lg p-4 border border-red-100">
+                      <div className="bg-red-50 rounded-md p-4 border border-red-100">
                         <div className="flex items-center gap-2 mb-2">
                           <Shield className="w-4 h-4 text-red-500" />
-                          <span className="font-medium text-gray-900">
+                          <span className="font-medium text-[#0F172A]">
                             {employee.emergencyContact.name}
                           </span>
                         </div>
-                        <p className="text-sm text-gray-500 mb-1">
+                        <p className="text-sm text-[#475569] mb-1">
                           {employee.emergencyContact.relationship}
                         </p>
-                        <div className="flex items-center gap-2 text-gray-700">
-                          <Phone className="w-4 h-4 text-gray-400" />
+                        <div className="flex items-center gap-2 text-slate-200">
+                          <Phone className="w-4 h-4 text-[#94A3B8]" />
                           <span>{employee.emergencyContact.phone}</span>
                         </div>
                       </div>
@@ -316,15 +316,15 @@ export const EmployeeDetailPanel: React.FC<EmployeeDetailPanelProps> = ({
                       employee.documents.map((doc) => (
                         <div
                           key={doc.id}
-                          className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                          className="flex items-center justify-between p-4 bg-white/5 rounded-md"
                         >
                           <div className="flex items-center gap-3">
-                            <div className="p-2 bg-white rounded-lg shadow-sm">
-                              <FileText className="w-5 h-5 text-[#23D3EE]" />
+                            <div className="p-2 bg-white rounded-md shadow-sm">
+                              <FileText className="w-5 h-5 text-[#0891B2]" />
                             </div>
                             <div>
-                              <p className="font-medium text-gray-900">{doc.name}</p>
-                              <p className="text-sm text-gray-500">
+                              <p className="font-medium text-[#0F172A]">{doc.name}</p>
+                              <p className="text-sm text-[#475569]">
                                 Uploaded {format(doc.uploadedAt, 'MMM d, yyyy')}
                               </p>
                             </div>
@@ -337,7 +337,7 @@ export const EmployeeDetailPanel: React.FC<EmployeeDetailPanelProps> = ({
                     ) : (
                       <div className="text-center py-8">
                         <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                        <p className="text-gray-500">No documents uploaded</p>
+                        <p className="text-[#475569]">No documents uploaded</p>
                       </div>
                     )}
                   </TabsContent>
@@ -345,13 +345,13 @@ export const EmployeeDetailPanel: React.FC<EmployeeDetailPanelProps> = ({
               </div>
 
               {/* Footer Actions */}
-              <div className="border-t p-4 bg-gray-50">
+              <div className="border-t p-4 bg-white/5">
                 <div className="flex gap-3">
                   <Button variant="outline" className="flex-1 gap-2">
                     <Mail className="w-4 h-4" />
                     Send Email
                   </Button>
-                  <Button className="flex-1 gap-2 bg-[#23D3EE] hover:bg-[#23D3EE]/90">
+                  <Button className="flex-1 gap-2 bg-[#0891B2] hover:bg-[#0891B2]/90">
                     <Calendar className="w-4 h-4" />
                     Schedule Meeting
                   </Button>

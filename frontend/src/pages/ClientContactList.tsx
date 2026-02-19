@@ -190,10 +190,10 @@ const getRelativeTime = (dateString?: string) => {
 
 const getTypeColor = (type: string) => {
   const colors: Record<string, { bg: string; text: string; dot: string }> = {
-    Client: { bg: "bg-[#23D3EE]/10", text: "text-[#23D3EE]", dot: "bg-[#23D3EE]" },
-    Lead: { bg: "bg-[#FBBF23]/10", text: "text-[#FBBF23]", dot: "bg-[#FBBF23]" },
+    Client: { bg: "bg-[#0891B2]/10", text: "text-[#0891B2]", dot: "bg-[#0891B2]" },
+    Lead: { bg: "bg-[#D97706]/10", text: "text-[#D97706]", dot: "bg-[#D97706]" },
     Partner: { bg: "bg-purple-500/10", text: "text-purple-500", dot: "bg-purple-500" },
-    Vendor: { bg: "bg-blue-500/10", text: "text-blue-500", dot: "bg-blue-500" },
+    Vendor: { bg: "bg-[#0891B2]/10", text: "text-blue-500", dot: "bg-[#0891B2]" },
   };
   return colors[type] || colors.Client;
 };
@@ -218,9 +218,9 @@ const StatCard = ({
   delay?: number;
 }) => {
   const colorClasses = {
-    teal: { bg: "bg-[#23D3EE]", light: "bg-[#23D3EE]/10", text: "text-[#23D3EE]" },
-    gold: { bg: "bg-[#FBBF23]", light: "bg-[#FBBF23]/10", text: "text-[#FBBF23]" },
-    navy: { bg: "bg-[#0F172A]", light: "bg-[#0F172A]/10", text: "text-[#0F172A]" },
+    teal: { bg: "bg-[#0891B2]", light: "bg-[#0891B2]/10", text: "text-[#0891B2]" },
+    gold: { bg: "bg-[#D97706]", light: "bg-[#D97706]/10", text: "text-[#D97706]" },
+    navy: { bg: "bg-[#F8FAFC]", light: "bg-[#F8FAFC]/10", text: "text-[#0F172A]" },
     purple: { bg: "bg-purple-500", light: "bg-purple-500/10", text: "text-purple-500" },
   };
 
@@ -232,17 +232,17 @@ const StatCard = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
       whileHover={{ y: -4 }}
-      className="relative bg-white rounded-2xl p-5 border border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5 transition-all overflow-hidden group"
+      className="relative bg-white rounded-md p-5 border border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg  transition-all overflow-hidden group"
     >
       <div className={cn("absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-10 group-hover:opacity-20 transition-all", colors.bg)} />
 
       <div className="relative flex items-start justify-between">
         <div>
-          <p className="text-sm text-slate-500 mb-1">{title}</p>
+          <p className="text-sm text-[#94A3B8] mb-1">{title}</p>
           <p className="text-2xl font-bold text-[#0F172A]">{value}</p>
-          <p className="text-xs text-slate-400 mt-1">{subtitle}</p>
+          <p className="text-xs text-[#475569] mt-1">{subtitle}</p>
         </div>
-        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", colors.light)}>
+        <div className={cn("w-10 h-10 rounded-md flex items-center justify-center", colors.light)}>
           <Icon size={18} className={colors.text} />
         </div>
       </div>
@@ -288,8 +288,8 @@ const ContactRow = ({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className={cn(
-        "group hover:bg-slate-50/80 transition-colors cursor-pointer border-b border-slate-100 last:border-0",
-        isSelected && "bg-[#23D3EE]/5"
+        "group hover:bg-[#F8FAFC]/80 transition-colors cursor-pointer border-b border-[rgba(15,23,42,0.06)] last:border-0",
+        isSelected && "bg-[#0891B2]/5"
       )}
       onClick={onView}
     >
@@ -298,7 +298,7 @@ const ContactRow = ({
         <Checkbox
           checked={isSelected}
           onCheckedChange={onSelect}
-          className="border-slate-300 data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
+          className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
         />
       </td>
 
@@ -306,12 +306,12 @@ const ContactRow = ({
       <td className="py-4 px-2" onClick={(e) => e.stopPropagation()}>
         <button
           onClick={onToggleFavorite}
-          className="p-1 rounded-lg hover:bg-slate-100 transition-colors"
+          className="p-1 rounded-md hover:bg-white/10 transition-colors"
         >
           {contact.isFavorite ? (
-            <Star size={16} className="text-[#FBBF23] fill-[#FBBF23]" />
+            <Star size={16} className="text-[#D97706] fill-[#FBBF24]" />
           ) : (
-            <StarOff size={16} className="text-slate-300 group-hover:text-slate-400" />
+            <StarOff size={16} className="text-[#475569] group-hover:text-[#475569]" />
           )}
         </button>
       </td>
@@ -325,30 +325,30 @@ const ContactRow = ({
                 <img
                   src={contact.avatar}
                   alt={contact.contactPerson}
-                  className="w-10 h-10 rounded-xl object-cover"
+                  className="w-10 h-10 rounded-md object-cover"
                 />
               ) : (
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white font-semibold text-sm">
+                <div className="w-10 h-10 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] font-semibold text-sm">
                   {getInitials(contact.contactPerson)}
                 </div>
               )}
               {contact.isPrimary && (
-                <div className="absolute -top-1 -right-1 w-4 h-4 bg-[#23D3EE] rounded-full flex items-center justify-center">
-                  <CheckCircle2 size={10} className="text-white" />
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-[#0891B2] rounded-full flex items-center justify-center">
+                  <CheckCircle2 size={10} className="text-[#0F172A]" />
                 </div>
               )}
             </div>
             <div>
-              <div className="font-semibold text-[#0F172A] group-hover:text-[#23D3EE] transition-colors flex items-center gap-2">
+              <div className="font-semibold text-[#0F172A] group-hover:text-[#0891B2] transition-colors flex items-center gap-2">
                 {contact.contactPerson || "Unknown"}
                 {contact.isPrimary && (
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#23D3EE]/10 text-[#23D3EE]">
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#0891B2]/10 text-[#0891B2]">
                     Primary
                   </span>
                 )}
               </div>
               {contact.department && (
-                <div className="text-xs text-slate-400">{contact.department}</div>
+                <div className="text-xs text-[#475569]">{contact.department}</div>
               )}
             </div>
           </div>
@@ -359,8 +359,8 @@ const ContactRow = ({
       {columns.find((c) => c.key === "clientName")?.visible && (
         <td className="py-4 px-4">
           <div className="flex items-center gap-2">
-            <Building2 size={14} className="text-slate-400" />
-            <span className="text-sm text-slate-600 font-medium">
+            <Building2 size={14} className="text-[#475569]" />
+            <span className="text-sm text-[#475569] font-medium">
               {contact.clientName}
             </span>
           </div>
@@ -370,7 +370,7 @@ const ContactRow = ({
       {/* Designation */}
       {columns.find((c) => c.key === "designation")?.visible && (
         <td className="py-4 px-4">
-          <span className="text-sm text-slate-600">
+          <span className="text-sm text-[#475569]">
             {contact.designation || "-"}
           </span>
         </td>
@@ -380,11 +380,11 @@ const ContactRow = ({
       {columns.find((c) => c.key === "contactEmail")?.visible && (
         <td className="py-4 px-4">
           <div className="flex items-center gap-2">
-            <Mail size={14} className="text-slate-400" />
+            <Mail size={14} className="text-[#475569]" />
             <a
               href={`mailto:${contact.contactEmail}`}
               onClick={(e) => e.stopPropagation()}
-              className="text-sm text-slate-600 hover:text-[#23D3EE] transition-colors"
+              className="text-sm text-[#475569] hover:text-[#0891B2] transition-colors"
             >
               {contact.contactEmail || "-"}
             </a>
@@ -396,11 +396,11 @@ const ContactRow = ({
       {columns.find((c) => c.key === "contactNo")?.visible && (
         <td className="py-4 px-4">
           <div className="flex items-center gap-2">
-            <Phone size={14} className="text-slate-400" />
+            <Phone size={14} className="text-[#475569]" />
             <a
               href={`tel:${contact.contactNo}`}
               onClick={(e) => e.stopPropagation()}
-              className="text-sm text-slate-600 hover:text-[#23D3EE] transition-colors"
+              className="text-sm text-[#475569] hover:text-[#0891B2] transition-colors"
             >
               {contact.contactNo || "-"}
             </a>
@@ -413,9 +413,9 @@ const ContactRow = ({
         <td className="py-4 px-4">
           <div className={cn(
             "flex items-center gap-2 text-sm",
-            isOverdue ? "text-red-600" : "text-slate-600"
+            isOverdue ? "text-red-600" : "text-[#475569]"
           )}>
-            <Clock size={14} className={isOverdue ? "text-red-400" : "text-slate-400"} />
+            <Clock size={14} className={isOverdue ? "text-red-400" : "text-[#475569]"} />
             <span>{getRelativeTime(contact.lastContacted)}</span>
             {isOverdue && (
               <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-600 text-[10px] font-semibold">
@@ -448,7 +448,7 @@ const ContactRow = ({
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={onSendEmail}
-            className="p-2 rounded-lg hover:bg-[#23D3EE]/10 text-[#23D3EE] transition-colors"
+            className="p-2 rounded-md hover:bg-[#0891B2]/10 text-[#0891B2] transition-colors"
             title="Send Email"
           >
             <Send size={16} />
@@ -457,7 +457,7 @@ const ContactRow = ({
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={onCall}
-            className="p-2 rounded-lg hover:bg-emerald-100 text-emerald-600 transition-colors"
+            className="p-2 rounded-md hover:bg-emerald-100 text-emerald-600 transition-colors"
             title="Call"
           >
             <PhoneCall size={16} />
@@ -465,41 +465,41 @@ const ContactRow = ({
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors">
+              <button className="p-2 rounded-md hover:bg-white/10 text-[#475569] transition-colors">
                 <MoreVertical size={16} />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 rounded-xl">
-              <DropdownMenuItem onClick={onView} className="rounded-lg">
+            <DropdownMenuContent align="end" className="w-48 rounded-md">
+              <DropdownMenuItem onClick={onView} className="rounded-md">
                 <Eye size={14} className="mr-2" />
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onEdit} className="rounded-lg">
+              <DropdownMenuItem onClick={onEdit} className="rounded-md">
                 <Pencil size={14} className="mr-2" />
                 Edit Contact
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="rounded-lg">
+              <DropdownMenuItem className="rounded-md">
                 <Video size={14} className="mr-2" />
                 Schedule Meeting
               </DropdownMenuItem>
-              <DropdownMenuItem className="rounded-lg">
+              <DropdownMenuItem className="rounded-md">
                 <MessageSquare size={14} className="mr-2" />
                 Send Message
               </DropdownMenuItem>
-              <DropdownMenuItem className="rounded-lg">
+              <DropdownMenuItem className="rounded-md">
                 <Copy size={14} className="mr-2" />
                 Copy Email
               </DropdownMenuItem>
               {contact.linkedin && (
-                <DropdownMenuItem className="rounded-lg">
+                <DropdownMenuItem className="rounded-md">
                   <Linkedin size={14} className="mr-2" />
                   View LinkedIn
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                className="rounded-lg text-red-600 focus:text-red-600 focus:bg-red-50"
+                className="rounded-md text-red-600 focus:text-red-600 focus:bg-red-50"
                 onClick={onDelete}
               >
                 <Trash2 size={14} className="mr-2" />
@@ -547,9 +547,9 @@ const ContactCard = ({
       exit={{ opacity: 0, scale: 0.9 }}
       whileHover={{ y: -4 }}
       className={cn(
-        "bg-white rounded-2xl border border-slate-200 p-5 cursor-pointer group",
-        "hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5 transition-all",
-        isSelected && "border-[#23D3EE] bg-[#23D3EE]/5"
+        "bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-5 cursor-pointer group",
+        "hover:border-[#22D3EE]/30 hover:shadow-lg  transition-all",
+        isSelected && "border-[#22D3EE] bg-[#0891B2]/5"
       )}
       onClick={onView}
     >
@@ -560,23 +560,23 @@ const ContactCard = ({
             checked={isSelected}
             onCheckedChange={onSelect}
             onClick={(e) => e.stopPropagation()}
-            className="border-slate-300 data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
+            className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
           />
           <div className="relative">
             {contact.avatar ? (
               <img
                 src={contact.avatar}
                 alt={contact.contactPerson}
-                className="w-14 h-14 rounded-xl object-cover"
+                className="w-14 h-14 rounded-md object-cover"
               />
             ) : (
-              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white font-bold text-lg">
+              <div className="w-14 h-14 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] font-bold text-lg">
                 {getInitials(contact.contactPerson)}
               </div>
             )}
             {contact.isPrimary && (
-              <div className="absolute -top-1 -right-1 w-5 h-5 bg-[#23D3EE] rounded-full flex items-center justify-center">
-                <CheckCircle2 size={12} className="text-white" />
+              <div className="absolute -top-1 -right-1 w-5 h-5 bg-[#0891B2] rounded-full flex items-center justify-center">
+                <CheckCircle2 size={12} className="text-[#0F172A]" />
               </div>
             )}
           </div>
@@ -585,32 +585,32 @@ const ContactCard = ({
         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={onToggleFavorite}
-            className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+            className="p-1.5 rounded-md hover:bg-white/10 transition-colors"
           >
             {contact.isFavorite ? (
-              <Star size={16} className="text-[#FBBF23] fill-[#FBBF23]" />
+              <Star size={16} className="text-[#D97706] fill-[#FBBF24]" />
             ) : (
-              <StarOff size={16} className="text-slate-300" />
+              <StarOff size={16} className="text-[#475569]" />
             )}
           </button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400">
+              <button className="p-1.5 rounded-md hover:bg-white/10 text-[#475569]">
                 <MoreHorizontal size={16} />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 rounded-xl">
-              <DropdownMenuItem onClick={onView} className="rounded-lg">
+            <DropdownMenuContent align="end" className="w-48 rounded-md">
+              <DropdownMenuItem onClick={onView} className="rounded-md">
                 <Eye size={14} className="mr-2" />
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onEdit} className="rounded-lg">
+              <DropdownMenuItem onClick={onEdit} className="rounded-md">
                 <Pencil size={14} className="mr-2" />
                 Edit
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                className="rounded-lg text-red-600"
+                className="rounded-md text-red-600"
                 onClick={onDelete}
               >
                 <Trash2 size={14} className="mr-2" />
@@ -624,19 +624,19 @@ const ContactCard = ({
       {/* Contact Info */}
       <div className="mb-4">
         <div className="flex items-center gap-2 mb-1">
-          <h3 className="font-semibold text-[#0F172A] group-hover:text-[#23D3EE] transition-colors">
+          <h3 className="font-semibold text-[#0F172A] group-hover:text-[#0891B2] transition-colors">
             {contact.contactPerson || "Unknown"}
           </h3>
           {contact.isPrimary && (
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#23D3EE]/10 text-[#23D3EE]">
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#0891B2]/10 text-[#0891B2]">
               Primary
             </span>
           )}
         </div>
-        <p className="text-sm text-slate-500">{contact.designation || "No title"}</p>
+        <p className="text-sm text-[#94A3B8]">{contact.designation || "No title"}</p>
         <div className="flex items-center gap-2 mt-1">
-          <Building2 size={12} className="text-slate-400" />
-          <span className="text-xs text-slate-500">{contact.clientName}</span>
+          <Building2 size={12} className="text-[#475569]" />
+          <span className="text-xs text-[#94A3B8]">{contact.clientName}</span>
         </div>
       </div>
 
@@ -645,17 +645,17 @@ const ContactCard = ({
         <a
           href={`mailto:${contact.contactEmail}`}
           onClick={(e) => e.stopPropagation()}
-          className="flex items-center gap-2 text-sm text-slate-600 hover:text-[#23D3EE] transition-colors"
+          className="flex items-center gap-2 text-sm text-[#475569] hover:text-[#0891B2] transition-colors"
         >
-          <Mail size={14} className="text-slate-400" />
+          <Mail size={14} className="text-[#475569]" />
           <span className="truncate">{contact.contactEmail || "-"}</span>
         </a>
         <a
           href={`tel:${contact.contactNo}`}
           onClick={(e) => e.stopPropagation()}
-          className="flex items-center gap-2 text-sm text-slate-600 hover:text-[#23D3EE] transition-colors"
+          className="flex items-center gap-2 text-sm text-[#475569] hover:text-[#0891B2] transition-colors"
         >
-          <Phone size={14} className="text-slate-400" />
+          <Phone size={14} className="text-[#475569]" />
           <span>{contact.contactNo || "-"}</span>
         </a>
       </div>
@@ -670,20 +670,20 @@ const ContactCard = ({
           <span className={cn("w-1.5 h-1.5 rounded-full", typeColor.dot)} />
           {contact.type}
         </span>
-        <span className="text-xs text-slate-400">
+        <span className="text-xs text-[#475569]">
           {getRelativeTime(contact.lastContacted)}
         </span>
       </div>
 
       {/* Quick Actions */}
       <div
-        className="flex gap-2 pt-4 border-t border-slate-100"
+        className="flex gap-2 pt-4 border-t border-[rgba(15,23,42,0.06)]"
         onClick={(e) => e.stopPropagation()}
       >
         <Button
           size="sm"
           onClick={onSendEmail}
-          className="flex-1 bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-lg h-9"
+          className="flex-1 bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md h-9"
         >
           <Send size={14} className="mr-1" />
           Email
@@ -692,7 +692,7 @@ const ContactCard = ({
           size="sm"
           variant="outline"
           onClick={onCall}
-          className="flex-1 rounded-lg h-9 border-slate-200"
+          className="flex-1 rounded-md h-9 border-[rgba(15,23,42,0.06)]"
         >
           <PhoneCall size={14} className="mr-1" />
           Call
@@ -783,9 +783,9 @@ const ContactDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[550px] p-0 rounded-2xl overflow-hidden">
+      <DialogContent className="sm:max-w-[550px] p-0 rounded-md overflow-hidden">
         {/* Header */}
-        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#23D3EE]/10 to-transparent">
+        <div className="p-6 border-b border-[rgba(15,23,42,0.06)] bg-[#F0FDFA]">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-[#0F172A]">
               {isEditMode ? "Edit Contact" : "Add New Contact"}
@@ -797,17 +797,17 @@ const ContactDialog = ({
           {/* Contact Name */}
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2 space-y-2">
-              <Label className="text-sm font-medium text-slate-600">
+              <Label className="text-sm font-medium text-[#475569]">
                 Contact Name <span className="text-red-500">*</span>
               </Label>
               <div className="relative">
-                <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                 <Input
                   value={formData.contactPerson}
                   onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
                   placeholder="John Doe"
                   required
-                  className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
+                  className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
                 />
               </div>
             </div>
@@ -816,17 +816,17 @@ const ContactDialog = ({
           {/* Company & Type */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-600">Company</Label>
+              <Label className="text-sm font-medium text-[#475569]">Company</Label>
               <Select
                 value={formData.clientId}
                 onValueChange={(val) => setFormData({ ...formData, clientId: val })}
               >
-                <SelectTrigger className="h-11 rounded-xl border-slate-200">
+                <SelectTrigger className="h-11 rounded-md border-[rgba(15,23,42,0.06)]">
                   <SelectValue placeholder="Select company" />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl">
+                <SelectContent className="rounded-md">
                   {clients.map((client) => (
-                    <SelectItem key={client.id} value={String(client.id)} className="rounded-lg">
+                    <SelectItem key={client.id} value={String(client.id)} className="rounded-md">
                       {client.clientName}
                     </SelectItem>
                   ))}
@@ -835,17 +835,17 @@ const ContactDialog = ({
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-600">Type</Label>
+              <Label className="text-sm font-medium text-[#475569]">Type</Label>
               <Select
                 value={formData.type}
                 onValueChange={(val) => setFormData({ ...formData, type: val })}
               >
-                <SelectTrigger className="h-11 rounded-xl border-slate-200">
+                <SelectTrigger className="h-11 rounded-md border-[rgba(15,23,42,0.06)]">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl">
+                <SelectContent className="rounded-md">
                   {typeOptions.filter((t) => t.value !== "all").map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value} className="rounded-lg">
+                    <SelectItem key={opt.value} value={opt.value} className="rounded-md">
                       {opt.label}
                     </SelectItem>
                   ))}
@@ -857,43 +857,43 @@ const ContactDialog = ({
           {/* Designation & Department */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-600">Job Title</Label>
+              <Label className="text-sm font-medium text-[#475569]">Job Title</Label>
               <div className="relative">
-                <Briefcase size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Briefcase size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                 <Input
                   value={formData.designation}
                   onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
                   placeholder="CEO, Manager..."
-                  className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
+                  className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-600">Department</Label>
+              <Label className="text-sm font-medium text-[#475569]">Department</Label>
               <Input
                 value={formData.department}
                 onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                 placeholder="Sales, Marketing..."
-                className="h-11 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
+                className="h-11 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
               />
             </div>
           </div>
 
           {/* Email */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-600">
+            <Label className="text-sm font-medium text-[#475569]">
               Email <span className="text-red-500">*</span>
             </Label>
             <div className="relative">
-              <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
               <Input
                 type="email"
                 value={formData.contactEmail}
                 onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
                 placeholder="john@company.com"
                 required
-                className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
+                className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
               />
             </div>
           </div>
@@ -901,27 +901,27 @@ const ContactDialog = ({
           {/* Phone Numbers */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-600">Office Phone</Label>
+              <Label className="text-sm font-medium text-[#475569]">Office Phone</Label>
               <div className="relative">
-                <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                 <Input
                   value={formData.contactNo}
                   onChange={(e) => setFormData({ ...formData, contactNo: e.target.value })}
                   placeholder="+1 (555) 000-0000"
-                  className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
+                  className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-600">Mobile</Label>
+              <Label className="text-sm font-medium text-[#475569]">Mobile</Label>
               <div className="relative">
-                <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                 <Input
                   value={formData.mobile}
                   onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
                   placeholder="+1 (555) 000-0000"
-                  className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
+                  className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
                 />
               </div>
             </div>
@@ -929,30 +929,30 @@ const ContactDialog = ({
 
           {/* LinkedIn */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-600">LinkedIn URL</Label>
+            <Label className="text-sm font-medium text-[#475569]">LinkedIn URL</Label>
             <div className="relative">
-              <Linkedin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Linkedin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
               <Input
                 value={formData.linkedin}
                 onChange={(e) => setFormData({ ...formData, linkedin: e.target.value })}
                 placeholder="https://linkedin.com/in/username"
-                className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
+                className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
               />
             </div>
           </div>
 
           {/* Primary Contact Toggle */}
-          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+          <div className="flex items-center justify-between p-4 bg-[#F8FAFC] rounded-md">
             <div>
               <p className="font-medium text-[#0F172A]">Primary Contact</p>
-              <p className="text-xs text-slate-500">Set as the main contact for this company</p>
+              <p className="text-xs text-[#94A3B8]">Set as the main contact for this company</p>
             </div>
             <Checkbox
               checked={formData.isPrimary}
               onCheckedChange={(checked) =>
                 setFormData({ ...formData, isPrimary: checked as boolean })
               }
-              className="border-slate-300 data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
+              className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
             />
           </div>
 
@@ -962,14 +962,14 @@ const ContactDialog = ({
               type="button"
               variant="outline"
               onClick={onClose}
-              className="rounded-xl border-slate-200"
+              className="rounded-md border-[rgba(15,23,42,0.06)]"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={isLoading || !formData.contactPerson.trim() || !formData.contactEmail.trim()}
-              className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl shadow-lg shadow-[#23D3EE]/25"
+              className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md "
             >
               {isLoading ? (
                 <Loader2 size={16} className="animate-spin mr-2" />
@@ -1280,7 +1280,7 @@ const ClientContactListPage = () => {
   // ============================================
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen bg-[#F8FAFC]">
       <Sidebar
         collapsed={sidebarCollapsed}
         setCollapsed={setSidebarCollapsed}
@@ -1293,17 +1293,17 @@ const ClientContactListPage = () => {
         )}
       >
         {/* Header */}
-        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-200/50">
+        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-[rgba(15,23,42,0.06)]/50">
           <div className="flex h-20 items-center justify-between px-6">
             <div className="flex items-center gap-2 text-sm">
               <button
                 onClick={() => navigate("/dashboard")}
-                className="text-slate-400 hover:text-[#23D3EE] transition-colors"
+                className="text-[#475569] hover:text-[#0891B2] transition-colors"
               >
                 Dashboard
               </button>
-              <ChevronRight size={14} className="text-slate-300" />
-              <span className="font-semibold text-[#23D3EE]">Contacts</span>
+              <ChevronRight size={14} className="text-[#475569]" />
+              <span className="font-semibold text-[#0891B2]">Contacts</span>
             </div>
 
             <div className="flex items-center gap-3">
@@ -1311,7 +1311,7 @@ const ClientContactListPage = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={openAddDialog}
-                className="flex items-center gap-2 px-4 py-2.5 bg-[#23D3EE] text-white text-sm font-medium rounded-xl shadow-lg shadow-[#23D3EE]/25 hover:bg-[#23D3EE]/90 transition-colors"
+                className="flex items-center gap-2 px-4 py-2.5 bg-[#0891B2] text-white text-sm font-medium rounded-md  hover:bg-[#0891B2]/90 transition-colors"
               >
                 <UserPlus size={16} />
                 <span>Add Contact</span>
@@ -1320,22 +1320,22 @@ const ClientContactListPage = () => {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="p-2.5 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors relative"
+                className="p-2.5 rounded-md bg-white/5 text-[#475569] hover:bg-slate-200 transition-colors relative"
               >
                 <Bell size={18} />
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-[#0F172A] text-[10px] font-bold rounded-full flex items-center justify-center">
                   2
                 </span>
               </motion.button>
 
-              <div className="flex items-center gap-3 pl-3 ml-3 border-l border-slate-200">
+              <div className="flex items-center gap-3 pl-3 ml-3 border-l border-[rgba(15,23,42,0.06)]">
                 <div className="text-right hidden sm:block">
                   <p className="text-sm font-semibold text-[#0F172A]">
                     {user ? `${user.firstName} ${user.lastName}` : "Guest User"}
                   </p>
-                  <p className="text-xs text-slate-400">Administrator</p>
+                  <p className="text-xs text-[#475569]">Administrator</p>
                 </div>
-                <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-[#23D3EE] via-[#23D3EE]/80 to-[#FBBF23] flex items-center justify-center text-white font-bold shadow-lg">
+                <div className="h-11 w-11 rounded-md bg-[#0891B2] flex items-center justify-center text-[#0F172A] font-bold card-shadow">
                   {user ? (user.firstName[0] + user.lastName[0]).toUpperCase() : "GU"}
                 </div>
               </div>
@@ -1349,10 +1349,10 @@ const ClientContactListPage = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#0F172A] via-[#0F172A] to-[#23D3EE]/30 p-8"
+            className="relative overflow-hidden rounded-3xl bg-[#F1F5F9] p-8"
           >
-            <div className="absolute top-0 right-0 w-64 h-64 bg-[#23D3EE]/10 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 left-1/2 w-48 h-48 bg-[#FBBF23]/10 rounded-full blur-3xl" />
+            <div className="absolute top-0 right-0 w-64 h-64 bg-[#0891B2]/10 rounded-full blur-3xl" />
+            <div className="absolute bottom-0 left-1/2 w-48 h-48 bg-[#D97706]/10 rounded-full blur-3xl" />
 
             <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
               <div>
@@ -1362,17 +1362,17 @@ const ClientContactListPage = () => {
                   transition={{ delay: 0.2 }}
                   className="flex items-center gap-2 mb-3"
                 >
-                  <Sparkles size={20} className="text-[#FBBF23]" />
-                  <span className="text-[#FBBF23] text-sm font-medium">
+                  <Sparkles size={20} className="text-[#D97706]" />
+                  <span className="text-[#D97706] text-sm font-medium">
                     Contact Management
                   </span>
                 </motion.div>
-                <h1 className="text-3xl lg:text-4xl font-bold text-white mb-2">
-                  Client <span className="text-[#23D3EE]">Contacts</span>
+                <h1 className="text-3xl lg:text-4xl font-bold text-[#0F172A] mb-2">
+                  Client <span className="text-[#0891B2]">Contacts</span>
                 </h1>
-                <p className="text-slate-300 text-lg max-w-xl">
+                <p className="text-[#475569] text-lg max-w-xl">
                   Manage your business contacts. You have{" "}
-                  <span className="text-[#23D3EE] font-semibold">
+                  <span className="text-[#0891B2] font-semibold">
                     {stats.total} contacts
                   </span>{" "}
                   in your directory.
@@ -1386,19 +1386,19 @@ const ClientContactListPage = () => {
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      className="flex items-center gap-2 px-4 py-2.5 bg-white/10 backdrop-blur-sm border border-white/10 text-white rounded-xl hover:bg-white/20 transition-colors"
+                      className="flex items-center gap-2 px-4 py-2.5 bg-white/10 backdrop-blur-sm border border-[rgba(15,23,42,0.06)] text-[#0F172A] rounded-md hover:bg-white/20 transition-colors"
                     >
                       <Download size={16} />
                       Export
                       <ChevronDown size={14} />
                     </motion.button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="rounded-xl">
-                    <DropdownMenuItem className="rounded-lg">
+                  <DropdownMenuContent className="rounded-md">
+                    <DropdownMenuItem className="rounded-md">
                       <FileText size={14} className="mr-2" />
                       Export as CSV
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="rounded-lg">
+                    <DropdownMenuItem className="rounded-md">
                       <FileSpreadsheet size={14} className="mr-2" />
                       Export as Excel
                     </DropdownMenuItem>
@@ -1408,7 +1408,7 @@ const ClientContactListPage = () => {
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-white/10 backdrop-blur-sm border border-white/10 text-white rounded-xl hover:bg-white/20 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-white/10 backdrop-blur-sm border border-[rgba(15,23,42,0.06)] text-[#0F172A] rounded-md hover:bg-white/20 transition-colors"
                 >
                   <Upload size={16} />
                   Import
@@ -1458,29 +1458,29 @@ const ClientContactListPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-white rounded-2xl border border-slate-200 p-4"
+            className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4"
           >
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
               <div className="flex flex-wrap items-center gap-3">
                 {/* Search */}
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#475569]" />
                   <Input
                     placeholder="Search contacts..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-64 h-10 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
+                    className="w-64 h-10 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
                   />
                 </div>
 
                 {/* Type Filter */}
                 <Select value={filterType} onValueChange={setFilterType}>
-                  <SelectTrigger className="w-36 h-10 rounded-xl border-slate-200">
+                  <SelectTrigger className="w-36 h-10 rounded-md border-[rgba(15,23,42,0.06)]">
                     <SelectValue placeholder="Type" />
                   </SelectTrigger>
-                  <SelectContent className="rounded-xl">
+                  <SelectContent className="rounded-md">
                     {typeOptions.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value} className="rounded-lg">
+                      <SelectItem key={opt.value} value={opt.value} className="rounded-md">
                         {opt.label}
                       </SelectItem>
                     ))}
@@ -1496,7 +1496,7 @@ const ClientContactListPage = () => {
                       setSearchTerm("");
                       setFilterType("all");
                     }}
-                    className="h-10 text-slate-500 hover:text-red-600"
+                    className="h-10 text-[#94A3B8] hover:text-red-600"
                   >
                     <X size={14} className="mr-1" />
                     Clear
@@ -1512,9 +1512,9 @@ const ClientContactListPage = () => {
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.9 }}
-                      className="flex items-center gap-2 px-3 py-1.5 bg-[#23D3EE]/10 rounded-xl"
+                      className="flex items-center gap-2 px-3 py-1.5 bg-[#0891B2]/10 rounded-md"
                     >
-                      <span className="text-sm font-medium text-[#23D3EE]">
+                      <span className="text-sm font-medium text-[#0891B2]">
                         {selectedContacts.length} selected
                       </span>
                       <Button size="sm" variant="ghost" className="h-7 text-red-600 hover:bg-red-100">
@@ -1531,12 +1531,12 @@ const ClientContactListPage = () => {
                 {/* Columns */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-10 rounded-xl border-slate-200">
+                    <Button variant="outline" size="sm" className="h-10 rounded-md border-[rgba(15,23,42,0.06)]">
                       <Columns size={14} className="mr-2" />
                       Columns
                     </Button>
                                       </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-48 rounded-xl">
+                  <DropdownMenuContent className="w-48 rounded-md">
                     <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
                     {columns.map((col) => (
                       <DropdownMenuCheckboxItem
@@ -1549,7 +1549,7 @@ const ClientContactListPage = () => {
                             )
                           );
                         }}
-                        className="rounded-lg"
+                        className="rounded-md"
                       >
                         {col.label}
                       </DropdownMenuCheckboxItem>
@@ -1558,14 +1558,14 @@ const ClientContactListPage = () => {
                 </DropdownMenu>
 
                 {/* View Toggle */}
-                <div className="flex items-center bg-slate-100 rounded-xl p-1">
+                <div className="flex items-center bg-white/5 rounded-md p-1">
                   <button
                     onClick={() => setViewMode("table")}
                     className={cn(
-                      "p-2 rounded-lg transition-colors",
+                      "p-2 rounded-md transition-colors",
                       viewMode === "table"
-                        ? "bg-white text-[#23D3EE] shadow-sm"
-                        : "text-slate-400 hover:text-slate-600"
+                        ? "bg-white text-[#0891B2] shadow-sm"
+                        : "text-[#475569] hover:text-[#475569]"
                     )}
                   >
                     <List size={16} />
@@ -1573,10 +1573,10 @@ const ClientContactListPage = () => {
                   <button
                     onClick={() => setViewMode("grid")}
                     className={cn(
-                      "p-2 rounded-lg transition-colors",
+                      "p-2 rounded-md transition-colors",
                       viewMode === "grid"
-                        ? "bg-white text-[#23D3EE] shadow-sm"
-                        : "text-slate-400 hover:text-slate-600"
+                        ? "bg-white text-[#0891B2] shadow-sm"
+                        : "text-[#475569] hover:text-[#475569]"
                     )}
                   >
                     <LayoutGrid size={16} />
@@ -1589,7 +1589,7 @@ const ClientContactListPage = () => {
                   size="icon"
                   onClick={fetchContacts}
                   disabled={isLoading}
-                  className="h-10 w-10 rounded-xl border-slate-200"
+                  className="h-10 w-10 rounded-md border-[rgba(15,23,42,0.06)]"
                 >
                   <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
                 </Button>
@@ -1602,24 +1602,24 @@ const ClientContactListPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="bg-white rounded-2xl border border-slate-200 overflow-hidden"
+            className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden"
           >
             {isLoading ? (
               <div className="flex flex-col items-center justify-center py-20">
-                <div className="w-16 h-16 rounded-2xl bg-[#23D3EE]/10 flex items-center justify-center mb-4">
-                  <Loader2 className="w-8 h-8 text-[#23D3EE] animate-spin" />
+                <div className="w-16 h-16 rounded-md bg-[#0891B2]/10 flex items-center justify-center mb-4">
+                  <Loader2 className="w-8 h-8 text-[#0891B2] animate-spin" />
                 </div>
-                <p className="text-slate-500">Loading contacts...</p>
+                <p className="text-[#94A3B8]">Loading contacts...</p>
               </div>
             ) : filteredContacts.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20">
-                <div className="w-20 h-20 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
-                  <Users size={32} className="text-slate-300" />
+                <div className="w-20 h-20 rounded-md bg-white/5 flex items-center justify-center mb-4">
+                  <Users size={32} className="text-[#475569]" />
                 </div>
                 <h3 className="text-lg font-semibold text-[#0F172A] mb-2">
                   No contacts found
                 </h3>
-                <p className="text-slate-500 mb-4">
+                <p className="text-[#94A3B8] mb-4">
                   {searchTerm || filterType !== "all"
                     ? "Try adjusting your filters"
                     : "Get started by adding your first contact"}
@@ -1633,7 +1633,7 @@ const ClientContactListPage = () => {
                         })()
                       : openAddDialog()
                   }
-                  className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl"
+                  className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
                 >
                   {searchTerm || filterType !== "all" ? (
                     <>
@@ -1653,7 +1653,7 @@ const ClientContactListPage = () => {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="bg-slate-50/80 border-b border-slate-100">
+                    <tr className="bg-[#F8FAFC]/80 border-b border-[rgba(15,23,42,0.06)]">
                       {/* Checkbox Header */}
                       <th className="py-4 px-4 text-left">
                         <Checkbox
@@ -1662,13 +1662,13 @@ const ClientContactListPage = () => {
                             selectedContacts.length === paginatedContacts.length
                           }
                           onCheckedChange={handleSelectAll}
-                          className="border-slate-300 data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
+                          className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
                         />
                       </th>
 
                       {/* Favorite Header */}
                       <th className="py-4 px-2 text-left">
-                        <Star size={14} className="text-slate-400" />
+                        <Star size={14} className="text-[#475569]" />
                       </th>
 
                       {/* Dynamic Column Headers */}
@@ -1677,7 +1677,7 @@ const ClientContactListPage = () => {
                           {col.sortable ? (
                             <button
                               onClick={() => handleSort(col.key)}
-                              className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider hover:text-[#23D3EE] transition-colors group"
+                              className="flex items-center gap-2 text-xs font-semibold text-[#94A3B8] uppercase tracking-wider hover:text-[#0891B2] transition-colors group"
                             >
                               {col.label}
                               <ArrowUpDown
@@ -1685,13 +1685,13 @@ const ClientContactListPage = () => {
                                 className={cn(
                                   "transition-colors",
                                   sortConfig?.key === col.key
-                                    ? "text-[#23D3EE]"
-                                    : "text-slate-300 group-hover:text-slate-400"
+                                    ? "text-[#0891B2]"
+                                    : "text-[#475569] group-hover:text-[#475569]"
                                 )}
                               />
                             </button>
                           ) : (
-                            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                            <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">
                               {col.label}
                             </span>
                           )}
@@ -1700,7 +1700,7 @@ const ClientContactListPage = () => {
 
                       {/* Actions Header */}
                       <th className="py-4 px-4 text-right">
-                        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                        <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">
                           Actions
                         </span>
                       </th>
@@ -1760,10 +1760,10 @@ const ClientContactListPage = () => {
 
             {/* Pagination */}
             {filteredContacts.length > 0 && (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-slate-100 bg-slate-50/50">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]/50">
                 {/* Results Info */}
                 <div className="flex items-center gap-4">
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-[#94A3B8]">
                     Showing{" "}
                     <span className="font-semibold text-[#0F172A]">
                       {(currentPage - 1) * pageSize + 1}
@@ -1787,12 +1787,12 @@ const ClientContactListPage = () => {
                       setCurrentPage(1);
                     }}
                   >
-                    <SelectTrigger className="w-20 h-8 rounded-lg border-slate-200 text-sm">
+                    <SelectTrigger className="w-20 h-8 rounded-md border-[rgba(15,23,42,0.06)] text-sm">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl">
+                    <SelectContent className="rounded-md">
                       {[10, 25, 50, 100].map((size) => (
-                        <SelectItem key={size} value={String(size)} className="rounded-lg">
+                        <SelectItem key={size} value={String(size)} className="rounded-md">
                           {size}
                         </SelectItem>
                       ))}
@@ -1808,7 +1808,7 @@ const ClientContactListPage = () => {
                     size="icon"
                     onClick={() => setCurrentPage(1)}
                     disabled={currentPage === 1}
-                    className="h-8 w-8 rounded-lg border-slate-200"
+                    className="h-8 w-8 rounded-md border-[rgba(15,23,42,0.06)]"
                   >
                     <ChevronsLeft size={14} />
                   </Button>
@@ -1819,7 +1819,7 @@ const ClientContactListPage = () => {
                     size="icon"
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="h-8 w-8 rounded-lg border-slate-200"
+                    className="h-8 w-8 rounded-md border-[rgba(15,23,42,0.06)]"
                   >
                     <ChevronLeft size={14} />
                   </Button>
@@ -1843,10 +1843,10 @@ const ClientContactListPage = () => {
                           key={pageNum}
                           onClick={() => setCurrentPage(pageNum)}
                           className={cn(
-                            "h-8 w-8 rounded-lg text-sm font-medium transition-colors",
+                            "h-8 w-8 rounded-md text-sm font-medium transition-colors",
                             currentPage === pageNum
-                              ? "bg-[#23D3EE] text-white"
-                              : "text-slate-600 hover:bg-slate-100"
+                              ? "bg-[#0891B2] text-white"
+                              : "text-[#475569] hover:bg-white/10"
                           )}
                         >
                           {pageNum}
@@ -1861,7 +1861,7 @@ const ClientContactListPage = () => {
                     size="icon"
                     onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
-                    className="h-8 w-8 rounded-lg border-slate-200"
+                    className="h-8 w-8 rounded-md border-[rgba(15,23,42,0.06)]"
                   >
                     <ChevronRight size={14} />
                   </Button>
@@ -1872,7 +1872,7 @@ const ClientContactListPage = () => {
                     size="icon"
                     onClick={() => setCurrentPage(totalPages)}
                     disabled={currentPage === totalPages}
-                    className="h-8 w-8 rounded-lg border-slate-200"
+                    className="h-8 w-8 rounded-md border-[rgba(15,23,42,0.06)]"
                   >
                     <ChevronsRight size={14} />
                   </Button>
@@ -1883,22 +1883,22 @@ const ClientContactListPage = () => {
         </div>
 
         {/* Footer */}
-        <footer className="px-6 py-4 border-t border-slate-200 bg-white">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-slate-400">
+        <footer className="px-6 py-4 border-t border-[rgba(15,23,42,0.06)] bg-white">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-[#475569]">
             <div className="flex items-center gap-2">
               <span>© {new Date().getFullYear()}</span>
               <span className="font-semibold text-[#0F172A]">Yoursoft</span>
-              <span className="text-[#23D3EE] font-semibold">Digital</span>
+              <span className="text-[#0891B2] font-semibold">Digital</span>
               <span>• All rights reserved</span>
             </div>
             <div className="flex items-center gap-4">
-              <a href="#" className="hover:text-[#23D3EE] transition-colors">
+              <a href="#" className="hover:text-[#0891B2] transition-colors">
                 Privacy
               </a>
-              <a href="#" className="hover:text-[#23D3EE] transition-colors">
+              <a href="#" className="hover:text-[#0891B2] transition-colors">
                 Terms
               </a>
-              <a href="#" className="hover:text-[#23D3EE] transition-colors">
+              <a href="#" className="hover:text-[#0891B2] transition-colors">
                 Support
               </a>
             </div>
@@ -1924,15 +1924,15 @@ const ClientContactListPage = () => {
       {/* DELETE CONFIRMATION DIALOG */}
       {/* ============================================ */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="rounded-2xl">
+        <AlertDialogContent className="rounded-md">
           <AlertDialogHeader>
-            <div className="w-12 h-12 rounded-2xl bg-red-100 flex items-center justify-center mb-4">
+            <div className="w-12 h-12 rounded-md bg-red-100 flex items-center justify-center mb-4">
               <Trash2 className="w-6 h-6 text-red-600" />
             </div>
             <AlertDialogTitle className="text-xl font-bold text-[#0F172A]">
               Delete Contact
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-500">
+            <AlertDialogDescription className="text-[#94A3B8]">
               Are you sure you want to delete{" "}
               <span className="font-semibold text-[#0F172A]">
                 {contactToDelete?.contactPerson}
@@ -1943,14 +1943,14 @@ const ClientContactListPage = () => {
           <AlertDialogFooter className="gap-3">
             <AlertDialogCancel
               disabled={isDeleting}
-              className="rounded-xl border-slate-200"
+              className="rounded-md border-[rgba(15,23,42,0.06)]"
             >
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteContact}
               disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700 text-white rounded-xl"
+              className="bg-red-600 hover:bg-red-700 text-[#0F172A] rounded-md"
             >
               {isDeleting ? (
                 <>

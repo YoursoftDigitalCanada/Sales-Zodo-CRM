@@ -67,10 +67,10 @@ export const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6">
+    <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-gray-900">
+        <h3 className="text-lg font-semibold text-[#0F172A]">
           {format(currentMonth, 'MMMM yyyy')}
         </h3>
         <div className="flex items-center gap-2">
@@ -103,7 +103,7 @@ export const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
         {weekDays.map((day) => (
           <div
             key={day}
-            className="text-center text-sm font-medium text-gray-500 py-2"
+            className="text-center text-sm font-medium text-[#475569] py-2"
           >
             {day}
           </div>
@@ -126,13 +126,13 @@ export const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
                     whileTap={{ scale: 0.95 }}
                     onClick={() => onDateClick?.(day, record)}
                     className={`
-                      relative aspect-square p-1 rounded-lg text-sm
-                      ${!isCurrentMonth ? 'text-gray-300' : 'text-gray-700'}
-                      ${isCurrentDay ? 'ring-2 ring-[#23D3EE] ring-offset-2' : ''}
-                      hover:bg-gray-100 transition-colors
+                      relative aspect-square p-1 rounded-md text-sm
+                      ${!isCurrentMonth ? 'text-gray-300' : 'text-slate-200'}
+                      ${isCurrentDay ? 'ring-2 ring-[#22D3EE] ring-offset-2' : ''}
+                      hover:bg-white/10 transition-colors
                     `}
                   >
-                    <span className={`${isCurrentDay ? 'font-bold text-[#23D3EE]' : ''}`}>
+                    <span className={`${isCurrentDay ? 'font-bold text-[#0891B2]' : ''}`}>
                       {format(day, 'd')}
                     </span>
                     
@@ -151,12 +151,12 @@ export const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
                     <div className="text-sm">
                       <p className="font-medium">{getAttendanceStatusConfig(record.status).label}</p>
                       {record.checkIn && (
-                        <p className="text-gray-400">
+                        <p className="text-[#94A3B8]">
                           In: {format(record.checkIn, 'h:mm a')}
                         </p>
                       )}
                       {record.checkOut && (
-                        <p className="text-gray-400">
+                        <p className="text-[#94A3B8]">
                           Out: {format(record.checkOut, 'h:mm a')}
                         </p>
                       )}
@@ -170,13 +170,13 @@ export const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap gap-4 mt-6 pt-4 border-t border-gray-100">
+      <div className="flex flex-wrap gap-4 mt-6 pt-4 border-t border-[rgba(15,23,42,0.06)]">
         {(['present', 'absent', 'late', 'half-day', 'holiday'] as AttendanceStatus[]).map((status) => {
           const config = getAttendanceStatusConfig(status);
           return (
             <div key={status} className="flex items-center gap-2">
               <span className={`w-3 h-3 rounded-full ${getStatusColor(status)}`} />
-              <span className="text-sm text-gray-600">{config.label}</span>
+              <span className="text-sm text-[#475569]">{config.label}</span>
             </div>
           );
         })}

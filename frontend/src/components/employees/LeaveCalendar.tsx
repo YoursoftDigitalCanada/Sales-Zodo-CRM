@@ -67,7 +67,7 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({
 
   const getColorForLeaveType = (leaveType: string): string => {
     const colors: Record<string, string> = {
-      annual: '#23D3EE',
+      annual: '#22D3EE',
       sick: '#EF4444',
       personal: '#8B5CF6',
       maternity: '#EC4899',
@@ -75,18 +75,18 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({
       unpaid: '#6B7280',
       bereavement: '#475569',
     };
-    return colors[leaveType] || '#23D3EE';
+    return colors[leaveType] || '#22D3EE';
   };
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-xl border border-gray-200 p-6"
+      className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-6"
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-gray-900">
+        <h3 className="text-lg font-semibold text-[#0F172A]">
           {format(currentMonth, 'MMMM yyyy')}
         </h3>
         <div className="flex items-center gap-2">
@@ -119,7 +119,7 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({
         {weekDays.map((day) => (
           <div
             key={day}
-            className="text-center text-sm font-medium text-gray-500 py-2"
+            className="text-center text-sm font-medium text-[#475569] py-2"
           >
             {day}
           </div>
@@ -142,17 +142,17 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({
                   whileTap={{ scale: 0.98 }}
                   onClick={() => onDateClick?.(day, requests)}
                   className={`
-                    relative min-h-[80px] p-2 rounded-lg text-left transition-colors
-                    ${!isCurrentMonth ? 'bg-gray-50 text-gray-300' : 'hover:bg-gray-50'}
-                    ${isCurrentDay ? 'ring-2 ring-[#23D3EE] ring-offset-1' : ''}
-                    ${hasRequests && isCurrentMonth ? 'bg-gray-50' : ''}
+                    relative min-h-[80px] p-2 rounded-md text-left transition-colors
+                    ${!isCurrentMonth ? 'bg-white/5 text-gray-300' : 'hover:bg-white/5'}
+                    ${isCurrentDay ? 'ring-2 ring-[#22D3EE] ring-offset-1' : ''}
+                    ${hasRequests && isCurrentMonth ? 'bg-white/5' : ''}
                   `}
                 >
                   <span
                     className={`
                       text-sm font-medium
-                      ${isCurrentDay ? 'text-[#23D3EE] font-bold' : ''}
-                      ${!isCurrentMonth ? 'text-gray-300' : 'text-gray-700'}
+                      ${isCurrentDay ? 'text-[#0891B2] font-bold' : ''}
+                      ${!isCurrentMonth ? 'text-gray-300' : 'text-slate-200'}
                     `}
                   >
                     {format(day, 'd')}
@@ -179,7 +179,7 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({
                         </div>
                       ))}
                       {requests.length > 2 && (
-                        <div className="text-xs text-gray-500 pl-1">
+                        <div className="text-xs text-[#475569] pl-1">
                           +{requests.length - 2} more
                         </div>
                       )}
@@ -190,11 +190,11 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({
 
               {hasRequests && isCurrentMonth && (
                 <PopoverContent className="w-80 p-0" align="start">
-                  <div className="p-4 border-b border-gray-100">
-                    <h4 className="font-semibold text-gray-900">
+                  <div className="p-4 border-b border-[rgba(15,23,42,0.06)]">
+                    <h4 className="font-semibold text-[#0F172A]">
                       {format(day, 'EEEE, MMMM d, yyyy')}
                     </h4>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-[#475569]">
                       {requests.length} employee{requests.length !== 1 ? 's' : ''} on leave
                     </p>
                   </div>
@@ -207,7 +207,7 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({
                       return (
                         <div
                           key={request.id}
-                          className="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0"
+                          className="p-3 hover:bg-white/5 cursor-pointer border-b border-gray-50 last:border-0"
                           onClick={() => onRequestClick?.(request)}
                         >
                           <div className="flex items-center gap-3">
@@ -223,7 +223,7 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({
                               </AvatarFallback>
                             </Avatar>
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium text-gray-900 truncate">
+                              <p className="font-medium text-[#0F172A] truncate">
                                 {request.employeeName}
                               </p>
                               <div className="flex items-center gap-2 mt-1">
@@ -241,7 +241,7 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({
                               </div>
                             </div>
                           </div>
-                          <div className="mt-2 text-xs text-gray-500">
+                          <div className="mt-2 text-xs text-[#475569]">
                             {format(new Date(request.startDate), 'MMM d')} -{' '}
                             {format(new Date(request.endDate), 'MMM d')} ({request.totalDays} days)
                           </div>
@@ -257,7 +257,7 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap gap-4 mt-6 pt-4 border-t border-gray-100">
+      <div className="flex flex-wrap gap-4 mt-6 pt-4 border-t border-[rgba(15,23,42,0.06)]">
         {['annual', 'sick', 'personal', 'maternity', 'paternity'].map((type) => {
           const config = getLeaveTypeConfig(type as any);
           return (
@@ -266,7 +266,7 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({
                 className="w-3 h-3 rounded-full"
                 style={{ backgroundColor: getColorForLeaveType(type) }}
               />
-              <span className="text-sm text-gray-600">{config.label}</span>
+              <span className="text-sm text-[#475569]">{config.label}</span>
             </div>
           );
         })}

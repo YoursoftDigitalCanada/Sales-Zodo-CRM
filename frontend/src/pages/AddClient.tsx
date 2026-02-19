@@ -300,7 +300,7 @@ const StyledCard = ({
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay }}
     className={cn(
-      "bg-white rounded-2xl border border-slate-200 overflow-hidden hover:border-[#23D3EE]/30 hover:shadow-lg hover:shadow-[#23D3EE]/5 transition-all",
+      "bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden hover:border-[#22D3EE]/30 hover:shadow-lg  transition-all",
       className
     )}
   >
@@ -321,18 +321,18 @@ const StyledCardHeader = ({
   color?: "teal" | "gold" | "navy" | "purple";
 }) => {
   const colorClasses = {
-    teal: "bg-[#23D3EE]/10 text-[#23D3EE]",
-    gold: "bg-[#FBBF23]/10 text-[#FBBF23]",
-    navy: "bg-[#0F172A]/10 text-[#0F172A]",
+    teal: "bg-[#0891B2]/10 text-[#0891B2]",
+    gold: "bg-[#D97706]/10 text-[#D97706]",
+    navy: "bg-[#F8FAFC]/10 text-[#0F172A]",
     purple: "bg-purple-500/10 text-purple-500",
   };
 
   return (
-    <div className="p-6 border-b border-slate-100">
+    <div className="p-6 border-b border-[rgba(15,23,42,0.06)]">
       <div className="flex items-center gap-3">
         <div
           className={cn(
-            "w-10 h-10 rounded-xl flex items-center justify-center",
+            "w-10 h-10 rounded-md flex items-center justify-center",
             colorClasses[color]
           )}
         >
@@ -340,7 +340,7 @@ const StyledCardHeader = ({
         </div>
         <div>
           <h3 className="font-semibold text-[#0F172A]">{title}</h3>
-          {subtitle && <p className="text-xs text-slate-400">{subtitle}</p>}
+          {subtitle && <p className="text-xs text-[#475569]">{subtitle}</p>}
         </div>
       </div>
     </div>
@@ -359,7 +359,7 @@ const StyledInput = ({
   icon?: React.ElementType;
 } & React.InputHTMLAttributes<HTMLInputElement>) => (
   <div className="space-y-2">
-    <Label className="text-sm font-medium text-slate-600">
+    <Label className="text-sm font-medium text-[#475569]">
       {label}
       {required && <span className="text-red-500 ml-1">*</span>}
     </Label>
@@ -367,13 +367,13 @@ const StyledInput = ({
       {Icon && (
         <Icon
           size={16}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]"
         />
       )}
       <Input
         {...props}
         className={cn(
-          "h-11 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20 transition-all",
+          "h-11 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all",
           Icon && "pl-10",
           props.className
         )}
@@ -399,20 +399,20 @@ const StyledSelect = ({
   options: { value: string; label: string }[];
 }) => (
   <div className="space-y-2">
-    <Label className="text-sm font-medium text-slate-600">
+    <Label className="text-sm font-medium text-[#475569]">
       {label}
       {required && <span className="text-red-500 ml-1">*</span>}
     </Label>
     <Select value={value} onValueChange={onValueChange}>
-      <SelectTrigger className="h-11 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20">
+      <SelectTrigger className="h-11 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20">
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
-      <SelectContent className="rounded-xl border-slate-200">
+      <SelectContent className="rounded-md border-[rgba(15,23,42,0.06)]">
         {options.map((option) => (
           <SelectItem
             key={option.value}
             value={option.value}
-            className="rounded-lg focus:bg-[#23D3EE]/10 focus:text-[#23D3EE]"
+            className="rounded-md focus:bg-[#0891B2]/10 focus:text-[#0891B2]"
           >
             {option.label}
           </SelectItem>
@@ -553,7 +553,7 @@ const AddClientPage = () => {
   // Loading State
   if (isFetching) {
     return (
-      <div className="flex min-h-screen bg-slate-50">
+      <div className="flex min-h-screen bg-[#F8FAFC]">
         <Sidebar
           collapsed={sidebarCollapsed}
           setCollapsed={setSidebarCollapsed}
@@ -566,10 +566,10 @@ const AddClientPage = () => {
             animate={{ opacity: 1, scale: 1 }}
             className="text-center"
           >
-            <div className="w-16 h-16 rounded-2xl bg-[#23D3EE]/10 flex items-center justify-center mx-auto mb-4">
-              <Loader2 className="w-8 h-8 text-[#23D3EE] animate-spin" />
+            <div className="w-16 h-16 rounded-md bg-[#0891B2]/10 flex items-center justify-center mx-auto mb-4">
+              <Loader2 className="w-8 h-8 text-[#0891B2] animate-spin" />
             </div>
-            <p className="text-slate-500 font-medium">Loading client data...</p>
+            <p className="text-[#94A3B8] font-medium">Loading client data...</p>
           </motion.div>
         </main>
       </div>
@@ -577,7 +577,7 @@ const AddClientPage = () => {
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen bg-[#F8FAFC]">
       <Sidebar
         collapsed={sidebarCollapsed}
         setCollapsed={setSidebarCollapsed}
@@ -589,7 +589,7 @@ const AddClientPage = () => {
         {/* ============================================ */}
         {/* HEADER */}
         {/* ============================================ */}
-        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-200/50">
+        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-[rgba(15,23,42,0.06)]/50">
           <div className="flex h-20 items-center justify-between px-6">
             {/* Left Section - Back & Breadcrumb */}
             <div className="flex items-center gap-4">
@@ -597,7 +597,7 @@ const AddClientPage = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => navigate("/client-list")}
-                className="p-2.5 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                className="p-2.5 rounded-md bg-white/5 text-[#475569] hover:bg-slate-200 transition-colors"
               >
                 <ArrowLeft size={18} />
               </motion.button>
@@ -606,19 +606,19 @@ const AddClientPage = () => {
               <div className="hidden sm:flex items-center gap-2 text-sm">
                 <button
                   onClick={() => navigate("/dashboard")}
-                  className="text-slate-400 hover:text-[#23D3EE] transition-colors"
+                  className="text-[#475569] hover:text-[#0891B2] transition-colors"
                 >
                   Dashboard
                 </button>
-                <ChevronRight size={14} className="text-slate-300" />
+                <ChevronRight size={14} className="text-[#475569]" />
                 <button
                   onClick={() => navigate("/client-list")}
-                  className="text-slate-400 hover:text-[#23D3EE] transition-colors"
+                  className="text-[#475569] hover:text-[#0891B2] transition-colors"
                 >
                   Clients
                 </button>
-                <ChevronRight size={14} className="text-slate-300" />
-                <span className="font-semibold text-[#23D3EE]">
+                <ChevronRight size={14} className="text-[#475569]" />
+                <span className="font-semibold text-[#0891B2]">
                   {isEditMode ? "Edit Client" : "New Client"}
                 </span>
               </div>
@@ -629,10 +629,10 @@ const AddClientPage = () => {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="p-2.5 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors relative"
+                className="p-2.5 rounded-md bg-white/5 text-[#475569] hover:bg-slate-200 transition-colors relative"
               >
                 <Bell size={18} />
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-[#0F172A] text-[10px] font-bold rounded-full flex items-center justify-center">
                   2
                 </span>
               </motion.button>
@@ -641,7 +641,7 @@ const AddClientPage = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => navigate("/client-list")}
-                className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors flex items-center gap-2 font-medium"
+                className="px-4 py-2.5 rounded-md border border-[rgba(15,23,42,0.06)] text-[#475569] hover:bg-[#F8FAFC] transition-colors flex items-center gap-2 font-medium"
               >
                 <X size={16} />
                 <span className="hidden sm:inline">Cancel</span>
@@ -652,7 +652,7 @@ const AddClientPage = () => {
                 whileTap={{ scale: 0.95 }}
                 onClick={handleSubmit}
                 disabled={isLoading}
-                className="px-4 py-2.5 rounded-xl bg-[#23D3EE] text-white shadow-lg shadow-[#23D3EE]/25 hover:bg-[#23D3EE]/90 transition-colors flex items-center gap-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2.5 rounded-md bg-[#0891B2] text-white  hover:bg-[#0891B2]/90 transition-colors flex items-center gap-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <Loader2 size={16} className="animate-spin" />
@@ -675,11 +675,11 @@ const AddClientPage = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#0F172A] via-[#0F172A] to-[#23D3EE]/30 p-8"
+            className="relative overflow-hidden rounded-3xl bg-[#F1F5F9] p-8"
           >
             {/* Background Decorations */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-[#23D3EE]/10 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 left-1/2 w-48 h-48 bg-[#FBBF23]/10 rounded-full blur-3xl" />
+            <div className="absolute top-0 right-0 w-64 h-64 bg-[#0891B2]/10 rounded-full blur-3xl" />
+            <div className="absolute bottom-0 left-1/2 w-48 h-48 bg-[#D97706]/10 rounded-full blur-3xl" />
 
             <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
               <div>
@@ -689,26 +689,26 @@ const AddClientPage = () => {
                   transition={{ delay: 0.2 }}
                   className="flex items-center gap-2 mb-3"
                 >
-                  <Sparkles size={20} className="text-[#FBBF23]" />
-                  <span className="text-[#FBBF23] text-sm font-medium">
+                  <Sparkles size={20} className="text-[#D97706]" />
+                  <span className="text-[#D97706] text-sm font-medium">
                     Client Management
                   </span>
                 </motion.div>
-                <h1 className="text-3xl lg:text-4xl font-bold text-white mb-2">
+                <h1 className="text-3xl lg:text-4xl font-bold text-[#0F172A] mb-2">
                   {isEditMode ? (
                     <>
                       Edit{" "}
-                      <span className="text-[#23D3EE]">
+                      <span className="text-[#0891B2]">
                         {formData.clientName || "Client"}
                       </span>
                     </>
                   ) : (
                     <>
-                      Add New <span className="text-[#23D3EE]">Client</span>
+                      Add New <span className="text-[#0891B2]">Client</span>
                     </>
                   )}
                 </h1>
-                <p className="text-slate-300 text-lg max-w-xl">
+                <p className="text-[#475569] text-lg max-w-xl">
                   {isEditMode
                     ? "Update the client information below. All changes will be saved automatically."
                     : "Register a new business or individual client to your CRM system."}
@@ -721,11 +721,11 @@ const AddClientPage = () => {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.3 }}
-                  className="flex items-center gap-3 bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-4"
+                  className="flex items-center gap-3 bg-white/10 backdrop-blur-sm border border-[rgba(15,23,42,0.06)] rounded-md p-4"
                 >
                   <div
                     className={cn(
-                      "w-12 h-12 rounded-xl flex items-center justify-center",
+                      "w-12 h-12 rounded-md flex items-center justify-center",
                       formData.status === "Active"
                         ? "bg-green-500/20 text-green-400"
                         : formData.status === "Inactive"
@@ -740,8 +740,8 @@ const AddClientPage = () => {
                     )}
                   </div>
                   <div>
-                    <p className="text-xs text-slate-400">Current Status</p>
-                    <p className="text-lg font-bold text-white">
+                    <p className="text-xs text-[#475569]">Current Status</p>
+                    <p className="text-lg font-bold text-[#0F172A]">
                       {formData.status}
                     </p>
                   </div>
@@ -772,10 +772,10 @@ const AddClientPage = () => {
                         <motion.div
                           whileHover={{ scale: 1.05 }}
                           className={cn(
-                            "w-24 h-24 rounded-2xl border-2 border-dashed flex items-center justify-center overflow-hidden bg-slate-50 transition-all cursor-pointer",
+                            "w-24 h-24 rounded-md border-2 border-dashed flex items-center justify-center overflow-hidden bg-[#F8FAFC] transition-all cursor-pointer",
                             previewImage
-                              ? "border-[#23D3EE]"
-                              : "border-slate-200 hover:border-[#23D3EE]/50"
+                              ? "border-[#22D3EE]"
+                              : "border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/50"
                           )}
                         >
                           {previewImage ? (
@@ -785,7 +785,7 @@ const AddClientPage = () => {
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <ImageIcon className="text-slate-300 w-8 h-8" />
+                            <ImageIcon className="text-[#475569] w-8 h-8" />
                           )}
                         </motion.div>
                         <input
@@ -794,7 +794,7 @@ const AddClientPage = () => {
                           onChange={handleImageChange}
                           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                         />
-                        <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-[#23D3EE] text-white rounded-xl shadow-lg shadow-[#23D3EE]/25 flex items-center justify-center pointer-events-none">
+                        <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-[#0891B2] text-white rounded-md  flex items-center justify-center pointer-events-none">
                           <Upload size={14} />
                         </div>
                       </div>
@@ -802,7 +802,7 @@ const AddClientPage = () => {
                         <h3 className="font-semibold text-[#0F172A]">
                           Client Logo / Photo
                         </h3>
-                        <p className="text-sm text-slate-400 mt-1">
+                        <p className="text-sm text-[#475569] mt-1">
                           Supports JPG, PNG (Max 2MB)
                         </p>
                         {previewImage && (
@@ -964,7 +964,7 @@ const AddClientPage = () => {
                           placeholder="Suite 100 (Optional)"
                           value={formData.billingAddressLine2}
                           onChange={handleInputChange}
-                          className="h-11 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
+                          className="h-11 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
                         />
                       </div>
 
@@ -999,18 +999,18 @@ const AddClientPage = () => {
                       />
 
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium text-slate-600">
+                        <Label className="text-sm font-medium text-[#475569]">
                           Country
                         </Label>
                         <div className="relative">
                           <Globe
                             size={16}
-                            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                            className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]"
                           />
                           <Input
                             value="Canada"
                             disabled
-                            className="h-11 pl-10 rounded-xl bg-slate-50 border-slate-200"
+                            className="h-11 pl-10 rounded-md bg-[#F8FAFC] border-[rgba(15,23,42,0.06)]"
                           />
                         </div>
                       </div>
@@ -1028,7 +1028,7 @@ const AddClientPage = () => {
                   />
                   <div className="p-6">
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-slate-600">
+                      <Label className="text-sm font-medium text-[#475569]">
                         Notes
                       </Label>
                       <Textarea
@@ -1036,7 +1036,7 @@ const AddClientPage = () => {
                         placeholder="Internal notes about this client..."
                         value={formData.notes}
                         onChange={handleInputChange}
-                        className="min-h-[120px] rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20 resize-none"
+                        className="min-h-[120px] rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 resize-none"
                       />
                     </div>
                   </div>
@@ -1189,17 +1189,17 @@ const AddClientPage = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5 }}
-                    className="bg-[#23D3EE]/10 border border-[#23D3EE]/20 rounded-2xl p-5"
+                    className="bg-[#0891B2]/10 border border-[#22D3EE]/20 rounded-md p-5"
                   >
                     <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-[#23D3EE]/20 flex items-center justify-center flex-shrink-0">
-                        <CheckCircle2 size={18} className="text-[#23D3EE]" />
+                      <div className="w-10 h-10 rounded-md bg-[#0891B2]/20 flex items-center justify-center flex-shrink-0">
+                        <CheckCircle2 size={18} className="text-[#0891B2]" />
                       </div>
                       <div>
                         <h4 className="font-semibold text-[#0F172A]">
                           Editing Mode
                         </h4>
-                        <p className="text-sm text-slate-500 mt-1">
+                        <p className="text-sm text-[#94A3B8] mt-1">
                           You are editing an existing client record. Click
                           "Update Client" to save your changes.
                         </p>
@@ -1213,17 +1213,17 @@ const AddClientPage = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.6 }}
-                  className="bg-[#FBBF23]/10 border border-[#FBBF23]/20 rounded-2xl p-5"
+                  className="bg-[#D97706]/10 border border-[#FBBF24]/20 rounded-md p-5"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#FBBF23]/20 flex items-center justify-center flex-shrink-0">
-                      <Sparkles size={18} className="text-[#FBBF23]" />
+                    <div className="w-10 h-10 rounded-md bg-[#D97706]/20 flex items-center justify-center flex-shrink-0">
+                      <Sparkles size={18} className="text-[#D97706]" />
                     </div>
                     <div>
                       <h4 className="font-semibold text-[#0F172A]">
                         Quick Tips
                       </h4>
-                      <ul className="text-sm text-slate-500 mt-2 space-y-1">
+                      <ul className="text-sm text-[#94A3B8] mt-2 space-y-1">
                         <li>• Fields marked with * are required</li>
                         <li>• GST/HST format: 12345 6789 RT0001</li>
                         <li>• Postal code format: A1A 1A1</li>
@@ -1237,22 +1237,22 @@ const AddClientPage = () => {
         </div>
 
         {/* Footer */}
-        <footer className="px-6 py-4 border-t border-slate-200 bg-white mt-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-slate-400 max-w-7xl mx-auto">
+        <footer className="px-6 py-4 border-t border-[rgba(15,23,42,0.06)] bg-white mt-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-[#475569] max-w-7xl mx-auto">
             <div className="flex items-center gap-2">
               <span>© {new Date().getFullYear()}</span>
               <span className="font-semibold text-[#0F172A]">Yoursoft</span>
-              <span className="text-[#23D3EE] font-semibold">Digital</span>
+              <span className="text-[#0891B2] font-semibold">Digital</span>
               <span>• All rights reserved</span>
             </div>
             <div className="flex items-center gap-4">
-              <a href="#" className="hover:text-[#23D3EE] transition-colors">
+              <a href="#" className="hover:text-[#0891B2] transition-colors">
                 Privacy
               </a>
-              <a href="#" className="hover:text-[#23D3EE] transition-colors">
+              <a href="#" className="hover:text-[#0891B2] transition-colors">
                 Terms
               </a>
-              <a href="#" className="hover:text-[#23D3EE] transition-colors">
+              <a href="#" className="hover:text-[#0891B2] transition-colors">
                 Support
               </a>
             </div>

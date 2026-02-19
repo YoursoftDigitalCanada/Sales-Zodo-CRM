@@ -77,10 +77,10 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
   );
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden">
       <Table>
         <TableHeader>
-          <TableRow className="bg-gray-50/50">
+          <TableRow className="bg-white/5/50">
             <TableHead className="w-12">
               <Checkbox 
                 checked={allSelected}
@@ -120,7 +120,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
             return (
               <TableRow 
                 key={employee.id}
-                className={isSelected ? 'bg-[#23D3EE]/5' : ''}
+                className={isSelected ? 'bg-[#0891B2]/5' : ''}
               >
                 <TableCell>
                   <Checkbox 
@@ -132,20 +132,20 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
                       <AvatarImage src={employee.avatar} />
-                      <AvatarFallback className="bg-[#23D3EE]/10 text-[#23D3EE]">
+                      <AvatarFallback className="bg-[#0891B2]/10 text-[#0891B2]">
                         {getInitials(employee.firstName, employee.lastName)}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="font-medium text-gray-900">
+                      <p className="font-medium text-[#0F172A]">
                         {employee.firstName} {employee.lastName}
                       </p>
-                      <p className="text-sm text-gray-500">{employee.position}</p>
+                      <p className="text-sm text-[#475569]">{employee.position}</p>
                     </div>
                   </div>
                 </TableCell>
                 <TableCell>
-                  <span className="text-gray-700">{employee.departmentName}</span>
+                  <span className="text-slate-200">{employee.departmentName}</span>
                 </TableCell>
                 <TableCell>
                   <Badge className={`${statusConfig.color} border-0`}>
@@ -158,16 +158,16 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
                     {employmentConfig.label}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-gray-600">
+                <TableCell className="text-[#475569]">
                   {format(employee.joinDate, 'MMM d, yyyy')}
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <Mail className="h-4 w-4 text-gray-400" />
+                      <Mail className="h-4 w-4 text-[#94A3B8]" />
                     </Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <Phone className="h-4 w-4 text-gray-400" />
+                      <Phone className="h-4 w-4 text-[#94A3B8]" />
                     </Button>
                   </div>
                 </TableCell>

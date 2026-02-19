@@ -92,18 +92,18 @@ interface User {
 
 const columnColors = {
   teal: {
-    bg: "bg-[#23D3EE]/10",
-    border: "border-[#23D3EE]/20",
-    text: "text-[#23D3EE]",
-    dot: "bg-[#23D3EE]",
-    header: "from-[#23D3EE]/20 to-[#23D3EE]/5",
+    bg: "bg-[#0891B2]/10",
+    border: "border-[#22D3EE]/20",
+    text: "text-[#0891B2]",
+    dot: "bg-[#0891B2]",
+    header: "from-[#22D3EE]/20/5",
   },
   gold: {
-    bg: "bg-[#FBBF23]/10",
-    border: "border-[#FBBF23]/20",
-    text: "text-[#FBBF23]",
-    dot: "bg-[#FBBF23]",
-    header: "from-[#FBBF23]/20 to-[#FBBF23]/5",
+    bg: "bg-[#D97706]/10",
+    border: "border-[#FBBF24]/20",
+    text: "text-[#D97706]",
+    dot: "bg-[#D97706]",
+    header: "from-[#FBBF24]/20/5",
   },
   purple: {
     bg: "bg-purple-500/10",
@@ -122,8 +122,8 @@ const columnColors = {
 };
 
 const priorityColors = {
-  low: { bg: "bg-slate-100", text: "text-slate-600", label: "Low" },
-  medium: { bg: "bg-blue-100", text: "text-blue-600", label: "Medium" },
+  low: { bg: "bg-white/5", text: "text-[#475569]", label: "Low" },
+  medium: { bg: "bg-blue-100", text: "text-[#0891B2]", label: "Medium" },
   high: { bg: "bg-orange-100", text: "text-orange-600", label: "High" },
   urgent: { bg: "bg-red-100", text: "text-red-600", label: "Urgent" },
 };
@@ -189,9 +189,9 @@ const TaskCard = ({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       className={cn(
-        "group bg-white rounded-xl border border-slate-200 p-4 cursor-grab active:cursor-grabbing",
-        "hover:border-[#23D3EE]/30 hover:shadow-lg hover:shadow-[#23D3EE]/5 transition-all",
-        isDragging && "shadow-2xl rotate-2"
+        "group bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4 cursor-grab active:cursor-grabbing",
+        "hover:border-[#22D3EE]/30 hover:shadow-lg  transition-all",
+        isDragging && "shadow-lg rotate-2"
       )}
     >
       {/* Drag Handle */}
@@ -199,7 +199,7 @@ const TaskCard = ({
         <div className="flex items-center gap-2">
           <GripVertical
             size={14}
-            className="text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="text-[#475569] opacity-0 group-hover:opacity-100 transition-opacity"
           />
           {task.priority && (
             <span
@@ -216,35 +216,35 @@ const TaskCard = ({
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="p-1 rounded-lg hover:bg-slate-100 opacity-0 group-hover:opacity-100 transition-all">
-              <MoreHorizontal size={14} className="text-slate-400" />
+            <button className="p-1 rounded-md hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-all">
+              <MoreHorizontal size={14} className="text-[#475569]" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48 rounded-xl">
-            <DropdownMenuItem onClick={onEdit} className="rounded-lg">
+          <DropdownMenuContent align="end" className="w-48 rounded-md">
+            <DropdownMenuItem onClick={onEdit} className="rounded-md">
               <Edit3 size={14} className="mr-2" />
               Edit Task
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => onMove("todo")}
-              className="rounded-lg"
+              className="rounded-md"
               disabled={task.status === "todo"}
             >
-              <Circle size={14} className="mr-2 text-[#23D3EE]" />
+              <Circle size={14} className="mr-2 text-[#0891B2]" />
               Move to To Do
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => onMove("in-progress")}
-              className="rounded-lg"
+              className="rounded-md"
               disabled={task.status === "in-progress"}
             >
-              <Timer size={14} className="mr-2 text-[#FBBF23]" />
+              <Timer size={14} className="mr-2 text-[#D97706]" />
               Move to In Progress
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => onMove("review")}
-              className="rounded-lg"
+              className="rounded-md"
               disabled={task.status === "review"}
             >
               <AlertCircle size={14} className="mr-2 text-purple-500" />
@@ -252,7 +252,7 @@ const TaskCard = ({
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => onMove("done")}
-              className="rounded-lg"
+              className="rounded-md"
               disabled={task.status === "done"}
             >
               <CheckCircle2 size={14} className="mr-2 text-emerald-500" />
@@ -261,7 +261,7 @@ const TaskCard = ({
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={onDelete}
-              className="rounded-lg text-red-600 focus:text-red-600 focus:bg-red-50"
+              className="rounded-md text-red-600 focus:text-red-600 focus:bg-red-50"
             >
               <Trash2 size={14} className="mr-2" />
               Delete Task
@@ -277,7 +277,7 @@ const TaskCard = ({
 
       {/* Description */}
       {task.description && (
-        <p className="text-sm text-slate-500 mb-3 line-clamp-2">
+        <p className="text-sm text-[#94A3B8] mb-3 line-clamp-2">
           {task.description}
         </p>
       )}
@@ -298,7 +298,7 @@ const TaskCard = ({
             </span>
           ))}
           {task.tags.length > 3 && (
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-500">
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-white/5 text-[#94A3B8]">
               +{task.tags.length - 3}
             </span>
           )}
@@ -306,21 +306,21 @@ const TaskCard = ({
       )}
 
       {/* Footer */}
-      <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+      <div className="flex items-center justify-between pt-3 border-t border-[rgba(15,23,42,0.06)]">
         {/* Assignee */}
         {task.assignee ? (
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white text-[10px] font-bold">
+            <div className="w-6 h-6 rounded-full bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] text-[10px] font-bold">
               {task.assignee
                 .split(" ")
                 .map((n) => n[0])
                 .join("")
                 .toUpperCase()}
             </div>
-            <span className="text-xs text-slate-500">{task.assignee}</span>
+            <span className="text-xs text-[#94A3B8]">{task.assignee}</span>
           </div>
         ) : (
-          <div className="flex items-center gap-1 text-xs text-slate-400">
+          <div className="flex items-center gap-1 text-xs text-[#475569]">
             <User size={12} />
             <span>Unassigned</span>
           </div>
@@ -328,7 +328,7 @@ const TaskCard = ({
 
         {/* Due Date */}
         {task.dueDate && (
-          <div className="flex items-center gap-1 text-xs text-slate-400">
+          <div className="flex items-center gap-1 text-xs text-[#475569]">
             <Calendar size={12} />
             <span>
               {new Date(task.dueDate).toLocaleDateString("en-US", {
@@ -390,7 +390,7 @@ const KanbanColumnComponent = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
-        "flex flex-col bg-slate-50/50 rounded-2xl border-2 border-dashed transition-all min-h-[600px]",
+        "flex flex-col bg-[#F8FAFC]/50 rounded-md border-2 border-dashed transition-all min-h-[600px]",
         isDragOver
           ? `${colors.border} ${colors.bg}`
           : "border-transparent"
@@ -402,7 +402,7 @@ const KanbanColumnComponent = ({
       {/* Column Header */}
       <div
         className={cn(
-          "p-4 rounded-t-2xl bg-gradient-to-b",
+          "p-4 rounded-t-2xl ",
           colors.header
         )}
       >
@@ -410,7 +410,7 @@ const KanbanColumnComponent = ({
           <div className="flex items-center gap-3">
             <div
               className={cn(
-                "w-10 h-10 rounded-xl flex items-center justify-center",
+                "w-10 h-10 rounded-md flex items-center justify-center",
                 colors.bg
               )}
             >
@@ -418,7 +418,7 @@ const KanbanColumnComponent = ({
             </div>
             <div>
               <h3 className="font-semibold text-[#0F172A]">{column.title}</h3>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-[#475569]">
                 {column.tasks.length} {column.tasks.length === 1 ? "task" : "tasks"}
               </p>
             </div>
@@ -429,7 +429,7 @@ const KanbanColumnComponent = ({
             whileTap={{ scale: 0.9 }}
             onClick={onAddTask}
             className={cn(
-              "p-2 rounded-xl transition-colors",
+              "p-2 rounded-md transition-colors",
               colors.bg,
               "hover:opacity-80"
             )}
@@ -463,13 +463,13 @@ const KanbanColumnComponent = ({
           >
             <div
               className={cn(
-                "w-16 h-16 rounded-2xl flex items-center justify-center mb-4",
+                "w-16 h-16 rounded-md flex items-center justify-center mb-4",
                 colors.bg
               )}
             >
               <Icon size={24} className={cn(colors.text, "opacity-50")} />
             </div>
-            <p className="text-slate-400 text-sm mb-3">No tasks yet</p>
+            <p className="text-[#475569] text-sm mb-3">No tasks yet</p>
             <button
               onClick={onAddTask}
               className={cn(
@@ -563,9 +563,9 @@ const TaskDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px] rounded-2xl p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-[500px] rounded-md p-0 overflow-hidden">
         {/* Header */}
-        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#23D3EE]/10 to-transparent">
+        <div className="p-6 border-b border-[rgba(15,23,42,0.06)] bg-[#F0FDFA]">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-[#0F172A]">
               {task ? "Edit Task" : "Create New Task"}
@@ -576,7 +576,7 @@ const TaskDialog = ({
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {/* Title */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-600">
+            <Label className="text-sm font-medium text-[#475569]">
               Task Title <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -586,13 +586,13 @@ const TaskDialog = ({
               }
               placeholder="Enter task title..."
               required
-              className="h-11 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
+              className="h-11 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
             />
           </div>
 
           {/* Description */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-600">
+            <Label className="text-sm font-medium text-[#475569]">
               Description
             </Label>
             <Textarea
@@ -601,43 +601,43 @@ const TaskDialog = ({
                 setFormData({ ...formData, description: e.target.value })
               }
               placeholder="Add a description..."
-              className="min-h-[100px] rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20 resize-none"
+              className="min-h-[100px] rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 resize-none"
             />
           </div>
 
           {/* Status & Priority */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-600">Status</Label>
+              <Label className="text-sm font-medium text-[#475569]">Status</Label>
               <Select
                 value={formData.status}
                 onValueChange={(val) =>
                   setFormData({ ...formData, status: val })
                 }
               >
-                <SelectTrigger className="h-11 rounded-xl border-slate-200">
+                <SelectTrigger className="h-11 rounded-md border-[rgba(15,23,42,0.06)]">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  <SelectItem value="todo" className="rounded-lg">
+                <SelectContent className="rounded-md">
+                  <SelectItem value="todo" className="rounded-md">
                     <div className="flex items-center gap-2">
-                      <Circle size={12} className="text-[#23D3EE]" />
+                      <Circle size={12} className="text-[#0891B2]" />
                       To Do
                     </div>
                   </SelectItem>
-                  <SelectItem value="in-progress" className="rounded-lg">
+                  <SelectItem value="in-progress" className="rounded-md">
                     <div className="flex items-center gap-2">
-                      <Timer size={12} className="text-[#FBBF23]" />
+                      <Timer size={12} className="text-[#D97706]" />
                       In Progress
                     </div>
                   </SelectItem>
-                  <SelectItem value="review" className="rounded-lg">
+                  <SelectItem value="review" className="rounded-md">
                     <div className="flex items-center gap-2">
                       <AlertCircle size={12} className="text-purple-500" />
                       Review
                     </div>
                   </SelectItem>
-                  <SelectItem value="done" className="rounded-lg">
+                  <SelectItem value="done" className="rounded-md">
                     <div className="flex items-center gap-2">
                       <CheckCircle2 size={12} className="text-emerald-500" />
                       Done
@@ -648,7 +648,7 @@ const TaskDialog = ({
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-600">Priority</Label>
+              <Label className="text-sm font-medium text-[#475569]">Priority</Label>
               <Select
                 value={formData.priority}
                 onValueChange={(val) =>
@@ -658,20 +658,20 @@ const TaskDialog = ({
                   })
                 }
               >
-                <SelectTrigger className="h-11 rounded-xl border-slate-200">
+                <SelectTrigger className="h-11 rounded-md border-[rgba(15,23,42,0.06)]">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  <SelectItem value="low" className="rounded-lg">
-                    <span className="text-slate-600">Low</span>
+                <SelectContent className="rounded-md">
+                  <SelectItem value="low" className="rounded-md">
+                    <span className="text-[#475569]">Low</span>
                   </SelectItem>
-                  <SelectItem value="medium" className="rounded-lg">
-                    <span className="text-blue-600">Medium</span>
+                  <SelectItem value="medium" className="rounded-md">
+                    <span className="text-[#0891B2]">Medium</span>
                   </SelectItem>
-                  <SelectItem value="high" className="rounded-lg">
+                  <SelectItem value="high" className="rounded-md">
                     <span className="text-orange-600">High</span>
                   </SelectItem>
-                  <SelectItem value="urgent" className="rounded-lg">
+                  <SelectItem value="urgent" className="rounded-md">
                     <span className="text-red-600">Urgent</span>
                   </SelectItem>
                 </SelectContent>
@@ -682,34 +682,34 @@ const TaskDialog = ({
           {/* Assignee & Due Date */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-600">Assignee</Label>
+              <Label className="text-sm font-medium text-[#475569]">Assignee</Label>
               <Input
                 value={formData.assignee}
                 onChange={(e) =>
                   setFormData({ ...formData, assignee: e.target.value })
                 }
                 placeholder="Enter name..."
-                className="h-11 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
+                className="h-11 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
               />
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-600">Due Date</Label>
+              <Label className="text-sm font-medium text-[#475569]">Due Date</Label>
               <Input
                 type="date"
                 value={formData.dueDate}
                 onChange={(e) =>
                   setFormData({ ...formData, dueDate: e.target.value })
                 }
-                className="h-11 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
+                className="h-11 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
               />
             </div>
           </div>
 
           {/* Tags */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-600">
-              Tags <span className="text-xs text-slate-400">(comma separated)</span>
+            <Label className="text-sm font-medium text-[#475569]">
+              Tags <span className="text-xs text-[#475569]">(comma separated)</span>
             </Label>
             <Input
               value={formData.tags}
@@ -717,7 +717,7 @@ const TaskDialog = ({
                 setFormData({ ...formData, tags: e.target.value })
               }
               placeholder="design, frontend, urgent..."
-              className="h-11 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
+              className="h-11 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
             />
           </div>
 
@@ -727,14 +727,14 @@ const TaskDialog = ({
               type="button"
               variant="outline"
               onClick={onClose}
-              className="rounded-xl"
+              className="rounded-md"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={isLoading || !formData.title.trim()}
-              className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl shadow-lg shadow-[#23D3EE]/25"
+              className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md "
             >
               {isLoading ? (
                 <Loader2 size={16} className="animate-spin mr-2" />
@@ -1011,7 +1011,7 @@ const KanbanPage: React.FC = () => {
   // Loading State
   if (loading) {
     return (
-      <div className="flex min-h-screen bg-slate-50">
+      <div className="flex min-h-screen bg-[#F8FAFC]">
         <Sidebar
           collapsed={sidebarCollapsed}
           setCollapsed={setSidebarCollapsed}
@@ -1027,10 +1027,10 @@ const KanbanPage: React.FC = () => {
             animate={{ opacity: 1, scale: 1 }}
             className="text-center"
           >
-            <div className="w-16 h-16 rounded-2xl bg-[#23D3EE]/10 flex items-center justify-center mx-auto mb-4">
-              <Loader2 className="w-8 h-8 text-[#23D3EE] animate-spin" />
+            <div className="w-16 h-16 rounded-md bg-[#0891B2]/10 flex items-center justify-center mx-auto mb-4">
+              <Loader2 className="w-8 h-8 text-[#0891B2] animate-spin" />
             </div>
-            <p className="text-slate-500 font-medium">Loading Kanban Board...</p>
+            <p className="text-[#94A3B8] font-medium">Loading Kanban Board...</p>
           </motion.div>
         </main>
       </div>
@@ -1038,7 +1038,7 @@ const KanbanPage: React.FC = () => {
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen bg-[#F8FAFC]">
       <Sidebar
         collapsed={sidebarCollapsed}
         setCollapsed={setSidebarCollapsed}
@@ -1053,43 +1053,43 @@ const KanbanPage: React.FC = () => {
         {/* ============================================ */}
         {/* HEADER */}
         {/* ============================================ */}
-        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-200/50">
+        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-[rgba(15,23,42,0.06)]/50">
           <div className="flex h-20 items-center justify-between px-6">
             {/* Left Section - Search */}
             <div className="flex items-center gap-4">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#475569]" />
                 <input
                   type="text"
                   placeholder="Search tasks..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-64 h-11 pl-10 pr-4 rounded-xl bg-slate-100 border-none text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#23D3EE]/20 focus:bg-white transition-all"
+                  className="w-64 h-11 pl-10 pr-4 rounded-md bg-white/5 border-none text-sm placeholder:text-[#475569] focus:outline-none focus:ring-2 focus:ring-[#22D3EE]/20 focus:bg-white transition-all"
                 />
               </div>
 
               {/* Priority Filter */}
               <Select value={filterPriority} onValueChange={setFilterPriority}>
-                <SelectTrigger className="w-40 h-11 rounded-xl border-slate-200">
+                <SelectTrigger className="w-40 h-11 rounded-md border-[rgba(15,23,42,0.06)]">
                   <div className="flex items-center gap-2">
-                    <Filter size={14} className="text-slate-400" />
+                    <Filter size={14} className="text-[#475569]" />
                     <SelectValue placeholder="All Priorities" />
                   </div>
                 </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  <SelectItem value="all" className="rounded-lg">
+                <SelectContent className="rounded-md">
+                  <SelectItem value="all" className="rounded-md">
                     All Priorities
                   </SelectItem>
-                  <SelectItem value="urgent" className="rounded-lg">
+                  <SelectItem value="urgent" className="rounded-md">
                     Urgent
                   </SelectItem>
-                  <SelectItem value="high" className="rounded-lg">
+                  <SelectItem value="high" className="rounded-md">
                     High
                   </SelectItem>
-                  <SelectItem value="medium" className="rounded-lg">
+                  <SelectItem value="medium" className="rounded-md">
                     Medium
                   </SelectItem>
-                  <SelectItem value="low" className="rounded-lg">
+                  <SelectItem value="low" className="rounded-md">
                     Low
                   </SelectItem>
                 </SelectContent>
@@ -1102,7 +1102,7 @@ const KanbanPage: React.FC = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => openAddDialog()}
-                className="flex items-center gap-2 px-4 py-2.5 bg-[#23D3EE] text-white text-sm font-medium rounded-xl shadow-lg shadow-[#23D3EE]/25 hover:bg-[#23D3EE]/90 transition-colors"
+                className="flex items-center gap-2 px-4 py-2.5 bg-[#0891B2] text-white text-sm font-medium rounded-md  hover:bg-[#0891B2]/90 transition-colors"
               >
                 <Plus size={16} />
                 <span>Add Task</span>
@@ -1111,23 +1111,23 @@ const KanbanPage: React.FC = () => {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="p-2.5 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors relative"
+                className="p-2.5 rounded-md bg-white/5 text-[#475569] hover:bg-slate-200 transition-colors relative"
               >
                 <Bell size={18} />
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-[#0F172A] text-[10px] font-bold rounded-full flex items-center justify-center">
                   2
                 </span>
               </motion.button>
 
               {/* User Avatar */}
-              <div className="flex items-center gap-3 pl-3 ml-3 border-l border-slate-200">
+              <div className="flex items-center gap-3 pl-3 ml-3 border-l border-[rgba(15,23,42,0.06)]">
                 <div className="text-right hidden sm:block">
                   <p className="text-sm font-semibold text-[#0F172A]">
                     {user ? `${user.firstName} ${user.lastName}` : "Guest User"}
                   </p>
-                  <p className="text-xs text-slate-400">Administrator</p>
+                  <p className="text-xs text-[#475569]">Administrator</p>
                 </div>
-                <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-[#23D3EE] via-[#23D3EE]/80 to-[#FBBF23] flex items-center justify-center text-white font-bold shadow-lg">
+                <div className="h-11 w-11 rounded-md bg-[#0891B2] flex items-center justify-center text-[#0F172A] font-bold card-shadow">
                   {user
                     ? (user.firstName[0] + user.lastName[0]).toUpperCase()
                     : "GU"}
@@ -1145,11 +1145,11 @@ const KanbanPage: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#0F172A] via-[#0F172A] to-[#23D3EE]/30 p-8"
+            className="relative overflow-hidden rounded-3xl bg-[#F1F5F9] p-8"
           >
             {/* Background Decorations */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-[#23D3EE]/10 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 left-1/2 w-48 h-48 bg-[#FBBF23]/10 rounded-full blur-3xl" />
+            <div className="absolute top-0 right-0 w-64 h-64 bg-[#0891B2]/10 rounded-full blur-3xl" />
+            <div className="absolute bottom-0 left-1/2 w-48 h-48 bg-[#D97706]/10 rounded-full blur-3xl" />
 
             <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
               <div>
@@ -1159,17 +1159,17 @@ const KanbanPage: React.FC = () => {
                   transition={{ delay: 0.2 }}
                   className="flex items-center gap-2 mb-3"
                 >
-                  <Sparkles size={20} className="text-[#FBBF23]" />
-                  <span className="text-[#FBBF23] text-sm font-medium">
+                  <Sparkles size={20} className="text-[#D97706]" />
+                  <span className="text-[#D97706] text-sm font-medium">
                     Project Management
                   </span>
                 </motion.div>
-                <h1 className="text-3xl lg:text-4xl font-bold text-white mb-2">
-                  Kanban <span className="text-[#23D3EE]">Board</span>
+                <h1 className="text-3xl lg:text-4xl font-bold text-[#0F172A] mb-2">
+                  Kanban <span className="text-[#0891B2]">Board</span>
                 </h1>
-                <p className="text-slate-300 text-lg max-w-xl">
+                <p className="text-[#475569] text-lg max-w-xl">
                   Drag and drop tasks to organize your workflow. You have{" "}
-                  <span className="text-[#23D3EE] font-semibold">
+                  <span className="text-[#0891B2] font-semibold">
                     {totalTasks} tasks
                   </span>{" "}
                   across all columns.
@@ -1184,13 +1184,13 @@ const KanbanPage: React.FC = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
-                    className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-4 min-w-[120px]"
+                    className="bg-white/10 backdrop-blur-sm border border-[rgba(15,23,42,0.06)] rounded-md p-4 min-w-[120px]"
                   >
                     <div className="flex items-center gap-2 mb-2">
-                      <col.icon size={14} className="text-[#23D3EE]" />
-                      <span className="text-xs text-slate-400">{col.title}</span>
+                      <col.icon size={14} className="text-[#0891B2]" />
+                      <span className="text-xs text-[#475569]">{col.title}</span>
                     </div>
-                    <span className="text-2xl font-bold text-white">
+                    <span className="text-2xl font-bold text-[#0F172A]">
                       {col.tasks.length}
                     </span>
                   </motion.div>
@@ -1222,22 +1222,22 @@ const KanbanPage: React.FC = () => {
         </div>
 
         {/* Footer */}
-        <footer className="px-6 py-4 border-t border-slate-200 bg-white">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-slate-400">
+        <footer className="px-6 py-4 border-t border-[rgba(15,23,42,0.06)] bg-white">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-[#475569]">
             <div className="flex items-center gap-2">
               <span>© {new Date().getFullYear()}</span>
               <span className="font-semibold text-[#0F172A]">Yoursoft</span>
-              <span className="text-[#23D3EE] font-semibold">Digital</span>
+              <span className="text-[#0891B2] font-semibold">Digital</span>
               <span>• All rights reserved</span>
             </div>
             <div className="flex items-center gap-4">
-              <a href="#" className="hover:text-[#23D3EE] transition-colors">
+              <a href="#" className="hover:text-[#0891B2] transition-colors">
                 Privacy
               </a>
-              <a href="#" className="hover:text-[#23D3EE] transition-colors">
+              <a href="#" className="hover:text-[#0891B2] transition-colors">
                 Terms
               </a>
-              <a href="#" className="hover:text-[#23D3EE] transition-colors">
+              <a href="#" className="hover:text-[#0891B2] transition-colors">
                 Support
               </a>
             </div>

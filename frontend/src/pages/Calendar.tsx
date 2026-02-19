@@ -191,7 +191,7 @@ const eventColors = [
   { id: "yellow", color: "#F59E0B", name: "Yellow" },
   { id: "red", color: "#EF4444", name: "Red" },
   { id: "pink", color: "#EC4899", name: "Pink" },
-  { id: "teal", color: "#23D3EE", name: "Teal" },
+  { id: "teal", color: "#22D3EE", name: "Teal" },
   { id: "orange", color: "#F97316", name: "Orange" },
 ];
 
@@ -328,7 +328,7 @@ const MiniCalendar = ({
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-4">
+    <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold text-[#0F172A]">
@@ -338,7 +338,7 @@ const MiniCalendar = ({
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 rounded-lg"
+            className="h-7 w-7 rounded-md"
             onClick={() => setViewDate(new Date(year, month - 1, 1))}
           >
             <ChevronLeft size={16} />
@@ -346,7 +346,7 @@ const MiniCalendar = ({
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 rounded-lg"
+            className="h-7 w-7 rounded-md"
             onClick={() => setViewDate(new Date(year, month + 1, 1))}
           >
             <ChevronRight size={16} />
@@ -359,7 +359,7 @@ const MiniCalendar = ({
         {dayNames.map((day) => (
           <div
             key={day}
-            className="text-center text-xs font-medium text-slate-400 py-1"
+            className="text-center text-xs font-medium text-[#475569] py-1"
           >
             {day}
           </div>
@@ -378,16 +378,16 @@ const MiniCalendar = ({
               key={index}
               onClick={() => onDateSelect(date)}
               className={cn(
-                "relative h-8 w-8 rounded-lg text-sm font-medium transition-all",
-                !isCurrentMonth && "text-slate-300",
-                isCurrentMonth && !isSelected && "text-slate-600 hover:bg-slate-100",
-                isTodayDate && !isSelected && "bg-[#23D3EE]/10 text-[#23D3EE]",
-                isSelected && "bg-[#23D3EE] text-white shadow-lg shadow-[#23D3EE]/30"
+                "relative h-8 w-8 rounded-md text-sm font-medium transition-all",
+                !isCurrentMonth && "text-[#475569]",
+                isCurrentMonth && !isSelected && "text-[#475569] hover:bg-white/10",
+                isTodayDate && !isSelected && "bg-[#0891B2]/10 text-[#0891B2]",
+                isSelected && "bg-[#0891B2] text-white "
               )}
             >
               {day}
               {hasEvent && !isSelected && (
-                <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#23D3EE]" />
+                <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#0891B2]" />
               )}
             </button>
           );
@@ -395,10 +395,10 @@ const MiniCalendar = ({
       </div>
 
       {/* Quick Actions */}
-      <div className="mt-4 pt-4 border-t border-slate-100">
+      <div className="mt-4 pt-4 border-t border-[rgba(15,23,42,0.06)]">
         <Button
           variant="ghost"
-          className="w-full justify-start text-sm text-slate-600 hover:text-[#23D3EE] rounded-lg"
+          className="w-full justify-start text-sm text-[#475569] hover:text-[#0891B2] rounded-md"
           onClick={() => onDateSelect(new Date())}
         >
           <CalendarIcon size={14} className="mr-2" />
@@ -426,13 +426,13 @@ const UpcomingEvents = ({
     .slice(0, 5);
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-4">
+    <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4">
       <h3 className="font-semibold text-[#0F172A] mb-4">Upcoming Events</h3>
 
       {upcomingEvents.length === 0 ? (
         <div className="text-center py-8">
-          <CalendarIcon size={32} className="text-slate-300 mx-auto mb-2" />
-          <p className="text-sm text-slate-500">No upcoming events</p>
+          <CalendarIcon size={32} className="text-[#475569] mx-auto mb-2" />
+          <p className="text-sm text-[#94A3B8]">No upcoming events</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -445,17 +445,17 @@ const UpcomingEvents = ({
                 key={event.id}
                 whileHover={{ x: 4 }}
                 onClick={() => onEventClick(event)}
-                className="flex items-start gap-3 p-3 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors"
+                className="flex items-start gap-3 p-3 rounded-md hover:bg-[#F8FAFC] cursor-pointer transition-colors"
               >
                 <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                  className="w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0"
                   style={{ backgroundColor: `${event.color}15` }}
                 >
                   <CategoryIcon size={18} style={{ color: event.color }} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-[#0F172A] truncate">{event.title}</p>
-                  <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
+                  <div className="flex items-center gap-2 text-xs text-[#94A3B8] mt-1">
                     <Clock size={12} />
                     <span>
                       {isToday(event.start) ? "Today" : formatShortDate(event.start)}
@@ -463,7 +463,7 @@ const UpcomingEvents = ({
                     </span>
                   </div>
                   {event.location && (
-                    <div className="flex items-center gap-2 text-xs text-slate-400 mt-1">
+                    <div className="flex items-center gap-2 text-xs text-[#475569] mt-1">
                       <MapPin size={12} />
                       <span className="truncate">{event.location}</span>
                     </div>
@@ -495,7 +495,7 @@ const CategoryFilter = ({
   onToggleCategory: (categoryId: string) => void;
 }) => {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-4">
+    <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4">
       <h3 className="font-semibold text-[#0F172A] mb-4">Categories</h3>
       <div className="space-y-2">
         {eventCategories.map((category) => {
@@ -507,10 +507,10 @@ const CategoryFilter = ({
               key={category.id}
               onClick={() => onToggleCategory(category.id)}
               className={cn(
-                "w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all",
+                "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-all",
                 isSelected
-                  ? "bg-slate-100"
-                  : "hover:bg-slate-50 opacity-60 hover:opacity-100"
+                  ? "bg-white/5"
+                  : "hover:bg-[#F8FAFC] opacity-60 hover:opacity-100"
               )}
             >
               <div
@@ -521,7 +521,7 @@ const CategoryFilter = ({
               <span className="text-sm font-medium text-[#0F172A] flex-1 text-left">
                 {category.name}
               </span>
-              {isSelected && <Check size={14} className="text-[#23D3EE]" />}
+              {isSelected && <Check size={14} className="text-[#0891B2]" />}
             </button>
           );
         })}
@@ -565,7 +565,7 @@ const EventCard = ({
     <motion.div
       whileHover={{ scale: 1.02 }}
       onClick={onClick}
-      className="p-3 rounded-xl cursor-pointer transition-all hover:shadow-md"
+      className="p-3 rounded-md cursor-pointer transition-all hover:shadow-md"
       style={{ backgroundColor: `${event.color}10`, borderLeft: `3px solid ${event.color}` }}
     >
       <div className="flex items-start gap-2">
@@ -573,12 +573,12 @@ const EventCard = ({
         <div className="flex-1 min-w-0">
           <p className="font-medium text-[#0F172A] text-sm truncate">{event.title}</p>
           {!event.allDay && (
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-[#94A3B8] mt-0.5">
               {formatTime(event.start)} - {formatTime(event.end)}
             </p>
           )}
           {event.location && (
-            <div className="flex items-center gap-1 text-xs text-slate-400 mt-1">
+            <div className="flex items-center gap-1 text-xs text-[#475569] mt-1">
               <MapPin size={10} />
               <span className="truncate">{event.location}</span>
             </div>
@@ -598,7 +598,7 @@ const EventCard = ({
             ))}
           </div>
           {event.attendees.length > 3 && (
-            <span className="text-xs text-slate-400">+{event.attendees.length - 3}</span>
+            <span className="text-xs text-[#475569]">+{event.attendees.length - 3}</span>
           )}
         </div>
       )}
@@ -671,13 +671,13 @@ const MonthView = ({
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+    <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden">
       {/* Day Headers */}
-      <div className="grid grid-cols-7 border-b border-slate-200">
+      <div className="grid grid-cols-7 border-b border-[rgba(15,23,42,0.06)]">
         {dayNames.map((day) => (
           <div
             key={day}
-            className="px-4 py-3 text-sm font-semibold text-slate-600 text-center bg-slate-50"
+            className="px-4 py-3 text-sm font-semibold text-[#475569] text-center bg-[#F8FAFC]"
           >
             {day}
           </div>
@@ -696,9 +696,9 @@ const MonthView = ({
               key={index}
               onClick={() => onDateClick(date)}
               className={cn(
-                "min-h-[120px] p-2 border-b border-r border-slate-100 cursor-pointer transition-colors",
-                !isCurrentMonth && "bg-slate-50/50",
-                isCurrentMonth && "hover:bg-slate-50",
+                "min-h-[120px] p-2 border-b border-r border-[rgba(15,23,42,0.06)] cursor-pointer transition-colors",
+                !isCurrentMonth && "bg-[#F8FAFC]/50",
+                isCurrentMonth && "hover:bg-[#F8FAFC]",
                 isPast && "opacity-60"
               )}
             >
@@ -707,15 +707,15 @@ const MonthView = ({
                 <span
                   className={cn(
                     "w-7 h-7 flex items-center justify-center rounded-full text-sm font-medium",
-                    !isCurrentMonth && "text-slate-400",
-                    isCurrentMonth && "text-slate-700",
-                    isTodayDate && "bg-[#23D3EE] text-white"
+                    !isCurrentMonth && "text-[#475569]",
+                    isCurrentMonth && "text-slate-200",
+                    isTodayDate && "bg-[#0891B2] text-white"
                   )}
                 >
                   {day}
                 </span>
                 {dayEvents.length > 2 && (
-                  <span className="text-xs text-slate-400">
+                  <span className="text-xs text-[#475569]">
                     +{dayEvents.length - 2} more
                   </span>
                 )}
@@ -787,25 +787,25 @@ const WeekView = ({
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+    <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden">
       {/* Header */}
-      <div className="grid grid-cols-8 border-b border-slate-200">
-        <div className="p-3 bg-slate-50" />
+      <div className="grid grid-cols-8 border-b border-[rgba(15,23,42,0.06)]">
+        <div className="p-3 bg-[#F8FAFC]" />
         {weekDays.map((date, index) => (
           <div
             key={index}
             className={cn(
-              "p-3 text-center border-l border-slate-200",
-              isToday(date) && "bg-[#23D3EE]/5"
+              "p-3 text-center border-l border-[rgba(15,23,42,0.06)]",
+              isToday(date) && "bg-[#0891B2]/5"
             )}
           >
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-[#94A3B8]">
               {date.toLocaleDateString("en-US", { weekday: "short" })}
             </p>
             <p
               className={cn(
                 "text-lg font-semibold",
-                isToday(date) ? "text-[#23D3EE]" : "text-[#0F172A]"
+                isToday(date) ? "text-[#0891B2]" : "text-[#0F172A]"
               )}
             >
               {date.getDate()}
@@ -815,8 +815,8 @@ const WeekView = ({
       </div>
 
       {/* All Day Events Row */}
-      <div className="grid grid-cols-8 border-b border-slate-200">
-        <div className="p-2 bg-slate-50 text-xs text-slate-500 text-center">
+      <div className="grid grid-cols-8 border-b border-[rgba(15,23,42,0.06)]">
+        <div className="p-2 bg-[#F8FAFC] text-xs text-[#94A3B8] text-center">
           All Day
         </div>
         {weekDays.map((date, index) => {
@@ -824,7 +824,7 @@ const WeekView = ({
           return (
             <div
               key={index}
-              className="p-1 border-l border-slate-200 min-h-[40px]"
+              className="p-1 border-l border-[rgba(15,23,42,0.06)] min-h-[40px]"
             >
               {allDayEvents.map((event) => (
                 <div
@@ -844,8 +844,8 @@ const WeekView = ({
       {/* Time Grid */}
       <div className="max-h-[600px] overflow-y-auto">
         {hours.map((hour) => (
-          <div key={hour} className="grid grid-cols-8 border-b border-slate-100">
-            <div className="p-2 bg-slate-50 text-xs text-slate-500 text-right pr-3">
+          <div key={hour} className="grid grid-cols-8 border-b border-[rgba(15,23,42,0.06)]">
+            <div className="p-2 bg-[#F8FAFC] text-xs text-[#94A3B8] text-right pr-3">
               {hour === 0
                 ? "12 AM"
                 : hour < 12
@@ -860,8 +860,8 @@ const WeekView = ({
                 <div
                   key={index}
                   className={cn(
-                    "p-1 border-l border-slate-100 min-h-[50px]",
-                    isToday(date) && "bg-[#23D3EE]/5"
+                    "p-1 border-l border-[rgba(15,23,42,0.06)] min-h-[50px]",
+                    isToday(date) && "bg-[#0891B2]/5"
                   )}
                 >
                   {hourEvents.map((event) => (
@@ -914,15 +914,15 @@ const DayView = ({
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+    <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b border-slate-200 bg-slate-50">
+      <div className="p-4 border-b border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]">
         <div className="flex items-center justify-center gap-3">
           <span
             className={cn(
-              "w-12 h-12 flex items-center justify-center rounded-xl text-2xl font-bold",
+              "w-12 h-12 flex items-center justify-center rounded-md text-2xl font-bold",
               isToday(currentDate)
-                ? "bg-[#23D3EE] text-white"
+                ? "bg-[#0891B2] text-white"
                 : "bg-slate-200 text-[#0F172A]"
             )}
           >
@@ -932,7 +932,7 @@ const DayView = ({
             <p className="font-semibold text-[#0F172A]">
               {currentDate.toLocaleDateString("en-US", { weekday: "long" })}
             </p>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-[#94A3B8]">
               {currentDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
             </p>
           </div>
@@ -941,8 +941,8 @@ const DayView = ({
 
       {/* All Day Events */}
       {allDayEvents.length > 0 && (
-        <div className="p-3 border-b border-slate-200 bg-slate-50/50">
-          <p className="text-xs text-slate-500 mb-2">All Day</p>
+        <div className="p-3 border-b border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]/50">
+          <p className="text-xs text-[#94A3B8] mb-2">All Day</p>
           <div className="space-y-2">
             {allDayEvents.map((event) => (
               <EventCard
@@ -963,9 +963,9 @@ const DayView = ({
           return (
             <div
               key={hour}
-              className="flex border-b border-slate-100 min-h-[60px]"
+              className="flex border-b border-[rgba(15,23,42,0.06)] min-h-[60px]"
             >
-              <div className="w-20 p-3 bg-slate-50 text-sm text-slate-500 text-right flex-shrink-0">
+              <div className="w-20 p-3 bg-[#F8FAFC] text-sm text-[#94A3B8] text-right flex-shrink-0">
                 {hour === 0
                   ? "12 AM"
                   : hour < 12
@@ -1026,13 +1026,13 @@ const AgendaView = ({
   );
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+    <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden">
       <div className="max-h-[700px] overflow-y-auto">
         {dateKeys.length === 0 ? (
           <div className="p-12 text-center">
-            <CalendarIcon size={48} className="text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-500 font-medium">No events to display</p>
-            <p className="text-slate-400 text-sm">Try adjusting your filters</p>
+            <CalendarIcon size={48} className="text-[#475569] mx-auto mb-3" />
+            <p className="text-[#94A3B8] font-medium">No events to display</p>
+            <p className="text-[#475569] text-sm">Try adjusting your filters</p>
           </div>
         ) : (
           dateKeys.map((dateKey) => {
@@ -1040,21 +1040,21 @@ const AgendaView = ({
             const dayEvents = groupedEvents[dateKey];
 
             return (
-              <div key={dateKey} className="border-b border-slate-100 last:border-0">
+              <div key={dateKey} className="border-b border-[rgba(15,23,42,0.06)] last:border-0">
                 {/* Date Header */}
                 <div
                   className={cn(
-                    "sticky top-0 px-4 py-3 bg-slate-50 border-b border-slate-100",
-                    isToday(date) && "bg-[#23D3EE]/10"
+                    "sticky top-0 px-4 py-3 bg-[#F8FAFC] border-b border-[rgba(15,23,42,0.06)]",
+                    isToday(date) && "bg-[#0891B2]/10"
                   )}
                 >
                   <div className="flex items-center gap-3">
                     <span
                       className={cn(
-                        "w-10 h-10 flex items-center justify-center rounded-xl font-bold",
+                        "w-10 h-10 flex items-center justify-center rounded-md font-bold",
                         isToday(date)
-                          ? "bg-[#23D3EE] text-white"
-                          : "bg-white text-[#0F172A] border border-slate-200"
+                          ? "bg-[#0891B2] text-white"
+                          : "bg-white text-[#0F172A] border border-[rgba(15,23,42,0.06)]"
                       )}
                     >
                       {date.getDate()}
@@ -1063,14 +1063,14 @@ const AgendaView = ({
                       <p
                         className={cn(
                           "font-semibold",
-                          isToday(date) ? "text-[#23D3EE]" : "text-[#0F172A]"
+                          isToday(date) ? "text-[#0891B2]" : "text-[#0F172A]"
                         )}
                       >
                         {isToday(date)
                           ? "Today"
                           : date.toLocaleDateString("en-US", { weekday: "long" })}
                       </p>
-                      <p className="text-sm text-slate-500">
+                      <p className="text-sm text-[#94A3B8]">
                         {date.toLocaleDateString("en-US", {
                           month: "long",
                           day: "numeric",
@@ -1078,7 +1078,7 @@ const AgendaView = ({
                         })}
                       </p>
                     </div>
-                    <span className="ml-auto text-sm text-slate-400">
+                    <span className="ml-auto text-sm text-[#475569]">
                       {dayEvents.length} event{dayEvents.length !== 1 && "s"}
                     </span>
                   </div>
@@ -1095,18 +1095,18 @@ const AgendaView = ({
                         key={event.id}
                         whileHover={{ x: 4 }}
                         onClick={() => onEventClick(event)}
-                        className="flex items-start gap-4 p-4 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors group"
+                        className="flex items-start gap-4 p-4 rounded-md hover:bg-[#F8FAFC] cursor-pointer transition-colors group"
                       >
                         {/* Time */}
                         <div className="w-20 flex-shrink-0 text-right">
                           {event.allDay ? (
-                            <span className="text-sm text-slate-400">All Day</span>
+                            <span className="text-sm text-[#475569]">All Day</span>
                           ) : (
                             <>
                               <p className="text-sm font-medium text-[#0F172A]">
                                 {formatTime(event.start)}
                               </p>
-                              <p className="text-xs text-slate-400">
+                              <p className="text-xs text-[#475569]">
                                 {formatTime(event.end)}
                               </p>
                             </>
@@ -1123,17 +1123,17 @@ const AgendaView = ({
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between">
                             <div>
-                              <h4 className="font-semibold text-[#0F172A] group-hover:text-[#23D3EE] transition-colors">
+                              <h4 className="font-semibold text-[#0F172A] group-hover:text-[#0891B2] transition-colors">
                                 {event.title}
                               </h4>
                               {event.description && (
-                                <p className="text-sm text-slate-500 mt-1 line-clamp-2">
+                                <p className="text-sm text-[#94A3B8] mt-1 line-clamp-2">
                                   {event.description}
                                 </p>
                               )}
                             </div>
                             {event.priority === "high" && (
-                              <span className="px-2 py-1 bg-red-100 text-red-600 text-xs font-medium rounded-lg">
+                              <span className="px-2 py-1 bg-red-100 text-red-600 text-xs font-medium rounded-md">
                                 High Priority
                               </span>
                             )}
@@ -1142,7 +1142,7 @@ const AgendaView = ({
                           {/* Meta */}
                           <div className="flex items-center flex-wrap gap-3 mt-3">
                             {event.location && (
-                              <div className="flex items-center gap-1 text-sm text-slate-500">
+                              <div className="flex items-center gap-1 text-sm text-[#94A3B8]">
                                 <MapPin size={14} />
                                 <span>{event.location}</span>
                               </div>
@@ -1154,7 +1154,7 @@ const AgendaView = ({
                               </div>
                             )}
                             {!event.allDay && (
-                              <div className="flex items-center gap-1 text-sm text-slate-400">
+                              <div className="flex items-center gap-1 text-sm text-[#475569]">
                                 <Clock size={14} />
                                 <span>{getEventDuration(event.start, event.end)}</span>
                               </div>
@@ -1178,7 +1178,7 @@ const AgendaView = ({
                                 ))}
                               </div>
                               {event.attendees.length > 5 && (
-                                <span className="text-xs text-slate-400">
+                                <span className="text-xs text-[#475569]">
                                   +{event.attendees.length - 5} more
                                 </span>
                               )}
@@ -1188,7 +1188,7 @@ const AgendaView = ({
 
                         {/* Category Icon */}
                         <div
-                          className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                          className="w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0"
                           style={{ backgroundColor: `${event.color}15` }}
                         >
                           <CategoryIcon size={18} style={{ color: event.color }} />
@@ -1319,13 +1319,13 @@ const EventFormDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] p-0 rounded-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#23D3EE]/10 to-transparent sticky top-0 bg-white z-10">
+      <DialogContent className="sm:max-w-[600px] p-0 rounded-md overflow-hidden max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-[rgba(15,23,42,0.06)] bg-[#F0FDFA] sticky top-0 bg-white z-10">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-[#0F172A]">
               {event ? "Edit Event" : "Create Event"}
             </DialogTitle>
-            <DialogDescription className="text-slate-500">
+            <DialogDescription className="text-[#94A3B8]">
               {event ? "Update event details" : "Add a new event to your calendar"}
             </DialogDescription>
           </DialogHeader>
@@ -1334,7 +1334,7 @@ const EventFormDialog = ({
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {/* Title */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-600">
+            <Label className="text-sm font-medium text-[#475569]">
               Event Title <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -1342,54 +1342,54 @@ const EventFormDialog = ({
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               placeholder="Enter event title"
               required
-              className="h-11 rounded-xl"
+              className="h-11 rounded-md"
             />
           </div>
 
           {/* Description */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-600">Description</Label>
+            <Label className="text-sm font-medium text-[#475569]">Description</Label>
             <Textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               placeholder="Add event description..."
               rows={2}
-              className="rounded-xl resize-none"
+              className="rounded-md resize-none"
             />
           </div>
 
           {/* All Day Toggle */}
-          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+          <div className="flex items-center justify-between p-3 bg-[#F8FAFC] rounded-md">
             <div className="flex items-center gap-3">
-              <CalendarDays size={18} className="text-slate-500" />
+              <CalendarDays size={18} className="text-[#94A3B8]" />
               <span className="font-medium text-[#0F172A]">All Day Event</span>
             </div>
             <Switch
               checked={formData.allDay}
               onCheckedChange={(checked) => setFormData({ ...formData, allDay: checked })}
-              className="data-[state=checked]:bg-[#23D3EE]"
+              className="data-[state=checked]:bg-[#0891B2]"
             />
           </div>
 
           {/* Date & Time */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-600">Start Date</Label>
+              <Label className="text-sm font-medium text-[#475569]">Start Date</Label>
               <Input
                 type="date"
                 value={formData.startDate}
                 onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                className="h-11 rounded-xl"
+                className="h-11 rounded-md"
               />
             </div>
             {!formData.allDay && (
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-slate-600">Start Time</Label>
+                <Label className="text-sm font-medium text-[#475569]">Start Time</Label>
                 <Input
                   type="time"
                   value={formData.startTime}
                   onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                  className="h-11 rounded-xl"
+                  className="h-11 rounded-md"
                 />
               </div>
             )}
@@ -1397,22 +1397,22 @@ const EventFormDialog = ({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-600">End Date</Label>
+              <Label className="text-sm font-medium text-[#475569]">End Date</Label>
               <Input
                 type="date"
                 value={formData.endDate}
                 onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                className="h-11 rounded-xl"
+                className="h-11 rounded-md"
               />
             </div>
             {!formData.allDay && (
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-slate-600">End Time</Label>
+                <Label className="text-sm font-medium text-[#475569]">End Time</Label>
                 <Input
                   type="time"
                   value={formData.endTime}
                   onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                  className="h-11 rounded-xl"
+                  className="h-11 rounded-md"
                 />
               </div>
             )}
@@ -1421,7 +1421,7 @@ const EventFormDialog = ({
           {/* Category & Color */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-600">Category</Label>
+              <Label className="text-sm font-medium text-[#475569]">Category</Label>
               <Select
                 value={formData.category}
                 onValueChange={(val) => {
@@ -1433,12 +1433,12 @@ const EventFormDialog = ({
                   });
                 }}
               >
-                <SelectTrigger className="h-11 rounded-xl">
+                <SelectTrigger className="h-11 rounded-md">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl">
+                <SelectContent className="rounded-md">
                   {eventCategories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id} className="rounded-lg">
+                    <SelectItem key={cat.id} value={cat.id} className="rounded-md">
                       <div className="flex items-center gap-2">
                         <cat.icon size={14} style={{ color: cat.color }} />
                         {cat.name}
@@ -1449,7 +1449,7 @@ const EventFormDialog = ({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-600">Color</Label>
+              <Label className="text-sm font-medium text-[#475569]">Color</Label>
               <div className="flex items-center gap-2 h-11">
                 {eventColors.map((c) => (
                   <button
@@ -1457,8 +1457,8 @@ const EventFormDialog = ({
                     type="button"
                     onClick={() => setFormData({ ...formData, color: c.color })}
                     className={cn(
-                      "w-7 h-7 rounded-lg transition-all",
-                      formData.color === c.color && "ring-2 ring-offset-2 ring-[#23D3EE]"
+                      "w-7 h-7 rounded-md transition-all",
+                      formData.color === c.color && "ring-2 ring-offset-2 ring-[#22D3EE]"
                     )}
                     style={{ backgroundColor: c.color }}
                   />
@@ -1469,56 +1469,56 @@ const EventFormDialog = ({
 
           {/* Location */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-600">Location</Label>
+            <Label className="text-sm font-medium text-[#475569]">Location</Label>
             <div className="relative">
-              <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
               <Input
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                 placeholder="Add location"
-                className="h-11 pl-10 rounded-xl"
+                className="h-11 pl-10 rounded-md"
               />
             </div>
           </div>
 
           {/* Meeting Link */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-600">Meeting Link</Label>
+            <Label className="text-sm font-medium text-[#475569]">Meeting Link</Label>
             <div className="relative">
-              <Video size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Video size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
               <Input
                 value={formData.meetingLink}
                 onChange={(e) => setFormData({ ...formData, meetingLink: e.target.value })}
                 placeholder="https://meet.google.com/..."
-                className="h-11 pl-10 rounded-xl"
+                className="h-11 pl-10 rounded-md"
               />
             </div>
           </div>
 
           {/* Priority */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-600">Priority</Label>
+            <Label className="text-sm font-medium text-[#475569]">Priority</Label>
             <Select
               value={formData.priority}
               onValueChange={(val) => setFormData({ ...formData, priority: val as CalendarEvent["priority"] })}
             >
-              <SelectTrigger className="h-11 rounded-xl">
+              <SelectTrigger className="h-11 rounded-md">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="rounded-xl">
-                <SelectItem value="low" className="rounded-lg">
+              <SelectContent className="rounded-md">
+                <SelectItem value="low" className="rounded-md">
                   <div className="flex items-center gap-2">
                     <Circle size={12} className="text-green-500 fill-green-500" />
                     Low
                   </div>
                 </SelectItem>
-                <SelectItem value="medium" className="rounded-lg">
+                <SelectItem value="medium" className="rounded-md">
                   <div className="flex items-center gap-2">
                     <Circle size={12} className="text-yellow-500 fill-yellow-500" />
                     Medium
                   </div>
                 </SelectItem>
-                <SelectItem value="high" className="rounded-lg">
+                <SelectItem value="high" className="rounded-md">
                   <div className="flex items-center gap-2">
                     <Circle size={12} className="text-red-500 fill-red-500" />
                     High
@@ -1530,15 +1530,15 @@ const EventFormDialog = ({
 
           {/* Attendees */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-600">Attendees</Label>
-            <div className="border border-slate-200 rounded-xl p-3">
+            <Label className="text-sm font-medium text-[#475569]">Attendees</Label>
+            <div className="border border-[rgba(15,23,42,0.06)] rounded-md p-3">
               {/* Selected Attendees */}
               {selectedAttendees.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-3">
                   {selectedAttendees.map((attendee) => (
                     <div
                       key={attendee.id}
-                      className="flex items-center gap-2 px-2 py-1 bg-[#23D3EE]/10 rounded-lg"
+                      className="flex items-center gap-2 px-2 py-1 bg-[#0891B2]/10 rounded-md"
                     >
                       <Avatar className="h-5 w-5">
                         <AvatarImage src={attendee.avatar} />
@@ -1550,7 +1550,7 @@ const EventFormDialog = ({
                       <button
                         type="button"
                         onClick={() => toggleAttendee(attendee)}
-                        className="text-slate-400 hover:text-red-500"
+                        className="text-[#475569] hover:text-red-500"
                       >
                         <X size={14} />
                       </button>
@@ -1568,7 +1568,7 @@ const EventFormDialog = ({
                       key={member.id}
                       type="button"
                       onClick={() => toggleAttendee(member)}
-                      className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors"
+                      className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-[#F8FAFC] transition-colors"
                     >
                       <Avatar className="h-8 w-8">
                         <AvatarImage src={member.avatar} />
@@ -1578,9 +1578,9 @@ const EventFormDialog = ({
                       </Avatar>
                       <div className="flex-1 text-left">
                         <p className="text-sm font-medium text-[#0F172A]">{member.name}</p>
-                        <p className="text-xs text-slate-500">{member.email}</p>
+                        <p className="text-xs text-[#94A3B8]">{member.email}</p>
                       </div>
-                      <Plus size={16} className="text-slate-400" />
+                      <Plus size={16} className="text-[#475569]" />
                     </button>
                   ))}
               </div>
@@ -1588,41 +1588,41 @@ const EventFormDialog = ({
           </div>
 
           {/* Private Event */}
-          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+          <div className="flex items-center justify-between p-3 bg-[#F8FAFC] rounded-md">
             <div className="flex items-center gap-3">
-              <Bell size={18} className="text-slate-500" />
+              <Bell size={18} className="text-[#94A3B8]" />
               <div>
                 <span className="font-medium text-[#0F172A]">Private Event</span>
-                <p className="text-xs text-slate-500">Only you can see this event</p>
+                <p className="text-xs text-[#94A3B8]">Only you can see this event</p>
               </div>
             </div>
             <Switch
               checked={formData.isPrivate}
               onCheckedChange={(checked) => setFormData({ ...formData, isPrivate: checked })}
-              className="data-[state=checked]:bg-[#23D3EE]"
+              className="data-[state=checked]:bg-[#0891B2]"
             />
           </div>
 
           {/* Notes */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-600">Notes</Label>
+            <Label className="text-sm font-medium text-[#475569]">Notes</Label>
             <Textarea
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               placeholder="Add any additional notes..."
               rows={2}
-              className="rounded-xl resize-none"
+              className="rounded-md resize-none"
             />
           </div>
 
           <DialogFooter className="pt-4 gap-3">
-            <Button type="button" variant="outline" onClick={onClose} className="rounded-xl">
+            <Button type="button" variant="outline" onClick={onClose} className="rounded-md">
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={!formData.title}
-              className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl"
+              className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
             >
               {event ? (
                 <>
@@ -1665,30 +1665,30 @@ const EventDetailsDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px] p-0 rounded-2xl overflow-hidden">
+      <DialogContent className="sm:max-w-[500px] p-0 rounded-md overflow-hidden">
         {/* Header with Color */}
         <div
-          className="p-6 text-white"
+          className="p-6 text-[#0F172A]"
           style={{ backgroundColor: event.color }}
         >
           <div className="flex items-start justify-between">
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
-                <CategoryIcon size={24} className="text-white" />
+              <div className="w-12 h-12 rounded-md bg-white/20 flex items-center justify-center">
+                <CategoryIcon size={24} className="text-[#0F172A]" />
               </div>
               <div>
                 <h2 className="text-xl font-bold">{event.title}</h2>
-                <p className="text-white/80 capitalize">{event.category}</p>
+                <p className="text-[#0F172A]/80 capitalize">{event.category}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               {event.priority === "high" && (
-                <span className="px-2 py-1 bg-white/20 rounded-lg text-xs font-medium">
+                <span className="px-2 py-1 bg-white/20 rounded-md text-xs font-medium">
                   High Priority
                 </span>
               )}
               {event.isPrivate && (
-                <span className="px-2 py-1 bg-white/20 rounded-lg text-xs font-medium">
+                <span className="px-2 py-1 bg-white/20 rounded-md text-xs font-medium">
                   Private
                 </span>
               )}
@@ -1699,22 +1699,22 @@ const EventDetailsDialog = ({
         <div className="p-6 space-y-5">
           {/* Date & Time */}
           <div className="flex items-start gap-4">
-            <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
-              <Clock size={18} className="text-slate-500" />
+            <div className="w-10 h-10 rounded-md bg-white/5 flex items-center justify-center">
+              <Clock size={18} className="text-[#94A3B8]" />
             </div>
             <div>
               <p className="font-medium text-[#0F172A]">
                 {formatDate(event.start)}
               </p>
               {event.allDay ? (
-                <p className="text-sm text-slate-500">All Day</p>
+                <p className="text-sm text-[#94A3B8]">All Day</p>
               ) : (
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-[#94A3B8]">
                   {formatTime(event.start)} - {formatTime(event.end)} ({getEventDuration(event.start, event.end)})
                 </p>
               )}
               {event.recurrence && (
-                <div className="flex items-center gap-1 text-sm text-[#23D3EE] mt-1">
+                <div className="flex items-center gap-1 text-sm text-[#0891B2] mt-1">
                   <Repeat size={14} />
                   <span className="capitalize">
                     Repeats {event.recurrence.frequency}
@@ -1727,12 +1727,12 @@ const EventDetailsDialog = ({
           {/* Location */}
           {event.location && (
             <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
-                <MapPin size={18} className="text-slate-500" />
+              <div className="w-10 h-10 rounded-md bg-white/5 flex items-center justify-center">
+                <MapPin size={18} className="text-[#94A3B8]" />
               </div>
               <div>
                 <p className="font-medium text-[#0F172A]">Location</p>
-                <p className="text-sm text-slate-500">{event.location}</p>
+                <p className="text-sm text-[#94A3B8]">{event.location}</p>
               </div>
             </div>
           )}
@@ -1740,7 +1740,7 @@ const EventDetailsDialog = ({
           {/* Meeting Link */}
           {event.meetingLink && (
             <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-md bg-blue-100 flex items-center justify-center">
                 <Video size={18} className="text-blue-500" />
               </div>
               <div className="flex-1">
@@ -1756,7 +1756,7 @@ const EventDetailsDialog = ({
               </div>
               <Button
                 size="sm"
-                className="bg-blue-500 hover:bg-blue-600 text-white rounded-lg"
+                className="bg-[#0891B2] hover:bg-[#0891B2] text-white rounded-md"
               >
                 <Video size={14} className="mr-1" />
                 Join
@@ -1767,12 +1767,12 @@ const EventDetailsDialog = ({
           {/* Description */}
           {event.description && (
             <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
-                <AlertCircle size={18} className="text-slate-500" />
+              <div className="w-10 h-10 rounded-md bg-white/5 flex items-center justify-center">
+                <AlertCircle size={18} className="text-[#94A3B8]" />
               </div>
               <div>
                 <p className="font-medium text-[#0F172A]">Description</p>
-                <p className="text-sm text-slate-500">{event.description}</p>
+                <p className="text-sm text-[#94A3B8]">{event.description}</p>
               </div>
             </div>
           )}
@@ -1780,8 +1780,8 @@ const EventDetailsDialog = ({
           {/* Attendees */}
           {event.attendees && event.attendees.length > 0 && (
             <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
-                <Users size={18} className="text-slate-500" />
+              <div className="w-10 h-10 rounded-md bg-white/5 flex items-center justify-center">
+                <Users size={18} className="text-[#94A3B8]" />
               </div>
               <div className="flex-1">
                 <p className="font-medium text-[#0F172A] mb-2">
@@ -1800,7 +1800,7 @@ const EventDetailsDialog = ({
                         <p className="text-sm font-medium text-[#0F172A]">
                           {attendee.name}
                         </p>
-                        <p className="text-xs text-slate-500">{attendee.email}</p>
+                        <p className="text-xs text-[#94A3B8]">{attendee.email}</p>
                       </div>
                       <span
                         className={cn(
@@ -1808,7 +1808,7 @@ const EventDetailsDialog = ({
                           attendee.status === "accepted" && "bg-green-100 text-green-600",
                           attendee.status === "pending" && "bg-yellow-100 text-yellow-600",
                           attendee.status === "declined" && "bg-red-100 text-red-600",
-                          attendee.status === "tentative" && "bg-blue-100 text-blue-600"
+                          attendee.status === "tentative" && "bg-blue-100 text-[#0891B2]"
                         )}
                       >
                         {attendee.status}
@@ -1822,32 +1822,32 @@ const EventDetailsDialog = ({
 
           {/* Notes */}
           {event.notes && (
-            <div className="p-4 bg-slate-50 rounded-xl">
-              <p className="text-xs text-slate-400 mb-1">Notes</p>
-              <p className="text-sm text-slate-600">{event.notes}</p>
+            <div className="p-4 bg-[#F8FAFC] rounded-md">
+              <p className="text-xs text-[#475569] mb-1">Notes</p>
+              <p className="text-sm text-[#475569]">{event.notes}</p>
             </div>
           )}
 
           {/* Created By */}
-          <div className="pt-4 border-t border-slate-100">
-            <p className="text-xs text-slate-400">
+          <div className="pt-4 border-t border-[rgba(15,23,42,0.06)]">
+            <p className="text-xs text-[#475569]">
               Created by {event.createdBy}
             </p>
           </div>
         </div>
 
-        <DialogFooter className="p-6 pt-0 gap-3 border-t border-slate-100">
+        <DialogFooter className="p-6 pt-0 gap-3 border-t border-[rgba(15,23,42,0.06)]">
           <Button
             variant="outline"
             onClick={onDelete}
-            className="rounded-xl text-red-600 border-red-200 hover:bg-red-50"
+            className="rounded-md text-red-600 border-red-200 hover:bg-red-50"
           >
             <Trash2 size={16} className="mr-2" />
             Delete
           </Button>
           <Button
             onClick={onEdit}
-            className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl"
+            className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
           >
             <Pencil size={16} className="mr-2" />
             Edit Event
@@ -2124,7 +2124,7 @@ const CalendarPage = () => {
 
       <main className="flex-1 ml-0">
         {/* Header */}
-        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-slate-200">
+        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-[rgba(15,23,42,0.06)]">
           <div className="px-8 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-6">
@@ -2133,7 +2133,7 @@ const CalendarPage = () => {
                   <Button
                     variant="outline"
                     size="icon"
-                    className="rounded-xl"
+                    className="rounded-md"
                     onClick={navigatePrevious}
                   >
                     <ChevronLeft size={18} />
@@ -2141,14 +2141,14 @@ const CalendarPage = () => {
                   <Button
                     variant="outline"
                     size="icon"
-                    className="rounded-xl"
+                    className="rounded-md"
                     onClick={navigateNext}
                   >
                     <ChevronRight size={18} />
                   </Button>
                   <Button
                     variant="outline"
-                    className="rounded-xl"
+                    className="rounded-md"
                     onClick={goToToday}
                   >
                     Today
@@ -2163,11 +2163,11 @@ const CalendarPage = () => {
 
               <div className="flex items-center gap-3">
                 {/* View Mode Toggle */}
-                <div className="flex items-center bg-slate-100 rounded-xl p-1">
+                <div className="flex items-center bg-white/5 rounded-md p-1">
                   <Button
                     variant={viewMode === "month" ? "secondary" : "ghost"}
                     size="sm"
-                    className="rounded-lg"
+                    className="rounded-md"
                     onClick={() => setViewMode("month")}
                   >
                     <LayoutGrid size={16} className="mr-1" />
@@ -2176,7 +2176,7 @@ const CalendarPage = () => {
                   <Button
                     variant={viewMode === "week" ? "secondary" : "ghost"}
                     size="sm"
-                    className="rounded-lg"
+                    className="rounded-md"
                     onClick={() => setViewMode("week")}
                   >
                     <Columns size={16} className="mr-1" />
@@ -2185,7 +2185,7 @@ const CalendarPage = () => {
                   <Button
                     variant={viewMode === "day" ? "secondary" : "ghost"}
                     size="sm"
-                    className="rounded-lg"
+                    className="rounded-md"
                     onClick={() => setViewMode("day")}
                   >
                     <CalendarIcon size={16} className="mr-1" />
@@ -2194,7 +2194,7 @@ const CalendarPage = () => {
                   <Button
                     variant={viewMode === "agenda" ? "secondary" : "ghost"}
                     size="sm"
-                    className="rounded-lg"
+                    className="rounded-md"
                     onClick={() => setViewMode("agenda")}
                   >
                     <List size={16} className="mr-1" />
@@ -2204,12 +2204,12 @@ const CalendarPage = () => {
 
                 {/* Search */}
                 <div className="relative">
-                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                   <Input
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search events..."
-                    className="pl-9 h-10 w-48 rounded-xl border-slate-200"
+                    className="pl-9 h-10 w-48 rounded-md border-[rgba(15,23,42,0.06)]"
                   />
                 </div>
 
@@ -2219,7 +2219,7 @@ const CalendarPage = () => {
                     setCurrentEvent(null);
                     setIsFormOpen(true);
                   }}
-                  className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl gap-2"
+                  className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md gap-2"
                 >
                   <Plus size={18} />
                   Add Event
@@ -2306,17 +2306,17 @@ const CalendarPage = () => {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-2xl border border-slate-200 p-4"
+                className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4"
               >
                 <h3 className="font-semibold text-[#0F172A] mb-4">Overview</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 bg-[#23D3EE]/10 rounded-xl text-center">
-                    <p className="text-2xl font-bold text-[#23D3EE]">{todayEvents}</p>
-                    <p className="text-xs text-slate-500">Today</p>
+                  <div className="p-3 bg-[#0891B2]/10 rounded-md text-center">
+                    <p className="text-2xl font-bold text-[#0891B2]">{todayEvents}</p>
+                    <p className="text-xs text-[#94A3B8]">Today</p>
                   </div>
-                  <div className="p-3 bg-[#FBBF23]/10 rounded-xl text-center">
-                    <p className="text-2xl font-bold text-[#FBBF23]">{upcomingEvents}</p>
-                    <p className="text-xs text-slate-500">Upcoming</p>
+                  <div className="p-3 bg-[#D97706]/10 rounded-md text-center">
+                    <p className="text-2xl font-bold text-[#D97706]">{upcomingEvents}</p>
+                    <p className="text-xs text-[#94A3B8]">Upcoming</p>
                   </div>
                 </div>
               </motion.div>
@@ -2394,7 +2394,7 @@ const CalendarPage = () => {
       />
 
       <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
-        <AlertDialogContent className="rounded-2xl">
+        <AlertDialogContent className="rounded-md">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Event</AlertDialogTitle>
             <AlertDialogDescription>
@@ -2402,10 +2402,10 @@ const CalendarPage = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-md">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteEvent}
-              className="bg-red-500 hover:bg-red-600 rounded-xl"
+              className="bg-red-500 hover:bg-red-600 rounded-md"
             >
               Delete
             </AlertDialogAction>

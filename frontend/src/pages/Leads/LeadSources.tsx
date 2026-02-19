@@ -290,7 +290,7 @@ const StatCard = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
       whileHover={{ y: -4 }}
-      className="relative bg-white rounded-2xl p-5 border border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5 transition-all overflow-hidden group"
+      className="relative bg-white rounded-md p-5 border border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg  transition-all overflow-hidden group"
     >
       <div
         className="absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-10 group-hover:opacity-20 transition-all"
@@ -299,7 +299,7 @@ const StatCard = ({
 
       <div className="relative flex items-start justify-between">
         <div>
-          <p className="text-sm text-slate-500 mb-1">{title}</p>
+          <p className="text-sm text-[#94A3B8] mb-1">{title}</p>
           <p className="text-2xl font-bold text-[#0F172A]">
             {prefix}
             {typeof value === "number" ? formatNumber(value) : value}
@@ -320,12 +320,12 @@ const StatCard = ({
               >
                 {Math.abs(change)}%
               </span>
-              <span className="text-xs text-slate-400">vs last month</span>
+              <span className="text-xs text-[#475569]">vs last month</span>
             </div>
           )}
         </div>
         <div
-          className="w-12 h-12 rounded-xl flex items-center justify-center"
+          className="w-12 h-12 rounded-md flex items-center justify-center"
           style={{ backgroundColor: `${color}15` }}
         >
           <Icon size={22} style={{ color }} />
@@ -364,10 +364,10 @@ const SourceCard = ({
       transition={{ delay }}
       whileHover={{ y: -4 }}
       className={cn(
-        "relative bg-white rounded-2xl border overflow-hidden transition-all group cursor-pointer",
+        "relative bg-white rounded-md border overflow-hidden transition-all group cursor-pointer",
         source.isActive
-          ? "border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5"
-          : "border-slate-200 opacity-60"
+          ? "border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg "
+          : "border-[rgba(15,23,42,0.06)] opacity-60"
       )}
       onClick={onView}
     >
@@ -375,10 +375,10 @@ const SourceCard = ({
       <div className="absolute top-4 right-4 z-10">
         <span
           className={cn(
-            "px-2 py-1 rounded-lg text-xs font-medium",
+            "px-2 py-1 rounded-md text-xs font-medium",
             source.isActive
               ? "bg-green-100 text-green-600"
-              : "bg-slate-100 text-slate-500"
+              : "bg-white/5 text-[#94A3B8]"
           )}
         >
           {source.isActive ? "Active" : "Inactive"}
@@ -390,13 +390,13 @@ const SourceCard = ({
         {/* Header */}
         <div className="flex items-center gap-4 mb-4">
           <div
-            className="w-14 h-14 rounded-xl flex items-center justify-center"
+            className="w-14 h-14 rounded-md flex items-center justify-center"
             style={{ backgroundColor: `${source.color}15` }}
           >
             <SourceIcon size={28} style={{ color: source.color }} />
           </div>
           <div>
-            <h3 className="font-semibold text-[#0F172A] group-hover:text-[#23D3EE] transition-colors">
+            <h3 className="font-semibold text-[#0F172A] group-hover:text-[#0891B2] transition-colors">
               {source.name}
             </h3>
             <span
@@ -410,20 +410,20 @@ const SourceCard = ({
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="p-3 bg-slate-50 rounded-lg">
-            <p className="text-xs text-slate-400 mb-1">Total Leads</p>
+          <div className="p-3 bg-[#F8FAFC] rounded-md">
+            <p className="text-xs text-[#475569] mb-1">Total Leads</p>
             <p className="text-lg font-bold text-[#0F172A]">{source.totalLeads}</p>
           </div>
-          <div className="p-3 bg-slate-50 rounded-lg">
-            <p className="text-xs text-slate-400 mb-1">Conversion</p>
-            <p className="text-lg font-bold text-[#23D3EE]">{formatPercent(source.conversionRate)}</p>
+          <div className="p-3 bg-[#F8FAFC] rounded-md">
+            <p className="text-xs text-[#475569] mb-1">Conversion</p>
+            <p className="text-lg font-bold text-[#0891B2]">{formatPercent(source.conversionRate)}</p>
           </div>
-          <div className="p-3 bg-slate-50 rounded-lg">
-            <p className="text-xs text-slate-400 mb-1">Revenue</p>
+          <div className="p-3 bg-[#F8FAFC] rounded-md">
+            <p className="text-xs text-[#475569] mb-1">Revenue</p>
             <p className="text-lg font-bold text-[#0F172A]">{formatCurrency(source.totalRevenue)}</p>
           </div>
-          <div className="p-3 bg-slate-50 rounded-lg">
-            <p className="text-xs text-slate-400 mb-1">ROI</p>
+          <div className="p-3 bg-[#F8FAFC] rounded-md">
+            <p className="text-xs text-[#475569] mb-1">ROI</p>
             <p className="text-lg font-bold text-green-500">
               {source.roi === Infinity ? "∞" : `${formatNumber(source.roi)}%`}
             </p>
@@ -431,7 +431,7 @@ const SourceCard = ({
         </div>
 
         {/* Trend */}
-        <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+        <div className="flex items-center justify-between pt-4 border-t border-[rgba(15,23,42,0.06)]">
           <div className="flex items-center gap-2">
             {source.trend >= 0 ? (
               <TrendingUp size={16} className="text-green-500" />
@@ -447,7 +447,7 @@ const SourceCard = ({
               {source.trend >= 0 ? "+" : ""}
               {source.trend}%
             </span>
-            <span className="text-xs text-slate-400">this month</span>
+            <span className="text-xs text-[#475569]">this month</span>
           </div>
 
           <DropdownMenu>
@@ -455,19 +455,19 @@ const SourceCard = ({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                className="h-8 w-8 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
               >
                 <MoreVertical size={16} />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 rounded-xl">
-              <DropdownMenuItem onClick={onView} className="rounded-lg">
+            <DropdownMenuContent align="end" className="w-48 rounded-md">
+              <DropdownMenuItem onClick={onView} className="rounded-md">
                 <Eye size={14} className="mr-2" /> View Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onEdit} className="rounded-lg">
+              <DropdownMenuItem onClick={onEdit} className="rounded-md">
                 <Pencil size={14} className="mr-2" /> Edit Source
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onToggle} className="rounded-lg">
+              <DropdownMenuItem onClick={onToggle} className="rounded-md">
                 {source.isActive ? (
                   <>
                     <X size={14} className="mr-2" /> Deactivate
@@ -479,12 +479,12 @@ const SourceCard = ({
                 )}
               </DropdownMenuItem>
               {source.trackingUrl && (
-                <DropdownMenuItem className="rounded-lg">
+                <DropdownMenuItem className="rounded-md">
                   <Copy size={14} className="mr-2" /> Copy Tracking URL
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onDelete} className="rounded-lg text-red-600">
+              <DropdownMenuItem onClick={onDelete} className="rounded-md text-red-600">
                 <Trash2 size={14} className="mr-2" /> Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -516,26 +516,26 @@ const SourceRow = ({
   const typeColor = getTypeColor(source.type);
 
   return (
-    <TableRow className={cn("group hover:bg-slate-50", !source.isActive && "opacity-60")}>
+    <TableRow className={cn("group hover:bg-[#F8FAFC]", !source.isActive && "opacity-60")}>
       <TableCell>
         <div className="flex items-center gap-3 cursor-pointer" onClick={onView}>
           <div
-            className="w-10 h-10 rounded-lg flex items-center justify-center"
+            className="w-10 h-10 rounded-md flex items-center justify-center"
             style={{ backgroundColor: `${source.color}15` }}
           >
             <SourceIcon size={20} style={{ color: source.color }} />
           </div>
           <div>
-            <p className="font-medium text-[#0F172A] group-hover:text-[#23D3EE] transition-colors">
+            <p className="font-medium text-[#0F172A] group-hover:text-[#0891B2] transition-colors">
               {source.name}
             </p>
-            <p className="text-xs text-slate-500">{source.description}</p>
+            <p className="text-xs text-[#94A3B8]">{source.description}</p>
           </div>
         </div>
       </TableCell>
       <TableCell>
         <span
-          className="text-xs font-medium px-2 py-1 rounded-lg capitalize"
+          className="text-xs font-medium px-2 py-1 rounded-md capitalize"
           style={{ backgroundColor: typeColor.bg, color: typeColor.text }}
         >
           {source.type}
@@ -543,7 +543,7 @@ const SourceRow = ({
       </TableCell>
       <TableCell>
         <span className="font-semibold text-[#0F172A]">{source.totalLeads}</span>
-        <span className="text-slate-400 text-sm ml-1">
+        <span className="text-[#475569] text-sm ml-1">
           ({source.convertedLeads} converted)
         </span>
       </TableCell>
@@ -569,7 +569,7 @@ const SourceRow = ({
         <span className="font-semibold text-[#0F172A]">{formatCurrency(source.totalRevenue)}</span>
       </TableCell>
       <TableCell>
-        <span className="text-sm text-slate-600">{formatCurrency(source.avgDealSize)}</span>
+        <span className="text-sm text-[#475569]">{formatCurrency(source.avgDealSize)}</span>
       </TableCell>
       <TableCell>
         <span
@@ -609,7 +609,7 @@ const SourceRow = ({
         <Switch
           checked={source.isActive}
           onCheckedChange={onToggle}
-          className="data-[state=checked]:bg-[#23D3EE]"
+          className="data-[state=checked]:bg-[#0891B2]"
         />
       </TableCell>
       <TableCell>
@@ -617,16 +617,16 @@ const SourceRow = ({
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={onView}>
-                  <Eye size={16} className="text-slate-400" />
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" onClick={onView}>
+                  <Eye size={16} className="text-[#475569]" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>View Details</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={onEdit}>
-                  <Pencil size={16} className="text-slate-400" />
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" onClick={onEdit}>
+                  <Pencil size={16} className="text-[#475569]" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Edit</TooltipContent>
@@ -634,26 +634,26 @@ const SourceRow = ({
           </TooltipProvider>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
-                <MoreVertical size={16} className="text-slate-400" />
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md">
+                <MoreVertical size={16} className="text-[#475569]" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 rounded-xl">
-              <DropdownMenuItem onClick={onView} className="rounded-lg">
+            <DropdownMenuContent align="end" className="w-48 rounded-md">
+              <DropdownMenuItem onClick={onView} className="rounded-md">
                 <BarChart3 size={14} className="mr-2" /> View Analytics
               </DropdownMenuItem>
               {source.trackingUrl && (
                 <>
-                  <DropdownMenuItem className="rounded-lg">
+                  <DropdownMenuItem className="rounded-md">
                     <ExternalLink size={14} className="mr-2" /> Open Tracking URL
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="rounded-lg">
+                  <DropdownMenuItem className="rounded-md">
                     <Copy size={14} className="mr-2" /> Copy URL
                   </DropdownMenuItem>
                 </>
               )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onDelete} className="rounded-lg text-red-600">
+              <DropdownMenuItem onClick={onDelete} className="rounded-md text-red-600">
                 <Trash2 size={14} className="mr-2" /> Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -732,13 +732,13 @@ const SourceFormDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px] p-0 rounded-2xl overflow-hidden">
-        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-[#23D3EE]/10 to-transparent">
+      <DialogContent className="sm:max-w-[500px] p-0 rounded-md overflow-hidden">
+        <div className="p-6 border-b border-[rgba(15,23,42,0.06)] bg-[#F0FDFA]">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-[#0F172A]">
               {source ? "Edit Lead Source" : "Add Lead Source"}
             </DialogTitle>
-            <DialogDescription className="text-slate-500">
+            <DialogDescription className="text-[#94A3B8]">
               {source ? "Update source configuration" : "Configure a new lead source"}
             </DialogDescription>
           </DialogHeader>
@@ -747,7 +747,7 @@ const SourceFormDialog = ({
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {/* Source Name */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-600">
+            <Label className="text-sm font-medium text-[#475569]">
               Source Name <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -755,36 +755,36 @@ const SourceFormDialog = ({
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="e.g., LinkedIn, Google Ads"
               required
-              className="h-11 rounded-xl"
+              className="h-11 rounded-md"
             />
           </div>
 
           {/* Type & Icon */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-600">Type</Label>
+              <Label className="text-sm font-medium text-[#475569]">Type</Label>
               <Select
                 value={formData.type}
                 onValueChange={(val) => setFormData({ ...formData, type: val as LeadSource["type"] })}
               >
-                <SelectTrigger className="h-11 rounded-xl">
+                <SelectTrigger className="h-11 rounded-md">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  <SelectItem value="digital" className="rounded-lg">Digital</SelectItem>
-                  <SelectItem value="traditional" className="rounded-lg">Traditional</SelectItem>
-                  <SelectItem value="referral" className="rounded-lg">Referral</SelectItem>
-                  <SelectItem value="direct" className="rounded-lg">Direct</SelectItem>
+                <SelectContent className="rounded-md">
+                  <SelectItem value="digital" className="rounded-md">Digital</SelectItem>
+                  <SelectItem value="traditional" className="rounded-md">Traditional</SelectItem>
+                  <SelectItem value="referral" className="rounded-md">Referral</SelectItem>
+                  <SelectItem value="direct" className="rounded-md">Direct</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-600">Icon</Label>
+              <Label className="text-sm font-medium text-[#475569]">Icon</Label>
               <Select
                 value={formData.icon}
                 onValueChange={(val) => setFormData({ ...formData, icon: val })}
               >
-                <SelectTrigger className="h-11 rounded-xl">
+                <SelectTrigger className="h-11 rounded-md">
                   <SelectValue>
                     <div className="flex items-center gap-2">
                       <SelectedIcon size={16} />
@@ -792,9 +792,9 @@ const SourceFormDialog = ({
                     </div>
                   </SelectValue>
                 </SelectTrigger>
-                <SelectContent className="rounded-xl max-h-[200px]">
+                <SelectContent className="rounded-md max-h-[200px]">
                   {Object.entries(sourceIcons).map(([key, Icon]) => (
-                    <SelectItem key={key} value={key} className="rounded-lg">
+                    <SelectItem key={key} value={key} className="rounded-md">
                       <div className="flex items-center gap-2">
                         <Icon size={16} />
                         <span className="capitalize">{key}</span>
@@ -808,7 +808,7 @@ const SourceFormDialog = ({
 
           {/* Color */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-600">Color</Label>
+            <Label className="text-sm font-medium text-[#475569]">Color</Label>
             <div className="flex items-center gap-2">
               {sourceColors.map((color) => (
                 <button
@@ -816,8 +816,8 @@ const SourceFormDialog = ({
                   type="button"
                   onClick={() => setFormData({ ...formData, color })}
                   className={cn(
-                    "w-8 h-8 rounded-lg transition-all",
-                    formData.color === color && "ring-2 ring-offset-2 ring-[#23D3EE]"
+                    "w-8 h-8 rounded-md transition-all",
+                    formData.color === color && "ring-2 ring-offset-2 ring-[#22D3EE]"
                   )}
                   style={{ backgroundColor: color }}
                 />
@@ -827,65 +827,65 @@ const SourceFormDialog = ({
 
           {/* Description */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-600">Description</Label>
+            <Label className="text-sm font-medium text-[#475569]">Description</Label>
             <Input
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               placeholder="Brief description of this source"
-              className="h-11 rounded-xl"
+              className="h-11 rounded-md"
             />
           </div>
 
           {/* Tracking URL */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-600">Tracking URL</Label>
+            <Label className="text-sm font-medium text-[#475569]">Tracking URL</Label>
             <div className="relative">
-              <LinkIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <LinkIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
               <Input
                 value={formData.trackingUrl}
                 onChange={(e) => setFormData({ ...formData, trackingUrl: e.target.value })}
                 placeholder="https://..."
-                className="h-11 pl-10 rounded-xl"
+                className="h-11 pl-10 rounded-md"
               />
             </div>
           </div>
 
           {/* Monthly Cost */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-600">Monthly Cost ($)</Label>
+            <Label className="text-sm font-medium text-[#475569]">Monthly Cost ($)</Label>
             <div className="relative">
-              <DollarSign size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <DollarSign size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
               <Input
                 type="number"
                 value={formData.cost}
                 onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
                 placeholder="0"
-                className="h-11 pl-10 rounded-xl"
+                className="h-11 pl-10 rounded-md"
               />
             </div>
           </div>
 
           {/* Active Toggle */}
-          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+          <div className="flex items-center justify-between p-4 bg-[#F8FAFC] rounded-md">
             <div>
               <p className="font-medium text-[#0F172A]">Active Source</p>
-              <p className="text-sm text-slate-500">Enable lead tracking for this source</p>
+              <p className="text-sm text-[#94A3B8]">Enable lead tracking for this source</p>
             </div>
             <Switch
               checked={formData.isActive}
               onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
-              className="data-[state=checked]:bg-[#23D3EE]"
+              className="data-[state=checked]:bg-[#0891B2]"
             />
           </div>
 
           <DialogFooter className="pt-4 gap-3">
-            <Button type="button" variant="outline" onClick={onClose} className="rounded-xl">
+            <Button type="button" variant="outline" onClick={onClose} className="rounded-md">
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={!formData.name}
-              className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl"
+              className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
             >
               {source ? (
                 <>
@@ -1059,16 +1059,16 @@ const LeadSources = () => {
 
       <main className="flex-1 ml-0">
         {/* Header */}
-        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-slate-200">
+        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-[rgba(15,23,42,0.06)]">
           <div className="px-8 py-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
-                  <Link to="/dashboard" className="hover:text-[#23D3EE]">
+                <div className="flex items-center gap-2 text-sm text-[#94A3B8] mb-1">
+                  <Link to="/dashboard" className="hover:text-[#0891B2]">
                     Dashboard
                   </Link>
                   <ChevronRight size={14} />
-                  <Link to="/leads" className="hover:text-[#23D3EE]">
+                  <Link to="/leads" className="hover:text-[#0891B2]">
                     Leads
                   </Link>
                   <ChevronRight size={14} />
@@ -1081,7 +1081,7 @@ const LeadSources = () => {
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="outline" size="icon" className="rounded-xl">
+                      <Button variant="outline" size="icon" className="rounded-md">
                         <Download size={18} />
                       </Button>
                     </TooltipTrigger>
@@ -1094,7 +1094,7 @@ const LeadSources = () => {
                     setCurrentSource(null);
                     setIsFormOpen(true);
                   }}
-                  className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl gap-2"
+                  className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md gap-2"
                 >
                   <Plus size={18} />
                   Add Source
@@ -1111,7 +1111,7 @@ const LeadSources = () => {
               title="Total Sources"
               value={stats.totalSources}
               icon={Target}
-              color="#23D3EE"
+              color="#22D3EE"
             />
             <StatCard
               title="Active Sources"
@@ -1141,7 +1141,7 @@ const LeadSources = () => {
               value={formatCurrency(stats.totalRevenue)}
               change={22.8}
               icon={DollarSign}
-              color="#FBBF23"
+              color="#FBBF24"
               delay={0.4}
             />
           </div>
@@ -1150,43 +1150,43 @@ const LeadSources = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-2xl border border-slate-200 overflow-hidden"
+            className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden"
           >
             {/* Filters */}
-            <div className="p-4 border-b border-slate-100">
+            <div className="p-4 border-b border-[rgba(15,23,42,0.06)]">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="relative">
-                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                     <Input
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Search sources..."
-                      className="pl-9 h-10 w-64 rounded-xl border-slate-200"
+                      className="pl-9 h-10 w-64 rounded-md border-[rgba(15,23,42,0.06)]"
                     />
                   </div>
 
                   <Select value={selectedType} onValueChange={setSelectedType}>
-                    <SelectTrigger className="w-[140px] h-10 rounded-xl border-slate-200">
+                    <SelectTrigger className="w-[140px] h-10 rounded-md border-[rgba(15,23,42,0.06)]">
                       <SelectValue placeholder="Type" />
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl">
-                      <SelectItem value="all" className="rounded-lg">All Types</SelectItem>
-                      <SelectItem value="digital" className="rounded-lg">Digital</SelectItem>
-                      <SelectItem value="traditional" className="rounded-lg">Traditional</SelectItem>
-                      <SelectItem value="referral" className="rounded-lg">Referral</SelectItem>
-                      <SelectItem value="direct" className="rounded-lg">Direct</SelectItem>
+                    <SelectContent className="rounded-md">
+                      <SelectItem value="all" className="rounded-md">All Types</SelectItem>
+                      <SelectItem value="digital" className="rounded-md">Digital</SelectItem>
+                      <SelectItem value="traditional" className="rounded-md">Traditional</SelectItem>
+                      <SelectItem value="referral" className="rounded-md">Referral</SelectItem>
+                      <SelectItem value="direct" className="rounded-md">Direct</SelectItem>
                     </SelectContent>
                   </Select>
 
-                  <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-xl">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-[#F8FAFC] rounded-md">
                     <Switch
                       id="active-only"
                       checked={showActiveOnly}
                       onCheckedChange={setShowActiveOnly}
-                      className="data-[state=checked]:bg-[#23D3EE]"
+                      className="data-[state=checked]:bg-[#0891B2]"
                     />
-                    <Label htmlFor="active-only" className="text-sm text-slate-600 cursor-pointer">
+                    <Label htmlFor="active-only" className="text-sm text-[#475569] cursor-pointer">
                       Active only
                     </Label>
                   </div>
@@ -1196,7 +1196,7 @@ const LeadSources = () => {
                   <Button
                     variant={viewMode === "grid" ? "secondary" : "ghost"}
                     size="icon"
-                    className="rounded-lg h-9 w-9"
+                    className="rounded-md h-9 w-9"
                     onClick={() => setViewMode("grid")}
                   >
                     <LayoutGrid size={16} />
@@ -1204,7 +1204,7 @@ const LeadSources = () => {
                   <Button
                     variant={viewMode === "list" ? "secondary" : "ghost"}
                     size="icon"
-                    className="rounded-lg h-9 w-9"
+                    className="rounded-md h-9 w-9"
                     onClick={() => setViewMode("list")}
                   >
                     <List size={16} />
@@ -1219,9 +1219,9 @@ const LeadSources = () => {
                 <div className="p-6 grid grid-cols-3 gap-6">
                   {filteredSources.length === 0 ? (
                     <div className="col-span-3 text-center py-12">
-                      <Target size={48} className="text-slate-300 mx-auto mb-3" />
-                      <p className="text-slate-500 font-medium">No sources found</p>
-                      <p className="text-slate-400 text-sm">Try adjusting your filters</p>
+                      <Target size={48} className="text-[#475569] mx-auto mb-3" />
+                      <p className="text-[#94A3B8] font-medium">No sources found</p>
+                      <p className="text-[#475569] text-sm">Try adjusting your filters</p>
                     </div>
                   ) : (
                     filteredSources.map((source, index) => (
@@ -1271,9 +1271,9 @@ const LeadSources = () => {
                         <TableRow>
                           <TableCell colSpan={10} className="text-center py-12">
                             <div className="flex flex-col items-center">
-                              <Target size={48} className="text-slate-300 mb-3" />
-                              <p className="text-slate-500 font-medium">No sources found</p>
-                              <p className="text-slate-400 text-sm">Try adjusting your filters</p>
+                              <Target size={48} className="text-[#475569] mb-3" />
+                              <p className="text-[#94A3B8] font-medium">No sources found</p>
+                              <p className="text-[#475569] text-sm">Try adjusting your filters</p>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -1313,32 +1313,32 @@ const LeadSources = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="mt-8 bg-white rounded-2xl border border-slate-200 p-6"
+            className="mt-8 bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-6"
           >
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="font-semibold text-[#0F172A]">Source Performance</h3>
-                <p className="text-sm text-slate-500">Lead generation by source over time</p>
+                <p className="text-sm text-[#94A3B8]">Lead generation by source over time</p>
               </div>
               <Select defaultValue="30">
-                <SelectTrigger className="w-[140px] h-9 rounded-lg">
+                <SelectTrigger className="w-[140px] h-9 rounded-md">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  <SelectItem value="7" className="rounded-lg">Last 7 days</SelectItem>
-                  <SelectItem value="30" className="rounded-lg">Last 30 days</SelectItem>
-                  <SelectItem value="90" className="rounded-lg">Last 90 days</SelectItem>
-                  <SelectItem value="365" className="rounded-lg">Last year</SelectItem>
+                <SelectContent className="rounded-md">
+                  <SelectItem value="7" className="rounded-md">Last 7 days</SelectItem>
+                  <SelectItem value="30" className="rounded-md">Last 30 days</SelectItem>
+                  <SelectItem value="90" className="rounded-md">Last 90 days</SelectItem>
+                  <SelectItem value="365" className="rounded-md">Last year</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {/* Chart Placeholder */}
-            <div className="h-64 bg-slate-50 rounded-xl flex items-center justify-center">
+            <div className="h-64 bg-[#F8FAFC] rounded-md flex items-center justify-center">
               <div className="text-center">
-                <BarChart3 size={48} className="text-slate-300 mx-auto mb-3" />
-                <p className="text-slate-500 font-medium">Performance Chart</p>
-                <p className="text-slate-400 text-sm">Integrate with your charting library</p>
+                <BarChart3 size={48} className="text-[#475569] mx-auto mb-3" />
+                <p className="text-[#94A3B8] font-medium">Performance Chart</p>
+                <p className="text-[#475569] text-sm">Integrate with your charting library</p>
               </div>
             </div>
 
@@ -1349,10 +1349,10 @@ const LeadSources = () => {
                 return (
                   <div
                     key={source.id}
-                    className="p-4 bg-slate-50 rounded-xl flex items-center gap-3"
+                    className="p-4 bg-[#F8FAFC] rounded-md flex items-center gap-3"
                   >
                     <div
-                      className="w-10 h-10 rounded-lg flex items-center justify-center"
+                      className="w-10 h-10 rounded-md flex items-center justify-center"
                       style={{ backgroundColor: `${source.color}15` }}
                     >
                       <SourceIcon size={20} style={{ color: source.color }} />
@@ -1361,7 +1361,7 @@ const LeadSources = () => {
                       <p className="text-sm font-medium text-[#0F172A] truncate">
                         {source.name}
                       </p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-[#94A3B8]">
                         {source.totalLeads} leads · {formatPercent(source.conversionRate)}
                       </p>
                     </div>
@@ -1400,7 +1400,7 @@ const LeadSources = () => {
       />
 
       <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
-        <AlertDialogContent className="rounded-2xl">
+        <AlertDialogContent className="rounded-md">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Lead Source</AlertDialogTitle>
             <AlertDialogDescription>
@@ -1409,10 +1409,10 @@ const LeadSources = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-md">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteSource}
-              className="bg-red-500 hover:bg-red-600 rounded-xl"
+              className="bg-red-500 hover:bg-red-600 rounded-md"
             >
               Delete
             </AlertDialogAction>

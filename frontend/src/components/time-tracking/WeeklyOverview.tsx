@@ -20,23 +20,23 @@ export function WeeklyOverview({ data, targetHours = 8 }: WeeklyOverviewProps) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-xl border border-gray-200 p-6"
+      className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-6"
     >
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-lg font-semibold text-gray-800">Weekly Overview</h3>
-          <p className="text-sm text-gray-500">
+          <h3 className="text-lg font-semibold text-[#0F172A]">Weekly Overview</h3>
+          <p className="text-sm text-[#475569]">
             {totalHours.toFixed(1)}h total • {totalBillable.toFixed(1)}h billable
           </p>
         </div>
         <div className="flex items-center gap-4 text-sm">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-[#23D3EE]" />
-            <span className="text-gray-600">Billable</span>
+            <div className="w-3 h-3 rounded-full bg-[#0891B2]" />
+            <span className="text-[#475569]">Billable</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-gray-300" />
-            <span className="text-gray-600">Non-billable</span>
+            <span className="text-[#475569]">Non-billable</span>
           </div>
         </div>
       </div>
@@ -54,7 +54,7 @@ export function WeeklyOverview({ data, targetHours = 8 }: WeeklyOverviewProps) {
                 {/* Target Line */}
                 {isToday && (
                   <div
-                    className="absolute w-full border-t-2 border-dashed border-[#FBBF23]/50"
+                    className="absolute w-full border-t-2 border-dashed border-[#FBBF24]/50"
                     style={{ bottom: `${(targetHours / maxHours) * 100}%` }}
                   />
                 )}
@@ -68,7 +68,7 @@ export function WeeklyOverview({ data, targetHours = 8 }: WeeklyOverviewProps) {
                       transition={{ duration: 0.5, delay: index * 0.1 }}
                       className={cn(
                         "w-full rounded-t-lg transition-all cursor-pointer hover:opacity-80",
-                        isToday ? "bg-[#23D3EE]" : "bg-[#23D3EE]/70"
+                        isToday ? "bg-[#0891B2]" : "bg-[#0891B2]/70"
                       )}
                       title={`${day.billable}h billable`}
                     />
@@ -90,7 +90,7 @@ export function WeeklyOverview({ data, targetHours = 8 }: WeeklyOverviewProps) {
 
                 {/* Hours Label */}
                 {day.hours > 0 && (
-                  <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-medium text-gray-600">
+                  <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-medium text-[#475569]">
                     {day.hours.toFixed(1)}h
                   </span>
                 )}
@@ -101,12 +101,12 @@ export function WeeklyOverview({ data, targetHours = 8 }: WeeklyOverviewProps) {
                 <p
                   className={cn(
                     "text-sm font-medium",
-                    isToday ? "text-[#23D3EE]" : "text-gray-700"
+                    isToday ? "text-[#0891B2]" : "text-slate-200"
                   )}
                 >
                   {day.day}
                 </p>
-                <p className="text-xs text-gray-400">{day.date}</p>
+                <p className="text-xs text-[#94A3B8]">{day.date}</p>
               </div>
 
               {/* Today Indicator */}
@@ -114,7 +114,7 @@ export function WeeklyOverview({ data, targetHours = 8 }: WeeklyOverviewProps) {
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="w-2 h-2 bg-[#23D3EE] rounded-full mt-1"
+                  className="w-2 h-2 bg-[#0891B2] rounded-full mt-1"
                 />
               )}
             </div>

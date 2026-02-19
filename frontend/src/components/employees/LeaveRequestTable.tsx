@@ -64,10 +64,10 @@ export const LeaveRequestTable: React.FC<LeaveRequestTableProps> = ({
   const someSelected = selectedIds.length > 0 && selectedIds.length < requests.length;
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden">
       <Table>
         <TableHeader>
-          <TableRow className="bg-gray-50/50">
+          <TableRow className="bg-white/5/50">
             {showSelection && (
               <TableHead className="w-12">
                 <Checkbox
@@ -98,7 +98,7 @@ export const LeaveRequestTable: React.FC<LeaveRequestTableProps> = ({
             return (
               <TableRow
                 key={request.id}
-                className={isSelected ? 'bg-[#23D3EE]/5' : ''}
+                className={isSelected ? 'bg-[#0891B2]/5' : ''}
               >
                 {showSelection && (
                   <TableCell>
@@ -115,15 +115,15 @@ export const LeaveRequestTable: React.FC<LeaveRequestTableProps> = ({
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
                       <AvatarImage src={request.employeeAvatar} />
-                      <AvatarFallback className="bg-[#23D3EE]/10 text-[#23D3EE]">
+                      <AvatarFallback className="bg-[#0891B2]/10 text-[#0891B2]">
                         {getInitials(nameParts[0], nameParts[1] || '')}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="font-medium text-gray-900">
+                      <p className="font-medium text-[#0F172A]">
                         {request.employeeName}
                       </p>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-[#475569]">
                         {request.employeePosition}
                       </p>
                     </div>
@@ -135,8 +135,8 @@ export const LeaveRequestTable: React.FC<LeaveRequestTableProps> = ({
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-1.5 text-gray-700">
-                    <Calendar className="w-4 h-4 text-gray-400" />
+                  <div className="flex items-center gap-1.5 text-slate-200">
+                    <Calendar className="w-4 h-4 text-[#94A3B8]" />
                     <span>
                       {format(new Date(request.startDate), 'MMM d')} -{' '}
                       {format(new Date(request.endDate), 'MMM d, yyyy')}
@@ -144,7 +144,7 @@ export const LeaveRequestTable: React.FC<LeaveRequestTableProps> = ({
                   </div>
                 </TableCell>
                 <TableCell>
-                  <span className="font-semibold text-gray-900">
+                  <span className="font-semibold text-[#0F172A]">
                     {request.totalDays} day{request.totalDays !== 1 ? 's' : ''}
                   </span>
                 </TableCell>
@@ -152,7 +152,7 @@ export const LeaveRequestTable: React.FC<LeaveRequestTableProps> = ({
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <p className="text-sm text-gray-600 truncate max-w-[200px] cursor-help">
+                        <p className="text-sm text-[#475569] truncate max-w-[200px] cursor-help">
                           {request.reason}
                         </p>
                       </TooltipTrigger>
@@ -163,7 +163,7 @@ export const LeaveRequestTable: React.FC<LeaveRequestTableProps> = ({
                   </TooltipProvider>
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-1.5 text-gray-500 text-sm">
+                  <div className="flex items-center gap-1.5 text-[#475569] text-sm">
                     <Clock className="w-4 h-4" />
                     <span>{format(new Date(request.appliedAt), 'MMM d, yyyy')}</span>
                   </div>
@@ -173,7 +173,7 @@ export const LeaveRequestTable: React.FC<LeaveRequestTableProps> = ({
                     {statusConfig.label}
                   </Badge>
                   {request.approvedBy && (
-                    <p className="text-xs text-gray-400 mt-1">
+                    <p className="text-xs text-[#94A3B8] mt-1">
                       by {request.approvedBy}
                     </p>
                   )}
@@ -268,8 +268,8 @@ export const LeaveRequestTable: React.FC<LeaveRequestTableProps> = ({
               >
                 <div className="flex flex-col items-center">
                   <Calendar className="w-12 h-12 text-gray-300 mb-3" />
-                  <p className="text-gray-500 font-medium">No leave requests found</p>
-                  <p className="text-gray-400 text-sm">
+                  <p className="text-[#475569] font-medium">No leave requests found</p>
+                  <p className="text-[#94A3B8] text-sm">
                     Leave requests will appear here
                   </p>
                 </div>

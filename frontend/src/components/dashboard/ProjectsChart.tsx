@@ -47,9 +47,9 @@ const CustomTooltip = ({ active, payload, label }: any) => {
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-[#0F172A] border border-white/10 rounded-xl p-4 shadow-2xl"
+        className="bg-[#1a1a2e] border border-[rgba(15,23,42,0.06)] rounded-md p-4 card-shadow"
       >
-        <p className="text-[#23D3EE] font-semibold mb-3 text-sm">{label} 2024</p>
+        <p className="text-[#0891B2] font-semibold mb-3 text-sm">{label} 2024</p>
         <div className="space-y-2">
           {payload.map((entry: any, index: number) => (
             <div key={index} className="flex items-center justify-between gap-6">
@@ -58,9 +58,9 @@ const CustomTooltip = ({ active, payload, label }: any) => {
                   className="w-3 h-3 rounded-full" 
                   style={{ backgroundColor: entry.color }}
                 />
-                <span className="text-slate-400 text-xs">{entry.name}</span>
+                <span className="text-[#475569] text-xs">{entry.name}</span>
               </div>
-              <span className="text-white font-semibold text-sm">
+              <span className="text-[#0F172A] font-semibold text-sm">
                 {entry.name === 'Revenue' ? `$${entry.value.toLocaleString()}` : entry.value}
               </span>
             </div>
@@ -85,10 +85,10 @@ const CustomLegend = ({ payload, activeLines, toggleLine }: any) => {
             whileTap={{ scale: 0.95 }}
             onClick={() => toggleLine(entry.dataKey)}
             className={cn(
-              "flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all",
+              "flex items-center gap-2 px-3 py-1.5 rounded-md transition-all",
               isActive 
-                ? "bg-slate-100" 
-                : "bg-slate-50 opacity-50"
+                ? "bg-white/5" 
+                : "bg-white/5 opacity-50"
             )}
           >
             <div 
@@ -99,7 +99,7 @@ const CustomLegend = ({ payload, activeLines, toggleLine }: any) => {
             />
             <span className={cn(
               "text-xs font-medium transition-colors",
-              isActive ? "text-[#0F172A]" : "text-slate-400"
+              isActive ? "text-[#0F172A]" : "text-[#475569]"
             )}>
               {entry.value}
             </span>
@@ -157,9 +157,9 @@ export function ProjectsChart() {
   ];
 
   const chartColors = {
-    projects: '#23D3EE',
-    completed: '#FBBF23',
-    pending: '#0F172A',
+    projects: '#22D3EE',
+    completed: '#FBBF24',
+    pending: '#1a1a2e',
   };
 
   const renderChart = () => {
@@ -340,28 +340,28 @@ export function ProjectsChart() {
   };
 
   return (
-    <Card className="overflow-hidden border-none shadow-xl bg-white">
+    <Card className="overflow-hidden border-none card-shadow bg-white/5">
       {/* Header */}
-      <div className="p-6 border-b border-slate-100">
+      <div className="p-6 border-b border-[rgba(15,23,42,0.06)]">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           {/* Title Section */}
           <div className="flex items-center gap-4">
             <motion.div 
               whileHover={{ rotate: 10 }}
-              className="h-12 w-12 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#23D3EE]/70 flex items-center justify-center shadow-lg shadow-[#23D3EE]/20"
+              className="h-12 w-12 rounded-md bg-[#F1F5F9]/70 flex items-center justify-center "
             >
-              <BarChart3 size={22} className="text-white" />
+              <BarChart3 size={22} className="text-[#0F172A]" />
             </motion.div>
             <div>
               <h3 className="text-xl font-bold text-[#0F172A]">Projects Overview</h3>
-              <p className="text-sm text-slate-400">Track your project performance</p>
+              <p className="text-sm text-[#475569]">Track your project performance</p>
             </div>
           </div>
 
           {/* Controls */}
           <div className="flex flex-wrap items-center gap-3">
             {/* Chart Type Selector */}
-            <div className="flex items-center bg-slate-100 rounded-xl p-1">
+            <div className="flex items-center bg-white/5 rounded-md p-1">
               {chartTypes.map((type) => (
                 <motion.button
                   key={type.id}
@@ -369,10 +369,10 @@ export function ProjectsChart() {
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setChartType(type.id)}
                   className={cn(
-                    "flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all",
+                    "flex items-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-all",
                     chartType === type.id 
-                      ? "bg-white text-[#0F172A] shadow-sm" 
-                      : "text-slate-500 hover:text-[#0F172A]"
+                      ? "bg-white/5 text-[#0F172A] shadow-sm" 
+                      : "text-[#94A3B8] hover:text-[#0F172A]"
                   )}
                 >
                   <type.icon size={14} />
@@ -386,13 +386,13 @@ export function ProjectsChart() {
               <select
                 value={selectedPeriod}
                 onChange={(e) => setSelectedPeriod(e.target.value)}
-                className="appearance-none bg-slate-100 border-none rounded-xl px-4 py-2.5 pr-8 text-xs font-medium text-[#0F172A] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#23D3EE]/20"
+                className="appearance-none bg-white/5 border-none rounded-md px-4 py-2.5 pr-8 text-xs font-medium text-[#0F172A] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#22D3EE]/20"
               >
                 {periods.map((period) => (
                   <option key={period.id} value={period.id}>{period.label}</option>
                 ))}
               </select>
-              <Calendar size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <Calendar size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#475569] pointer-events-none" />
             </div>
 
             {/* Action Buttons */}
@@ -401,21 +401,21 @@ export function ProjectsChart() {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleRefresh}
-                className="p-2.5 rounded-xl bg-slate-100 text-slate-500 hover:text-[#23D3EE] hover:bg-[#23D3EE]/10 transition-all"
+                className="p-2.5 rounded-md bg-white/5 text-[#94A3B8] hover:text-[#0891B2] hover:bg-[#0891B2]/10 transition-all"
               >
                 <RefreshCw size={16} className={cn(isRefreshing && "animate-spin")} />
               </motion.button>
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="p-2.5 rounded-xl bg-slate-100 text-slate-500 hover:text-[#23D3EE] hover:bg-[#23D3EE]/10 transition-all"
+                className="p-2.5 rounded-md bg-white/5 text-[#94A3B8] hover:text-[#0891B2] hover:bg-[#0891B2]/10 transition-all"
               >
                 <Download size={16} />
               </motion.button>
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="p-2.5 rounded-xl bg-slate-100 text-slate-500 hover:text-[#23D3EE] hover:bg-[#23D3EE]/10 transition-all"
+                className="p-2.5 rounded-md bg-white/5 text-[#94A3B8] hover:text-[#0891B2] hover:bg-[#0891B2]/10 transition-all"
               >
                 <MoreHorizontal size={16} />
               </motion.button>
@@ -432,18 +432,18 @@ export function ProjectsChart() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
               className={cn(
-                "p-4 rounded-xl border transition-all hover:shadow-md",
-                stat.color === 'teal' && "bg-[#23D3EE]/5 border-[#23D3EE]/20",
-                stat.color === 'gold' && "bg-[#FBBF23]/5 border-[#FBBF23]/20",
-                stat.color === 'navy' && "bg-[#0F172A]/5 border-[#0F172A]/20"
+                "p-4 rounded-md border transition-all hover:shadow-md",
+                stat.color === 'teal' && "bg-[#0891B2]/5 border-[#22D3EE]/20",
+                stat.color === 'gold' && "bg-[#D97706]/5 border-[#FBBF24]/20",
+                stat.color === 'navy' && "bg-[#1a1a2e]/5 border-[#1a1a2e]/20"
               )}
             >
-              <p className="text-xs text-slate-500 mb-1">{stat.label}</p>
+              <p className="text-xs text-[#94A3B8] mb-1">{stat.label}</p>
               <div className="flex items-center justify-between">
                 <span className={cn(
                   "text-xl font-bold",
-                  stat.color === 'teal' && "text-[#23D3EE]",
-                  stat.color === 'gold' && "text-[#FBBF23]",
+                  stat.color === 'teal' && "text-[#0891B2]",
+                  stat.color === 'gold' && "text-[#D97706]",
                   stat.color === 'navy' && "text-[#0F172A]"
                 )}>
                   {stat.value}
@@ -486,13 +486,13 @@ export function ProjectsChart() {
       </div>
 
       {/* Footer */}
-      <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-100">
+      <div className="px-6 py-4 bg-white/5/50 border-t border-[rgba(15,23,42,0.06)]">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-slate-400">
-            Last updated: <span className="text-slate-600 font-medium">Today at 2:30 PM</span>
+          <p className="text-xs text-[#475569]">
+            Last updated: <span className="text-[#475569] font-medium">Today at 2:30 PM</span>
           </p>
           <div className="flex items-center gap-4">
-            <button className="text-xs text-[#23D3EE] font-medium hover:underline flex items-center gap-1">
+            <button className="text-xs text-[#0891B2] font-medium hover:underline flex items-center gap-1">
               View Detailed Report
               <ArrowUpRight size={12} />
             </button>

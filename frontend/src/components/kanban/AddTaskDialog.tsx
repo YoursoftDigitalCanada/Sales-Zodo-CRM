@@ -67,15 +67,15 @@ const statusOptions = [
     value: "todo",
     label: "To Do",
     icon: Circle,
-    color: "text-[#23D3EE]",
-    bg: "bg-[#23D3EE]/10",
+    color: "text-[#0891B2]",
+    bg: "bg-[#0891B2]/10",
   },
   {
     value: "in-progress",
     label: "In Progress",
     icon: Timer,
-    color: "text-[#FBBF23]",
-    bg: "bg-[#FBBF23]/10",
+    color: "text-[#D97706]",
+    bg: "bg-[#D97706]/10",
   },
   {
     value: "review",
@@ -97,8 +97,8 @@ const priorityOptions = [
   {
     value: "low",
     label: "Low",
-    color: "text-slate-600",
-    bg: "bg-slate-100",
+    color: "text-[#475569]",
+    bg: "bg-white/5",
     dot: "bg-slate-400",
   },
   {
@@ -142,23 +142,23 @@ const StyledInput = ({
 } & React.InputHTMLAttributes<HTMLInputElement>) => (
   <div className="space-y-2">
     <div className="flex items-center justify-between">
-      <Label className="text-sm font-medium text-slate-600">
+      <Label className="text-sm font-medium text-[#475569]">
         {label}
         {required && <span className="text-red-500 ml-1">*</span>}
       </Label>
-      {hint && <span className="text-xs text-slate-400">{hint}</span>}
+      {hint && <span className="text-xs text-[#475569]">{hint}</span>}
     </div>
     <div className="relative">
       {Icon && (
         <Icon
           size={16}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]"
         />
       )}
       <Input
         {...props}
         className={cn(
-          "h-11 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20 transition-all",
+          "h-11 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all",
           Icon && "pl-10",
           props.className
         )}
@@ -288,24 +288,24 @@ export const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[520px] p-0 rounded-2xl overflow-hidden border-slate-200">
+      <DialogContent className="sm:max-w-[520px] p-0 rounded-md overflow-hidden border-[rgba(15,23,42,0.06)]">
         {/* ============================================ */}
         {/* HEADER */}
         {/* ============================================ */}
-        <div className="relative p-6 border-b border-slate-100 bg-gradient-to-r from-[#23D3EE]/10 via-[#23D3EE]/5 to-transparent">
+        <div className="relative p-6 border-b border-[rgba(15,23,42,0.06)] /10/5 to-transparent">
           {/* Background Decoration */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-[#23D3EE]/5 rounded-full blur-2xl" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[#0891B2]/5 rounded-full blur-2xl" />
 
           <DialogHeader className="relative">
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl bg-[#23D3EE]/20 flex items-center justify-center">
-                <Sparkles size={18} className="text-[#23D3EE]" />
+              <div className="w-10 h-10 rounded-md bg-[#0891B2]/20 flex items-center justify-center">
+                <Sparkles size={18} className="text-[#0891B2]" />
               </div>
               <div>
                 <DialogTitle className="text-xl font-bold text-[#0F172A]">
                   {isEditMode ? "Edit Task" : "Create New Task"}
                 </DialogTitle>
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-[#94A3B8]">
                   {isEditMode
                     ? "Update the task details below"
                     : "Fill in the details to create a new task"}
@@ -317,7 +317,7 @@ export const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
           {/* Close Button */}
           <button
             onClick={handleClose}
-            className="absolute top-4 right-4 p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+            className="absolute top-4 right-4 p-2 rounded-md hover:bg-white/10 text-[#475569] hover:text-[#475569] transition-colors"
           >
             <X size={18} />
           </button>
@@ -330,7 +330,7 @@ export const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
           {/* Title */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium text-slate-600">
+              <Label className="text-sm font-medium text-[#475569]">
                 Task Title <span className="text-red-500">*</span>
               </Label>
               {errors.title && (
@@ -346,14 +346,14 @@ export const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
             <div className="relative">
               <FileText
                 size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]"
               />
               <Input
                 value={formData.title}
                 onChange={(e) => handleChange("title", e.target.value)}
                 placeholder="Enter task title..."
                 className={cn(
-                  "h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20 transition-all",
+                  "h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all",
                   errors.title && "border-red-300 focus:border-red-400 focus:ring-red-200"
                 )}
               />
@@ -362,14 +362,14 @@ export const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
 
           {/* Description */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-600">
+            <Label className="text-sm font-medium text-[#475569]">
               Description
             </Label>
             <Textarea
               value={formData.description}
               onChange={(e) => handleChange("description", e.target.value)}
               placeholder="Add a description..."
-              className="min-h-[100px] rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20 resize-none transition-all"
+              className="min-h-[100px] rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 resize-none transition-all"
             />
           </div>
 
@@ -377,12 +377,12 @@ export const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
           <div className="grid grid-cols-2 gap-4">
             {/* Status */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-600">Status</Label>
+              <Label className="text-sm font-medium text-[#475569]">Status</Label>
               <Select
                 value={formData.status}
                 onValueChange={(val) => handleChange("status", val)}
               >
-                <SelectTrigger className="h-11 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20">
+                <SelectTrigger className="h-11 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20">
                   <SelectValue>
                     {selectedStatus && (
                       <div className="flex items-center gap-2">
@@ -395,17 +395,17 @@ export const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
                     )}
                   </SelectValue>
                 </SelectTrigger>
-                <SelectContent className="rounded-xl border-slate-200">
+                <SelectContent className="rounded-md border-[rgba(15,23,42,0.06)]">
                   {statusOptions.map((option) => (
                     <SelectItem
                       key={option.value}
                       value={option.value}
-                      className="rounded-lg focus:bg-[#23D3EE]/10"
+                      className="rounded-md focus:bg-[#0891B2]/10"
                     >
                       <div className="flex items-center gap-2">
                         <div
                           className={cn(
-                            "w-6 h-6 rounded-lg flex items-center justify-center",
+                            "w-6 h-6 rounded-md flex items-center justify-center",
                             option.bg
                           )}
                         >
@@ -421,14 +421,14 @@ export const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
 
             {/* Priority */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-600">Priority</Label>
+              <Label className="text-sm font-medium text-[#475569]">Priority</Label>
               <Select
                 value={formData.priority}
                 onValueChange={(val) =>
                   handleChange("priority", val)
                 }
               >
-                <SelectTrigger className="h-11 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20">
+                <SelectTrigger className="h-11 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20">
                   <SelectValue>
                     {selectedPriority && (
                       <div className="flex items-center gap-2">
@@ -440,12 +440,12 @@ export const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
                     )}
                   </SelectValue>
                 </SelectTrigger>
-                <SelectContent className="rounded-xl border-slate-200">
+                <SelectContent className="rounded-md border-[rgba(15,23,42,0.06)]">
                   {priorityOptions.map((option) => (
                     <SelectItem
                       key={option.value}
                       value={option.value}
-                      className="rounded-lg focus:bg-[#23D3EE]/10"
+                      className="rounded-md focus:bg-[#0891B2]/10"
                     >
                       <div className="flex items-center gap-2">
                         <div
@@ -478,17 +478,17 @@ export const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
 
             {/* Due Date */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-600">Due Date</Label>
+              <Label className="text-sm font-medium text-[#475569]">Due Date</Label>
               <div className="relative">
                 <Calendar
                   size={16}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569] pointer-events-none"
                 />
                 <Input
                   type="date"
                   value={formData.dueDate}
                   onChange={(e) => handleChange("dueDate", e.target.value)}
-                  className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20 transition-all"
+                  className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all"
                 />
               </div>
             </div>
@@ -497,19 +497,19 @@ export const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
           {/* Tags */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium text-slate-600">Tags</Label>
-              <span className="text-xs text-slate-400">Comma separated</span>
+              <Label className="text-sm font-medium text-[#475569]">Tags</Label>
+              <span className="text-xs text-[#475569]">Comma separated</span>
             </div>
             <div className="relative">
               <Tag
                 size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]"
               />
               <Input
                 value={formData.tags}
                 onChange={(e) => handleChange("tags", e.target.value)}
                 placeholder="design, frontend, bug..."
-                className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20 transition-all"
+                className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all"
               />
             </div>
 
@@ -533,13 +533,13 @@ export const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
                         initial={{ opacity: 0, scale: 0.8 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: index * 0.05 }}
-                        className="px-2.5 py-1 rounded-lg bg-[#23D3EE]/10 text-[#23D3EE] text-xs font-medium"
+                        className="px-2.5 py-1 rounded-md bg-[#0891B2]/10 text-[#0891B2] text-xs font-medium"
                       >
                         #{tag}
                       </motion.span>
                     ))}
                   {formData.tags.split(",").filter((t) => t.trim()).length > 5 && (
-                    <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500 text-xs font-medium">
+                    <span className="px-2.5 py-1 rounded-md bg-white/5 text-[#94A3B8] text-xs font-medium">
                       +{formData.tags.split(",").filter((t) => t.trim()).length - 5} more
                     </span>
                   )}
@@ -551,13 +551,13 @@ export const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
           {/* ============================================ */}
           {/* FOOTER */}
           {/* ============================================ */}
-          <DialogFooter className="gap-3 pt-4 border-t border-slate-100 mt-6">
+          <DialogFooter className="gap-3 pt-4 border-t border-[rgba(15,23,42,0.06)] mt-6">
             <Button
               type="button"
               variant="outline"
               onClick={handleClose}
               disabled={isLoading}
-              className="rounded-xl border-slate-200 hover:bg-slate-50"
+              className="rounded-md border-[rgba(15,23,42,0.06)] hover:bg-white/5"
             >
               Cancel
             </Button>
@@ -565,7 +565,7 @@ export const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
               <Button
                 type="submit"
                 disabled={isLoading || !formData.title.trim()}
-                className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl shadow-lg shadow-[#23D3EE]/25 min-w-[120px]"
+                className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md  min-w-[120px]"
               >
                 {isLoading ? (
                   <>

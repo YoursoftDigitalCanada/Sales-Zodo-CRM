@@ -189,7 +189,7 @@ const folders: Folder[] = [
 const labels: EmailLabel[] = [
   { id: "work", name: "Work", color: "#3B82F6" },
   { id: "personal", name: "Personal", color: "#8B5CF6" },
-  { id: "clients", name: "Clients", color: "#23D3EE" },
+  { id: "clients", name: "Clients", color: "#22D3EE" },
   { id: "finance", name: "Finance", color: "#22C55E" },
   { id: "urgent", name: "Urgent", color: "#EF4444" },
   { id: "social", name: "Social", color: "#EC4899" },
@@ -500,10 +500,10 @@ const ComposeEmailDialog = ({
       <motion.div
         initial={{ y: 100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="fixed bottom-0 right-6 w-72 bg-white rounded-t-xl shadow-2xl border border-slate-200 z-50"
+        className="fixed bottom-0 right-6 w-72 bg-white rounded-t-xl card-shadow border border-[rgba(15,23,42,0.06)] z-50"
       >
         <div
-          className="flex items-center justify-between p-3 bg-[#0F172A] text-white rounded-t-xl cursor-pointer"
+          className="flex items-center justify-between p-3 bg-[#F8FAFC] text-[#0F172A] rounded-t-xl cursor-pointer"
           onClick={() => setIsMinimized(false)}
         >
           <div className="flex items-center gap-2">
@@ -537,22 +537,22 @@ const ComposeEmailDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[700px] p-0 rounded-2xl overflow-hidden max-h-[90vh]">
+      <DialogContent className="sm:max-w-[700px] p-0 rounded-md overflow-hidden max-h-[90vh]">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 bg-[#0F172A] text-white">
+        <div className="flex items-center justify-between p-4 bg-[#F8FAFC] text-[#0F172A]">
           <h2 className="font-semibold">
             {replyTo ? "Reply" : forwardEmail ? "Forward" : "New Message"}
           </h2>
           <div className="flex items-center gap-1">
             <button
               onClick={() => setIsMinimized(true)}
-              className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
+              className="p-1.5 hover:bg-white/10 rounded-md transition-colors"
             >
               <Minimize2 size={16} />
             </button>
             <button
               onClick={onClose}
-              className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
+              className="p-1.5 hover:bg-white/10 rounded-md transition-colors"
             >
               <X size={16} />
             </button>
@@ -563,18 +563,18 @@ const ComposeEmailDialog = ({
         <div className="p-4 space-y-3">
           {/* To */}
           <div className="flex items-center gap-3">
-            <Label className="w-12 text-sm text-slate-500">To:</Label>
+            <Label className="w-12 text-sm text-[#94A3B8]">To:</Label>
             <div className="flex-1 flex items-center gap-2">
               <Input
                 value={to}
                 onChange={(e) => setTo(e.target.value)}
                 placeholder="recipient@email.com"
-                className="flex-1 h-9 border-0 border-b border-slate-200 rounded-none px-0 focus-visible:ring-0 focus-visible:border-[#23D3EE]"
+                className="flex-1 h-9 border-0 border-b border-[rgba(15,23,42,0.06)] rounded-none px-0 focus-visible:ring-0 focus-visible:border-[#22D3EE]"
               />
               {!showCc && (
                 <button
                   onClick={() => setShowCc(true)}
-                  className="text-xs text-slate-400 hover:text-[#23D3EE]"
+                  className="text-xs text-[#475569] hover:text-[#0891B2]"
                 >
                   Cc/Bcc
                 </button>
@@ -585,24 +585,24 @@ const ComposeEmailDialog = ({
           {/* Cc */}
           {showCc && (
             <div className="flex items-center gap-3">
-              <Label className="w-12 text-sm text-slate-500">Cc:</Label>
+              <Label className="w-12 text-sm text-[#94A3B8]">Cc:</Label>
               <Input
                 value={cc}
                 onChange={(e) => setCc(e.target.value)}
                 placeholder="cc@email.com"
-                className="flex-1 h-9 border-0 border-b border-slate-200 rounded-none px-0 focus-visible:ring-0 focus-visible:border-[#23D3EE]"
+                className="flex-1 h-9 border-0 border-b border-[rgba(15,23,42,0.06)] rounded-none px-0 focus-visible:ring-0 focus-visible:border-[#22D3EE]"
               />
             </div>
           )}
 
           {/* Subject */}
           <div className="flex items-center gap-3">
-            <Label className="w-12 text-sm text-slate-500">Subject:</Label>
+            <Label className="w-12 text-sm text-[#94A3B8]">Subject:</Label>
             <Input
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               placeholder="Email subject"
-              className="flex-1 h-9 border-0 border-b border-slate-200 rounded-none px-0 focus-visible:ring-0 focus-visible:border-[#23D3EE]"
+              className="flex-1 h-9 border-0 border-b border-[rgba(15,23,42,0.06)] rounded-none px-0 focus-visible:ring-0 focus-visible:border-[#22D3EE]"
             />
           </div>
 
@@ -619,19 +619,19 @@ const ComposeEmailDialog = ({
 
           {/* Attachments */}
           {attachments.length > 0 && (
-            <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-100">
+            <div className="flex flex-wrap gap-2 pt-2 border-t border-[rgba(15,23,42,0.06)]">
               {attachments.map((file, index) => (
                 <div
                   key={index}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-lg text-sm"
+                  className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-md text-sm"
                 >
-                  <Paperclip size={14} className="text-slate-500" />
-                  <span className="text-slate-700">{file.name}</span>
+                  <Paperclip size={14} className="text-[#94A3B8]" />
+                  <span className="text-slate-200">{file.name}</span>
                   <button
                     onClick={() =>
                       setAttachments((prev) => prev.filter((_, i) => i !== index))
                     }
-                    className="text-slate-400 hover:text-red-500"
+                    className="text-[#475569] hover:text-red-500"
                   >
                     <X size={14} />
                   </button>
@@ -642,7 +642,7 @@ const ComposeEmailDialog = ({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-4 border-t border-slate-100 bg-slate-50">
+        <div className="flex items-center justify-between p-4 border-t border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]">
           {/* Formatting Toolbar */}
           <div className="flex items-center gap-1">
             <TooltipProvider>
@@ -655,7 +655,7 @@ const ComposeEmailDialog = ({
               ].map((tool) => (
                 <Tooltip key={tool.label}>
                   <TooltipTrigger asChild>
-                    <button className="p-2 rounded-lg hover:bg-slate-200 text-slate-500 transition-colors">
+                    <button className="p-2 rounded-md hover:bg-slate-200 text-[#94A3B8] transition-colors">
                       <tool.icon size={16} />
                     </button>
                   </TooltipTrigger>
@@ -667,7 +667,7 @@ const ComposeEmailDialog = ({
               <Separator orientation="vertical" className="h-6 mx-1" />
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <label className="p-2 rounded-lg hover:bg-slate-200 text-slate-500 transition-colors cursor-pointer">
+                  <label className="p-2 rounded-md hover:bg-slate-200 text-[#94A3B8] transition-colors cursor-pointer">
                     <Paperclip size={16} />
                     <input
                       type="file"
@@ -687,7 +687,7 @@ const ComposeEmailDialog = ({
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button className="p-2 rounded-lg hover:bg-slate-200 text-slate-500 transition-colors">
+                  <button className="p-2 rounded-md hover:bg-slate-200 text-[#94A3B8] transition-colors">
                     <Link2 size={16} />
                   </button>
                 </TooltipTrigger>
@@ -697,7 +697,7 @@ const ComposeEmailDialog = ({
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button className="p-2 rounded-lg hover:bg-slate-200 text-slate-500 transition-colors">
+                  <button className="p-2 rounded-md hover:bg-slate-200 text-[#94A3B8] transition-colors">
                     <Smile size={16} />
                   </button>
                 </TooltipTrigger>
@@ -713,24 +713,24 @@ const ComposeEmailDialog = ({
             <Button
               variant="outline"
               onClick={handleSaveDraft}
-              className="rounded-xl"
+              className="rounded-md"
             >
               Save Draft
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl">
+                <Button className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md">
                   <Send size={16} className="mr-2" />
                   Send
                   <ChevronDown size={14} className="ml-2" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 rounded-xl">
-                <DropdownMenuItem onClick={handleSend} className="rounded-lg">
+              <DropdownMenuContent align="end" className="w-48 rounded-md">
+                <DropdownMenuItem onClick={handleSend} className="rounded-md">
                   <Send size={14} className="mr-2" />
                   Send Now
                 </DropdownMenuItem>
-                <DropdownMenuItem className="rounded-lg">
+                <DropdownMenuItem className="rounded-md">
                   <Clock size={14} className="mr-2" />
                   Schedule Send
                 </DropdownMenuItem>
@@ -775,10 +775,10 @@ const EmailListItem = ({
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       className={cn(
-        "flex items-center gap-3 px-4 py-3 cursor-pointer border-b border-slate-100 transition-all group",
+        "flex items-center gap-3 px-4 py-3 cursor-pointer border-b border-[rgba(15,23,42,0.06)] transition-all group",
         isActive
-          ? "bg-[#23D3EE]/10 border-l-4 border-l-[#23D3EE]"
-          : "hover:bg-slate-50",
+          ? "bg-[#0891B2]/10 border-l-4 border-l-[#22D3EE]"
+          : "hover:bg-[#F8FAFC]",
         !email.read && "bg-blue-50/50"
       )}
       onClick={onClick}
@@ -788,16 +788,16 @@ const EmailListItem = ({
         <Checkbox
           checked={isSelected}
           onCheckedChange={onSelect}
-          className="data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
+          className="data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
         />
         <button
           onClick={onStar}
-          className="p-1 rounded-lg hover:bg-slate-200 transition-colors"
+          className="p-1 rounded-md hover:bg-slate-200 transition-colors"
         >
           {email.starred ? (
-            <Star size={16} className="text-[#FBBF23] fill-[#FBBF23]" />
+            <Star size={16} className="text-[#D97706] fill-[#FBBF24]" />
           ) : (
-            <Star size={16} className="text-slate-300 group-hover:text-slate-400" />
+            <Star size={16} className="text-[#475569] group-hover:text-[#475569]" />
           )}
         </button>
         {email.important && (
@@ -813,7 +813,7 @@ const EmailListItem = ({
           className="w-10 h-10 rounded-full object-cover flex-shrink-0"
         />
       ) : (
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+        <div className="w-10 h-10 rounded-full bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] text-sm font-bold flex-shrink-0">
           {getInitials(email.from.name)}
         </div>
       )}
@@ -823,36 +823,36 @@ const EmailListItem = ({
         <div className="flex items-center gap-2 mb-0.5">
           <span className={cn(
             "font-medium truncate",
-            !email.read ? "text-[#0F172A] font-semibold" : "text-slate-600"
+            !email.read ? "text-[#0F172A] font-semibold" : "text-[#475569]"
           )}>
             {email.from.name}
           </span>
           {!email.read && (
-            <span className="w-2 h-2 rounded-full bg-[#23D3EE] flex-shrink-0" />
+            <span className="w-2 h-2 rounded-full bg-[#0891B2] flex-shrink-0" />
           )}
         </div>
         <div className="flex items-center gap-2">
           <span className={cn(
             "truncate",
-            !email.read ? "text-[#0F172A] font-medium" : "text-slate-500"
+            !email.read ? "text-[#0F172A] font-medium" : "text-[#94A3B8]"
           )}>
             {email.subject}
           </span>
         </div>
-        <p className="text-sm text-slate-400 truncate">{email.preview}</p>
+        <p className="text-sm text-[#475569] truncate">{email.preview}</p>
       </div>
 
       {/* Meta */}
       <div className="flex flex-col items-end gap-1 flex-shrink-0">
         <span className={cn(
           "text-xs",
-          !email.read ? "text-[#23D3EE] font-semibold" : "text-slate-400"
+          !email.read ? "text-[#0891B2] font-semibold" : "text-[#475569]"
         )}>
           {email.time}
         </span>
         <div className="flex items-center gap-1">
           {email.hasAttachments && (
-            <Paperclip size={12} className="text-slate-400" />
+            <Paperclip size={12} className="text-[#475569]" />
           )}
           {emailLabels.slice(0, 2).map((label) => (
             <span
@@ -874,7 +874,7 @@ const EmailListItem = ({
             <TooltipTrigger asChild>
               <button
                 onClick={onArchive}
-                className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-400 transition-colors"
+                className="p-1.5 rounded-md hover:bg-slate-200 text-[#475569] transition-colors"
               >
                 <Archive size={14} />
               </button>
@@ -885,7 +885,7 @@ const EmailListItem = ({
             <TooltipTrigger asChild>
               <button
                 onClick={onDelete}
-                className="p-1.5 rounded-lg hover:bg-red-100 text-slate-400 hover:text-red-500 transition-colors"
+                className="p-1.5 rounded-md hover:bg-red-100 text-[#475569] hover:text-red-500 transition-colors"
               >
                 <Trash2 size={14} />
               </button>
@@ -896,7 +896,7 @@ const EmailListItem = ({
             <TooltipTrigger asChild>
               <button
                 onClick={onMarkRead}
-                className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-400 transition-colors"
+                className="p-1.5 rounded-md hover:bg-slate-200 text-[#475569] transition-colors"
               >
                 {email.read ? <Mail size={14} /> : <MailOpen size={14} />}
               </button>
@@ -942,13 +942,13 @@ const EmailDetailView = ({
       className="h-full flex flex-col bg-white"
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-slate-100">
+      <div className="flex items-center justify-between p-4 border-b border-[rgba(15,23,42,0.06)]">
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="h-9 w-9 rounded-lg lg:hidden"
+            className="h-9 w-9 rounded-md lg:hidden"
           >
             <ArrowLeft size={18} />
           </Button>
@@ -965,7 +965,7 @@ const EmailDetailView = ({
                   variant="ghost"
                   size="icon"
                   onClick={onArchive}
-                  className="h-9 w-9 rounded-lg"
+                  className="h-9 w-9 rounded-md"
                 >
                   <Archive size={18} />
                 </Button>
@@ -978,7 +978,7 @@ const EmailDetailView = ({
                   variant="ghost"
                   size="icon"
                   onClick={onDelete}
-                  className="h-9 w-9 rounded-lg text-red-500 hover:text-red-600 hover:bg-red-50"
+                  className="h-9 w-9 rounded-md text-red-500 hover:text-red-600 hover:bg-red-50"
                 >
                   <Trash2 size={18} />
                 </Button>
@@ -991,7 +991,7 @@ const EmailDetailView = ({
                   variant="ghost"
                   size="icon"
                   onClick={onMarkRead}
-                  className="h-9 w-9 rounded-lg"
+                  className="h-9 w-9 rounded-md"
                 >
                   {email.read ? <Mail size={18} /> : <MailOpen size={18} />}
                 </Button>
@@ -1000,28 +1000,28 @@ const EmailDetailView = ({
             </Tooltip>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg">
+                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-md">
                   <MoreVertical size={18} />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 rounded-xl">
-                <DropdownMenuItem className="rounded-lg">
+              <DropdownMenuContent align="end" className="w-48 rounded-md">
+                <DropdownMenuItem className="rounded-md">
                   <Printer size={14} className="mr-2" />
                   Print
                 </DropdownMenuItem>
-                <DropdownMenuItem className="rounded-lg">
+                <DropdownMenuItem className="rounded-md">
                   <Download size={14} className="mr-2" />
                   Download
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuSub>
-                  <DropdownMenuSubTrigger className="rounded-lg">
+                  <DropdownMenuSubTrigger className="rounded-md">
                     <Tag size={14} className="mr-2" />
                     Labels
                   </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="rounded-xl">
+                  <DropdownMenuSubContent className="rounded-md">
                     {labels.map((label) => (
-                      <DropdownMenuItem key={label.id} className="rounded-lg">
+                      <DropdownMenuItem key={label.id} className="rounded-md">
                         <span
                           className="w-3 h-3 rounded-full mr-2"
                           style={{ backgroundColor: label.color }}
@@ -1032,11 +1032,11 @@ const EmailDetailView = ({
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="rounded-lg">
+                <DropdownMenuItem className="rounded-md">
                   <Flag size={14} className="mr-2" />
                   Mark as Important
                 </DropdownMenuItem>
-                <DropdownMenuItem className="rounded-lg">
+                <DropdownMenuItem className="rounded-md">
                   <Clock size={14} className="mr-2" />
                   Snooze
                 </DropdownMenuItem>
@@ -1058,7 +1058,7 @@ const EmailDetailView = ({
                 className="w-12 h-12 rounded-full object-cover"
               />
             ) : (
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white font-bold">
+              <div className="w-12 h-12 rounded-full bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] font-bold">
                 {getInitials(email.from.name)}
               </div>
             )}
@@ -1067,34 +1067,34 @@ const EmailDetailView = ({
                 <span className="font-semibold text-[#0F172A]">{email.from.name}</span>
                 <button onClick={onStar}>
                   {email.starred ? (
-                    <Star size={16} className="text-[#FBBF23] fill-[#FBBF23]" />
+                    <Star size={16} className="text-[#D97706] fill-[#FBBF24]" />
                   ) : (
-                    <Star size={16} className="text-slate-300 hover:text-slate-400" />
+                    <Star size={16} className="text-[#475569] hover:text-[#475569]" />
                   )}
                 </button>
               </div>
-              <p className="text-sm text-slate-500">{email.from.email}</p>
+              <p className="text-sm text-[#94A3B8]">{email.from.email}</p>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs text-slate-400">to me</span>
+                <span className="text-xs text-[#475569]">to me</span>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="text-xs text-slate-400 hover:text-slate-600">
+                    <button className="text-xs text-[#475569] hover:text-[#475569]">
                       <ChevronDown size={12} />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-64 rounded-xl p-3">
+                  <DropdownMenuContent className="w-64 rounded-md p-3">
                     <div className="space-y-2 text-sm">
                       <div>
-                        <span className="text-slate-400">From:</span>{" "}
-                        <span className="text-slate-600">{email.from.email}</span>
+                        <span className="text-[#475569]">From:</span>{" "}
+                        <span className="text-[#475569]">{email.from.email}</span>
                       </div>
                       <div>
-                        <span className="text-slate-400">To:</span>{" "}
-                        <span className="text-slate-600">{email.to.map((t) => t.email).join(", ")}</span>
+                        <span className="text-[#475569]">To:</span>{" "}
+                        <span className="text-[#475569]">{email.to.map((t) => t.email).join(", ")}</span>
                       </div>
                       <div>
-                        <span className="text-slate-400">Date:</span>{" "}
-                        <span className="text-slate-600">{email.date} at {email.time}</span>
+                        <span className="text-[#475569]">Date:</span>{" "}
+                        <span className="text-[#475569]">{email.date} at {email.time}</span>
                       </div>
                     </div>
                   </DropdownMenuContent>
@@ -1103,12 +1103,12 @@ const EmailDetailView = ({
             </div>
           </div>
           <div className="text-right">
-            <span className="text-sm text-slate-500">{email.date}, {email.time}</span>
+            <span className="text-sm text-[#94A3B8]">{email.date}, {email.time}</span>
             <div className="flex items-center gap-1 mt-2 justify-end">
               {emailLabels.map((label) => (
                 <span
                   key={label.id}
-                  className="px-2 py-0.5 rounded-md text-xs font-medium text-white"
+                  className="px-2 py-0.5 rounded-md text-xs font-medium text-[#0F172A]"
                   style={{ backgroundColor: label.color }}
                 >
                   {label.name}
@@ -1120,13 +1120,13 @@ const EmailDetailView = ({
 
         {/* Email Body */}
         <div
-          className="prose prose-sm max-w-none text-slate-600"
+          className="prose prose-sm max-w-none text-[#475569]"
           dangerouslySetInnerHTML={{ __html: email.body }}
         />
 
         {/* Attachments */}
         {email.hasAttachments && email.attachments && (
-          <div className="mt-8 pt-6 border-t border-slate-100">
+          <div className="mt-8 pt-6 border-t border-[rgba(15,23,42,0.06)]">
             <h4 className="text-sm font-semibold text-[#0F172A] mb-3">
               Attachments ({email.attachments.length})
             </h4>
@@ -1135,19 +1135,19 @@ const EmailDetailView = ({
                 <motion.div
                   key={attachment.id}
                   whileHover={{ y: -2 }}
-                  className="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-xl border border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-md transition-all cursor-pointer group"
+                  className="flex items-center gap-3 px-4 py-3 bg-[#F8FAFC] rounded-md border border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-md transition-all cursor-pointer group"
                 >
                   <span className="text-2xl">{getAttachmentIcon(attachment.type)}</span>
                   <div>
-                    <p className="text-sm font-medium text-[#0F172A] group-hover:text-[#23D3EE] transition-colors">
+                    <p className="text-sm font-medium text-[#0F172A] group-hover:text-[#0891B2] transition-colors">
                       {attachment.name}
                     </p>
-                    <p className="text-xs text-slate-400">{attachment.size}</p>
+                    <p className="text-xs text-[#475569]">{attachment.size}</p>
                   </div>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="h-8 w-8 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <Download size={14} />
                   </Button>
@@ -1159,19 +1159,19 @@ const EmailDetailView = ({
       </div>
 
       {/* Reply Actions */}
-      <div className="p-4 border-t border-slate-100 bg-slate-50">
+      <div className="p-4 border-t border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]">
         <div className="flex items-center gap-3">
           <Button
             onClick={onReply}
             variant="outline"
-            className="flex-1 rounded-xl border-slate-200 hover:border-[#23D3EE] hover:text-[#23D3EE]"
+            className="flex-1 rounded-md border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE] hover:text-[#0891B2]"
           >
             <CornerUpLeft size={16} className="mr-2" />
             Reply
           </Button>
           <Button
             variant="outline"
-            className="flex-1 rounded-xl border-slate-200 hover:border-[#23D3EE] hover:text-[#23D3EE]"
+            className="flex-1 rounded-md border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE] hover:text-[#0891B2]"
           >
             <ReplyAll size={16} className="mr-2" />
             Reply All
@@ -1179,7 +1179,7 @@ const EmailDetailView = ({
           <Button
             onClick={onForward}
             variant="outline"
-            className="flex-1 rounded-xl border-slate-200 hover:border-[#23D3EE] hover:text-[#23D3EE]"
+            className="flex-1 rounded-md border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE] hover:text-[#0891B2]"
           >
             <CornerUpRight size={16} className="mr-2" />
             Forward
@@ -1361,7 +1361,7 @@ const LetterBoxPage = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen bg-[#F8FAFC]">
       <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
 
       <main
@@ -1371,15 +1371,15 @@ const LetterBoxPage = () => {
         )}
       >
         {/* Header */}
-        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200">
+        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-[rgba(15,23,42,0.06)]">
           <div className="px-6 py-4">
             <div className="flex items-center justify-between">
               {/* Title & Breadcrumb */}
               <div>
-                <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
+                <div className="flex items-center gap-2 text-sm text-[#94A3B8] mb-1">
                   <span>Dashboard</span>
                   <ChevronRight size={14} />
-                  <span className="text-[#23D3EE] font-medium">Letter Box</span>
+                  <span className="text-[#0891B2] font-medium">Letter Box</span>
                 </div>
                 <h1 className="text-2xl font-bold text-[#0F172A]">Letter Box</h1>
               </div>
@@ -1387,25 +1387,25 @@ const LetterBoxPage = () => {
               {/* Header Actions */}
               <div className="flex items-center gap-3">
                 <div className="relative">
-                  <button className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors relative">
-                    <Bell size={20} className="text-slate-600" />
+                  <button className="p-2.5 rounded-md bg-white/5 hover:bg-slate-200 transition-colors relative">
+                    <Bell size={20} className="text-[#475569]" />
                     {unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 bg-red-500 rounded-full text-white text-xs font-bold flex items-center justify-center">
+                      <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 bg-red-500 rounded-full text-[#0F172A] text-xs font-bold flex items-center justify-center">
                         {unreadCount}
                       </span>
                     )}
                   </button>
                 </div>
 
-                <div className="flex items-center gap-3 pl-3 border-l border-slate-200">
-                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white font-bold shadow-lg shadow-[#23D3EE]/20">
+                <div className="flex items-center gap-3 pl-3 border-l border-[rgba(15,23,42,0.06)]">
+                  <div className="h-10 w-10 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] font-bold ">
                     SA
                   </div>
                   <div className="hidden sm:block">
                     <p className="text-sm font-semibold text-[#0F172A]">SAdmin</p>
-                    <p className="text-xs text-slate-500">Administrator</p>
+                    <p className="text-xs text-[#94A3B8]">Administrator</p>
                   </div>
-                  <ChevronDown size={16} className="text-slate-400" />
+                  <ChevronDown size={16} className="text-[#475569]" />
                 </div>
               </div>
             </div>
@@ -1415,7 +1415,7 @@ const LetterBoxPage = () => {
         {/* Main Layout */}
         <div className="flex h-[calc(100vh-89px)]">
           {/* Folders Sidebar */}
-          <aside className="w-64 border-r border-slate-200 bg-white p-4 flex flex-col">
+          <aside className="w-64 border-r border-[rgba(15,23,42,0.06)] bg-white p-4 flex flex-col">
             {/* Compose Button */}
             <Button
               onClick={() => {
@@ -1423,7 +1423,7 @@ const LetterBoxPage = () => {
                 setForwardEmail(undefined);
                 setShowCompose(true);
               }}
-              className="w-full h-12 bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl shadow-lg shadow-[#23D3EE]/20 mb-6"
+              className="w-full h-12 bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md  mb-6"
             >
               <MailPlus size={18} className="mr-2" />
               Compose
@@ -1441,16 +1441,16 @@ const LetterBoxPage = () => {
                     setSelectedEmails([]);
                   }}
                   className={cn(
-                    "w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all",
+                    "w-full flex items-center justify-between px-4 py-3 rounded-md transition-all",
                     selectedFolder === folder.id
-                      ? "bg-[#23D3EE]/10 text-[#23D3EE]"
-                      : "text-slate-600 hover:bg-slate-50"
+                      ? "bg-[#0891B2]/10 text-[#0891B2]"
+                      : "text-[#475569] hover:bg-[#F8FAFC]"
                   )}
                 >
                   <div className="flex items-center gap-3">
                     <folder.icon
                       size={18}
-                      className={selectedFolder === folder.id ? "text-[#23D3EE]" : "text-slate-400"}
+                      className={selectedFolder === folder.id ? "text-[#0891B2]" : "text-[#475569]"}
                     />
                     <span className="font-medium">{folder.name}</span>
                   </div>
@@ -1459,10 +1459,10 @@ const LetterBoxPage = () => {
                       className={cn(
                         "px-2 py-0.5 rounded-md text-xs font-semibold",
                         selectedFolder === folder.id
-                          ? "bg-[#23D3EE] text-white"
+                          ? "bg-[#0891B2] text-white"
                           : folder.id === "inbox" && folder.count > 0
-                          ? "bg-[#23D3EE] text-white"
-                          : "bg-slate-100 text-slate-500"
+                          ? "bg-[#0891B2] text-white"
+                          : "bg-white/5 text-[#94A3B8]"
                       )}
                     >
                       {folder.count}
@@ -1473,20 +1473,20 @@ const LetterBoxPage = () => {
             </nav>
 
             {/* Labels */}
-            <div className="pt-4 border-t border-slate-100">
+            <div className="pt-4 border-t border-[rgba(15,23,42,0.06)]">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <h3 className="text-xs font-bold text-[#475569] uppercase tracking-wider">
                   Labels
                 </h3>
-                <button className="p-1 rounded-md hover:bg-slate-100">
-                  <FolderPlus size={14} className="text-slate-400" />
+                <button className="p-1 rounded-md hover:bg-white/10">
+                  <FolderPlus size={14} className="text-[#475569]" />
                 </button>
               </div>
               <div className="space-y-1">
                 {labels.map((label) => (
                   <button
                     key={label.id}
-                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-[#475569] hover:bg-[#F8FAFC] transition-colors"
                   >
                     <span
                       className="w-3 h-3 rounded-full"
@@ -1499,16 +1499,16 @@ const LetterBoxPage = () => {
             </div>
 
             {/* Storage Info */}
-            <div className="pt-4 mt-4 border-t border-slate-100">
-              <div className="p-4 rounded-xl bg-gradient-to-br from-[#23D3EE]/10 to-[#FBBF23]/10">
+            <div className="pt-4 mt-4 border-t border-[rgba(15,23,42,0.06)]">
+              <div className="p-4 rounded-md bg-[#F1F5F9]">
                 <div className="flex items-center gap-2 mb-2">
-                  <Sparkles size={16} className="text-[#23D3EE]" />
+                  <Sparkles size={16} className="text-[#0891B2]" />
                   <span className="text-sm font-semibold text-[#0F172A]">Storage</span>
                 </div>
-                <p className="text-xs text-slate-500 mb-2">2.4 GB of 15 GB used</p>
+                <p className="text-xs text-[#94A3B8] mb-2">2.4 GB of 15 GB used</p>
                 <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-[#23D3EE] to-[#6366F1] rounded-full"
+                    className="h-full bg-[#F1F5F9] rounded-full"
                     style={{ width: "16%" }}
                   />
                 </div>
@@ -1519,12 +1519,12 @@ const LetterBoxPage = () => {
           {/* Email List */}
           <div
             className={cn(
-              "flex-1 flex flex-col bg-white border-r border-slate-200",
+              "flex-1 flex flex-col bg-white border-r border-[rgba(15,23,42,0.06)]",
               activeEmail ? "hidden lg:flex lg:w-[400px] lg:flex-shrink-0" : ""
             )}
           >
             {/* Toolbar */}
-            <div className="flex items-center justify-between p-4 border-b border-slate-100">
+            <div className="flex items-center justify-between p-4 border-b border-[rgba(15,23,42,0.06)]">
               <div className="flex items-center gap-3">
                 <Checkbox
                   checked={
@@ -1532,13 +1532,13 @@ const LetterBoxPage = () => {
                     selectedEmails.length === filteredEmails.length
                   }
                   onCheckedChange={handleSelectAll}
-                  className="data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
+                  className="data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
                 />
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={handleRefresh}
-                  className="h-9 w-9 rounded-lg"
+                  className="h-9 w-9 rounded-md"
                 >
                   <RefreshCw size={16} />
                 </Button>
@@ -1547,13 +1547,13 @@ const LetterBoxPage = () => {
                   <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="flex items-center gap-1 pl-2 border-l border-slate-200"
+                    className="flex items-center gap-1 pl-2 border-l border-[rgba(15,23,42,0.06)]"
                   >
                     <Button
                       variant="ghost"
                       size="icon"
                       onClick={() => handleBulkAction("archive")}
-                      className="h-9 w-9 rounded-lg"
+                      className="h-9 w-9 rounded-md"
                     >
                       <Archive size={16} />
                     </Button>
@@ -1561,43 +1561,43 @@ const LetterBoxPage = () => {
                       variant="ghost"
                       size="icon"
                       onClick={() => handleBulkAction("delete")}
-                      className="h-9 w-9 rounded-lg text-red-500 hover:text-red-600 hover:bg-red-50"
+                      className="h-9 w-9 rounded-md text-red-500 hover:text-red-600 hover:bg-red-50"
                     >
                       <Trash2 size={16} />
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg">
+                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-md">
                           <MoreHorizontal size={16} />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" className="w-48 rounded-xl">
+                      <DropdownMenuContent align="start" className="w-48 rounded-md">
                                                 <DropdownMenuItem
                           onClick={() => handleBulkAction("read")}
-                          className="rounded-lg"
+                          className="rounded-md"
                         >
                           <MailOpen size={14} className="mr-2" />
                           Mark as Read
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => handleBulkAction("unread")}
-                          className="rounded-lg"
+                          className="rounded-md"
                         >
                           <Mail size={14} className="mr-2" />
                           Mark as Unread
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="rounded-lg">
+                        <DropdownMenuItem className="rounded-md">
                           <Star size={14} className="mr-2" />
                           Star Selected
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="rounded-lg">
+                        <DropdownMenuItem className="rounded-md">
                           <Flag size={14} className="mr-2" />
                           Mark Important
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
-                    <span className="text-sm text-slate-500 ml-2">
+                    <span className="text-sm text-[#94A3B8] ml-2">
                       {selectedEmails.length} selected
                     </span>
                   </motion.div>
@@ -1606,51 +1606,51 @@ const LetterBoxPage = () => {
 
               <div className="flex items-center gap-2">
                 <div className="relative">
-                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                   <Input
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Search emails..."
-                    className="h-9 w-64 pl-9 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
+                    className="h-9 w-64 pl-9 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
                   />
                   {searchTerm && (
                     <button
                       onClick={() => setSearchTerm("")}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-slate-100"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-white/10"
                     >
-                      <X size={12} className="text-slate-400" />
+                      <X size={12} className="text-[#475569]" />
                     </button>
                   )}
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg">
+                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-md">
                       <SlidersHorizontal size={16} />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48 rounded-xl">
-                    <DropdownMenuItem className="rounded-lg">
+                  <DropdownMenuContent align="end" className="w-48 rounded-md">
+                    <DropdownMenuItem className="rounded-md">
                       <Clock size={14} className="mr-2" />
                       Sort by Date
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="rounded-lg">
+                    <DropdownMenuItem className="rounded-md">
                       <AtSign size={14} className="mr-2" />
                       Sort by Sender
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="rounded-lg">
+                    <DropdownMenuItem className="rounded-md">
                       <FileText size={14} className="mr-2" />
                       Sort by Subject
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem className="rounded-lg">
+                    <DropdownMenuItem className="rounded-md">
                       <Mail size={14} className="mr-2" />
                       Unread First
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="rounded-lg">
+                    <DropdownMenuItem className="rounded-md">
                       <Star size={14} className="mr-2" />
                       Starred First
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="rounded-lg">
+                    <DropdownMenuItem className="rounded-md">
                       <Paperclip size={14} className="mr-2" />
                       With Attachments
                     </DropdownMenuItem>
@@ -1684,13 +1684,13 @@ const LetterBoxPage = () => {
                   animate={{ opacity: 1, y: 0 }}
                   className="flex flex-col items-center justify-center h-full py-20"
                 >
-                  <div className="w-20 h-20 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
-                    <Inbox size={40} className="text-slate-300" />
+                  <div className="w-20 h-20 rounded-md bg-white/5 flex items-center justify-center mb-4">
+                    <Inbox size={40} className="text-[#475569]" />
                   </div>
                   <h3 className="text-lg font-semibold text-[#0F172A] mb-2">
                     {searchTerm ? "No emails found" : "No emails here"}
                   </h3>
-                  <p className="text-sm text-slate-500 text-center max-w-xs">
+                  <p className="text-sm text-[#94A3B8] text-center max-w-xs">
                     {searchTerm
                       ? `No emails match "${searchTerm}". Try a different search.`
                       : `Your ${selectedFolder} is empty.`}
@@ -1701,15 +1701,15 @@ const LetterBoxPage = () => {
 
             {/* Pagination */}
             {filteredEmails.length > 0 && (
-              <div className="flex items-center justify-between p-4 border-t border-slate-100">
-                <span className="text-sm text-slate-500">
+              <div className="flex items-center justify-between p-4 border-t border-[rgba(15,23,42,0.06)]">
+                <span className="text-sm text-[#94A3B8]">
                   1-{filteredEmails.length} of {filteredEmails.length}
                 </span>
                 <div className="flex items-center gap-1">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 rounded-lg"
+                    className="h-8 w-8 rounded-md"
                     disabled
                   >
                     <ChevronLeft size={16} />
@@ -1717,7 +1717,7 @@ const LetterBoxPage = () => {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 rounded-lg"
+                    className="h-8 w-8 rounded-md"
                     disabled
                   >
                     <ChevronRight size={16} />
@@ -1746,33 +1746,33 @@ const LetterBoxPage = () => {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="hidden lg:flex flex-1 flex-col items-center justify-center bg-slate-50"
+                className="hidden lg:flex flex-1 flex-col items-center justify-center bg-[#F8FAFC]"
               >
                 <div className="text-center">
-                  <div className="w-32 h-32 mx-auto mb-6 rounded-3xl bg-gradient-to-br from-[#23D3EE]/20 to-[#FBBF23]/20 flex items-center justify-center">
-                    <Mail size={56} className="text-[#23D3EE]" />
+                  <div className="w-32 h-32 mx-auto mb-6 rounded-3xl bg-[#F1F5F9] flex items-center justify-center">
+                    <Mail size={56} className="text-[#0891B2]" />
                   </div>
                   <h3 className="text-xl font-semibold text-[#0F172A] mb-2">
                     Select an email to read
                   </h3>
-                  <p className="text-slate-500 max-w-sm">
+                  <p className="text-[#94A3B8] max-w-sm">
                     Click on any email from the list to view its contents here.
                   </p>
                   <div className="flex items-center justify-center gap-4 mt-6">
-                    <div className="flex items-center gap-2 text-sm text-slate-400">
-                      <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
+                    <div className="flex items-center gap-2 text-sm text-[#475569]">
+                      <div className="w-8 h-8 rounded-md bg-white/5 flex items-center justify-center">
                         <span className="text-xs font-bold">↑↓</span>
                       </div>
                       Navigate
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-slate-400">
-                      <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
+                    <div className="flex items-center gap-2 text-sm text-[#475569]">
+                      <div className="w-8 h-8 rounded-md bg-white/5 flex items-center justify-center">
                         <span className="text-xs font-bold">R</span>
                       </div>
                       Reply
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-slate-400">
-                      <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
+                    <div className="flex items-center gap-2 text-sm text-[#475569]">
+                      <div className="w-8 h-8 rounded-md bg-white/5 flex items-center justify-center">
                         <span className="text-xs font-bold">E</span>
                       </div>
                       Archive

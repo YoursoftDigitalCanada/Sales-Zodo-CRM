@@ -42,9 +42,9 @@ interface MessageBubbleProps {
 
 // Message Status Icon Component
 function MessageStatus({ status }: { status: Message["status"] }) {
-  if (status === "sent") return <Check size={14} className="text-gray-400" />;
-  if (status === "delivered") return <CheckCheck size={14} className="text-gray-400" />;
-  return <CheckCheck size={14} className="text-[#23D3EE]" />;
+  if (status === "sent") return <Check size={14} className="text-[#94A3B8]" />;
+  if (status === "delivered") return <CheckCheck size={14} className="text-[#94A3B8]" />;
+  return <CheckCheck size={14} className="text-[#0891B2]" />;
 }
 
 export function MessageBubble({
@@ -68,9 +68,9 @@ export function MessageBubble({
       {!isOwn && (
         <div className="w-8 flex-shrink-0">
           {showAvatar && (
-            <Avatar className="w-8 h-8 rounded-lg">
+            <Avatar className="w-8 h-8 rounded-md">
               <AvatarImage src={senderAvatar} />
-              <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#6366F1] text-white text-xs rounded-lg">
+              <AvatarFallback className="bg-[#F1F5F9] text-[#0F172A] text-xs rounded-md">
                 {getInitials(senderName)}
               </AvatarFallback>
             </Avatar>
@@ -91,9 +91,9 @@ export function MessageBubble({
             <TooltipTrigger asChild>
               <button
                 onClick={() => onReply?.(message)}
-                className="p-1.5 hover:bg-gray-200 rounded-lg bg-white shadow-sm"
+                className="p-1.5 hover:bg-gray-200 rounded-md bg-white shadow-sm"
               >
-                <Reply size={14} className="text-gray-500" />
+                <Reply size={14} className="text-[#475569]" />
               </button>
             </TooltipTrigger>
             <TooltipContent>Reply</TooltipContent>
@@ -101,8 +101,8 @@ export function MessageBubble({
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <button className="p-1.5 hover:bg-gray-200 rounded-lg bg-white shadow-sm">
-                <Smile size={14} className="text-gray-500" />
+              <button className="p-1.5 hover:bg-gray-200 rounded-md bg-white shadow-sm">
+                <Smile size={14} className="text-[#475569]" />
               </button>
             </TooltipTrigger>
             <TooltipContent>React</TooltipContent>
@@ -110,8 +110,8 @@ export function MessageBubble({
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="p-1.5 hover:bg-gray-200 rounded-lg bg-white shadow-sm">
-                <MoreHorizontal size={14} className="text-gray-500" />
+              <button className="p-1.5 hover:bg-gray-200 rounded-md bg-white shadow-sm">
+                <MoreHorizontal size={14} className="text-[#475569]" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align={isOwn ? "start" : "end"}>
@@ -147,10 +147,10 @@ export function MessageBubble({
         {/* Bubble Content */}
         <div
           className={cn(
-            "rounded-2xl px-4 py-2.5 shadow-sm",
+            "rounded-md px-4 py-2.5 shadow-sm",
             isOwn
-              ? "bg-[#23D3EE] text-white rounded-br-md"
-              : "bg-white text-gray-800 rounded-bl-md border border-gray-100"
+              ? "bg-[#0891B2] text-white rounded-br-md"
+              : "bg-white text-[#0F172A] rounded-bl-md border border-[rgba(15,23,42,0.06)]"
           )}
         >
           {/* Attachments */}
@@ -159,43 +159,43 @@ export function MessageBubble({
               {message.attachments.map((attachment) => (
                 <div key={attachment.id}>
                   {attachment.type === "image" ? (
-                    <div className="rounded-lg overflow-hidden">
+                    <div className="rounded-md overflow-hidden">
                       <img
                         src={attachment.preview || attachment.url}
                         alt={attachment.name}
-                        className="max-w-full h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                        className="max-w-full h-auto rounded-md cursor-pointer hover:opacity-90 transition-opacity"
                       />
                     </div>
                   ) : (
                     <div
                       className={cn(
-                        "flex items-center gap-3 p-3 rounded-lg",
-                        isOwn ? "bg-white/10" : "bg-gray-50"
+                        "flex items-center gap-3 p-3 rounded-md",
+                        isOwn ? "bg-white/10" : "bg-white/5"
                       )}
                     >
-                      <div className={cn("p-2 rounded-lg", isOwn ? "bg-white/20" : "bg-[#23D3EE]/10")}>
-                        <FileText size={20} className={isOwn ? "text-white" : "text-[#23D3EE]"} />
+                      <div className={cn("p-2 rounded-md", isOwn ? "bg-white/20" : "bg-[#0891B2]/10")}>
+                        <FileText size={20} className={isOwn ? "text-[#0F172A]" : "text-[#0891B2]"} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p
                           className={cn(
                             "text-sm font-medium truncate",
-                            isOwn ? "text-white" : "text-gray-800"
+                            isOwn ? "text-[#0F172A]" : "text-[#0F172A]"
                           )}
                         >
                           {attachment.name}
                         </p>
-                        <p className={cn("text-xs", isOwn ? "text-white/70" : "text-gray-500")}>
+                        <p className={cn("text-xs", isOwn ? "text-[#0F172A]/70" : "text-[#475569]")}>
                           {attachment.size}
                         </p>
                       </div>
                       <button
                         className={cn(
-                          "p-2 rounded-lg transition-colors",
+                          "p-2 rounded-md transition-colors",
                           isOwn ? "hover:bg-white/20" : "hover:bg-gray-200"
                         )}
                       >
-                        <Download size={16} className={isOwn ? "text-white" : "text-gray-500"} />
+                        <Download size={16} className={isOwn ? "text-[#0F172A]" : "text-[#475569]"} />
                       </button>
                     </div>
                   )}
@@ -209,7 +209,7 @@ export function MessageBubble({
 
           {/* Timestamp & Status */}
           <div className={cn("flex items-center gap-1 mt-1", isOwn ? "justify-end" : "justify-start")}>
-            <span className={cn("text-[10px]", isOwn ? "text-white/70" : "text-gray-400")}>
+            <span className={cn("text-[10px]", isOwn ? "text-[#0F172A]/70" : "text-[#94A3B8]")}>
               {formatFullTime(message.timestamp)}
             </span>
             {isOwn && <MessageStatus status={message.status} />}

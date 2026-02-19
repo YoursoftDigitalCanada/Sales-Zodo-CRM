@@ -110,8 +110,8 @@ const statusOptions = [
 ];
 
 const priorityOptions = [
-  { value: "low", label: "Low", color: "bg-slate-100 text-slate-600 border-slate-200" },
-  { value: "medium", label: "Medium", color: "bg-blue-100 text-blue-600 border-blue-200" },
+  { value: "low", label: "Low", color: "bg-white/5 text-[#475569] border-[rgba(15,23,42,0.06)]" },
+  { value: "medium", label: "Medium", color: "bg-blue-100 text-[#0891B2] border-blue-200" },
   { value: "high", label: "High", color: "bg-amber-100 text-amber-600 border-amber-200" },
   { value: "critical", label: "Critical", color: "bg-red-100 text-red-600 border-red-200" },
 ];
@@ -158,9 +158,9 @@ const getInitials = (name: string) => {
 
 const getStatusColor = (status: string) => {
   const colors: Record<string, { bg: string; text: string; dot: string }> = {
-    not_started: { bg: "bg-slate-100", text: "text-slate-600", dot: "bg-slate-400" },
-    planning: { bg: "bg-blue-100", text: "text-blue-600", dot: "bg-blue-500" },
-    in_progress: { bg: "bg-[#23D3EE]/10", text: "text-[#23D3EE]", dot: "bg-[#23D3EE]" },
+    not_started: { bg: "bg-white/5", text: "text-[#475569]", dot: "bg-slate-400" },
+    planning: { bg: "bg-blue-100", text: "text-[#0891B2]", dot: "bg-[#0891B2]" },
+    in_progress: { bg: "bg-[#0891B2]/10", text: "text-[#0891B2]", dot: "bg-[#0891B2]" },
     on_hold: { bg: "bg-amber-100", text: "text-amber-600", dot: "bg-amber-500" },
     completed: { bg: "bg-green-100", text: "text-green-600", dot: "bg-green-500" },
     cancelled: { bg: "bg-red-100", text: "text-red-600", dot: "bg-red-500" },
@@ -196,26 +196,26 @@ const SectionCard = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
-        "bg-white rounded-2xl border border-slate-200 overflow-hidden",
-        "hover:border-[#23D3EE]/30 hover:shadow-lg hover:shadow-[#23D3EE]/5 transition-all",
+        "bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden",
+        "hover:border-[#22D3EE]/30 hover:shadow-lg  transition-all",
         className
       )}
     >
       <div
         className={cn(
-          "flex items-center justify-between p-5 border-b border-slate-100",
-          collapsible && "cursor-pointer hover:bg-slate-50/50"
+          "flex items-center justify-between p-5 border-b border-[rgba(15,23,42,0.06)]",
+          collapsible && "cursor-pointer hover:bg-[#F8FAFC]/50"
         )}
         onClick={() => collapsible && setIsOpen(!isOpen)}
       >
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#23D3EE]/10 to-[#FBBF23]/10 flex items-center justify-center">
-            <Icon size={20} className="text-[#23D3EE]" />
+          <div className="w-10 h-10 rounded-md bg-[#F1F5F9] flex items-center justify-center">
+            <Icon size={20} className="text-[#0891B2]" />
           </div>
           <div>
             <h3 className="font-semibold text-[#0F172A]">{title}</h3>
             {badge && (
-              <span className="text-xs text-slate-400">{badge}</span>
+              <span className="text-xs text-[#475569]">{badge}</span>
             )}
           </div>
         </div>
@@ -224,7 +224,7 @@ const SectionCard = ({
             animate={{ rotate: isOpen ? 90 : 0 }}
             transition={{ duration: 0.2 }}
           >
-            <ChevronRight size={20} className="text-slate-400" />
+            <ChevronRight size={20} className="text-[#475569]" />
           </motion.div>
         )}
       </div>
@@ -265,33 +265,33 @@ const TeamMemberSelector = ({
           transition={{ delay: index * 0.05 }}
           onClick={() => onToggle(member.id)}
           className={cn(
-            "flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all",
+            "flex items-center gap-3 p-3 rounded-md border cursor-pointer transition-all",
             selectedMembers.includes(member.id)
-              ? "border-[#23D3EE] bg-[#23D3EE]/5"
-              : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+              ? "border-[#22D3EE] bg-[#0891B2]/5"
+              : "border-[rgba(15,23,42,0.06)] hover:border-slate-300 hover:bg-[#F8FAFC]"
           )}
         >
           <div className="relative">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white font-semibold text-sm">
+            <div className="w-10 h-10 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] font-semibold text-sm">
               {getInitials(member.name)}
             </div>
             {selectedMembers.includes(member.id) && (
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                className="absolute -top-1 -right-1 w-5 h-5 bg-[#23D3EE] rounded-full flex items-center justify-center"
+                className="absolute -top-1 -right-1 w-5 h-5 bg-[#0891B2] rounded-full flex items-center justify-center"
               >
-                <CheckCircle2 size={12} className="text-white" />
+                <CheckCircle2 size={12} className="text-[#0F172A]" />
               </motion.div>
             )}
           </div>
           <div className="flex-1">
             <p className="font-medium text-[#0F172A] text-sm">{member.name}</p>
-            <p className="text-xs text-slate-400">{member.role}</p>
+            <p className="text-xs text-[#475569]">{member.role}</p>
           </div>
           <Checkbox
             checked={selectedMembers.includes(member.id)}
-            className="border-slate-300 data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
+            className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
           />
         </motion.div>
       ))}
@@ -323,9 +323,9 @@ const MilestoneEditor = ({
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl group"
+            className="flex items-center gap-3 p-4 bg-[#F8FAFC] rounded-md group"
           >
-            <div className="w-8 h-8 rounded-lg bg-[#23D3EE]/10 flex items-center justify-center text-[#23D3EE] font-semibold text-sm">
+            <div className="w-8 h-8 rounded-md bg-[#0891B2]/10 flex items-center justify-center text-[#0891B2] font-semibold text-sm">
               {index + 1}
             </div>
             <div className="flex-1 grid grid-cols-2 gap-3">
@@ -333,20 +333,20 @@ const MilestoneEditor = ({
                 value={milestone.title}
                 onChange={(e) => onUpdate(milestone.id, "title", e.target.value)}
                 placeholder="Milestone title"
-                className="h-10 rounded-lg border-slate-200 bg-white focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
+                className="h-10 rounded-md border-[rgba(15,23,42,0.06)] bg-white focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
               />
               <Input
                 type="date"
                 value={milestone.dueDate}
                 onChange={(e) => onUpdate(milestone.id, "dueDate", e.target.value)}
-                className="h-10 rounded-lg border-slate-200 bg-white focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
+                className="h-10 rounded-md border-[rgba(15,23,42,0.06)] bg-white focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
               />
             </div>
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={() => onRemove(milestone.id)}
-              className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+              className="p-2 rounded-md text-[#475569] hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
             >
               <X size={16} />
             </motion.button>
@@ -358,7 +358,7 @@ const MilestoneEditor = ({
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
         onClick={onAdd}
-        className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-dashed border-slate-200 text-slate-500 hover:border-[#23D3EE] hover:text-[#23D3EE] hover:bg-[#23D3EE]/5 transition-all"
+        className="w-full flex items-center justify-center gap-2 p-3 rounded-md border-2 border-dashed border-[rgba(15,23,42,0.06)] text-[#94A3B8] hover:border-[#22D3EE] hover:text-[#0891B2] hover:bg-[#0891B2]/5 transition-all"
       >
         <Plus size={18} />
         <span className="font-medium">Add Milestone</span>
@@ -395,13 +395,13 @@ const TagInput = ({
   return (
     <div className="space-y-3">
       <div className="relative">
-        <Hash size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <Hash size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Type and press Enter to add tags"
-          className="h-11 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
+          className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
         />
       </div>
       {tags.length > 0 && (
@@ -413,13 +413,13 @@ const TagInput = ({
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#23D3EE]/10 text-[#23D3EE] text-sm font-medium"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#0891B2]/10 text-[#0891B2] text-sm font-medium"
               >
                 <Hash size={12} />
                 {tag}
                 <button
                   onClick={() => onRemove(tag)}
-                  className="ml-1 hover:bg-[#23D3EE]/20 rounded p-0.5 transition-colors"
+                  className="ml-1 hover:bg-[#0891B2]/20 rounded p-0.5 transition-colors"
                 >
                   <X size={12} />
                 </button>
@@ -471,10 +471,10 @@ const FileUploadZone = ({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         animate={{
-          borderColor: isDragging ? "#23D3EE" : "#e2e8f0",
+          borderColor: isDragging ? "#22D3EE" : "#e2e8f0",
           backgroundColor: isDragging ? "rgba(23, 195, 178, 0.05)" : "transparent",
         }}
-        className="border-2 border-dashed rounded-xl p-8 text-center transition-all"
+        className="border-2 border-dashed rounded-md p-8 text-center transition-all"
       >
         <input
           type="file"
@@ -488,14 +488,14 @@ const FileUploadZone = ({
             animate={{ scale: isDragging ? 1.05 : 1 }}
             className="flex flex-col items-center gap-3"
           >
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#23D3EE]/10 to-[#FBBF23]/10 flex items-center justify-center">
-              <Upload size={24} className="text-[#23D3EE]" />
+            <div className="w-14 h-14 rounded-md bg-[#F1F5F9] flex items-center justify-center">
+              <Upload size={24} className="text-[#0891B2]" />
             </div>
             <div>
               <p className="font-medium text-[#0F172A]">
-                Drop files here or <span className="text-[#23D3EE]">browse</span>
+                Drop files here or <span className="text-[#0891B2]">browse</span>
               </p>
-              <p className="text-sm text-slate-400 mt-1">
+              <p className="text-sm text-[#475569] mt-1">
                 Support for PDF, DOC, images, and more
               </p>
             </div>
@@ -512,22 +512,22 @@ const FileUploadZone = ({
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl group"
+                className="flex items-center gap-3 p-3 bg-[#F8FAFC] rounded-md group"
               >
-                <div className="w-10 h-10 rounded-lg bg-[#23D3EE]/10 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-md bg-[#0891B2]/10 flex items-center justify-center">
                   {file.type.includes("image") ? (
-                    <Image size={18} className="text-[#23D3EE]" />
+                    <Image size={18} className="text-[#0891B2]" />
                   ) : file.type.includes("spreadsheet") || file.name.endsWith(".xlsx") ? (
                     <FileSpreadsheet size={18} className="text-green-600" />
                   ) : (
-                    <FileText size={18} className="text-[#23D3EE]" />
+                    <FileText size={18} className="text-[#0891B2]" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm text-[#0F172A] truncate">
                     {file.name}
                   </p>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-[#475569]">
                     {(file.size / 1024).toFixed(1)} KB
                   </p>
                 </div>
@@ -535,7 +535,7 @@ const FileUploadZone = ({
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   onClick={() => onRemove(index)}
-                  className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+                  className="p-2 rounded-md text-[#475569] hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
                 >
                   <X size={16} />
                 </motion.button>
@@ -563,29 +563,29 @@ const ProgressIndicator = ({
     if (value < 25) return "from-slate-400 to-slate-500";
     if (value < 50) return "from-amber-400 to-amber-500";
     if (value < 75) return "from-blue-400 to-blue-500";
-    return "from-[#23D3EE] to-emerald-500";
+    return "from-[#22D3EE] to-emerald-500";
   };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <span className="text-sm text-slate-500">Project Progress</span>
+        <span className="text-sm text-[#94A3B8]">Project Progress</span>
         <motion.span
           key={value}
           initial={{ scale: 0.8 }}
           animate={{ scale: 1 }}
           className={cn(
-            "px-3 py-1 rounded-lg font-bold text-lg",
-            value >= 75 ? "bg-[#23D3EE]/10 text-[#23D3EE]" : "bg-slate-100 text-slate-600"
+            "px-3 py-1 rounded-md font-bold text-lg",
+            value >= 75 ? "bg-[#0891B2]/10 text-[#0891B2]" : "bg-white/5 text-[#475569]"
           )}
         >
           {value}%
         </motion.span>
       </div>
       <div className="relative">
-        <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+        <div className="h-3 bg-white/5 rounded-full overflow-hidden">
           <motion.div
-            className={cn("h-full rounded-full bg-gradient-to-r", getProgressColor())}
+            className={cn("h-full rounded-full ", getProgressColor())}
             initial={{ width: 0 }}
             animate={{ width: `${value}%` }}
             transition={{ duration: 0.5, ease: "easeOut" }}
@@ -599,7 +599,7 @@ const ProgressIndicator = ({
           className="absolute inset-0 opacity-0"
         />
       </div>
-      <div className="flex justify-between text-xs text-slate-400">
+      <div className="flex justify-between text-xs text-[#475569]">
         <span>Not Started</span>
         <span>In Progress</span>
         <span>Completed</span>
@@ -780,7 +780,7 @@ const AddProjectPage = () => {
   const StatusIcon = selectedStatusOption?.icon || CircleDot;
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
+    <div className="flex min-h-screen bg-[#F8FAFC]">
       <Sidebar collapsed={sidebarCollapsed} onCollapse={setSidebarCollapsed} />
 
       <main
@@ -792,21 +792,21 @@ const AddProjectPage = () => {
         {/* ============================================ */}
         {/* HEADER */}
         {/* ============================================ */}
-        <header className="sticky top-0 z-30 backdrop-blur-xl bg-white/80 border-b border-slate-200/50">
+        <header className="sticky top-0 z-30 backdrop-blur-xl bg-white/80 border-b border-[rgba(15,23,42,0.06)]/50">
           <div className="flex h-16 items-center justify-between px-6">
             <div className="flex items-center gap-4">
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => navigate("/projects")}
-                className="p-2 rounded-xl hover:bg-slate-100 text-slate-600 transition-colors"
+                className="p-2 rounded-md hover:bg-white/10 text-[#475569] transition-colors"
               >
                 <ArrowLeft size={20} />
               </motion.button>
 
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-slate-400">Projects</span>
-                <ChevronRight size={16} className="text-slate-300" />
+                <span className="text-[#475569]">Projects</span>
+                <ChevronRight size={16} className="text-[#475569]" />
                 <span className="font-medium text-[#0F172A]">New Project</span>
               </div>
             </div>
@@ -815,14 +815,14 @@ const AddProjectPage = () => {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="relative p-2 rounded-xl hover:bg-slate-100 text-slate-600 transition-colors"
+                className="relative p-2 rounded-md hover:bg-white/10 text-[#475569] transition-colors"
               >
                 <Bell size={20} />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#23D3EE] rounded-full" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#0891B2] rounded-full" />
               </motion.button>
 
-              <div className="flex items-center gap-3 pl-3 border-l border-slate-200">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white font-semibold text-sm">
+              <div className="flex items-center gap-3 pl-3 border-l border-[rgba(15,23,42,0.06)]">
+                <div className="w-9 h-9 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] font-semibold text-sm">
                   {user ? getInitials(`${user.firstName} ${user.lastName}`) : "?"}
                 </div>
               </div>
@@ -841,12 +841,12 @@ const AddProjectPage = () => {
             className="mb-8"
           >
             <div className="flex items-center gap-4 mb-2">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center shadow-lg shadow-[#23D3EE]/25">
-                <FolderPlus size={24} className="text-white" />
+              <div className="w-12 h-12 rounded-md bg-[#F1F5F9] flex items-center justify-center ">
+                <FolderPlus size={24} className="text-[#0F172A]" />
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-[#0F172A]">Create New Project</h1>
-                <p className="text-slate-500">Fill in the details to start a new project</p>
+                <p className="text-[#94A3B8]">Fill in the details to start a new project</p>
               </div>
             </div>
           </motion.div>
@@ -862,55 +862,55 @@ const AddProjectPage = () => {
                   <div className="space-y-5">
                     {/* Project Name */}
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-slate-600">
+                      <Label className="text-sm font-medium text-[#475569]">
                         Project Title <span className="text-red-500">*</span>
                       </Label>
                       <div className="relative">
                         <Briefcase
                           size={18}
-                          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]"
                         />
                         <Input
                           value={name}
                           onChange={(e) => setName(e.target.value)}
                           placeholder="Enter project title"
                           required
-                          className="h-12 pl-11 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20 text-base"
+                          className="h-12 pl-11 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 text-base"
                         />
                       </div>
                     </div>
 
                     {/* Description */}
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-slate-600">Description</Label>
+                      <Label className="text-sm font-medium text-[#475569]">Description</Label>
                       <Textarea
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         placeholder="Describe the project scope, objectives, and key deliverables..."
                         rows={4}
-                        className="rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20 resize-none"
+                        className="rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 resize-none"
                       />
                     </div>
 
                     {/* Client & Category */}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium text-slate-600">
+                        <Label className="text-sm font-medium text-[#475569]">
                           Client <span className="text-red-500">*</span>
                         </Label>
                         <Select value={clientId} onValueChange={setClientId}>
-                          <SelectTrigger className="h-12 rounded-xl border-slate-200">
+                          <SelectTrigger className="h-12 rounded-md border-[rgba(15,23,42,0.06)]">
                             <div className="flex items-center gap-2">
-                              <Building2 size={16} className="text-slate-400" />
+                              <Building2 size={16} className="text-[#475569]" />
                               <SelectValue placeholder="Select client" />
                             </div>
                           </SelectTrigger>
-                          <SelectContent className="rounded-xl">
+                          <SelectContent className="rounded-md">
                             {mockClients.map((client) => (
                               <SelectItem
                                 key={client.id}
                                 value={String(client.id)}
-                                className="rounded-lg"
+                                className="rounded-md"
                               >
                                 {client.name}
                               </SelectItem>
@@ -920,17 +920,17 @@ const AddProjectPage = () => {
                       </div>
 
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium text-slate-600">Category</Label>
+                        <Label className="text-sm font-medium text-[#475569]">Category</Label>
                         <Select value={category} onValueChange={setCategory}>
-                          <SelectTrigger className="h-12 rounded-xl border-slate-200">
+                          <SelectTrigger className="h-12 rounded-md border-[rgba(15,23,42,0.06)]">
                             <div className="flex items-center gap-2">
-                              <Layers size={16} className="text-slate-400" />
+                              <Layers size={16} className="text-[#475569]" />
                               <SelectValue placeholder="Select category" />
                             </div>
                           </SelectTrigger>
-                          <SelectContent className="rounded-xl">
+                          <SelectContent className="rounded-md">
                             {categoryOptions.map((cat) => (
-                              <SelectItem key={cat} value={cat} className="rounded-lg">
+                              <SelectItem key={cat} value={cat} className="rounded-md">
                                 {cat}
                               </SelectItem>
                             ))}
@@ -941,23 +941,23 @@ const AddProjectPage = () => {
 
                     {/* Project Manager */}
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-slate-600">Project Manager</Label>
+                      <Label className="text-sm font-medium text-[#475569]">Project Manager</Label>
                       <Select value={projectManager} onValueChange={setProjectManager}>
-                        <SelectTrigger className="h-12 rounded-xl border-slate-200">
+                        <SelectTrigger className="h-12 rounded-md border-[rgba(15,23,42,0.06)]">
                           <div className="flex items-center gap-2">
-                            <User size={16} className="text-slate-400" />
+                            <User size={16} className="text-[#475569]" />
                             <SelectValue placeholder="Assign project manager" />
                           </div>
                         </SelectTrigger>
-                        <SelectContent className="rounded-xl">
+                        <SelectContent className="rounded-md">
                           {mockTeamMembers.map((member) => (
                             <SelectItem
                               key={member.id}
                               value={String(member.id)}
-                              className="rounded-lg"
+                              className="rounded-md"
                             >
                               <div className="flex items-center gap-2">
-                                <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[#23D3EE] to-[#6366F1] flex items-center justify-center text-white text-xs font-semibold">
+                                <div className="w-6 h-6 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] text-xs font-semibold">
                                   {getInitials(member.name)}
                                 </div>
                                 {member.name}
@@ -976,33 +976,33 @@ const AddProjectPage = () => {
                     {/* Dates */}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium text-slate-600">Start Date</Label>
+                        <Label className="text-sm font-medium text-[#475569]">Start Date</Label>
                         <div className="relative">
                           <CalendarDays
                             size={16}
-                            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                            className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]"
                           />
                           <Input
                             type="date"
                             value={startDate}
                             onChange={(e) => setStartDate(e.target.value)}
-                            className="h-12 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
+                            className="h-12 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
                           />
                         </div>
                       </div>
 
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium text-slate-600">Due Date</Label>
+                        <Label className="text-sm font-medium text-[#475569]">Due Date</Label>
                         <div className="relative">
                           <CalendarDays
                             size={16}
-                            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                            className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]"
                           />
                           <Input
                             type="date"
                             value={dueDate}
                             onChange={(e) => setDueDate(e.target.value)}
-                            className="h-12 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
+                            className="h-12 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
                           />
                         </div>
                       </div>
@@ -1066,15 +1066,15 @@ const AddProjectPage = () => {
                   <div className="space-y-5">
                     {/* Status */}
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-slate-600">Status</Label>
+                      <Label className="text-sm font-medium text-[#475569]">Status</Label>
                       <Select value={status} onValueChange={setStatus}>
-                        <SelectTrigger className="h-12 rounded-xl border-slate-200">
+                        <SelectTrigger className="h-12 rounded-md border-[rgba(15,23,42,0.06)]">
                           <div className="flex items-center gap-2">
-                            <StatusIcon size={16} className="text-slate-400" />
+                            <StatusIcon size={16} className="text-[#475569]" />
                             <SelectValue />
                           </div>
                         </SelectTrigger>
-                        <SelectContent className="rounded-xl">
+                        <SelectContent className="rounded-md">
                           {statusOptions.map((opt) => {
                             const Icon = opt.icon;
                             const colors = getStatusColor(opt.value);
@@ -1082,7 +1082,7 @@ const AddProjectPage = () => {
                               <SelectItem
                                 key={opt.value}
                                 value={opt.value}
-                                className="rounded-lg"
+                                className="rounded-md"
                               >
                                 <div className="flex items-center gap-2">
                                   <span
@@ -1102,7 +1102,7 @@ const AddProjectPage = () => {
 
                     {/* Priority */}
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-slate-600">Priority</Label>
+                      <Label className="text-sm font-medium text-[#475569]">Priority</Label>
                       <div className="grid grid-cols-2 gap-2">
                         {priorityOptions.map((opt) => (
                           <motion.button
@@ -1112,10 +1112,10 @@ const AddProjectPage = () => {
                             whileTap={{ scale: 0.98 }}
                             onClick={() => setPriority(opt.value)}
                             className={cn(
-                              "p-3 rounded-xl border text-sm font-medium transition-all",
+                              "p-3 rounded-md border text-sm font-medium transition-all",
                               priority === opt.value
                                 ? opt.color
-                                : "border-slate-200 text-slate-500 hover:border-slate-300"
+                                : "border-[rgba(15,23,42,0.06)] text-[#94A3B8] hover:border-slate-300"
                             )}
                           >
                             {opt.label}
@@ -1130,37 +1130,37 @@ const AddProjectPage = () => {
                 <SectionCard title="Budget & Time" icon={DollarSign}>
                   <div className="space-y-5">
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-slate-600">Budget</Label>
+                      <Label className="text-sm font-medium text-[#475569]">Budget</Label>
                       <div className="relative">
                         <DollarSign
                           size={16}
-                          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]"
                         />
                         <Input
                           type="number"
                           value={budget}
                           onChange={(e) => setBudget(e.target.value)}
                           placeholder="0.00"
-                          className="h-12 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
+                          className="h-12 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
                         />
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-slate-600">
+                      <Label className="text-sm font-medium text-[#475569]">
                         Estimated Hours
                       </Label>
                       <div className="relative">
                         <Clock
                           size={16}
-                          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]"
                         />
                         <Input
                           type="number"
                           value={estimatedHours}
                           onChange={(e) => setEstimatedHours(e.target.value)}
                           placeholder="0"
-                          className="h-12 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
+                          className="h-12 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
                         />
                       </div>
                     </div>
@@ -1174,12 +1174,12 @@ const AddProjectPage = () => {
 
                 {/* Notifications */}
                 <SectionCard title="Notifications" icon={Bell}>
-                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                  <div className="flex items-center justify-between p-3 bg-[#F8FAFC] rounded-md">
                     <div>
                       <p className="font-medium text-[#0F172A] text-sm">
                         Notify Team Members
                       </p>
-                      <p className="text-xs text-slate-400">
+                      <p className="text-xs text-[#475569]">
                         Send email notifications when created
                       </p>
                     </div>
@@ -1188,7 +1188,7 @@ const AddProjectPage = () => {
                       onCheckedChange={(checked) =>
                         setSendNotification(checked as boolean)
                       }
-                      className="border-slate-300 data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
+                      className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
                     />
                   </div>
                 </SectionCard>
@@ -1202,7 +1202,7 @@ const AddProjectPage = () => {
                   <Button
                     type="submit"
                     disabled={submitting && !saveAsDraft}
-                    className="w-full h-12 bg-gradient-to-r from-[#23D3EE] to-[#23D3EE]/90 hover:from-[#23D3EE]/90 hover:to-[#23D3EE] text-white rounded-xl shadow-lg shadow-[#23D3EE]/25 text-base font-semibold"
+                    className="w-full h-12 bg-[#F1F5F9]/90 hover:from-[#22D3EE]/90 hover:to-[#22D3EE] text-[#0F172A] rounded-md  text-base font-semibold"
                   >
                     {submitting && !saveAsDraft ? (
                       <>
@@ -1222,7 +1222,7 @@ const AddProjectPage = () => {
                     variant="outline"
                     disabled={submitting && saveAsDraft}
                     onClick={(e) => handleSubmit(e, true)}
-                    className="w-full h-11 rounded-xl border-slate-200 hover:bg-slate-50"
+                    className="w-full h-11 rounded-md border-[rgba(15,23,42,0.06)] hover:bg-[#F8FAFC]"
                   >
                     {submitting && saveAsDraft ? (
                       <>
@@ -1241,7 +1241,7 @@ const AddProjectPage = () => {
                     type="button"
                     variant="ghost"
                     onClick={() => navigate("/projects")}
-                    className="w-full h-11 rounded-xl text-slate-500 hover:text-slate-700"
+                    className="w-full h-11 rounded-md text-[#94A3B8] hover:text-slate-200"
                   >
                     Cancel
                   </Button>
@@ -1252,21 +1252,21 @@ const AddProjectPage = () => {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.3 }}
-                  className="p-4 bg-gradient-to-br from-[#23D3EE]/5 to-[#FBBF23]/5 rounded-2xl border border-[#23D3EE]/20"
+                  className="p-4 bg-[#F1F5F9] rounded-md border border-[#22D3EE]/20"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-[#23D3EE]/10 flex items-center justify-center flex-shrink-0">
-                      <HelpCircle size={16} className="text-[#23D3EE]" />
+                    <div className="w-8 h-8 rounded-md bg-[#0891B2]/10 flex items-center justify-center flex-shrink-0">
+                      <HelpCircle size={16} className="text-[#0891B2]" />
                     </div>
                     <div>
                       <p className="font-medium text-[#0F172A] text-sm mb-1">
                         Need Help?
                       </p>
-                      <p className="text-xs text-slate-500 leading-relaxed">
+                      <p className="text-xs text-[#94A3B8] leading-relaxed">
                         Check our project management guide or contact support for
                         assistance.
                       </p>
-                      <button className="mt-2 text-xs font-medium text-[#23D3EE] hover:underline">
+                      <button className="mt-2 text-xs font-medium text-[#0891B2] hover:underline">
                         View Documentation →
                       </button>
                     </div>

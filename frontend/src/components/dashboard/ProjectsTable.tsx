@@ -33,35 +33,35 @@ const projects = [
 ];
 
 const statusStyles = {
-  teal: "bg-[#23D3EE]/10 text-[#23D3EE] border border-[#23D3EE]/20",
-  gold: "bg-[#FBBF23]/10 text-[#FBBF23] border border-[#FBBF23]/20",
+  teal: "bg-[#0891B2]/10 text-[#0891B2] border border-[#22D3EE]/20",
+  gold: "bg-[#D97706]/10 text-[#D97706] border border-[#FBBF24]/20",
   green: "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20",
-  navy: "bg-[#0F172A]/10 text-[#0F172A] border border-[#0F172A]/20",
+  navy: "bg-[#1a1a2e]/10 text-[#0F172A] border border-[#1a1a2e]/20",
 };
 
 const avatarGradients = [
-  "bg-gradient-to-br from-[#23D3EE] to-[#23D3EE]/70",
-  "bg-gradient-to-br from-[#FBBF23] to-[#FBBF23]/70",
-  "bg-gradient-to-br from-[#0F172A] to-[#0F172A]/70",
-  "bg-gradient-to-br from-purple-500 to-purple-400",
+  "bg-[#F1F5F9]/70",
+  "bg-[#F1F5F9]/70",
+  "bg-[#F1F5F9]/70",
+  "r from-purple-500 to-purple-400",
 ];
 
 export function ProjectsTable() {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+    <div className="bg-white/5 rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden">
       {/* Header */}
-      <div className="p-6 border-b border-slate-100">
+      <div className="p-6 border-b border-[rgba(15,23,42,0.06)]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#23D3EE]/10 flex items-center justify-center">
-              <FolderKanban size={18} className="text-[#23D3EE]" />
+            <div className="w-10 h-10 rounded-md bg-[#0891B2]/10 flex items-center justify-center">
+              <FolderKanban size={18} className="text-[#0891B2]" />
             </div>
             <div>
               <h3 className="font-semibold text-[#0F172A]">Projects Status</h3>
-              <p className="text-xs text-slate-400">Track your ongoing work</p>
+              <p className="text-xs text-[#475569]">Track your ongoing work</p>
             </div>
           </div>
-          <button className="flex items-center gap-1 text-sm text-[#23D3EE] font-medium hover:underline group">
+          <button className="flex items-center gap-1 text-sm text-[#0891B2] font-medium hover:underline group">
             View All
             <ArrowUpRight size={14} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
           </button>
@@ -72,17 +72,17 @@ export function ProjectsTable() {
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="bg-slate-50/50">
-              <th className="text-left py-3 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            <tr className="bg-white/5/50">
+              <th className="text-left py-3 px-6 text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">
                 Project
               </th>
-              <th className="text-left py-3 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              <th className="text-left py-3 px-6 text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">
                 Team
               </th>
-              <th className="text-left py-3 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              <th className="text-left py-3 px-6 text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">
                 Due Date
               </th>
-              <th className="text-left py-3 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              <th className="text-left py-3 px-6 text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">
                 Status
               </th>
               <th className="py-3 px-6"></th>
@@ -95,10 +95,10 @@ export function ProjectsTable() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.05 * index }}
-                className="hover:bg-slate-50/50 transition-colors group cursor-pointer"
+                className="hover:bg-white/5/50 transition-colors group cursor-pointer"
               >
                 <td className="py-4 px-6">
-                  <span className="font-medium text-[#0F172A] group-hover:text-[#23D3EE] transition-colors">
+                  <span className="font-medium text-[#0F172A] group-hover:text-[#0891B2] transition-colors">
                     {project.name}
                   </span>
                 </td>
@@ -114,7 +114,7 @@ export function ProjectsTable() {
                       >
                         <AvatarFallback
                           className={cn(
-                            "text-white text-xs font-semibold",
+                            "text-[#0F172A] text-xs font-semibold",
                             avatarGradients[i % avatarGradients.length]
                           )}
                         >
@@ -123,14 +123,14 @@ export function ProjectsTable() {
                       </Avatar>
                     ))}
                     {project.teamSize > 3 && (
-                      <div className="h-8 w-8 -ml-2 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-xs font-semibold text-slate-600">
+                      <div className="h-8 w-8 -ml-2 rounded-full bg-white/5 border-2 border-white flex items-center justify-center text-xs font-semibold text-[#475569]">
                         +{project.teamSize - 3}
                       </div>
                     )}
                   </div>
                 </td>
                 <td className="py-4 px-6">
-                  <span className="text-sm text-slate-500">{project.dueDate}</span>
+                  <span className="text-sm text-[#94A3B8]">{project.dueDate}</span>
                 </td>
                 <td className="py-4 px-6">
                   <Badge
@@ -143,7 +143,7 @@ export function ProjectsTable() {
                   </Badge>
                 </td>
                 <td className="py-4 px-6">
-                  <button className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors opacity-0 group-hover:opacity-100">
+                  <button className="p-1.5 rounded-md hover:bg-white/5 text-[#475569] hover:text-[#475569] transition-colors opacity-0 group-hover:opacity-100">
                     <MoreHorizontal size={16} />
                   </button>
                 </td>

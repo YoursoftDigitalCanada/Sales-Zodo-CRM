@@ -156,12 +156,12 @@ const AttendancePage: React.FC = () => {
   };
 
   return (
-    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
+    <div className="p-6 space-y-6 bg-[#F8FAFC] min-h-screen">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Attendance</h1>
-          <p className="text-gray-500 mt-1">
+          <h1 className="text-2xl font-bold text-[#0F172A]">Attendance</h1>
+          <p className="text-[#475569] mt-1">
             Track and manage employee attendance
           </p>
         </div>
@@ -184,7 +184,7 @@ const AttendancePage: React.FC = () => {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="bg-white border border-gray-200">
+        <TabsList className="bg-white">
           <TabsTrigger value="overview" className="gap-2">
             <BarChart3 className="w-4 h-4" />
             Overview
@@ -233,7 +233,7 @@ const AttendancePage: React.FC = () => {
 
           {/* Recent Records */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            <h3 className="text-lg font-semibold text-[#0F172A] mb-4">
               Today's Attendance
             </h3>
             <AttendanceTable
@@ -247,7 +247,7 @@ const AttendancePage: React.FC = () => {
           {/* Filters */}
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
               <Input
                 placeholder="Search by employee name..."
                 value={searchQuery}
@@ -258,7 +258,7 @@ const AttendancePage: React.FC = () => {
 
             <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
               <SelectTrigger className="w-[200px] bg-white">
-                <Users className="w-4 h-4 mr-2 text-gray-400" />
+                <Users className="w-4 h-4 mr-2 text-[#94A3B8]" />
                 <SelectValue placeholder="All Employees" />
               </SelectTrigger>
               <SelectContent>
@@ -273,7 +273,7 @@ const AttendancePage: React.FC = () => {
 
             <Select value={dateRange} onValueChange={setDateRange}>
               <SelectTrigger className="w-[180px] bg-white">
-                <CalendarIcon className="w-4 h-4 mr-2 text-gray-400" />
+                <CalendarIcon className="w-4 h-4 mr-2 text-[#94A3B8]" />
                 <SelectValue placeholder="Date Range" />
               </SelectTrigger>
               <SelectContent>
@@ -294,7 +294,7 @@ const AttendancePage: React.FC = () => {
           <div className="flex flex-col sm:flex-row gap-4 mb-4">
             <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
               <SelectTrigger className="w-[250px] bg-white">
-                <Users className="w-4 h-4 mr-2 text-gray-400" />
+                <Users className="w-4 h-4 mr-2 text-[#94A3B8]" />
                 <SelectValue placeholder="Select Employee" />
               </SelectTrigger>
               <SelectContent>

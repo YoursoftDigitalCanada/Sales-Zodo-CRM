@@ -160,7 +160,7 @@ export function AddTimeEntryDialog({
                           className="w-2 h-2 rounded-full"
                           style={{
                             backgroundColor:
-                              project.color === "teal" ? "#23D3EE" : project.color,
+                              project.color === "teal" ? "#22D3EE" : project.color,
                           }}
                         />
                         {project.name}
@@ -198,7 +198,7 @@ export function AddTimeEntryDialog({
           <div className="space-y-2">
             <Label htmlFor="date">Date *</Label>
             <div className="relative">
-              <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
               <Input
                 id="date"
                 type="date"
@@ -214,7 +214,7 @@ export function AddTimeEntryDialog({
             <div className="space-y-2">
               <Label htmlFor="startTime">Start Time *</Label>
               <div className="relative">
-                <Clock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <Clock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
                 <Input
                   id="startTime"
                   type="time"
@@ -227,7 +227,7 @@ export function AddTimeEntryDialog({
             <div className="space-y-2">
               <Label htmlFor="endTime">End Time *</Label>
               <div className="relative">
-                <Clock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <Clock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
                 <Input
                   id="endTime"
                   type="time"
@@ -240,28 +240,28 @@ export function AddTimeEntryDialog({
           </div>
 
           {/* Duration Preview */}
-          <div className="p-3 bg-gray-50 rounded-lg">
+          <div className="p-3 bg-white/5 rounded-md">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Duration</span>
-              <span className="font-semibold text-gray-800">
+              <span className="text-sm text-[#475569]">Duration</span>
+              <span className="font-semibold text-[#0F172A]">
                 {duration > 0 ? formatDuration(duration) : "Invalid time range"}
               </span>
             </div>
           </div>
 
           {/* Billable Toggle */}
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+          <div className="flex items-center justify-between p-3 bg-white/5 rounded-md">
             <div className="flex items-center gap-2">
-              <DollarSign size={18} className={formData.isBillable ? "text-[#23D3EE]" : "text-gray-400"} />
+              <DollarSign size={18} className={formData.isBillable ? "text-[#0891B2]" : "text-[#94A3B8]"} />
               <div>
-                <p className="text-sm font-medium text-gray-700">Billable</p>
-                <p className="text-xs text-gray-500">Track this time as billable</p>
+                <p className="text-sm font-medium text-slate-200">Billable</p>
+                <p className="text-xs text-[#475569]">Track this time as billable</p>
               </div>
             </div>
             <Switch
               checked={formData.isBillable}
               onCheckedChange={(checked) => setFormData({ ...formData, isBillable: checked })}
-              className="data-[state=checked]:bg-[#23D3EE]"
+              className="data-[state=checked]:bg-[#0891B2]"
             />
           </div>
 
@@ -270,7 +270,7 @@ export function AddTimeEntryDialog({
             <div className="space-y-2">
               <Label htmlFor="hourlyRate">Hourly Rate ($)</Label>
               <div className="relative">
-                <DollarSign size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <DollarSign size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
                 <Input
                   id="hourlyRate"
                   type="number"
@@ -282,7 +282,7 @@ export function AddTimeEntryDialog({
                 />
               </div>
               {earnings > 0 && (
-                <p className="text-sm text-[#23D3EE]">
+                <p className="text-sm text-[#0891B2]">
                   Earnings: ${earnings.toFixed(2)}
                 </p>
               )}
@@ -297,7 +297,7 @@ export function AddTimeEntryDialog({
           <Button
             onClick={handleSubmit}
             disabled={!isValid}
-            className="bg-[#23D3EE] hover:bg-[#23D3EE]/90"
+            className="bg-[#0891B2] hover:bg-[#0891B2]/90"
           >
             {editingEntry ? "Update Entry" : "Add Entry"}
           </Button>

@@ -72,21 +72,21 @@ export function ChatInput({ onSendMessage, replyingTo, onCancelReply, disabled }
   const quickEmojis = ["👍", "❤️", "😊", "😂", "🎉", "🔥", "👏", "💯"];
 
   return (
-    <div className="bg-white border-t border-gray-200 p-4">
+    <div className="bg-white border-t border-[rgba(15,23,42,0.06)] p-4">
       <div className="max-w-3xl mx-auto">
         {/* Reply Preview */}
         {replyingTo && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-3 p-3 bg-gray-50 rounded-lg border-l-4 border-[#23D3EE] flex items-center justify-between"
+            className="mb-3 p-3 bg-white/5 rounded-md border-l-4 border-[#22D3EE] flex items-center justify-between"
           >
             <div className="flex-1 min-w-0">
-              <p className="text-xs text-[#23D3EE] font-medium mb-1">Replying to message</p>
-              <p className="text-sm text-gray-600 truncate">{replyingTo.content}</p>
+              <p className="text-xs text-[#0891B2] font-medium mb-1">Replying to message</p>
+              <p className="text-sm text-[#475569] truncate">{replyingTo.content}</p>
             </div>
-            <button onClick={onCancelReply} className="p-1 hover:bg-gray-200 rounded-lg ml-2">
-              <X size={16} className="text-gray-500" />
+            <button onClick={onCancelReply} className="p-1 hover:bg-gray-200 rounded-md ml-2">
+              <X size={16} className="text-[#475569]" />
             </button>
           </motion.div>
         )}
@@ -99,18 +99,18 @@ export function ChatInput({ onSendMessage, replyingTo, onCancelReply, disabled }
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 disabled={disabled}
-                className="p-2.5 hover:bg-gray-100 rounded-xl transition-all disabled:opacity-50"
+                className="p-2.5 hover:bg-white/10 rounded-md transition-all disabled:opacity-50"
               >
-                <Paperclip size={20} className="text-gray-500" />
+                <Paperclip size={20} className="text-[#475569]" />
               </motion.button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-48">
               <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
-                <ImageIcon size={16} className="mr-2 text-[#23D3EE]" />
+                <ImageIcon size={16} className="mr-2 text-[#0891B2]" />
                 Photo & Video
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
-                <FileText size={16} className="mr-2 text-[#FBBF23]" />
+                <FileText size={16} className="mr-2 text-[#D97706]" />
                 Document
               </DropdownMenuItem>
               <DropdownMenuItem>
@@ -142,14 +142,14 @@ export function ChatInput({ onSendMessage, replyingTo, onCancelReply, disabled }
               onChange={(e) => setMessageInput(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={disabled}
-              className="pr-12 py-3 bg-gray-50 border-gray-200 rounded-xl focus:border-[#23D3EE] focus:ring-[#23D3EE]/20"
+              className="pr-12 py-3 bg-white/5 border-[rgba(15,23,42,0.06)] rounded-md focus:border-[#22D3EE] focus:ring-[#22D3EE]/20"
             />
 
             {/* Emoji Button */}
             <DropdownMenu open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
               <DropdownMenuTrigger asChild>
-                <button className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 hover:bg-gray-200 rounded-lg transition-all">
-                  <Smile size={18} className="text-gray-400" />
+                <button className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 hover:bg-gray-200 rounded-md transition-all">
+                  <Smile size={18} className="text-[#94A3B8]" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="p-2">
@@ -161,7 +161,7 @@ export function ChatInput({ onSendMessage, replyingTo, onCancelReply, disabled }
                         setMessageInput((prev) => prev + emoji);
                         setShowEmojiPicker(false);
                       }}
-                      className="p-2 hover:bg-gray-100 rounded-lg text-xl transition-colors"
+                      className="p-2 hover:bg-white/10 rounded-md text-xl transition-colors"
                     >
                       {emoji}
                     </button>
@@ -178,7 +178,7 @@ export function ChatInput({ onSendMessage, replyingTo, onCancelReply, disabled }
               whileTap={{ scale: 0.95 }}
               onClick={handleSend}
               disabled={disabled}
-              className="p-3 bg-[#23D3EE] text-white rounded-xl hover:bg-[#23D3EE]/90 transition-all shadow-lg shadow-[#23D3EE]/20 disabled:opacity-50"
+              className="p-3 bg-[#0891B2] text-white rounded-md hover:bg-[#0891B2]/90 transition-all  disabled:opacity-50"
             >
               <Send size={20} />
             </motion.button>
@@ -187,7 +187,7 @@ export function ChatInput({ onSendMessage, replyingTo, onCancelReply, disabled }
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               disabled={disabled}
-              className="p-3 bg-gray-100 text-gray-500 rounded-xl hover:bg-gray-200 transition-all disabled:opacity-50"
+              className="p-3 bg-white/5 text-[#475569] rounded-md hover:bg-gray-200 transition-all disabled:opacity-50"
             >
               <Mic size={20} />
             </motion.button>

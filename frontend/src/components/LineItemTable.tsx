@@ -5,7 +5,7 @@ export function LineItemTable() {
 
   return (
     <table className="w-full border mt-6">
-      <thead className="bg-purple-600 text-white">
+      <thead className="bg-purple-600 text-[#0F172A]">
         <tr>
           <th>Item</th><th>HSN</th><th>GST%</th>
           <th>Qty</th><th>Rate</th><th>Total</th>

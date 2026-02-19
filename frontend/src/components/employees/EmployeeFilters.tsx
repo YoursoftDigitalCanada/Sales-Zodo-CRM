@@ -102,7 +102,7 @@ export const EmployeeFilters: React.FC<EmployeeFiltersProps> = ({
       <div className="flex flex-col sm:flex-row gap-4">
         {/* Search Input */}
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
           <Input
             placeholder="Search employees by name, email, or ID..."
             value={searchQuery}
@@ -132,7 +132,7 @@ export const EmployeeFilters: React.FC<EmployeeFiltersProps> = ({
               <SlidersHorizontal className="w-4 h-4" />
               Filters
               {activeFiltersCount > 0 && (
-                <Badge className="ml-1 bg-[#23D3EE] hover:bg-[#23D3EE]">
+                <Badge className="ml-1 bg-[#0891B2] hover:bg-[#0891B2]">
                   {activeFiltersCount}
                 </Badge>
               )}
@@ -141,13 +141,13 @@ export const EmployeeFilters: React.FC<EmployeeFiltersProps> = ({
           <PopoverContent className="w-80" align="end">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h4 className="font-medium text-gray-900">Filters</h4>
+                <h4 className="font-medium text-[#0F172A]">Filters</h4>
                 {activeFiltersCount > 0 && (
                   <Button 
                     variant="ghost" 
                     size="sm" 
                     onClick={clearFilters}
-                    className="h-8 text-gray-500 hover:text-gray-700"
+                    className="h-8 text-[#475569] hover:text-slate-200"
                   >
                     Clear all
                   </Button>
@@ -169,7 +169,7 @@ export const EmployeeFilters: React.FC<EmployeeFiltersProps> = ({
                       />
                       <label
                         htmlFor={`dept-${dept.id}`}
-                        className="text-sm text-gray-700 cursor-pointer"
+                        className="text-sm text-slate-200 cursor-pointer"
                       >
                         {dept.name}
                       </label>
@@ -193,7 +193,7 @@ export const EmployeeFilters: React.FC<EmployeeFiltersProps> = ({
                       />
                       <label
                         htmlFor={`status-${option.value}`}
-                        className="text-sm text-gray-700 cursor-pointer"
+                        className="text-sm text-slate-200 cursor-pointer"
                       >
                         {option.label}
                       </label>
@@ -217,7 +217,7 @@ export const EmployeeFilters: React.FC<EmployeeFiltersProps> = ({
                       />
                       <label
                         htmlFor={`type-${option.value}`}
-                        className="text-sm text-gray-700 cursor-pointer"
+                        className="text-sm text-slate-200 cursor-pointer"
                       >
                         {option.label}
                       </label>
@@ -230,11 +230,11 @@ export const EmployeeFilters: React.FC<EmployeeFiltersProps> = ({
         </Popover>
 
         {/* View Mode Toggle */}
-        <div className="flex rounded-lg border border-gray-200 bg-white p-1">
+        <div className="flex rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-1">
           <Button
             variant={viewMode === 'grid' ? 'default' : 'ghost'}
             size="icon"
-            className={`h-8 w-8 ${viewMode === 'grid' ? 'bg-[#23D3EE] hover:bg-[#23D3EE]/90' : ''}`}
+            className={`h-8 w-8 ${viewMode === 'grid' ? 'bg-[#0891B2] hover:bg-[#0891B2]/90' : ''}`}
             onClick={() => onViewModeChange('grid')}
           >
             <LayoutGrid className="w-4 h-4" />
@@ -242,7 +242,7 @@ export const EmployeeFilters: React.FC<EmployeeFiltersProps> = ({
           <Button
             variant={viewMode === 'table' ? 'default' : 'ghost'}
             size="icon"
-            className={`h-8 w-8 ${viewMode === 'table' ? 'bg-[#23D3EE] hover:bg-[#23D3EE]/90' : ''}`}
+            className={`h-8 w-8 ${viewMode === 'table' ? 'bg-[#0891B2] hover:bg-[#0891B2]/90' : ''}`}
             onClick={() => onViewModeChange('table')}
           >
             <List className="w-4 h-4" />

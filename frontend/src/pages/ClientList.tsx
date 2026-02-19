@@ -307,9 +307,9 @@ const StatCard = ({
   delay?: number;
 }) => {
   const colorClasses = {
-    teal: { bg: "bg-[#23D3EE]", light: "bg-[#23D3EE]/10", text: "text-[#23D3EE]" },
-    gold: { bg: "bg-[#FBBF23]", light: "bg-[#FBBF23]/10", text: "text-[#FBBF23]" },
-    navy: { bg: "bg-[#0F172A]", light: "bg-[#0F172A]/10", text: "text-[#0F172A]" },
+    teal: { bg: "bg-[#0891B2]", light: "bg-[#0891B2]/10", text: "text-[#0891B2]" },
+    gold: { bg: "bg-[#D97706]", light: "bg-[#D97706]/10", text: "text-[#D97706]" },
+    navy: { bg: "bg-[#F8FAFC]", light: "bg-[#F8FAFC]/10", text: "text-[#0F172A]" },
     purple: { bg: "bg-purple-500", light: "bg-purple-500/10", text: "text-purple-500" },
     green: { bg: "bg-emerald-500", light: "bg-emerald-500/10", text: "text-emerald-500" },
     red: { bg: "bg-red-500", light: "bg-red-500/10", text: "text-red-500" },
@@ -323,18 +323,18 @@ const StatCard = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
       whileHover={{ y: -4 }}
-      className="relative bg-white rounded-2xl p-5 border border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5 transition-all overflow-hidden group"
+      className="relative bg-white rounded-md p-5 border border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg  transition-all overflow-hidden group"
     >
       <div className={cn("absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-10 group-hover:opacity-20 transition-all", colors.bg)} />
 
       <div className="relative flex items-start justify-between">
         <div>
-          <p className="text-sm text-slate-500 mb-1">{title}</p>
+          <p className="text-sm text-[#94A3B8] mb-1">{title}</p>
           <p className="text-2xl font-bold text-[#0F172A]">{value}</p>
-          <p className="text-xs text-slate-400 mt-1">{subtitle}</p>
+          <p className="text-xs text-[#475569] mt-1">{subtitle}</p>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", colors.light)}>
+          <div className={cn("w-10 h-10 rounded-md flex items-center justify-center", colors.light)}>
             <Icon size={18} className={colors.text} />
           </div>
           {trend !== undefined && (
@@ -385,8 +385,8 @@ const ClientRow = ({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className={cn(
-        "group hover:bg-slate-50/80 transition-colors cursor-pointer border-b border-slate-100 last:border-0",
-        isSelected && "bg-[#23D3EE]/5"
+        "group hover:bg-[#F8FAFC]/80 transition-colors cursor-pointer border-b border-[rgba(15,23,42,0.06)] last:border-0",
+        isSelected && "bg-[#0891B2]/5"
       )}
       onClick={onView}
     >
@@ -395,7 +395,7 @@ const ClientRow = ({
         <Checkbox
           checked={isSelected}
           onCheckedChange={onSelect}
-          className="border-slate-300 data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
+          className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
         />
       </td>
 
@@ -403,12 +403,12 @@ const ClientRow = ({
       <td className="py-4 px-2" onClick={(e) => e.stopPropagation()}>
         <button
           onClick={onToggleFavorite}
-          className="p-1 rounded-lg hover:bg-slate-100 transition-colors"
+          className="p-1 rounded-md hover:bg-white/10 transition-colors"
         >
           {client.isFavorite ? (
-            <Star size={16} className="text-[#FBBF23] fill-[#FBBF23]" />
+            <Star size={16} className="text-[#D97706] fill-[#FBBF24]" />
           ) : (
-            <StarOff size={16} className="text-slate-300 group-hover:text-slate-400" />
+            <StarOff size={16} className="text-[#475569] group-hover:text-[#475569]" />
           )}
         </button>
       </td>
@@ -423,10 +423,10 @@ const ClientRow = ({
                 <img
                   src={client.profileImage}
                   alt={client.clientName}
-                  className="w-10 h-10 rounded-xl object-cover"
+                  className="w-10 h-10 rounded-md object-cover"
                 />
               ) : (
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#23D3EE]/70 flex items-center justify-center text-white font-semibold text-sm">
+                <div className="w-10 h-10 rounded-md bg-[#F1F5F9]/70 flex items-center justify-center text-[#0F172A] font-semibold text-sm">
                   {getInitials(client.clientName)}
                 </div>
               )}
@@ -435,24 +435,24 @@ const ClientRow = ({
                 className={cn(
                   "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white",
                   client.status === "Active" ? "bg-emerald-500" :
-                    client.status === "Pending" ? "bg-[#FBBF23]" : "bg-slate-400"
+                    client.status === "Pending" ? "bg-[#D97706]" : "bg-slate-400"
                 )}
               />
             </div>
             <div>
-              <div className="font-semibold text-[#0F172A] group-hover:text-[#23D3EE] transition-colors">
+              <div className="font-semibold text-[#0F172A] group-hover:text-[#0891B2] transition-colors">
                 {client.clientName}
               </div>
-              <div className="flex items-center gap-2 text-xs text-slate-400">
+              <div className="flex items-center gap-2 text-xs text-[#475569]">
                 <span>{client.clientType}</span>
                 {client.clientCategory && (
                   <>
                     <span>•</span>
                     <span className={cn(
                       "px-1.5 py-0.5 rounded-full font-medium",
-                      client.clientCategory === "VIP" ? "bg-[#FBBF23]/10 text-[#FBBF23]" :
-                        client.clientCategory === "New" ? "bg-[#23D3EE]/10 text-[#23D3EE]" :
-                          "bg-slate-100 text-slate-500"
+                      client.clientCategory === "VIP" ? "bg-[#D97706]/10 text-[#D97706]" :
+                        client.clientCategory === "New" ? "bg-[#0891B2]/10 text-[#0891B2]" :
+                          "bg-white/5 text-[#94A3B8]"
                     )}>
                       {client.clientCategory}
                     </span>
@@ -468,10 +468,10 @@ const ClientRow = ({
       {columns.find((c) => c.key === "assignedOwner")?.visible && (
         <td className="py-4 px-4">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center">
-              <User size={12} className="text-slate-500" />
+            <div className="w-6 h-6 rounded-md bg-white/5 flex items-center justify-center">
+              <User size={12} className="text-[#94A3B8]" />
             </div>
-            <span className="text-sm text-slate-600">
+            <span className="text-sm text-[#475569]">
               {client.assignedOwner || "Unassigned"}
             </span>
           </div>
@@ -504,9 +504,9 @@ const ClientRow = ({
         <td className="py-4 px-4">
           <div className={cn(
             "flex items-center gap-2 text-sm",
-            isOverdue ? "text-red-600" : "text-slate-600"
+            isOverdue ? "text-red-600" : "text-[#475569]"
           )}>
-            <Clock size={14} className={isOverdue ? "text-red-400" : "text-slate-400"} />
+            <Clock size={14} className={isOverdue ? "text-red-400" : "text-[#475569]"} />
             <span>{getRelativeTime(client.lastInteractionDate)}</span>
             {isOverdue && (
               <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-600 text-[10px] font-semibold">
@@ -525,16 +525,16 @@ const ClientRow = ({
               client.tags.split(",").slice(0, 2).map((tag, i) => (
                 <span
                   key={i}
-                  className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#23D3EE]/10 text-[#23D3EE]"
+                  className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#0891B2]/10 text-[#0891B2]"
                 >
                   {tag.trim()}
                 </span>
               ))
             ) : (
-              <span className="text-slate-300 text-xs">-</span>
+              <span className="text-[#475569] text-xs">-</span>
             )}
             {client.tags && client.tags.split(",").length > 2 && (
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-500">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-white/5 text-[#94A3B8]">
                 +{client.tags.split(",").length - 2}
               </span>
             )}
@@ -545,17 +545,17 @@ const ClientRow = ({
       {/* Contact */}
       {columns.find((c) => c.key === "primaryContactName")?.visible && (
         <td className="py-4 px-4">
-          <div className="text-sm text-slate-600">
+          <div className="text-sm text-[#475569]">
             {client.primaryContactName || "-"}
           </div>
-          <div className="text-xs text-slate-400">{client.primaryEmail}</div>
+          <div className="text-xs text-[#475569]">{client.primaryEmail}</div>
         </td>
       )}
 
       {/* Phone */}
       {columns.find((c) => c.key === "phone")?.visible && (
         <td className="py-4 px-4">
-          <span className="text-sm text-slate-600">{client.phone || "-"}</span>
+          <span className="text-sm text-[#475569]">{client.phone || "-"}</span>
         </td>
       )}
 
@@ -565,13 +565,13 @@ const ClientRow = ({
           <span className={cn(
             "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold",
             client.status === "Active" ? "bg-emerald-100 text-emerald-700" :
-              client.status === "Pending" ? "bg-[#FBBF23]/10 text-[#FBBF23]" :
-                "bg-slate-100 text-slate-600"
+              client.status === "Pending" ? "bg-[#D97706]/10 text-[#D97706]" :
+                "bg-white/5 text-[#475569]"
           )}>
             <span className={cn(
               "w-1.5 h-1.5 rounded-full",
               client.status === "Active" ? "bg-emerald-500" :
-                client.status === "Pending" ? "bg-[#FBBF23]" :
+                client.status === "Pending" ? "bg-[#D97706]" :
                   "bg-slate-400"
             )} />
             {client.status}
@@ -586,7 +586,7 @@ const ClientRow = ({
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={onView}
-            className="p-2 rounded-lg hover:bg-[#23D3EE]/10 text-[#23D3EE] transition-colors"
+            className="p-2 rounded-md hover:bg-[#0891B2]/10 text-[#0891B2] transition-colors"
             title="View"
           >
             <Eye size={16} />
@@ -595,7 +595,7 @@ const ClientRow = ({
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={onEdit}
-            className="p-2 rounded-lg hover:bg-[#FBBF23]/10 text-[#FBBF23] transition-colors"
+            className="p-2 rounded-md hover:bg-[#D97706]/10 text-[#D97706] transition-colors"
             title="Edit"
           >
             <Pencil size={16} />
@@ -603,26 +603,26 @@ const ClientRow = ({
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors">
+              <button className="p-2 rounded-md hover:bg-white/10 text-[#475569] transition-colors">
                 <MoreVertical size={16} />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 rounded-xl">
-              <DropdownMenuItem className="rounded-lg">
+            <DropdownMenuContent align="end" className="w-48 rounded-md">
+              <DropdownMenuItem className="rounded-md">
                 <Mail size={14} className="mr-2" />
                 Send Email
               </DropdownMenuItem>
-              <DropdownMenuItem className="rounded-lg">
+              <DropdownMenuItem className="rounded-md">
                 <Phone size={14} className="mr-2" />
                 Call Client
               </DropdownMenuItem>
-              <DropdownMenuItem className="rounded-lg">
+              <DropdownMenuItem className="rounded-md">
                 <Copy size={14} className="mr-2" />
                 Duplicate
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                className="rounded-lg text-red-600 focus:text-red-600 focus:bg-red-50"
+                className="rounded-md text-red-600 focus:text-red-600 focus:bg-red-50"
                 onClick={onDelete}
               >
                 <Trash2 size={14} className="mr-2" />
@@ -664,9 +664,9 @@ const ClientCard = ({
       exit={{ opacity: 0, scale: 0.9 }}
       whileHover={{ y: -4 }}
       className={cn(
-        "bg-white rounded-2xl border border-slate-200 p-5 cursor-pointer group",
-        "hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5 transition-all",
-        isSelected && "border-[#23D3EE] bg-[#23D3EE]/5"
+        "bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-5 cursor-pointer group",
+        "hover:border-[#22D3EE]/30 hover:shadow-lg  transition-all",
+        isSelected && "border-[#22D3EE] bg-[#0891B2]/5"
       )}
       onClick={onView}
     >
@@ -677,17 +677,17 @@ const ClientCard = ({
             checked={isSelected}
             onCheckedChange={onSelect}
             onClick={(e) => e.stopPropagation()}
-            className="border-slate-300 data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
+            className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
           />
           <div className="relative">
             {client.profileImage ? (
               <img
                 src={client.profileImage}
                 alt={client.clientName}
-                className="w-12 h-12 rounded-xl object-cover"
+                className="w-12 h-12 rounded-md object-cover"
               />
             ) : (
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#23D3EE] to-[#23D3EE]/70 flex items-center justify-center text-white font-semibold">
+              <div className="w-12 h-12 rounded-md bg-[#F1F5F9]/70 flex items-center justify-center text-[#0F172A] font-semibold">
                 {getInitials(client.clientName)}
               </div>
             )}
@@ -695,7 +695,7 @@ const ClientCard = ({
               className={cn(
                 "absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white",
                 client.status === "Active" ? "bg-emerald-500" :
-                  client.status === "Pending" ? "bg-[#FBBF23]" : "bg-slate-400"
+                  client.status === "Pending" ? "bg-[#D97706]" : "bg-slate-400"
               )}
             />
           </div>
@@ -704,32 +704,32 @@ const ClientCard = ({
         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={onToggleFavorite}
-            className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+            className="p-1.5 rounded-md hover:bg-white/10 transition-colors"
           >
             {client.isFavorite ? (
-              <Star size={16} className="text-[#FBBF23] fill-[#FBBF23]" />
+              <Star size={16} className="text-[#D97706] fill-[#FBBF24]" />
             ) : (
-              <StarOff size={16} className="text-slate-300" />
+              <StarOff size={16} className="text-[#475569]" />
             )}
           </button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400">
+              <button className="p-1.5 rounded-md hover:bg-white/10 text-[#475569]">
                 <MoreHorizontal size={16} />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 rounded-xl">
-              <DropdownMenuItem className="rounded-lg" onClick={onView}>
+            <DropdownMenuContent align="end" className="w-48 rounded-md">
+              <DropdownMenuItem className="rounded-md" onClick={onView}>
                 <Eye size={14} className="mr-2" />
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem className="rounded-lg" onClick={onEdit}>
+              <DropdownMenuItem className="rounded-md" onClick={onEdit}>
                 <Pencil size={14} className="mr-2" />
                 Edit
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                className="rounded-lg text-red-600 focus:text-red-600"
+                className="rounded-md text-red-600 focus:text-red-600"
                 onClick={onDelete}
               >
                 <Trash2 size={14} className="mr-2" />
@@ -742,19 +742,19 @@ const ClientCard = ({
 
       {/* Client Info */}
       <div className="mb-4">
-        <h3 className="font-semibold text-[#0F172A] group-hover:text-[#23D3EE] transition-colors mb-1">
+        <h3 className="font-semibold text-[#0F172A] group-hover:text-[#0891B2] transition-colors mb-1">
           {client.clientName}
         </h3>
-        <div className="flex items-center gap-2 text-xs text-slate-400">
+        <div className="flex items-center gap-2 text-xs text-[#475569]">
           <span>{client.clientType}</span>
           {client.clientCategory && (
             <>
               <span>•</span>
               <span className={cn(
                 "px-1.5 py-0.5 rounded-full font-medium",
-                client.clientCategory === "VIP" ? "bg-[#FBBF23]/10 text-[#FBBF23]" :
-                  client.clientCategory === "New" ? "bg-[#23D3EE]/10 text-[#23D3EE]" :
-                    "bg-slate-100 text-slate-500"
+                client.clientCategory === "VIP" ? "bg-[#D97706]/10 text-[#D97706]" :
+                  client.clientCategory === "New" ? "bg-[#0891B2]/10 text-[#0891B2]" :
+                    "bg-white/5 text-[#94A3B8]"
               )}>
                 {client.clientCategory}
               </span>
@@ -765,17 +765,17 @@ const ClientCard = ({
 
       {/* Contact Info */}
       <div className="space-y-2 mb-4">
-        <div className="flex items-center gap-2 text-sm text-slate-600">
-          <Mail size={14} className="text-slate-400" />
+        <div className="flex items-center gap-2 text-sm text-[#475569]">
+          <Mail size={14} className="text-[#475569]" />
           <span className="truncate">{client.primaryEmail}</span>
         </div>
-        <div className="flex items-center gap-2 text-sm text-slate-600">
-          <Phone size={14} className="text-slate-400" />
+        <div className="flex items-center gap-2 text-sm text-[#475569]">
+          <Phone size={14} className="text-[#475569]" />
           <span>{client.phone || "-"}</span>
         </div>
         {client.city && (
-          <div className="flex items-center gap-2 text-sm text-slate-600">
-            <MapPin size={14} className="text-slate-400" />
+          <div className="flex items-center gap-2 text-sm text-[#475569]">
+            <MapPin size={14} className="text-[#475569]" />
             <span>{client.city}{client.state ? `, ${client.state}` : ""}</span>
           </div>
         )}
@@ -787,7 +787,7 @@ const ClientCard = ({
           {client.tags.split(",").slice(0, 3).map((tag, i) => (
             <span
               key={i}
-              className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#23D3EE]/10 text-[#23D3EE]"
+              className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#0891B2]/10 text-[#0891B2]"
             >
               {tag.trim()}
             </span>
@@ -796,15 +796,15 @@ const ClientCard = ({
       )}
 
       {/* Footer Stats */}
-      <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+      <div className="flex items-center justify-between pt-4 border-t border-[rgba(15,23,42,0.06)]">
         <div>
-          <p className="text-xs text-slate-400">Revenue</p>
+          <p className="text-xs text-[#475569]">Revenue</p>
           <p className="font-semibold text-[#0F172A]">
             {formatCurrency(client.totalRevenue)}
           </p>
         </div>
         <div className="text-right">
-          <p className="text-xs text-slate-400">Balance</p>
+          <p className="text-xs text-[#475569]">Balance</p>
           <p className={cn(
             "font-semibold",
             (client.outstandingBalance || 0) > 0 ? "text-red-600" : "text-emerald-600"
@@ -1107,7 +1107,7 @@ const ClientListPage = () => {
   // ============================================
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen bg-[#F8FAFC]">
       <Sidebar
         collapsed={sidebarCollapsed}
         setCollapsed={setSidebarCollapsed}
@@ -1122,18 +1122,18 @@ const ClientListPage = () => {
         {/* ============================================ */}
         {/* HEADER */}
         {/* ============================================ */}
-        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-200/50">
+        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-[rgba(15,23,42,0.06)]/50">
           <div className="flex h-20 items-center justify-between px-6">
             {/* Left - Breadcrumb */}
             <div className="flex items-center gap-2 text-sm">
               <button
                 onClick={() => navigate("/dashboard")}
-                className="text-slate-400 hover:text-[#23D3EE] transition-colors"
+                className="text-[#475569] hover:text-[#0891B2] transition-colors"
               >
                 Dashboard
               </button>
-              <ChevronRight size={14} className="text-slate-300" />
-              <span className="font-semibold text-[#23D3EE]">Clients</span>
+              <ChevronRight size={14} className="text-[#475569]" />
+              <span className="font-semibold text-[#0891B2]">Clients</span>
             </div>
 
             {/* Right - Actions */}
@@ -1142,7 +1142,7 @@ const ClientListPage = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => navigate("/client-list/add")}
-                className="flex items-center gap-2 px-4 py-2.5 bg-[#23D3EE] text-white text-sm font-medium rounded-xl shadow-lg shadow-[#23D3EE]/25 hover:bg-[#23D3EE]/90 transition-colors"
+                className="flex items-center gap-2 px-4 py-2.5 bg-[#0891B2] text-white text-sm font-medium rounded-md  hover:bg-[#0891B2]/90 transition-colors"
               >
                 <Plus size={16} />
                 <span>Add Client</span>
@@ -1151,23 +1151,23 @@ const ClientListPage = () => {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="p-2.5 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors relative"
+                className="p-2.5 rounded-md bg-white/5 text-[#475569] hover:bg-slate-200 transition-colors relative"
               >
                 <Bell size={18} />
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-[#0F172A] text-[10px] font-bold rounded-full flex items-center justify-center">
                   3
                 </span>
               </motion.button>
 
               {/* User */}
-              <div className="flex items-center gap-3 pl-3 ml-3 border-l border-slate-200">
+              <div className="flex items-center gap-3 pl-3 ml-3 border-l border-[rgba(15,23,42,0.06)]">
                 <div className="text-right hidden sm:block">
                   <p className="text-sm font-semibold text-[#0F172A]">
                     {user ? `${user.firstName} ${user.lastName}` : "Guest User"}
                   </p>
-                  <p className="text-xs text-slate-400">Administrator</p>
+                  <p className="text-xs text-[#475569]">Administrator</p>
                 </div>
-                <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-[#23D3EE] via-[#23D3EE]/80 to-[#FBBF23] flex items-center justify-center text-white font-bold shadow-lg">
+                <div className="h-11 w-11 rounded-md bg-[#0891B2] flex items-center justify-center text-[#0F172A] font-bold card-shadow">
                   {user ? (user.firstName[0] + user.lastName[0]).toUpperCase() : "GU"}
                 </div>
               </div>
@@ -1183,10 +1183,10 @@ const ClientListPage = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#0F172A] via-[#0F172A] to-[#23D3EE]/30 p-8"
+            className="relative overflow-hidden rounded-3xl bg-[#F1F5F9] p-8"
           >
-            <div className="absolute top-0 right-0 w-64 h-64 bg-[#23D3EE]/10 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 left-1/2 w-48 h-48 bg-[#FBBF23]/10 rounded-full blur-3xl" />
+            <div className="absolute top-0 right-0 w-64 h-64 bg-[#0891B2]/10 rounded-full blur-3xl" />
+            <div className="absolute bottom-0 left-1/2 w-48 h-48 bg-[#D97706]/10 rounded-full blur-3xl" />
 
             <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
               <div>
@@ -1196,17 +1196,17 @@ const ClientListPage = () => {
                   transition={{ delay: 0.2 }}
                   className="flex items-center gap-2 mb-3"
                 >
-                  <Sparkles size={20} className="text-[#FBBF23]" />
-                  <span className="text-[#FBBF23] text-sm font-medium">
+                  <Sparkles size={20} className="text-[#D97706]" />
+                  <span className="text-[#D97706] text-sm font-medium">
                     Client Management
                   </span>
                 </motion.div>
-                <h1 className="text-3xl lg:text-4xl font-bold text-white mb-2">
-                  Client <span className="text-[#23D3EE]">Directory</span>
+                <h1 className="text-3xl lg:text-4xl font-bold text-[#0F172A] mb-2">
+                  Client <span className="text-[#0891B2]">Directory</span>
                 </h1>
-                <p className="text-slate-300 text-lg max-w-xl">
+                <p className="text-[#475569] text-lg max-w-xl">
                   Manage your client relationships. You have{" "}
-                  <span className="text-[#23D3EE] font-semibold">
+                  <span className="text-[#0891B2] font-semibold">
                     {stats.total} clients
                   </span>{" "}
                   in your database.
@@ -1220,23 +1220,23 @@ const ClientListPage = () => {
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      className="flex items-center gap-2 px-4 py-2.5 bg-white/10 backdrop-blur-sm border border-white/10 text-white rounded-xl hover:bg-white/20 transition-colors"
+                      className="flex items-center gap-2 px-4 py-2.5 bg-white/10 backdrop-blur-sm border border-[rgba(15,23,42,0.06)] text-[#0F172A] rounded-md hover:bg-white/20 transition-colors"
                     >
                       <Download size={16} />
                       Export
                       <ChevronDown size={14} />
                     </motion.button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="rounded-xl">
-                    <DropdownMenuItem onClick={() => handleExport("csv")} className="rounded-lg">
+                  <DropdownMenuContent className="rounded-md">
+                    <DropdownMenuItem onClick={() => handleExport("csv")} className="rounded-md">
                       <FileText size={14} className="mr-2" />
                       Export as CSV
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleExport("excel")} className="rounded-lg">
+                    <DropdownMenuItem onClick={() => handleExport("excel")} className="rounded-md">
                       <FileSpreadsheet size={14} className="mr-2" />
                       Export as Excel
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleExport("pdf")} className="rounded-lg">
+                    <DropdownMenuItem onClick={() => handleExport("pdf")} className="rounded-md">
                       <FileDown size={14} className="mr-2" />
                       Export as PDF
                     </DropdownMenuItem>
@@ -1246,7 +1246,7 @@ const ClientListPage = () => {
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-white/10 backdrop-blur-sm border border-white/10 text-white rounded-xl hover:bg-white/20 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-white/10 backdrop-blur-sm border border-[rgba(15,23,42,0.06)] text-[#0F172A] rounded-md hover:bg-white/20 transition-colors"
                 >
                   <Upload size={16} />
                   Import
@@ -1300,19 +1300,19 @@ const ClientListPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-white rounded-2xl border border-slate-200 p-4"
+            className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4"
           >
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
               {/* Left - Search & Filters */}
               <div className="flex flex-wrap items-center gap-3">
                 {/* Search */}
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#475569]" />
                   <Input
                     placeholder="Search clients..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-64 h-10 pl-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-2 focus:ring-[#23D3EE]/20"
+                    className="w-64 h-10 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
                   />
                 </div>
 
@@ -1321,12 +1321,12 @@ const ClientListPage = () => {
                   value={filters.status}
                   onValueChange={(val) => setFilters({ ...filters, status: val })}
                 >
-                  <SelectTrigger className="w-36 h-10 rounded-xl border-slate-200">
+                  <SelectTrigger className="w-36 h-10 rounded-md border-[rgba(15,23,42,0.06)]">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
-                  <SelectContent className="rounded-xl">
+                  <SelectContent className="rounded-md">
                     {statusOptions.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value} className="rounded-lg">
+                      <SelectItem key={opt.value} value={opt.value} className="rounded-md">
                         {opt.label}
                       </SelectItem>
                     ))}
@@ -1338,12 +1338,12 @@ const ClientListPage = () => {
                   value={filters.category}
                   onValueChange={(val) => setFilters({ ...filters, category: val })}
                 >
-                  <SelectTrigger className="w-36 h-10 rounded-xl border-slate-200">
+                  <SelectTrigger className="w-36 h-10 rounded-md border-[rgba(15,23,42,0.06)]">
                     <SelectValue placeholder="Category" />
                   </SelectTrigger>
-                  <SelectContent className="rounded-xl">
+                  <SelectContent className="rounded-md">
                     {categoryOptions.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value} className="rounded-lg">
+                      <SelectItem key={opt.value} value={opt.value} className="rounded-md">
                         {opt.label}
                       </SelectItem>
                     ))}
@@ -1356,14 +1356,14 @@ const ClientListPage = () => {
                   size="sm"
                   onClick={() => setShowFilters(!showFilters)}
                   className={cn(
-                    "h-10 rounded-xl border-slate-200",
-                    showFilters && "border-[#23D3EE] bg-[#23D3EE]/5"
+                    "h-10 rounded-md border-[rgba(15,23,42,0.06)]",
+                    showFilters && "border-[#22D3EE] bg-[#0891B2]/5"
                   )}
                 >
                   <SlidersHorizontal size={14} className="mr-2" />
                   Filters
                   {activeFiltersCount > 0 && (
-                    <span className="ml-2 px-1.5 py-0.5 rounded-full bg-[#23D3EE] text-white text-[10px] font-bold">
+                    <span className="ml-2 px-1.5 py-0.5 rounded-full bg-[#0891B2] text-white text-[10px] font-bold">
                       {activeFiltersCount}
                     </span>
                   )}
@@ -1375,7 +1375,7 @@ const ClientListPage = () => {
                     variant="ghost"
                     size="sm"
                     onClick={clearFilters}
-                    className="h-10 text-slate-500 hover:text-red-600"
+                    className="h-10 text-[#94A3B8] hover:text-red-600"
                   >
                     <X size={14} className="mr-1" />
                     Clear
@@ -1392,9 +1392,9 @@ const ClientListPage = () => {
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.9 }}
-                      className="flex items-center gap-2 px-3 py-1.5 bg-[#23D3EE]/10 rounded-xl"
+                      className="flex items-center gap-2 px-3 py-1.5 bg-[#0891B2]/10 rounded-md"
                     >
-                      <span className="text-sm font-medium text-[#23D3EE]">
+                      <span className="text-sm font-medium text-[#0891B2]">
                         {selectedClients.length} selected
                       </span>
                       <Button
@@ -1421,12 +1421,12 @@ const ClientListPage = () => {
                 {/* Column Visibility */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-10 rounded-xl border-slate-200">
+                    <Button variant="outline" size="sm" className="h-10 rounded-md border-[rgba(15,23,42,0.06)]">
                       <Columns size={14} className="mr-2" />
                       Columns
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-48 rounded-xl">
+                  <DropdownMenuContent className="w-48 rounded-md">
                     <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
                     {columns.map((col) => (
                       <DropdownMenuCheckboxItem
@@ -1439,7 +1439,7 @@ const ClientListPage = () => {
                             )
                           );
                         }}
-                        className="rounded-lg"
+                        className="rounded-md"
                       >
                         {col.label}
                       </DropdownMenuCheckboxItem>
@@ -1448,14 +1448,14 @@ const ClientListPage = () => {
                 </DropdownMenu>
 
                 {/* View Toggle */}
-                <div className="flex items-center bg-slate-100 rounded-xl p-1">
+                <div className="flex items-center bg-white/5 rounded-md p-1">
                   <button
                     onClick={() => setViewMode("table")}
                     className={cn(
-                      "p-2 rounded-lg transition-colors",
+                      "p-2 rounded-md transition-colors",
                       viewMode === "table"
-                        ? "bg-white text-[#23D3EE] shadow-sm"
-                        : "text-slate-400 hover:text-slate-600"
+                        ? "bg-white text-[#0891B2] shadow-sm"
+                        : "text-[#475569] hover:text-[#475569]"
                     )}
                   >
                     <List size={16} />
@@ -1463,10 +1463,10 @@ const ClientListPage = () => {
                   <button
                     onClick={() => setViewMode("grid")}
                     className={cn(
-                      "p-2 rounded-lg transition-colors",
+                      "p-2 rounded-md transition-colors",
                       viewMode === "grid"
-                        ? "bg-white text-[#23D3EE] shadow-sm"
-                        : "text-slate-400 hover:text-slate-600"
+                        ? "bg-white text-[#0891B2] shadow-sm"
+                        : "text-[#475569] hover:text-[#475569]"
                     )}
                   >
                     <LayoutGrid size={16} />
@@ -1479,7 +1479,7 @@ const ClientListPage = () => {
                   size="icon"
                   onClick={fetchClients}
                   disabled={isLoading}
-                  className="h-10 w-10 rounded-xl border-slate-200"
+                  className="h-10 w-10 rounded-md border-[rgba(15,23,42,0.06)]"
                 >
                   <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
                 </Button>
@@ -1493,10 +1493,10 @@ const ClientListPage = () => {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="flex flex-wrap gap-2 pt-4 mt-4 border-t border-slate-100"
+                  className="flex flex-wrap gap-2 pt-4 mt-4 border-t border-[rgba(15,23,42,0.06)]"
                 >
                   {searchTerm && (
-                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#23D3EE]/10 text-[#23D3EE] text-sm">
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#0891B2]/10 text-[#0891B2] text-sm">
                       Search: "{searchTerm}"
                       <button onClick={() => setSearchTerm("")}>
                         <X size={12} />
@@ -1504,7 +1504,7 @@ const ClientListPage = () => {
                     </span>
                   )}
                   {filters.status !== "all" && (
-                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#23D3EE]/10 text-[#23D3EE] text-sm">
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#0891B2]/10 text-[#0891B2] text-sm">
                       Status: {filters.status}
                       <button onClick={() => setFilters({ ...filters, status: "all" })}>
                         <X size={12} />
@@ -1512,7 +1512,7 @@ const ClientListPage = () => {
                     </span>
                   )}
                   {filters.category !== "all" && (
-                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#23D3EE]/10 text-[#23D3EE] text-sm">
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#0891B2]/10 text-[#0891B2] text-sm">
                       Category: {filters.category}
                       <button onClick={() => setFilters({ ...filters, category: "all" })}>
                         <X size={12} />
@@ -1529,24 +1529,24 @@ const ClientListPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="bg-white rounded-2xl border border-slate-200 overflow-hidden"
+            className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden"
           >
             {isLoading ? (
               <div className="flex flex-col items-center justify-center py-20">
-                <div className="w-16 h-16 rounded-2xl bg-[#23D3EE]/10 flex items-center justify-center mb-4">
-                  <Loader2 className="w-8 h-8 text-[#23D3EE] animate-spin" />
+                <div className="w-16 h-16 rounded-md bg-[#0891B2]/10 flex items-center justify-center mb-4">
+                  <Loader2 className="w-8 h-8 text-[#0891B2] animate-spin" />
                 </div>
-                <p className="text-slate-500">Loading clients...</p>
+                <p className="text-[#94A3B8]">Loading clients...</p>
               </div>
             ) : filteredClients.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20">
-                <div className="w-20 h-20 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
-                  <Users size={32} className="text-slate-300" />
+                <div className="w-20 h-20 rounded-md bg-white/5 flex items-center justify-center mb-4">
+                  <Users size={32} className="text-[#475569]" />
                 </div>
                 <h3 className="text-lg font-semibold text-[#0F172A] mb-2">
                   No clients found
                 </h3>
-                <p className="text-slate-500 mb-4">
+                <p className="text-[#94A3B8] mb-4">
                   {searchTerm || activeFiltersCount > 0
                     ? "Try adjusting your filters"
                     : "Get started by adding your first client"}
@@ -1557,7 +1557,7 @@ const ClientListPage = () => {
                       ? clearFilters()
                       : navigate("/client-list/add")
                   }
-                  className="bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl"
+                  className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
                 >
                   {searchTerm || activeFiltersCount > 0 ? (
                     <>
@@ -1577,7 +1577,7 @@ const ClientListPage = () => {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="bg-slate-50/80 border-b border-slate-100">
+                    <tr className="bg-[#F8FAFC]/80 border-b border-[rgba(15,23,42,0.06)]">
                       {/* Checkbox Header */}
                       <th className="py-4 px-4 text-left">
                         <Checkbox
@@ -1586,13 +1586,13 @@ const ClientListPage = () => {
                             selectedClients.length === paginatedClients.length
                           }
                           onCheckedChange={handleSelectAll}
-                          className="border-slate-300 data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
+                          className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
                         />
                       </th>
 
                       {/* Favorite Header */}
                       <th className="py-4 px-2 text-left">
-                        <Star size={14} className="text-slate-400" />
+                        <Star size={14} className="text-[#475569]" />
                       </th>
 
                       {/* Dynamic Column Headers */}
@@ -1604,7 +1604,7 @@ const ClientListPage = () => {
                           {col.sortable ? (
                             <button
                               onClick={() => handleSort(col.key)}
-                              className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider hover:text-[#23D3EE] transition-colors group"
+                              className="flex items-center gap-2 text-xs font-semibold text-[#94A3B8] uppercase tracking-wider hover:text-[#0891B2] transition-colors group"
                             >
                               {col.label}
                               <ArrowUpDown
@@ -1612,13 +1612,13 @@ const ClientListPage = () => {
                                 className={cn(
                                   "transition-colors",
                                   sortConfig?.key === col.key
-                                    ? "text-[#23D3EE]"
-                                    : "text-slate-300 group-hover:text-slate-400"
+                                    ? "text-[#0891B2]"
+                                    : "text-[#475569] group-hover:text-[#475569]"
                                 )}
                               />
                             </button>
                           ) : (
-                            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                            <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">
                               {col.label}
                             </span>
                           )}
@@ -1627,7 +1627,7 @@ const ClientListPage = () => {
 
                       {/* Actions Header */}
                       <th className="py-4 px-4 text-right">
-                        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                        <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">
                           Actions
                         </span>
                       </th>
@@ -1683,10 +1683,10 @@ const ClientListPage = () => {
 
             {/* Pagination */}
             {filteredClients.length > 0 && (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-slate-100 bg-slate-50/50">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]/50">
                 {/* Results Info */}
                 <div className="flex items-center gap-4">
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-[#94A3B8]">
                     Showing{" "}
                     <span className="font-semibold text-[#0F172A]">
                       {(currentPage - 1) * pageSize + 1}
@@ -1710,12 +1710,12 @@ const ClientListPage = () => {
                       setCurrentPage(1);
                     }}
                   >
-                    <SelectTrigger className="w-20 h-8 rounded-lg border-slate-200 text-sm">
+                    <SelectTrigger className="w-20 h-8 rounded-md border-[rgba(15,23,42,0.06)] text-sm">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl">
+                    <SelectContent className="rounded-md">
                       {[10, 25, 50, 100].map((size) => (
-                        <SelectItem key={size} value={String(size)} className="rounded-lg">
+                        <SelectItem key={size} value={String(size)} className="rounded-md">
                           {size}
                         </SelectItem>
                       ))}
@@ -1731,7 +1731,7 @@ const ClientListPage = () => {
                     size="icon"
                     onClick={() => setCurrentPage(1)}
                     disabled={currentPage === 1}
-                    className="h-8 w-8 rounded-lg border-slate-200"
+                    className="h-8 w-8 rounded-md border-[rgba(15,23,42,0.06)]"
                   >
                     <ChevronsLeft size={14} />
                   </Button>
@@ -1742,7 +1742,7 @@ const ClientListPage = () => {
                     size="icon"
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="h-8 w-8 rounded-lg border-slate-200"
+                    className="h-8 w-8 rounded-md border-[rgba(15,23,42,0.06)]"
                   >
                     <ChevronLeft size={14} />
                   </Button>
@@ -1766,10 +1766,10 @@ const ClientListPage = () => {
                           key={pageNum}
                           onClick={() => setCurrentPage(pageNum)}
                           className={cn(
-                            "h-8 w-8 rounded-lg text-sm font-medium transition-colors",
+                            "h-8 w-8 rounded-md text-sm font-medium transition-colors",
                             currentPage === pageNum
-                              ? "bg-[#23D3EE] text-white"
-                              : "text-slate-600 hover:bg-slate-100"
+                              ? "bg-[#0891B2] text-white"
+                              : "text-[#475569] hover:bg-white/10"
                           )}
                         >
                           {pageNum}
@@ -1784,7 +1784,7 @@ const ClientListPage = () => {
                     size="icon"
                     onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
-                    className="h-8 w-8 rounded-lg border-slate-200"
+                    className="h-8 w-8 rounded-md border-[rgba(15,23,42,0.06)]"
                   >
                     <ChevronRight size={14} />
                   </Button>
@@ -1795,7 +1795,7 @@ const ClientListPage = () => {
                     size="icon"
                     onClick={() => setCurrentPage(totalPages)}
                     disabled={currentPage === totalPages}
-                    className="h-8 w-8 rounded-lg border-slate-200"
+                    className="h-8 w-8 rounded-md border-[rgba(15,23,42,0.06)]"
                   >
                     <ChevronsRight size={14} />
                   </Button>
@@ -1806,22 +1806,22 @@ const ClientListPage = () => {
         </div>
 
         {/* Footer */}
-        <footer className="px-6 py-4 border-t border-slate-200 bg-white">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-slate-400">
+        <footer className="px-6 py-4 border-t border-[rgba(15,23,42,0.06)] bg-white">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-[#475569]">
             <div className="flex items-center gap-2">
               <span>© {new Date().getFullYear()}</span>
               <span className="font-semibold text-[#0F172A]">Yoursoft</span>
-              <span className="text-[#23D3EE] font-semibold">Digital</span>
+              <span className="text-[#0891B2] font-semibold">Digital</span>
               <span>• All rights reserved</span>
             </div>
             <div className="flex items-center gap-4">
-              <a href="#" className="hover:text-[#23D3EE] transition-colors">
+              <a href="#" className="hover:text-[#0891B2] transition-colors">
                 Privacy
               </a>
-              <a href="#" className="hover:text-[#23D3EE] transition-colors">
+              <a href="#" className="hover:text-[#0891B2] transition-colors">
                 Terms
               </a>
-              <a href="#" className="hover:text-[#23D3EE] transition-colors">
+              <a href="#" className="hover:text-[#0891B2] transition-colors">
                 Support
               </a>
             </div>
@@ -1833,15 +1833,15 @@ const ClientListPage = () => {
       {/* DELETE CONFIRMATION DIALOG */}
       {/* ============================================ */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="rounded-2xl">
+        <AlertDialogContent className="rounded-md">
           <AlertDialogHeader>
-            <div className="w-12 h-12 rounded-2xl bg-red-100 flex items-center justify-center mb-4">
+            <div className="w-12 h-12 rounded-md bg-red-100 flex items-center justify-center mb-4">
               <Trash2 className="w-6 h-6 text-red-600" />
             </div>
             <AlertDialogTitle className="text-xl font-bold text-[#0F172A]">
               Delete Client
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-500">
+            <AlertDialogDescription className="text-[#94A3B8]">
               Are you sure you want to delete{" "}
               <span className="font-semibold text-[#0F172A]">
                 {clientToDelete?.clientName}
@@ -1853,14 +1853,14 @@ const ClientListPage = () => {
           <AlertDialogFooter className="gap-3">
             <AlertDialogCancel
               disabled={isDeleting}
-              className="rounded-xl border-slate-200"
+              className="rounded-md border-[rgba(15,23,42,0.06)]"
             >
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteClient}
               disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700 text-white rounded-xl"
+              className="bg-red-600 hover:bg-red-700 text-[#0F172A] rounded-md"
             >
               {isDeleting ? (
                 <>
@@ -1882,15 +1882,15 @@ const ClientListPage = () => {
       {/* BULK DELETE DIALOG */}
       {/* ============================================ */}
       <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
-        <AlertDialogContent className="rounded-2xl">
+        <AlertDialogContent className="rounded-md">
           <AlertDialogHeader>
-            <div className="w-12 h-12 rounded-2xl bg-red-100 flex items-center justify-center mb-4">
+            <div className="w-12 h-12 rounded-md bg-red-100 flex items-center justify-center mb-4">
               <Trash2 className="w-6 h-6 text-red-600" />
             </div>
             <AlertDialogTitle className="text-xl font-bold text-[#0F172A]">
               Delete {selectedClients.length} Clients
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-500">
+            <AlertDialogDescription className="text-[#94A3B8]">
               Are you sure you want to delete{" "}
               <span className="font-semibold text-[#0F172A]">
                 {selectedClients.length} clients
@@ -1901,14 +1901,14 @@ const ClientListPage = () => {
           <AlertDialogFooter className="gap-3">
             <AlertDialogCancel
               disabled={isDeleting}
-              className="rounded-xl border-slate-200"
+              className="rounded-md border-[rgba(15,23,42,0.06)]"
             >
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleBulkDelete}
               disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700 text-white rounded-xl"
+              className="bg-red-600 hover:bg-red-700 text-[#0F172A] rounded-md"
             >
               {isDeleting ? (
                 <>
@@ -1933,36 +1933,36 @@ const ClientListPage = () => {
         open={!!quickViewClient}
         onOpenChange={() => setQuickViewClient(null)}
       >
-        <DialogContent className="sm:max-w-[600px] rounded-2xl p-0 overflow-hidden">
+        <DialogContent className="sm:max-w-[600px] rounded-md p-0 overflow-hidden">
           {quickViewClient && (
             <>
               {/* Header */}
-              <div className="relative p-6 bg-gradient-to-r from-[#0F172A] to-[#23D3EE]/30">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-[#23D3EE]/10 rounded-full blur-2xl" />
+              <div className="relative p-6 bg-[#F1F5F9]/30">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-[#0891B2]/10 rounded-full blur-2xl" />
                 <div className="relative flex items-center gap-4">
                   {quickViewClient.profileImage ? (
                     <img
                       src={quickViewClient.profileImage}
                       alt={quickViewClient.clientName}
-                      className="w-16 h-16 rounded-2xl object-cover border-2 border-white/20"
+                      className="w-16 h-16 rounded-md object-cover border-2 border-white/20"
                     />
                   ) : (
-                    <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center text-white font-bold text-xl">
+                    <div className="w-16 h-16 rounded-md bg-white/20 backdrop-blur flex items-center justify-center text-[#0F172A] font-bold text-xl">
                       {getInitials(quickViewClient.clientName)}
                     </div>
                   )}
                   <div>
-                    <h2 className="text-xl font-bold text-white">
+                    <h2 className="text-xl font-bold text-[#0F172A]">
                       {quickViewClient.clientName}
                     </h2>
-                    <p className="text-white/70">{quickViewClient.clientType}</p>
+                    <p className="text-[#0F172A]/70">{quickViewClient.clientType}</p>
                     <div className="flex items-center gap-2 mt-2">
                       <span
                         className={cn(
                           "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold",
                           quickViewClient.status === "Active"
                             ? "bg-emerald-500/20 text-emerald-300"
-                            : "bg-slate-500/20 text-slate-300"
+                            : "bg-[#F8FAFC]0/20 text-[#475569]"
                         )}
                       >
                         <span
@@ -1976,7 +1976,7 @@ const ClientListPage = () => {
                         {quickViewClient.status}
                       </span>
                       {quickViewClient.clientCategory && (
-                        <span className="px-2 py-0.5 rounded-full bg-[#FBBF23]/20 text-[#FBBF23] text-xs font-semibold">
+                        <span className="px-2 py-0.5 rounded-full bg-[#D97706]/20 text-[#D97706] text-xs font-semibold">
                           {quickViewClient.clientCategory}
                         </span>
                       )}
@@ -1990,7 +1990,7 @@ const ClientListPage = () => {
                 {/* Contact Info */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <p className="text-xs text-slate-400 uppercase tracking-wider">
+                    <p className="text-xs text-[#475569] uppercase tracking-wider">
                       Primary Contact
                     </p>
                     <p className="font-medium text-[#0F172A]">
@@ -1998,7 +1998,7 @@ const ClientListPage = () => {
                     </p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs text-slate-400 uppercase tracking-wider">
+                    <p className="text-xs text-[#475569] uppercase tracking-wider">
                       Email
                     </p>
                     <p className="font-medium text-[#0F172A]">
@@ -2006,7 +2006,7 @@ const ClientListPage = () => {
                     </p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs text-slate-400 uppercase tracking-wider">
+                    <p className="text-xs text-[#475569] uppercase tracking-wider">
                       Phone
                     </p>
                     <p className="font-medium text-[#0F172A]">
@@ -2014,7 +2014,7 @@ const ClientListPage = () => {
                     </p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs text-slate-400 uppercase tracking-wider">
+                    <p className="text-xs text-[#475569] uppercase tracking-wider">
                       Location
                     </p>
                     <p className="font-medium text-[#0F172A]">
@@ -2026,7 +2026,7 @@ const ClientListPage = () => {
 
                 {/* Financial Stats */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 bg-emerald-50 rounded-xl">
+                  <div className="p-4 bg-emerald-50 rounded-md">
                     <p className="text-xs text-emerald-600 uppercase tracking-wider mb-1">
                       Total Revenue
                     </p>
@@ -2036,7 +2036,7 @@ const ClientListPage = () => {
                   </div>
                   <div
                     className={cn(
-                      "p-4 rounded-xl",
+                      "p-4 rounded-md",
                       (quickViewClient.outstandingBalance || 0) > 0
                         ? "bg-red-50"
                         : "bg-emerald-50"
@@ -2068,14 +2068,14 @@ const ClientListPage = () => {
                 {/* Tags */}
                 {quickViewClient.tags && (
                   <div>
-                    <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">
+                    <p className="text-xs text-[#475569] uppercase tracking-wider mb-2">
                       Tags
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {quickViewClient.tags.split(",").map((tag, i) => (
                         <span
                           key={i}
-                          className="px-3 py-1 rounded-full bg-[#23D3EE]/10 text-[#23D3EE] text-sm font-medium"
+                          className="px-3 py-1 rounded-full bg-[#0891B2]/10 text-[#0891B2] text-sm font-medium"
                         >
                           {tag.trim()}
                         </span>
@@ -2085,13 +2085,13 @@ const ClientListPage = () => {
                 )}
 
                 {/* Actions */}
-                <div className="flex gap-3 pt-4 border-t border-slate-100">
+                <div className="flex gap-3 pt-4 border-t border-[rgba(15,23,42,0.06)]">
                   <Button
                     onClick={() => {
                       setQuickViewClient(null);
                       navigate(`/client-list/${quickViewClient.id}`);
                     }}
-                    className="flex-1 bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white rounded-xl"
+                    className="flex-1 bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
                   >
                     <Eye size={16} className="mr-2" />
                     View Full Profile
@@ -2102,7 +2102,7 @@ const ClientListPage = () => {
                       setQuickViewClient(null);
                       navigate(`/client-list/${quickViewClient.id}/edit`);
                     }}
-                    className="flex-1 rounded-xl border-slate-200"
+                    className="flex-1 rounded-md border-[rgba(15,23,42,0.06)]"
                   >
                     <Pencil size={16} className="mr-2" />
                     Edit Client

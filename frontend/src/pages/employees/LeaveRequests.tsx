@@ -195,12 +195,12 @@ const LeaveRequestsPage: React.FC = () => {
   };
 
   return (
-    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
+    <div className="p-6 space-y-6 bg-[#F8FAFC] min-h-screen">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Leave Requests</h1>
-          <p className="text-gray-500 mt-1">
+          <h1 className="text-2xl font-bold text-[#0F172A]">Leave Requests</h1>
+          <p className="text-[#475569] mt-1">
             Manage and approve employee leave requests
           </p>
         </div>
@@ -211,7 +211,7 @@ const LeaveRequestsPage: React.FC = () => {
           </Button>
           <Button
             onClick={() => setIsAddDialogOpen(true)}
-            className="gap-2 bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white shadow-lg shadow-[#23D3EE]/20"
+            className="gap-2 bg-[#0891B2] hover:bg-[#0891B2]/90 text-white "
           >
             <Plus className="w-4 h-4" />
             Request Leave
@@ -234,7 +234,7 @@ const LeaveRequestsPage: React.FC = () => {
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-              <TabsList className="bg-white border border-gray-200">
+              <TabsList className="bg-white">
                 <TabsTrigger value="all" className="gap-2">
                   All
                   <Badge variant="secondary" className="ml-1">
@@ -259,12 +259,12 @@ const LeaveRequestsPage: React.FC = () => {
               </TabsList>
 
               {/* View Mode Toggle */}
-              <div className="flex rounded-lg border border-gray-200 bg-white p-1">
+              <div className="flex rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-1">
                 <Button
                   variant={viewMode === 'cards' ? 'default' : 'ghost'}
                   size="icon"
                   className={`h-8 w-8 ${
-                    viewMode === 'cards' ? 'bg-[#23D3EE] hover:bg-[#23D3EE]/90' : ''
+                    viewMode === 'cards' ? 'bg-[#0891B2] hover:bg-[#0891B2]/90' : ''
                   }`}
                   onClick={() => setViewMode('cards')}
                 >
@@ -274,7 +274,7 @@ const LeaveRequestsPage: React.FC = () => {
                   variant={viewMode === 'table' ? 'default' : 'ghost'}
                   size="icon"
                   className={`h-8 w-8 ${
-                    viewMode === 'table' ? 'bg-[#23D3EE] hover:bg-[#23D3EE]/90' : ''
+                    viewMode === 'table' ? 'bg-[#0891B2] hover:bg-[#0891B2]/90' : ''
                   }`}
                   onClick={() => setViewMode('table')}
                 >
@@ -286,7 +286,7 @@ const LeaveRequestsPage: React.FC = () => {
             {/* Filters */}
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
                 <Input
                   placeholder="Search by employee or reason..."
                   value={searchQuery}
@@ -410,14 +410,14 @@ const LeaveRequestsPage: React.FC = () => {
 
           {/* Empty State */}
           {filteredRequests.length === 0 && (
-            <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Calendar className="w-8 h-8 text-gray-400" />
+            <div className="text-center py-12 bg-white rounded-md border border-[rgba(15,23,42,0.06)]">
+              <div className="w-16 h-16 bg-[#F8FAFC] rounded-full flex items-center justify-center mx-auto mb-4">
+                <Calendar className="w-8 h-8 text-[#94A3B8]" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-1">
+              <h3 className="text-lg font-medium text-[#0F172A] mb-1">
                 No leave requests found
               </h3>
-              <p className="text-gray-500">
+              <p className="text-[#475569]">
                 {searchQuery || typeFilter !== 'all'
                   ? 'Try adjusting your filters'
                   : 'Leave requests will appear here'}
@@ -427,7 +427,7 @@ const LeaveRequestsPage: React.FC = () => {
 
           {/* Leave Calendar */}
           <div className="mt-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            <h3 className="text-lg font-semibold text-[#0F172A] mb-4">
               Leave Calendar
             </h3>
             <LeaveCalendar
@@ -445,9 +445,9 @@ const LeaveRequestsPage: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-xl border border-gray-200 p-6"
+            className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-6"
           >
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            <h3 className="text-lg font-semibold text-[#0F172A] mb-4">
               Quick Actions
             </h3>
             <div className="space-y-3">
@@ -482,9 +482,9 @@ const LeaveRequestsPage: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-white rounded-xl border border-gray-200 p-6"
+            className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-6"
           >
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            <h3 className="text-lg font-semibold text-[#0F172A] mb-4">
               Upcoming Leaves
             </h3>
             <div className="space-y-3">
@@ -497,13 +497,13 @@ const LeaveRequestsPage: React.FC = () => {
                 .map((request) => (
                   <div
                     key={request.id}
-                    className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
+                    className="flex items-center gap-3 p-3 bg-[#F8FAFC] rounded-md"
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">
+                      <p className="text-sm font-medium text-[#0F172A] truncate">
                         {request.employeeName}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-[#475569]">
                         {new Date(request.startDate).toLocaleDateString()} -{' '}
                         {new Date(request.endDate).toLocaleDateString()}
                       </p>
@@ -517,7 +517,7 @@ const LeaveRequestsPage: React.FC = () => {
                 (r) =>
                   r.status === 'approved' && new Date(r.startDate) > new Date()
               ).length === 0 && (
-                <p className="text-sm text-gray-500 text-center py-4">
+                <p className="text-sm text-[#475569] text-center py-4">
                   No upcoming leaves
                 </p>
               )}

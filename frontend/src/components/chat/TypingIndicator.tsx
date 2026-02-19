@@ -104,14 +104,14 @@ export function TypingIndicator({
                 delay: index * 0.15,
                 ease: "easeInOut",
               }}
-              className={cn(config.dot, "bg-[#23D3EE] rounded-full")}
+              className={cn(config.dot, "bg-[#0891B2] rounded-full")}
             />
           ))}
         </div>
         <motion.span
           animate={{ opacity: [0.5, 1, 0.5] }}
           transition={{ duration: 2, repeat: Infinity }}
-          className={cn(config.text, "text-gray-500 font-medium")}
+          className={cn(config.text, "text-[#475569] font-medium")}
         >
           {userName ? `${userName} is typing...` : "typing..."}
         </motion.span>
@@ -147,7 +147,7 @@ export function TypingIndicator({
         ))}
       </div>
       {userName && (
-        <span className={cn(config.text, "text-gray-500 ml-2")}>
+        <span className={cn(config.text, "text-[#475569] ml-2")}>
           {userName} is typing...
         </span>
       )}
@@ -174,7 +174,7 @@ export function PulseTypingIndicator({ className }: PulseTypingIndicatorProps) {
       {[0, 1, 2].map((index) => (
         <motion.div
           key={index}
-          className="w-2 h-2 bg-[#23D3EE] rounded-full"
+          className="w-2 h-2 bg-[#0891B2] rounded-full"
           animate={{
             scale: [1, 1.3, 1],
             opacity: [0.5, 1, 0.5],
@@ -200,7 +200,7 @@ interface WaveTypingIndicatorProps {
 }
 
 export function WaveTypingIndicator({ 
-  color = "#23D3EE", 
+  color = "#22D3EE", 
   className 
 }: WaveTypingIndicatorProps) {
   return (
@@ -250,11 +250,11 @@ export function BounceTypingIndicator({
       exit={{ opacity: 0, y: 10 }}
       className={cn("flex items-center gap-2", className)}
     >
-      <div className="flex items-center gap-1 px-3 py-2 bg-gray-100 rounded-full">
+      <div className="flex items-center gap-1 px-3 py-2 bg-white/5 rounded-full">
         {[0, 1, 2].map((index) => (
           <motion.div
             key={index}
-            className="w-2 h-2 bg-gray-500 rounded-full"
+            className="w-2 h-2 bg-white/50 rounded-full"
             animate={{
               y: [0, -6, 0],
             }}
@@ -268,7 +268,7 @@ export function BounceTypingIndicator({
         ))}
       </div>
       {userName && (
-        <span className="text-xs text-gray-500 font-medium">
+        <span className="text-xs text-[#475569] font-medium">
           {userName} is typing
         </span>
       )}

@@ -384,12 +384,12 @@ const AllEmployeesPage: React.FC = () => {
   };
 
   return (
-    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
+    <div className="p-6 space-y-6 bg-[#F8FAFC] min-h-screen">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">All Employees</h1>
-          <p className="text-gray-500 mt-1">
+          <h1 className="text-2xl font-bold text-[#0F172A]">All Employees</h1>
+          <p className="text-[#475569] mt-1">
             Manage your team members and their information
           </p>
         </div>
@@ -404,7 +404,7 @@ const AllEmployeesPage: React.FC = () => {
           </Button>
           <Button
             onClick={() => setIsAddDialogOpen(true)}
-            className="gap-2 bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white shadow-lg shadow-[#23D3EE]/20"
+            className="gap-2 bg-[#0891B2] hover:bg-[#0891B2]/90 text-white "
           >
             <Plus className="w-4 h-4" />
             Add Employee
@@ -439,17 +439,17 @@ const AllEmployeesPage: React.FC = () => {
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
-          className="flex items-center justify-between p-4 bg-[#23D3EE]/10 rounded-xl border border-[#23D3EE]/20"
+          className="flex items-center justify-between p-4 bg-[#0891B2]/10 rounded-md border border-[#22D3EE]/20"
         >
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[#23D3EE]/20">
-              <Users className="w-5 h-5 text-[#23D3EE]" />
+            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[#0891B2]/20">
+              <Users className="w-5 h-5 text-[#0891B2]" />
             </div>
             <div>
-              <p className="font-medium text-gray-900">
+              <p className="font-medium text-[#0F172A]">
                 {selectedIds.length} employee{selectedIds.length !== 1 ? 's' : ''} selected
               </p>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-[#475569]">
                 Select actions to perform on selected employees
               </p>
             </div>
@@ -524,15 +524,15 @@ const AllEmployeesPage: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center py-16 bg-white rounded-xl border border-gray-200"
+          className="text-center py-16 bg-white rounded-md border border-[rgba(15,23,42,0.06)]"
         >
-          <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Users className="w-10 h-10 text-gray-400" />
+          <div className="w-20 h-20 bg-[#F8FAFC] rounded-full flex items-center justify-center mx-auto mb-4">
+            <Users className="w-10 h-10 text-[#94A3B8]" />
           </div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
+          <h3 className="text-xl font-semibold text-[#0F172A] mb-2">
             No employees found
           </h3>
-          <p className="text-gray-500 mb-6 max-w-md mx-auto">
+          <p className="text-[#475569] mb-6 max-w-md mx-auto">
             {searchQuery ||
               filters.departments.length > 0 ||
               filters.statuses.length > 0 ||
@@ -546,7 +546,7 @@ const AllEmployeesPage: React.FC = () => {
             filters.employmentTypes.length === 0 && (
               <Button
                 onClick={() => setIsAddDialogOpen(true)}
-                className="gap-2 bg-[#23D3EE] hover:bg-[#23D3EE]/90 text-white"
+                className="gap-2 bg-[#0891B2] hover:bg-[#0891B2]/90 text-white"
               >
                 <UserPlus className="w-4 h-4" />
                 Add Your First Employee
@@ -573,7 +573,7 @@ const AllEmployeesPage: React.FC = () => {
 
       {/* Pagination Info */}
       {filteredEmployees.length > 0 && (
-        <div className="flex items-center justify-between text-sm text-gray-500">
+        <div className="flex items-center justify-between text-sm text-[#475569]">
           <p>
             Showing {filteredEmployees.length} of {employees.length} employees
           </p>
@@ -619,7 +619,7 @@ const AllEmployeesPage: React.FC = () => {
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This will permanently delete{' '}
-              <span className="font-semibold text-gray-900">
+              <span className="font-semibold text-[#0F172A]">
                 {employeeToDelete?.firstName} {employeeToDelete?.lastName}
               </span>
               's profile and all associated data. This action cannot be undone.
@@ -644,7 +644,7 @@ const AllEmployeesPage: React.FC = () => {
             <AlertDialogTitle>Delete {selectedIds.length} employees?</AlertDialogTitle>
             <AlertDialogDescription>
               This will permanently delete{' '}
-              <span className="font-semibold text-gray-900">
+              <span className="font-semibold text-[#0F172A]">
                 {selectedIds.length} employee{selectedIds.length !== 1 ? 's' : ''}
               </span>{' '}
               and all their associated data. This action cannot be undone.

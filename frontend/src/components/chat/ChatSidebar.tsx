@@ -75,11 +75,11 @@ export function ChatSidebar({
     });
 
   return (
-    <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
+    <div className="w-80 bg-white border-r border-[rgba(15,23,42,0.06)] flex flex-col">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200">
+      <div className="p-4 border-b border-[rgba(15,23,42,0.06)]">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl font-bold text-gray-800">Messages</h1>
+          <h1 className="text-xl font-bold text-[#0F172A]">Messages</h1>
           <div className="flex items-center gap-2">
             <Tooltip>
               <TooltipTrigger asChild>
@@ -87,7 +87,7 @@ export function ChatSidebar({
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={onNewChat}
-                  className="p-2 bg-[#23D3EE] text-white rounded-lg hover:bg-[#23D3EE]/90 transition-all shadow-lg shadow-[#23D3EE]/20"
+                  className="p-2 bg-[#0891B2] text-white rounded-md hover:bg-[#0891B2]/90 transition-all "
                 >
                   <Plus size={18} />
                 </motion.button>
@@ -99,9 +99,9 @@ export function ChatSidebar({
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-all"
+                  className="p-2 hover:bg-white/10 rounded-md transition-all"
                 >
-                  <MoreVertical size={18} className="text-gray-500" />
+                  <MoreVertical size={18} className="text-[#475569]" />
                 </motion.button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
@@ -129,13 +129,13 @@ export function ChatSidebar({
 
         {/* Search */}
         <div className="relative">
-          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
           <Input
             type="text"
             placeholder="Search conversations..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 bg-gray-50 border-gray-200 focus:border-[#23D3EE] focus:ring-[#23D3EE]/20"
+            className="pl-10 bg-white/5 border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-[#22D3EE]/20"
           />
         </div>
 
@@ -148,10 +148,10 @@ export function ChatSidebar({
               whileTap={{ scale: 0.98 }}
               onClick={() => setFilterType(filter)}
               className={cn(
-                "px-3 py-1.5 text-xs font-medium rounded-lg transition-all capitalize",
+                "px-3 py-1.5 text-xs font-medium rounded-md transition-all capitalize",
                 filterType === filter
-                  ? "bg-[#23D3EE] text-white shadow-lg shadow-[#23D3EE]/20"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  ? "bg-[#0891B2] text-white "
+                  : "bg-white/5 text-[#475569] hover:bg-gray-200"
               )}
             >
               {filter}
@@ -165,11 +165,11 @@ export function ChatSidebar({
         <div className="p-2">
           {filteredConversations.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                <MessageSquare size={24} className="text-gray-400" />
+              <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4">
+                <MessageSquare size={24} className="text-[#94A3B8]" />
               </div>
-              <p className="text-gray-500 font-medium">No conversations found</p>
-              <p className="text-gray-400 text-sm mt-1">Start a new chat to get going</p>
+              <p className="text-[#475569] font-medium">No conversations found</p>
+              <p className="text-[#94A3B8] text-sm mt-1">Start a new chat to get going</p>
             </div>
           ) : (
             <AnimatePresence>
@@ -191,30 +191,30 @@ export function ChatSidebar({
                         <button
                           onClick={() => onSelectConversation(conversation)}
                           className={cn(
-                            "w-full flex items-start gap-3 p-3 rounded-xl transition-all text-left group relative",
+                            "w-full flex items-start gap-3 p-3 rounded-md transition-all text-left group relative",
                             isSelected
-                              ? "bg-[#23D3EE]/10 border border-[#23D3EE]/20"
-                              : "hover:bg-gray-50"
+                              ? "bg-[#0891B2]/10 border border-[#22D3EE]/20"
+                              : "hover:bg-white/5"
                           )}
                         >
                           {/* Pin indicator */}
                           {conversation.isPinned && (
                             <div className="absolute top-2 right-2">
-                              <Pin size={12} className="text-[#23D3EE]" />
+                              <Pin size={12} className="text-[#0891B2]" />
                             </div>
                           )}
 
                           {/* Avatar */}
                           <div className="relative flex-shrink-0">
                             {conversation.type === "group" ? (
-                              <div className="w-12 h-12 bg-gradient-to-br from-[#23D3EE] to-[#23D3EE]/70 rounded-xl flex items-center justify-center">
-                                <Users size={20} className="text-white" />
+                              <div className="w-12 h-12 bg-[#F1F5F9]/70 rounded-md flex items-center justify-center">
+                                <Users size={20} className="text-[#0F172A]" />
                               </div>
                             ) : (
                               <div className="relative">
-                                <Avatar className="w-12 h-12 rounded-xl">
+                                <Avatar className="w-12 h-12 rounded-md">
                                   <AvatarImage src={otherParticipant.avatar} />
-                                  <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#6366F1] text-white rounded-xl">
+                                  <AvatarFallback className="bg-[#F1F5F9] text-[#0F172A] rounded-md">
                                     {getInitials(otherParticipant.name)}
                                   </AvatarFallback>
                                 </Avatar>
@@ -229,21 +229,21 @@ export function ChatSidebar({
                               <span
                                 className={cn(
                                   "font-semibold truncate",
-                                  isSelected ? "text-[#23D3EE]" : "text-gray-800"
+                                  isSelected ? "text-[#0891B2]" : "text-[#0F172A]"
                                 )}
                               >
                                 {displayName}
                               </span>
-                              <span className="text-xs text-gray-400 flex-shrink-0 ml-2">
+                              <span className="text-xs text-[#94A3B8] flex-shrink-0 ml-2">
                                 {conversation.lastMessage &&
                                   formatMessageTime(conversation.lastMessage.timestamp)}
                               </span>
                             </div>
 
                             <div className="flex items-center justify-between">
-                              <p className="text-sm text-gray-500 truncate pr-2">
+                              <p className="text-sm text-[#475569] truncate pr-2">
                                 {conversation.lastMessage?.senderId === currentUser.id && (
-                                  <span className="text-gray-400">You: </span>
+                                  <span className="text-[#94A3B8]">You: </span>
                                 )}
                                 {conversation.lastMessage?.attachments?.length ? (
                                   <span className="flex items-center gap-1">
@@ -256,9 +256,9 @@ export function ChatSidebar({
                               </p>
 
                               <div className="flex items-center gap-2 flex-shrink-0">
-                                {conversation.isMuted && <BellOff size={14} className="text-gray-400" />}
+                                {conversation.isMuted && <BellOff size={14} className="text-[#94A3B8]" />}
                                 {conversation.unreadCount > 0 && (
-                                  <span className="min-w-[20px] h-5 bg-[#23D3EE] text-white text-xs font-bold rounded-full flex items-center justify-center px-1.5">
+                                  <span className="min-w-[20px] h-5 bg-[#0891B2] text-white text-xs font-bold rounded-full flex items-center justify-center px-1.5">
                                     {conversation.unreadCount}
                                   </span>
                                 )}
@@ -270,7 +270,7 @@ export function ChatSidebar({
                         {/* Context Menu Trigger */}
                         <DropdownMenuTrigger asChild>
                           <button className="absolute top-3 right-3 p-1 opacity-0 group-hover:opacity-100 hover:bg-gray-200 rounded transition-all">
-                            <MoreVertical size={14} className="text-gray-500" />
+                            <MoreVertical size={14} className="text-[#475569]" />
                           </button>
                         </DropdownMenuTrigger>
                       </motion.div>

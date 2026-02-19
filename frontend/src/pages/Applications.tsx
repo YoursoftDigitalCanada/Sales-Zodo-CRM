@@ -715,7 +715,7 @@ const statusConfig: Record<ApplicationStatus, { label: string; color: string; bg
   screening: { label: "Screening", color: "#8B5CF6", bgColor: "#F5F3FF", icon: FileSearch, description: "Initial review", order: 2 },
   reviewing: { label: "Reviewing", color: "#F59E0B", bgColor: "#FFFBEB", icon: Eye, description: "Under review", order: 3 },
   shortlisted: { label: "Shortlisted", color: "#10B981", bgColor: "#ECFDF5", icon: BookmarkCheck, description: "Selected for next stage", order: 4 },
-  interview: { label: "Interview", color: "#23D3EE", bgColor: "#F0FDFA", icon: CalendarDays, description: "Interview stage", order: 5 },
+  interview: { label: "Interview", color: "#22D3EE", bgColor: "#F0FDFA", icon: CalendarDays, description: "Interview stage", order: 5 },
   assessment: { label: "Assessment", color: "#6366F1", bgColor: "#EEF2FF", icon: ClipboardCheck, description: "Taking assessments", order: 6 },
   offer: { label: "Offer", color: "#EC4899", bgColor: "#FDF2F8", icon: FileCheck, description: "Offer extended", order: 7 },
   approved: { label: "Approved", color: "#22C55E", bgColor: "#F0FDF4", icon: CheckCircle2, description: "Application approved", order: 8 },
@@ -1165,10 +1165,10 @@ const StatCard = ({
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
       className={cn(
-        "relative bg-white rounded-2xl p-5 border transition-all overflow-hidden group cursor-pointer",
+        "relative bg-white rounded-md p-5 border transition-all overflow-hidden group cursor-pointer",
         isActive 
-          ? "border-[#23D3EE] shadow-lg shadow-[#23D3EE]/10 ring-2 ring-[#23D3EE]/20" 
-          : "border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5"
+          ? "border-[#22D3EE]  ring-2 ring-[#22D3EE]/20" 
+          : "border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg "
       )}
     >
       <div
@@ -1177,9 +1177,9 @@ const StatCard = ({
       />
       <div className="relative flex items-start justify-between">
         <div>
-          <p className="text-sm text-slate-500 mb-1">{title}</p>
+          <p className="text-sm text-[#94A3B8] mb-1">{title}</p>
           <p className="text-3xl font-bold text-[#0F172A]">{value}</p>
-          {subtitle && <p className="text-xs text-slate-400 mt-1">{subtitle}</p>}
+          {subtitle && <p className="text-xs text-[#475569] mt-1">{subtitle}</p>}
           {trend && (
             <div className="flex items-center gap-1 mt-2">
               {trend.value >= 0 ? (
@@ -1190,12 +1190,12 @@ const StatCard = ({
               <span className={cn("text-xs font-semibold", trend.value >= 0 ? "text-green-600" : "text-red-600")}>
                 {Math.abs(trend.value)}%
               </span>
-              <span className="text-xs text-slate-400">{trend.label}</span>
+              <span className="text-xs text-[#475569]">{trend.label}</span>
             </div>
           )}
         </div>
         <div
-          className="w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110"
+          className="w-12 h-12 rounded-md flex items-center justify-center transition-transform group-hover:scale-110"
           style={{ backgroundColor: `${color}15` }}
         >
           <Icon size={22} style={{ color }} />
@@ -1325,7 +1325,7 @@ const RatingStars = ({
         ))}
       </div>
       {showValue && (
-        <span className="text-sm text-slate-500 ml-1">({rating}/{maxRating})</span>
+        <span className="text-sm text-[#94A3B8] ml-1">({rating}/{maxRating})</span>
       )}
     </div>
   );
@@ -1389,7 +1389,7 @@ const ScoreCircle = ({
         </div>
       </div>
       {showLabel && label && (
-        <span className="text-xs text-slate-500">{label}</span>
+        <span className="text-xs text-[#94A3B8]">{label}</span>
       )}
     </div>
   );
@@ -1414,12 +1414,12 @@ const ScoreBar = ({
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between text-sm">
-        <span className="text-slate-600">{label}</span>
+        <span className="text-[#475569]">{label}</span>
         {showPercentage && (
           <span className="font-semibold" style={{ color: barColor }}>{score}%</span>
         )}
       </div>
-      <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+      <div className="h-2 bg-white/5 rounded-full overflow-hidden">
         <motion.div
           initial={animate ? { width: 0 } : false}
           animate={{ width: `${score}%` }}
@@ -1470,11 +1470,11 @@ const EmptyState = ({
       animate={{ opacity: 1, y: 0 }}
       className="flex flex-col items-center justify-center py-16 px-4 text-center"
     >
-      <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
-        <Icon size={28} className="text-slate-400" />
+      <div className="w-16 h-16 bg-white/5 rounded-md flex items-center justify-center mb-4">
+        <Icon size={28} className="text-[#475569]" />
       </div>
       <h3 className="text-lg font-semibold text-[#0F172A] mb-2">{title}</h3>
-      <p className="text-slate-500 max-w-md mb-6">{description}</p>
+      <p className="text-[#94A3B8] max-w-md mb-6">{description}</p>
       {action}
     </motion.div>
   );
@@ -1488,7 +1488,7 @@ const ApplicationSkeleton = ({ viewMode }: { viewMode: ViewMode }) => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
         {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="bg-white rounded-2xl border border-slate-200 p-5 animate-pulse">
+          <div key={i} className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-5 animate-pulse">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 bg-slate-200 rounded-full" />
               <div className="flex-1">
@@ -1511,8 +1511,8 @@ const ApplicationSkeleton = ({ viewMode }: { viewMode: ViewMode }) => {
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-      <div className="p-4 border-b border-slate-100">
+    <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden">
+      <div className="p-4 border-b border-[rgba(15,23,42,0.06)]">
         <div className="h-4 bg-slate-200 rounded w-1/4 animate-pulse" />
       </div>
       {Array.from({ length: 10 }).map((_, i) => (
@@ -1607,7 +1607,7 @@ const FilterPanel = ({
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent className="w-full sm:max-w-md p-0 flex flex-col">
-        <SheetHeader className="p-6 pb-4 border-b border-slate-100">
+        <SheetHeader className="p-6 pb-4 border-b border-[rgba(15,23,42,0.06)]">
           <div className="flex items-center justify-between">
             <div>
               <SheetTitle className="text-xl font-bold text-[#0F172A]">Filters</SheetTitle>
@@ -1620,7 +1620,7 @@ const FilterPanel = ({
                 variant="ghost"
                 size="sm"
                 onClick={handleResetFilters}
-                className="text-slate-500 hover:text-red-500"
+                className="text-[#94A3B8] hover:text-red-500"
               >
                 <X size={14} className="mr-1" />
                 Clear All
@@ -1647,10 +1647,10 @@ const FilterPanel = ({
                       }));
                     }}
                     className={cn(
-                      "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all",
+                      "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all",
                       localFilters.types.includes(type.id)
-                        ? "text-white shadow-md"
-                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                        ? "text-[#0F172A] shadow-md"
+                        : "bg-white/5 text-[#475569] hover:bg-slate-200"
                     )}
                     style={
                       localFilters.types.includes(type.id)
@@ -1683,10 +1683,10 @@ const FilterPanel = ({
                       }));
                     }}
                     className={cn(
-                      "inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all border",
+                      "inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-all border",
                       localFilters.statuses.includes(key as ApplicationStatus)
                         ? "border-transparent shadow-sm"
-                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                        : "border-[rgba(15,23,42,0.06)] bg-white text-[#475569] hover:border-slate-300"
                     )}
                     style={
                       localFilters.statuses.includes(key as ApplicationStatus)
@@ -1719,10 +1719,10 @@ const FilterPanel = ({
                       }));
                     }}
                     className={cn(
-                      "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all",
+                      "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all",
                       localFilters.priorities.includes(key as Priority)
                         ? "shadow-sm"
-                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                        : "bg-white/5 text-[#475569] hover:bg-slate-200"
                     )}
                     style={
                       localFilters.priorities.includes(key as Priority)
@@ -1755,10 +1755,10 @@ const FilterPanel = ({
                       }));
                     }}
                     className={cn(
-                      "px-3 py-1.5 rounded-lg text-sm font-medium transition-all",
+                      "px-3 py-1.5 rounded-md text-sm font-medium transition-all",
                       localFilters.sources.includes(source)
-                        ? "bg-[#23D3EE] text-white shadow-sm"
-                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                        ? "bg-[#0891B2] text-white shadow-sm"
+                        : "bg-white/5 text-[#475569] hover:bg-slate-200"
                     )}
                   >
                     {source}
@@ -1781,10 +1781,10 @@ const FilterPanel = ({
                   }));
                 }}
               >
-                <SelectTrigger className="w-full rounded-xl">
+                <SelectTrigger className="w-full rounded-md">
                   <SelectValue placeholder="Select department" />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl">
+                <SelectContent className="rounded-md">
                   <SelectItem value="">All Departments</SelectItem>
                   {uniqueDepartments.map((dept) => (
                     <SelectItem key={dept} value={dept!}>
@@ -1801,7 +1801,7 @@ const FilterPanel = ({
             <div>
               <div className="flex items-center justify-between mb-3">
                 <Label className="text-sm font-semibold text-[#0F172A]">Rating</Label>
-                <span className="text-sm text-slate-500">
+                <span className="text-sm text-[#94A3B8]">
                   {localFilters.rating[0]} - {localFilters.rating[1]} stars
                 </span>
               </div>
@@ -1826,7 +1826,7 @@ const FilterPanel = ({
             <div>
               <div className="flex items-center justify-between mb-3">
                 <Label className="text-sm font-semibold text-[#0F172A]">Overall Score</Label>
-                <span className="text-sm text-slate-500">
+                <span className="text-sm text-[#94A3B8]">
                   {localFilters.score[0]}% - {localFilters.score[1]}%
                 </span>
               </div>
@@ -1856,7 +1856,7 @@ const FilterPanel = ({
                     <Button
                       variant="outline"
                       className={cn(
-                        "justify-start text-left font-normal rounded-xl",
+                        "justify-start text-left font-normal rounded-md",
                         !localFilters.dateRange.from && "text-muted-foreground"
                       )}
                     >
@@ -1864,7 +1864,7 @@ const FilterPanel = ({
                       {localFilters.dateRange.from ? format(localFilters.dateRange.from, "MMM d, yyyy") : "From date"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 rounded-xl" align="start">
+                  <PopoverContent className="w-auto p-0 rounded-md" align="start">
                     <Calendar
                       mode="single"
                       selected={localFilters.dateRange.from || undefined}
@@ -1884,7 +1884,7 @@ const FilterPanel = ({
                     <Button
                       variant="outline"
                       className={cn(
-                        "justify-start text-left font-normal rounded-xl",
+                        "justify-start text-left font-normal rounded-md",
                         !localFilters.dateRange.to && "text-muted-foreground"
                       )}
                     >
@@ -1892,7 +1892,7 @@ const FilterPanel = ({
                       {localFilters.dateRange.to ? format(localFilters.dateRange.to, "MMM d, yyyy") : "To date"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 rounded-xl" align="start">
+                  <PopoverContent className="w-auto p-0 rounded-md" align="start">
                     <Calendar
                       mode="single"
                       selected={localFilters.dateRange.to || undefined}
@@ -1919,7 +1919,7 @@ const FilterPanel = ({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Star size={16} className="text-yellow-500" />
-                    <span className="text-sm text-slate-600">Starred only</span>
+                    <span className="text-sm text-[#475569]">Starred only</span>
                   </div>
                   <Switch
                     checked={localFilters.isStarred === true}
@@ -1933,8 +1933,8 @@ const FilterPanel = ({
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <CalendarDays size={16} className="text-[#23D3EE]" />
-                    <span className="text-sm text-slate-600">Has interview scheduled</span>
+                    <CalendarDays size={16} className="text-[#0891B2]" />
+                    <span className="text-sm text-[#475569]">Has interview scheduled</span>
                   </div>
                   <Switch
                     checked={localFilters.hasInterview === true}
@@ -1949,7 +1949,7 @@ const FilterPanel = ({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <FileCheck size={16} className="text-green-500" />
-                    <span className="text-sm text-slate-600">Has offer</span>
+                    <span className="text-sm text-[#475569]">Has offer</span>
                   </div>
                   <Switch
                     checked={localFilters.hasOffer === true}
@@ -1964,7 +1964,7 @@ const FilterPanel = ({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <AlertTriangle size={16} className="text-red-500" />
-                    <span className="text-sm text-slate-600">Overdue tasks</span>
+                    <span className="text-sm text-[#475569]">Overdue tasks</span>
                   </div>
                   <Switch
                     checked={localFilters.isOverdue === true}
@@ -1999,8 +1999,8 @@ const FilterPanel = ({
                     className={cn(
                       "px-2.5 py-1 rounded-full text-xs font-medium transition-all",
                       localFilters.tags.includes(tag)
-                        ? "bg-[#23D3EE] text-white"
-                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                        ? "bg-[#0891B2] text-white"
+                        : "bg-white/5 text-[#475569] hover:bg-slate-200"
                     )}
                   >
                     {tag}
@@ -2011,18 +2011,18 @@ const FilterPanel = ({
           </div>
         </ScrollArea>
 
-        <SheetFooter className="p-6 pt-4 border-t border-slate-100">
+        <SheetFooter className="p-6 pt-4 border-t border-[rgba(15,23,42,0.06)]">
           <div className="flex gap-3 w-full">
             <Button
               variant="outline"
               onClick={onClose}
-              className="flex-1 rounded-xl"
+              className="flex-1 rounded-md"
             >
               Cancel
             </Button>
             <Button
               onClick={handleApplyFilters}
-              className="flex-1 rounded-xl bg-[#23D3EE] hover:bg-[#14a89a] text-white"
+              className="flex-1 rounded-md bg-[#0891B2] hover:bg-[#14a89a] text-[#0F172A]"
             >
               Apply Filters
             </Button>
@@ -2068,10 +2068,10 @@ const ApplicationCard = ({
       transition={{ delay }}
       whileHover={{ y: -4 }}
       className={cn(
-        "relative bg-white rounded-2xl border overflow-hidden transition-all group",
+        "relative bg-white rounded-md border overflow-hidden transition-all group",
         isSelected
-          ? "border-[#23D3EE] shadow-lg shadow-[#23D3EE]/10 ring-2 ring-[#23D3EE]/20"
-          : "border-slate-200 hover:border-[#23D3EE]/30 hover:shadow-xl hover:shadow-[#23D3EE]/5"
+          ? "border-[#22D3EE]  ring-2 ring-[#22D3EE]/20"
+          : "border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg "
       )}
     >
       {/* Selection checkbox */}
@@ -2080,7 +2080,7 @@ const ApplicationCard = ({
           checked={isSelected}
           onCheckedChange={onSelect}
           onClick={(e) => e.stopPropagation()}
-          className="data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE] bg-white shadow-sm"
+          className="data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE] bg-white"
         />
       </div>
 
@@ -2115,13 +2115,13 @@ const ApplicationCard = ({
           e.stopPropagation();
           onToggleStar();
         }}
-        className="absolute top-4 right-4 z-10 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+        className="absolute top-4 right-4 z-10 p-1.5 rounded-md hover:bg-white/10 transition-colors"
       >
         <Star
           size={18}
           className={cn(
             "transition-colors",
-            application.isStarred ? "fill-yellow-400 text-yellow-400" : "text-slate-300 hover:text-yellow-400"
+            application.isStarred ? "fill-yellow-400 text-yellow-400" : "text-[#475569] hover:text-yellow-400"
           )}
         />
       </button>
@@ -2130,18 +2130,18 @@ const ApplicationCard = ({
       <div className="p-5 pt-12 cursor-pointer" onClick={onView}>
         {/* Header */}
         <div className="flex items-start gap-3 mb-4">
-          <Avatar className="h-12 w-12 border-2 border-white shadow-lg">
+          <Avatar className="h-12 w-12 border-2 border-white card-shadow">
             <AvatarImage src={application.applicant.avatar} />
-            <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#0F172A] text-white font-semibold">
+            <AvatarFallback className="bg-[#F1F5F9] text-[#0F172A] font-semibold">
               {getInitials(application.applicant.name)}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-[#0F172A] group-hover:text-[#23D3EE] transition-colors truncate">
+            <h3 className="font-semibold text-[#0F172A] group-hover:text-[#0891B2] transition-colors truncate">
               {application.applicant.name}
             </h3>
-            <p className="text-sm text-slate-500 truncate">{application.position}</p>
-            <p className="text-xs text-slate-400 font-mono mt-0.5">{application.referenceNumber}</p>
+            <p className="text-sm text-[#94A3B8] truncate">{application.position}</p>
+            <p className="text-xs text-[#475569] font-mono mt-0.5">{application.referenceNumber}</p>
           </div>
         </div>
 
@@ -2154,19 +2154,19 @@ const ApplicationCard = ({
 
         {/* Info grid */}
         <div className="grid grid-cols-2 gap-2 text-sm mb-4">
-          <div className="flex items-center gap-2 text-slate-500">
+          <div className="flex items-center gap-2 text-[#94A3B8]">
             <Building2 size={14} className="flex-shrink-0" />
             <span className="truncate">{application.applicant.company || "N/A"}</span>
           </div>
-          <div className="flex items-center gap-2 text-slate-500">
+          <div className="flex items-center gap-2 text-[#94A3B8]">
             <MapPin size={14} className="flex-shrink-0" />
             <span className="truncate">{application.applicant.location || "N/A"}</span>
           </div>
-          <div className="flex items-center gap-2 text-slate-500">
+          <div className="flex items-center gap-2 text-[#94A3B8]">
             <Briefcase size={14} className="flex-shrink-0" />
             <span>{application.yearsOfExperience || 0} years exp.</span>
           </div>
-          <div className="flex items-center gap-2 text-slate-500">
+          <div className="flex items-center gap-2 text-[#94A3B8]">
             <DollarSign size={14} className="flex-shrink-0" />
             <span>
               {application.expectedSalary
@@ -2183,7 +2183,7 @@ const ApplicationCard = ({
             <Separator orientation="vertical" className="h-4" />
             <ScoreCircle score={application.scores.overall} size="small" />
           </div>
-          <div className="flex items-center gap-2 text-xs text-slate-400">
+          <div className="flex items-center gap-2 text-xs text-[#475569]">
             <Clock size={12} />
             {getRelativeTime(application.submittedAt)}
           </div>
@@ -2195,13 +2195,13 @@ const ApplicationCard = ({
             {application.tags.slice(0, 4).map((tag) => (
               <span
                 key={tag}
-                className="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded-full"
+                className="px-2 py-0.5 bg-white/5 text-[#475569] text-xs rounded-full"
               >
                 {tag}
               </span>
             ))}
             {application.tags.length > 4 && (
-              <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-xs rounded-full">
+              <span className="px-2 py-0.5 bg-white/5 text-[#94A3B8] text-xs rounded-full">
                 +{application.tags.length - 4}
               </span>
             )}
@@ -2211,19 +2211,19 @@ const ApplicationCard = ({
         {/* Alerts / Notifications */}
         <div className="flex items-center gap-2">
           {hasUpcomingInterview && (
-            <div className="flex items-center gap-1 px-2 py-1 bg-[#23D3EE]/10 text-[#23D3EE] text-xs rounded-lg">
+            <div className="flex items-center gap-1 px-2 py-1 bg-[#0891B2]/10 text-[#0891B2] text-xs rounded-md">
               <CalendarDays size={12} />
               Interview scheduled
             </div>
           )}
           {hasPendingTasks && (
-            <div className="flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-lg">
+            <div className="flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-md">
               <Clock size={12} />
               Tasks pending
             </div>
           )}
           {application.documents.length > 0 && (
-            <div className="flex items-center gap-1 px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-lg">
+            <div className="flex items-center gap-1 px-2 py-1 bg-white/5 text-[#475569] text-xs rounded-md">
               <Paperclip size={12} />
               {application.documents.length}
             </div>
@@ -2232,7 +2232,7 @@ const ApplicationCard = ({
       </div>
 
       {/* Footer with actions */}
-      <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+      <div className="px-5 py-3 bg-[#F8FAFC] border-t border-[rgba(15,23,42,0.06)] flex items-center justify-between">
         {application.assignedTo ? (
           <div className="flex items-center gap-2">
             <Avatar className="h-6 w-6">
@@ -2241,10 +2241,10 @@ const ApplicationCard = ({
                 {getInitials(application.assignedTo)}
               </AvatarFallback>
             </Avatar>
-            <span className="text-xs text-slate-600">{application.assignedTo}</span>
+            <span className="text-xs text-[#475569]">{application.assignedTo}</span>
           </div>
         ) : (
-          <span className="text-xs text-slate-400">Unassigned</span>
+          <span className="text-xs text-[#475569]">Unassigned</span>
         )}
 
         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -2254,10 +2254,10 @@ const ApplicationCard = ({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 rounded-lg"
+                  className="h-7 w-7 rounded-md"
                   onClick={() => onQuickAction("email")}
                 >
-                  <Mail size={14} className="text-slate-400" />
+                  <Mail size={14} className="text-[#475569]" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Send Email</TooltipContent>
@@ -2267,10 +2267,10 @@ const ApplicationCard = ({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 rounded-lg"
+                  className="h-7 w-7 rounded-md"
                   onClick={() => onQuickAction("schedule")}
                 >
-                  <CalendarDays size={14} className="text-slate-400" />
+                  <CalendarDays size={14} className="text-[#475569]" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Schedule Interview</TooltipContent>
@@ -2279,81 +2279,81 @@ const ApplicationCard = ({
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg">
-                <MoreHorizontal size={14} className="text-slate-400" />
+              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md">
+                <MoreHorizontal size={14} className="text-[#475569]" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52 rounded-xl">
-              <DropdownMenuItem onClick={onView} className="rounded-lg">
+            <DropdownMenuContent align="end" className="w-52 rounded-md">
+              <DropdownMenuItem onClick={onView} className="rounded-md">
                 <Eye size={14} className="mr-2" /> View Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onQuickAction("edit")} className="rounded-lg">
+              <DropdownMenuItem onClick={() => onQuickAction("edit")} className="rounded-md">
                 <Pencil size={14} className="mr-2" /> Edit
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuSub>
-                <DropdownMenuSubTrigger className="rounded-lg">
+                <DropdownMenuSubTrigger className="rounded-md">
                   <RefreshCw size={14} className="mr-2" /> Change Status
                 </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent className="rounded-xl max-h-80 overflow-y-auto">
+                <DropdownMenuSubContent className="rounded-md max-h-80 overflow-y-auto">
                   {Object.entries(statusConfig)
                     .sort((a, b) => a[1].order - b[1].order)
                     .map(([key, config]) => (
                       <DropdownMenuItem
                         key={key}
                         onClick={() => onStatusChange(key as ApplicationStatus)}
-                        className="rounded-lg"
+                        className="rounded-md"
                       >
                         <config.icon size={14} className="mr-2" style={{ color: config.color }} />
                         {config.label}
                         {application.status === key && (
-                          <Check size={14} className="ml-auto text-[#23D3EE]" />
+                          <Check size={14} className="ml-auto text-[#0891B2]" />
                         )}
                       </DropdownMenuItem>
                     ))}
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
               <DropdownMenuSub>
-                <DropdownMenuSubTrigger className="rounded-lg">
+                <DropdownMenuSubTrigger className="rounded-md">
                   <Flag size={14} className="mr-2" /> Set Priority
                 </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent className="rounded-xl">
+                <DropdownMenuSubContent className="rounded-md">
                   {Object.entries(priorityConfig).map(([key, config]) => (
                     <DropdownMenuItem
                       key={key}
                       onClick={() => onQuickAction(`priority:${key}`)}
-                      className="rounded-lg"
+                      className="rounded-md"
                     >
                       <config.icon size={14} className="mr-2" style={{ color: config.color }} />
                       {config.label}
                       {application.priority === key && (
-                        <Check size={14} className="ml-auto text-[#23D3EE]" />
+                        <Check size={14} className="ml-auto text-[#0891B2]" />
                       )}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => onQuickAction("assign")} className="rounded-lg">
+              <DropdownMenuItem onClick={() => onQuickAction("assign")} className="rounded-md">
                 <UserPlus size={14} className="mr-2" /> Assign To
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onQuickAction("tag")} className="rounded-lg">
+              <DropdownMenuItem onClick={() => onQuickAction("tag")} className="rounded-md">
                 <Tag size={14} className="mr-2" /> Add Tags
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onQuickAction("note")} className="rounded-lg">
+              <DropdownMenuItem onClick={() => onQuickAction("note")} className="rounded-md">
                 <MessageSquare size={14} className="mr-2" /> Add Note
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => onQuickAction("duplicate")} className="rounded-lg">
+              <DropdownMenuItem onClick={() => onQuickAction("duplicate")} className="rounded-md">
                 <Copy size={14} className="mr-2" /> Duplicate
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onQuickAction("archive")} className="rounded-lg">
+              <DropdownMenuItem onClick={() => onQuickAction("archive")} className="rounded-md">
                 <Archive size={14} className="mr-2" /> Archive
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => onQuickAction("delete")}
-                className="rounded-lg text-red-600 focus:text-red-600"
+                className="rounded-md text-red-600 focus:text-red-600"
               >
                 <Trash2 size={14} className="mr-2" /> Delete
               </DropdownMenuItem>
@@ -2391,8 +2391,8 @@ const ApplicationTableRow = ({
   return (
     <TableRow
       className={cn(
-        "group hover:bg-slate-50 cursor-pointer transition-colors",
-        isSelected && "bg-[#23D3EE]/5"
+        "group hover:bg-[#F8FAFC] cursor-pointer transition-colors",
+        isSelected && "bg-[#0891B2]/5"
       )}
     >
       {visibleColumns.map((col) => {
@@ -2404,7 +2404,7 @@ const ApplicationTableRow = ({
                   checked={isSelected}
                   onCheckedChange={onSelect}
                   onClick={(e) => e.stopPropagation()}
-                  className="data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
+                  className="data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
                 />
               </TableCell>
             );
@@ -2423,7 +2423,7 @@ const ApplicationTableRow = ({
                       "transition-colors",
                       application.isStarred
                         ? "fill-yellow-400 text-yellow-400"
-                        : "text-slate-300 hover:text-yellow-400"
+                        : "text-[#475569] hover:text-yellow-400"
                     )}
                   />
                 </button>
@@ -2433,30 +2433,30 @@ const ApplicationTableRow = ({
             return (
               <TableCell key={col.id} onClick={onView}>
                 <div className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10 border border-slate-100">
+                  <Avatar className="h-10 w-10 border border-[rgba(15,23,42,0.06)]">
                     <AvatarImage src={application.applicant.avatar} />
-                    <AvatarFallback className="text-sm bg-gradient-to-br from-[#23D3EE] to-[#0F172A] text-white">
+                    <AvatarFallback className="text-sm bg-[#F1F5F9] text-[#0F172A]">
                       {getInitials(application.applicant.name)}
                     </AvatarFallback>
                   </Avatar>
                   <div>
                     <div className="flex items-center gap-2">
-                      <p className="font-medium text-[#0F172A] group-hover:text-[#23D3EE] transition-colors">
+                      <p className="font-medium text-[#0F172A] group-hover:text-[#0891B2] transition-colors">
                         {application.applicant.name}
                       </p>
                       {application.aiMatchScore && application.aiMatchScore >= 80 && (
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger>
-                              <Sparkles size={14} className="text-[#23D3EE]" />
+                              <Sparkles size={14} className="text-[#0891B2]" />
                             </TooltipTrigger>
                             <TooltipContent>High AI Match ({application.aiMatchScore}%)</TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       )}
                     </div>
-                    <p className="text-xs text-slate-500">{application.applicant.email}</p>
-                    <p className="text-xs text-slate-400 font-mono">{application.referenceNumber}</p>
+                    <p className="text-xs text-[#94A3B8]">{application.applicant.email}</p>
+                    <p className="text-xs text-[#475569] font-mono">{application.referenceNumber}</p>
                   </div>
                 </div>
               </TableCell>
@@ -2466,7 +2466,7 @@ const ApplicationTableRow = ({
               <TableCell key={col.id} onClick={onView}>
                 <div>
                   <p className="font-medium text-[#0F172A]">{application.position}</p>
-                  <p className="text-xs text-slate-500">{application.department}</p>
+                  <p className="text-xs text-[#94A3B8]">{application.department}</p>
                 </div>
               </TableCell>
             );
@@ -2485,19 +2485,19 @@ const ApplicationTableRow = ({
                       <StatusBadge status={application.status} size="small" interactive />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="rounded-xl max-h-80 overflow-y-auto">
+                  <DropdownMenuContent className="rounded-md max-h-80 overflow-y-auto">
                     {Object.entries(statusConfig)
                       .sort((a, b) => a[1].order - b[1].order)
                       .map(([key, config]) => (
                         <DropdownMenuItem
                           key={key}
                           onClick={() => onStatusChange(key as ApplicationStatus)}
-                          className="rounded-lg"
+                          className="rounded-md"
                         >
                           <config.icon size={14} className="mr-2" style={{ color: config.color }} />
                           {config.label}
                           {application.status === key && (
-                            <Check size={14} className="ml-auto text-[#23D3EE]" />
+                            <Check size={14} className="ml-auto text-[#0891B2]" />
                           )}
                         </DropdownMenuItem>
                       ))}
@@ -2525,15 +2525,15 @@ const ApplicationTableRow = ({
           case "source":
             return (
               <TableCell key={col.id}>
-                <span className="text-sm text-slate-600">{application.source}</span>
+                <span className="text-sm text-[#475569]">{application.source}</span>
               </TableCell>
             );
           case "submittedAt":
             return (
               <TableCell key={col.id}>
                 <div className="text-sm">
-                  <p className="text-slate-600">{getRelativeTime(application.submittedAt)}</p>
-                  <p className="text-xs text-slate-400">{format(application.submittedAt, "MMM d, yyyy")}</p>
+                  <p className="text-[#475569]">{getRelativeTime(application.submittedAt)}</p>
+                  <p className="text-xs text-[#475569]">{format(application.submittedAt, "MMM d, yyyy")}</p>
                 </div>
               </TableCell>
             );
@@ -2548,13 +2548,13 @@ const ApplicationTableRow = ({
                         {getInitials(application.assignedTo)}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-sm text-slate-600">{application.assignedTo}</span>
+                    <span className="text-sm text-[#475569]">{application.assignedTo}</span>
                   </div>
                 ) : (
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-slate-400 h-7 px-2"
+                    className="text-[#475569] h-7 px-2"
                     onClick={(e) => {
                       e.stopPropagation();
                       onQuickAction("assign");
@@ -2576,8 +2576,8 @@ const ApplicationTableRow = ({
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={onView}>
-                          <Eye size={16} className="text-slate-400" />
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" onClick={onView}>
+                          <Eye size={16} className="text-[#475569]" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>View Details</TooltipContent>
@@ -2587,10 +2587,10 @@ const ApplicationTableRow = ({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 rounded-lg"
+                          className="h-8 w-8 rounded-md"
                           onClick={() => onQuickAction("email")}
                         >
-                          <Mail size={16} className="text-slate-400" />
+                          <Mail size={16} className="text-[#475569]" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>Send Email</TooltipContent>
@@ -2598,27 +2598,27 @@ const ApplicationTableRow = ({
                   </TooltipProvider>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
-                        <MoreVertical size={16} className="text-slate-400" />
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md">
+                        <MoreVertical size={16} className="text-[#475569]" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48 rounded-xl">
-                      <DropdownMenuItem onClick={onView} className="rounded-lg">
+                    <DropdownMenuContent align="end" className="w-48 rounded-md">
+                      <DropdownMenuItem onClick={onView} className="rounded-md">
                         <Eye size={14} className="mr-2" /> View Details
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onQuickAction("edit")} className="rounded-lg">
+                      <DropdownMenuItem onClick={() => onQuickAction("edit")} className="rounded-md">
                         <Pencil size={14} className="mr-2" /> Edit
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onQuickAction("schedule")} className="rounded-lg">
+                      <DropdownMenuItem onClick={() => onQuickAction("schedule")} className="rounded-md">
                         <CalendarDays size={14} className="mr-2" /> Schedule Interview
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => onQuickAction("archive")} className="rounded-lg">
+                      <DropdownMenuItem onClick={() => onQuickAction("archive")} className="rounded-md">
                         <Archive size={14} className="mr-2" /> Archive
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => onQuickAction("delete")}
-                        className="rounded-lg text-red-600"
+                        className="rounded-md text-red-600"
                       >
                         <Trash2 size={14} className="mr-2" /> Delete
                       </DropdownMenuItem>
@@ -2658,20 +2658,20 @@ const KanbanCard = ({
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
       whileHover={{ scale: 1.02 }}
-      className="bg-white rounded-xl border border-slate-200 p-4 cursor-grab active:cursor-grabbing hover:shadow-lg hover:border-[#23D3EE]/30 transition-all"
+      className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4 cursor-grab active:cursor-grabbing hover:shadow-lg hover:border-[#22D3EE]/30 transition-all"
       onClick={onView}
     >
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Avatar className="h-9 w-9 border border-slate-100">
+          <Avatar className="h-9 w-9 border border-[rgba(15,23,42,0.06)]">
             <AvatarImage src={application.applicant.avatar} />
-            <AvatarFallback className="text-xs bg-gradient-to-br from-[#23D3EE] to-[#0F172A] text-white">
+            <AvatarFallback className="text-xs bg-[#F1F5F9] text-[#0F172A]">
               {getInitials(application.applicant.name)}
             </AvatarFallback>
           </Avatar>
           <div>
             <p className="font-medium text-sm text-[#0F172A] line-clamp-1">{application.applicant.name}</p>
-            <p className="text-xs text-slate-500 line-clamp-1">{application.position}</p>
+            <p className="text-xs text-[#94A3B8] line-clamp-1">{application.position}</p>
           </div>
         </div>
         <button
@@ -2685,7 +2685,7 @@ const KanbanCard = ({
             size={14}
             className={cn(
               "transition-colors",
-              application.isStarred ? "fill-yellow-400 text-yellow-400" : "text-slate-300 hover:text-yellow-400"
+              application.isStarred ? "fill-yellow-400 text-yellow-400" : "text-[#475569] hover:text-yellow-400"
             )}
           />
         </button>
@@ -2693,7 +2693,7 @@ const KanbanCard = ({
 
       <div className="flex items-center gap-2 mb-3 flex-wrap">
         <PriorityBadge priority={application.priority} size="small" showLabel={false} />
-        <span className="text-[10px] text-slate-400 font-mono">{application.referenceNumber}</span>
+        <span className="text-[10px] text-[#475569] font-mono">{application.referenceNumber}</span>
         {application.aiMatchScore && application.aiMatchScore >= 75 && (
           <div
             className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium"
@@ -2715,7 +2715,7 @@ const KanbanCard = ({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>
-                  <CalendarDays size={14} className="text-[#23D3EE]" />
+                  <CalendarDays size={14} className="text-[#0891B2]" />
                 </TooltipTrigger>
                 <TooltipContent>Interview Scheduled</TooltipContent>
               </Tooltip>
@@ -2725,7 +2725,7 @@ const KanbanCard = ({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>
-                  <div className="flex items-center gap-0.5 text-slate-400">
+                  <div className="flex items-center gap-0.5 text-[#475569]">
                     <Paperclip size={12} />
                     <span className="text-[10px]">{application.documents.length}</span>
                   </div>
@@ -2738,8 +2738,8 @@ const KanbanCard = ({
       </div>
 
       {hasUpcomingInterview && (
-        <div className="mt-3 pt-3 border-t border-slate-100">
-          <div className="flex items-center gap-2 text-xs text-[#23D3EE]">
+        <div className="mt-3 pt-3 border-t border-[rgba(15,23,42,0.06)]">
+          <div className="flex items-center gap-2 text-xs text-[#0891B2]">
             <CalendarDays size={12} />
             {format(
               application.interviews.find((i) => i.status === "scheduled")!.scheduledAt,
@@ -2749,7 +2749,7 @@ const KanbanCard = ({
         </div>
       )}
 
-      <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
+      <div className="mt-3 pt-3 border-t border-[rgba(15,23,42,0.06)] flex items-center justify-between">
         {application.assignedTo ? (
           <Avatar className="h-6 w-6">
             <AvatarImage src={application.assignedToAvatar} />
@@ -2758,9 +2758,9 @@ const KanbanCard = ({
             </AvatarFallback>
           </Avatar>
         ) : (
-          <span className="text-[10px] text-slate-400">Unassigned</span>
+          <span className="text-[10px] text-[#475569]">Unassigned</span>
         )}
-        <span className="text-[10px] text-slate-400">{getRelativeTime(application.submittedAt)}</span>
+        <span className="text-[10px] text-[#475569]">{getRelativeTime(application.submittedAt)}</span>
       </div>
     </motion.div>
   );
@@ -2788,7 +2788,7 @@ const KanbanColumn = ({
   return (
     <div
       className={cn(
-        "flex-shrink-0 bg-slate-50 rounded-2xl transition-all",
+        "flex-shrink-0 bg-[#F8FAFC] rounded-md transition-all",
         isCollapsed ? "w-16" : "w-80"
       )}
     >
@@ -2800,7 +2800,7 @@ const KanbanColumn = ({
         )}
       >
         <div
-          className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+          className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0"
           style={{ backgroundColor: `${column.color}15` }}
         >
           <Icon size={16} style={{ color: column.color }} />
@@ -2817,10 +2817,10 @@ const KanbanColumn = ({
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7 rounded-lg"
+              className="h-7 w-7 rounded-md"
               onClick={() => setIsCollapsed(true)}
             >
-              <ChevronLeft size={14} className="text-slate-400" />
+              <ChevronLeft size={14} className="text-[#475569]" />
             </Button>
           </>
         )}
@@ -2841,10 +2841,10 @@ const KanbanColumn = ({
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 rounded-lg"
+              className="h-6 w-6 rounded-md"
               onClick={() => setIsCollapsed(false)}
             >
-              <ChevronRight size={12} className="text-slate-400" />
+              <ChevronRight size={12} className="text-[#475569]" />
             </Button>
           </>
         )}
@@ -2866,7 +2866,7 @@ const KanbanColumn = ({
               ))}
             </AnimatePresence>
             {applications.length === 0 && (
-              <div className="text-center py-8 text-slate-400">
+              <div className="text-center py-8 text-[#475569]">
                 <Inbox size={24} className="mx-auto mb-2 opacity-50" />
                 <p className="text-sm">No applications</p>
               </div>
@@ -2924,14 +2924,14 @@ const ApplicationDetailsSheet = ({
       <SheetContent className="w-full sm:max-w-2xl lg:max-w-3xl p-0 flex flex-col overflow-hidden">
         {/* Header */}
         <div
-          className="p-6 border-b border-slate-100 flex-shrink-0"
+          className="p-6 border-b border-[rgba(15,23,42,0.06)] flex-shrink-0"
           style={{ background: `linear-gradient(135deg, ${typeConfig?.color}08, transparent)` }}
         >
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-4">
-              <Avatar className="h-16 w-16 border-4 border-white shadow-lg">
+              <Avatar className="h-16 w-16 border-4 border-white card-shadow">
                 <AvatarImage src={application.applicant.avatar} />
-                <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#0F172A] text-white text-xl font-bold">
+                <AvatarFallback className="bg-[#F1F5F9] text-[#0F172A] text-xl font-bold">
                   {getInitials(application.applicant.name)}
                 </AvatarFallback>
               </Avatar>
@@ -2945,7 +2945,7 @@ const ApplicationDetailsSheet = ({
                         "transition-colors",
                         application.isStarred
                           ? "fill-yellow-400 text-yellow-400"
-                          : "text-slate-300 hover:text-yellow-400"
+                          : "text-[#475569] hover:text-yellow-400"
                       )}
                     />
                   </button>
@@ -2969,10 +2969,10 @@ const ApplicationDetailsSheet = ({
                     </TooltipProvider>
                   )}
                 </div>
-                <p className="text-slate-600 font-medium">{application.position}</p>
+                <p className="text-[#475569] font-medium">{application.position}</p>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="text-xs text-slate-400 font-mono">{application.referenceNumber}</span>
-                  <span className="text-slate-300">•</span>
+                  <span className="text-xs text-[#475569] font-mono">{application.referenceNumber}</span>
+                  <span className="text-[#475569]">•</span>
                   // Continuing from ApplicationDetailsSheet...
 
                   <span
@@ -2989,7 +2989,7 @@ const ApplicationDetailsSheet = ({
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="outline" size="icon" className="rounded-xl h-9 w-9">
+                    <Button variant="outline" size="icon" className="rounded-md h-9 w-9">
                       <Mail size={16} />
                     </Button>
                   </TooltipTrigger>
@@ -2997,7 +2997,7 @@ const ApplicationDetailsSheet = ({
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="outline" size="icon" className="rounded-xl h-9 w-9">
+                    <Button variant="outline" size="icon" className="rounded-md h-9 w-9">
                       <Phone size={16} />
                     </Button>
                   </TooltipTrigger>
@@ -3005,7 +3005,7 @@ const ApplicationDetailsSheet = ({
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="outline" size="icon" className="rounded-xl h-9 w-9">
+                    <Button variant="outline" size="icon" className="rounded-md h-9 w-9">
                       <CalendarDays size={16} />
                     </Button>
                   </TooltipTrigger>
@@ -3014,28 +3014,28 @@ const ApplicationDetailsSheet = ({
               </TooltipProvider>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon" className="rounded-xl h-9 w-9">
+                  <Button variant="outline" size="icon" className="rounded-md h-9 w-9">
                     <MoreHorizontal size={16} />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 rounded-xl">
-                  <DropdownMenuItem className="rounded-lg">
+                <DropdownMenuContent align="end" className="w-48 rounded-md">
+                  <DropdownMenuItem className="rounded-md">
                     <Pencil size={14} className="mr-2" /> Edit Application
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="rounded-lg">
+                  <DropdownMenuItem className="rounded-md">
                     <Copy size={14} className="mr-2" /> Duplicate
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="rounded-lg">
+                  <DropdownMenuItem className="rounded-md">
                     <Share2 size={14} className="mr-2" /> Share
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="rounded-lg">
+                  <DropdownMenuItem className="rounded-md">
                     <Printer size={14} className="mr-2" /> Print
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="rounded-lg">
+                  <DropdownMenuItem className="rounded-md">
                     <Archive size={14} className="mr-2" /> Archive
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="rounded-lg text-red-600">
+                  <DropdownMenuItem className="rounded-md text-red-600">
                     <Trash2 size={14} className="mr-2" /> Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -3051,7 +3051,7 @@ const ApplicationDetailsSheet = ({
                   <StatusBadge status={application.status} interactive />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="rounded-xl max-h-80 overflow-y-auto">
+              <DropdownMenuContent className="rounded-md max-h-80 overflow-y-auto">
                 <DropdownMenuLabel>Change Status</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {Object.entries(statusConfig)
@@ -3060,23 +3060,23 @@ const ApplicationDetailsSheet = ({
                     <DropdownMenuItem
                       key={key}
                       onClick={() => onStatusChange(key as ApplicationStatus)}
-                      className="rounded-lg"
+                      className="rounded-md"
                     >
                       <config.icon size={14} className="mr-2" style={{ color: config.color }} />
                       {config.label}
-                      {application.status === key && <Check size={14} className="ml-auto text-[#23D3EE]" />}
+                      {application.status === key && <Check size={14} className="ml-auto text-[#0891B2]" />}
                     </DropdownMenuItem>
                   ))}
               </DropdownMenuContent>
             </DropdownMenu>
             <PriorityBadge priority={application.priority} />
             <Separator orientation="vertical" className="h-5" />
-            <div className="flex items-center gap-1 text-sm text-slate-500">
+            <div className="flex items-center gap-1 text-sm text-[#94A3B8]">
               <Clock size={14} />
               <span>Submitted {getRelativeTime(application.submittedAt)}</span>
             </div>
             <Separator orientation="vertical" className="h-5" />
-            <div className="flex items-center gap-1 text-sm text-slate-500">
+            <div className="flex items-center gap-1 text-sm text-[#94A3B8]">
               <Timer size={14} />
               <span>{application.totalDaysInPipeline || 0} days in pipeline</span>
             </div>
@@ -3087,26 +3087,26 @@ const ApplicationDetailsSheet = ({
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-4 p-3 bg-[#23D3EE]/10 border border-[#23D3EE]/20 rounded-xl flex items-center justify-between"
+              className="mt-4 p-3 bg-[#0891B2]/10 border border-[#22D3EE]/20 rounded-md flex items-center justify-between"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-[#23D3EE]/20 rounded-lg flex items-center justify-center">
-                  <CalendarDays size={20} className="text-[#23D3EE]" />
+                <div className="w-10 h-10 bg-[#0891B2]/20 rounded-md flex items-center justify-center">
+                  <CalendarDays size={20} className="text-[#0891B2]" />
                 </div>
                 <div>
                   <p className="font-semibold text-[#0F172A]">{upcomingInterview.title}</p>
-                  <p className="text-sm text-slate-600">
+                  <p className="text-sm text-[#475569]">
                     {format(upcomingInterview.scheduledAt, "EEEE, MMMM d 'at' h:mm a")}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 {upcomingInterview.meetingLink && (
-                  <Button size="sm" className="rounded-lg bg-[#23D3EE] hover:bg-[#14a89a]">
+                  <Button size="sm" className="rounded-md bg-[#0891B2] hover:bg-[#14a89a]">
                     <Video size={14} className="mr-1" /> Join Meeting
                   </Button>
                 )}
-                <Button variant="outline" size="sm" className="rounded-lg">
+                <Button variant="outline" size="sm" className="rounded-md">
                   Reschedule
                 </Button>
               </div>
@@ -3116,7 +3116,7 @@ const ApplicationDetailsSheet = ({
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-          <div className="px-6 border-b border-slate-100 flex-shrink-0">
+          <div className="px-6 border-b border-[rgba(15,23,42,0.06)] flex-shrink-0">
             <TabsList className="h-12 bg-transparent gap-1 p-0">
               {[
                 { id: "overview", label: "Overview", icon: LayoutDashboard },
@@ -3130,12 +3130,12 @@ const ApplicationDetailsSheet = ({
                 <TabsTrigger
                   key={tab.id}
                   value={tab.id}
-                  className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[#23D3EE] data-[state=active]:text-[#23D3EE] rounded-none px-4 gap-2"
+                  className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[#22D3EE] data-[state=active]:text-[#0891B2] rounded-none px-4 gap-2"
                 >
                   <tab.icon size={14} />
                   {tab.label}
                   {tab.count !== undefined && tab.count > 0 && (
-                    <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-[10px] rounded-full">
+                    <span className="px-1.5 py-0.5 bg-white/5 text-[#475569] text-[10px] rounded-full">
                       {tab.count}
                     </span>
                   )}
@@ -3149,63 +3149,63 @@ const ApplicationDetailsSheet = ({
             <TabsContent value="overview" className="p-6 space-y-6 m-0">
               {/* Quick Stats */}
               <div className="grid grid-cols-4 gap-4">
-                <div className="p-4 bg-slate-50 rounded-xl text-center">
+                <div className="p-4 bg-[#F8FAFC] rounded-md text-center">
                   <ScoreCircle score={application.scores.overall} size="default" showLabel={false} />
-                  <p className="text-xs text-slate-500 mt-2">Overall Score</p>
+                  <p className="text-xs text-[#94A3B8] mt-2">Overall Score</p>
                 </div>
-                <div className="p-4 bg-slate-50 rounded-xl text-center">
+                <div className="p-4 bg-[#F8FAFC] rounded-md text-center">
                   <p className="text-2xl font-bold text-[#0F172A]">{application.yearsOfExperience || 0}</p>
-                  <p className="text-xs text-slate-500 mt-1">Years Experience</p>
+                  <p className="text-xs text-[#94A3B8] mt-1">Years Experience</p>
                 </div>
-                <div className="p-4 bg-slate-50 rounded-xl text-center">
-                  <p className="text-2xl font-bold text-[#23D3EE]">
+                <div className="p-4 bg-[#F8FAFC] rounded-md text-center">
+                  <p className="text-2xl font-bold text-[#0891B2]">
                     {application.expectedSalary ? formatCurrency(application.expectedSalary.min) : "N/A"}
                   </p>
-                  <p className="text-xs text-slate-500 mt-1">Expected Salary</p>
+                  <p className="text-xs text-[#94A3B8] mt-1">Expected Salary</p>
                 </div>
-                <div className="p-4 bg-slate-50 rounded-xl text-center">
+                <div className="p-4 bg-[#F8FAFC] rounded-md text-center">
                   <p className="text-2xl font-bold text-[#0F172A]">{application.noticePeriod || "N/A"}</p>
-                  <p className="text-xs text-slate-500 mt-1">Notice Period</p>
+                  <p className="text-xs text-[#94A3B8] mt-1">Notice Period</p>
                 </div>
               </div>
 
               {/* Contact Information */}
-              <Card className="rounded-2xl border-slate-200">
+              <Card className="rounded-md border-[rgba(15,23,42,0.06)]">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base font-semibold text-[#0F172A] flex items-center gap-2">
-                    <User size={16} className="text-[#23D3EE]" />
+                    <User size={16} className="text-[#0891B2]" />
                     Contact Information
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
-                    <Mail size={18} className="text-slate-400" />
+                  <div className="flex items-center gap-3 p-3 bg-[#F8FAFC] rounded-md">
+                    <Mail size={18} className="text-[#475569]" />
                     <div className="min-w-0">
-                      <p className="text-xs text-slate-400">Email</p>
+                      <p className="text-xs text-[#475569]">Email</p>
                       <p className="text-sm font-medium text-[#0F172A] truncate">{application.applicant.email}</p>
                     </div>
                     <Button variant="ghost" size="icon" className="h-8 w-8 ml-auto flex-shrink-0">
-                      <Copy size={14} className="text-slate-400" />
+                      <Copy size={14} className="text-[#475569]" />
                     </Button>
                   </div>
-                  <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
-                    <Phone size={18} className="text-slate-400" />
+                  <div className="flex items-center gap-3 p-3 bg-[#F8FAFC] rounded-md">
+                    <Phone size={18} className="text-[#475569]" />
                     <div className="min-w-0">
-                      <p className="text-xs text-slate-400">Phone</p>
+                      <p className="text-xs text-[#475569]">Phone</p>
                       <p className="text-sm font-medium text-[#0F172A]">{application.applicant.phone || "N/A"}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
-                    <MapPin size={18} className="text-slate-400" />
+                  <div className="flex items-center gap-3 p-3 bg-[#F8FAFC] rounded-md">
+                    <MapPin size={18} className="text-[#475569]" />
                     <div className="min-w-0">
-                      <p className="text-xs text-slate-400">Location</p>
+                      <p className="text-xs text-[#475569]">Location</p>
                       <p className="text-sm font-medium text-[#0F172A]">{application.applicant.location || "N/A"}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
-                    <Building2 size={18} className="text-slate-400" />
+                  <div className="flex items-center gap-3 p-3 bg-[#F8FAFC] rounded-md">
+                    <Building2 size={18} className="text-[#475569]" />
                     <div className="min-w-0">
-                      <p className="text-xs text-slate-400">Current Company</p>
+                      <p className="text-xs text-[#475569]">Current Company</p>
                       <p className="text-sm font-medium text-[#0F172A]">{application.applicant.company || "N/A"}</p>
                     </div>
                   </div>
@@ -3214,34 +3214,34 @@ const ApplicationDetailsSheet = ({
 
               {/* Social Links */}
               {(application.applicant.linkedin || application.applicant.website || application.applicant.github) && (
-                <Card className="rounded-2xl border-slate-200">
+                <Card className="rounded-md border-[rgba(15,23,42,0.06)]">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base font-semibold text-[#0F172A] flex items-center gap-2">
-                      <LinkIcon size={16} className="text-[#23D3EE]" />
+                      <LinkIcon size={16} className="text-[#0891B2]" />
                       Links & Profiles
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="flex flex-wrap gap-2">
                       {application.applicant.linkedin && (
-                        <Button variant="outline" size="sm" className="rounded-lg">
+                        <Button variant="outline" size="sm" className="rounded-md">
                           <Linkedin size={14} className="mr-2 text-[#0077B5]" />
                           LinkedIn
-                          <ExternalLink size={12} className="ml-2 text-slate-400" />
+                          <ExternalLink size={12} className="ml-2 text-[#475569]" />
                         </Button>
                       )}
                       {application.applicant.github && (
-                        <Button variant="outline" size="sm" className="rounded-lg">
+                        <Button variant="outline" size="sm" className="rounded-md">
                           <Github size={14} className="mr-2" />
                           GitHub
-                          <ExternalLink size={12} className="ml-2 text-slate-400" />
+                          <ExternalLink size={12} className="ml-2 text-[#475569]" />
                         </Button>
                       )}
                       {application.applicant.website && (
-                        <Button variant="outline" size="sm" className="rounded-lg">
-                          <Globe size={14} className="mr-2 text-slate-500" />
+                        <Button variant="outline" size="sm" className="rounded-md">
+                          <Globe size={14} className="mr-2 text-[#94A3B8]" />
                           Website
-                          <ExternalLink size={12} className="ml-2 text-slate-400" />
+                          <ExternalLink size={12} className="ml-2 text-[#475569]" />
                         </Button>
                       )}
                     </div>
@@ -3250,10 +3250,10 @@ const ApplicationDetailsSheet = ({
               )}
 
               {/* Evaluation Scores */}
-              <Card className="rounded-2xl border-slate-200">
+              <Card className="rounded-md border-[rgba(15,23,42,0.06)]">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base font-semibold text-[#0F172A] flex items-center gap-2">
-                    <Target size={16} className="text-[#23D3EE]" />
+                    <Target size={16} className="text-[#0891B2]" />
                     Evaluation Scores
                   </CardTitle>
                 </CardHeader>
@@ -3269,11 +3269,11 @@ const ApplicationDetailsSheet = ({
                       <ScoreCircle score={application.scores.overall} size="large" showLabel={false} />
                       <div>
                         <p className="font-semibold text-[#0F172A]">Overall Score</p>
-                        <p className="text-sm text-slate-500">{getScoreLabel(application.scores.overall)}</p>
+                        <p className="text-sm text-[#94A3B8]">{getScoreLabel(application.scores.overall)}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-slate-500">Rating:</span>
+                      <span className="text-sm text-[#94A3B8]">Rating:</span>
                       <RatingStars
                         rating={application.rating}
                         onChange={(rating) => onUpdate({ rating })}
@@ -3286,10 +3286,10 @@ const ApplicationDetailsSheet = ({
 
               {/* Skills */}
               {application.skills && application.skills.length > 0 && (
-                <Card className="rounded-2xl border-slate-200">
+                <Card className="rounded-md border-[rgba(15,23,42,0.06)]">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base font-semibold text-[#0F172A] flex items-center gap-2">
-                      <Zap size={16} className="text-[#23D3EE]" />
+                      <Zap size={16} className="text-[#0891B2]" />
                       Skills
                     </CardTitle>
                   </CardHeader>
@@ -3301,14 +3301,14 @@ const ApplicationDetailsSheet = ({
                             <TooltipTrigger>
                               <span
                                 className={cn(
-                                  "px-3 py-1.5 text-sm font-medium rounded-lg transition-colors",
+                                  "px-3 py-1.5 text-sm font-medium rounded-md transition-colors",
                                   skill.level === "expert"
-                                    ? "bg-[#23D3EE]/20 text-[#23D3EE]"
+                                    ? "bg-[#0891B2]/20 text-[#0891B2]"
                                     : skill.level === "advanced"
                                     ? "bg-blue-100 text-blue-700"
                                     : skill.level === "intermediate"
                                     ? "bg-amber-100 text-amber-700"
-                                    : "bg-slate-100 text-slate-600"
+                                    : "bg-white/5 text-[#475569]"
                                 )}
                               >
                                 {skill.name}
@@ -3326,14 +3326,14 @@ const ApplicationDetailsSheet = ({
               )}
 
               {/* Tags */}
-              <Card className="rounded-2xl border-slate-200">
+              <Card className="rounded-md border-[rgba(15,23,42,0.06)]">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base font-semibold text-[#0F172A] flex items-center gap-2">
-                      <Tags size={16} className="text-[#23D3EE]" />
+                      <Tags size={16} className="text-[#0891B2]" />
                       Tags
                     </CardTitle>
-                    <Button variant="ghost" size="sm" className="rounded-lg text-[#23D3EE]">
+                    <Button variant="ghost" size="sm" className="rounded-md text-[#0891B2]">
                       <Plus size={14} className="mr-1" /> Add Tag
                     </Button>
                   </div>
@@ -3343,32 +3343,32 @@ const ApplicationDetailsSheet = ({
                     {application.tags.map((tag) => (
                       <span
                         key={tag}
-                        className="inline-flex items-center gap-1 px-3 py-1 bg-slate-100 text-slate-700 text-sm rounded-full group"
+                        className="inline-flex items-center gap-1 px-3 py-1 bg-white/5 text-slate-200 text-sm rounded-full group"
                       >
                         {tag}
                         <button className="opacity-0 group-hover:opacity-100 transition-opacity">
-                          <X size={12} className="text-slate-400 hover:text-red-500" />
+                          <X size={12} className="text-[#475569] hover:text-red-500" />
                         </button>
                       </span>
                     ))}
                     {application.tags.length === 0 && (
-                      <span className="text-sm text-slate-400">No tags added</span>
+                      <span className="text-sm text-[#475569]">No tags added</span>
                     )}
                   </div>
                 </CardContent>
               </Card>
 
               {/* Assignment */}
-              <Card className="rounded-2xl border-slate-200">
+              <Card className="rounded-md border-[rgba(15,23,42,0.06)]">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base font-semibold text-[#0F172A] flex items-center gap-2">
-                    <UserCheck size={16} className="text-[#23D3EE]" />
+                    <UserCheck size={16} className="text-[#0891B2]" />
                     Assignment
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   {application.assignedTo ? (
-                    <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                    <div className="flex items-center justify-between p-3 bg-[#F8FAFC] rounded-md">
                       <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10">
                           <AvatarImage src={application.assignedToAvatar} />
@@ -3378,23 +3378,23 @@ const ApplicationDetailsSheet = ({
                         </Avatar>
                         <div>
                           <p className="font-medium text-[#0F172A]">{application.assignedTo}</p>
-                          <p className="text-xs text-slate-500">Recruiter</p>
+                          <p className="text-xs text-[#94A3B8]">Recruiter</p>
                         </div>
                       </div>
-                      <Button variant="outline" size="sm" className="rounded-lg">
+                      <Button variant="outline" size="sm" className="rounded-md">
                         Reassign
                       </Button>
                     </div>
                   ) : (
-                    <Button variant="outline" className="w-full rounded-xl">
+                    <Button variant="outline" className="w-full rounded-md">
                       <UserPlus size={16} className="mr-2" />
                       Assign Recruiter
                     </Button>
                   )}
 
                   {application.collaborators && application.collaborators.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-slate-100">
-                      <p className="text-sm text-slate-500 mb-3">Collaborators</p>
+                    <div className="mt-4 pt-4 border-t border-[rgba(15,23,42,0.06)]">
+                      <p className="text-sm text-[#94A3B8] mb-3">Collaborators</p>
                       <div className="flex items-center gap-2">
                         {application.collaborators.map((collab) => (
                           <TooltipProvider key={collab.id}>
@@ -3409,7 +3409,7 @@ const ApplicationDetailsSheet = ({
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p>{collab.name}</p>
-                                <p className="text-xs text-slate-400">{collab.role}</p>
+                                <p className="text-xs text-[#475569]">{collab.role}</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
@@ -3424,41 +3424,41 @@ const ApplicationDetailsSheet = ({
               </Card>
 
               {/* Meta Information */}
-              <Card className="rounded-2xl border-slate-200">
+              <Card className="rounded-md border-[rgba(15,23,42,0.06)]">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base font-semibold text-[#0F172A] flex items-center gap-2">
-                    <Info size={16} className="text-[#23D3EE]" />
+                    <Info size={16} className="text-[#0891B2]" />
                     Additional Information
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <p className="text-slate-400">Source</p>
+                      <p className="text-[#475569]">Source</p>
                       <p className="font-medium text-[#0F172A]">{application.source}</p>
                     </div>
                     <div>
-                      <p className="text-slate-400">Department</p>
+                      <p className="text-[#475569]">Department</p>
                       <p className="font-medium text-[#0F172A]">{application.department || "N/A"}</p>
                     </div>
                     <div>
-                      <p className="text-slate-400">Work Type</p>
+                      <p className="text-[#475569]">Work Type</p>
                       <p className="font-medium text-[#0F172A] capitalize">{application.workType || "N/A"}</p>
                     </div>
                     <div>
-                      <p className="text-slate-400">Employment Type</p>
+                      <p className="text-[#475569]">Employment Type</p>
                       <p className="font-medium text-[#0F172A] capitalize">
                         {application.employmentType?.replace("_", " ") || "N/A"}
                       </p>
                     </div>
                     <div>
-                      <p className="text-slate-400">Submitted</p>
+                      <p className="text-[#475569]">Submitted</p>
                       <p className="font-medium text-[#0F172A]">
                         {format(application.submittedAt, "MMM d, yyyy 'at' h:mm a")}
                       </p>
                     </div>
                     <div>
-                      <p className="text-slate-400">Last Updated</p>
+                      <p className="text-[#475569]">Last Updated</p>
                       <p className="font-medium text-[#0F172A]">
                         {format(application.lastUpdated, "MMM d, yyyy 'at' h:mm a")}
                       </p>
@@ -3474,7 +3474,7 @@ const ApplicationDetailsSheet = ({
                 <h3 className="font-semibold text-[#0F172A]">
                   Documents ({application.documents.length})
                 </h3>
-                <Button size="sm" className="rounded-lg bg-[#23D3EE] hover:bg-[#14a89a]">
+                <Button size="sm" className="rounded-md bg-[#0891B2] hover:bg-[#14a89a]">
                   <Upload size={14} className="mr-2" /> Upload
                 </Button>
               </div>
@@ -3484,11 +3484,11 @@ const ApplicationDetailsSheet = ({
                   {application.documents.map((doc) => (
                     <div
                       key={doc.id}
-                      className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors group"
+                      className="flex items-center gap-4 p-4 bg-[#F8FAFC] rounded-md hover:bg-white/10 transition-colors group"
                     >
                       <div
                         className={cn(
-                          "w-12 h-12 rounded-xl flex items-center justify-center",
+                          "w-12 h-12 rounded-md flex items-center justify-center",
                           doc.category === "resume"
                             ? "bg-blue-100"
                             : doc.category === "cover_letter"
@@ -3502,18 +3502,18 @@ const ApplicationDetailsSheet = ({
                           size={24}
                           className={cn(
                             doc.category === "resume"
-                              ? "text-blue-600"
+                              ? "text-[#0891B2]"
                               : doc.category === "cover_letter"
                               ? "text-purple-600"
                               : doc.category === "portfolio"
                               ? "text-pink-600"
-                              : "text-slate-500"
+                              : "text-[#94A3B8]"
                           )}
                         />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-[#0F172A] truncate">{doc.name}</p>
-                        <div className="flex items-center gap-2 text-xs text-slate-500">
+                        <div className="flex items-center gap-2 text-xs text-[#94A3B8]">
                           <span className="capitalize">{doc.category.replace("_", " ")}</span>
                           <span>•</span>
                           <span>{formatFileSize(doc.size)}</span>
@@ -3533,24 +3533,24 @@ const ApplicationDetailsSheet = ({
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
-                                <Eye size={16} className="text-slate-400" />
+                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md">
+                                <Eye size={16} className="text-[#475569]" />
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>Preview</TooltipContent>
                           </Tooltip>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
-                                <Download size={16} className="text-slate-400" />
+                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md">
+                                <Download size={16} className="text-[#475569]" />
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>Download</TooltipContent>
                           </Tooltip>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
-                                <Trash2 size={16} className="text-slate-400 hover:text-red-500" />
+                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md">
+                                <Trash2 size={16} className="text-[#475569] hover:text-red-500" />
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>Delete</TooltipContent>
@@ -3566,7 +3566,7 @@ const ApplicationDetailsSheet = ({
                   title="No documents"
                   description="No documents have been uploaded for this application yet."
                   action={
-                    <Button className="rounded-xl bg-[#23D3EE] hover:bg-[#14a89a]">
+                    <Button className="rounded-md bg-[#0891B2] hover:bg-[#14a89a]">
                       <Upload size={16} className="mr-2" /> Upload Document
                     </Button>
                   }
@@ -3580,7 +3580,7 @@ const ApplicationDetailsSheet = ({
                 <h3 className="font-semibold text-[#0F172A]">
                   Interviews ({application.interviews.length})
                 </h3>
-                <Button size="sm" className="rounded-lg bg-[#23D3EE] hover:bg-[#14a89a]">
+                <Button size="sm" className="rounded-md bg-[#0891B2] hover:bg-[#14a89a]">
                   <Plus size={14} className="mr-2" /> Schedule Interview
                 </Button>
               </div>
@@ -3588,12 +3588,12 @@ const ApplicationDetailsSheet = ({
               {application.interviews.length > 0 ? (
                 <div className="space-y-4">
                   {application.interviews.map((interview) => (
-                    <Card key={interview.id} className="rounded-xl border-slate-200 overflow-hidden">
+                    <Card key={interview.id} className="rounded-md border-[rgba(15,23,42,0.06)] overflow-hidden">
                       <div
                         className={cn(
                           "h-1",
                           interview.status === "scheduled" || interview.status === "confirmed"
-                            ? "bg-[#23D3EE]"
+                            ? "bg-[#0891B2]"
                             : interview.status === "completed"
                             ? "bg-green-500"
                             : interview.status === "cancelled"
@@ -3606,44 +3606,44 @@ const ApplicationDetailsSheet = ({
                           <div className="flex items-start gap-3">
                             <div
                               className={cn(
-                                "w-10 h-10 rounded-lg flex items-center justify-center",
+                                "w-10 h-10 rounded-md flex items-center justify-center",
                                 interview.type === "video"
                                   ? "bg-blue-100"
                                   : interview.type === "phone"
                                   ? "bg-green-100"
                                   : interview.type === "technical"
                                   ? "bg-purple-100"
-                                  : "bg-slate-100"
+                                  : "bg-white/5"
                               )}
                             >
                               {interview.type === "video" ? (
-                                <Video size={20} className="text-blue-600" />
+                                <Video size={20} className="text-[#0891B2]" />
                               ) : interview.type === "phone" ? (
                                 <Phone size={20} className="text-green-600" />
                               ) : interview.type === "technical" ? (
                                 <Code size={20} className="text-purple-600" />
                               ) : (
-                                <Users size={20} className="text-slate-600" />
+                                <Users size={20} className="text-[#475569]" />
                               )}
                             </div>
                             <div>
                               <h4 className="font-semibold text-[#0F172A]">{interview.title}</h4>
-                              <p className="text-sm text-slate-500">
+                              <p className="text-sm text-[#94A3B8]">
                                 {format(interview.scheduledAt, "EEEE, MMMM d, yyyy 'at' h:mm a")}
                               </p>
-                              <p className="text-xs text-slate-400 mt-1">{interview.duration} minutes</p>
+                              <p className="text-xs text-[#475569] mt-1">{interview.duration} minutes</p>
                             </div>
                           </div>
                           <span
                             className={cn(
-                              "px-2 py-1 rounded-lg text-xs font-medium capitalize",
+                              "px-2 py-1 rounded-md text-xs font-medium capitalize",
                               interview.status === "scheduled" || interview.status === "confirmed"
-                                ? "bg-[#23D3EE]/10 text-[#23D3EE]"
+                                ? "bg-[#0891B2]/10 text-[#0891B2]"
                                 : interview.status === "completed"
                                 ? "bg-green-100 text-green-700"
                                 : interview.status === "cancelled"
                                 ? "bg-red-100 text-red-700"
-                                : "bg-slate-100 text-slate-600"
+                                : "bg-white/5 text-[#475569]"
                             )}
                           >
                             {interview.status.replace("_", " ")}
@@ -3651,8 +3651,8 @@ const ApplicationDetailsSheet = ({
                         </div>
 
                         {/* Interviewers */}
-                        <div className="mt-4 pt-4 border-t border-slate-100">
-                          <p className="text-xs text-slate-400 mb-2">Interviewers</p>
+                        <div className="mt-4 pt-4 border-t border-[rgba(15,23,42,0.06)]">
+                          <p className="text-xs text-[#475569] mb-2">Interviewers</p>
                           <div className="flex items-center gap-2">
                             {interview.interviewers.map((interviewer) => (
                               <TooltipProvider key={interviewer.id}>
@@ -3667,7 +3667,7 @@ const ApplicationDetailsSheet = ({
                                   </TooltipTrigger>
                                   <TooltipContent>
                                     <p>{interviewer.name}</p>
-                                    <p className="text-xs text-slate-400">{interviewer.role}</p>
+                                    <p className="text-xs text-[#475569]">{interviewer.role}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
@@ -3677,10 +3677,10 @@ const ApplicationDetailsSheet = ({
 
                         {/* Feedback (if completed) */}
                         {interview.status === "completed" && interview.feedback && interview.feedback.length > 0 && (
-                          <div className="mt-4 pt-4 border-t border-slate-100">
-                            <p className="text-xs text-slate-400 mb-2">Feedback</p>
+                          <div className="mt-4 pt-4 border-t border-[rgba(15,23,42,0.06)]">
+                            <p className="text-xs text-[#475569] mb-2">Feedback</p>
                             {interview.feedback.map((fb) => (
-                              <div key={fb.id} className="p-3 bg-slate-50 rounded-lg">
+                              <div key={fb.id} className="p-3 bg-[#F8FAFC] rounded-md">
                                 <div className="flex items-center justify-between mb-2">
                                   <span className="text-sm font-medium text-[#0F172A]">
                                     {fb.interviewerName}
@@ -3693,7 +3693,7 @@ const ApplicationDetailsSheet = ({
                                         fb.recommendation === "strong_yes"
                                           ? "bg-green-100 text-green-700"
                                           : fb.recommendation === "yes"
-                                          ? "bg-[#23D3EE]/10 text-[#23D3EE]"
+                                          ? "bg-[#0891B2]/10 text-[#0891B2]"
                                           : fb.recommendation === "neutral"
                                           ? "bg-amber-100 text-amber-700"
                                           : "bg-red-100 text-red-700"
@@ -3703,7 +3703,7 @@ const ApplicationDetailsSheet = ({
                                     </span>
                                   </div>
                                 </div>
-                                <p className="text-sm text-slate-600">{fb.comments}</p>
+                                <p className="text-sm text-[#475569]">{fb.comments}</p>
                               </div>
                             ))}
                           </div>
@@ -3712,15 +3712,15 @@ const ApplicationDetailsSheet = ({
                         {/* Actions */}
                         <div className="mt-4 flex items-center gap-2">
                           {interview.meetingLink && interview.status === "scheduled" && (
-                            <Button size="sm" className="rounded-lg bg-[#23D3EE] hover:bg-[#14a89a]">
+                            <Button size="sm" className="rounded-md bg-[#0891B2] hover:bg-[#14a89a]">
                               <Video size={14} className="mr-1" /> Join
                             </Button>
                           )}
-                          <Button variant="outline" size="sm" className="rounded-lg">
+                          <Button variant="outline" size="sm" className="rounded-md">
                             <Pencil size={14} className="mr-1" /> Edit
                           </Button>
                           {interview.status === "scheduled" && (
-                            <Button variant="outline" size="sm" className="rounded-lg text-red-600">
+                            <Button variant="outline" size="sm" className="rounded-md text-red-600">
                               <X size={14} className="mr-1" /> Cancel
                             </Button>
                           )}
@@ -3735,7 +3735,7 @@ const ApplicationDetailsSheet = ({
                   title="No interviews scheduled"
                   description="No interviews have been scheduled for this application yet."
                   action={
-                    <Button className="rounded-xl bg-[#23D3EE] hover:bg-[#14a89a]">
+                    <Button className="rounded-md bg-[#0891B2] hover:bg-[#14a89a]">
                       <Plus size={16} className="mr-2" /> Schedule Interview
                     </Button>
                   }
@@ -3749,7 +3749,7 @@ const ApplicationDetailsSheet = ({
                 <h3 className="font-semibold text-[#0F172A]">
                   Assessments ({application.assessments.length})
                 </h3>
-                <Button size="sm" className="rounded-lg bg-[#23D3EE] hover:bg-[#14a89a]">
+                <Button size="sm" className="rounded-md bg-[#0891B2] hover:bg-[#14a89a]">
                   <Plus size={14} className="mr-2" /> Send Assessment
                 </Button>
               </div>
@@ -3757,48 +3757,48 @@ const ApplicationDetailsSheet = ({
               {application.assessments.length > 0 ? (
                 <div className="space-y-4">
                   {application.assessments.map((assessment) => (
-                    <Card key={assessment.id} className="rounded-xl border-slate-200">
+                    <Card key={assessment.id} className="rounded-md border-[rgba(15,23,42,0.06)]">
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between">
                           <div className="flex items-start gap-3">
                             <div
                               className={cn(
-                                "w-10 h-10 rounded-lg flex items-center justify-center",
+                                "w-10 h-10 rounded-md flex items-center justify-center",
                                 assessment.type === "technical"
                                   ? "bg-blue-100"
                                   : assessment.type === "personality"
                                   ? "bg-purple-100"
                                   : assessment.type === "cognitive"
                                   ? "bg-amber-100"
-                                  : "bg-slate-100"
+                                  : "bg-white/5"
                               )}
                             >
                               <ClipboardCheck
                                 size={20}
                                 className={cn(
                                   assessment.type === "technical"
-                                    ? "text-blue-600"
+                                    ? "text-[#0891B2]"
                                     : assessment.type === "personality"
                                     ? "text-purple-600"
                                     : assessment.type === "cognitive"
                                     ? "text-amber-600"
-                                    : "text-slate-600"
+                                    : "text-[#475569]"
                                 )}
                               />
                             </div>
                             <div>
                               <h4 className="font-semibold text-[#0F172A]">{assessment.name}</h4>
                               {assessment.provider && (
-                                <p className="text-sm text-slate-500">via {assessment.provider}</p>
+                                <p className="text-sm text-[#94A3B8]">via {assessment.provider}</p>
                               )}
-                              <p className="text-xs text-slate-400 mt-1">
+                              <p className="text-xs text-[#475569] mt-1">
                                 Sent {format(assessment.sentAt, "MMM d, yyyy")}
                               </p>
                             </div>
                           </div>
                           <span
                             className={cn(
-                              "px-2 py-1 rounded-lg text-xs font-medium capitalize",
+                              "px-2 py-1 rounded-md text-xs font-medium capitalize",
                               assessment.status === "completed"
                                 ? "bg-green-100 text-green-700"
                                 : assessment.status === "in_progress"
@@ -3813,23 +3813,23 @@ const ApplicationDetailsSheet = ({
                         </div>
 
                         {assessment.status === "completed" && assessment.score !== undefined && (
-                          <div className="mt-4 pt-4 border-t border-slate-100">
+                          <div className="mt-4 pt-4 border-t border-[rgba(15,23,42,0.06)]">
                             <div className="flex items-center justify-between">
                               <div>
-                                <p className="text-sm text-slate-500">Score</p>
+                                <p className="text-sm text-[#94A3B8]">Score</p>
                                 <p className="text-2xl font-bold" style={{ color: getScoreColor(assessment.score) }}>
                                   {assessment.score}/{assessment.maxScore}
                                 </p>
                               </div>
                               {assessment.percentile && (
                                 <div className="text-right">
-                                  <p className="text-sm text-slate-500">Percentile</p>
+                                  <p className="text-sm text-[#94A3B8]">Percentile</p>
                                   <p className="text-2xl font-bold text-[#0F172A]">{assessment.percentile}%</p>
                                 </div>
                               )}
                             </div>
                             {assessment.reportUrl && (
-                              <Button variant="outline" size="sm" className="mt-3 rounded-lg w-full">
+                              <Button variant="outline" size="sm" className="mt-3 rounded-md w-full">
                                 <FileText size={14} className="mr-2" /> View Full Report
                               </Button>
                             )}
@@ -3838,10 +3838,10 @@ const ApplicationDetailsSheet = ({
 
                         {assessment.status === "pending" && (
                           <div className="mt-4 flex items-center gap-2">
-                            <Button variant="outline" size="sm" className="rounded-lg">
+                            <Button variant="outline" size="sm" className="rounded-md">
                               <Send size={14} className="mr-1" /> Resend
                             </Button>
-                            <Button variant="outline" size="sm" className="rounded-lg text-red-600">
+                            <Button variant="outline" size="sm" className="rounded-md text-red-600">
                               <X size={14} className="mr-1" /> Cancel
                             </Button>
                           </div>
@@ -3856,7 +3856,7 @@ const ApplicationDetailsSheet = ({
                   title="No assessments"
                   description="No assessments have been sent to this candidate yet."
                   action={
-                    <Button className="rounded-xl bg-[#23D3EE] hover:bg-[#14a89a]">
+                    <Button className="rounded-md bg-[#0891B2] hover:bg-[#14a89a]">
                       <Plus size={16} className="mr-2" /> Send Assessment
                     </Button>
                   }
@@ -3870,7 +3870,7 @@ const ApplicationDetailsSheet = ({
                 <h3 className="font-semibold text-[#0F172A]">Notes ({application.notes.length})</h3>
                 <Button
                   size="sm"
-                  className="rounded-lg bg-[#23D3EE] hover:bg-[#14a89a]"
+                  className="rounded-md bg-[#0891B2] hover:bg-[#14a89a]"
                   onClick={() => setIsAddingNote(true)}
                 >
                   <Plus size={14} className="mr-2" /> Add Note
@@ -3884,28 +3884,28 @@ const ApplicationDetailsSheet = ({
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="bg-slate-50 rounded-xl p-4 mb-4"
+                    className="bg-[#F8FAFC] rounded-md p-4 mb-4"
                   >
                     <Textarea
                       placeholder="Write your note..."
                       value={newNote}
                       onChange={(e) => setNewNote(e.target.value)}
-                      className="min-h-[100px] rounded-xl resize-none mb-3"
+                      className="min-h-[100px] rounded-md resize-none mb-3"
                     />
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Checkbox id="privateNote" />
-                        <Label htmlFor="privateNote" className="text-sm text-slate-600">
+                        <Label htmlFor="privateNote" className="text-sm text-[#475569]">
                           Private note (only visible to you)
                         </Label>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" className="rounded-lg" onClick={() => setIsAddingNote(false)}>
+                        <Button variant="outline" size="sm" className="rounded-md" onClick={() => setIsAddingNote(false)}>
                           Cancel
                         </Button>
                         <Button
                           size="sm"
-                          className="rounded-lg bg-[#23D3EE] hover:bg-[#14a89a]"
+                          className="rounded-md bg-[#0891B2] hover:bg-[#14a89a]"
                           onClick={handleAddNote}
                           disabled={!newNote.trim()}
                         >
@@ -3925,8 +3925,8 @@ const ApplicationDetailsSheet = ({
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       className={cn(
-                        "p-4 rounded-xl border",
-                        note.isPinned ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"
+                        "p-4 rounded-md border",
+                        note.isPinned ? "bg-amber-50 border-amber-200" : "bg-white border-[rgba(15,23,42,0.06)]"
                       )}
                     >
                       <div className="flex items-start justify-between mb-3">
@@ -3941,7 +3941,7 @@ const ApplicationDetailsSheet = ({
                             <div className="flex items-center gap-2">
                               <span className="font-medium text-sm text-[#0F172A]">{note.author}</span>
                               {note.authorRole && (
-                                <span className="text-xs text-slate-400">{note.authorRole}</span>
+                                <span className="text-xs text-[#475569]">{note.authorRole}</span>
                               )}
                               {note.isPrivate && (
                                 <span className="flex items-center gap-1 text-xs text-amber-600">
@@ -3954,32 +3954,32 @@ const ApplicationDetailsSheet = ({
                                 </span>
                               )}
                             </div>
-                            <span className="text-xs text-slate-400">
+                            <span className="text-xs text-[#475569]">
                               {format(note.createdAt, "MMM d, yyyy 'at' h:mm a")}
                             </span>
                           </div>
                         </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg">
-                              <MoreHorizontal size={14} className="text-slate-400" />
+                            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md">
+                              <MoreHorizontal size={14} className="text-[#475569]" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="rounded-xl">
-                            <DropdownMenuItem className="rounded-lg">
+                          <DropdownMenuContent align="end" className="rounded-md">
+                            <DropdownMenuItem className="rounded-md">
                               <Pencil size={14} className="mr-2" /> Edit
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="rounded-lg">
+                            <DropdownMenuItem className="rounded-md">
                               <Bookmark size={14} className="mr-2" /> {note.isPinned ? "Unpin" : "Pin"}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="rounded-lg text-red-600">
+                            <DropdownMenuItem className="rounded-md text-red-600">
                               <Trash2 size={14} className="mr-2" /> Delete
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
-                      <p className="text-sm text-slate-700 whitespace-pre-wrap">{note.content}</p>
+                      <p className="text-sm text-slate-200 whitespace-pre-wrap">{note.content}</p>
                     </motion.div>
                   ))}
                 </div>
@@ -3990,7 +3990,7 @@ const ApplicationDetailsSheet = ({
                   description="No notes have been added to this application yet."
                   action={
                     <Button
-                      className="rounded-xl bg-[#23D3EE] hover:bg-[#14a89a]"
+                      className="rounded-md bg-[#0891B2] hover:bg-[#14a89a]"
                       onClick={() => setIsAddingNote(true)}
                     >
                       <Plus size={16} className="mr-2" /> Add Note
@@ -4023,38 +4023,38 @@ const ApplicationDetailsSheet = ({
                               : activity.type === "note_added"
                               ? "bg-purple-100"
                               : activity.type === "interview_scheduled"
-                              ? "bg-[#23D3EE]/20"
+                              ? "bg-[#0891B2]/20"
                               : activity.type === "document_uploaded"
                               ? "bg-amber-100"
-                              : "bg-slate-100"
+                              : "bg-white/5"
                           )}
                         >
                           {activity.type === "status_change" ? (
-                            <RefreshCw size={14} className="text-blue-600" />
+                            <RefreshCw size={14} className="text-[#0891B2]" />
                           ) : activity.type === "note_added" ? (
                             <MessageSquare size={14} className="text-purple-600" />
                           ) : activity.type === "interview_scheduled" ? (
-                            <CalendarDays size={14} className="text-[#23D3EE]" />
+                            <CalendarDays size={14} className="text-[#0891B2]" />
                           ) : activity.type === "document_uploaded" ? (
                             <Upload size={14} className="text-amber-600" />
                           ) : (
-                            <Activity size={14} className="text-slate-600" />
+                            <Activity size={14} className="text-[#475569]" />
                           )}
                         </div>
                         <div className="flex-1 pb-6">
                           <p className="text-sm text-[#0F172A]">{activity.description}</p>
-                          <div className="flex items-center gap-2 mt-1 text-xs text-slate-400">
+                          <div className="flex items-center gap-2 mt-1 text-xs text-[#475569]">
                             <span>{activity.user}</span>
                             <span>•</span>
                             <span>{format(activity.timestamp, "MMM d, yyyy 'at' h:mm a")}</span>
                           </div>
                           {activity.changes && activity.changes.length > 0 && (
-                            <div className="mt-2 p-2 bg-slate-50 rounded-lg text-xs">
+                            <div className="mt-2 p-2 bg-[#F8FAFC] rounded-md text-xs">
                               {activity.changes.map((change, i) => (
                                 <div key={i} className="flex items-center gap-2">
-                                  <span className="text-slate-500">{change.field}:</span>
+                                  <span className="text-[#94A3B8]">{change.field}:</span>
                                   <span className="text-red-500 line-through">{String(change.from)}</span>
-                                  <ArrowRight size={12} className="text-slate-400" />
+                                  <ArrowRight size={12} className="text-[#475569]" />
                                   <span className="text-green-600">{String(change.to)}</span>
                                 </div>
                               ))}
@@ -4080,7 +4080,7 @@ const ApplicationDetailsSheet = ({
                 <h3 className="font-semibold text-[#0F172A]">
                   Emails ({application.emailThreads.length})
                 </h3>
-                <Button size="sm" className="rounded-lg bg-[#23D3EE] hover:bg-[#14a89a]">
+                <Button size="sm" className="rounded-md bg-[#0891B2] hover:bg-[#14a89a]">
                   <Send size={14} className="mr-2" /> Compose Email
                 </Button>
               </div>
@@ -4091,8 +4091,8 @@ const ApplicationDetailsSheet = ({
                     <Card
                       key={thread.id}
                       className={cn(
-                        "rounded-xl border-slate-200 cursor-pointer hover:border-[#23D3EE]/30 transition-colors",
-                        !thread.isRead && "border-l-4 border-l-[#23D3EE]"
+                        "rounded-md border-[rgba(15,23,42,0.06)] cursor-pointer hover:border-[#22D3EE]/30 transition-colors",
+                        !thread.isRead && "border-l-4 border-l-[#22D3EE]"
                       )}
                     >
                       <CardContent className="p-4">
@@ -4103,23 +4103,23 @@ const ApplicationDetailsSheet = ({
                               <h4
                                 className={cn(
                                   "truncate",
-                                  thread.isRead ? "text-slate-600" : "font-semibold text-[#0F172A]"
+                                  thread.isRead ? "text-[#475569]" : "font-semibold text-[#0F172A]"
                                 )}
                               >
                                 {thread.subject}
                               </h4>
                             </div>
-                            <p className="text-sm text-slate-500 truncate">
+                            <p className="text-sm text-[#94A3B8] truncate">
                               {thread.messages[thread.messages.length - 1]?.body.substring(0, 100)}...
                             </p>
                           </div>
                           <div className="flex flex-col items-end gap-1 ml-4 flex-shrink-0">
-                            <span className="text-xs text-slate-400">
+                            <span className="text-xs text-[#475569]">
                               {getRelativeTime(thread.lastMessageAt)}
                             </span>
                             <div className="flex items-center gap-1">
                               {thread.messages.length > 1 && (
-                                <span className="text-xs bg-slate-100 px-1.5 py-0.5 rounded">
+                                <span className="text-xs bg-white/5 px-1.5 py-0.5 rounded">
                                   {thread.messages.length}
                                 </span>
                               )}
@@ -4136,7 +4136,7 @@ const ApplicationDetailsSheet = ({
                   title="No emails"
                   description="No emails have been exchanged with this candidate yet."
                   action={
-                    <Button className="rounded-xl bg-[#23D3EE] hover:bg-[#14a89a]">
+                    <Button className="rounded-md bg-[#0891B2] hover:bg-[#14a89a]">
                       <Send size={16} className="mr-2" /> Compose Email
                     </Button>
                   }
@@ -4147,17 +4147,17 @@ const ApplicationDetailsSheet = ({
         </Tabs>
 
         {/* Footer Actions */}
-        <div className="p-4 border-t border-slate-100 flex items-center justify-between bg-white flex-shrink-0">
+        <div className="p-4 border-t border-[rgba(15,23,42,0.06)] flex items-center justify-between bg-white flex-shrink-0">
           <div className="flex items-center gap-2">
-            <Button variant="outline" className="rounded-xl" onClick={onClose}>
+            <Button variant="outline" className="rounded-md" onClick={onClose}>
               Close
             </Button>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" className="rounded-xl">
+            <Button variant="outline" className="rounded-md">
               <Mail size={16} className="mr-2" /> Send Email
             </Button>
-            <Button className="rounded-xl bg-[#23D3EE] hover:bg-[#14a89a]">
+            <Button className="rounded-md bg-[#0891B2] hover:bg-[#14a89a]">
               <CalendarDays size={16} className="mr-2" /> Schedule Interview
             </Button>
           </div>
@@ -4184,9 +4184,9 @@ const BulkActionsBar = ({
       exit={{ opacity: 0, y: 20 }}
       className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50"
     >
-      <div className="bg-[#0F172A] text-white rounded-2xl px-6 py-3 shadow-2xl flex items-center gap-4">
+      <div className="bg-[#F8FAFC] text-[#0F172A] rounded-md px-6 py-3 card-shadow flex items-center gap-4">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-[#23D3EE] rounded-lg flex items-center justify-center font-semibold">
+          <div className="w-8 h-8 bg-[#0891B2] rounded-md flex items-center justify-center font-semibold">
             {selectedCount}
           </div>
           <span className="text-sm">selected</span>
@@ -4199,7 +4199,7 @@ const BulkActionsBar = ({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 rounded-lg hover:bg-white/10"
+                  className="h-9 w-9 rounded-md hover:bg-white/10"
                   onClick={() => onBulkAction("email")}
                 >
                   <Mail size={18} />
@@ -4212,7 +4212,7 @@ const BulkActionsBar = ({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 rounded-lg hover:bg-white/10"
+                  className="h-9 w-9 rounded-md hover:bg-white/10"
                   onClick={() => onBulkAction("status")}
                 >
                   <RefreshCw size={18} />
@@ -4225,7 +4225,7 @@ const BulkActionsBar = ({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 rounded-lg hover:bg-white/10"
+                  className="h-9 w-9 rounded-md hover:bg-white/10"
                   onClick={() => onBulkAction("assign")}
                 >
                   <UserPlus size={18} />
@@ -4238,7 +4238,7 @@ const BulkActionsBar = ({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 rounded-lg hover:bg-white/10"
+                  className="h-9 w-9 rounded-md hover:bg-white/10"
                   onClick={() => onBulkAction("tag")}
                 >
                   <Tag size={18} />
@@ -4251,7 +4251,7 @@ const BulkActionsBar = ({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 rounded-lg hover:bg-white/10"
+                  className="h-9 w-9 rounded-md hover:bg-white/10"
                   onClick={() => onBulkAction("export")}
                 >
                   <Download size={18} />
@@ -4264,7 +4264,7 @@ const BulkActionsBar = ({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 rounded-lg hover:bg-white/10"
+                  className="h-9 w-9 rounded-md hover:bg-white/10"
                   onClick={() => onBulkAction("archive")}
                 >
                   <Archive size={18} />
@@ -4277,7 +4277,7 @@ const BulkActionsBar = ({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 rounded-lg hover:bg-white/10 text-red-400"
+                  className="h-9 w-9 rounded-md hover:bg-white/10 text-red-400"
                   onClick={() => onBulkAction("delete")}
                 >
                   <Trash2 size={18} />
@@ -4293,7 +4293,7 @@ const BulkActionsBar = ({
         <Button
           variant="ghost"
           size="sm"
-          className="rounded-lg hover:bg-white/10 text-slate-300"
+          className="rounded-md hover:bg-white/10 text-[#475569]"
           onClick={onClearSelection}
         >
           <X size={16} className="mr-1" /> Clear
@@ -4336,7 +4336,7 @@ const ColumnCustomizationDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md rounded-2xl">
+      <DialogContent className="sm:max-w-md rounded-md">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-[#0F172A]">Customize Columns</DialogTitle>
           <DialogDescription>
@@ -4351,10 +4351,10 @@ const ColumnCustomizationDialog = ({
                 .map((column) => (
                   <div
                     key={column.id}
-                    className="flex items-center justify-between p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors"
+                    className="flex items-center justify-between p-3 bg-[#F8FAFC] rounded-md hover:bg-white/10 transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <GripVertical size={16} className="text-slate-400 cursor-grab" />
+                      <GripVertical size={16} className="text-[#475569] cursor-grab" />
                       <span className="text-sm font-medium text-[#0F172A]">{column.label}</span>
                     </div>
                     <Switch
@@ -4367,10 +4367,10 @@ const ColumnCustomizationDialog = ({
           </ScrollArea>
         </div>
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={handleReset} className="rounded-xl">
+          <Button variant="outline" onClick={handleReset} className="rounded-md">
             Reset to Default
           </Button>
-          <Button onClick={handleApply} className="rounded-xl bg-[#23D3EE] hover:bg-[#14a89a]">
+          <Button onClick={handleApply} className="rounded-md bg-[#0891B2] hover:bg-[#14a89a]">
             Apply Changes
           </Button>
         </DialogFooter>
@@ -4396,22 +4396,22 @@ const SavedViewsDropdown = ({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="rounded-xl gap-2">
+        <Button variant="outline" className="rounded-md gap-2">
           <Bookmark size={16} />
           {currentView ? savedViews.find((v) => v.id === currentView)?.name : "All Applications"}
           <ChevronDown size={14} />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-64 rounded-xl">
+      <DropdownMenuContent align="start" className="w-64 rounded-md">
         <DropdownMenuLabel>Saved Views</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={() => onSelectView({ id: "", name: "All Applications" } as SavedView)}
-          className="rounded-lg"
+          className="rounded-md"
         >
           <LayoutList size={14} className="mr-2" />
           All Applications
-          {!currentView && <Check size={14} className="ml-auto text-[#23D3EE]" />}
+          {!currentView && <Check size={14} className="ml-auto text-[#0891B2]" />}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         {savedViews.length > 0 ? (
@@ -4419,11 +4419,11 @@ const SavedViewsDropdown = ({
             <DropdownMenuItem
               key={view.id}
               onClick={() => onSelectView(view)}
-              className="rounded-lg group"
+              className="rounded-md group"
             >
               <Bookmark size={14} className="mr-2" />
               <span className="flex-1">{view.name}</span>
-              {currentView === view.id && <Check size={14} className="ml-auto text-[#23D3EE]" />}
+              {currentView === view.id && <Check size={14} className="ml-auto text-[#0891B2]" />}
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -4431,17 +4431,17 @@ const SavedViewsDropdown = ({
                 }}
                 className="opacity-0 group-hover:opacity-100 ml-2"
               >
-                <X size={14} className="text-slate-400 hover:text-red-500" />
+                <X size={14} className="text-[#475569] hover:text-red-500" />
               </button>
             </DropdownMenuItem>
           ))
         ) : (
-          <div className="px-2 py-4 text-center text-sm text-slate-400">
+          <div className="px-2 py-4 text-center text-sm text-[#475569]">
             No saved views yet
           </div>
         )}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={onSaveView} className="rounded-lg text-[#23D3EE]">
+        <DropdownMenuItem onClick={onSaveView} className="rounded-md text-[#0891B2]">
           <Plus size={14} className="mr-2" />
           Save Current View
         </DropdownMenuItem>
@@ -4470,13 +4470,13 @@ const QuickDateFilter = ({
 
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="w-[140px] rounded-xl">
-        <CalendarIcon size={14} className="mr-2 text-slate-400" />
+      <SelectTrigger className="w-[140px] rounded-md">
+        <CalendarIcon size={14} className="mr-2 text-[#475569]" />
         <SelectValue placeholder="Date Range" />
       </SelectTrigger>
-      <SelectContent className="rounded-xl">
+      <SelectContent className="rounded-md">
         {options.map((option) => (
-          <SelectItem key={option.id} value={option.id} className="rounded-lg">
+          <SelectItem key={option.id} value={option.id} className="rounded-md">
             {option.label}
           </SelectItem>
         ))}
@@ -5105,25 +5105,25 @@ const Applications = () => {
         <motion.header
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white border-b border-slate-200 px-6 py-4 flex-shrink-0"
+          className="bg-white border-b border-[rgba(15,23,42,0.06)] px-6 py-4 flex-shrink-0"
         >
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-2xl font-bold text-[#0F172A]">Applications</h1>
-              <p className="text-slate-500 text-sm">
+              <p className="text-[#94A3B8] text-sm">
                 Manage and track all applications in one place
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <Button variant="outline" className="rounded-xl gap-2">
+              <Button variant="outline" className="rounded-md gap-2">
                 <Upload size={16} />
                 Import
               </Button>
-              <Button variant="outline" className="rounded-xl gap-2">
+              <Button variant="outline" className="rounded-md gap-2">
                 <Download size={16} />
                 Export
               </Button>
-              <Button className="rounded-xl gap-2 bg-[#23D3EE] hover:bg-[#14a89a]">
+              <Button className="rounded-md gap-2 bg-[#0891B2] hover:bg-[#14a89a]">
                 <Plus size={16} />
                 Add Application
               </Button>
@@ -5136,7 +5136,7 @@ const Applications = () => {
               title="Total"
               value={stats.total}
               icon={Files}
-              color="#0F172A"
+              color="#1a1a2e"
               isActive={statusFilter === "all"}
               onClick={() => setStatusFilter("all")}
               delay={0}
@@ -5212,7 +5212,7 @@ const Applications = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between flex-shrink-0"
+          className="bg-white border-b border-[rgba(15,23,42,0.06)] px-6 py-3 flex items-center justify-between flex-shrink-0"
         >
           <div className="flex items-center gap-3 flex-1">
             {/* Saved Views */}
@@ -5226,18 +5226,18 @@ const Applications = () => {
 
             {/* Search */}
             <div className="relative flex-1 max-w-md">
-              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
               <Input
                 ref={searchInputRef}
                 placeholder="Search applications... (Press / to focus)"
                 value={filters.search}
                 onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
-                className="pl-10 pr-10 rounded-xl border-slate-200 focus:border-[#23D3EE] focus:ring-[#23D3EE]/20"
+                className="pl-10 pr-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-[#22D3EE]/20"
               />
               {filters.search && (
                 <button
                   onClick={() => setFilters((prev) => ({ ...prev, search: "" }))}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#475569] hover:text-[#475569]"
                 >
                   <X size={16} />
                 </button>
@@ -5251,15 +5251,15 @@ const Applications = () => {
             <Button
               variant="outline"
               className={cn(
-                "rounded-xl gap-2",
-                activeFilterCount > 0 && "border-[#23D3EE] text-[#23D3EE]"
+                "rounded-md gap-2",
+                activeFilterCount > 0 && "border-[#22D3EE] text-[#0891B2]"
               )}
               onClick={() => setIsFilterPanelOpen(true)}
             >
               <Filter size={16} />
               Filters
               {activeFilterCount > 0 && (
-                <span className="w-5 h-5 bg-[#23D3EE] text-white text-xs rounded-full flex items-center justify-center">
+                <span className="w-5 h-5 bg-[#0891B2] text-white text-xs rounded-full flex items-center justify-center">
                   {activeFilterCount}
                 </span>
               )}
@@ -5270,7 +5270,7 @@ const Applications = () => {
                 variant="ghost"
                 size="sm"
                 onClick={handleClearFilters}
-                className="text-slate-500 hover:text-red-500"
+                className="text-[#94A3B8] hover:text-red-500"
               >
                 <X size={14} className="mr-1" />
                 Clear
@@ -5282,12 +5282,12 @@ const Applications = () => {
             {/* Sort */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="rounded-xl gap-2">
+                <Button variant="outline" className="rounded-md gap-2">
                   <ArrowUpDown size={16} />
                   Sort
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 rounded-xl">
+              <DropdownMenuContent align="end" className="w-48 rounded-md">
                 <DropdownMenuLabel>Sort By</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {[
@@ -5312,15 +5312,15 @@ const Applications = () => {
                         setSortOrder("desc");
                       }
                     }}
-                    className="rounded-lg"
+                    className="rounded-md"
                   >
                     {item.label}
                     {sortField === item.field && (
                       <span className="ml-auto">
                         {sortOrder === "asc" ? (
-                          <ArrowUp size={14} className="text-[#23D3EE]" />
+                          <ArrowUp size={14} className="text-[#0891B2]" />
                         ) : (
-                          <ArrowDown size={14} className="text-[#23D3EE]" />
+                          <ArrowDown size={14} className="text-[#0891B2]" />
                         )}
                       </span>
                     )}
@@ -5337,7 +5337,7 @@ const Applications = () => {
                     <Button
                       variant="outline"
                       size="icon"
-                      className="rounded-xl"
+                      className="rounded-md"
                       onClick={() => setIsColumnDialogOpen(true)}
                     >
                       <Columns size={16} />
@@ -5349,7 +5349,7 @@ const Applications = () => {
             )}
 
             {/* View Mode Toggle */}
-            <div className="flex items-center bg-slate-100 rounded-xl p-1">
+            <div className="flex items-center bg-white/5 rounded-md p-1">
               <TooltipProvider>
                 {[
                   { mode: "grid" as ViewMode, icon: LayoutGrid, label: "Grid View" },
@@ -5361,10 +5361,10 @@ const Applications = () => {
                       <button
                         onClick={() => setViewMode(mode)}
                         className={cn(
-                          "p-2 rounded-lg transition-all",
+                          "p-2 rounded-md transition-all",
                           viewMode === mode
-                            ? "bg-white text-[#23D3EE] shadow-sm"
-                            : "text-slate-400 hover:text-slate-600"
+                            ? "bg-white text-[#0891B2] shadow-sm"
+                            : "text-[#475569] hover:text-[#475569]"
                         )}
                       >
                         <Icon size={18} />
@@ -5383,7 +5383,7 @@ const Applications = () => {
                   <Button
                     variant="outline"
                     size="icon"
-                    className="rounded-xl"
+                    className="rounded-md"
                     onClick={() => {
                       setIsLoading(true);
                       setTimeout(() => setIsLoading(false), 500);
@@ -5399,7 +5399,7 @@ const Applications = () => {
         </motion.div>
 
         {/* Results Info */}
-        <div className="px-6 py-3 flex items-center justify-between bg-slate-50 border-b border-slate-200 flex-shrink-0">
+        <div className="px-6 py-3 flex items-center justify-between bg-[#F8FAFC] border-b border-[rgba(15,23,42,0.06)] flex-shrink-0">
           <div className="flex items-center gap-4">
             {viewMode !== "kanban" && (
               <Checkbox
@@ -5408,21 +5408,21 @@ const Applications = () => {
                   selectedApplications.size === filteredApplications.length
                 }
                 onCheckedChange={handleSelectAll}
-                className="data-[state=checked]:bg-[#23D3EE] data-[state=checked]:border-[#23D3EE]"
+                className="data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
               />
             )}
-            <span className="text-sm text-slate-600">
+            <span className="text-sm text-[#475569]">
               {filteredApplications.length === applications.filter((a) => !a.isArchived).length
                 ? `${filteredApplications.length} applications`
                 : `${filteredApplications.length} of ${applications.filter((a) => !a.isArchived).length} applications`}
               {selectedApplications.size > 0 && (
-                <span className="text-[#23D3EE] font-medium ml-2">
+                <span className="text-[#0891B2] font-medium ml-2">
                   ({selectedApplications.size} selected)
                 </span>
               )}
             </span>
           </div>
-          <div className="flex items-center gap-2 text-sm text-slate-500">
+          <div className="flex items-center gap-2 text-sm text-[#94A3B8]">
             <span>
               Sorted by {sortField.charAt(0).toUpperCase() + sortField.slice(1)} ({sortOrder === "asc" ? "A-Z" : "Z-A"})
             </span>
@@ -5446,11 +5446,11 @@ const Applications = () => {
               }
               action={
                 filters.search || activeFilterCount > 0 ? (
-                  <Button variant="outline" className="rounded-xl" onClick={handleClearFilters}>
+                  <Button variant="outline" className="rounded-md" onClick={handleClearFilters}>
                     <X size={16} className="mr-2" /> Clear Filters
                   </Button>
                 ) : (
-                  <Button className="rounded-xl bg-[#23D3EE] hover:bg-[#14a89a]">
+                  <Button className="rounded-md bg-[#0891B2] hover:bg-[#14a89a]">
                     <Plus size={16} className="mr-2" /> Add Application
                   </Button>
                 )
@@ -5492,11 +5492,11 @@ const Applications = () => {
                     <motion.div
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="bg-white rounded-2xl border border-slate-200 overflow-hidden"
+                      className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden"
                     >
                       <Table>
                         <TableHeader>
-                          <TableRow className="bg-slate-50 hover:bg-slate-50">
+                          <TableRow className="bg-[#F8FAFC] hover:bg-[#F8FAFC]">
                             {columns
                               .filter((col) => col.visible)
                               .map((col) => (
@@ -5504,7 +5504,7 @@ const Applications = () => {
                                   key={col.id}
                                   className={cn(
                                     "font-semibold text-[#0F172A]",
-                                    col.sortable && "cursor-pointer hover:bg-slate-100"
+                                    col.sortable && "cursor-pointer hover:bg-white/10"
                                   )}
                                   style={{ width: col.width }}
                                   onClick={() => {
@@ -5535,9 +5535,9 @@ const Applications = () => {
                                     {col.label}
                                     {col.sortable && sortField === col.id && (
                                       sortOrder === "asc" ? (
-                                        <ArrowUp size={14} className="text-[#23D3EE]" />
+                                        <ArrowUp size={14} className="text-[#0891B2]" />
                                       ) : (
-                                        <ArrowDown size={14} className="text-[#23D3EE]" />
+                                        <ArrowDown size={14} className="text-[#0891B2]" />
                                       )
                                     )}
                                   </div>

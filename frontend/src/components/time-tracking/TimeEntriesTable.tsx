@@ -108,17 +108,17 @@ export function TimeEntriesTable({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-xl border border-gray-200"
+      className="bg-white rounded-md border border-[rgba(15,23,42,0.06)]"
     >
       {/* Header */}
-      <div className="p-4 border-b border-gray-200">
+      <div className="p-4 border-b border-[rgba(15,23,42,0.06)]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <h3 className="text-lg font-semibold text-gray-800">Time Entries</h3>
+          <h3 className="text-lg font-semibold text-[#0F172A]">Time Entries</h3>
 
           <div className="flex items-center gap-3">
             {/* Search */}
             <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
               <Input
                 type="text"
                 placeholder="Search entries..."
@@ -170,16 +170,16 @@ export function TimeEntriesTable({
           return (
             <div key={date}>
               {/* Date Header */}
-              <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+              <div className="px-4 py-3 bg-white/5 border-b border-[rgba(15,23,42,0.06)] flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Checkbox
                     checked={allSelected}
                     onCheckedChange={() => toggleSelectAll(dateEntries)}
                   />
-                  <span className="font-medium text-gray-700">{date}</span>
-                  <span className="text-sm text-gray-500">({dateEntries.length} entries)</span>
+                  <span className="font-medium text-slate-200">{date}</span>
+                  <span className="text-sm text-[#475569]">({dateEntries.length} entries)</span>
                 </div>
-                <span className="font-semibold text-gray-800">{formatDuration(totalDuration)}</span>
+                <span className="font-semibold text-[#0F172A]">{formatDuration(totalDuration)}</span>
               </div>
 
               {/* Entries */}
@@ -201,7 +201,7 @@ export function TimeEntriesTable({
                           animate={{ opacity: 1 }}
                           exit={{ opacity: 0 }}
                           transition={{ delay: index * 0.05 }}
-                          className="group hover:bg-gray-50 transition-colors"
+                          className="group hover:bg-white/5 transition-colors"
                         >
                           <TableCell className="w-12">
                             <Checkbox
@@ -212,7 +212,7 @@ export function TimeEntriesTable({
 
                           <TableCell className="min-w-[300px]">
                             <div>
-                              <p className="font-medium text-gray-800">
+                              <p className="font-medium text-[#0F172A]">
                                 {entry.description || "No description"}
                               </p>
                               <div className="flex items-center gap-2 mt-1">
@@ -228,53 +228,53 @@ export function TimeEntriesTable({
                                       className="w-1.5 h-1.5 rounded-full"
                                       style={{
                                         backgroundColor:
-                                          project.color === "teal" ? "#23D3EE" : project.color,
+                                          project.color === "teal" ? "#22D3EE" : project.color,
                                       }}
                                     />
                                     {project.name}
                                   </span>
                                 )}
                                 {task && (
-                                  <span className="text-xs text-gray-500">• {task.name}</span>
+                                  <span className="text-xs text-[#475569]">• {task.name}</span>
                                 )}
                               </div>
                             </div>
                           </TableCell>
 
                           <TableCell>
-                            <div className="flex items-center gap-1 text-sm text-gray-600">
-                              <Clock size={14} className="text-gray-400" />
+                            <div className="flex items-center gap-1 text-sm text-[#475569]">
+                              <Clock size={14} className="text-[#94A3B8]" />
                               {formatTime(entry.startTime)}
-                              <span className="text-gray-400">-</span>
+                              <span className="text-[#94A3B8]">-</span>
                               {entry.endTime ? formatTime(entry.endTime) : "Running"}
                             </div>
                           </TableCell>
 
                           <TableCell>
                             {entry.isBillable ? (
-                              <div className="flex items-center gap-1 text-[#23D3EE]">
+                              <div className="flex items-center gap-1 text-[#0891B2]">
                                 <DollarSign size={14} />
                                 <span className="text-sm font-medium">Billable</span>
                               </div>
                             ) : (
-                              <span className="text-sm text-gray-500">Non-billable</span>
+                              <span className="text-sm text-[#475569]">Non-billable</span>
                             )}
                           </TableCell>
 
                           <TableCell className="text-right">
-                            <p className="font-semibold text-gray-800">
+                            <p className="font-semibold text-[#0F172A]">
                               {formatDuration(entry.duration)}
                             </p>
                             {earnings > 0 && (
-                              <p className="text-xs text-[#23D3EE]">{formatCurrency(earnings)}</p>
+                              <p className="text-xs text-[#0891B2]">{formatCurrency(earnings)}</p>
                             )}
                           </TableCell>
 
                           <TableCell className="w-12">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <button className="p-1.5 opacity-0 group-hover:opacity-100 hover:bg-gray-200 rounded-lg transition-all">
-                                  <MoreHorizontal size={16} className="text-gray-500" />
+                                <button className="p-1.5 opacity-0 group-hover:opacity-100 hover:bg-gray-200 rounded-md transition-all">
+                                  <MoreHorizontal size={16} className="text-[#475569]" />
                                 </button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
@@ -315,11 +315,11 @@ export function TimeEntriesTable({
       {/* Empty State */}
       {Object.keys(groupedEntries).length === 0 && (
         <div className="p-12 text-center">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Clock size={24} className="text-gray-400" />
+          <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Clock size={24} className="text-[#94A3B8]" />
           </div>
-          <p className="text-gray-500 font-medium">No time entries found</p>
-          <p className="text-sm text-gray-400 mt-1">Start tracking your time to see entries here</p>
+          <p className="text-[#475569] font-medium">No time entries found</p>
+          <p className="text-sm text-[#94A3B8] mt-1">Start tracking your time to see entries here</p>
         </div>
       )}
     </motion.div>

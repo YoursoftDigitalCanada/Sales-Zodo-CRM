@@ -61,6 +61,9 @@ import LeaveRequestsPage from "./pages/employees/LeaveRequests";
 // AI Modules
 import RoofEstimator from "./pages/RoofEstimator";
 
+// Help Center
+import HelpCenterPage from "./pages/HelpCenter";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -386,6 +389,9 @@ const App = () => (
 
           {/* ========== AI MODULES ========== */}
           <Route path="/roof-estimator" element={<RoofEstimator />} />
+
+          {/* ========== HELP CENTER ========== */}
+          <Route path="/help" element={<HelpCenterPage />} />
 
           {/* ========== 404 CATCH-ALL ========== */}
           <Route path="*" element={<NotFound />} />

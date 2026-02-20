@@ -1240,6 +1240,28 @@ const EventFormDialog = ({
     notes: "",
   });
   const [selectedAttendees, setSelectedAttendees] = useState<Attendee[]>([]);
+  const [teamMembers, setTeamMembers] = useState<Attendee[]>([]);
+  const [searchAttendee, setSearchAttendee] = useState("");
+
+  // Fetch employees when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      api.get("/employees", { params: { limit: 200 } })
+        .then((res) => {
+          const employees = res.data?.data || [];
+          setTeamMembers(
+            employees.map((emp: any) => ({
+              id: emp.id,
+              name: `${emp.user?.firstName || ""} ${emp.user?.lastName || ""}`.trim() || emp.email || "Employee",
+              email: emp.user?.email || emp.email || "",
+              avatar: emp.user?.profileImage || undefined,
+              status: "pending" as const,
+            }))
+          );
+        })
+        .catch(() => setTeamMembers([]));
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (event) {
@@ -1560,9 +1582,18 @@ const EventFormDialog = ({
               )}
 
               {/* Available Attendees */}
+              <div className="mb-2">
+                <Input
+                  placeholder="Search team members..."
+                  value={searchAttendee}
+                  onChange={(e) => setSearchAttendee(e.target.value)}
+                  className="h-9 rounded-md text-sm"
+                />
+              </div>
               <div className="space-y-1 max-h-[150px] overflow-y-auto">
-                {(selectedAttendees)
+                {teamMembers
                   .filter((m) => !selectedAttendees.find((a) => a.id === m.id))
+                  .filter((m) => !searchAttendee || m.name.toLowerCase().includes(searchAttendee.toLowerCase()) || m.email.toLowerCase().includes(searchAttendee.toLowerCase()))
                   .map((member) => (
                     <button
                       key={member.id}
@@ -1583,6 +1614,9 @@ const EventFormDialog = ({
                       <Plus size={16} className="text-[#475569]" />
                     </button>
                   ))}
+                {teamMembers.filter((m) => !selectedAttendees.find((a) => a.id === m.id)).length === 0 && (
+                  <p className="text-xs text-[#94A3B8] text-center py-3">No more team members to add</p>
+                )}
               </div>
             </div>
           </div>

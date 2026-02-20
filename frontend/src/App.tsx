@@ -64,6 +64,9 @@ import RoofEstimator from "./pages/RoofEstimator";
 // Help Center
 import HelpCenterPage from "./pages/HelpCenter";
 
+// Integrations
+import IntegrationsPage from "./pages/integrations/IntegrationsPage";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -392,6 +395,9 @@ const App = () => (
 
           {/* ========== HELP CENTER ========== */}
           <Route path="/help" element={<HelpCenterPage />} />
+
+          {/* ========== INTEGRATIONS ========== */}
+          <Route path="/integrations" element={<IntegrationsPage />} />
 
           {/* ========== 404 CATCH-ALL ========== */}
           <Route path="*" element={<NotFound />} />

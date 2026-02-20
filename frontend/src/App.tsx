@@ -70,6 +70,9 @@ import IntegrationsPage from "./pages/integrations/IntegrationsPage";
 // Settings
 import SettingsPage from "./pages/settings/SettingsPage";
 
+// Analytics
+import AnalyticsPage from "./pages/analytics/AnalyticsPage";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -406,6 +409,9 @@ const App = () => (
 
           {/* ========== INTEGRATIONS ========== */}
           <Route path="/integrations" element={<IntegrationsPage />} />
+
+          {/* ========== ANALYTICS ========== */}
+          <Route path="/analytics" element={<AnalyticsPage />} />
 
           {/* ========== 404 CATCH-ALL ========== */}
           <Route path="*" element={<NotFound />} />

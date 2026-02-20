@@ -14,9 +14,9 @@ export const createLeadSchema = z.object({
     location: z.string().max(255).optional().nullable(),
 
     // Company Info
-    companyName: z.string().min(1).max(255),
+    companyName: z.string().max(255).default(''),
     jobTitle: z.string().max(100).optional().nullable(),
-    website: z.string().url().optional().nullable(),
+    website: z.string().url().optional().nullable().or(z.literal('')),
 
     // Lead Details
     leadSource: z.string().max(100).optional().nullable(),
@@ -39,9 +39,9 @@ export const updateLeadSchema = z.object({
     location: z.string().max(255).optional().nullable(),
 
     // Company Info
-    companyName: z.string().min(1).max(255).optional(),
+    companyName: z.string().max(255).optional(),
     jobTitle: z.string().max(100).optional().nullable(),
-    website: z.string().url().optional().nullable(),
+    website: z.string().url().optional().nullable().or(z.literal('')),
 
     // Lead Details
     leadSource: z.string().max(100).optional().nullable(),

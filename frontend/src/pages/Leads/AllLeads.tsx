@@ -153,6 +153,7 @@ interface Lead {
   value: number;
   currency: string;
   assignedTo: string;
+  assignedToId?: string;
   tags?: string[];
   notes?: string;
   lastContact?: string;
@@ -391,8 +392,7 @@ const LeadCard = ({
       <div className="absolute top-4 left-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
         <Checkbox
           checked={isSelected}
-          onCheckedChange={(e) => {
-            e.stopPropagation?.();
+          onCheckedChange={() => {
             onSelect();
           }}
           onClick={(e) => e.stopPropagation()}
@@ -791,6 +791,24 @@ const LeadFormDialog = ({
   });
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
+  const [employees, setEmployees] = useState<{ id: string; name: string }[]>([]);
+
+  // Fetch employees for the Assigned To dropdown
+  useEffect(() => {
+    if (isOpen) {
+      axios.get("/employees", { params: { limit: 200 } })
+        .then((res) => {
+          const emps = res.data?.data || [];
+          setEmployees(
+            emps.map((emp: any) => ({
+              id: emp.id,
+              name: `${emp.user?.firstName || ""} ${emp.user?.lastName || ""}`.trim() || "Employee",
+            }))
+          );
+        })
+        .catch(() => setEmployees([]));
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (lead) {
@@ -807,7 +825,7 @@ const LeadFormDialog = ({
         status: lead.status,
         temperature: lead.temperature,
         value: lead.value.toString(),
-        assignedTo: lead.assignedTo,
+        assignedTo: lead.assignedToId || "",
         tags: lead.tags?.join(", ") || "",
         notes: lead.notes || "",
       });
@@ -1095,15 +1113,27 @@ const LeadFormDialog = ({
 
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#475569]">Assigned To</Label>
-                <div className="relative">
-                  <Users size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
-                  <Input
-                    value={formData.assignedTo}
-                    onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
-                    placeholder="Enter assignee name"
-                    className="h-11 pl-10 rounded-md"
-                  />
-                </div>
+                <Select
+                  value={formData.assignedTo}
+                  onValueChange={(val) => setFormData({ ...formData, assignedTo: val })}
+                >
+                  <SelectTrigger className="h-11 rounded-md">
+                    <div className="flex items-center gap-2">
+                      <Users size={16} className="text-[#475569]" />
+                      <SelectValue placeholder="Select employee" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md">
+                    <SelectItem value="unassigned" className="rounded-md">
+                      <span className="text-[#94A3B8]">Unassigned</span>
+                    </SelectItem>
+                    {employees.map((emp) => (
+                      <SelectItem key={emp.id} value={emp.id} className="rounded-md">
+                        {emp.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
@@ -1532,6 +1562,7 @@ const mapApiLead = (apiLead: any): Lead => ({
   assignedTo: apiLead.assignedTo
     ? `${apiLead.assignedTo.user?.firstName || ""} ${apiLead.assignedTo.user?.lastName || ""}`.trim()
     : "",
+  assignedToId: apiLead.assignedToId || apiLead.assignedTo?.id || "",
   tags: apiLead.tags?.map((t: any) => t.name) || [],
   notes: apiLead.notes,
   lastContact: apiLead.lastContact,
@@ -1653,14 +1684,14 @@ const AllLeads = () => {
   // Handlers
   const handleAddLead = async (data: Partial<Lead>) => {
     try {
-      const apiData = {
+      const apiData: Record<string, any> = {
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email,
         phone: data.phone || undefined,
         companyName: data.company,
         jobTitle: data.jobTitle || undefined,
-        website: data.website || undefined,
+        website: data.website && data.website.trim() ? data.website.trim() : undefined,
         location: data.location || undefined,
         leadSource: data.source || "website",
         status: (data.status || "new").toUpperCase(),
@@ -1669,6 +1700,10 @@ const AllLeads = () => {
         notes: data.notes || undefined,
         tags: data.tags || [],
       };
+      // Only send assignedTo if a valid employee is selected
+      if (data.assignedTo && data.assignedTo !== "unassigned" && data.assignedTo !== "") {
+        apiData.assignedTo = data.assignedTo;
+      }
 
       const response = await axios.post("/leads", apiData);
       const newLead = mapApiLead(response.data);
@@ -1690,14 +1725,14 @@ const AllLeads = () => {
   const handleEditLead = async (data: Partial<Lead>) => {
     if (!currentLead) return;
     try {
-      const apiData = {
+      const apiData: Record<string, any> = {
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email,
         phone: data.phone || undefined,
         companyName: data.company,
         jobTitle: data.jobTitle || undefined,
-        website: data.website || undefined,
+        website: data.website && data.website.trim() ? data.website.trim() : undefined,
         location: data.location || undefined,
         leadSource: data.source,
         status: data.status?.toUpperCase(),
@@ -1706,6 +1741,12 @@ const AllLeads = () => {
         notes: data.notes || undefined,
         tags: data.tags || [],
       };
+      // Only send assignedTo if a valid employee is selected
+      if (data.assignedTo && data.assignedTo !== "unassigned" && data.assignedTo !== "") {
+        apiData.assignedTo = data.assignedTo;
+      } else {
+        apiData.assignedTo = null;
+      }
 
       const response = await axios.put(`/leads/${currentLead.id}`, apiData);
       const updatedLead = mapApiLead(response.data);

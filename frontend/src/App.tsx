@@ -73,6 +73,9 @@ import SettingsPage from "./pages/settings/SettingsPage";
 // Analytics
 import AnalyticsPage from "./pages/analytics/AnalyticsPage";
 
+// Reports
+import ReportsPage from "./pages/reports/ReportsPage";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -412,6 +415,12 @@ const App = () => (
 
           {/* ========== ANALYTICS ========== */}
           <Route path="/analytics" element={<AnalyticsPage />} />
+
+          {/* ========== REPORTS ========== */}
+          <Route path="/reports/sales" element={<ReportsPage />} />
+          <Route path="/reports/revenue" element={<ReportsPage />} />
+          <Route path="/reports/expenses" element={<ReportsPage />} />
+          <Route path="/reports/custom" element={<ReportsPage />} />
 
           {/* ========== 404 CATCH-ALL ========== */}
           <Route path="*" element={<NotFound />} />

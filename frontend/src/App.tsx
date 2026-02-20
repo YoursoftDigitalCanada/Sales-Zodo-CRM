@@ -67,6 +67,9 @@ import HelpCenterPage from "./pages/HelpCenter";
 // Integrations
 import IntegrationsPage from "./pages/integrations/IntegrationsPage";
 
+// Settings
+import SettingsPage from "./pages/settings/SettingsPage";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -387,7 +390,12 @@ const App = () => (
           />
 
           {/* ========== SETTINGS ROUTES ========== */}
-          {/* <Route path="/settings" element={<Settings />} /> */}
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/settings/general" element={<SettingsPage />} />
+          <Route path="/settings/company" element={<SettingsPage />} />
+          <Route path="/settings/billing" element={<SettingsPage />} />
+          <Route path="/settings/email" element={<SettingsPage />} />
+          <Route path="/settings/security" element={<SettingsPage />} />
           <Route path="/onboarding" element={<Onboarding />} />
 
           {/* ========== AI MODULES ========== */}

@@ -76,6 +76,9 @@ import AnalyticsPage from "./pages/analytics/AnalyticsPage";
 // Reports
 import ReportsPage from "./pages/reports/ReportsPage";
 
+// Roles
+import RolesPage from "./pages/roles/RolesPage";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -421,6 +424,9 @@ const App = () => (
           <Route path="/reports/revenue" element={<ReportsPage />} />
           <Route path="/reports/expenses" element={<ReportsPage />} />
           <Route path="/reports/custom" element={<ReportsPage />} />
+
+          {/* ========== ROLES ========== */}
+          <Route path="/roles" element={<RolesPage />} />
 
           {/* ========== 404 CATCH-ALL ========== */}
           <Route path="*" element={<NotFound />} />

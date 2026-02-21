@@ -1,11 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import { projectsService } from './projects.service';
 import { sendSuccess, sendCreated, sendNoContent } from '../../common/utils/responseFormatter';
+import { sanitizeBody } from '../../common/utils/sanitize-body';
 
 export class ProjectsController {
     async create(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const project = await projectsService.create(req.user!.tenantId!, req.body);
+            const project = await projectsService.create(req.user!.tenantId!, sanitizeBody(req.body));
             sendCreated(res, project, 'Project created');
         } catch (e) { next(e); }
     }
@@ -26,7 +27,7 @@ export class ProjectsController {
 
     async update(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const project = await projectsService.update(req.params.id, req.user!.tenantId!, req.body);
+            const project = await projectsService.update(req.params.id, req.user!.tenantId!, sanitizeBody(req.body));
             sendSuccess(res, project, 'Project updated');
         } catch (e) { next(e); }
     }

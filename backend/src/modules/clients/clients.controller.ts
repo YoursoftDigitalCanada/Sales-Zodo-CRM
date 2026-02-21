@@ -7,6 +7,7 @@ import {
     sendNoContent,
 } from '../../common/utils/responseFormatter';
 import { CreateClientDto, UpdateClientDto } from './clients.dto';
+import { sanitizeBody } from '../../common/utils/sanitize-body';
 
 export class ClientsController {
     /**
@@ -16,9 +17,9 @@ export class ClientsController {
     async create(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const tenantId = req.user!.tenantId!;
-            const data: CreateClientDto = req.body;
+            const data = sanitizeBody<CreateClientDto>(req.body);
 
-            const client = await clientsManager.createClient(req, tenantId, data);
+            const client = await clientsManager.createClient(req, tenantId, data as CreateClientDto);
 
             sendCreated(res, client, 'Client created successfully');
         } catch (error) {
@@ -68,9 +69,9 @@ export class ClientsController {
         try {
             const tenantId = req.user!.tenantId!;
             const { id } = req.params;
-            const data: UpdateClientDto = req.body;
+            const data = sanitizeBody<UpdateClientDto>(req.body);
 
-            const client = await clientsManager.updateClient(req, id, tenantId, data);
+            const client = await clientsManager.updateClient(req, id, tenantId, data as UpdateClientDto);
 
             sendSuccess(res, client, 'Client updated successfully');
         } catch (error) {

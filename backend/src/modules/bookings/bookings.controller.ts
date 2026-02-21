@@ -1,11 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import { bookingsService } from './bookings.service';
 import { sendSuccess, sendCreated, sendNoContent } from '../../common/utils/responseFormatter';
+import { sanitizeBody } from '../../common/utils/sanitize-body';
 
 export class BookingsController {
     async create(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const booking = await bookingsService.create(req.user!.tenantId!, req.body);
+            const booking = await bookingsService.create(req.user!.tenantId!, sanitizeBody(req.body));
             sendCreated(res, booking, 'Booking created');
         } catch (e) { next(e); }
     }
@@ -26,7 +27,7 @@ export class BookingsController {
 
     async update(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const booking = await bookingsService.update(req.params.id, req.user!.tenantId!, req.body);
+            const booking = await bookingsService.update(req.params.id, req.user!.tenantId!, sanitizeBody(req.body));
             sendSuccess(res, booking, 'Booking updated');
         } catch (e) { next(e); }
     }

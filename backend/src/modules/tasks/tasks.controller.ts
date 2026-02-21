@@ -7,15 +7,16 @@ import {
     sendNoContent,
 } from '../../common/utils/responseFormatter';
 import { CreateTaskDto, UpdateTaskDto } from './tasks.dto';
+import { sanitizeBody } from '../../common/utils/sanitize-body';
 
 export class TasksController {
     async create(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const tenantId = req.user!.tenantId!;
             const employeeId = req.user!.employeeId;
-            const data: CreateTaskDto = req.body;
+            const data = sanitizeBody<CreateTaskDto>(req.body);
 
-            const task = await tasksManager.createTask(req, tenantId, data, employeeId);
+            const task = await tasksManager.createTask(req, tenantId, data as CreateTaskDto, employeeId);
 
             sendCreated(res, task, 'Task created successfully');
         } catch (error) {
@@ -78,9 +79,9 @@ export class TasksController {
         try {
             const tenantId = req.user!.tenantId!;
             const { id } = req.params;
-            const data: UpdateTaskDto = req.body;
+            const data = sanitizeBody<UpdateTaskDto>(req.body);
 
-            const task = await tasksManager.updateTask(req, id, tenantId, data);
+            const task = await tasksManager.updateTask(req, id, tenantId, data as UpdateTaskDto);
 
             sendSuccess(res, task, 'Task updated successfully');
         } catch (error) {

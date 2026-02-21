@@ -1,11 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import { invoicesService } from './invoices.service';
 import { sendSuccess, sendCreated, sendNoContent } from '../../common/utils/responseFormatter';
+import { sanitizeBody } from '../../common/utils/sanitize-body';
 
 export class InvoicesController {
     async create(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const invoice = await invoicesService.create(req.user!.tenantId!, req.body);
+            const invoice = await invoicesService.create(req.user!.tenantId!, sanitizeBody(req.body));
             sendCreated(res, invoice, 'Invoice created');
         } catch (e) { next(e); }
     }
@@ -26,7 +27,7 @@ export class InvoicesController {
 
     async update(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const invoice = await invoicesService.update(req.params.id, req.user!.tenantId!, req.body);
+            const invoice = await invoicesService.update(req.params.id, req.user!.tenantId!, sanitizeBody(req.body));
             sendSuccess(res, invoice, 'Invoice updated');
         } catch (e) { next(e); }
     }

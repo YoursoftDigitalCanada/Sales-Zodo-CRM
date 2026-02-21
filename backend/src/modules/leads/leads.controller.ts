@@ -1,13 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
 import { leadsService } from './leads.service';
 import { leadsManager } from './leads.manager';
-import { 
-  sendSuccess, 
-  sendCreated, 
+import {
+  sendSuccess,
+  sendCreated,
   sendNoContent,
   sendPaginated,
 } from '../../common/utils/responseFormatter';
 import { CreateLeadDto, UpdateLeadDto } from './leads.dto';
+import { sanitizeBody } from '../../common/utils/sanitize-body';
 
 export class LeadsController {
   /**
@@ -18,9 +19,9 @@ export class LeadsController {
     try {
       const tenantId = req.user!.tenantId!;
       const employeeId = req.user!.employeeId!;
-      const data: CreateLeadDto = req.body;
+      const data = sanitizeBody<CreateLeadDto>(req.body);
 
-      const lead = await leadsManager.createLead(req, tenantId, data, employeeId);
+      const lead = await leadsManager.createLead(req, tenantId, data as CreateLeadDto, employeeId);
 
       sendCreated(res, lead, 'Lead created successfully');
     } catch (error) {
@@ -131,9 +132,9 @@ export class LeadsController {
       const tenantId = req.user!.tenantId!;
       const employeeId = req.user!.employeeId!;
       const { id } = req.params;
-      const data: UpdateLeadDto = req.body;
+      const data = sanitizeBody<UpdateLeadDto>(req.body);
 
-      const lead = await leadsManager.updateLead(req, id, tenantId, data, employeeId);
+      const lead = await leadsManager.updateLead(req, id, tenantId, data as UpdateLeadDto, employeeId);
 
       sendSuccess(res, lead, 'Lead updated successfully');
     } catch (error) {

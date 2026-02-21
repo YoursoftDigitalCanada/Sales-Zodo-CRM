@@ -70,6 +70,7 @@ export async function authenticate(
       email: decoded.email,
       tenantId: decoded.tenantId ?? '',
       employeeId: decoded.employeeId,
+      role: decoded.role,
       requestId: req.requestId || '',
     };
 
@@ -112,6 +113,7 @@ export async function optionalAuthenticate(
           email: decoded.email,
           tenantId: decoded.tenantId ?? '',
           employeeId: decoded.employeeId,
+          role: decoded.role,
           requestId: req.requestId || '',
         };
       }

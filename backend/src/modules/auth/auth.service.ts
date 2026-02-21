@@ -12,6 +12,7 @@ import {
   BadRequestError,
   NotFoundError,
   ConflictError,
+  ForbiddenError,
 } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
 import {
@@ -478,12 +479,16 @@ export class AuthService {
   }
 
   /**
-   * Switch tenant for users with multiple tenant memberships
+   * Switch tenant for users with multiple tenant memberships.
+   *
+   * Security: Verifies user is an active employee of the target tenant
+   * via DB lookup. Returns 403 Forbidden if not a member.
+   * Issues a new JWT scoped to the validated target tenant.
    */
   async switchTenant(
     userId: string,
     targetTenantId: string,
-    metadata: { userAgent?: string; ipAddress?: string }
+    metadata: { userAgent?: string; ipAddress?: string; sourceTenantId?: string }
   ): Promise<AuthResponse> {
     const user = await authRepository.findUserById(userId);
 
@@ -491,13 +496,21 @@ export class AuthService {
       throw new NotFoundError('User not found', ErrorCodes.USER_NOT_FOUND);
     }
 
-    // Find employee record for target tenant
+    // ── DB ownership check: user must be an active employee of target tenant
     const employee = user.employees.find(
       (emp) => emp.tenantId === targetTenantId && emp.isActive
     );
 
     if (!employee) {
-      throw new UnauthorizedError(
+      logger.warn('Tenant switch denied — user is not a member', {
+        userId: user.id,
+        email: user.email,
+        targetTenantId,
+        sourceTenantId: metadata.sourceTenantId,
+        ipAddress: metadata.ipAddress,
+        userAgent: metadata.userAgent,
+      });
+      throw new ForbiddenError(
         'You do not have access to this organization',
         ErrorCodes.TENANT_ACCESS_DENIED
       );
@@ -538,9 +551,15 @@ export class AuthService {
 
     const sidebarModules = getModulesForPermissions(permissions);
 
-    logger.info(`User switched tenant: ${user.email}`, {
+    logger.info('Tenant switch successful', {
       userId: user.id,
-      tenantId: targetTenantId
+      email: user.email,
+      sourceTenantId: metadata.sourceTenantId || 'none',
+      targetTenantId,
+      targetTenantName: employeeWithPermissions.tenant.name,
+      targetRole: employeeWithPermissions.role.name,
+      ipAddress: metadata.ipAddress,
+      userAgent: metadata.userAgent,
     });
 
     return {

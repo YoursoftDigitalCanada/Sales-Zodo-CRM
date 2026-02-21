@@ -102,6 +102,21 @@ export interface AIGrowthIndicators {
     netPosition: number;
 }
 
+// ── Insight ───────────────────────────────────────────────────────────
+
+export type InsightSeverity = 'info' | 'success' | 'warning' | 'critical';
+export type InsightCategory = 'pipeline' | 'revenue' | 'tasks' | 'bookings' | 'clients' | 'projects' | 'expenses' | 'growth';
+
+export interface AIInsight {
+    id: string;
+    title: string;
+    description: string;
+    severity: InsightSeverity;
+    category: InsightCategory;
+    action?: string;
+    metric?: number;
+}
+
 // ── Master AI Context Object ─────────────────────────────────────────
 
 export interface TenantAIContext {
@@ -110,7 +125,7 @@ export interface TenantAIContext {
 
     /** Tenant metadata */
     tenantName: string;
-    businessType: string | null;
+    businessType: string;
     onboardingCompleted: boolean;
 
     /** Is this a zero-state tenant? (newly onboarded, little/no data) */
@@ -130,6 +145,9 @@ export interface TenantAIContext {
 
     /** Computed growth indicators */
     growthIndicators: AIGrowthIndicators;
+
+    /** AI-generated, industry-aware insights */
+    insights: AIInsight[];
 
     /** Enabled modules for this tenant */
     enabledModules: string[];

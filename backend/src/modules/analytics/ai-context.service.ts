@@ -30,6 +30,7 @@ import {
     BusinessHealthLevel,
     AIGrowthIndicators,
 } from './ai-context.dto';
+import { businessTypeInsightEngine } from './business-type-insights';
 
 // ── Zero-state threshold: tenants with fewer total records are "zero-state" ──
 const ZERO_STATE_THRESHOLD = 3;
@@ -66,7 +67,7 @@ class TenantAIContextService {
 
         const settings = (tenant.settings as Record<string, any>) || {};
         const enabledModules: string[] = settings.enabledModules || [];
-        const businessType: string | null = settings.businessType || null;
+        const businessType: string = settings.businessType || 'general';
 
         // ── 2. Aggregate all analytics in parallel ──────────────────────────
         const [
@@ -161,14 +162,20 @@ class TenantAIContextService {
             bookings: dashboardStats.bookings,
 
             growthIndicators,
+            insights: [], // placeholder — filled below
             enabledModules,
             generatedAt: new Date().toISOString(),
         };
+
+        // ── 7. Generate industry-aware insights ─────────────────────────
+        context.insights = businessTypeInsightEngine.generateInsights(context);
 
         logger.info('[AI Context] Built tenant context', {
             tenantId,
             zeroState,
             businessHealth,
+            businessType,
+            insightCount: context.insights.length,
             totalDataPoints,
             durationMs: Date.now() - startTime,
         });

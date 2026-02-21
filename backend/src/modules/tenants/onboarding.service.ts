@@ -298,12 +298,13 @@ class OnboardingService {
             },
         });
 
-        // ── 7. Enabled Modules — stored in Tenant.settings JSON ─────────────
+        // ── 7. Enabled Modules + Business Type — stored in Tenant.settings JSON ──
         await tx.tenant.update({
             where: { id: tenantId },
             data: {
                 settings: {
                     enabledModules: [...DEFAULT_ENABLED_MODULES],
+                    businessType: 'general',
                 },
             },
         });

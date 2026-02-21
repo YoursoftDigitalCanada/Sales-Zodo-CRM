@@ -59,6 +59,19 @@ declare global {
        * `req.user!.tenantId!` — no more non-null assertions needed.
        */
       context: TenantContext;
+
+      /**
+       * Cross-tenant membership context — set by `tenantMembershipGuard`.
+       *
+       * Only present on routes that use the membership guard (e.g., switch-tenant).
+       * Contains pre-validated membership data from the Employee table.
+       */
+      membershipContext?: {
+        employeeId: string;
+        tenantId: string;
+        role: string;
+        tenantName: string;
+      };
     }
   }
 }

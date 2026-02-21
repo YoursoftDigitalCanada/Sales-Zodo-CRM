@@ -3,6 +3,7 @@ import { authController } from './auth.controller';
 import { validate } from '../../common/middleware/validate.middleware';
 import { authenticate } from '../../common/middleware/auth.middleware';
 import { rateLimiter } from '../../common/middleware/rateLimiter.middleware';
+import { tenantMembershipGuard } from '../../common/middleware/tenant-membership.guard';
 import { config } from '../../config';
 import {
   loginSchema,
@@ -186,6 +187,7 @@ router.get(
 router.post(
   '/switch-tenant/:tenantId',
   authenticate,
+  tenantMembershipGuard('tenantId'),
   authController.switchTenant.bind(authController)
 );
 

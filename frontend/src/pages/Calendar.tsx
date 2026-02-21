@@ -1908,6 +1908,7 @@ const CalendarPage = () => {
     new Set(eventCategories.map((c) => c.id))
   );
   const [searchQuery, setSearchQuery] = useState("");
+  const [dismissedAlerts, setDismissedAlerts] = useState<string[]>([]);
 
   // Dialog states
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -1951,7 +1952,6 @@ const CalendarPage = () => {
       setEvents(calendarEvents);
     } catch (error) {
       console.error('Failed to fetch calendar events:', error);
-      // Fallback: show empty calendar
       setEvents([]);
     } finally {
       setIsLoading(false);
@@ -1965,25 +1965,17 @@ const CalendarPage = () => {
   // Navigation
   const navigatePrevious = () => {
     const newDate = new Date(currentDate);
-    if (viewMode === "month") {
-      newDate.setMonth(newDate.getMonth() - 1);
-    } else if (viewMode === "week") {
-      newDate.setDate(newDate.getDate() - 7);
-    } else if (viewMode === "day") {
-      newDate.setDate(newDate.getDate() - 1);
-    }
+    if (viewMode === "month") newDate.setMonth(newDate.getMonth() - 1);
+    else if (viewMode === "week") newDate.setDate(newDate.getDate() - 7);
+    else if (viewMode === "day") newDate.setDate(newDate.getDate() - 1);
     setCurrentDate(newDate);
   };
 
   const navigateNext = () => {
     const newDate = new Date(currentDate);
-    if (viewMode === "month") {
-      newDate.setMonth(newDate.getMonth() + 1);
-    } else if (viewMode === "week") {
-      newDate.setDate(newDate.getDate() + 7);
-    } else if (viewMode === "day") {
-      newDate.setDate(newDate.getDate() + 1);
-    }
+    if (viewMode === "month") newDate.setMonth(newDate.getMonth() + 1);
+    else if (viewMode === "week") newDate.setDate(newDate.getDate() + 7);
+    else if (viewMode === "day") newDate.setDate(newDate.getDate() + 1);
     setCurrentDate(newDate);
   };
 
@@ -2012,11 +2004,8 @@ const CalendarPage = () => {
   const toggleCategory = (categoryId: string) => {
     setSelectedCategories((prev) => {
       const newSet = new Set(prev);
-      if (newSet.has(categoryId)) {
-        newSet.delete(categoryId);
-      } else {
-        newSet.add(categoryId);
-      }
+      if (newSet.has(categoryId)) newSet.delete(categoryId);
+      else newSet.add(categoryId);
       return newSet;
     });
   };
@@ -2024,10 +2013,7 @@ const CalendarPage = () => {
   // Event handlers
   const handleDateClick = (date: Date) => {
     setSelectedDate(date);
-    if (viewMode === "month") {
-      setCurrentDate(date);
-      setViewMode("day");
-    }
+    if (viewMode === "month") { setCurrentDate(date); setViewMode("day"); }
   };
 
   const handleEventClick = (event: CalendarEvent) => {
@@ -2055,20 +2041,11 @@ const CalendarPage = () => {
       };
       const res = await api.post('/calendar', payload);
       const created = res.data?.data;
-      if (created) {
-        setEvents((prev) => [...prev, mapApiEvent(created)]);
-      }
-      toast({
-        title: "Event Created",
-        description: `${data.title} has been added to your calendar.`,
-      });
+      if (created) setEvents((prev) => [...prev, mapApiEvent(created)]);
+      toast({ title: "Event Created", description: `${data.title} has been added to your calendar.` });
     } catch (error: any) {
       console.error('Failed to create event:', error);
-      toast({
-        title: "Error",
-        description: error?.response?.data?.message || "Failed to create event.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error?.response?.data?.message || "Failed to create event.", variant: "destructive" });
     }
   };
 
@@ -2093,20 +2070,11 @@ const CalendarPage = () => {
 
       const res = await api.put(`/calendar/${currentEvent.id}`, payload);
       const updated = res.data?.data;
-      if (updated) {
-        setEvents((prev) => prev.map((e) => (e.id === currentEvent.id ? mapApiEvent(updated) : e)));
-      }
-      toast({
-        title: "Event Updated",
-        description: "The event has been updated successfully.",
-      });
+      if (updated) setEvents((prev) => prev.map((e) => (e.id === currentEvent.id ? mapApiEvent(updated) : e)));
+      toast({ title: "Event Updated", description: "The event has been updated successfully." });
     } catch (error: any) {
       console.error('Failed to update event:', error);
-      toast({
-        title: "Error",
-        description: error?.response?.data?.message || "Failed to update event.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error?.response?.data?.message || "Failed to update event.", variant: "destructive" });
     }
   };
 
@@ -2118,18 +2086,10 @@ const CalendarPage = () => {
       setIsDeleteAlertOpen(false);
       setIsDetailsOpen(false);
       setCurrentEvent(null);
-      toast({
-        title: "Event Deleted",
-        description: "The event has been removed from your calendar.",
-        variant: "destructive",
-      });
+      toast({ title: "Event Deleted", description: "The event has been removed from your calendar.", variant: "destructive" });
     } catch (error: any) {
       console.error('Failed to delete event:', error);
-      toast({
-        title: "Error",
-        description: error?.response?.data?.message || "Failed to delete event.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error?.response?.data?.message || "Failed to delete event.", variant: "destructive" });
     }
   };
 
@@ -2137,20 +2097,67 @@ const CalendarPage = () => {
   const filteredEvents = events.filter((event) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
-    return (
-      event.title.toLowerCase().includes(query) ||
-      event.description?.toLowerCase().includes(query) ||
-      event.location?.toLowerCase().includes(query)
-    );
+    return event.title.toLowerCase().includes(query) || event.description?.toLowerCase().includes(query) || event.location?.toLowerCase().includes(query);
   });
 
-  // Stats
-  const todayEvents = events.filter(
-    (e) => isSameDay(e.start, new Date()) && e.status !== "cancelled"
-  ).length;
-  const upcomingEvents = events.filter(
-    (e) => e.start > new Date() && e.status !== "cancelled"
-  ).length;
+  // Computed stats
+  const now = new Date();
+  const todayEvents = events.filter((e) => isSameDay(e.start, now) && e.status !== "cancelled");
+  const todayCount = todayEvents.length;
+  const upcomingEvents = events.filter((e) => e.start > now && e.status !== "cancelled");
+  const upcomingCount = upcomingEvents.length;
+
+  const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay());
+  const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 7);
+  const thisWeekEvents = events.filter((e) => e.start >= weekStart && e.start < weekEnd && e.status !== "cancelled");
+  const thisWeekCount = thisWeekEvents.length;
+
+  const highPriorityCount = events.filter((e) => e.priority === "high" && e.start >= now && e.status !== "cancelled").length;
+
+  const meetingCount = todayEvents.filter((e) => e.type === "meeting" || e.category === "meeting").length;
+  const totalMeetingHours = todayEvents.filter((e) => e.type === "meeting" || e.category === "meeting").reduce((sum, e) => sum + (e.end.getTime() - e.start.getTime()) / 3600000, 0);
+  const focusHours = Math.max(0, 8 - totalMeetingHours);
+
+  // Detect back-to-back meetings (within 15 min gap)
+  const sortedTodayMeetings = todayEvents.filter((e) => e.type === "meeting" || e.category === "meeting").sort((a, b) => a.start.getTime() - b.start.getTime());
+  const backToBackCount = sortedTodayMeetings.reduce((count, meeting, i) => {
+    if (i === 0) return 0;
+    const gap = meeting.start.getTime() - sortedTodayMeetings[i - 1].end.getTime();
+    return gap <= 15 * 60 * 1000 ? count + 1 : count;
+  }, 0);
+
+  // Pending RSVPs
+  const pendingRsvpCount = events.filter((e) => e.start > now && e.attendees?.some((a) => a.status === "pending")).length;
+
+  // Smart scheduling alerts
+  type ScheduleAlert = { id: string; type: "warning" | "danger" | "info"; title: string; message: string; };
+  const scheduleAlerts: ScheduleAlert[] = [];
+  if (backToBackCount > 0) scheduleAlerts.push({ id: "b2b", type: "warning", title: "Back-to-Back Meetings", message: `${backToBackCount} consecutive meetings today with no break` });
+  if (totalMeetingHours > 5) scheduleAlerts.push({ id: "overload", type: "danger", title: "Meeting Overload", message: `${totalMeetingHours.toFixed(1)}h of meetings — consider declining non-essential ones` });
+  if (pendingRsvpCount > 0) scheduleAlerts.push({ id: "rsvp", type: "info", title: "Pending RSVPs", message: `${pendingRsvpCount} event${pendingRsvpCount > 1 ? 's' : ''} awaiting attendee responses` });
+  if (highPriorityCount > 0) scheduleAlerts.push({ id: "highpri", type: "warning", title: "High Priority", message: `${highPriorityCount} high-priority event${highPriorityCount > 1 ? 's' : ''} coming up` });
+  const visibleAlerts = scheduleAlerts.filter((a) => !dismissedAlerts.includes(a.id));
+
+  // Next free slot (simplified: first 1h gap in today's schedule after now)
+  const getNextFreeSlot = (): string => {
+    const currentHour = now.getHours();
+    const sortedToday = todayEvents.sort((a, b) => a.start.getTime() - b.start.getTime());
+    for (let h = Math.max(currentHour, 9); h < 17; h++) {
+      const slotStart = new Date(now); slotStart.setHours(h, 0, 0, 0);
+      const slotEnd = new Date(now); slotEnd.setHours(h + 1, 0, 0, 0);
+      const hasConflict = sortedToday.some((e) => e.start < slotEnd && e.end > slotStart);
+      if (!hasConflict) return `${h > 12 ? h - 12 : h}:00 ${h >= 12 ? 'PM' : 'AM'}`;
+    }
+    return "Tomorrow 9:00 AM";
+  };
+
+  // AI scheduling suggestions
+  const aiSuggestions: { icon: LucideIcon; text: string; action: string }[] = [];
+  if (focusHours < 2) aiSuggestions.push({ icon: Target, text: "Low focus time today. Block a deep work slot.", action: "Block Time" });
+  if (meetingCount > 4) aiSuggestions.push({ icon: Coffee, text: "Heavy meeting day. Schedule a coffee break.", action: "Add Break" });
+  if (pendingRsvpCount > 2) aiSuggestions.push({ icon: Users, text: `${pendingRsvpCount} events need RSVPs. Send reminders.`, action: "Remind" });
+  if (thisWeekCount === 0) aiSuggestions.push({ icon: CalendarDays, text: "Empty week ahead. Schedule planning sessions.", action: "Plan" });
+  if (aiSuggestions.length === 0) aiSuggestions.push({ icon: CheckCircle2, text: "Schedule looks balanced. No action needed.", action: "" });
 
   return (
     <div className="flex min-h-screen bg-[#F8FAFC]">
@@ -2162,237 +2169,179 @@ const CalendarPage = () => {
           <div className="px-8 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-6">
-                {/* Navigation */}
                 <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="rounded-md"
-                    onClick={navigatePrevious}
-                  >
-                    <ChevronLeft size={18} />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="rounded-md"
-                    onClick={navigateNext}
-                  >
-                    <ChevronRight size={18} />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="rounded-md"
-                    onClick={goToToday}
-                  >
-                    Today
-                  </Button>
+                  <Button variant="outline" size="icon" className="rounded-md" onClick={navigatePrevious}><ChevronLeft size={18} /></Button>
+                  <Button variant="outline" size="icon" className="rounded-md" onClick={navigateNext}><ChevronRight size={18} /></Button>
+                  <Button variant="outline" className="rounded-md" onClick={goToToday}>Today</Button>
                 </div>
-
-                {/* Period Title */}
-                <h1 className="text-2xl font-bold text-[#0F172A]">
-                  {getPeriodTitle()}
-                </h1>
+                <h1 className="text-2xl font-bold text-[#0F172A]">{getPeriodTitle()}</h1>
               </div>
-
               <div className="flex items-center gap-3">
-                {/* View Mode Toggle */}
                 <div className="flex items-center bg-white/5 rounded-md p-1">
-                  <Button
-                    variant={viewMode === "month" ? "secondary" : "ghost"}
-                    size="sm"
-                    className="rounded-md"
-                    onClick={() => setViewMode("month")}
-                  >
-                    <LayoutGrid size={16} className="mr-1" />
-                    Month
-                  </Button>
-                  <Button
-                    variant={viewMode === "week" ? "secondary" : "ghost"}
-                    size="sm"
-                    className="rounded-md"
-                    onClick={() => setViewMode("week")}
-                  >
-                    <Columns size={16} className="mr-1" />
-                    Week
-                  </Button>
-                  <Button
-                    variant={viewMode === "day" ? "secondary" : "ghost"}
-                    size="sm"
-                    className="rounded-md"
-                    onClick={() => setViewMode("day")}
-                  >
-                    <CalendarIcon size={16} className="mr-1" />
-                    Day
-                  </Button>
-                  <Button
-                    variant={viewMode === "agenda" ? "secondary" : "ghost"}
-                    size="sm"
-                    className="rounded-md"
-                    onClick={() => setViewMode("agenda")}
-                  >
-                    <List size={16} className="mr-1" />
-                    Agenda
-                  </Button>
+                  <Button variant={viewMode === "month" ? "secondary" : "ghost"} size="sm" className="rounded-md" onClick={() => setViewMode("month")}><LayoutGrid size={16} className="mr-1" />Month</Button>
+                  <Button variant={viewMode === "week" ? "secondary" : "ghost"} size="sm" className="rounded-md" onClick={() => setViewMode("week")}><Columns size={16} className="mr-1" />Week</Button>
+                  <Button variant={viewMode === "day" ? "secondary" : "ghost"} size="sm" className="rounded-md" onClick={() => setViewMode("day")}><CalendarIcon size={16} className="mr-1" />Day</Button>
+                  <Button variant={viewMode === "agenda" ? "secondary" : "ghost"} size="sm" className="rounded-md" onClick={() => setViewMode("agenda")}><List size={16} className="mr-1" />Agenda</Button>
                 </div>
-
-                {/* Search */}
                 <div className="relative">
                   <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
-                  <Input
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search events..."
-                    className="pl-9 h-10 w-48 rounded-md border-[rgba(15,23,42,0.06)]"
-                  />
+                  <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search events..." className="pl-9 h-10 w-48 rounded-md border-[rgba(15,23,42,0.06)]" />
                 </div>
-
-                {/* Add Event Button */}
-                <Button
-                  onClick={() => {
-                    setCurrentEvent(null);
-                    setIsFormOpen(true);
-                  }}
-                  className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md gap-2"
-                >
-                  <Plus size={18} />
-                  Add Event
-                </Button>
+                <Button onClick={() => { setCurrentEvent(null); setIsFormOpen(true); }} className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md gap-2"><Plus size={18} />Add Event</Button>
               </div>
             </div>
           </div>
         </header>
 
-        <div className="p-8">
+        <div className="p-6 space-y-5 page-enter">
+
+          {/* ===== AI SCHEDULING INTELLIGENCE BAR ===== */}
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-lg border-l-[3px] border-l-[#0891B2] overflow-hidden" style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.04), 0 8px 20px rgba(15,23,42,0.05)' }}>
+            <div className="flex items-center justify-between px-5 pt-3.5 pb-2">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-md bg-[#0891B2]/8 flex items-center justify-center"><Sparkles size={14} className="text-[#0891B2]" /></div>
+                <span className="text-xs font-semibold text-[#0F172A]">AI Schedule Intelligence</span>
+                <span className="ai-tag">AI</span>
+              </div>
+              <span className="text-[10px] text-[#94A3B8]">Updated just now</span>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 divide-x divide-[rgba(15,23,42,0.06)]">
+              <div className="px-4 py-3">
+                <div className="flex items-center gap-1 mb-1"><CalendarDays size={11} className="text-[#94A3B8]" /><span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-medium">Today</span></div>
+                <span className="text-lg font-bold text-[#0F172A]" style={{ fontVariantNumeric: 'tabular-nums' }}>{todayCount}</span>
+                <span className="text-[10px] text-[#94A3B8] ml-1">events</span>
+              </div>
+              <div className="px-4 py-3">
+                <div className="flex items-center gap-1 mb-1"><Users size={11} className="text-[#94A3B8]" /><span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-medium">Meetings</span></div>
+                <span className="text-lg font-bold text-[#8B5CF6]" style={{ fontVariantNumeric: 'tabular-nums' }}>{meetingCount}</span>
+                <span className="text-[10px] text-[#94A3B8] ml-1">({totalMeetingHours.toFixed(1)}h)</span>
+              </div>
+              <div className="px-4 py-3">
+                <div className="flex items-center gap-1 mb-1"><Target size={11} className="text-[#94A3B8]" /><span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-medium">Focus Time</span></div>
+                <span className={cn("text-lg font-bold", focusHours >= 3 ? "text-[#16A34A]" : focusHours >= 1 ? "text-[#D97706]" : "text-[#DC2626]")} style={{ fontVariantNumeric: 'tabular-nums' }}>{focusHours.toFixed(1)}h</span>
+                <span className="text-[10px] text-[#94A3B8] ml-1">available</span>
+              </div>
+              <div className="px-4 py-3">
+                <div className="flex items-center gap-1 mb-1"><CalendarRange size={11} className="text-[#94A3B8]" /><span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-medium">This Week</span></div>
+                <span className="text-lg font-bold text-[#0F172A]" style={{ fontVariantNumeric: 'tabular-nums' }}>{thisWeekCount}</span>
+                <span className="text-[10px] text-[#94A3B8] ml-1">events</span>
+              </div>
+              <div className="px-4 py-3">
+                <div className="flex items-center gap-1 mb-1"><AlertCircle size={11} className="text-[#94A3B8]" /><span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-medium">High Priority</span></div>
+                <span className={cn("text-lg font-bold", highPriorityCount > 0 ? "text-[#DC2626]" : "text-[#16A34A]")} style={{ fontVariantNumeric: 'tabular-nums' }}>{highPriorityCount}</span>
+                <span className="text-[10px] text-[#94A3B8] ml-1">upcoming</span>
+              </div>
+              <div className="px-4 py-3">
+                <div className="flex items-center gap-1 mb-1"><Clock size={11} className="text-[#94A3B8]" /><span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-medium">Next Free</span></div>
+                <span className="text-sm font-bold text-[#0891B2]">{getNextFreeSlot()}</span>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* ===== SMART ALERTS ===== */}
+          {visibleAlerts.length > 0 && (
+            <div className="space-y-2">
+              {visibleAlerts.map((alert) => (
+                <motion.div key={alert.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className={cn("flex items-center gap-3 px-4 py-2 rounded-lg border", alert.type === "danger" ? "bg-[#DC2626]/5 border-[#DC2626]/15" : alert.type === "warning" ? "bg-[#D97706]/5 border-[#D97706]/15" : "bg-[#0891B2]/5 border-[#0891B2]/15")}>
+                  <AlertCircle size={14} className={alert.type === "danger" ? "text-[#DC2626]" : alert.type === "warning" ? "text-[#D97706]" : "text-[#0891B2]"} />
+                  <span className="text-xs font-semibold text-[#0F172A]">{alert.title}</span>
+                  <span className="text-xs text-[#475569] flex-1">{alert.message}</span>
+                  <button onClick={() => setDismissedAlerts((p) => [...p, alert.id])} className="text-[#94A3B8] hover:text-[#475569]"><X size={14} /></button>
+                </motion.div>
+              ))}
+            </div>
+          )}
+
+          {/* ===== MAIN GRID ===== */}
           <div className="grid grid-cols-4 gap-6">
             {/* Main Calendar View */}
             <div className="col-span-3">
               <AnimatePresence mode="wait">
                 {viewMode === "month" && (
-                  <motion.div
-                    key="month"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                  >
-                    <MonthView
-                      currentDate={currentDate}
-                      events={filteredEvents}
-                      onDateClick={handleDateClick}
-                      onEventClick={handleEventClick}
-                      selectedCategories={selectedCategories}
-                    />
+                  <motion.div key="month" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+                    <MonthView currentDate={currentDate} events={filteredEvents} onDateClick={handleDateClick} onEventClick={handleEventClick} selectedCategories={selectedCategories} />
                   </motion.div>
                 )}
-
                 {viewMode === "week" && (
-                  <motion.div
-                    key="week"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                  >
-                    <WeekView
-                      currentDate={currentDate}
-                      events={filteredEvents}
-                      onEventClick={handleEventClick}
-                      selectedCategories={selectedCategories}
-                    />
+                  <motion.div key="week" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+                    <WeekView currentDate={currentDate} events={filteredEvents} onEventClick={handleEventClick} selectedCategories={selectedCategories} />
                   </motion.div>
                 )}
-
                 {viewMode === "day" && (
-                  <motion.div
-                    key="day"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                  >
-                    <DayView
-                      currentDate={currentDate}
-                      events={filteredEvents}
-                      onEventClick={handleEventClick}
-                      selectedCategories={selectedCategories}
-                    />
+                  <motion.div key="day" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+                    <DayView currentDate={currentDate} events={filteredEvents} onEventClick={handleEventClick} selectedCategories={selectedCategories} />
                   </motion.div>
                 )}
-
                 {viewMode === "agenda" && (
-                  <motion.div
-                    key="agenda"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                  >
-                    <AgendaView
-                      events={filteredEvents}
-                      onEventClick={handleEventClick}
-                      selectedCategories={selectedCategories}
-                    />
+                  <motion.div key="agenda" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+                    <AgendaView events={filteredEvents} onEventClick={handleEventClick} selectedCategories={selectedCategories} />
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
 
             {/* Right Sidebar */}
-            <div className="col-span-1 space-y-6">
-              {/* Quick Stats */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4"
-              >
-                <h3 className="font-semibold text-[#0F172A] mb-4">Overview</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 bg-[#0891B2]/10 rounded-md text-center">
-                    <p className="text-2xl font-bold text-[#0891B2]">{todayEvents}</p>
-                    <p className="text-xs text-[#94A3B8]">Today</p>
+            <div className="col-span-1 space-y-5">
+
+              {/* Quick Stats - Enhanced */}
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-lg border border-[rgba(15,23,42,0.06)] p-4" style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.04), 0 4px 12px rgba(15,23,42,0.04)' }}>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-sm text-[#0F172A]">Overview</h3>
+                  <button onClick={fetchCalendarEvents} className="p-1 rounded hover:bg-[#F1F5F9] text-[#94A3B8] hover:text-[#475569] transition-colors"><RefreshCw size={13} /></button>
+                </div>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="p-3 bg-[#0891B2]/8 rounded-lg text-center">
+                    <p className="text-xl font-bold text-[#0891B2]" style={{ fontVariantNumeric: 'tabular-nums' }}>{todayCount}</p>
+                    <p className="text-[10px] text-[#94A3B8] font-medium">Today</p>
                   </div>
-                  <div className="p-3 bg-[#D97706]/10 rounded-md text-center">
-                    <p className="text-2xl font-bold text-[#D97706]">{upcomingEvents}</p>
-                    <p className="text-xs text-[#94A3B8]">Upcoming</p>
+                  <div className="p-3 bg-[#8B5CF6]/8 rounded-lg text-center">
+                    <p className="text-xl font-bold text-[#8B5CF6]" style={{ fontVariantNumeric: 'tabular-nums' }}>{thisWeekCount}</p>
+                    <p className="text-[10px] text-[#94A3B8] font-medium">This Week</p>
+                  </div>
+                  <div className="p-3 bg-[#D97706]/8 rounded-lg text-center">
+                    <p className="text-xl font-bold text-[#D97706]" style={{ fontVariantNumeric: 'tabular-nums' }}>{upcomingCount}</p>
+                    <p className="text-[10px] text-[#94A3B8] font-medium">Upcoming</p>
+                  </div>
+                  <div className="p-3 bg-[#DC2626]/8 rounded-lg text-center">
+                    <p className="text-xl font-bold text-[#DC2626]" style={{ fontVariantNumeric: 'tabular-nums' }}>{highPriorityCount}</p>
+                    <p className="text-[10px] text-[#94A3B8] font-medium">High Priority</p>
                   </div>
                 </div>
               </motion.div>
 
+              {/* AI Scheduling Suggestions */}
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-white rounded-lg border border-[rgba(15,23,42,0.06)] overflow-hidden" style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.04), 0 4px 12px rgba(15,23,42,0.04)' }}>
+                <div className="px-4 py-3 border-b border-[rgba(15,23,42,0.06)]">
+                  <div className="flex items-center gap-2"><Sparkles size={13} className="text-[#0891B2]" /><span className="text-xs font-semibold text-[#0F172A]">AI Suggestions</span><span className="ai-tag">AI</span></div>
+                </div>
+                <div className="divide-y divide-[rgba(15,23,42,0.04)]">
+                  {aiSuggestions.map((suggestion, i) => (
+                    <div key={i} className="px-4 py-2.5 flex items-start gap-2.5 hover:bg-[#F8FAFC] transition-colors">
+                      <suggestion.icon size={13} className="text-[#0891B2] mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] text-[#475569] leading-relaxed">{suggestion.text}</p>
+                        {suggestion.action && (
+                          <button onClick={() => { setCurrentEvent(null); setIsFormOpen(true); toast({ title: "Action", description: suggestion.text }); }} className="text-[10px] font-medium text-[#0891B2] hover:underline mt-0.5">{suggestion.action} →</button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+
               {/* Mini Calendar */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-              >
-                <MiniCalendar
-                  selectedDate={selectedDate}
-                  onDateSelect={(date) => {
-                    setSelectedDate(date);
-                    setCurrentDate(date);
-                  }}
-                  events={events}
-                />
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+                <MiniCalendar selectedDate={selectedDate} onDateSelect={(date) => { setSelectedDate(date); setCurrentDate(date); }} events={events} />
               </motion.div>
 
               {/* Upcoming Events */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                <UpcomingEvents
-                  events={filteredEvents}
-                  onEventClick={handleEventClick}
-                />
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+                <UpcomingEvents events={filteredEvents} onEventClick={handleEventClick} />
               </motion.div>
 
               {/* Category Filter */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                <CategoryFilter
-                  selectedCategories={selectedCategories}
-                  onToggleCategory={toggleCategory}
-                />
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+                <CategoryFilter selectedCategories={selectedCategories} onToggleCategory={toggleCategory} />
               </motion.div>
             </div>
           </div>
@@ -2400,49 +2349,17 @@ const CalendarPage = () => {
       </main>
 
       {/* Dialogs */}
-      <EventFormDialog
-        isOpen={isFormOpen}
-        onClose={() => {
-          setIsFormOpen(false);
-          setCurrentEvent(null);
-        }}
-        event={currentEvent}
-        selectedDate={selectedDate}
-        onSubmit={currentEvent ? handleEditEvent : handleAddEvent}
-      />
-
-      <EventDetailsDialog
-        isOpen={isDetailsOpen}
-        onClose={() => {
-          setIsDetailsOpen(false);
-          setCurrentEvent(null);
-        }}
-        event={currentEvent}
-        onEdit={() => {
-          setIsDetailsOpen(false);
-          setIsFormOpen(true);
-        }}
-        onDelete={() => {
-          setIsDeleteAlertOpen(true);
-        }}
-      />
-
+      <EventFormDialog isOpen={isFormOpen} onClose={() => { setIsFormOpen(false); setCurrentEvent(null); }} event={currentEvent} selectedDate={selectedDate} onSubmit={currentEvent ? handleEditEvent : handleAddEvent} />
+      <EventDetailsDialog isOpen={isDetailsOpen} onClose={() => { setIsDetailsOpen(false); setCurrentEvent(null); }} event={currentEvent} onEdit={() => { setIsDetailsOpen(false); setIsFormOpen(true); }} onDelete={() => { setIsDeleteAlertOpen(true); }} />
       <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
         <AlertDialogContent className="rounded-md">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Event</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{currentEvent?.title}"? This action cannot be undone.
-            </AlertDialogDescription>
+            <AlertDialogDescription>Are you sure you want to delete "{currentEvent?.title}"? This action cannot be undone.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="rounded-md">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteEvent}
-              className="bg-red-500 hover:bg-red-600 rounded-md"
-            >
-              Delete
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleDeleteEvent} className="bg-red-500 hover:bg-red-600 rounded-md">Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

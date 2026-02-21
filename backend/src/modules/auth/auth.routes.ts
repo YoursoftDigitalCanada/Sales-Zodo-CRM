@@ -163,15 +163,28 @@ router.get(
 
 /**
  * @swagger
- * /auth/switch-tenant:
+ * /auth/switch-tenant/{tenantId}:
  *   post:
  *     summary: Switch to different tenant
  *     tags: [Auth]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: tenantId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Target tenant UUID to switch to
+ *     responses:
+ *       200:
+ *         description: Tenant switched, new JWT issued
+ *       403:
+ *         description: User is not a member of the target tenant
  */
 router.post(
-  '/switch-tenant',
+  '/switch-tenant/:tenantId',
   authenticate,
   authController.switchTenant.bind(authController)
 );

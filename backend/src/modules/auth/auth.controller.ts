@@ -2,8 +2,6 @@ import { Request, Response, NextFunction } from 'express';
 import { authService } from './auth.service';
 import { sendSuccess, sendCreated, sendNoContent } from '../../common/utils/responseFormatter';
 import { LoginInput, RegisterInput, ChangePasswordInput } from './auth.types';
-import { BadRequestError } from '../../common/errors/HttpErrors';
-import { ErrorCodes } from '../../common/errors/errorCodes';
 
 export class AuthController {
   /**
@@ -136,25 +134,18 @@ export class AuthController {
   }
 
   /**
-   * POST /auth/switch-tenant
-   * Body: { targetTenantId: string }
+   * POST /auth/switch-tenant/:tenantId
    *
-   * Verifies the user is a member of the target tenant via DB lookup.
-   * Issues a new JWT scoped to the target tenant on success.
+   * Reads the target tenant from the route param (never from body/query).
+   * Verifies the user is an active employee of the target tenant via DB lookup.
+   * Issues a new JWT scoped to the validated target tenant on success.
    * Returns 403 if the user has no active membership in the target tenant.
    */
   async switchTenant(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.user!.userId;
       const sourceTenantId = req.user!.tenantId || undefined;
-      const { targetTenantId } = req.body;
-
-      if (!targetTenantId || typeof targetTenantId !== 'string') {
-        throw new BadRequestError(
-          'targetTenantId is required in the request body',
-          ErrorCodes.VALIDATION_FAILED
-        );
-      }
+      const targetTenantId = req.params.tenantId;
 
       const metadata = {
         userAgent: req.headers['user-agent'],

@@ -79,6 +79,15 @@ import ReportsPage from "./pages/reports/ReportsPage";
 // Quotes
 import QuotesPage from "./pages/Quotes";
 
+// Notifications
+import NotificationsPage from "./pages/Notifications";
+
+// Support
+import SupportPage from "./pages/Support";
+
+// Documents
+import DocumentsPage from "./pages/Documents";
+
 // Roles
 import RolesPage from "./pages/roles/RolesPage";
 
@@ -259,6 +268,52 @@ const App = () => (
             element={
               <FeatureGuard featureId="invoices">
                 <QuotesPage />
+              </FeatureGuard>
+            }
+          />
+
+          {/* ========== NOTIFICATIONS ROUTE ========== */}
+          <Route
+            path="/notifications"
+            element={
+              <FeatureGuard featureId="email">
+                <NotificationsPage />
+              </FeatureGuard>
+            }
+          />
+
+          {/* ========== SUPPORT ROUTES ========== */}
+          <Route
+            path="/support/tickets"
+            element={
+              <FeatureGuard featureId="email">
+                <SupportPage />
+              </FeatureGuard>
+            }
+          />
+          <Route
+            path="/support/knowledge-base"
+            element={
+              <FeatureGuard featureId="email">
+                <SupportPage />
+              </FeatureGuard>
+            }
+          />
+          <Route
+            path="/support/faq"
+            element={
+              <FeatureGuard featureId="email">
+                <SupportPage />
+              </FeatureGuard>
+            }
+          />
+
+          {/* ========== DOCUMENTS ROUTE ========== */}
+          <Route
+            path="/documents"
+            element={
+              <FeatureGuard featureId="email">
+                <DocumentsPage />
               </FeatureGuard>
             }
           />

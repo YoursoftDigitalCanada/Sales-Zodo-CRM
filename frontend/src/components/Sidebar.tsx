@@ -306,6 +306,13 @@ const navigationItems: NavigationItem[] = [
     badge: 7,
     badgeColor: "red",
   },
+  {
+    title: "Documents",
+    icon: FileText,
+    path: "/documents",
+    featureId: "email",
+    isNew: true,
+  },
 
   // ===== TEAM =====
   { title: "Team", isHeader: true },

@@ -76,6 +76,9 @@ import AnalyticsPage from "./pages/analytics/AnalyticsPage";
 // Reports
 import ReportsPage from "./pages/reports/ReportsPage";
 
+// Quotes
+import QuotesPage from "./pages/Quotes";
+
 // Roles
 import RolesPage from "./pages/roles/RolesPage";
 
@@ -246,6 +249,16 @@ const App = () => (
             element={
               <FeatureGuard featureId="invoices">
                 <ExpensesPage />
+              </FeatureGuard>
+            }
+          />
+
+          {/* ========== QUOTES ROUTE ========== */}
+          <Route
+            path="/quotes"
+            element={
+              <FeatureGuard featureId="invoices">
+                <QuotesPage />
               </FeatureGuard>
             }
           />

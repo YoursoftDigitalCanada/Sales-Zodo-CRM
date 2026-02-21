@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { emailsService } from './emails.service';
 import { sendSuccess, sendCreated, sendNoContent } from '../../common/utils/responseFormatter';
+import { sanitizeBody } from '../../common/utils/sanitize-body';
 
 export class EmailsController {
     async getEmails(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -19,7 +20,7 @@ export class EmailsController {
 
     async sendEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const result = await emailsService.sendEmail(req.user!.tenantId!, req.body);
+            const result = await emailsService.sendEmail(req.user!.tenantId!, sanitizeBody(req.body));
             sendCreated(res, result, 'Email sent');
         } catch (e) { next(e); }
     }

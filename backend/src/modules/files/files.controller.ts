@@ -1,12 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import { filesService } from './files.service';
 import { sendSuccess, sendCreated, sendNoContent } from '../../common/utils/responseFormatter';
+import { sanitizeBody } from '../../common/utils/sanitize-body';
 
 export class FilesController {
     async upload(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             // In practice, you'd handle file upload middleware here (multer, etc.)
-            const file = await filesService.create(req.user!.tenantId!, req.body);
+            const file = await filesService.create(req.user!.tenantId!, sanitizeBody(req.body));
             sendCreated(res, file, 'File uploaded');
         } catch (e) { next(e); }
     }
@@ -27,7 +28,7 @@ export class FilesController {
 
     async update(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const file = await filesService.update(req.params.id, req.user!.tenantId!, req.body);
+            const file = await filesService.update(req.params.id, req.user!.tenantId!, sanitizeBody(req.body));
             sendSuccess(res, file, 'File updated');
         } catch (e) { next(e); }
     }

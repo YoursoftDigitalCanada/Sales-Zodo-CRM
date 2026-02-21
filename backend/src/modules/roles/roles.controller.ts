@@ -1,11 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import { rolesService } from './roles.service';
 import { sendSuccess, sendCreated, sendNoContent } from '../../common/utils/responseFormatter';
+import { sanitizeBody } from '../../common/utils/sanitize-body';
 
 export class RolesController {
     async create(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const role = await rolesService.create(req.user!.tenantId!, req.body);
+            const role = await rolesService.create(req.user!.tenantId!, sanitizeBody(req.body));
             sendCreated(res, role, 'Role created');
         } catch (e) { next(e); }
     }
@@ -26,7 +27,7 @@ export class RolesController {
 
     async update(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const role = await rolesService.update(req.params.id, req.user!.tenantId!, req.body);
+            const role = await rolesService.update(req.params.id, req.user!.tenantId!, sanitizeBody(req.body));
             sendSuccess(res, role, 'Role updated');
         } catch (e) { next(e); }
     }

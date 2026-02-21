@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { leadSourcesService } from './lead-sources.service';
 import { sendSuccess, sendCreated, sendNoContent } from '../../common/utils/responseFormatter';
+import { sanitizeBody } from '../../common/utils/sanitize-body';
 
 export class LeadSourcesController {
   /**
@@ -9,7 +10,7 @@ export class LeadSourcesController {
   async create(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const tenantId = req.user!.tenantId!;
-      const data = req.body;
+      const data = sanitizeBody(req.body);
 
       const source = await leadSourcesService.create(tenantId, data);
 
@@ -88,7 +89,7 @@ export class LeadSourcesController {
     try {
       const tenantId = req.user!.tenantId!;
       const { id } = req.params;
-      const data = req.body;
+      const data = sanitizeBody(req.body);
 
       const source = await leadSourcesService.update(id, tenantId, data);
 

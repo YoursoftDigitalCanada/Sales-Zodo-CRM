@@ -1,11 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import { foldersService } from './folders.service';
 import { sendSuccess, sendCreated, sendNoContent } from '../../common/utils/responseFormatter';
+import { sanitizeBody } from '../../common/utils/sanitize-body';
 
 export class FoldersController {
     async create(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const folder = await foldersService.create(req.user!.tenantId!, req.body);
+            const folder = await foldersService.create(req.user!.tenantId!, sanitizeBody(req.body));
             sendCreated(res, folder, 'Folder created');
         } catch (e) { next(e); }
     }
@@ -26,7 +27,7 @@ export class FoldersController {
 
     async update(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const folder = await foldersService.update(req.params.id, req.user!.tenantId!, req.body);
+            const folder = await foldersService.update(req.params.id, req.user!.tenantId!, sanitizeBody(req.body));
             sendSuccess(res, folder, 'Folder updated');
         } catch (e) { next(e); }
     }

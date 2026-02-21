@@ -1,0 +1,20 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const expenses_controller_1 = require("./expenses.controller");
+const auth_middleware_1 = require("../../common/middleware/auth.middleware");
+const permission_middleware_1 = require("../../common/middleware/permission.middleware");
+const validate_middleware_1 = require("../../common/middleware/validate.middleware");
+const permissions_1 = require("../../common/constants/permissions");
+const expenses_validators_1 = require("./expenses.validators");
+const router = (0, express_1.Router)();
+router.use(auth_middleware_1.authenticate);
+router.use(auth_middleware_1.loadEmployee);
+router.get('/', (0, permission_middleware_1.requirePermission)(permissions_1.PERMISSIONS.EXPENSES_VIEW), (0, validate_middleware_1.validate)(expenses_validators_1.expenseQuerySchema), expenses_controller_1.expensesController.getMany.bind(expenses_controller_1.expensesController));
+router.post('/', (0, permission_middleware_1.requirePermission)(permissions_1.PERMISSIONS.EXPENSES_CREATE), (0, validate_middleware_1.validate)(expenses_validators_1.createExpenseSchema), expenses_controller_1.expensesController.create.bind(expenses_controller_1.expensesController));
+router.get('/:id', (0, permission_middleware_1.requirePermission)(permissions_1.PERMISSIONS.EXPENSES_VIEW), (0, validate_middleware_1.validate)(expenses_validators_1.expenseIdSchema), expenses_controller_1.expensesController.getById.bind(expenses_controller_1.expensesController));
+router.put('/:id', (0, permission_middleware_1.requirePermission)(permissions_1.PERMISSIONS.EXPENSES_UPDATE), (0, validate_middleware_1.validate)(expenses_validators_1.expenseIdSchema), (0, validate_middleware_1.validate)(expenses_validators_1.updateExpenseSchema), expenses_controller_1.expensesController.update.bind(expenses_controller_1.expensesController));
+router.patch('/:id/approve', (0, permission_middleware_1.requirePermission)(permissions_1.PERMISSIONS.EXPENSES_APPROVE), (0, validate_middleware_1.validate)(expenses_validators_1.expenseIdSchema), expenses_controller_1.expensesController.approve.bind(expenses_controller_1.expensesController));
+router.delete('/:id', (0, permission_middleware_1.requirePermission)(permissions_1.PERMISSIONS.EXPENSES_DELETE), (0, validate_middleware_1.validate)(expenses_validators_1.expenseIdSchema), expenses_controller_1.expensesController.delete.bind(expenses_controller_1.expensesController));
+exports.default = router;
+//# sourceMappingURL=expenses.routes.js.map

@@ -7,12 +7,13 @@ import {
     sendNoContent,
 } from '../../common/utils/responseFormatter';
 import { CreateContactDto, UpdateContactDto } from './contacts.dto';
+import { sanitizeBody } from '../../common/utils/sanitize-body';
 
 export class ContactsController {
     async create(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const tenantId = req.user!.tenantId!;
-            const data: CreateContactDto = req.body;
+            const data = sanitizeBody<CreateContactDto>(req.body);
 
             const contact = await contactsManager.createContact(req, tenantId, data);
 
@@ -52,7 +53,7 @@ export class ContactsController {
         try {
             const tenantId = req.user!.tenantId!;
             const { id } = req.params;
-            const data: UpdateContactDto = req.body;
+            const data = sanitizeBody<UpdateContactDto>(req.body);
 
             const contact = await contactsManager.updateContact(req, id, tenantId, data);
 

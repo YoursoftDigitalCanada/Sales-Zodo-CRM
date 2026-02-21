@@ -1,0 +1,322 @@
+import { Router } from 'express';
+import { leadsController } from './leads.controller';
+import { 
+  authenticate, 
+  loadEmployee,
+} from '../../common/middleware/auth.middleware';
+import { 
+  requirePermission,
+  requireAnyPermission,
+} from '../../common/middleware/permission.middleware';
+import { validate } from '../../common/middleware/validate.middleware';
+import { PERMISSIONS } from '../../common/constants/permissions';
+import {
+  createLeadSchema,
+  updateLeadSchema,
+  leadQuerySchema,
+  leadIdSchema,
+  convertLeadSchema,
+  bulkAssignSchema,
+  bulkStatusSchema,
+  pipelineQuerySchema,
+} from './leads.validators';
+
+const router = Router();
+
+// All routes require authentication and employee context
+router.use(authenticate);
+router.use(loadEmployee);
+
+/**
+ * @swagger
+ * /leads:
+ *   get:
+ *     summary: Get leads with filters and pagination
+ *     tags: [Leads]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/PageParam'
+ *       - $ref: '#/components/parameters/LimitParam'
+ *       - $ref: '#/components/parameters/SearchParam'
+ *       - name: status
+ *         in: query
+ *         schema:
+ *           type: string
+ *           enum: [NEW, CONTACTED, QUALIFIED, PROPOSAL, NEGOTIATION, WON, LOST]
+ *       - name: temperature
+ *         in: query
+ *         schema:
+ *           type: string
+ *           enum: [COLD, WARM, HOT]
+ *       - name: assignedToId
+ *         in: query
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: List of leads
+ */
+router.get(
+  '/',
+  requirePermission(PERMISSIONS.LEADS_VIEW),
+  validate(leadQuerySchema),
+  leadsController.getMany.bind(leadsController)
+);
+
+/**
+ * @swagger
+ * /leads/pipeline:
+ *   get:
+ *     summary: Get leads grouped by status (pipeline view)
+ *     tags: [Leads]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.get(
+  '/pipeline',
+  requirePermission(PERMISSIONS.LEADS_VIEW),
+  validate(pipelineQuerySchema),
+  leadsController.getPipeline.bind(leadsController)
+);
+
+/**
+ * @swagger
+ * /leads/statistics:
+ *   get:
+ *     summary: Get lead statistics
+ *     tags: [Leads]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.get(
+  '/statistics',
+  requirePermission(PERMISSIONS.LEADS_VIEW),
+  leadsController.getStatistics.bind(leadsController)
+);
+
+/**
+ * @swagger
+ * /leads:
+ *   post:
+ *     summary: Create a new lead
+ *     tags: [Leads]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - firstName
+ *               - lastName
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *               lastName:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               phone:
+ *                 type: string
+ *               companyName:
+ *                 type: string
+ *               status:
+ *                 type: string
+ *                 enum: [NEW, CONTACTED, QUALIFIED, PROPOSAL, NEGOTIATION, WON, LOST]
+ *               temperature:
+ *                 type: string
+ *                 enum: [COLD, WARM, HOT]
+ *     responses:
+ *       201:
+ *         description: Lead created
+ */
+router.post(
+  '/',
+  requirePermission(PERMISSIONS.LEADS_CREATE),
+  validate(createLeadSchema),
+  leadsController.create.bind(leadsController)
+);
+
+/**
+ * @swagger
+ * /leads/bulk/assign:
+ *   post:
+ *     summary: Bulk assign leads
+ *     tags: [Leads]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.post(
+  '/bulk/assign',
+  requirePermission(PERMISSIONS.LEADS_ASSIGN),
+  validate(bulkAssignSchema),
+  leadsController.bulkAssign.bind(leadsController)
+);
+
+/**
+ * @swagger
+ * /leads/bulk/status:
+ *   post:
+ *     summary: Bulk update lead status
+ *     tags: [Leads]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.post(
+  '/bulk/status',
+  requirePermission(PERMISSIONS.LEADS_UPDATE),
+  validate(bulkStatusSchema),
+  leadsController.bulkUpdateStatus.bind(leadsController)
+);
+
+/**
+ * @swagger
+ * /leads/import:
+ *   post:
+ *     summary: Import leads
+ *     tags: [Leads]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.post(
+  '/import',
+  requirePermission(PERMISSIONS.LEADS_IMPORT),
+  leadsController.import.bind(leadsController)
+);
+
+/**
+ * @swagger
+ * /leads/export:
+ *   post:
+ *     summary: Export leads
+ *     tags: [Leads]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.post(
+  '/export',
+  requirePermission(PERMISSIONS.LEADS_EXPORT),
+  leadsController.export.bind(leadsController)
+);
+
+/**
+ * @swagger
+ * /leads/{id}:
+ *   get:
+ *     summary: Get lead by ID
+ *     tags: [Leads]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/IdParam'
+ */
+router.get(
+  '/:id',
+  requirePermission(PERMISSIONS.LEADS_VIEW),
+  validate(leadIdSchema),
+  leadsController.getById.bind(leadsController)
+);
+
+/**
+ * @swagger
+ * /leads/{id}/activities:
+ *   get:
+ *     summary: Get lead activities
+ *     tags: [Leads]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.get(
+  '/:id/activities',
+  requirePermission(PERMISSIONS.LEADS_VIEW),
+  validate(leadIdSchema),
+  leadsController.getActivities.bind(leadsController)
+);
+
+/**
+ * @swagger
+ * /leads/{id}:
+ *   put:
+ *     summary: Update lead
+ *     tags: [Leads]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.put(
+  '/:id',
+  requirePermission(PERMISSIONS.LEADS_UPDATE),
+  validate(leadIdSchema),
+  validate(updateLeadSchema),
+  leadsController.update.bind(leadsController)
+);
+
+/**
+ * @swagger
+ * /leads/{id}/status:
+ *   patch:
+ *     summary: Update lead status
+ *     tags: [Leads]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.patch(
+  '/:id/status',
+  requirePermission(PERMISSIONS.LEADS_UPDATE),
+  validate(leadIdSchema),
+  leadsController.updateStatus.bind(leadsController)
+);
+
+/**
+ * @swagger
+ * /leads/{id}/assign:
+ *   patch:
+ *     summary: Assign lead to employee
+ *     tags: [Leads]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.patch(
+  '/:id/assign',
+  requirePermission(PERMISSIONS.LEADS_ASSIGN),
+  validate(leadIdSchema),
+  leadsController.assign.bind(leadsController)
+);
+
+/**
+ * @swagger
+ * /leads/{id}/convert:
+ *   post:
+ *     summary: Convert lead to client
+ *     tags: [Leads]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.post(
+  '/:id/convert',
+  requirePermission(PERMISSIONS.LEADS_CONVERT),
+  validate(convertLeadSchema),
+  leadsController.convert.bind(leadsController)
+);
+
+/**
+ * @swagger
+ * /leads/{id}:
+ *   delete:
+ *     summary: Delete lead
+ *     tags: [Leads]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.delete(
+  '/:id',
+  requirePermission(PERMISSIONS.LEADS_DELETE),
+  validate(leadIdSchema),
+  leadsController.delete.bind(leadsController)
+);
+
+export default router;

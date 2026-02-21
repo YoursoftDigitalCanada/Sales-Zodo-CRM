@@ -1,11 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import { tenantsService } from './tenants.service';
 import { sendSuccess, sendCreated, sendNoContent } from '../../common/utils/responseFormatter';
+import { sanitizeBody } from '../../common/utils/sanitize-body';
 
 export class TenantsController {
     async create(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenant = await tenantsService.create(req.body);
+            const tenant = await tenantsService.create(sanitizeBody(req.body));
             sendCreated(res, tenant, 'Tenant created');
         } catch (e) { next(e); }
     }
@@ -26,7 +27,7 @@ export class TenantsController {
 
     async update(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenant = await tenantsService.update(req.params.id, req.body);
+            const tenant = await tenantsService.update(req.params.id, sanitizeBody(req.body));
             sendSuccess(res, tenant, 'Tenant updated');
         } catch (e) { next(e); }
     }

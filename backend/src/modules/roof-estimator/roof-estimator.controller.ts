@@ -9,6 +9,7 @@ import {
 import {
     CreateEstimateDto, UpdateEstimateDto, UpdateSettingsDto,
 } from './roof-estimator.dto';
+import { sanitizeBody } from '../../common/utils/sanitize-body';
 
 export class RoofEstimatorController {
     /**
@@ -50,7 +51,7 @@ export class RoofEstimatorController {
         try {
             const tenantId = req.user!.tenantId!;
             const createdBy = req.user!.employeeId || req.user!.userId;
-            const data: CreateEstimateDto = req.body;
+            const data = sanitizeBody<CreateEstimateDto>(req.body);
 
             const estimate = await roofEstimatorManager.createEstimate(req, tenantId, data, createdBy);
 
@@ -99,7 +100,7 @@ export class RoofEstimatorController {
         try {
             const tenantId = req.user!.tenantId!;
             const { id } = req.params;
-            const data: UpdateEstimateDto = req.body;
+            const data = sanitizeBody<UpdateEstimateDto>(req.body);
 
             const estimate = await roofEstimatorManager.updateEstimate(req, id, tenantId, data);
 
@@ -146,7 +147,7 @@ export class RoofEstimatorController {
     async updateSettings(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const tenantId = req.user!.tenantId!;
-            const data: UpdateSettingsDto = req.body;
+            const data = sanitizeBody<UpdateSettingsDto>(req.body);
 
             const settings = await roofEstimatorService.updateSettings(tenantId, data);
 

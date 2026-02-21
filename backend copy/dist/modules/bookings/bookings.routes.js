@@ -1,0 +1,21 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const bookings_controller_1 = require("./bookings.controller");
+const auth_middleware_1 = require("../../common/middleware/auth.middleware");
+const permission_middleware_1 = require("../../common/middleware/permission.middleware");
+const validate_middleware_1 = require("../../common/middleware/validate.middleware");
+const permissions_1 = require("../../common/constants/permissions");
+const bookings_validators_1 = require("./bookings.validators");
+const router = (0, express_1.Router)();
+router.use(auth_middleware_1.authenticate);
+router.use(auth_middleware_1.loadEmployee);
+router.get('/', (0, permission_middleware_1.requirePermission)(permissions_1.PERMISSIONS.BOOKINGS_VIEW), (0, validate_middleware_1.validate)(bookings_validators_1.bookingQuerySchema), bookings_controller_1.bookingsController.getMany.bind(bookings_controller_1.bookingsController));
+router.post('/', (0, permission_middleware_1.requirePermission)(permissions_1.PERMISSIONS.BOOKINGS_CREATE), (0, validate_middleware_1.validate)(bookings_validators_1.createBookingSchema), bookings_controller_1.bookingsController.create.bind(bookings_controller_1.bookingsController));
+router.get('/:id', (0, permission_middleware_1.requirePermission)(permissions_1.PERMISSIONS.BOOKINGS_VIEW), (0, validate_middleware_1.validate)(bookings_validators_1.bookingIdSchema), bookings_controller_1.bookingsController.getById.bind(bookings_controller_1.bookingsController));
+router.put('/:id', (0, permission_middleware_1.requirePermission)(permissions_1.PERMISSIONS.BOOKINGS_UPDATE), (0, validate_middleware_1.validate)(bookings_validators_1.bookingIdSchema), (0, validate_middleware_1.validate)(bookings_validators_1.updateBookingSchema), bookings_controller_1.bookingsController.update.bind(bookings_controller_1.bookingsController));
+router.patch('/:id/confirm', (0, permission_middleware_1.requirePermission)(permissions_1.PERMISSIONS.BOOKINGS_CONFIRM), (0, validate_middleware_1.validate)(bookings_validators_1.bookingIdSchema), bookings_controller_1.bookingsController.confirm.bind(bookings_controller_1.bookingsController));
+router.patch('/:id/cancel', (0, permission_middleware_1.requirePermission)(permissions_1.PERMISSIONS.BOOKINGS_CANCEL), (0, validate_middleware_1.validate)(bookings_validators_1.bookingIdSchema), bookings_controller_1.bookingsController.cancel.bind(bookings_controller_1.bookingsController));
+router.delete('/:id', (0, permission_middleware_1.requirePermission)(permissions_1.PERMISSIONS.BOOKINGS_DELETE), (0, validate_middleware_1.validate)(bookings_validators_1.bookingIdSchema), bookings_controller_1.bookingsController.delete.bind(bookings_controller_1.bookingsController));
+exports.default = router;
+//# sourceMappingURL=bookings.routes.js.map

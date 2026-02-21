@@ -1,11 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import { groupsService } from './groups.service';
 import { sendSuccess, sendCreated, sendNoContent } from '../../common/utils/responseFormatter';
+import { sanitizeBody } from '../../common/utils/sanitize-body';
 
 export class GroupsController {
     async create(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const group = await groupsService.create(req.user!.tenantId!, req.body);
+            const group = await groupsService.create(req.user!.tenantId!, sanitizeBody(req.body));
             sendCreated(res, group, 'Group created');
         } catch (e) { next(e); }
     }
@@ -26,7 +27,7 @@ export class GroupsController {
 
     async update(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const group = await groupsService.update(req.params.id, req.user!.tenantId!, req.body);
+            const group = await groupsService.update(req.params.id, req.user!.tenantId!, sanitizeBody(req.body));
             sendSuccess(res, group, 'Group updated');
         } catch (e) { next(e); }
     }

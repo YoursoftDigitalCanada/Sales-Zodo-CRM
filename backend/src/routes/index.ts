@@ -3,6 +3,7 @@ import { config } from '../config';
 import { authenticate, loadEmployee } from '../common/middleware/auth.middleware';
 import { tenantContext } from '../common/middleware/tenant.middleware';
 import { moduleGuard } from '../common/middleware/module.middleware';
+import { stripTenantFromBody } from '../common/middleware/sanitize-body.middleware';
 
 // Core module routes
 import authRoutes from '../modules/auth/auth.routes';
@@ -67,6 +68,9 @@ import roofEstimatorRoutes from '../modules/roof-estimator/roof-estimator.routes
 export function registerRoutes(app: Application): void {
   const apiRouter = Router();
   const apiPrefix = `/api/${config.app.apiVersion}`;
+
+  // ── Global safety net: strip tenantId from ALL request bodies ──────
+  apiRouter.use(stripTenantFromBody);
 
   // =========================================================================
   // PUBLIC ROUTES (No authentication or tenant context required)

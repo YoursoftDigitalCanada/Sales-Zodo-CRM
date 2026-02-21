@@ -1,0 +1,20 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const users_controller_1 = require("./users.controller");
+const auth_middleware_1 = require("../../common/middleware/auth.middleware");
+const permission_middleware_1 = require("../../common/middleware/permission.middleware");
+const validate_middleware_1 = require("../../common/middleware/validate.middleware");
+const permissions_1 = require("../../common/constants/permissions");
+const users_validators_1 = require("./users.validators");
+const router = (0, express_1.Router)();
+router.use(auth_middleware_1.authenticate);
+router.use(auth_middleware_1.loadEmployee);
+router.get('/', (0, permission_middleware_1.requirePermission)(permissions_1.PERMISSIONS.USERS_VIEW), (0, validate_middleware_1.validate)(users_validators_1.userQuerySchema), users_controller_1.usersController.getMany.bind(users_controller_1.usersController));
+router.post('/', (0, permission_middleware_1.requirePermission)(permissions_1.PERMISSIONS.USERS_CREATE), (0, validate_middleware_1.validate)(users_validators_1.createUserSchema), users_controller_1.usersController.create.bind(users_controller_1.usersController));
+router.get('/:id', (0, permission_middleware_1.requirePermission)(permissions_1.PERMISSIONS.USERS_VIEW), (0, validate_middleware_1.validate)(users_validators_1.userIdSchema), users_controller_1.usersController.getById.bind(users_controller_1.usersController));
+router.put('/:id', (0, permission_middleware_1.requirePermission)(permissions_1.PERMISSIONS.USERS_UPDATE), (0, validate_middleware_1.validate)(users_validators_1.userIdSchema), (0, validate_middleware_1.validate)(users_validators_1.updateUserSchema), users_controller_1.usersController.update.bind(users_controller_1.usersController));
+router.patch('/:id/status', (0, permission_middleware_1.requirePermission)(permissions_1.PERMISSIONS.USERS_MANAGE_STATUS), (0, validate_middleware_1.validate)(users_validators_1.userIdSchema), users_controller_1.usersController.updateStatus.bind(users_controller_1.usersController));
+router.delete('/:id', (0, permission_middleware_1.requirePermission)(permissions_1.PERMISSIONS.USERS_DELETE), (0, validate_middleware_1.validate)(users_validators_1.userIdSchema), users_controller_1.usersController.delete.bind(users_controller_1.usersController));
+exports.default = router;
+//# sourceMappingURL=users.routes.js.map

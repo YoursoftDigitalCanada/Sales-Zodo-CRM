@@ -1,0 +1,204 @@
+import { Prisma } from '@prisma/client';
+import { CreateInvoiceDto, UpdateInvoiceDto, InvoiceQueryDto } from './invoices.dto';
+export declare class InvoicesRepository {
+    create(tenantId: string, data: CreateInvoiceDto): Promise<{
+        status: import(".prisma/client").$Enums.InvoiceStatus;
+        tenantId: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        currency: import(".prisma/client").$Enums.Currency;
+        notes: string | null;
+        createdById: string | null;
+        total: Prisma.Decimal;
+        dueDate: Date;
+        clientId: string;
+        invoiceNumber: string;
+        issueDate: Date;
+        paidAt: Date | null;
+        subtotal: Prisma.Decimal;
+        taxRate: Prisma.Decimal | null;
+        taxAmount: Prisma.Decimal;
+        discountAmount: Prisma.Decimal;
+        amountPaid: Prisma.Decimal;
+        amountDue: Prisma.Decimal;
+        terms: string | null;
+        sentAt: Date | null;
+        viewedAt: Date | null;
+    }>;
+    findById(id: string, tenantId: string): Promise<({
+        client: {
+            id: string;
+            clientName: string;
+        };
+        items: {
+            id: string;
+            description: string;
+            sortOrder: number;
+            amount: Prisma.Decimal;
+            invoiceId: string;
+            taxRate: Prisma.Decimal | null;
+            quantity: Prisma.Decimal;
+            unitPrice: Prisma.Decimal;
+        }[];
+    } & {
+        status: import(".prisma/client").$Enums.InvoiceStatus;
+        tenantId: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        currency: import(".prisma/client").$Enums.Currency;
+        notes: string | null;
+        createdById: string | null;
+        total: Prisma.Decimal;
+        dueDate: Date;
+        clientId: string;
+        invoiceNumber: string;
+        issueDate: Date;
+        paidAt: Date | null;
+        subtotal: Prisma.Decimal;
+        taxRate: Prisma.Decimal | null;
+        taxAmount: Prisma.Decimal;
+        discountAmount: Prisma.Decimal;
+        amountPaid: Prisma.Decimal;
+        amountDue: Prisma.Decimal;
+        terms: string | null;
+        sentAt: Date | null;
+        viewedAt: Date | null;
+    }) | null>;
+    findMany(tenantId: string, query: InvoiceQueryDto): Promise<{
+        data: ({
+            client: {
+                id: string;
+                clientName: string;
+            };
+            items: {
+                id: string;
+                description: string;
+                sortOrder: number;
+                amount: Prisma.Decimal;
+                invoiceId: string;
+                taxRate: Prisma.Decimal | null;
+                quantity: Prisma.Decimal;
+                unitPrice: Prisma.Decimal;
+            }[];
+        } & {
+            status: import(".prisma/client").$Enums.InvoiceStatus;
+            tenantId: string;
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            currency: import(".prisma/client").$Enums.Currency;
+            notes: string | null;
+            createdById: string | null;
+            total: Prisma.Decimal;
+            dueDate: Date;
+            clientId: string;
+            invoiceNumber: string;
+            issueDate: Date;
+            paidAt: Date | null;
+            subtotal: Prisma.Decimal;
+            taxRate: Prisma.Decimal | null;
+            taxAmount: Prisma.Decimal;
+            discountAmount: Prisma.Decimal;
+            amountPaid: Prisma.Decimal;
+            amountDue: Prisma.Decimal;
+            terms: string | null;
+            sentAt: Date | null;
+            viewedAt: Date | null;
+        })[];
+        total: number;
+    }>;
+    update(id: string, data: UpdateInvoiceDto): Promise<{
+        status: import(".prisma/client").$Enums.InvoiceStatus;
+        tenantId: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        currency: import(".prisma/client").$Enums.Currency;
+        notes: string | null;
+        createdById: string | null;
+        total: Prisma.Decimal;
+        dueDate: Date;
+        clientId: string;
+        invoiceNumber: string;
+        issueDate: Date;
+        paidAt: Date | null;
+        subtotal: Prisma.Decimal;
+        taxRate: Prisma.Decimal | null;
+        taxAmount: Prisma.Decimal;
+        discountAmount: Prisma.Decimal;
+        amountPaid: Prisma.Decimal;
+        amountDue: Prisma.Decimal;
+        terms: string | null;
+        sentAt: Date | null;
+        viewedAt: Date | null;
+    }>;
+    markAsPaid(id: string): Promise<{
+        client: {
+            id: string;
+            clientName: string;
+        };
+        items: {
+            id: string;
+            description: string;
+            sortOrder: number;
+            amount: Prisma.Decimal;
+            invoiceId: string;
+            taxRate: Prisma.Decimal | null;
+            quantity: Prisma.Decimal;
+            unitPrice: Prisma.Decimal;
+        }[];
+    } & {
+        status: import(".prisma/client").$Enums.InvoiceStatus;
+        tenantId: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        currency: import(".prisma/client").$Enums.Currency;
+        notes: string | null;
+        createdById: string | null;
+        total: Prisma.Decimal;
+        dueDate: Date;
+        clientId: string;
+        invoiceNumber: string;
+        issueDate: Date;
+        paidAt: Date | null;
+        subtotal: Prisma.Decimal;
+        taxRate: Prisma.Decimal | null;
+        taxAmount: Prisma.Decimal;
+        discountAmount: Prisma.Decimal;
+        amountPaid: Prisma.Decimal;
+        amountDue: Prisma.Decimal;
+        terms: string | null;
+        sentAt: Date | null;
+        viewedAt: Date | null;
+    }>;
+    delete(id: string): Promise<{
+        status: import(".prisma/client").$Enums.InvoiceStatus;
+        tenantId: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        currency: import(".prisma/client").$Enums.Currency;
+        notes: string | null;
+        createdById: string | null;
+        total: Prisma.Decimal;
+        dueDate: Date;
+        clientId: string;
+        invoiceNumber: string;
+        issueDate: Date;
+        paidAt: Date | null;
+        subtotal: Prisma.Decimal;
+        taxRate: Prisma.Decimal | null;
+        taxAmount: Prisma.Decimal;
+        discountAmount: Prisma.Decimal;
+        amountPaid: Prisma.Decimal;
+        amountDue: Prisma.Decimal;
+        terms: string | null;
+        sentAt: Date | null;
+        viewedAt: Date | null;
+    }>;
+}
+export declare const invoicesRepository: InvoicesRepository;
+//# sourceMappingURL=invoices.repository.d.ts.map

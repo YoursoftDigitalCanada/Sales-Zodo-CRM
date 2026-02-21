@@ -1,11 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import { usersService } from './users.service';
 import { sendSuccess, sendCreated, sendNoContent } from '../../common/utils/responseFormatter';
+import { sanitizeBody } from '../../common/utils/sanitize-body';
 
 export class UsersController {
     async create(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const user = await usersService.create(req.body);
+            const user = await usersService.create(sanitizeBody(req.body));
             sendCreated(res, user, 'User created successfully');
         } catch (error) { next(error); }
     }
@@ -27,7 +28,7 @@ export class UsersController {
 
     async update(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const user = await usersService.update(req.params.id, req.body);
+            const user = await usersService.update(req.params.id, sanitizeBody(req.body));
             sendSuccess(res, user, 'User updated successfully');
         } catch (error) { next(error); }
     }

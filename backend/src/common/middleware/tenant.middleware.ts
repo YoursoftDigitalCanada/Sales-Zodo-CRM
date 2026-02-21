@@ -5,8 +5,15 @@ import { ErrorCodes } from '../errors/errorCodes';
 import { logger } from '../utils/logger';
 
 /**
- * Tenant context middleware
- * Ensures tenant is loaded and validates tenant status
+ * Global Tenant Context Middleware — THE MULTI-TENANT ISOLATION GATE
+ *
+ * Flow: Request → Auth (JWT) → TenantContext → Module Controllers
+ *
+ * 1. Extracts tenantId from verified JWT (req.user.tenantId)
+ * 2. Blocks access if tenantId is missing
+ * 3. Loads and validates tenant status from DB
+ * 4. Attaches tenant to req.tenant
+ * 5. Logs tenantId for observability (every request)
  */
 export async function tenantContext(
   req: Request,
@@ -17,31 +24,50 @@ export async function tenantContext(
     const tenantId = req.user?.tenantId;
 
     if (!tenantId) {
+      logger.warn('Tenant context missing — blocked request', {
+        path: req.originalUrl,
+        method: req.method,
+        userId: req.user?.userId,
+        requestId: req.requestId,
+      });
       throw new ForbiddenError(
-        'Tenant context required',
+        'Tenant context required. Your account is not associated with any organization.',
         ErrorCodes.TENANT_NOT_FOUND
       );
     }
 
-    // Check if tenant is already loaded
+    // Short-circuit: if loadEmployee already attached tenant, just log and proceed
     if (req.tenant) {
+      logger.debug('Tenant context resolved', {
+        tenantId,
+        tenantSlug: req.tenant.slug,
+        userId: req.user?.userId,
+        path: req.originalUrl,
+        requestId: req.requestId,
+      });
       return next();
     }
 
-    // Load tenant
+    // Load tenant from DB
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
     });
 
     if (!tenant) {
+      logger.error('Tenant not found in DB despite valid JWT', {
+        tenantId,
+        userId: req.user?.userId,
+        requestId: req.requestId,
+      });
       throw new NotFoundError(
         'Tenant not found',
         ErrorCodes.TENANT_NOT_FOUND
       );
     }
 
-    // Check tenant status
+    // Validate tenant status
     if (tenant.status === 'SUSPENDED') {
+      logger.warn('Suspended tenant attempted access', { tenantId, slug: tenant.slug });
       throw new ForbiddenError(
         'Your organization has been suspended',
         ErrorCodes.TENANT_SUSPENDED
@@ -49,13 +75,27 @@ export async function tenantContext(
     }
 
     if (tenant.status === 'CANCELLED') {
+      logger.warn('Cancelled tenant attempted access', { tenantId, slug: tenant.slug });
       throw new ForbiddenError(
         'Your organization account has been cancelled',
         ErrorCodes.TENANT_SUSPENDED
       );
     }
 
+    // Attach to request
     req.tenant = tenant;
+
+    // Observability log (every request gets tenantId context)
+    logger.debug('Tenant context resolved', {
+      tenantId,
+      tenantSlug: tenant.slug,
+      userId: req.user?.userId,
+      role: req.user?.role,
+      path: req.originalUrl,
+      method: req.method,
+      requestId: req.requestId,
+    });
+
     next();
   } catch (error) {
     next(error);

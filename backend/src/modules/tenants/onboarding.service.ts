@@ -15,6 +15,7 @@
 
 import { Prisma, PrismaClient } from '@prisma/client';
 import { PERMISSIONS } from '../../common/constants/permissions';
+import { DEFAULT_ENABLED_MODULES } from '../../common/constants/modules.guard';
 import { logger } from '../../common/utils/logger';
 
 type TxPrisma = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;
@@ -294,6 +295,16 @@ class OnboardingService {
                     emailOnBookingConfirmed: true,
                 },
                 integrations: {},
+            },
+        });
+
+        // ── 7. Enabled Modules — stored in Tenant.settings JSON ─────────────
+        await tx.tenant.update({
+            where: { id: tenantId },
+            data: {
+                settings: {
+                    enabledModules: [...DEFAULT_ENABLED_MODULES],
+                },
             },
         });
 

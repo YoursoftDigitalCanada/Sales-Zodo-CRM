@@ -2,6 +2,7 @@ import { Application, Router } from 'express';
 import { config } from '../config';
 import { authenticate, loadEmployee } from '../common/middleware/auth.middleware';
 import { tenantContext } from '../common/middleware/tenant.middleware';
+import { moduleGuard } from '../common/middleware/module.middleware';
 
 // Core module routes
 import authRoutes from '../modules/auth/auth.routes';
@@ -87,6 +88,7 @@ export function registerRoutes(app: Application): void {
   const protectedRouter = Router();
   protectedRouter.use(authenticate);
   protectedRouter.use(tenantContext);
+  protectedRouter.use(moduleGuard);
 
   // CRM - Leads
   protectedRouter.use('/leads', leadsRoutes);

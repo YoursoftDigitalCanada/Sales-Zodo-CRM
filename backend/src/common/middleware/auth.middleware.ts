@@ -17,7 +17,7 @@ export async function authenticate(
   try {
     // Get token from header
     const authHeader = req.headers.authorization;
-    
+
     if (!authHeader) {
       throw new UnauthorizedError(
         'No authorization header provided',
@@ -27,7 +27,7 @@ export async function authenticate(
 
     // Check Bearer format
     const parts = authHeader.split(' ');
-    
+
     if (parts.length !== 2 || parts[0] !== 'Bearer') {
       throw new UnauthorizedError(
         'Invalid authorization header format. Use: Bearer <token>',
@@ -39,7 +39,7 @@ export async function authenticate(
 
     // Verify token
     let decoded: DecodedToken;
-    
+
     try {
       decoded = verifyAccessToken(token);
     } catch (error: any) {
@@ -49,7 +49,7 @@ export async function authenticate(
           ErrorCodes.AUTH_TOKEN_EXPIRED
         );
       }
-      
+
       throw new UnauthorizedError(
         'Invalid access token',
         ErrorCodes.AUTH_TOKEN_INVALID
@@ -64,12 +64,13 @@ export async function authenticate(
       );
     }
 
-    // Attach user info to request
+    // Attach user context to request
     req.user = {
       userId: decoded.userId,
       email: decoded.email,
-      tenantId: decoded.tenantId,
+      tenantId: decoded.tenantId ?? '',
       employeeId: decoded.employeeId,
+      requestId: req.requestId || '',
     };
 
     next();
@@ -89,13 +90,13 @@ export async function optionalAuthenticate(
 ): Promise<void> {
   try {
     const authHeader = req.headers.authorization;
-    
+
     if (!authHeader) {
       return next();
     }
 
     const parts = authHeader.split(' ');
-    
+
     if (parts.length !== 2 || parts[0] !== 'Bearer') {
       return next();
     }
@@ -104,13 +105,14 @@ export async function optionalAuthenticate(
 
     try {
       const decoded = verifyAccessToken(token);
-      
+
       if (decoded.type === 'access') {
         req.user = {
           userId: decoded.userId,
           email: decoded.email,
-          tenantId: decoded.tenantId,
+          tenantId: decoded.tenantId ?? '',
           employeeId: decoded.employeeId,
+          requestId: req.requestId || '',
         };
       }
     } catch (error) {
@@ -176,6 +178,14 @@ export async function loadEmployee(
     req.employee = employee as any;
     req.tenant = employee.tenant;
     req.permissions = employee.role.permissions.map((rp) => rp.permission.code);
+
+    // Enrich user context with role name + requestId
+    if (req.user) {
+      req.user.role = employee.role.name;
+      if (!req.user.requestId && req.requestId) {
+        req.user.requestId = req.requestId;
+      }
+    }
 
     next();
   } catch (error) {

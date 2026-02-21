@@ -17,7 +17,7 @@ export class RoofEstimatorController {
      */
     async getSatellite(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
             const { address } = req.body;
 
             const result = await roofEstimatorManager.getSatellite(tenantId, address);
@@ -33,7 +33,7 @@ export class RoofEstimatorController {
      */
     async detectRoof(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
             const { satelliteImageUrl, latitude, longitude } = req.body;
 
             const result = await roofEstimatorManager.detectRoof(tenantId, satelliteImageUrl, latitude, longitude);
@@ -49,7 +49,7 @@ export class RoofEstimatorController {
      */
     async create(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
             const createdBy = req.user!.employeeId || req.user!.userId;
             const data = sanitizeBody<CreateEstimateDto>(req.body);
 
@@ -66,7 +66,7 @@ export class RoofEstimatorController {
      */
     async getMany(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
             const query = req.query as any;
 
             const result = await roofEstimatorService.getMany(tenantId, query);
@@ -82,7 +82,7 @@ export class RoofEstimatorController {
      */
     async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
             const { id } = req.params;
 
             const estimate = await roofEstimatorService.getById(id, tenantId);
@@ -98,7 +98,7 @@ export class RoofEstimatorController {
      */
     async update(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
             const { id } = req.params;
             const data = sanitizeBody<UpdateEstimateDto>(req.body);
 
@@ -115,7 +115,7 @@ export class RoofEstimatorController {
      */
     async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
             const { id } = req.params;
 
             await roofEstimatorManager.deleteEstimate(req, id, tenantId);
@@ -131,7 +131,7 @@ export class RoofEstimatorController {
      */
     async getSettings(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
 
             const settings = await roofEstimatorService.getSettings(tenantId);
 
@@ -146,7 +146,7 @@ export class RoofEstimatorController {
      */
     async updateSettings(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
             const data = sanitizeBody<UpdateSettingsDto>(req.body);
 
             const settings = await roofEstimatorService.updateSettings(tenantId, data);
@@ -162,7 +162,7 @@ export class RoofEstimatorController {
      */
     async getStatistics(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
 
             const stats = await roofEstimatorService.getStatistics(tenantId);
 

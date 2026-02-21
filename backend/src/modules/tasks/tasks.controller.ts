@@ -12,7 +12,7 @@ import { sanitizeBody } from '../../common/utils/sanitize-body';
 export class TasksController {
     async create(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
             const employeeId = req.user!.employeeId;
             const data = sanitizeBody<CreateTaskDto>(req.body);
 
@@ -26,7 +26,7 @@ export class TasksController {
 
     async getMany(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
             const query = req.query as any;
 
             const result = await tasksService.getMany(tenantId, query);
@@ -39,7 +39,7 @@ export class TasksController {
 
     async getKanban(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
             const { assignedToId, projectId } = req.query as any;
 
             const kanban = await tasksService.getKanban(tenantId, { assignedToId, projectId });
@@ -52,7 +52,7 @@ export class TasksController {
 
     async getStatistics(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
 
             const statistics = await tasksService.getStatistics(tenantId);
 
@@ -64,7 +64,7 @@ export class TasksController {
 
     async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
             const { id } = req.params;
 
             const task = await tasksService.getById(id, tenantId);
@@ -77,7 +77,7 @@ export class TasksController {
 
     async update(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
             const { id } = req.params;
             const data = sanitizeBody<UpdateTaskDto>(req.body);
 
@@ -91,7 +91,7 @@ export class TasksController {
 
     async updateStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
             const { id } = req.params;
             const { status } = req.body;
 
@@ -105,7 +105,7 @@ export class TasksController {
 
     async assign(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
             const { id } = req.params;
             const { assignedToId } = req.body;
 
@@ -119,7 +119,7 @@ export class TasksController {
 
     async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
             const { id } = req.params;
 
             await tasksManager.deleteTask(req, id, tenantId);

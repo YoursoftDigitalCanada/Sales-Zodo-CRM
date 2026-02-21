@@ -9,7 +9,7 @@ export class NotificationsController {
   async getNotifications(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.user!.userId;
-      const tenantId = req.user!.tenantId!;
+      const tenantId = req.context.tenantId;
 
       const result = await notificationsService.getNotifications(userId, tenantId, {
         page: req.query.page ? parseInt(req.query.page as string, 10) : undefined,
@@ -30,7 +30,7 @@ export class NotificationsController {
   async getCounts(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.user!.userId;
-      const tenantId = req.user!.tenantId!;
+      const tenantId = req.context.tenantId;
 
       const counts = await notificationsService.getCounts(userId, tenantId);
 
@@ -46,7 +46,7 @@ export class NotificationsController {
   async getNotification(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.user!.userId;
-      const tenantId = req.user!.tenantId!;
+      const tenantId = req.context.tenantId;
       const { id } = req.params;
 
       const notification = await notificationsService.getNotification(id, userId, tenantId);
@@ -63,7 +63,7 @@ export class NotificationsController {
   async markAsRead(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.user!.userId;
-      const tenantId = req.user!.tenantId!;
+      const tenantId = req.context.tenantId;
       const { id } = req.params;
 
       await notificationsService.markAsRead(id, userId, tenantId);
@@ -80,7 +80,7 @@ export class NotificationsController {
   async markManyAsRead(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.user!.userId;
-      const tenantId = req.user!.tenantId!;
+      const tenantId = req.context.tenantId;
       const { notificationIds } = req.body;
 
       const count = await notificationsService.markManyAsRead(notificationIds, userId, tenantId);
@@ -97,7 +97,7 @@ export class NotificationsController {
   async markAllAsRead(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.user!.userId;
-      const tenantId = req.user!.tenantId!;
+      const tenantId = req.context.tenantId;
 
       const count = await notificationsService.markAllAsRead(userId, tenantId);
 
@@ -113,7 +113,7 @@ export class NotificationsController {
   async deleteNotification(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.user!.userId;
-      const tenantId = req.user!.tenantId!;
+      const tenantId = req.context.tenantId;
       const { id } = req.params;
 
       await notificationsService.delete(id, userId, tenantId);

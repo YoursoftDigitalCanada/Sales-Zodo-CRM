@@ -16,7 +16,7 @@ export class AnalyticsController {
      */
     async getDashboard(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const stats = await analyticsService.getDashboardStats(req.user!.tenantId!);
+            const stats = await analyticsService.getDashboardStats(req.context.tenantId);
             sendSuccess(res, stats);
         } catch (e) { next(e); }
     }
@@ -26,7 +26,7 @@ export class AnalyticsController {
      */
     async getLeadsReport(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const report = await analyticsService.getLeadsReport(req.user!.tenantId!, req.query as any);
+            const report = await analyticsService.getLeadsReport(req.context.tenantId, req.query as any);
             sendSuccess(res, report);
         } catch (e) { next(e); }
     }
@@ -36,7 +36,7 @@ export class AnalyticsController {
      */
     async getRevenueReport(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const report = await analyticsService.getRevenueReport(req.user!.tenantId!);
+            const report = await analyticsService.getRevenueReport(req.context.tenantId);
             sendSuccess(res, report);
         } catch (e) { next(e); }
     }
@@ -46,7 +46,7 @@ export class AnalyticsController {
      */
     async getPipelineHealth(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const health = await analyticsService.getPipelineHealth(req.user!.tenantId!);
+            const health = await analyticsService.getPipelineHealth(req.context.tenantId);
             sendSuccess(res, health);
         } catch (e) { next(e); }
     }
@@ -56,7 +56,7 @@ export class AnalyticsController {
      */
     async getLeadSources(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const sources = await analyticsService.getLeadSourceStats(req.user!.tenantId!, req.query as any);
+            const sources = await analyticsService.getLeadSourceStats(req.context.tenantId, req.query as any);
             sendSuccess(res, sources);
         } catch (e) { next(e); }
     }
@@ -66,7 +66,7 @@ export class AnalyticsController {
      */
     async getRevenueTrend(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const trend = await analyticsService.getRevenueTrend(req.user!.tenantId!);
+            const trend = await analyticsService.getRevenueTrend(req.context.tenantId);
             sendSuccess(res, trend);
         } catch (e) { next(e); }
     }
@@ -76,7 +76,7 @@ export class AnalyticsController {
      */
     async getBookingStats(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const stats = await analyticsService.getBookingStats(req.user!.tenantId!);
+            const stats = await analyticsService.getBookingStats(req.context.tenantId);
             sendSuccess(res, stats);
         } catch (e) { next(e); }
     }

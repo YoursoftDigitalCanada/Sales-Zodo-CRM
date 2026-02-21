@@ -9,7 +9,7 @@ export class LeadSourcesController {
    */
   async create(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const tenantId = req.user!.tenantId!;
+      const tenantId = req.context.tenantId;
       const data = sanitizeBody(req.body);
 
       const source = await leadSourcesService.create(tenantId, data);
@@ -25,7 +25,7 @@ export class LeadSourcesController {
    */
   async getMany(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const tenantId = req.user!.tenantId!;
+      const tenantId = req.context.tenantId;
       const query = req.query as any;
 
       const result = await leadSourcesService.getMany(tenantId, query);
@@ -41,7 +41,7 @@ export class LeadSourcesController {
    */
   async getActive(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const tenantId = req.user!.tenantId!;
+      const tenantId = req.context.tenantId;
 
       const sources = await leadSourcesService.getActive(tenantId);
 
@@ -56,7 +56,7 @@ export class LeadSourcesController {
    */
   async getStatistics(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const tenantId = req.user!.tenantId!;
+      const tenantId = req.context.tenantId;
 
       const statistics = await leadSourcesService.getStatistics(tenantId);
 
@@ -71,7 +71,7 @@ export class LeadSourcesController {
    */
   async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const tenantId = req.user!.tenantId!;
+      const tenantId = req.context.tenantId;
       const { id } = req.params;
 
       const source = await leadSourcesService.getById(id, tenantId);
@@ -87,7 +87,7 @@ export class LeadSourcesController {
    */
   async update(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const tenantId = req.user!.tenantId!;
+      const tenantId = req.context.tenantId;
       const { id } = req.params;
       const data = sanitizeBody(req.body);
 
@@ -104,7 +104,7 @@ export class LeadSourcesController {
    */
   async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const tenantId = req.user!.tenantId!;
+      const tenantId = req.context.tenantId;
       const { id } = req.params;
 
       await leadSourcesService.delete(id, tenantId);

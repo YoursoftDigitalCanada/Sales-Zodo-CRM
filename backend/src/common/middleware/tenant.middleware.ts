@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../../config/database';
-import { ForbiddenError, NotFoundError } from '../errors/HttpErrors';
+import { ForbiddenError, NotFoundError, UnauthorizedError } from '../errors/HttpErrors';
 import { ErrorCodes } from '../errors/errorCodes';
 import { logger } from '../utils/logger';
 
@@ -30,11 +30,20 @@ export async function tenantContext(
         userId: req.user?.userId,
         requestId: req.requestId,
       });
-      throw new ForbiddenError(
+      throw new UnauthorizedError(
         'Tenant context required. Your account is not associated with any organization.',
         ErrorCodes.TENANT_NOT_FOUND
       );
     }
+
+    // ── Attach req.context — THE single trusted source of tenantId ──
+    // Populated exclusively from the verified JWT payload.
+    // Controllers must use req.context.tenantId instead of req.user!.tenantId!
+    req.context = {
+      tenantId,
+      userId: req.user!.userId,
+      employeeId: req.user?.employeeId,
+    };
 
     // Short-circuit: if loadEmployee already attached tenant, just log and proceed
     if (req.tenant) {

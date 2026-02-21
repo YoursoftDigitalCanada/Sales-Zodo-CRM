@@ -5,6 +5,25 @@
 // ============================================================================
 
 /**
+ * TenantContext — the dedicated, trusted namespace for tenant isolation.
+ *
+ * Set by `tenantContext` middleware AFTER JWT verification.
+ * Controllers should read tenant data from `req.context` exclusively.
+ *
+ * This is the ONLY trusted source of tenantId — never from req.body/query/params.
+ */
+export interface TenantContext {
+    /** Tenant (workspace) UUID — extracted from verified JWT payload */
+    tenantId: string;
+
+    /** Authenticated user's UUID — from JWT */
+    userId: string;
+
+    /** Employee UUID within the tenant (from JWT, if user is an employee) */
+    employeeId?: string;
+}
+
+/**
  * RequestContext — attached to every authenticated Express request.
  *
  * All module controllers/services should read tenant isolation data from here

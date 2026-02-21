@@ -5,35 +5,35 @@ import { sendSuccess, sendCreated, sendNoContent } from '../../../common/utils/r
 export class ProductsController {
     async create(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const product = await productsService.create(req.user!.tenantId!, req.body);
+            const product = await productsService.create(req.context.tenantId, req.body);
             sendCreated(res, product, 'Product created successfully');
         } catch (e) { next(e); }
     }
 
     async getMany(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const result = await productsService.getMany(req.user!.tenantId!, req.query as any);
+            const result = await productsService.getMany(req.context.tenantId, req.query as any);
             sendSuccess(res, result.data, undefined, 200, result.meta);
         } catch (e) { next(e); }
     }
 
     async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const product = await productsService.getById(req.params.id, req.user!.tenantId!);
+            const product = await productsService.getById(req.params.id, req.context.tenantId);
             sendSuccess(res, product);
         } catch (e) { next(e); }
     }
 
     async update(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const product = await productsService.update(req.params.id, req.user!.tenantId!, req.body);
+            const product = await productsService.update(req.params.id, req.context.tenantId, req.body);
             sendSuccess(res, product, 'Product updated successfully');
         } catch (e) { next(e); }
     }
 
     async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            await productsService.delete(req.params.id, req.user!.tenantId!);
+            await productsService.delete(req.params.id, req.context.tenantId);
             sendNoContent(res);
         } catch (e) { next(e); }
     }

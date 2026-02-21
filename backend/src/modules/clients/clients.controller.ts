@@ -16,7 +16,7 @@ export class ClientsController {
      */
     async create(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
             const data = sanitizeBody<CreateClientDto>(req.body);
 
             const client = await clientsManager.createClient(req, tenantId, data as CreateClientDto);
@@ -33,7 +33,7 @@ export class ClientsController {
      */
     async getMany(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
             const query = req.query as any;
 
             const result = await clientsService.getMany(tenantId, query);
@@ -50,7 +50,7 @@ export class ClientsController {
      */
     async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
             const { id } = req.params;
 
             const client = await clientsService.getById(id, tenantId);
@@ -67,7 +67,7 @@ export class ClientsController {
      */
     async update(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
             const { id } = req.params;
             const data = sanitizeBody<UpdateClientDto>(req.body);
 
@@ -85,7 +85,7 @@ export class ClientsController {
      */
     async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
             const { id } = req.params;
 
             await clientsManager.deleteClient(req, id, tenantId);

@@ -13,7 +13,7 @@ export class UsersController {
 
     async getMany(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId;
+            const tenantId = req.context.tenantId;
             const result = await usersService.getMany(req.query as any, tenantId);
             sendSuccess(res, result.data, undefined, 200, result.meta);
         } catch (error) { next(error); }

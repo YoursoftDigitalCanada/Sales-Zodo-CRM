@@ -1,5 +1,5 @@
 import { Employee, Tenant } from '@prisma/client';
-import { RequestContext, AuthContext } from './request-context';
+import { RequestContext, AuthContext, TenantContext } from './request-context';
 
 declare global {
   namespace Express {
@@ -47,6 +47,18 @@ declare global {
        * Also available via `req.user.requestId` after auth middleware runs.
        */
       requestId?: string;
+
+      /**
+       * Trusted tenant context — set by `tenantContext` middleware.
+       *
+       * THE single source of truth for tenantId.
+       * Populated exclusively from the verified JWT payload.
+       * Never reads from req.body, req.query, or headers.
+       *
+       * Use `req.context.tenantId` in all controllers instead of
+       * `req.user!.tenantId!` — no more non-null assertions needed.
+       */
+      context: TenantContext;
     }
   }
 }

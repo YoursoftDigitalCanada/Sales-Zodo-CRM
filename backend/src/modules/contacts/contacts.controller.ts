@@ -12,7 +12,7 @@ import { sanitizeBody } from '../../common/utils/sanitize-body';
 export class ContactsController {
     async create(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
             const data = sanitizeBody<CreateContactDto>(req.body);
 
             const contact = await contactsManager.createContact(req, tenantId, data);
@@ -25,7 +25,7 @@ export class ContactsController {
 
     async getMany(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
             const query = req.query as any;
 
             const result = await contactsService.getMany(tenantId, query);
@@ -38,7 +38,7 @@ export class ContactsController {
 
     async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
             const { id } = req.params;
 
             const contact = await contactsService.getById(id, tenantId);
@@ -51,7 +51,7 @@ export class ContactsController {
 
     async update(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
             const { id } = req.params;
             const data = sanitizeBody<UpdateContactDto>(req.body);
 
@@ -65,7 +65,7 @@ export class ContactsController {
 
     async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
             const { id } = req.params;
 
             await contactsManager.deleteContact(req, id, tenantId);

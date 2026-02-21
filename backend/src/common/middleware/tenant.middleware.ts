@@ -10,10 +10,15 @@ import { logger } from '../utils/logger';
  * Flow: Request → Auth (JWT) → TenantContext → Module Controllers
  *
  * 1. Extracts tenantId from verified JWT (req.user.tenantId)
- * 2. Blocks access if tenantId is missing
- * 3. Loads and validates tenant status from DB
- * 4. Attaches tenant to req.tenant
- * 5. Logs tenantId for observability (every request)
+ * 2. Blocks access if tenantId is missing (401)
+ * 3. Attaches req.context (single trusted source of tenantId)
+ * 4. Validates active Employee membership in the tenant (403 if revoked)
+ * 5. Loads and validates tenant status from DB (SUSPENDED / CANCELLED)
+ * 6. Attaches tenant to req.tenant
+ * 7. Logs tenantId for observability
+ *
+ * Security: Prevents stale JWT abuse — if a user is removed from a workspace
+ * but still holds a valid JWT, this middleware blocks access immediately.
  */
 export async function tenantContext(
   req: Request,
@@ -22,12 +27,13 @@ export async function tenantContext(
 ): Promise<void> {
   try {
     const tenantId = req.user?.tenantId;
+    const userId = req.user?.userId;
 
     if (!tenantId) {
       logger.warn('Tenant context missing — blocked request', {
         path: req.originalUrl,
         method: req.method,
-        userId: req.user?.userId,
+        userId,
         requestId: req.requestId,
       });
       throw new UnauthorizedError(
@@ -46,33 +52,48 @@ export async function tenantContext(
     };
 
     // Short-circuit: if loadEmployee already attached tenant, just log and proceed
+    // (loadEmployee already verified the employee + tenant, no need to re-check)
     if (req.tenant) {
       logger.debug('Tenant context resolved', {
         tenantId,
         tenantSlug: req.tenant.slug,
-        userId: req.user?.userId,
+        userId,
         path: req.originalUrl,
         requestId: req.requestId,
       });
       return next();
     }
 
-    // Load tenant from DB
-    const tenant = await prisma.tenant.findUnique({
-      where: { id: tenantId },
+    // ── Validate active Employee membership + load tenant in a single query ──
+    // This prevents stale JWT abuse: if user is removed from a workspace,
+    // access is blocked immediately even if the JWT hasn't expired.
+    const membership = await prisma.employee.findFirst({
+      where: {
+        userId: userId!,
+        tenantId,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        tenant: true,
+      },
     });
 
-    if (!tenant) {
-      logger.error('Tenant not found in DB despite valid JWT', {
+    if (!membership) {
+      logger.warn('Active membership not found — blocked stale JWT', {
         tenantId,
-        userId: req.user?.userId,
+        userId,
+        path: req.originalUrl,
+        method: req.method,
         requestId: req.requestId,
       });
-      throw new NotFoundError(
-        'Tenant not found',
-        ErrorCodes.TENANT_NOT_FOUND
+      throw new ForbiddenError(
+        'Your access to this organization has been revoked.',
+        ErrorCodes.TENANT_ACCESS_DENIED
       );
     }
+
+    const tenant = membership.tenant;
 
     // Validate tenant status
     if (tenant.status === 'SUSPENDED') {
@@ -94,11 +115,11 @@ export async function tenantContext(
     // Attach to request
     req.tenant = tenant;
 
-    // Observability log (every request gets tenantId context)
+    // Observability log
     logger.debug('Tenant context resolved', {
       tenantId,
       tenantSlug: tenant.slug,
-      userId: req.user?.userId,
+      userId,
       role: req.user?.role,
       path: req.originalUrl,
       method: req.method,

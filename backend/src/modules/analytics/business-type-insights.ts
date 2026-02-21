@@ -27,12 +27,34 @@
 
 import { TenantAIContext, AIInsight, InsightSeverity } from './ai-context.dto';
 
+// ── Module → category mapping ────────────────────────────────────────
+// Maps insight categories to the module slugs that must be enabled.
+// If a category isn't listed here, insights are always included.
+const CATEGORY_MODULE_MAP: Record<string, string[]> = {
+    revenue: ['finance', 'invoices', 'quotes'],
+    expenses: ['finance', 'expenses'],
+    bookings: ['bookings', 'calendar'],
+    projects: ['projects'],
+    tasks: ['tasks'],
+};
+
+/** Check if at least one of the required modules is enabled */
+function isModuleEnabled(category: string, enabledModules: string[]): boolean {
+    const requiredModules = CATEGORY_MODULE_MAP[category];
+    if (!requiredModules) return true; // no restriction — always show
+    return requiredModules.some(m => enabledModules.includes(m));
+}
+
 // ── Engine ───────────────────────────────────────────────────────────
 
 class BusinessTypeInsightEngine {
 
     /**
      * Generate industry-aware insights from the AI context.
+     *
+     * Smart personalization (Task 33):
+     *   1. Filters out insights whose modules are disabled for the tenant
+     *   2. Adjusts tone for new (not-yet-onboarded) tenants
      *
      * @param ctx — Already tenant-scoped, no DB access needed.
      * @returns Ordered array of insights (most critical first).
@@ -43,10 +65,35 @@ class BusinessTypeInsightEngine {
         }
 
         // Start with universal insights, then layer industry-specific ones
-        const insights: AIInsight[] = [
+        let insights: AIInsight[] = [
             ...this.universalInsights(ctx),
             ...this.industryInsights(ctx),
         ];
+
+        // ── Task 33: Module-aware filtering ─────────────────────────────
+        // Skip insights for disabled modules (e.g., no booking insights
+        // if bookings module isn't enabled for this tenant)
+        if (ctx.enabledModules.length > 0) {
+            insights = insights.filter(i =>
+                isModuleEnabled(i.category, ctx.enabledModules)
+            );
+        }
+
+        // ── Task 33: Onboarding-aware tone ──────────────────────────────
+        // For tenants that haven't completed onboarding, reframe critical
+        // alerts with encouraging "setting up" language
+        if (!ctx.onboardingCompleted) {
+            insights = insights.map(i => {
+                if (i.severity === 'critical' || i.severity === 'warning') {
+                    return {
+                        ...i,
+                        severity: 'info' as const,
+                        description: `${i.description} (Your workspace is still being set up — this will improve as you add more data.)`,
+                    };
+                }
+                return i;
+            });
+        }
 
         // Sort: critical → warning → info → success
         const severityOrder: Record<InsightSeverity, number> = {

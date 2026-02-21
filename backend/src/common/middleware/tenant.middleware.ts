@@ -51,9 +51,14 @@ export async function tenantContext(
       employeeId: req.user?.employeeId,
     };
 
-    // Short-circuit: if loadEmployee already attached tenant, just log and proceed
+    // Short-circuit: if loadEmployee already attached tenant, just enrich & proceed
     // (loadEmployee already verified the employee + tenant, no need to re-check)
     if (req.tenant) {
+      // Enrich context with cached tenant metadata
+      const tenantSettings = (req.tenant.settings as Record<string, any>) || {};
+      req.context.tenantName = req.tenant.name;
+      req.context.businessType = tenantSettings.businessType || 'general';
+
       logger.debug('Tenant context resolved', {
         tenantId,
         tenantSlug: req.tenant.slug,
@@ -115,10 +120,16 @@ export async function tenantContext(
     // Attach to request
     req.tenant = tenant;
 
+    // Enrich context with cached tenant metadata (eliminates re-fetch in AI context)
+    const tenantSettings = (tenant.settings as Record<string, any>) || {};
+    req.context.tenantName = tenant.name;
+    req.context.businessType = tenantSettings.businessType || 'general';
+
     // Observability log
     logger.debug('Tenant context resolved', {
       tenantId,
       tenantSlug: tenant.slug,
+      businessType: req.context.businessType,
       userId,
       role: req.user?.role,
       path: req.originalUrl,

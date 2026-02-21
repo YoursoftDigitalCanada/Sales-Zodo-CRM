@@ -56,7 +56,6 @@ class TenantAIContextService {
                 id: true,
                 name: true,
                 settings: true,
-                onboardingCompleted: true,
                 status: true,
             },
         });
@@ -68,6 +67,7 @@ class TenantAIContextService {
         const settings = (tenant.settings as Record<string, any>) || {};
         const enabledModules: string[] = settings.enabledModules || [];
         const businessType: string = settings.businessType || 'general';
+        const onboardingCompleted: boolean = settings.onboardingCompleted ?? false;
 
         // ── 2. Aggregate all analytics in parallel ──────────────────────────
         const [
@@ -124,7 +124,7 @@ class TenantAIContextService {
             dashboardStats.tasks.total +
             dashboardStats.projects.total;
 
-        const zeroState = !tenant.onboardingCompleted || totalDataPoints < ZERO_STATE_THRESHOLD;
+        const zeroState = !onboardingCompleted || totalDataPoints < ZERO_STATE_THRESHOLD;
         const businessHealth = this.assessBusinessHealth(dashboardStats, growthIndicators, zeroState);
 
         // ── 6. Assemble the context ─────────────────────────────────────────
@@ -132,7 +132,7 @@ class TenantAIContextService {
             tenantId: tenant.id,
             tenantName: tenant.name,
             businessType,
-            onboardingCompleted: tenant.onboardingCompleted,
+            onboardingCompleted,
             zeroState,
             businessHealth,
 

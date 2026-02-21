@@ -97,6 +97,66 @@ export class AnalyticsController {
             sendSuccess(res, context);
         } catch (e) { next(e); }
     }
+
+    /**
+     * GET /analytics/business-overview — Human-readable AI summary
+     *
+     * Builds the full AI context, then distills it into a structured
+     * response for the frontend dashboard widget and copilot.
+     *
+     * Response shape:
+     *   businessHealth, businessType, zeroState,
+     *   topInsights (top 5), suggestedActions, riskAlerts, summary
+     */
+    async getBusinessOverview(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const context = await tenantAIContextService.buildContext(req.context.tenantId);
+            const { insights } = context;
+
+            const overview = {
+                businessHealth: context.businessHealth,
+                businessType: context.businessType,
+                zeroState: context.zeroState,
+                onboardingCompleted: context.onboardingCompleted,
+
+                // Top 5 severity-ranked insights
+                topInsights: insights.slice(0, 5),
+
+                // Actionable items only
+                suggestedActions: insights
+                    .filter(i => i.action)
+                    .map(i => ({
+                        insightId: i.id,
+                        title: i.title,
+                        action: i.action!,
+                        severity: i.severity,
+                        category: i.category,
+                    })),
+
+                // Critical + warning alerts
+                riskAlerts: insights.filter(
+                    i => i.severity === 'critical' || i.severity === 'warning'
+                ),
+
+                // Quick summary stats
+                summary: {
+                    totalLeads: context.pipeline.totalLeads,
+                    conversionRate: context.pipeline.conversionRate,
+                    revenueThisMonth: context.revenue.thisMonth,
+                    revenueGrowth: context.revenue.growth,
+                    overdueTasks: context.tasks.overdue,
+                    taskCompletionRate: context.tasks.completionRate,
+                    activeProjects: context.projects.active,
+                    activeClients: context.clients.total,
+                    netPosition: context.growthIndicators.netPosition,
+                },
+
+                generatedAt: context.generatedAt,
+            };
+
+            sendSuccess(res, overview);
+        } catch (e) { next(e); }
+    }
 }
 
 export const analyticsController = new AnalyticsController();

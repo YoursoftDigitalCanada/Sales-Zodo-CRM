@@ -21,6 +21,12 @@ export interface TenantContext {
 
     /** Employee UUID within the tenant (from JWT, if user is an employee) */
     employeeId?: string;
+
+    /** Tenant name — cached from DB to avoid redundant lookups */
+    tenantName?: string;
+
+    /** Business type — cached from Tenant.settings for AI context */
+    businessType?: string;
 }
 
 /**

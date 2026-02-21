@@ -59,4 +59,10 @@ router.get('/ai-context',
     analyticsController.getAIContext.bind(analyticsController),
 );
 
+// ── AI Business Overview — Human-readable AI summary for dashboards ─────
+router.get('/business-overview',
+    requirePermission(PERMISSIONS.ANALYTICS_VIEW),
+    analyticsController.getBusinessOverview.bind(analyticsController),
+);
+
 export default router;

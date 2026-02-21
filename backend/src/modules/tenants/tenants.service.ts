@@ -2,6 +2,8 @@ import { tenantsRepository } from './tenants.repository';
 import { CreateTenantDto, UpdateTenantDto, TenantQueryDto, toTenantResponseDto } from './tenants.dto';
 import { NotFoundError, BadRequestError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
+import { normalizeBusinessType } from './business-type';
+import { prisma } from '../../config/database';
 
 export class TenantsService {
     async create(data: CreateTenantDto) {
@@ -37,6 +39,31 @@ export class TenantsService {
         const existing = await tenantsRepository.findById(id);
         if (!existing) throw new NotFoundError('Tenant not found', ErrorCodes.RESOURCE_NOT_FOUND);
         await tenantsRepository.delete(id);
+    }
+
+    /**
+     * Update the tenant's businessType in settings JSON.
+     * Input is normalized to a valid BusinessType enum value.
+     * Unknown values fall back to 'general'.
+     */
+    async updateBusinessType(tenantId: string, rawBusinessType: string): Promise<{ businessType: string }> {
+        const tenant = await tenantsRepository.findById(tenantId);
+        if (!tenant) throw new NotFoundError('Tenant not found', ErrorCodes.RESOURCE_NOT_FOUND);
+
+        const businessType = normalizeBusinessType(rawBusinessType);
+        const existingSettings = (tenant.settings as Record<string, any>) || {};
+
+        await prisma.tenant.update({
+            where: { id: tenantId },
+            data: {
+                settings: {
+                    ...existingSettings,
+                    businessType,
+                },
+            },
+        });
+
+        return { businessType };
     }
 }
 

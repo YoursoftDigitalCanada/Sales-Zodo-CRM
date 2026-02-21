@@ -53,4 +53,10 @@ router.get('/bookings',
     analyticsController.getBookingStats.bind(analyticsController),
 );
 
+// ── AI Context — Unified intelligence for all AI features ───────────────
+router.get('/ai-context',
+    requirePermission(PERMISSIONS.ANALYTICS_VIEW),
+    analyticsController.getAIContext.bind(analyticsController),
+);
+
 export default router;

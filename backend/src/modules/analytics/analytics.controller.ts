@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { analyticsService } from './analytics.service';
+import { tenantAIContextService } from './ai-context.service';
 import { sendSuccess } from '../../common/utils/responseFormatter';
 
 // ============================================================================
@@ -78,6 +79,22 @@ export class AnalyticsController {
         try {
             const stats = await analyticsService.getBookingStats(req.context.tenantId);
             sendSuccess(res, stats);
+        } catch (e) { next(e); }
+    }
+
+    /**
+     * GET /analytics/ai-context — Unified AI intelligence context
+     *
+     * Returns a single, normalized DTO containing all tenant-scoped
+     * business metrics for consumption by AI features (Business Overview,
+     * Ask Experts, Smart Alerts, Forecasting).
+     *
+     * AI/LLM never queries DB directly — this is the bridge.
+     */
+    async getAIContext(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const context = await tenantAIContextService.buildContext(req.context.tenantId);
+            sendSuccess(res, context);
         } catch (e) { next(e); }
     }
 }

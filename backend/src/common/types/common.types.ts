@@ -19,10 +19,3 @@ export interface SortOptions {
 }
 
 export type ID = string;
-
-export interface TenantContext {
-  tenantId: string;
-  userId: string;
-  employeeId?: string;
-  permissions: string[];
-}

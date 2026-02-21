@@ -42,14 +42,14 @@ export class AnalyticsRepository {
         }
 
         const bySource = await prisma.lead.groupBy({
-            by: ['sourceId'],
-            where: { ...where, sourceId: { not: null } },
+            by: ['leadSourceId'],
+            where: { ...where, leadSourceId: { not: null } },
             _count: true,
-            orderBy: { _count: { sourceId: 'desc' } },
+            orderBy: { _count: { leadSourceId: 'desc' } },
         });
 
         // Resolve source names
-        const sourceIds = bySource.map((s) => s.sourceId).filter(Boolean) as string[];
+        const sourceIds = bySource.map((s) => s.leadSourceId).filter(Boolean) as string[];
         const sources = sourceIds.length
             ? await prisma.leadSource.findMany({
                 where: { id: { in: sourceIds }, tenantId },
@@ -60,8 +60,8 @@ export class AnalyticsRepository {
         const sourceMap = new Map(sources.map((s) => [s.id, s.name]));
 
         return bySource.map((s) => ({
-            sourceId: s.sourceId,
-            sourceName: sourceMap.get(s.sourceId!) || 'Unknown',
+            sourceId: s.leadSourceId,
+            sourceName: sourceMap.get(s.leadSourceId!) || 'Unknown',
             count: s._count,
         }));
     }
@@ -69,6 +69,9 @@ export class AnalyticsRepository {
     // ── Pipeline Health ───────────────────────────────────────────────────
 
     async getPipelineHealth(tenantId: string) {
+        // All possible stages in order — every pipeline view must show all 7
+        const ALL_STAGES = ['NEW', 'CONTACTED', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATION', 'WON', 'LOST'] as const;
+
         const byStatus = await prisma.lead.groupBy({
             by: ['status'],
             where: { tenantId },
@@ -78,14 +81,23 @@ export class AnalyticsRepository {
 
         const total = byStatus.reduce((sum, s) => sum + s._count, 0);
 
+        // Build a lookup map from the DB results
+        const statusMap = new Map(
+            byStatus.map((s) => [s.status, { count: s._count, value: Number(s._sum.potentialValue) || 0 }])
+        );
+
+        // Return all 7 stages — zero-fill any that have no leads yet
         return {
             total,
-            stages: byStatus.map((s) => ({
-                status: s.status,
-                count: s._count,
-                value: Number(s._sum.potentialValue) || 0,
-                percentage: total > 0 ? Math.round((s._count / total) * 100) : 0,
-            })),
+            stages: ALL_STAGES.map((status) => {
+                const data = statusMap.get(status) || { count: 0, value: 0 };
+                return {
+                    status,
+                    count: data.count,
+                    value: data.value,
+                    percentage: total > 0 ? Math.round((data.count / total) * 100) : 0,
+                };
+            }),
         };
     }
 

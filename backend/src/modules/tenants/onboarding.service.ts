@@ -308,7 +308,16 @@ class OnboardingService {
             },
         });
 
-        logger.info(`[Onboarding] Tenant ${tenantId} seeded — 4 roles, ${DEFAULT_LEAD_SOURCES.length} lead sources, ${DEFAULT_TAGS.length} tags`);
+        // ── 8. Mark onboarding as complete (MUST be last) ───────────────────
+        // This flag is the lifecycle gate: set TRUE only after all seed steps
+        // succeed. Because we're inside a transaction, if any prior step
+        // failed, this line is never reached and the flag stays false.
+        await tx.tenant.update({
+            where: { id: tenantId },
+            data: { onboardingCompleted: true },
+        });
+
+        logger.info(`[Onboarding] Tenant ${tenantId} seeded — 4 roles, ${DEFAULT_LEAD_SOURCES.length} lead sources, ${DEFAULT_TAGS.length} tags, onboarding complete`);
 
         return {
             roles: {

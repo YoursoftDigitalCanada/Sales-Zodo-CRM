@@ -178,7 +178,6 @@ export function createTenantPrisma(tenantId: string) {
         // Organization
         employee: new TenantScopedClient(prisma.employee, tenantId),
         role: new TenantScopedClient(prisma.role, tenantId),
-        group: new TenantScopedClient(prisma.group, tenantId),
 
         // Leads pipeline
         leadSource: new TenantScopedClient(prisma.leadSource, tenantId),

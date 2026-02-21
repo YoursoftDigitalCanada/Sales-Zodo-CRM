@@ -25,6 +25,7 @@ import { prisma } from '../../config/database';
 import { config } from '../../config';
 import { logger } from '../../common/utils/logger';
 import { getModulesForPermissions } from '../../common/constants/modules';
+import { onboardingService } from '../tenants/onboarding.service';
 
 export class AuthService {
   /**
@@ -188,32 +189,15 @@ export class AuthService {
         },
       });
 
-      // Create default Owner role for the tenant
-      const ownerRole = await tx.role.create({
-        data: {
-          name: 'Owner',
-          description: 'Full access to all features',
-          isSystemRole: true,
-          tenantId: tenant.id,
-        },
-      });
+      // ── ONBOARDING: seed roles, permissions, lead sources, tags, settings ──
+      const onboarding = await onboardingService.seedTenant(tx, tenant.id);
 
-      // Assign all permissions to Owner role
-      const allPermissions = await tx.permission.findMany();
-
-      await tx.rolePermission.createMany({
-        data: allPermissions.map((permission) => ({
-          roleId: ownerRole.id,
-          permissionId: permission.id,
-        })),
-      });
-
-      // Create employee record
+      // Create employee record linked to Owner role
       const employee = await tx.employee.create({
         data: {
           userId: user.id,
           tenantId: tenant.id,
-          roleId: ownerRole.id,
+          roleId: onboarding.roles.owner,
           isActive: true,
         },
         include: {
@@ -234,13 +218,6 @@ export class AuthService {
       await tx.user.update({
         where: { id: user.id },
         data: { tenantId: tenant.id },
-      });
-
-      // Create tenant settings
-      await tx.tenantSettings.create({
-        data: {
-          tenantId: tenant.id,
-        },
       });
 
       // Create user preferences

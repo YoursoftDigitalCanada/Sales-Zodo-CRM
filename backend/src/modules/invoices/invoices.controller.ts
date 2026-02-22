@@ -34,7 +34,7 @@ export class InvoicesController {
 
     async markAsPaid(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const invoice = await invoicesService.markAsPaid(req.params.id, req.context.tenantId);
+            const invoice = await invoicesService.markAsPaid(req.params.id, req.context.tenantId, req.user?.userId);
             sendSuccess(res, invoice, 'Invoice marked as paid');
         } catch (e) { next(e); }
     }

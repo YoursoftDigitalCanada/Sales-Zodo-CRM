@@ -1,13 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
 import { leadsService } from './leads.service';
 import { leadsManager } from './leads.manager';
-import { 
-  sendSuccess, 
-  sendCreated, 
+import {
+  sendSuccess,
+  sendCreated,
   sendNoContent,
   sendPaginated,
 } from '../../common/utils/responseFormatter';
 import { CreateLeadDto, UpdateLeadDto } from './leads.dto';
+import { sanitizeBody } from '../../common/utils/sanitize-body';
 
 export class LeadsController {
   /**
@@ -16,11 +17,11 @@ export class LeadsController {
    */
   async create(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const tenantId = req.user!.tenantId!;
+      const tenantId = req.context.tenantId;
       const employeeId = req.user!.employeeId!;
-      const data: CreateLeadDto = req.body;
+      const data = sanitizeBody<CreateLeadDto>(req.body);
 
-      const lead = await leadsManager.createLead(req, tenantId, data, employeeId);
+      const lead = await leadsManager.createLead(req, tenantId, data as CreateLeadDto, employeeId);
 
       sendCreated(res, lead, 'Lead created successfully');
     } catch (error) {
@@ -34,7 +35,7 @@ export class LeadsController {
    */
   async getMany(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const tenantId = req.user!.tenantId!;
+      const tenantId = req.context.tenantId;
       const query = req.query as any;
 
       const result = await leadsService.getMany(tenantId, query);
@@ -51,7 +52,7 @@ export class LeadsController {
    */
   async getPipeline(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const tenantId = req.user!.tenantId!;
+      const tenantId = req.context.tenantId;
       const { assignedToId, leadSourceId, temperature } = req.query as any;
 
       const pipeline = await leadsService.getPipeline(tenantId, {
@@ -72,7 +73,7 @@ export class LeadsController {
    */
   async getStatistics(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const tenantId = req.user!.tenantId!;
+      const tenantId = req.context.tenantId;
       const { startDate, endDate } = req.query as any;
 
       const statistics = await leadsService.getStatistics(
@@ -93,7 +94,7 @@ export class LeadsController {
    */
   async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const tenantId = req.user!.tenantId!;
+      const tenantId = req.context.tenantId;
       const { id } = req.params;
 
       const lead = await leadsService.getById(id, tenantId);
@@ -110,7 +111,7 @@ export class LeadsController {
    */
   async getActivities(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const tenantId = req.user!.tenantId!;
+      const tenantId = req.context.tenantId;
       const { id } = req.params;
       const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 50;
 
@@ -128,12 +129,12 @@ export class LeadsController {
    */
   async update(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const tenantId = req.user!.tenantId!;
+      const tenantId = req.context.tenantId;
       const employeeId = req.user!.employeeId!;
       const { id } = req.params;
-      const data: UpdateLeadDto = req.body;
+      const data = sanitizeBody<UpdateLeadDto>(req.body);
 
-      const lead = await leadsManager.updateLead(req, id, tenantId, data, employeeId);
+      const lead = await leadsManager.updateLead(req, id, tenantId, data as UpdateLeadDto, employeeId);
 
       sendSuccess(res, lead, 'Lead updated successfully');
     } catch (error) {
@@ -147,7 +148,7 @@ export class LeadsController {
    */
   async updateStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const tenantId = req.user!.tenantId!;
+      const tenantId = req.context.tenantId;
       const { id } = req.params;
       const { status } = req.body;
 
@@ -165,7 +166,7 @@ export class LeadsController {
    */
   async assign(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const tenantId = req.user!.tenantId!;
+      const tenantId = req.context.tenantId;
       const employeeId = req.user!.employeeId!;
       const { id } = req.params;
       const { assignedToId } = req.body;
@@ -190,7 +191,7 @@ export class LeadsController {
    */
   async convert(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const tenantId = req.user!.tenantId!;
+      const tenantId = req.context.tenantId;
       const { id } = req.params;
       const options = req.body;
 
@@ -208,7 +209,7 @@ export class LeadsController {
    */
   async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const tenantId = req.user!.tenantId!;
+      const tenantId = req.context.tenantId;
       const { id } = req.params;
 
       await leadsManager.deleteLead(req, id, tenantId);
@@ -225,7 +226,7 @@ export class LeadsController {
    */
   async bulkAssign(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const tenantId = req.user!.tenantId!;
+      const tenantId = req.context.tenantId;
       const employeeId = req.user!.employeeId!;
       const { leadIds, assignedToId } = req.body;
 
@@ -249,7 +250,7 @@ export class LeadsController {
    */
   async bulkUpdateStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const tenantId = req.user!.tenantId!;
+      const tenantId = req.context.tenantId;
       const { leadIds, status } = req.body;
 
       const count = await leadsService.bulkUpdateStatus(leadIds, tenantId, status);
@@ -266,7 +267,7 @@ export class LeadsController {
    */
   async import(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const tenantId = req.user!.tenantId!;
+      const tenantId = req.context.tenantId;
       const employeeId = req.user!.employeeId!;
       const { leads } = req.body;
 
@@ -284,7 +285,7 @@ export class LeadsController {
    */
   async export(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const tenantId = req.user!.tenantId!;
+      const tenantId = req.context.tenantId;
       const query = req.body;
 
       const data = await leadsManager.exportLeads(req, tenantId, query);

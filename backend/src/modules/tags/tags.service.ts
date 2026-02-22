@@ -9,6 +9,7 @@ import {
 } from './tags.dto';
 import { NotFoundError, ConflictError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
+import { activityLogger } from '../../common/services/activity-logger.service';
 
 export class TagsService {
   async create(tenantId: string, data: CreateTagDto): Promise<TagResponseDto> {
@@ -18,7 +19,16 @@ export class TagsService {
     }
 
     const tag = await tagsRepository.create(tenantId, data);
-    return toTagResponseDto(tag);
+    const dto = toTagResponseDto(tag);
+
+    activityLogger.log({
+      tenantId, entityType: 'Tag', entityId: dto.id,
+      action: 'CREATE', module: 'tags',
+      description: `Created tag "${data.name}"`,
+      metadata: { tagName: data.name, color: data.color },
+    });
+
+    return dto;
   }
 
   async getById(id: string, tenantId: string): Promise<TagResponseDto> {
@@ -70,7 +80,16 @@ export class TagsService {
     }
 
     const tag = await tagsRepository.update(id, tenantId, data);
-    return toTagResponseDto(tag);
+    const dto = toTagResponseDto(tag);
+
+    activityLogger.log({
+      tenantId, entityType: 'Tag', entityId: dto.id,
+      action: 'UPDATE', module: 'tags',
+      description: `Updated tag "${(tag as any).name || dto.id}"`,
+      metadata: { updatedFields: Object.keys(data) },
+    });
+
+    return dto;
   }
 
   async delete(id: string, tenantId: string): Promise<void> {
@@ -79,6 +98,12 @@ export class TagsService {
     if (!existing) {
       throw new NotFoundError('Tag not found', ErrorCodes.RESOURCE_NOT_FOUND);
     }
+
+    activityLogger.log({
+      tenantId, entityType: 'Tag', entityId: id,
+      action: 'DELETE', module: 'tags',
+      description: `Deleted tag "${existing.name}"`,
+    });
 
     await tagsRepository.delete(id, tenantId);
   }

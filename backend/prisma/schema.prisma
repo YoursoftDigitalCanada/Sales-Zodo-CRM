@@ -50,6 +50,24 @@ enum ClientStatus {
   PROSPECT
 }
 
+enum LeadLifecycleStage {
+  SUBSCRIBER     // Signed up / showed initial interest
+  LEAD           // Identified as potential customer
+  MQL            // Marketing Qualified Lead
+  SQL            // Sales Qualified Lead
+  OPPORTUNITY    // Active deal in progress
+}
+
+enum ClientLifecycleStage {
+  NEW_CUSTOMER   // Just converted from lead
+  ONBOARDING     // Going through setup / first project
+  ACTIVE         // Engaged, recurring work
+  AT_RISK        // No activity / signs of churn
+  CHURNED        // Lost / inactive customer
+  RE_ENGAGED     // Came back after churn
+  VIP            // High-value, long-term customer
+}
+
 enum ClientType {
   INDIVIDUAL
   BUSINESS
@@ -133,6 +151,7 @@ enum PaymentMethod {
   CREDIT_CARD
   DEBIT_CARD
   BANK_TRANSFER
+  E_TRANSFER
   CHECK
   PAYPAL
   STRIPE
@@ -293,6 +312,7 @@ model Tenant {
   tags                  Tag[]
   roofEstimates         RoofEstimate[]
   roofEstimateSettings  RoofEstimateSettings?
+  payments              InvoicePayment[]
 
   @@index([status])
   @@index([slug])
@@ -506,9 +526,10 @@ model Lead {
   website           String?
   
   // Lead Classification
-  status            LeadStatus      @default(NEW)
-  temperature       LeadTemperature @default(WARM)
-  potentialValue    Decimal?        @db.Decimal(15, 2)
+  status            LeadStatus          @default(NEW)
+  temperature       LeadTemperature     @default(WARM)
+  lifecycleStage    LeadLifecycleStage  @default(LEAD)
+  potentialValue    Decimal?            @db.Decimal(15, 2)
   
   // Source
   leadSourceId      String?
@@ -594,7 +615,8 @@ model Client {
   clientType              ClientType    @default(BUSINESS)
   primaryEmail            String
   primaryPhone            String
-  status                  ClientStatus  @default(ACTIVE)
+  status                  ClientStatus          @default(ACTIVE)
+  lifecycleStage          ClientLifecycleStage   @default(NEW_CUSTOMER)
   assignedOwnerId         String?
   assignedOwner           Employee?     @relation("AssignedToEmployee", fields: [assignedOwnerId], references: [id], onDelete: SetNull)
   
@@ -649,6 +671,9 @@ model Client {
   orders                  Order[]
   bookings                Booking[]
   tasks                   Task[]
+  files                   File[]
+  emails                  Email[]
+  payments                InvoicePayment[]
   roofEstimates           RoofEstimate[]
 
   @@index([tenantId])
@@ -695,6 +720,9 @@ model Contact {
   @@index([isPrimaryContact])
   @@index([email])
   @@index([type])
+
+  // Relations
+  emails                Email[]
 }
 
 // ============================================================================
@@ -1083,6 +1111,9 @@ model File {
   projectId       String?
   project         Project?    @relation(fields: [projectId], references: [id], onDelete: SetNull)
   
+  clientId        String?
+  client          Client?     @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  
   // Sharing
   isShared        Boolean     @default(false)
   sharedWith      Json?       // Array of employee IDs or "all"
@@ -1107,6 +1138,7 @@ model File {
   @@index([deletedAt])
   @@index([applicationId])
   @@index([projectId])
+  @@index([clientId])
 }
 
 model FileTag {
@@ -1216,16 +1248,32 @@ model InvoiceItem {
 model InvoicePayment {
   id              String        @id @default(uuid())
   
-  invoiceId       String
-  invoice         Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  // Invoice link (optional — allows standalone payments like deposits, retainers)
+  invoiceId       String?
+  invoice         Invoice?      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   
+  // Client link (required — every payment belongs to a client)
+  clientId        String
+  client          Client        @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  
+  // Payment details
   amount          Decimal       @db.Decimal(15, 2)
   paymentMethod   PaymentMethod
   paymentDate     DateTime      @default(now())
-  reference       String?       // Transaction ID, check number, etc.
+  reference       String?       // Transaction ID, check number, e-transfer ref, etc.
   notes           String?
+  
+  // Tenant relation
+  tenantId        String
+  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   @@index([invoiceId])
+  @@index([clientId])
+  @@index([tenantId])
   @@index([paymentDate])
 }
 
@@ -1633,6 +1681,13 @@ model Email {
   sentById        String?
   sentBy          Employee?     @relation("SentByEmployee", fields: [sentById], references: [id], onDelete: SetNull)
   
+  // Entity links (optional — link emails to CRM entities)
+  clientId        String?
+  client          Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  
+  contactId       String?
+  contact         Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  
   // Timestamps
   sentAt          DateTime?
   receivedAt      DateTime?
@@ -1657,6 +1712,8 @@ model Email {
   @@index([threadId])
   @@index([isRead])
   @@index([deletedAt])
+  @@index([clientId])
+  @@index([contactId])
 }
 
 model EmailLabelAssignment {

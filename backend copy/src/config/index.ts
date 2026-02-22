@@ -53,6 +53,10 @@ const envSchema = z.object({
   // Storage Quotas
   DEFAULT_FILE_STORAGE_QUOTA: z.string().transform(Number).default('5368709120'),
   DEFAULT_EMAIL_STORAGE_QUOTA: z.string().transform(Number).default('1073741824'),
+
+  // AI / LLM (optional — copilot falls back to deterministic mode if missing)
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_MODEL: z.string().default('gpt-4o-mini'),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -114,6 +118,10 @@ export const config = {
   storage: {
     defaultFileQuota: parsed.data.DEFAULT_FILE_STORAGE_QUOTA,
     defaultEmailQuota: parsed.data.DEFAULT_EMAIL_STORAGE_QUOTA,
+  },
+  ai: {
+    openaiApiKey: parsed.data.OPENAI_API_KEY,
+    openaiModel: parsed.data.OPENAI_MODEL,
   },
 } as const;
 

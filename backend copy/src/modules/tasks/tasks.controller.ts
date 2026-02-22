@@ -7,15 +7,16 @@ import {
     sendNoContent,
 } from '../../common/utils/responseFormatter';
 import { CreateTaskDto, UpdateTaskDto } from './tasks.dto';
+import { sanitizeBody } from '../../common/utils/sanitize-body';
 
 export class TasksController {
     async create(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
             const employeeId = req.user!.employeeId;
-            const data: CreateTaskDto = req.body;
+            const data = sanitizeBody<CreateTaskDto>(req.body);
 
-            const task = await tasksManager.createTask(req, tenantId, data, employeeId);
+            const task = await tasksManager.createTask(req, tenantId, data as CreateTaskDto, employeeId);
 
             sendCreated(res, task, 'Task created successfully');
         } catch (error) {
@@ -25,7 +26,7 @@ export class TasksController {
 
     async getMany(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
             const query = req.query as any;
 
             const result = await tasksService.getMany(tenantId, query);
@@ -38,7 +39,7 @@ export class TasksController {
 
     async getKanban(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
             const { assignedToId, projectId } = req.query as any;
 
             const kanban = await tasksService.getKanban(tenantId, { assignedToId, projectId });
@@ -51,7 +52,7 @@ export class TasksController {
 
     async getStatistics(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
 
             const statistics = await tasksService.getStatistics(tenantId);
 
@@ -63,7 +64,7 @@ export class TasksController {
 
     async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
             const { id } = req.params;
 
             const task = await tasksService.getById(id, tenantId);
@@ -76,11 +77,11 @@ export class TasksController {
 
     async update(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
             const { id } = req.params;
-            const data: UpdateTaskDto = req.body;
+            const data = sanitizeBody<UpdateTaskDto>(req.body);
 
-            const task = await tasksManager.updateTask(req, id, tenantId, data);
+            const task = await tasksManager.updateTask(req, id, tenantId, data as UpdateTaskDto);
 
             sendSuccess(res, task, 'Task updated successfully');
         } catch (error) {
@@ -90,7 +91,7 @@ export class TasksController {
 
     async updateStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
             const { id } = req.params;
             const { status } = req.body;
 
@@ -104,7 +105,7 @@ export class TasksController {
 
     async assign(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
             const { id } = req.params;
             const { assignedToId } = req.body;
 
@@ -118,7 +119,7 @@ export class TasksController {
 
     async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenantId = req.user!.tenantId!;
+            const tenantId = req.context.tenantId;
             const { id } = req.params;
 
             await tasksManager.deleteTask(req, id, tenantId);

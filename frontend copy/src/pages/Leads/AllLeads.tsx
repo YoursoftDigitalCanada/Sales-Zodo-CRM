@@ -130,7 +130,7 @@ import {
   Snowflake,
   type LucideIcon,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 // ============================================
 // TYPES
@@ -1573,6 +1573,7 @@ const mapApiLead = (apiLead: any): Lead => ({
 
 const AllLeads = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   // State
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -2215,8 +2216,7 @@ const AllLeads = () => {
                             isSelected={selectedLeads.has(lead.id)}
                             onSelect={() => toggleSelectLead(lead.id)}
                             onView={() => {
-                              setCurrentLead(lead);
-                              setIsDetailsOpen(true);
+                              navigate(`/leads/${lead.id}`);
                             }}
                             onEdit={() => {
                               setCurrentLead(lead);
@@ -2249,8 +2249,7 @@ const AllLeads = () => {
                         isSelected={selectedLeads.has(lead.id)}
                         onSelect={() => toggleSelectLead(lead.id)}
                         onView={() => {
-                          setCurrentLead(lead);
-                          setIsDetailsOpen(true);
+                          navigate(`/leads/${lead.id}`);
                         }}
                         onEdit={() => {
                           setCurrentLead(lead);

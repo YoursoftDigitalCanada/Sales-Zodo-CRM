@@ -2,11 +2,22 @@ import { ordersRepository } from './orders.repository';
 import { CreateOrderDto, UpdateOrderDto, OrderQueryDto, toOrderResponseDto } from './orders.dto';
 import { NotFoundError } from '../../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../../common/errors/errorCodes';
+import { activityLogger } from '../../../common/services/activity-logger.service';
+import { eventBus } from '../../../common/events/event-bus';
 
 export class OrdersService {
     async create(tenantId: string, data: CreateOrderDto) {
         const order = await ordersRepository.create(tenantId, data);
-        return toOrderResponseDto(order);
+        const dto = toOrderResponseDto(order);
+
+        activityLogger.log({
+            tenantId, entityType: 'Order', entityId: dto.id,
+            action: 'CREATE', module: 'ecommerce',
+            description: `Created order #${(order as any).orderNumber || dto.id}`,
+            metadata: { orderNumber: (order as any).orderNumber, totalAmount: (order as any).totalAmount },
+        });
+
+        return dto;
     }
 
     async getById(id: string, tenantId: string) {
@@ -29,14 +40,49 @@ export class OrdersService {
     async update(id: string, tenantId: string, data: UpdateOrderDto) {
         const existing = await ordersRepository.findById(id, tenantId);
         if (!existing) throw new NotFoundError('Order not found', ErrorCodes.RESOURCE_NOT_FOUND);
-        const order = await ordersRepository.update(id, data);
-        return toOrderResponseDto(order);
+        const order = await ordersRepository.update(id, tenantId, data);
+        const dto = toOrderResponseDto(order);
+
+        const oldStatus = (existing as any).status;
+        const newStatus = (order as any).status;
+        const isStatusChange = oldStatus && newStatus && oldStatus !== newStatus;
+
+        activityLogger.log({
+            tenantId, entityType: 'Order', entityId: dto.id,
+            action: isStatusChange ? 'STATUS_CHANGE' : 'UPDATE',
+            module: 'ecommerce',
+            description: isStatusChange
+                ? `Order #${(order as any).orderNumber || dto.id} status changed from ${oldStatus} to ${newStatus}`
+                : `Updated order #${(order as any).orderNumber || dto.id}`,
+            metadata: isStatusChange
+                ? { oldStatus, newStatus }
+                : { updatedFields: Object.keys(data) },
+        });
+
+        if (isStatusChange) {
+            eventBus.emit('order.statusChanged', {
+                tenantId,
+                orderId: dto.id,
+                orderNumber: (order as any).orderNumber || dto.id,
+                oldStatus,
+                newStatus,
+            });
+        }
+
+        return dto;
     }
 
     async delete(id: string, tenantId: string) {
         const existing = await ordersRepository.findById(id, tenantId);
         if (!existing) throw new NotFoundError('Order not found', ErrorCodes.RESOURCE_NOT_FOUND);
-        await ordersRepository.delete(id);
+
+        activityLogger.log({
+            tenantId, entityType: 'Order', entityId: id,
+            action: 'DELETE', module: 'ecommerce',
+            description: `Deleted order #${(existing as any).orderNumber || id}`,
+        });
+
+        await ordersRepository.delete(id, tenantId);
     }
 }
 

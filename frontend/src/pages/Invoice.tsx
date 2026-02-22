@@ -41,7 +41,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { getInvoices } from "@/services/invoiceService";
+import { getInvoices, deleteInvoice, createInvoice, markInvoiceAsPaid } from "@/services/invoiceService";
 import {
   Bell,
   Plus,
@@ -286,7 +286,7 @@ const StatCard = ({
 
   const colors = colorClasses[color];
 
-  
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -425,8 +425,8 @@ const InvoiceRow = ({
                 {overdue
                   ? `${Math.abs(daysUntilDue)} days overdue`
                   : daysUntilDue === 0
-                  ? "Due today"
-                  : `Due in ${daysUntilDue} days`}
+                    ? "Due today"
+                    : `Due in ${daysUntilDue} days`}
               </p>
             )}
           </div>
@@ -1103,12 +1103,9 @@ const InvoicePage = () => {
     setIsLoading(true);
     try {
       const data = await getInvoices();
-      // Enhance invoices with additional mock data
       const enhanced = (data || []).map((inv: any) => ({
         ...inv,
-        dueDate: inv.dueDate || new Date(Date.now() + Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
-        amountPaid: inv.status === "Paid" ? inv.total : (inv.status === "Partial" ? inv.total * 0.5 : 0),
-        clientEmail: inv.clientEmail || `${inv.clientName?.toLowerCase().replace(/\s/g, "")}@example.com`,
+        amountPaid: inv.amountPaid ?? 0,
       }));
       setInvoices(enhanced);
     } catch (err) {
@@ -1127,7 +1124,7 @@ const InvoicePage = () => {
     if (!invoiceToDelete) return;
     setIsDeleting(true);
     try {
-      // API call here
+      await deleteInvoice(invoiceToDelete.id);
       setInvoices((prev) => prev.filter((inv) => inv.id !== invoiceToDelete.id));
       toast({
         title: "Deleted",
@@ -1146,8 +1143,12 @@ const InvoicePage = () => {
     }
   };
 
+  // TODO: Backend only supports marking invoice as fully paid (PATCH /:id/paid).
+  // The amount, method, and notes params are accepted by the UI but cannot be
+  // sent to the backend until a partial-payment endpoint is implemented.
   const handleRecordPayment = async (invoiceId: number, amount: number, method: string, notes: string) => {
     try {
+      await markInvoiceAsPaid(invoiceId);
       setInvoices((prev) =>
         prev.map((inv) => {
           if (inv.id === invoiceId) {
@@ -1171,6 +1172,10 @@ const InvoicePage = () => {
     }
   };
 
+  // TODO: No backend endpoint for sending invoices exists yet.
+  // This handler performs a local-only optimistic update. When a
+  // POST /invoices/:id/send endpoint is implemented, wire the
+  // backend call here before updating local state.
   const handleSendInvoice = async (invoiceId: number, email: string, message: string) => {
     try {
       setInvoices((prev) =>
@@ -1199,20 +1204,38 @@ const InvoicePage = () => {
     // Implement PDF generation
   };
 
-  const handleDuplicate = (invoice: Invoice) => {
-    const newInvoice: Invoice = {
-      ...invoice,
-      id: Date.now(),
-      invoiceNumber: `INV-${Date.now().toString().slice(-6)}`,
-      status: "Draft",
-      invoiceDate: new Date().toISOString(),
-      amountPaid: 0,
-    };
-    setInvoices((prev) => [newInvoice, ...prev]);
-    toast({
-      title: "Duplicated",
-      description: `Invoice duplicated as ${newInvoice.invoiceNumber}`,
-    });
+  const handleDuplicate = async (invoice: Invoice) => {
+    try {
+      const duplicateData = {
+        clientId: invoice.clientId,
+        invoiceNumber: `INV-${Date.now().toString().slice(-6)}`,
+        invoiceDate: new Date().toISOString(),
+        dueDate: invoice.dueDate,
+        items: invoice.items,
+        notes: invoice.notes,
+        status: "DRAFT",
+      };
+      const result = await createInvoice(duplicateData);
+      const newInvoice: Invoice = {
+        ...invoice,
+        id: result?.data?.id || Date.now(),
+        invoiceNumber: duplicateData.invoiceNumber,
+        status: "Draft",
+        invoiceDate: new Date().toISOString(),
+        amountPaid: 0,
+      };
+      setInvoices((prev) => [newInvoice, ...prev]);
+      toast({
+        title: "Duplicated",
+        description: `Invoice duplicated as ${newInvoice.invoiceNumber}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to duplicate invoice",
+        variant: "destructive",
+      });
+    }
   };
 
   // ============================================
@@ -1326,6 +1349,7 @@ const InvoicePage = () => {
   const handleBulkDelete = async () => {
     if (selectedInvoices.length === 0) return;
     try {
+      await Promise.all(selectedInvoices.map((id) => deleteInvoice(id)));
       setInvoices((prev) => prev.filter((inv) => !selectedInvoices.includes(inv.id)));
       toast({
         title: "Deleted",
@@ -1504,7 +1528,7 @@ const InvoicePage = () => {
               color="red"
               delay={0.3}
             />
-                        <StatCard
+            <StatCard
               title="Collection Rate"
               value={`${stats.total > 0 ? Math.round((stats.paid / stats.total) * 100) : 0}%`}
               subtitle="Payment success rate"
@@ -2033,8 +2057,8 @@ const InvoicePage = () => {
                   {[
                     { icon: FilePlus, label: "Create Invoice", color: "teal", action: () => navigate("/invoice/create") },
                     { icon: Receipt, label: "Create Quote", color: "gold", action: () => navigate("/quotes/create") },
-                    { icon: CreditCard, label: "Record Payment", color: "green", action: () => {} },
-                    { icon: FileSpreadsheet, label: "Generate Report", color: "purple", action: () => {} },
+                    { icon: CreditCard, label: "Record Payment", color: "green", action: () => { } },
+                    { icon: FileSpreadsheet, label: "Generate Report", color: "purple", action: () => { } },
                     { icon: Settings, label: "Invoice Settings", color: "slate", action: () => navigate("/settings/invoice") },
                   ].map((action, index) => {
                     const colorClasses: Record<string, string> = {

@@ -2,11 +2,21 @@ import { categoriesRepository } from './categories.repository';
 import { CreateCategoryDto, UpdateCategoryDto, CategoryQueryDto, toCategoryResponseDto } from './categories.dto';
 import { NotFoundError } from '../../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../../common/errors/errorCodes';
+import { activityLogger } from '../../../common/services/activity-logger.service';
 
 export class CategoriesService {
     async create(tenantId: string, data: CreateCategoryDto) {
         const category = await categoriesRepository.create(tenantId, data);
-        return toCategoryResponseDto(category);
+        const dto = toCategoryResponseDto(category);
+
+        activityLogger.log({
+            tenantId, entityType: 'ProductCategory', entityId: dto.id,
+            action: 'CREATE', module: 'ecommerce',
+            description: `Created category "${(category as any).name || dto.id}"`,
+            metadata: { categoryName: (category as any).name },
+        });
+
+        return dto;
     }
 
     async getById(id: string, tenantId: string) {
@@ -34,14 +44,30 @@ export class CategoriesService {
     async update(id: string, tenantId: string, data: UpdateCategoryDto) {
         const existing = await categoriesRepository.findById(id, tenantId);
         if (!existing) throw new NotFoundError('Category not found', ErrorCodes.RESOURCE_NOT_FOUND);
-        const category = await categoriesRepository.update(id, data);
-        return toCategoryResponseDto(category);
+        const category = await categoriesRepository.update(id, tenantId, data);
+        const dto = toCategoryResponseDto(category);
+
+        activityLogger.log({
+            tenantId, entityType: 'ProductCategory', entityId: dto.id,
+            action: 'UPDATE', module: 'ecommerce',
+            description: `Updated category "${(category as any).name || dto.id}"`,
+            metadata: { updatedFields: Object.keys(data) },
+        });
+
+        return dto;
     }
 
     async delete(id: string, tenantId: string) {
         const existing = await categoriesRepository.findById(id, tenantId);
         if (!existing) throw new NotFoundError('Category not found', ErrorCodes.RESOURCE_NOT_FOUND);
-        await categoriesRepository.delete(id);
+
+        activityLogger.log({
+            tenantId, entityType: 'ProductCategory', entityId: id,
+            action: 'DELETE', module: 'ecommerce',
+            description: `Deleted category "${(existing as any).name || id}"`,
+        });
+
+        await categoriesRepository.delete(id, tenantId);
     }
 }
 

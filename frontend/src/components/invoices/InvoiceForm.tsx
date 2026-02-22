@@ -7,7 +7,7 @@ import { Calendar, Image as ImageIcon, Save, ArrowLeft, Download } from 'lucide-
 import AddressBlock from './form-parts/AddressBlock';
 import LineItemTable from './form-parts/LineItemTable';
 import { numberToWords } from '../../utils/invoiceUtils';
-import api from "@/lib/axios";
+import { createInvoice } from "@/services/invoiceService";
 
 // --- Zod Schema ---
 const invoiceSchema = z.object({
@@ -55,23 +55,27 @@ export default function InvoiceForm() {
   const onSave = async (data: InvoiceFormData) => {
     setIsSaving(true);
     try {
-      // 1. Prepare Payload for .NET API
+      // 1. Prepare Payload for Backend API
       const payload = {
         invoiceNumber: data.invoiceNo,
-        invoiceDate: data.date,
-        dueDate: data.date, // You might want to add a due date field later
-        clientName: data.billedTo.businessName,
-        clientId: 1, // Replace with actual Client ID if you have a dropdown
+        invoiceDate: new Date(data.date).toISOString(),
+        dueDate: new Date(data.date).toISOString(),
+        businessName: data.billedBy.businessName,
+        businessPhone: data.billedBy.phone || null,
+        clientId: null, // TODO: Wire up client selector to provide UUID
+        clientBusinessName: data.billedTo.businessName,
+        clientPhone: data.billedTo.phone || null,
         items: data.items.map(item => ({
-          name: item.name,
+          itemName: item.name,
           quantity: item.quantity,
           rate: item.rate,
-          gstPercent: item.gstRate
+          taxApplied: (item.gstRate || 0) > 0,
+          lineTotal: item.total || item.quantity * item.rate,
         }))
       };
 
       // 2. Send to Backend
-      await api.post("/invoices", payload);
+      await createInvoice(payload);
 
       // 3. Redirect on Success
       alert("Invoice Saved Successfully!");
@@ -94,23 +98,23 @@ export default function InvoiceForm() {
     <div className="bg-white rounded-md shadow-sm p-8 max-w-6xl mx-auto my-6">
       <FormProvider {...methods}>
         <form onSubmit={handleSubmit(onSave)}>
-          
+
           {/* --- TOP ACTIONS (UPDATED) --- */}
           <div className="flex justify-between items-center mb-8 border-b pb-4">
-            <button 
-              type="button" 
-              onClick={() => router.back()} 
+            <button
+              type="button"
+              onClick={() => router.back()}
               className="flex items-center text-[#475569] hover:text-slate-200"
             >
               <ArrowLeft size={18} className="mr-2" /> Back to List
             </button>
-            
+
             <h1 className="text-3xl font-bold text-[#0F172A]">New Invoice</h1>
 
             <div className="flex gap-3">
               {/* Download Button */}
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={handleDownload}
                 className="px-4 py-2 border border-[rgba(15,23,42,0.06)] rounded-md text-slate-200 hover:bg-white/5 flex items-center"
               >
@@ -118,8 +122,8 @@ export default function InvoiceForm() {
               </button>
 
               {/* Save Button */}
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={isSaving}
                 className={`text-[#0F172A] px-6 py-2 rounded-md flex items-center card-shadow 
                   ${isSaving ? 'bg-pink-400 cursor-not-allowed' : 'bg-[#E91E63] hover:bg-pink-700 shadow-pink-500/30'}`}
@@ -199,7 +203,7 @@ export default function InvoiceForm() {
                 <span>CGST</span>
                 <span>${totalCGST.toFixed(2)}</span>
               </div>
-              
+
               <div className="border-t border-[rgba(15,23,42,0.06)] my-4 pt-4 flex justify-between items-center">
                 <span className="text-lg font-bold text-[#0F172A]">Total (CAD)</span>
                 <span className="text-2xl font-bold text-[#0F172A]">${grandTotal.toFixed(2)}</span>

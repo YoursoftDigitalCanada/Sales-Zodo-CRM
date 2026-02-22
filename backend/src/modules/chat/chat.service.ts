@@ -24,8 +24,8 @@ export class ChatService {
         };
     }
 
-    async sendMessage(roomId: string, senderId: string, data: SendMessageDto) {
-        const message = await chatRepository.sendMessage(roomId, senderId, data);
+    async sendMessage(roomId: string, tenantId: string, senderId: string, data: SendMessageDto) {
+        const message = await chatRepository.sendMessage(roomId, tenantId, senderId, data);
         return toMessageResponseDto(message);
     }
 

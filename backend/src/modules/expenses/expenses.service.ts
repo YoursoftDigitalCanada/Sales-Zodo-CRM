@@ -2,11 +2,31 @@ import { expensesRepository } from './expenses.repository';
 import { CreateExpenseDto, UpdateExpenseDto, ExpenseQueryDto, toExpenseResponseDto } from './expenses.dto';
 import { NotFoundError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
+import { eventBus } from '../../common/events/event-bus';
+import { activityLogger } from '../../common/services/activity-logger.service';
 
 export class ExpensesService {
     async create(tenantId: string, data: CreateExpenseDto, submittedById?: string) {
         const expense = await expensesRepository.create(tenantId, data, submittedById || '');
-        return toExpenseResponseDto(expense);
+        const dto = toExpenseResponseDto(expense);
+
+        eventBus.emit('expense.created', {
+            tenantId,
+            expenseId: dto.id,
+            amount: (expense as any).amount,
+            category: (expense as any).category,
+            submittedById,
+        });
+
+        activityLogger.log({
+            tenantId, entityType: 'Expense', entityId: dto.id,
+            action: 'CREATE', module: 'expenses',
+            description: `Created expense "${dto.id}"`,
+            userId: submittedById,
+            metadata: { amount: (expense as any).amount, category: (expense as any).category },
+        });
+
+        return dto;
     }
 
     async getById(id: string, tenantId: string) {
@@ -27,21 +47,54 @@ export class ExpensesService {
     async update(id: string, tenantId: string, data: UpdateExpenseDto) {
         const existing = await expensesRepository.findById(id, tenantId);
         if (!existing) throw new NotFoundError('Expense not found', ErrorCodes.RESOURCE_NOT_FOUND);
-        const expense = await expensesRepository.update(id, data);
-        return toExpenseResponseDto(expense);
+        const expense = await expensesRepository.update(id, tenantId, data);
+        const dto = toExpenseResponseDto(expense);
+
+        activityLogger.log({
+            tenantId, entityType: 'Expense', entityId: dto.id,
+            action: 'UPDATE', module: 'expenses',
+            description: `Updated expense "${dto.id}"`,
+            metadata: { updatedFields: Object.keys(data) },
+        });
+
+        return dto;
     }
 
     async delete(id: string, tenantId: string) {
         const existing = await expensesRepository.findById(id, tenantId);
         if (!existing) throw new NotFoundError('Expense not found', ErrorCodes.RESOURCE_NOT_FOUND);
-        await expensesRepository.delete(id);
+
+        activityLogger.log({
+            tenantId, entityType: 'Expense', entityId: id,
+            action: 'DELETE', module: 'expenses',
+            description: `Deleted expense "${id}"`,
+        });
+
+        await expensesRepository.delete(id, tenantId);
     }
 
     async approve(id: string, tenantId: string, approvedById: string) {
         const existing = await expensesRepository.findById(id, tenantId);
         if (!existing) throw new NotFoundError('Expense not found', ErrorCodes.RESOURCE_NOT_FOUND);
-        const expense = await expensesRepository.approve(id, approvedById);
-        return toExpenseResponseDto(expense);
+        const expense = await expensesRepository.approve(id, tenantId, approvedById);
+        const dto = toExpenseResponseDto(expense);
+
+        eventBus.emit('expense.approved', {
+            tenantId,
+            expenseId: dto.id,
+            amount: (expense as any).amount,
+            approvedById,
+        });
+
+        activityLogger.log({
+            tenantId, entityType: 'Expense', entityId: dto.id,
+            action: 'STATUS_CHANGE', module: 'expenses',
+            description: `Expense "${dto.id}" approved`,
+            userId: approvedById,
+            metadata: { newStatus: 'APPROVED' },
+        });
+
+        return dto;
     }
 }
 

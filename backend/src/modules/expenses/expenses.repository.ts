@@ -54,7 +54,11 @@ export class ExpensesRepository {
         return { data, total };
     }
 
-    async update(id: string, data: UpdateExpenseDto) {
+    async update(id: string, tenantId: string, data: UpdateExpenseDto) {
+        // Verify tenant ownership
+        const existing = await prisma.expense.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Expense not found or access denied');
+
         return prisma.expense.update({
             where: { id },
             data: {
@@ -75,11 +79,18 @@ export class ExpensesRepository {
         });
     }
 
-    async delete(id: string) {
+    async delete(id: string, tenantId: string) {
+        // Tenant-scoped delete
+        const existing = await prisma.expense.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Expense not found or access denied');
         return prisma.expense.delete({ where: { id } });
     }
 
-    async approve(id: string, approvedById: string) {
+    async approve(id: string, tenantId: string, approvedById: string) {
+        // Verify tenant ownership
+        const existing = await prisma.expense.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Expense not found or access denied');
+
         return prisma.expense.update({
             where: { id },
             data: { status: 'APPROVED', approvedById, approvedAt: new Date() },

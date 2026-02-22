@@ -65,3 +65,40 @@ export interface ReportDto {
     data: Record<string, unknown>;
     generatedAt: Date;
 }
+
+// ── SMB Analytics — Lifecycle & Retention ─────────────────────────────
+
+export interface ClientLifecycleBreakdownDto {
+    total: number;
+    stages: {
+        stage: string;
+        count: number;
+        percentage: number;
+    }[];
+}
+
+export interface RepeatCustomerDto {
+    totalClients: number;
+    repeatClients: number;            // Clients with 2+ paid invoices
+    repeatRate: number;               // Percentage (0-100)
+    averageInvoicesPerClient: number;
+}
+
+export interface CustomerLifetimeValueDto {
+    averageCLV: number;               // Average revenue per client
+    totalRevenue: number;
+    totalClients: number;
+    topClients: {
+        clientId: string;
+        clientName: string;
+        totalRevenue: number;
+        invoiceCount: number;
+    }[];
+}
+
+export interface SMBInsightsDto {
+    lifecycle: ClientLifecycleBreakdownDto;
+    retention: RepeatCustomerDto;
+    clv: CustomerLifetimeValueDto;
+    generatedAt: string;
+}

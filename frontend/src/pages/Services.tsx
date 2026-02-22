@@ -1,42 +1,39 @@
 import React, { useEffect, useState } from 'react';
 import { Sidebar } from "@/components/Sidebar";
-import { Plus, Edit2, Trash2, Scissors, DollarSign, Clock, X } from "lucide-react";
-import { buildApiUrl } from "@/services/api";
-
-const API_URL = buildApiUrl("/services");
+import { Plus, Scissors, DollarSign, Clock, X } from "lucide-react";
+import { getServices, createService, deleteService } from "@/features/services";
+import type { ServiceEntity } from "@/features/services";
 
 export default function Services() {
-  const [services, setServices] = useState<any[]>([]);
+  const [services, setServices] = useState<ServiceEntity[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
+
   // Form State
   const [formData, setFormData] = useState({ name: "", price: "", durationMinutes: "30", isActive: true });
 
   useEffect(() => { loadServices(); }, []);
 
-  const loadServices = () => {
-    fetch(API_URL)
-      .then(res => res.json())
-      .then(data => { setServices(data); setLoading(false); })
-      .catch(console.error);
+  const loadServices = async () => {
+    try {
+      const data = await getServices();
+      setServices(data);
+    } catch (error) {
+      console.error("Failed to load services:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSave = async () => {
     try {
-      const response = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: formData.name,
-          price: Number(formData.price),
-          durationMinutes: Number(formData.durationMinutes),
-          isActive: true
-        })
+      await createService({
+        name: formData.name,
+        price: Number(formData.price),
+        durationMinutes: Number(formData.durationMinutes),
+        isActive: true,
       });
 
-      if (!response.ok) throw new Error("Failed to save");
-      
       alert("Service Added!");
       setIsModalOpen(false);
       setFormData({ name: "", price: "", durationMinutes: "30", isActive: true });
@@ -46,24 +43,28 @@ export default function Services() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if(!confirm("Are you sure you want to delete this service?")) return;
-    await fetch(`${API_URL}/${id}`, { method: "DELETE" });
-    loadServices();
+  const handleDelete = async (id: number | string) => {
+    if (!confirm("Are you sure you want to delete this service?")) return;
+    try {
+      await deleteService(id);
+      loadServices();
+    } catch (error) {
+      console.error("Failed to delete service:", error);
+    }
   };
 
   return (
     <div className="flex min-h-screen bg-[#F8FAFC]">
       <Sidebar />
       <main className="flex-1 ml-64 p-8">
-        
+
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-2xl font-bold text-[#0F172A]">Services Menu</h1>
             <p className="text-[#475569]">Manage what your company provides</p>
           </div>
-          <button 
+          <button
             onClick={() => setIsModalOpen(true)}
             className="bg-black text-[#0F172A] px-4 py-2 rounded-md flex items-center hover:bg-gray-800 transition"
           >
@@ -80,14 +81,14 @@ export default function Services() {
                   <Scissors className="text-[#0891B2]" size={24} />
                 </div>
                 <button onClick={() => handleDelete(service.id)} className="text-[#94A3B8] hover:text-red-500">
-                  <Trash2 size={18} />
+                  <X size={18} />
                 </button>
               </div>
-              
+
               <h3 className="text-lg font-bold text-[#0F172A] mb-1">{service.name}</h3>
               <div className="flex items-center gap-4 text-sm text-[#475569] mt-4">
-                <span className="flex items-center"><DollarSign size={14} className="mr-1"/> ${service.price}</span>
-                <span className="flex items-center"><Clock size={14} className="mr-1"/> {service.durationMinutes} mins</span>
+                <span className="flex items-center"><DollarSign size={14} className="mr-1" /> ${service.price}</span>
+                <span className="flex items-center"><Clock size={14} className="mr-1" /> {service.durationMinutes} mins</span>
               </div>
             </div>
           ))}
@@ -101,36 +102,36 @@ export default function Services() {
           <div className="bg-white p-8 rounded-md card-shadow w-96 animate-in zoom-in duration-200">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold">Add Service</h2>
-              <button onClick={() => setIsModalOpen(false)}><X size={20} className="text-[#94A3B8] hover:text-red-500"/></button>
+              <button onClick={() => setIsModalOpen(false)}><X size={20} className="text-[#94A3B8] hover:text-red-500" /></button>
             </div>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-200 mb-1">Service Name</label>
-                <input 
-                  placeholder="e.g. Haircut, Dental Cleaning" 
+                <input
+                  placeholder="e.g. Haircut, Dental Cleaning"
                   className="w-full p-2 border rounded-md"
                   value={formData.name}
-                  onChange={e => setFormData({...formData, name: e.target.value})}
+                  onChange={e => setFormData({ ...formData, name: e.target.value })}
                 />
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-200 mb-1">Price ($)</label>
-                  <input 
-                    type="number" 
+                  <input
+                    type="number"
                     className="w-full p-2 border rounded-md"
                     value={formData.price}
-                    onChange={e => setFormData({...formData, price: e.target.value})}
+                    onChange={e => setFormData({ ...formData, price: e.target.value })}
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-200 mb-1">Duration (min)</label>
-                  <select 
+                  <select
                     className="w-full p-2 border rounded-md"
                     value={formData.durationMinutes}
-                    onChange={e => setFormData({...formData, durationMinutes: e.target.value})}
+                    onChange={e => setFormData({ ...formData, durationMinutes: e.target.value })}
                   >
                     <option value="15">15 min</option>
                     <option value="30">30 min</option>
@@ -141,7 +142,7 @@ export default function Services() {
                 </div>
               </div>
 
-              <button 
+              <button
                 onClick={handleSave}
                 className="w-full bg-[#0891B2] text-white py-3 rounded-md font-semibold mt-4 hover:bg-[#0891B2]/80"
               >

@@ -9,7 +9,7 @@ export const createLeadSchema = z.object({
     // Basic Info
     firstName: z.string().min(1).max(100),
     lastName: z.string().min(1).max(100),
-    email: z.string().email(),
+    email: z.string().email().optional().nullable(),
     phone: z.string().max(30).optional().nullable(),
     location: z.string().max(255).optional().nullable(),
 

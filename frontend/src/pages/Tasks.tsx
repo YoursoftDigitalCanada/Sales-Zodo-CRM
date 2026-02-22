@@ -1,7 +1,8 @@
 // src/pages/Tasks.tsx
 
 import React, { useState, useEffect, useMemo } from "react";
-import axios from "@/lib/axios";
+import { getTasks as fetchTasksApi, createTask as createTaskApi, updateTask as updateTaskApi, deleteTask as deleteTaskApi, updateTaskStatus } from "@/features/tasks";
+import { getUsers } from "@/features/users";
 import { Sidebar } from "@/components/Sidebar";
 import { AiInsightBadge, getTaskInsights } from "@/components/ai/AiInsightBadge";
 import { motion, AnimatePresence, Reorder } from "framer-motion";
@@ -1120,8 +1121,7 @@ const TaskFormDialog = ({
     const fetchUsers = async () => {
       setLoadingUsers(true);
       try {
-        const res = await axios.get("/users");
-        const data = res.data?.data || [];
+        const data = await getUsers();
         if (!cancelled) {
           setAvailableUsers(
             data.map((u: any) => ({
@@ -2097,38 +2097,33 @@ const TasksPage = () => {
   useEffect(() => {
     const fetchTasks = async () => {
       try {
-        const response = await axios.get('/tasks');
-        if (response.data.success && response.data.data) {
-          // Transform API data to match frontend Task type
-          const apiTasks = response.data.data.map((t: any) => ({
-            id: t.id,
-            title: t.title,
-            description: t.description || '',
-            status: t.status === 'DONE' ? 'completed' : t.status === 'REVIEW' ? 'in_review' : t.status === 'IN_PROGRESS' ? 'in_progress' : 'todo',
-            priority: t.priority?.toLowerCase() || 'medium',
-            dueDate: t.dueDate ? new Date(t.dueDate) : undefined,
-            startDate: t.startDate ? new Date(t.startDate) : undefined,
-            completedDate: t.completedAt ? new Date(t.completedAt) : undefined,
-            project: t.project?.name || undefined,
-            projectColor: '#8B5CF6',
-            category: t.category || 'development',
-            tags: t.tags || [],
-            assignees: t.assignedTo ? [{ id: t.assignedTo.id, name: `${t.assignedTo.user?.firstName || ''} ${t.assignedTo.user?.lastName || ''}`.trim(), email: t.assignedTo.user?.email || '', avatar: undefined }] : [],
-            subtasks: [],
-            attachments: t.attachmentCount || 0,
-            comments: t.commentCount || 0,
-            isStarred: false,
-            isRecurring: false,
-            estimatedTime: t.estimatedTime || undefined,
-            actualTime: undefined,
-            createdBy: t.createdBy?.user?.firstName || 'System',
-            createdAt: new Date(t.createdAt),
-            updatedAt: t.updatedAt ? new Date(t.updatedAt) : undefined,
-          }));
-          setTasks(apiTasks);
-        } else {
-          setTasks([]);
-        }
+        const response = await fetchTasksApi() as any[];
+        const apiTasks = (Array.isArray(response) ? response : []).map((t: any) => ({
+          id: t.id,
+          title: t.title,
+          description: t.description || '',
+          status: t.status === 'DONE' ? 'completed' : t.status === 'REVIEW' ? 'in_review' : t.status === 'IN_PROGRESS' ? 'in_progress' : 'todo',
+          priority: t.priority?.toLowerCase() || 'medium',
+          dueDate: t.dueDate ? new Date(t.dueDate) : undefined,
+          startDate: t.startDate ? new Date(t.startDate) : undefined,
+          completedDate: t.completedAt ? new Date(t.completedAt) : undefined,
+          project: t.project?.name || undefined,
+          projectColor: '#8B5CF6',
+          category: t.category || 'development',
+          tags: t.tags || [],
+          assignees: t.assignedTo ? [{ id: t.assignedTo.id, name: `${t.assignedTo.user?.firstName || ''} ${t.assignedTo.user?.lastName || ''}`.trim(), email: t.assignedTo.user?.email || '', avatar: undefined }] : [],
+          subtasks: [],
+          attachments: t.attachmentCount || 0,
+          comments: t.commentCount || 0,
+          isStarred: false,
+          isRecurring: false,
+          estimatedTime: t.estimatedTime || undefined,
+          actualTime: undefined,
+          createdBy: t.createdBy?.user?.firstName || 'System',
+          createdAt: new Date(t.createdAt),
+          updatedAt: t.updatedAt ? new Date(t.updatedAt) : undefined,
+        }));
+        setTasks(apiTasks);
       } catch (error) {
         console.error('Failed to fetch tasks:', error);
         setTasks([]);
@@ -2273,10 +2268,10 @@ const TasksPage = () => {
         estimatedHours: data.estimatedTime ? data.estimatedTime / 60 : undefined,
       };
 
-      const response = await axios.post('/tasks', apiData);
+      const responseData = await createTaskApi(apiData);
 
-      if (response.data.success && response.data.data) {
-        const t = response.data.data;
+      if (responseData) {
+        const t = responseData as any;
         const newTask: Task = {
           id: t.id,
           title: t.title,
@@ -2326,7 +2321,7 @@ const TasksPage = () => {
         category: data.category || 'OTHER',
       };
 
-      await axios.put(`/tasks/${currentTask.id}`, apiData);
+      await updateTaskApi(currentTask.id, apiData);
 
       setTasks((prev) =>
         prev.map((t) =>
@@ -2351,7 +2346,7 @@ const TasksPage = () => {
     if (!currentTask) return;
 
     try {
-      await axios.delete(`/tasks/${currentTask.id}`);
+      await deleteTaskApi(currentTask.id);
 
       setTasks((prev) => prev.filter((t) => t.id !== currentTask.id));
       setIsDeleteAlertOpen(false);
@@ -2375,7 +2370,7 @@ const TasksPage = () => {
   const handleToggleComplete = async (task: Task) => {
     const newStatus = task.status === "completed" ? "TODO" : "DONE";
     try {
-      await axios.patch(`/tasks/${task.id}/status`, { status: newStatus });
+      await updateTaskStatus(task.id, newStatus);
 
       setTasks((prev) =>
         prev.map((t) =>

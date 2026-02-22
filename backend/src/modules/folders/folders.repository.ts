@@ -40,7 +40,11 @@ export class FoldersRepository {
         return { data, total };
     }
 
-    async update(id: string, data: UpdateFolderDto) {
+    async update(id: string, tenantId: string, data: UpdateFolderDto) {
+        // Verify tenant ownership
+        const existing = await prisma.folder.findFirst({ where: { id, tenantId, deletedAt: null } });
+        if (!existing) throw new Error('Folder not found or access denied');
+
         const updateData: Prisma.FolderUpdateInput = {};
         if (data.name !== undefined) updateData.name = data.name;
         if (data.parentId !== undefined) {
@@ -56,11 +60,17 @@ export class FoldersRepository {
         });
     }
 
-    async softDelete(id: string) {
+    async softDelete(id: string, tenantId: string) {
+        // Tenant-scoped soft delete
+        const existing = await prisma.folder.findFirst({ where: { id, tenantId, deletedAt: null } });
+        if (!existing) throw new Error('Folder not found or access denied');
         return prisma.folder.update({ where: { id }, data: { deletedAt: new Date() } });
     }
 
-    async delete(id: string) {
+    async delete(id: string, tenantId: string) {
+        // Tenant-scoped hard delete
+        const existing = await prisma.folder.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Folder not found or access denied');
         return prisma.folder.delete({ where: { id } });
     }
 }

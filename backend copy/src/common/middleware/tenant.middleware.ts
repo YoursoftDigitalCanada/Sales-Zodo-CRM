@@ -1,12 +1,24 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../../config/database';
-import { ForbiddenError, NotFoundError } from '../errors/HttpErrors';
+import { ForbiddenError, NotFoundError, UnauthorizedError } from '../errors/HttpErrors';
 import { ErrorCodes } from '../errors/errorCodes';
 import { logger } from '../utils/logger';
 
 /**
- * Tenant context middleware
- * Ensures tenant is loaded and validates tenant status
+ * Global Tenant Context Middleware — THE MULTI-TENANT ISOLATION GATE
+ *
+ * Flow: Request → Auth (JWT) → TenantContext → Module Controllers
+ *
+ * 1. Extracts tenantId from verified JWT (req.user.tenantId)
+ * 2. Blocks access if tenantId is missing (401)
+ * 3. Attaches req.context (single trusted source of tenantId)
+ * 4. Validates active Employee membership in the tenant (403 if revoked)
+ * 5. Loads and validates tenant status from DB (SUSPENDED / CANCELLED)
+ * 6. Attaches tenant to req.tenant
+ * 7. Logs tenantId for observability
+ *
+ * Security: Prevents stale JWT abuse — if a user is removed from a workspace
+ * but still holds a valid JWT, this middleware blocks access immediately.
  */
 export async function tenantContext(
   req: Request,
@@ -15,33 +27,82 @@ export async function tenantContext(
 ): Promise<void> {
   try {
     const tenantId = req.user?.tenantId;
+    const userId = req.user?.userId;
 
     if (!tenantId) {
-      throw new ForbiddenError(
-        'Tenant context required',
+      logger.warn('Tenant context missing — blocked request', {
+        path: req.originalUrl,
+        method: req.method,
+        userId,
+        requestId: req.requestId,
+      });
+      throw new UnauthorizedError(
+        'Tenant context required. Your account is not associated with any organization.',
         ErrorCodes.TENANT_NOT_FOUND
       );
     }
 
-    // Check if tenant is already loaded
+    // ── Attach req.context — THE single trusted source of tenantId ──
+    // Populated exclusively from the verified JWT payload.
+    // Controllers must use req.context.tenantId instead of req.user!.tenantId!
+    req.context = {
+      tenantId,
+      userId: req.user!.userId,
+      employeeId: req.user?.employeeId,
+    };
+
+    // Short-circuit: if loadEmployee already attached tenant, just enrich & proceed
+    // (loadEmployee already verified the employee + tenant, no need to re-check)
     if (req.tenant) {
+      // Enrich context with cached tenant metadata
+      const tenantSettings = (req.tenant.settings as Record<string, any>) || {};
+      req.context.tenantName = req.tenant.name;
+      req.context.businessType = tenantSettings.businessType || 'general';
+
+      logger.debug('Tenant context resolved', {
+        tenantId,
+        tenantSlug: req.tenant.slug,
+        userId,
+        path: req.originalUrl,
+        requestId: req.requestId,
+      });
       return next();
     }
 
-    // Load tenant
-    const tenant = await prisma.tenant.findUnique({
-      where: { id: tenantId },
+    // ── Validate active Employee membership + load tenant in a single query ──
+    // This prevents stale JWT abuse: if user is removed from a workspace,
+    // access is blocked immediately even if the JWT hasn't expired.
+    const membership = await prisma.employee.findFirst({
+      where: {
+        userId: userId!,
+        tenantId,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        tenant: true,
+      },
     });
 
-    if (!tenant) {
-      throw new NotFoundError(
-        'Tenant not found',
-        ErrorCodes.TENANT_NOT_FOUND
+    if (!membership) {
+      logger.warn('Active membership not found — blocked stale JWT', {
+        tenantId,
+        userId,
+        path: req.originalUrl,
+        method: req.method,
+        requestId: req.requestId,
+      });
+      throw new ForbiddenError(
+        'Your access to this organization has been revoked.',
+        ErrorCodes.TENANT_ACCESS_DENIED
       );
     }
 
-    // Check tenant status
+    const tenant = membership.tenant;
+
+    // Validate tenant status
     if (tenant.status === 'SUSPENDED') {
+      logger.warn('Suspended tenant attempted access', { tenantId, slug: tenant.slug });
       throw new ForbiddenError(
         'Your organization has been suspended',
         ErrorCodes.TENANT_SUSPENDED
@@ -49,13 +110,33 @@ export async function tenantContext(
     }
 
     if (tenant.status === 'CANCELLED') {
+      logger.warn('Cancelled tenant attempted access', { tenantId, slug: tenant.slug });
       throw new ForbiddenError(
         'Your organization account has been cancelled',
         ErrorCodes.TENANT_SUSPENDED
       );
     }
 
+    // Attach to request
     req.tenant = tenant;
+
+    // Enrich context with cached tenant metadata (eliminates re-fetch in AI context)
+    const tenantSettings = (tenant.settings as Record<string, any>) || {};
+    req.context.tenantName = tenant.name;
+    req.context.businessType = tenantSettings.businessType || 'general';
+
+    // Observability log
+    logger.debug('Tenant context resolved', {
+      tenantId,
+      tenantSlug: tenant.slug,
+      businessType: req.context.businessType,
+      userId,
+      role: req.user?.role,
+      path: req.originalUrl,
+      method: req.method,
+      requestId: req.requestId,
+    });
+
     next();
   } catch (error) {
     next(error);

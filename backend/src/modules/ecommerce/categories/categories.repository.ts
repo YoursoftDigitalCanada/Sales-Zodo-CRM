@@ -62,7 +62,11 @@ export class CategoriesRepository {
         });
     }
 
-    async update(id: string, data: UpdateCategoryDto) {
+    async update(id: string, tenantId: string, data: UpdateCategoryDto) {
+        // Verify tenant ownership
+        const existing = await prisma.productCategory.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Category not found or access denied');
+
         const updateData: any = {};
         if (data.name !== undefined) updateData.name = data.name;
         if (data.description !== undefined) updateData.description = data.description;
@@ -75,7 +79,10 @@ export class CategoriesRepository {
         return prisma.productCategory.update({ where: { id }, data: updateData, include: { children: true } });
     }
 
-    async delete(id: string) {
+    async delete(id: string, tenantId: string) {
+        // Tenant-scoped delete
+        const existing = await prisma.productCategory.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Category not found or access denied');
         return prisma.productCategory.delete({ where: { id } });
     }
 }

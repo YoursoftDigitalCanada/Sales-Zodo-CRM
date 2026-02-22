@@ -1,7 +1,7 @@
 // src/pages/Leads/LeadSources.tsx
 
 import React, { useState, useEffect } from "react";
-import axios from "@/lib/axios";
+import { getLeadSources, getLeadSourceStats, createLeadSource, updateLeadSource, deleteLeadSource, toggleLeadSourceActive } from "@/features/leads";
 import { Sidebar } from "@/components/Sidebar";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -930,13 +930,10 @@ const LeadSources = () => {
     try {
       setLoading(true);
       // Fetch both lists and statistics in parallel
-      const [listRes, statsRes] = await Promise.all([
-        axios.get("/lead-sources", { params: { limit: 100 } }),
-        axios.get("/lead-sources/statistics").catch(() => ({ data: { data: [] } })),
+      const [apiSources, statsArr] = await Promise.all([
+        getLeadSources(),
+        getLeadSourceStats().catch(() => []),
       ]);
-
-      const apiSources = listRes.data?.data || listRes.data || [];
-      const statsArr = statsRes.data?.data || statsRes.data || [];
 
       // Build stats map by id
       const statsMap = new Map<string, any>();
@@ -989,7 +986,7 @@ const LeadSources = () => {
   // Handlers
   const handleAddSource = async (data: Partial<LeadSource>) => {
     try {
-      await axios.post("/lead-sources", {
+      await createLeadSource({
         name: data.name,
         description: data.description || undefined,
         isActive: data.isActive ?? true,
@@ -1006,7 +1003,7 @@ const LeadSources = () => {
   const handleEditSource = async (data: Partial<LeadSource>) => {
     if (!currentSource) return;
     try {
-      await axios.put(`/lead-sources/${currentSource.id}`, {
+      await updateLeadSource(currentSource.id, {
         name: data.name,
         description: data.description || undefined,
         isActive: data.isActive,
@@ -1023,7 +1020,7 @@ const LeadSources = () => {
   const handleDeleteSource = async () => {
     if (!sourceToDelete) return;
     try {
-      await axios.delete(`/lead-sources/${sourceToDelete.id}`);
+      await deleteLeadSource(sourceToDelete.id);
       setIsDeleteAlertOpen(false);
       setSourceToDelete(null);
       toast({ title: "Source Deleted", description: "The lead source has been removed.", variant: "destructive" });
@@ -1038,7 +1035,7 @@ const LeadSources = () => {
   const handleToggleSource = async (source: LeadSource) => {
     try {
       const newState = !source.isActive;
-      await axios.put(`/lead-sources/${source.id}`, { isActive: newState });
+      await toggleLeadSourceActive(source.id, newState);
       // Optimistic update
       setSources((prev) =>
         prev.map((s) => s.id === source.id ? { ...s, isActive: newState } : s)

@@ -59,6 +59,10 @@ export class TagsRepository {
   }
 
   async update(id: string, tenantId: string, data: UpdateTagDto) {
+    // Verify tenant ownership
+    const existing = await prisma.tag.findFirst({ where: { id, tenantId } });
+    if (!existing) throw new Error('Tag not found or access denied');
+
     return prisma.tag.update({
       where: { id },
       data,

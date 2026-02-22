@@ -70,7 +70,11 @@ export class OrdersRepository {
         return { data, total };
     }
 
-    async update(id: string, data: UpdateOrderDto) {
+    async update(id: string, tenantId: string, data: UpdateOrderDto) {
+        // Verify tenant ownership
+        const existing = await prisma.order.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Order not found or access denied');
+
         const updateData: any = {};
         if (data.status !== undefined) updateData.status = data.status;
         if (data.paymentMethod !== undefined) updateData.paymentMethod = data.paymentMethod;
@@ -88,7 +92,10 @@ export class OrdersRepository {
         return prisma.order.update({ where: { id }, data: updateData, include: orderInclude });
     }
 
-    async delete(id: string) {
+    async delete(id: string, tenantId: string) {
+        // Tenant-scoped delete
+        const existing = await prisma.order.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Order not found or access denied');
         return prisma.order.delete({ where: { id } });
     }
 }

@@ -89,6 +89,10 @@ export class LeadSourcesRepository {
    * Update lead source
    */
   async update(id: string, tenantId: string, data: UpdateLeadSourceDto) {
+    // Verify tenant ownership
+    const existing = await prisma.leadSource.findFirst({ where: { id, tenantId } });
+    if (!existing) throw new Error('Lead source not found or access denied');
+
     return prisma.leadSource.update({
       where: { id },
       data,

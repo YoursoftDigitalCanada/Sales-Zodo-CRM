@@ -55,19 +55,31 @@ export class EmailsRepository {
         return { data, total };
     }
 
-    async markAsRead(id: string) {
+    async markAsRead(id: string, tenantId: string) {
+        // Verify tenant ownership
+        const existing = await prisma.email.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Email not found or access denied');
         return prisma.email.update({ where: { id }, data: { isRead: true } });
     }
 
-    async toggleStar(id: string, isStarred: boolean) {
+    async toggleStar(id: string, tenantId: string, isStarred: boolean) {
+        // Verify tenant ownership
+        const existing = await prisma.email.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Email not found or access denied');
         return prisma.email.update({ where: { id }, data: { isStarred } });
     }
 
-    async moveToFolder(id: string, folder: EmailFolder) {
+    async moveToFolder(id: string, tenantId: string, folder: EmailFolder) {
+        // Verify tenant ownership
+        const existing = await prisma.email.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Email not found or access denied');
         return prisma.email.update({ where: { id }, data: { folder } });
     }
 
-    async delete(id: string) {
+    async delete(id: string, tenantId: string) {
+        // Tenant-scoped soft delete
+        const existing = await prisma.email.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Email not found or access denied');
         return prisma.email.update({ where: { id }, data: { deletedAt: new Date() } });
     }
 }

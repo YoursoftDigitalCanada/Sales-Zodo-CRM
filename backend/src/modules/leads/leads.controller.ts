@@ -253,7 +253,7 @@ export class LeadsController {
       const tenantId = req.context.tenantId;
       const { leadIds, status } = req.body;
 
-      const count = await leadsService.bulkUpdateStatus(leadIds, tenantId, status);
+      const count = await leadsManager.bulkUpdateLeadStatus(req, leadIds, tenantId, status);
 
       sendSuccess(res, { updatedCount: count }, `${count} leads updated`);
     } catch (error) {

@@ -83,6 +83,19 @@ export class AnalyticsController {
     }
 
     /**
+     * GET /analytics/smb-insights — SMB-focused metrics
+     *
+     * Returns lifecycle stage distribution, repeat customer rate,
+     * and customer lifetime value approximation in one response.
+     */
+    async getSMBInsights(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const insights = await analyticsService.getSMBInsights(req.context.tenantId);
+            sendSuccess(res, insights);
+        } catch (e) { next(e); }
+    }
+
+    /**
      * GET /analytics/ai-context — Unified AI intelligence context
      *
      * Returns a single, normalized DTO containing all tenant-scoped

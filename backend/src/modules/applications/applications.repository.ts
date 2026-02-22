@@ -65,7 +65,11 @@ export class ApplicationsRepository {
         return { data, total };
     }
 
-    async update(id: string, data: UpdateApplicationDto) {
+    async update(id: string, tenantId: string, data: UpdateApplicationDto) {
+        // Verify tenant ownership
+        const existing = await prisma.application.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Application not found or access denied');
+
         const updateData: Prisma.ApplicationUpdateInput = {};
 
         if (data.title !== undefined) updateData.title = data.title;
@@ -86,7 +90,10 @@ export class ApplicationsRepository {
         });
     }
 
-    async delete(id: string) {
+    async delete(id: string, tenantId: string) {
+        // Tenant-scoped delete
+        const existing = await prisma.application.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Application not found or access denied');
         return prisma.application.delete({ where: { id } });
     }
 }

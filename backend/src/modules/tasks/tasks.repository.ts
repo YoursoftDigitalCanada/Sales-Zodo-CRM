@@ -52,6 +52,10 @@ export class TasksRepository {
     }
 
     async update(id: string, tenantId: string, data: UpdateTaskDto) {
+        // Verify tenant ownership
+        const existing = await prisma.task.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Task not found or access denied');
+
         return prisma.task.update({
             where: { id },
             data: {
@@ -69,6 +73,10 @@ export class TasksRepository {
     }
 
     async updateStatus(id: string, tenantId: string, status: TaskStatus) {
+        // Verify tenant ownership
+        const existing = await prisma.task.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Task not found or access denied');
+
         return prisma.task.update({
             where: { id },
             data: {
@@ -80,6 +88,9 @@ export class TasksRepository {
     }
 
     async delete(id: string, tenantId: string) {
+        // Tenant-scoped delete
+        const existing = await prisma.task.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Task not found or access denied');
         return prisma.task.delete({ where: { id } });
     }
 
@@ -94,6 +105,10 @@ export class TasksRepository {
     }
 
     async assign(id: string, tenantId: string, assignedToId: string | null) {
+        // Verify tenant ownership
+        const existing = await prisma.task.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Task not found or access denied');
+
         return prisma.task.update({
             where: { id },
             data: { assignedToId },

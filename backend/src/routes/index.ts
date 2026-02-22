@@ -56,6 +56,10 @@ import ecommerceRoutes from '../modules/ecommerce/ecommerce.routes';
 
 // AI modules
 import roofEstimatorRoutes from '../modules/roof-estimator/roof-estimator.routes';
+import copilotRoutes from '../modules/copilot/copilot.routes';
+
+// Timeline module
+import timelineRoutes from '../modules/timeline/timeline.routes';
 
 /**
  * Register all API routes
@@ -146,6 +150,10 @@ export function registerRoutes(app: Application): void {
 
   // AI Modules
   protectedRouter.use('/roof-estimator', roofEstimatorRoutes);
+  protectedRouter.use('/copilot', copilotRoutes);
+
+  // Timeline
+  protectedRouter.use('/timeline', timelineRoutes);
 
   // Mount protected router on the main API router
   apiRouter.use(protectedRouter);
@@ -209,6 +217,7 @@ export function registerRoutes(app: Application): void {
         ecommerce: `${apiPrefix}/ecommerce`,
         // AI Modules
         roofEstimator: `${apiPrefix}/roof-estimator`,
+        copilot: `${apiPrefix}/copilot`,
       },
     });
   });

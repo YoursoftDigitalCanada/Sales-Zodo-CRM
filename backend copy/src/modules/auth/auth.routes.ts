@@ -3,6 +3,7 @@ import { authController } from './auth.controller';
 import { validate } from '../../common/middleware/validate.middleware';
 import { authenticate } from '../../common/middleware/auth.middleware';
 import { rateLimiter } from '../../common/middleware/rateLimiter.middleware';
+import { tenantMembershipGuard } from '../../common/middleware/tenant-membership.guard';
 import { config } from '../../config';
 import {
   loginSchema,
@@ -163,16 +164,30 @@ router.get(
 
 /**
  * @swagger
- * /auth/switch-tenant:
+ * /auth/switch-tenant/{tenantId}:
  *   post:
  *     summary: Switch to different tenant
  *     tags: [Auth]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: tenantId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Target tenant UUID to switch to
+ *     responses:
+ *       200:
+ *         description: Tenant switched, new JWT issued
+ *       403:
+ *         description: User is not a member of the target tenant
  */
 router.post(
-  '/switch-tenant',
+  '/switch-tenant/:tenantId',
   authenticate,
+  tenantMembershipGuard('tenantId'),
   authController.switchTenant.bind(authController)
 );
 

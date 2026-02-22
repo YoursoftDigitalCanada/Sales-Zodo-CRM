@@ -1,4 +1,4 @@
-import { LeadStatus, ClientType } from '@prisma/client';
+import { LeadStatus } from '@prisma/client';
 import { prisma } from '../../config/database';
 import { leadsService } from './leads.service';
 import { leadsRepository } from './leads.repository';
@@ -8,20 +8,21 @@ import {
   LeadResponseDto,
   ConvertLeadDto,
 } from './leads.dto';
-import { auditService } from '../audit/audit.service';
 import { notificationManager } from '../notifications/notifications.manager';
-import { NotFoundError, BadRequestError } from '../../common/errors/HttpErrors';
+import { NotFoundError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
 import { logger } from '../../common/utils/logger';
 import { Request } from 'express';
 
+
 /**
  * Leads Manager
- * Contains complex business logic and orchestration
+ * Handles notification orchestration and bulk operations.
+ * Audit logging is handled exclusively in leads.service via activityLogger.
  */
 export class LeadsManager {
   /**
-   * Create lead with audit logging and notifications
+   * Create lead with notifications
    */
   async createLead(
     req: Request,
@@ -30,14 +31,6 @@ export class LeadsManager {
     createdById: string
   ): Promise<LeadResponseDto> {
     const lead = await leadsService.create(tenantId, data, createdById);
-
-    // Audit log
-    await auditService.logCreate(req, 'leads', 'Lead', lead.id, {
-      firstName: lead.firstName,
-      lastName: lead.lastName,
-      email: lead.email,
-      status: lead.status,
-    });
 
     // Notify assigned employee if different from creator
     if (data.assignedToId && data.assignedToId !== createdById) {
@@ -65,7 +58,7 @@ export class LeadsManager {
   }
 
   /**
-   * Update lead with audit logging
+   * Update lead with notifications
    */
   async updateLead(
     req: Request,
@@ -74,7 +67,6 @@ export class LeadsManager {
     data: UpdateLeadDto,
     employeeId: string
   ): Promise<LeadResponseDto> {
-    // Get existing lead for comparison
     const existing = await leadsRepository.findById(id, tenantId);
     if (!existing) {
       throw new NotFoundError('Lead not found', ErrorCodes.RESOURCE_NOT_FOUND);
@@ -82,9 +74,6 @@ export class LeadsManager {
 
     const previousAssignee = existing.assignedToId;
     const lead = await leadsService.update(id, tenantId, data);
-
-    // Audit log
-    await auditService.logUpdate(req, 'leads', 'Lead', lead.id, existing, lead);
 
     // Notify new assignee if assignment changed
     if (data.assignedToId && data.assignedToId !== previousAssignee) {
@@ -106,7 +95,7 @@ export class LeadsManager {
   }
 
   /**
-   * Delete lead with audit logging
+   * Delete lead
    */
   async deleteLead(
     req: Request,
@@ -120,18 +109,11 @@ export class LeadsManager {
 
     await leadsService.delete(id, tenantId);
 
-    // Audit log
-    await auditService.logDelete(req, 'leads', 'Lead', id, {
-      firstName: lead.firstName,
-      lastName: lead.lastName,
-      email: lead.email,
-    });
-
     logger.info('Lead deleted', { leadId: id, tenantId });
   }
 
   /**
-   * Update lead status with audit logging
+   * Update lead status
    */
   async updateLeadStatus(
     req: Request,
@@ -144,23 +126,12 @@ export class LeadsManager {
       throw new NotFoundError('Lead not found', ErrorCodes.RESOURCE_NOT_FOUND);
     }
 
-    const oldStatus = existing.status;
     const lead = await leadsService.updateStatus(id, tenantId, status);
-
-    // Audit log
-    await auditService.logStatusChange(
-      req,
-      'leads',
-      'Lead',
-      id,
-      oldStatus,
-      status
-    );
 
     logger.info('Lead status updated', {
       leadId: id,
       tenantId,
-      oldStatus,
+      oldStatus: existing.status,
       newStatus: status,
     });
 
@@ -183,16 +154,6 @@ export class LeadsManager {
     }
 
     const lead = await leadsService.assign(id, tenantId, assignedToId);
-
-    // Audit log
-    await auditService.logUpdate(
-      req,
-      'leads',
-      'Lead',
-      id,
-      { assignedToId: existing.assignedToId },
-      { assignedToId }
-    );
 
     // Notify new assignee
     if (assignedToId && assignedToId !== assignerEmployeeId) {
@@ -225,19 +186,7 @@ export class LeadsManager {
   ): Promise<number> {
     const count = await leadsService.bulkAssign(leadIds, tenantId, assignedToId);
 
-    // Audit log
-    await auditService.logWithContext(
-      req,
-      'UPDATE',
-      'leads',
-      `Bulk assigned ${count} leads`,
-      {
-        entityType: 'Lead',
-        newValues: { leadIds, assignedToId },
-      }
-    );
-
-    // Get assignee info for notification
+    // Notify assignee
     if (assignedToId !== assignerEmployeeId) {
       const assignee = await prisma.employee.findUnique({
         where: { id: assignedToId },
@@ -269,6 +218,26 @@ export class LeadsManager {
   }
 
   /**
+   * Bulk update lead status
+   */
+  async bulkUpdateLeadStatus(
+    req: Request,
+    leadIds: string[],
+    tenantId: string,
+    status: LeadStatus
+  ): Promise<number> {
+    const count = await leadsService.bulkUpdateStatus(leadIds, tenantId, status);
+
+    logger.info('Bulk lead status update', {
+      count,
+      tenantId,
+      newStatus: status,
+    });
+
+    return count;
+  }
+
+  /**
    * Convert lead to client
    */
   async convertLeadToClient(
@@ -277,91 +246,14 @@ export class LeadsManager {
     tenantId: string,
     options: ConvertLeadDto
   ): Promise<{ clientId: string; contactId?: string }> {
-    const lead = await leadsRepository.findById(leadId, tenantId);
-
-    if (!lead) {
-      throw new NotFoundError('Lead not found', ErrorCodes.RESOURCE_NOT_FOUND);
-    }
-
-    if (lead.status === 'WON' && lead.convertedToClientId) {
-      throw new BadRequestError('Lead has already been converted', ErrorCodes.VALIDATION_FAILED);
-    }
-
-    // Create client and optionally contact in a transaction
-    const result = await prisma.$transaction(async (tx) => {
-      // Create client
-      const client = await tx.client.create({
-        data: {
-          tenantId,
-          clientType: options.clientType as ClientType,
-          clientName: options.clientType === 'COMPANY' ? (lead.companyName || `${lead.firstName} ${lead.lastName}`) : `${lead.firstName} ${lead.lastName}`,
-          companyName: options.clientType === 'COMPANY' ? lead.companyName : null,
-          primaryEmail: lead.email || '',
-          primaryPhone: lead.phone || '',
-          status: 'ACTIVE',
-          assignedOwnerId: lead.assignedToId,
-          internalNotes: lead.notes,
-        },
-      });
-
-      let contact = null;
-
-      // Create primary contact if requested and it's a company
-      if (options.createContact && options.clientType === 'COMPANY') {
-        contact = await tx.contact.create({
-          data: {
-            tenantId,
-            companyId: client.id,
-            contactName: `${lead.firstName} ${lead.lastName}`,
-            email: lead.email || '',
-            officePhone: lead.phone,
-            jobTitle: lead.jobTitle,
-            isPrimaryContact: true,
-          },
-        });
-      }
-
-      // Mark lead as converted
-      await tx.lead.update({
-        where: { id: leadId },
-        data: {
-          status: 'WON',
-          convertedAt: new Date(),
-          convertedToClientId: client.id,
-        },
-      });
-
-      return { client, contact };
-    });
-
-    // Audit log
-    await auditService.logWithContext(
-      req,
-      'UPDATE',
-      'leads',
-      `Converted lead to ${options.clientType.toLowerCase()} client`,
-      {
-        entityType: 'Lead',
-        entityId: leadId,
-        oldValues: { status: lead.status },
-        newValues: {
-          status: 'WON',
-          convertedToClientId: result.client.id,
-        },
-      }
+    const result = await leadsService.convertToClient(
+      leadId,
+      tenantId,
+      options,
+      req.user?.userId,
     );
 
-    logger.info('Lead converted to client', {
-      leadId,
-      clientId: result.client.id,
-      contactId: result.contact?.id,
-      tenantId,
-    });
-
-    return {
-      clientId: result.client.id,
-      contactId: result.contact?.id,
-    };
+    return result;
   }
 
   /**
@@ -438,17 +330,6 @@ export class LeadsManager {
       }
     }
 
-    // Audit log
-    await auditService.logWithContext(
-      req,
-      'IMPORT',
-      'leads',
-      `Imported ${imported} leads (${failed} failed)`,
-      {
-        newValues: { imported, failed },
-      }
-    );
-
     logger.info('Leads import completed', {
       tenantId,
       imported,
@@ -467,17 +348,6 @@ export class LeadsManager {
     query: any
   ): Promise<any[]> {
     const { data } = await leadsService.getMany(tenantId, { ...query, limit: 10000 });
-
-    // Audit log
-    await auditService.logWithContext(
-      req,
-      'EXPORT',
-      'leads',
-      `Exported ${data.length} leads`,
-      {
-        newValues: { count: data.length },
-      }
-    );
 
     return data;
   }

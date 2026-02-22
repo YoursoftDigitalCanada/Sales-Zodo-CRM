@@ -71,7 +71,9 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import api from "@/lib/axios";
+import { createProject } from "@/features/projects";
+import { getClients } from "@/features/clients/services/clients-service";
+import { getUsers } from "@/features/users/services/users-service";
 
 // ============================================
 // TYPES
@@ -127,20 +129,7 @@ const categoryOptions = [
   "Other",
 ];
 
-const mockTeamMembers: TeamMember[] = [
-  { id: 1, name: "John Smith", role: "Developer" },
-  { id: 2, name: "Sarah Johnson", role: "Designer" },
-  { id: 3, name: "Mike Wilson", role: "Project Manager" },
-  { id: 4, name: "Emily Davis", role: "QA Engineer" },
-  { id: 5, name: "Alex Brown", role: "DevOps" },
-];
 
-const mockClients = [
-  { id: 1, name: "Acme Corporation" },
-  { id: 2, name: "TechStart Inc." },
-  { id: 3, name: "Global Solutions" },
-  { id: 4, name: "Innovation Labs" },
-];
 
 // ============================================
 // UTILITY FUNCTIONS
@@ -251,13 +240,15 @@ const SectionCard = ({
 const TeamMemberSelector = ({
   selectedMembers,
   onToggle,
+  members,
 }: {
   selectedMembers: number[];
   onToggle: (id: number) => void;
+  members: TeamMember[];
 }) => {
   return (
     <div className="space-y-3">
-      {mockTeamMembers.map((member, index) => (
+      {members.map((member, index) => (
         <motion.div
           key={member.id}
           initial={{ opacity: 0, x: -20 }}
@@ -658,6 +649,39 @@ const AddProjectPage = () => {
     }
   }, []);
 
+  // Data from API
+  const [apiClients, setApiClients] = useState<{ id: string; name: string }[]>([]);
+  const [apiTeamMembers, setApiTeamMembers] = useState<TeamMember[]>([]);
+
+  useEffect(() => {
+    const fetchDropdownData = async () => {
+      try {
+        const clientsData = await getClients();
+        setApiClients(
+          (clientsData || []).map((c: any) => ({
+            id: c.id,
+            name: c.clientName || c.companyName || "Unnamed Client",
+          }))
+        );
+      } catch {
+        console.error("Failed to load clients");
+      }
+      try {
+        const usersData = await getUsers();
+        setApiTeamMembers(
+          (usersData || []).map((u: any, i: number) => ({
+            id: typeof u.id === "number" ? u.id : i + 1,
+            name: [u.firstName, u.lastName].filter(Boolean).join(" ") || u.email || "User",
+            role: u.role || u.jobTitle || "Team Member",
+          }))
+        );
+      } catch {
+        console.error("Failed to load team members");
+      }
+    };
+    fetchDropdownData();
+  }, []);
+
   // ============================================
   // HANDLERS
   // ============================================
@@ -731,25 +755,29 @@ const AddProjectPage = () => {
 
     try {
       const projectData = {
-        name,
+        projectTitle: name,
         description,
-        clientId: clientId ? parseInt(clientId) : null,
-        projectManager,
-        status: isDraft ? "draft" : status,
-        priority,
-        progress: Number(progress),
-        startDate,
-        dueDate,
+        clientId: clientId || null,
+        projectManagerId: projectManager || null,
+        status: isDraft ? "NOT_STARTED" : status.toUpperCase().replace(/ /g, "_"),
+        priority: priority.toUpperCase(),
+        progressPercentage: Number(progress),
+        startDate: startDate ? new Date(startDate).toISOString() : null,
+        dueDate: dueDate ? new Date(dueDate).toISOString() : null,
         budget: budget ? parseFloat(budget) : null,
         estimatedHours: estimatedHours ? parseInt(estimatedHours) : null,
         category,
         tags,
-        teamMembers: selectedTeamMembers,
-        milestones,
-        sendNotification,
+        teamMembers: selectedTeamMembers.map(String),
+        milestones: milestones.map(m => ({
+          title: m.title,
+          dueDate: m.dueDate ? new Date(m.dueDate).toISOString() : null,
+          isCompleted: m.completed || false,
+        })),
+        notifyTeamMembers: sendNotification,
       };
 
-      await api.post("/projects", projectData);
+      await createProject(projectData as Record<string, unknown>);
 
       toast({
         title: isDraft ? "Draft Saved" : "Project Created",
@@ -906,7 +934,7 @@ const AddProjectPage = () => {
                             </div>
                           </SelectTrigger>
                           <SelectContent className="rounded-md">
-                            {mockClients.map((client) => (
+                            {apiClients.map((client) => (
                               <SelectItem
                                 key={client.id}
                                 value={String(client.id)}
@@ -950,7 +978,7 @@ const AddProjectPage = () => {
                           </div>
                         </SelectTrigger>
                         <SelectContent className="rounded-md">
-                          {mockTeamMembers.map((member) => (
+                          {apiTeamMembers.map((member) => (
                             <SelectItem
                               key={member.id}
                               value={String(member.id)}
@@ -1038,6 +1066,7 @@ const AddProjectPage = () => {
                   <TeamMemberSelector
                     selectedMembers={selectedTeamMembers}
                     onToggle={handleTeamMemberToggle}
+                    members={apiTeamMembers}
                   />
                 </SectionCard>
 

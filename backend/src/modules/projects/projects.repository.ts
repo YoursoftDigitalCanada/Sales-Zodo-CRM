@@ -50,7 +50,11 @@ export class ProjectsRepository {
         return { data, total };
     }
 
-    async update(id: string, data: UpdateProjectDto) {
+    async update(id: string, tenantId: string, data: UpdateProjectDto) {
+        // Verify tenant ownership
+        const existing = await prisma.project.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Project not found or access denied');
+
         // Handle team members update separately
         if (data.teamMembers) {
             await prisma.projectMember.deleteMany({ where: { projectId: id } });
@@ -77,7 +81,11 @@ export class ProjectsRepository {
         });
     }
 
-    async delete(id: string) {
+    async delete(id: string, tenantId: string) {
+        // Verify tenant ownership
+        const existing = await prisma.project.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Project not found or access denied');
+
         await prisma.projectMember.deleteMany({ where: { projectId: id } });
         return prisma.project.delete({ where: { id } });
     }

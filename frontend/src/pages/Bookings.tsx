@@ -114,7 +114,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import api from "@/lib/axios";
+import { getBookings, createBooking, cancelBooking, confirmBooking } from "@/features/bookings";
+import { getUsers } from "@/features/users";
 
 // ============================================
 // TYPES
@@ -867,8 +868,8 @@ const CreateBookingWizard = ({
                         backgroundColor: isCompleted
                           ? "#22D3EE"
                           : isActive
-                          ? "#22D3EE"
-                          : "#f1f5f9",
+                            ? "#22D3EE"
+                            : "#f1f5f9",
                       }}
                       className={cn(
                         "w-10 h-10 rounded-md flex items-center justify-center transition-all",
@@ -1046,8 +1047,8 @@ const CreateBookingWizard = ({
                           time === slot.time
                             ? "bg-[#0891B2] text-white "
                             : slot.available
-                            ? "bg-white/5 text-slate-200 hover:bg-slate-200"
-                            : "bg-[#F8FAFC] text-[#475569] cursor-not-allowed"
+                              ? "bg-white/5 text-slate-200 hover:bg-slate-200"
+                              : "bg-[#F8FAFC] text-[#475569] cursor-not-allowed"
                         )}
                       >
                         {slot.time}
@@ -1381,13 +1382,10 @@ const BookingsPage = () => {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [bookingsRes, usersRes] = await Promise.all([
-        api.get("/bookings"),
-        api.get("/users"),
+      const [bookingsData, usersData] = await Promise.all([
+        getBookings() as Promise<any[]>,
+        getUsers() as Promise<any[]>,
       ]);
-
-      const bookingsData = bookingsRes.data?.data || [];
-      const usersData = usersRes.data?.data || [];
 
       // Normalize bookings to current UI shape
       const enhancedBookings = (bookingsData || []).map((b: any) => {
@@ -1410,7 +1408,7 @@ const BookingsPage = () => {
           endTime: b.endTime,
           status: (b.status || "PENDING").toLowerCase(),
           notes: b.notes || "",
-          price: b.price || Math.floor(Math.random() * 200) + 50,
+          price: b.price || 0,
           duration,
           location: b.location || "",
           isOnline: (b.location || "").toLowerCase() === "online",
@@ -1461,7 +1459,7 @@ const BookingsPage = () => {
       const endTime = new Date(startTime.getTime() + (Number(payload.duration) || 30) * 60000);
       const selectedService = services.find((s) => String(s.id) === String(payload.serviceId));
 
-      await api.post("/bookings", {
+      await createBooking({
         title: selectedService?.name || "Appointment",
         description: payload.notes || null,
         startTime: startTime.toISOString(),
@@ -1493,7 +1491,7 @@ const BookingsPage = () => {
     setIsCancelling(true);
 
     try {
-      await api.patch(`/bookings/${bookingToCancel.id}/cancel`);
+      await cancelBooking(bookingToCancel.id);
 
       setBookings((prev) =>
         prev.map((b) =>
@@ -1520,9 +1518,10 @@ const BookingsPage = () => {
 
   const handleMarkComplete = async (booking: Booking) => {
     try {
-            setBookings((prev) =>
+      await confirmBooking(booking.id);
+      setBookings((prev) =>
         prev.map((b) =>
-          b.id === booking.id ? { ...b, status: "Completed" } : b
+          b.id === booking.id ? { ...b, status: "confirmed" } : b
         )
       );
 
@@ -1678,6 +1677,9 @@ const BookingsPage = () => {
     if (selectedBookings.length === 0) return;
 
     try {
+      await Promise.all(
+        selectedBookings.map((id) => cancelBooking(id))
+      );
       setBookings((prev) =>
         prev.map((b) =>
           selectedBookings.includes(b.id) ? { ...b, status: "Cancelled" } : b

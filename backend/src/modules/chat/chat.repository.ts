@@ -36,7 +36,11 @@ export class ChatRepository {
         return { data, total };
     }
 
-    async sendMessage(roomId: string, senderId: string, data: SendMessageDto) {
+    async sendMessage(roomId: string, tenantId: string, senderId: string, data: SendMessageDto) {
+        // Verify room belongs to tenant
+        const room = await prisma.chatRoom.findFirst({ where: { id: roomId, tenantId } });
+        if (!room) throw new Error('Chat room not found or access denied');
+
         const message = await prisma.chatMessage.create({
             data: { roomId, senderId, content: data.content, attachments: data.attachments as Prisma.InputJsonValue || undefined },
         });
@@ -58,7 +62,10 @@ export class ChatRepository {
         return { data, total };
     }
 
-    async deleteMessage(messageId: string) {
+    async deleteMessage(messageId: string, tenantId: string) {
+        // Verify message's room belongs to tenant
+        const message = await prisma.chatMessage.findUnique({ where: { id: messageId }, include: { room: { select: { tenantId: true } } } });
+        if (!message || message.room.tenantId !== tenantId) throw new Error('Message not found or access denied');
         return prisma.chatMessage.update({ where: { id: messageId }, data: { deletedAt: new Date() } });
     }
 }

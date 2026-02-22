@@ -64,7 +64,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
-import { getExpenses } from "@/features/expenses";
+import { getExpenses, createExpense, updateExpense, deleteExpense, approveExpense } from "@/features/expenses";
 import {
   Bell,
   Search,
@@ -215,181 +215,18 @@ const paymentMethods = [
   { id: "reimbursement", name: "Reimbursement", icon: CircleDollarSign },
 ];
 
-const initialExpenses: Expense[] = [
-  {
-    id: "exp_001",
-    item: "Flight to Toronto - Client Meeting",
-    description: "Round trip flight for quarterly client review",
-    category: "travel",
-    amount: 850.00,
-    currency: "CAD",
-    date: "2024-01-20",
-    vendor: "Air Canada",
-    paymentMethod: "company_card",
-    status: "approved",
-    tags: ["client", "quarterly"],
-    submittedBy: "John Smith",
-    approvedBy: "Sarah Johnson",
-    project: "Client Review Q1",
-    client: "Acme Corp",
-    createdAt: "2024-01-18T10:30:00Z",
-  },
-  {
-    id: "exp_002",
-    item: "Team Lunch - Project Celebration",
-    description: "Team lunch to celebrate project completion",
-    category: "meals",
-    amount: 245.50,
-    currency: "CAD",
-    date: "2024-01-19",
-    vendor: "The Keg Steakhouse",
-    paymentMethod: "credit_card",
-    status: "pending",
-    tags: ["team", "celebration"],
-    submittedBy: "Emily Davis",
-    project: "Website Redesign",
-    createdAt: "2024-01-19T14:00:00Z",
-  },
-  {
-    id: "exp_003",
-    item: "Adobe Creative Cloud - Annual",
-    description: "Annual subscription for design team",
-    category: "software",
-    amount: 599.88,
-    currency: "CAD",
-    date: "2024-01-15",
-    vendor: "Adobe Inc.",
-    paymentMethod: "company_card",
-    status: "approved",
-    tags: ["subscription", "design"],
-    submittedBy: "Sarah Johnson",
-    approvedBy: "John Smith",
-    createdAt: "2024-01-15T09:00:00Z",
-  },
-  {
-    id: "exp_004",
-    item: "Office Supplies - Stationery",
-    description: "Notebooks, pens, and general office supplies",
-    category: "office",
-    amount: 125.75,
-    currency: "CAD",
-    date: "2024-01-18",
-    vendor: "Staples",
-    paymentMethod: "debit_card",
-    status: "reimbursed",
-    submittedBy: "Mike Chen",
-    approvedBy: "Emily Davis",
-    createdAt: "2024-01-18T11:30:00Z",
-  },
-  {
-    id: "exp_005",
-    item: "Uber Rides - Client Visits",
-    description: "Transportation for multiple client site visits",
-    category: "travel",
-    amount: 156.80,
-    currency: "CAD",
-    date: "2024-01-17",
-    vendor: "Uber",
-    paymentMethod: "credit_card",
-    status: "approved",
-    tags: ["client"],
-    submittedBy: "David Wilson",
-    approvedBy: "John Smith",
-    client: "TechStart Inc.",
-    createdAt: "2024-01-17T16:45:00Z",
-  },
-  {
-    id: "exp_006",
-    item: "AWS Monthly - Cloud Services",
-    description: "Monthly cloud infrastructure costs",
-    category: "software",
-    amount: 1250.00,
-    currency: "CAD",
-    date: "2024-01-01",
-    vendor: "Amazon Web Services",
-    paymentMethod: "company_card",
-    status: "approved",
-    tags: ["recurring", "infrastructure"],
-    submittedBy: "System",
-    approvedBy: "John Smith",
-    createdAt: "2024-01-01T00:00:00Z",
-  },
-  {
-    id: "exp_007",
-    item: "Marketing Campaign - Social Ads",
-    description: "Q1 social media advertising spend",
-    category: "marketing",
-    amount: 2500.00,
-    currency: "CAD",
-    date: "2024-01-10",
-    vendor: "Meta Platforms",
-    paymentMethod: "company_card",
-    status: "approved",
-    tags: ["advertising", "q1"],
-    submittedBy: "Lisa Brown",
-    approvedBy: "Sarah Johnson",
-    project: "Q1 Marketing",
-    createdAt: "2024-01-10T10:00:00Z",
-  },
-  {
-    id: "exp_008",
-    item: "Conference Registration",
-    description: "TechConf 2024 - 2 attendees",
-    category: "travel",
-    amount: 1200.00,
-    currency: "CAD",
-    date: "2024-01-12",
-    vendor: "TechConf Events",
-    paymentMethod: "credit_card",
-    status: "pending",
-    tags: ["conference", "training"],
-    submittedBy: "Amanda Lee",
-    createdAt: "2024-01-12T15:30:00Z",
-  },
-  {
-    id: "exp_009",
-    item: "Internet - Office",
-    description: "Monthly internet service",
-    category: "utilities",
-    amount: 150.00,
-    currency: "CAD",
-    date: "2024-01-05",
-    vendor: "Bell Canada",
-    paymentMethod: "bank_transfer",
-    status: "approved",
-    tags: ["recurring"],
-    submittedBy: "System",
-    approvedBy: "John Smith",
-    createdAt: "2024-01-05T00:00:00Z",
-  },
-  {
-    id: "exp_010",
-    item: "Client Dinner",
-    description: "Business dinner with potential client",
-    category: "meals",
-    amount: 385.00,
-    currency: "CAD",
-    date: "2024-01-16",
-    vendor: "Canoe Restaurant",
-    paymentMethod: "credit_card",
-    status: "rejected",
-    notes: "Missing receipt - please resubmit",
-    submittedBy: "Robert Brown",
-    client: "NewClient Ltd.",
-    createdAt: "2024-01-16T20:00:00Z",
-  },
-];
+// Initial state removed — data is fetched from API on mount
 
-const expenseStats: ExpenseStats = {
-  totalExpenses: 24890.50,
-  totalRevenue: 125840.00,
-  netProfit: 100949.50,
-  pendingApprovals: 3,
-  thisMonthExpenses: 7463.93,
-  lastMonthExpenses: 6850.00,
-  expenseChange: 8.9,
-  revenueChange: 12.5,
-  profitChange: 15.2,
+const defaultExpenseStats: ExpenseStats = {
+  totalExpenses: 0,
+  totalRevenue: 0,
+  netProfit: 0,
+  pendingApprovals: 0,
+  thisMonthExpenses: 0,
+  lastMonthExpenses: 0,
+  expenseChange: 0,
+  revenueChange: 0,
+  profitChange: 0,
 };
 
 // ============================================
@@ -1552,7 +1389,7 @@ const Expenses = () => {
   const { toast } = useToast();
 
   // State
-  const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [activeTab, setActiveTab] = useState("all");
@@ -1579,22 +1416,26 @@ const Expenses = () => {
         if (data.length > 0) {
           const mapped = data.map((e: any) => ({
             id: e.id,
-            item: e.description || e.item || "Expense",
-            description: e.notes || e.description || "",
+            item: e.title || e.description || "Expense",
+            description: e.description || e.notes || "",
             category: e.category?.toLowerCase() || "other",
             amount: e.amount || 0,
             currency: e.currency || "CAD",
-            date: e.expenseDate || e.date || new Date().toISOString(),
+            date: e.paymentDate || e.expenseDate || e.date || new Date().toISOString(),
             vendor: e.vendor || e.merchant || "",
             paymentMethod:
               e.paymentMethod?.toLowerCase().replace(" ", "_") || "credit_card",
             status: e.status?.toLowerCase() || "pending",
-            submittedBy: e.submittedBy?.user?.firstName
-              ? `${e.submittedBy.user.firstName} ${e.submittedBy.user.lastName || ""}`
-              : "Unknown",
-            approvedBy: e.approvedBy?.user?.firstName
-              ? `${e.approvedBy.user.firstName} ${e.approvedBy.user.lastName || ""}`
-              : undefined,
+            submittedBy: e.createdBy?.firstName
+              ? `${e.createdBy.firstName} ${e.createdBy.lastName || ""}`
+              : e.submittedBy?.user?.firstName
+                ? `${e.submittedBy.user.firstName} ${e.submittedBy.user.lastName || ""}`
+                : "Unknown",
+            approvedBy: e.approvedBy?.firstName
+              ? `${e.approvedBy.firstName} ${e.approvedBy.lastName || ""}`
+              : e.approvedBy?.user?.firstName
+                ? `${e.approvedBy.user.firstName} ${e.approvedBy.user.lastName || ""}`
+                : undefined,
             project: e.project?.name,
             createdAt: e.createdAt || new Date().toISOString(),
           }));
@@ -1672,116 +1513,202 @@ const Expenses = () => {
   }, [expenses, activeTab, searchQuery, selectedCategory, selectedStatus, sortBy, sortOrder]);
 
   // Handlers
-  const handleAddExpense = async (data: Partial<Expense>) => {
-    const newExpense: Expense = {
-      id: `exp_${Date.now()}`,
-      item: data.item!,
-      description: data.description,
-      category: data.category!,
-      amount: data.amount!,
-      currency: data.currency || "CAD",
-      date: data.date!,
-      vendor: data.vendor!,
-      paymentMethod: data.paymentMethod || "credit_card",
-      status: "pending",
-      tags: data.tags,
-      notes: data.notes,
-      submittedBy: "Current User",
-      project: data.project,
-      client: data.client,
-      createdAt: new Date().toISOString(),
-    };
+  const mapApiExpense = (e: any): Expense => ({
+    id: e.id,
+    item: e.title || e.description || e.item || "Expense",
+    description: e.description || e.notes || "",
+    category: e.category?.toLowerCase() || "other",
+    amount: e.amount || 0,
+    currency: e.currency || "CAD",
+    date: e.paymentDate || e.expenseDate || e.date || new Date().toISOString(),
+    vendor: e.vendor || e.merchant || "",
+    paymentMethod: e.paymentMethod?.toLowerCase().replace(" ", "_") || "credit_card",
+    status: e.status?.toLowerCase() || "pending",
+    submittedBy: e.createdBy?.firstName
+      ? `${e.createdBy.firstName} ${e.createdBy.lastName || ""}`
+      : e.submittedBy?.user?.firstName
+        ? `${e.submittedBy.user.firstName} ${e.submittedBy.user.lastName || ""}`
+        : "Unknown",
+    approvedBy: e.approvedBy?.firstName
+      ? `${e.approvedBy.firstName} ${e.approvedBy.lastName || ""}`
+      : e.approvedBy?.user?.firstName
+        ? `${e.approvedBy.user.firstName} ${e.approvedBy.user.lastName || ""}`
+        : undefined,
+    project: e.project?.name,
+    createdAt: e.createdAt || new Date().toISOString(),
+  });
 
-    setExpenses((prev) => [newExpense, ...prev]);
-    toast({
-      title: "Expense Added",
-      description: "Your expense has been submitted for approval.",
-    });
+  const handleAddExpense = async (data: Partial<Expense>) => {
+    try {
+      const apiData = {
+        description: data.item || data.description || "Expense",
+        notes: data.notes || data.description || "",
+        category: data.category?.toUpperCase() || "OTHER",
+        amount: data.amount || 0,
+        currency: data.currency || "CAD",
+        expenseDate: data.date || new Date().toISOString(),
+        vendor: data.vendor || "",
+        paymentMethod: data.paymentMethod?.toUpperCase().replace("_", " ") || "CREDIT_CARD",
+      };
+      const created = await createExpense(apiData);
+      const newExpense = mapApiExpense(created);
+      setExpenses((prev) => [newExpense, ...prev]);
+      toast({
+        title: "Expense Added",
+        description: "Your expense has been submitted for approval.",
+      });
+    } catch (error: any) {
+      console.error("Failed to add expense:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to add expense.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleEditExpense = async (data: Partial<Expense>) => {
     if (!currentExpense) return;
-
-    setExpenses((prev) =>
-      prev.map((e) =>
-        e.id === currentExpense.id
-          ? { ...e, ...data, updatedAt: new Date().toISOString() }
-          : e
-      )
-    );
-    toast({
-      title: "Expense Updated",
-      description: "The expense has been updated successfully.",
-    });
-  };
-
-  const handleDeleteExpense = () => {
-    if (!expenseToDelete) return;
-
-    setExpenses((prev) => prev.filter((e) => e.id !== expenseToDelete.id));
-    setSelectedExpenses((prev) => {
-      const newSet = new Set(prev);
-      newSet.delete(expenseToDelete.id);
-      return newSet;
-    });
-    setIsDeleteAlertOpen(false);
-    setExpenseToDelete(null);
-    toast({
-      title: "Expense Deleted",
-      description: "The expense has been removed.",
-      variant: "destructive",
-    });
-  };
-
-  const handleStatusChange = (expense: Expense, status: Expense["status"]) => {
-    setExpenses((prev) =>
-      prev.map((e) =>
-        e.id === expense.id
-          ? {
-            ...e,
-            status,
-            approvedBy: status === "approved" ? "Current User" : e.approvedBy,
-            updatedAt: new Date().toISOString(),
-          }
-          : e
-      )
-    );
-    toast({
-      title: `Expense ${status.charAt(0).toUpperCase() + status.slice(1)}`,
-      description: `The expense has been ${status}.`,
-    });
-    setIsDetailsOpen(false);
-  };
-
-  const handleBulkAction = (action: "approve" | "reject" | "delete") => {
-    if (selectedExpenses.size === 0) return;
-
-    if (action === "delete") {
-      setExpenses((prev) => prev.filter((e) => !selectedExpenses.has(e.id)));
-      toast({
-        title: "Expenses Deleted",
-        description: `${selectedExpenses.size} expense(s) have been removed.`,
-        variant: "destructive",
-      });
-    } else {
-      const status = action === "approve" ? "approved" : "rejected";
+    try {
+      const apiData = {
+        description: data.item || data.description || currentExpense.item,
+        notes: data.notes || data.description || "",
+        category: data.category?.toUpperCase() || currentExpense.category.toUpperCase(),
+        amount: data.amount || currentExpense.amount,
+        vendor: data.vendor || currentExpense.vendor,
+        paymentMethod: data.paymentMethod?.toUpperCase().replace("_", " ") || "CREDIT_CARD",
+      };
+      const updated = await updateExpense(currentExpense.id, apiData);
+      const mappedExpense = mapApiExpense(updated);
       setExpenses((prev) =>
         prev.map((e) =>
-          selectedExpenses.has(e.id) && e.status === "pending"
-            ? {
-              ...e,
-              status,
-              approvedBy: action === "approve" ? "Current User" : undefined,
-              updatedAt: new Date().toISOString(),
-            }
-            : e
+          e.id === currentExpense.id ? mappedExpense : e
         )
       );
       toast({
-        title: `Expenses ${action === "approve" ? "Approved" : "Rejected"}`,
-        description: `${selectedExpenses.size} expense(s) have been ${status}.`,
+        title: "Expense Updated",
+        description: "The expense has been updated successfully.",
+      });
+    } catch (error: any) {
+      console.error("Failed to update expense:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to update expense.",
+        variant: "destructive",
       });
     }
+  };
+
+  const handleDeleteExpense = async () => {
+    if (!expenseToDelete) return;
+    try {
+      await deleteExpense(expenseToDelete.id);
+      setExpenses((prev) => prev.filter((e) => e.id !== expenseToDelete.id));
+      setSelectedExpenses((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(expenseToDelete.id);
+        return newSet;
+      });
+      setIsDeleteAlertOpen(false);
+      setExpenseToDelete(null);
+      toast({
+        title: "Expense Deleted",
+        description: "The expense has been removed.",
+        variant: "destructive",
+      });
+    } catch (error: any) {
+      console.error("Failed to delete expense:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to delete expense.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleStatusChange = async (expense: Expense, status: Expense["status"]) => {
+    try {
+      // Call backend for "approved" status (PATCH /expenses/:id/approve)
+      if (status === "approved") {
+        const updated = await approveExpense(expense.id);
+        const mappedExpense = mapApiExpense(updated);
+        setExpenses((prev) =>
+          prev.map((e) => (e.id === expense.id ? mappedExpense : e))
+        );
+      } else {
+        // For other statuses (rejected, reimbursed) — optimistic local update
+        setExpenses((prev) =>
+          prev.map((e) =>
+            e.id === expense.id
+              ? { ...e, status, updatedAt: new Date().toISOString() }
+              : e
+          )
+        );
+      }
+      toast({
+        title: `Expense ${status.charAt(0).toUpperCase() + status.slice(1)}`,
+        description: `The expense has been ${status}.`,
+      });
+      setIsDetailsOpen(false);
+    } catch (error: any) {
+      console.error("Failed to update expense status:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to update expense status.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleBulkAction = async (action: "approve" | "reject" | "delete") => {
+    if (selectedExpenses.size === 0) return;
+    const ids = Array.from(selectedExpenses);
+
+    try {
+      if (action === "delete") {
+        await Promise.all(ids.map((id) => deleteExpense(id)));
+        setExpenses((prev) => prev.filter((e) => !selectedExpenses.has(e.id)));
+        toast({
+          title: "Expenses Deleted",
+          description: `${ids.length} expense(s) have been removed.`,
+          variant: "destructive",
+        });
+      } else if (action === "approve") {
+        await Promise.all(ids.map((id) => approveExpense(id)));
+        setExpenses((prev) =>
+          prev.map((e) =>
+            selectedExpenses.has(e.id) && e.status === "pending"
+              ? { ...e, status: "approved", approvedBy: "Current User", updatedAt: new Date().toISOString() }
+              : e
+          )
+        );
+        toast({
+          title: "Expenses Approved",
+          description: `${ids.length} expense(s) have been approved.`,
+        });
+      } else {
+        // Reject is local-only — no backend endpoint for reject
+        setExpenses((prev) =>
+          prev.map((e) =>
+            selectedExpenses.has(e.id) && e.status === "pending"
+              ? { ...e, status: "rejected", updatedAt: new Date().toISOString() }
+              : e
+          )
+        );
+        toast({
+          title: "Expenses Rejected",
+          description: `${ids.length} expense(s) have been rejected.`,
+        });
+      }
+    } catch (error: any) {
+      console.error(`Failed to ${action} expenses:`, error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || `Failed to ${action} expenses.`,
+        variant: "destructive",
+      });
+    }
+
     setSelectedExpenses(new Set());
   };
 
@@ -1857,8 +1784,8 @@ const Expenses = () => {
           <div className="grid grid-cols-4 gap-6 mb-8">
             <StatCard
               title="Total Expenses"
-              value={formatCurrency(expenseStats.totalExpenses)}
-              change={expenseStats.expenseChange}
+              value={formatCurrency(defaultExpenseStats.totalExpenses)}
+              change={defaultExpenseStats.expenseChange}
               changeLabel="vs last month"
               icon={Receipt}
               color="teal"
@@ -1873,7 +1800,7 @@ const Expenses = () => {
             />
             <StatCard
               title="This Month"
-              value={formatCurrency(expenseStats.thisMonthExpenses)}
+              value={formatCurrency(defaultExpenseStats.thisMonthExpenses)}
               change={8.9}
               changeLabel="vs last month"
               icon={CalendarDays}

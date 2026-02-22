@@ -75,7 +75,11 @@ export class InvoicesRepository {
         return { data, total };
     }
 
-    async update(id: string, data: UpdateInvoiceDto) {
+    async update(id: string, tenantId: string, data: UpdateInvoiceDto) {
+        // Verify tenant ownership
+        const existing = await prisma.invoice.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Invoice not found or access denied');
+
         let totals = {};
         if (data.items) {
             await prisma.invoiceItem.deleteMany({ where: { invoiceId: id } });
@@ -112,16 +116,23 @@ export class InvoicesRepository {
         });
     }
 
-    async markAsPaid(id: string) {
-        const invoice = await prisma.invoice.findUnique({ where: { id } });
+    async markAsPaid(id: string, tenantId: string) {
+        // Verify tenant ownership
+        const invoice = await prisma.invoice.findFirst({ where: { id, tenantId } });
+        if (!invoice) throw new Error('Invoice not found or access denied');
+
         return prisma.invoice.update({
             where: { id },
-            data: { status: 'PAID', paidAt: new Date(), amountPaid: invoice?.total || 0, amountDue: 0 },
+            data: { status: 'PAID', paidAt: new Date(), amountPaid: invoice.total || 0, amountDue: 0 },
             include: invoiceInclude,
         });
     }
 
-    async delete(id: string) {
+    async delete(id: string, tenantId: string) {
+        // Verify tenant ownership
+        const existing = await prisma.invoice.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Invoice not found or access denied');
+
         await prisma.invoiceItem.deleteMany({ where: { invoiceId: id } });
         return prisma.invoice.delete({ where: { id } });
     }

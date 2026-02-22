@@ -42,7 +42,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import api from "@/lib/axios";
+import { getClientById, createClient, updateClient } from "@/services/clientService";
 
 // ============================================
 // CANADIAN DATA
@@ -202,8 +202,7 @@ const mapApiClientToFormData = (data: any): FormData => {
     assignedOwner:
       typeof data.assignedOwner === "string"
         ? data.assignedOwner
-        : `${data.assignedOwner?.firstName || ""} ${
-            data.assignedOwner?.lastName || ""
+        : `${data.assignedOwner?.firstName || ""} ${data.assignedOwner?.lastName || ""
           }`.trim(),
     billingAddressLine1: data.streetAddress || data.billingAddressLine1 || "",
     billingAddressLine2: data.suite || data.billingAddressLine2 || "",
@@ -238,16 +237,16 @@ const mapFormDataToApiPayload = (data: FormData) => {
     ownerValue === ""
       ? { assignedOwner: null }
       : isUuid(ownerValue)
-      ? { assignedOwner: ownerValue }
-      : {};
+        ? { assignedOwner: ownerValue }
+        : {};
 
   const logoValue = data.profileImage.trim();
   const logoPayload =
     logoValue === ""
       ? { clientLogo: null }
       : /^https?:\/\//i.test(logoValue)
-      ? { clientLogo: logoValue }
-      : {};
+        ? { clientLogo: logoValue }
+        : {};
 
   return {
     ...logoPayload,
@@ -451,8 +450,7 @@ const AddClientPage = () => {
   const fetchClientData = async (clientId: string) => {
     setIsFetching(true);
     try {
-      const response = await api.get(`/clients/${clientId}`);
-      const data = response.data?.data || response.data;
+      const data = await getClientById(clientId) as any;
 
       if (data) {
         setFormData(mapApiClientToFormData(data));
@@ -526,9 +524,9 @@ const AddClientPage = () => {
       const payload = mapFormDataToApiPayload(formData);
 
       if (isEditMode) {
-        await api.put(url, payload);
+        await updateClient(id!, payload);
       } else {
-        await api.post(url, payload);
+        await createClient(payload);
       }
 
       toast({

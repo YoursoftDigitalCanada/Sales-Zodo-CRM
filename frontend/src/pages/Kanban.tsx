@@ -55,7 +55,7 @@ import {
   FolderKanban,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import api from "@/lib/axios";
+import { getKanbanTasks, createTask, updateTask, deleteTask } from "@/features/tasks";
 
 // ============================================
 // TYPES
@@ -782,8 +782,7 @@ const KanbanPage: React.FC = () => {
   const loadKanban = async () => {
     setLoading(true);
     try {
-      const res = await api.get("/tasks/kanban");
-      const data = res.data?.data || [];
+      const data = await getKanbanTasks() as any[];
 
       const columnsMap = new Map<string, KanbanTask[]>();
       defaultColumns.forEach((col) => columnsMap.set(col.id, []));
@@ -826,16 +825,14 @@ const KanbanPage: React.FC = () => {
   // Handlers
   const handleAddTask = async (task: Partial<KanbanTask>) => {
     try {
-      const res = await api.post("/tasks", {
+      const createdPayload = await createTask({
         taskTitle: task.title || "",
         description: task.description || "",
         status: columnIdToStatus[task.status || "todo"] || "TODO",
         priority: (task.priority || "medium").toUpperCase(),
         dueDate: task.dueDate ? new Date(task.dueDate).toISOString() : undefined,
         tags: task.tags || [],
-      });
-
-      const createdPayload = res.data?.data || res.data;
+      }) as any;
       const created: KanbanTask = {
         id: createdPayload.id,
         title: createdPayload.title || createdPayload.taskTitle || task.title || "",
@@ -882,16 +879,14 @@ const KanbanPage: React.FC = () => {
     if (!task.id) return;
 
     try {
-      const res = await api.put(`/tasks/${task.id}`, {
+      const updatedPayload = await updateTask(task.id, {
         taskTitle: task.title,
         description: task.description,
         status: task.status ? columnIdToStatus[task.status] : undefined,
         priority: task.priority ? task.priority.toUpperCase() : undefined,
         dueDate: task.dueDate ? new Date(task.dueDate).toISOString() : undefined,
         tags: task.tags,
-      });
-
-      const updatedPayload = res.data?.data || res.data;
+      }) as any;
       const updated: KanbanTask = {
         id: updatedPayload.id,
         title: updatedPayload.title || updatedPayload.taskTitle || task.title || "",
@@ -921,9 +916,9 @@ const KanbanPage: React.FC = () => {
           tasks:
             col.id === task.status
               ? [
-                  { ...col.tasks.find((t) => t.id === task.id)!, ...task } as KanbanTask,
-                  ...col.tasks.filter((t) => t.id !== task.id),
-                ]
+                { ...col.tasks.find((t) => t.id === task.id)!, ...task } as KanbanTask,
+                ...col.tasks.filter((t) => t.id !== task.id),
+              ]
               : col.tasks.filter((t) => t.id !== task.id),
         }))
       );
@@ -932,7 +927,7 @@ const KanbanPage: React.FC = () => {
 
   const handleDeleteTask = async (taskId: string) => {
     try {
-      await api.delete(`/tasks/${taskId}`);
+      await deleteTask(taskId);
     } catch (err) {
       console.error("Failed to delete task", err);
     }

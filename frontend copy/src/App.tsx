@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { GlobalAiFloatingButton } from "@/components/ai/GlobalAiFloatingButton";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { CopilotContextProvider } from "@/contexts/CopilotContext";
 
 // Layout
 import Layout from "./components/Layout";
@@ -17,6 +18,7 @@ import Onboarding from "./pages/Onboarding";
 import TasksPage from "./pages/Tasks";
 import AllLeads from "./pages/Leads/AllLeads";
 import Pipeline from "./pages/Leads/Pipeline";
+import LeadDetailPage from "./pages/Leads/LeadDetailPage";
 import ClientGroupPage from "./pages/ClientGroups";
 import LeadSources from "./pages/Leads/LeadSources";
 import CalendarPage from "./pages/Calendar";
@@ -99,407 +101,417 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          {/* ========== PUBLIC ROUTES ========== */}
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
+        <CopilotContextProvider>
+          <Routes>
+            {/* ========== PUBLIC ROUTES ========== */}
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
 
-          {/* ========== DASHBOARD ========== */}
-          <Route path="/dashboard" element={<Index />} />
-          <Route
-            path="/tasks"
-            element={
-              <FeatureGuard featureId="tasks">
-                <TasksPage />
-              </FeatureGuard>
-            }
-          />
-
-          {/* ========== LEAD ROUTES ========== */}
-          <Route
-            path="/leads"
-            element={
-              <FeatureGuard featureId="leads">
-                <AllLeads />
-              </FeatureGuard>
-            }
-          />
-          <Route
-            path="/leads/pipeline"
-            element={
-              <FeatureGuard featureId="pipeline">
-                <Pipeline />
-              </FeatureGuard>
-            }
-          />
-          <Route
-            path="/leads/sources"
-            element={
-              <FeatureGuard featureId="leads">
-                <LeadSources />
-              </FeatureGuard>
-            }
-          />
-
-          {/* ========== CLIENT ROUTES ========== */}
-          <Route
-            path="/client-list"
-            element={
-              <FeatureGuard featureId="companies">
-                <ClientListPage />
-              </FeatureGuard>
-            }
-          />
-          <Route
-            path="/client-list/add"
-            element={
-              <FeatureGuard featureId="companies">
-                <AddClientPage />
-              </FeatureGuard>
-            }
-          />
-          <Route
-            path="/client-list/:id"
-            element={
-              <FeatureGuard featureId="companies">
-                <ClientDetailPage />
-              </FeatureGuard>
-            }
-          />
-          <Route
-            path="/client-contact-list"
-            element={
-              <FeatureGuard featureId="contacts">
-                <ClientContactListPage />
-              </FeatureGuard>
-            }
-          />
-          <Route
-            path="/contacts"
-            element={
-              <FeatureGuard featureId="contacts">
-                <ClientContactListPage />
-              </FeatureGuard>
-            }
-          />
-          <Route
-            path="/client-list/:id/edit"
-            element={
-              <FeatureGuard featureId="companies">
-                <AddClientPage />
-              </FeatureGuard>
-            }
-          />
-          <Route
-            path="/clients/groups"
-            element={
-              <FeatureGuard featureId="companies">
-                <ClientGroupPage />
-              </FeatureGuard>
-            }
-          />
-          <Route
-            path="/crm"
-            element={
-              <FeatureGuard featureId={["leads", "contacts", "companies"]}>
-                <CRMPage />
-              </FeatureGuard>
-            }
-          />
-
-          {/* ========== PROJECT ROUTES ========== */}
-          <Route
-            path="/projects"
-            element={
-              <FeatureGuard featureId="tasks">
-                <ProjectsPage />
-              </FeatureGuard>
-            }
-          />
-          <Route
-            path="/projects/add"
-            element={
-              <FeatureGuard featureId="tasks">
-                <AddProjectPage />
-              </FeatureGuard>
-            }
-          />
-          <Route
-            path="/kanban"
-            element={
-              <FeatureGuard featureId="tasks">
-                <KanbanPage />
-              </FeatureGuard>
-            }
-          />
-
-          {/* ✅ Time Tracking Route */}
-          <Route
-            path="/time-tracking"
-            element={
-              <FeatureGuard featureId="tasks">
-                <TimeTrackingPage />
-              </FeatureGuard>
-            }
-          />
-
-          {/* ========== FINANCE ROUTES ========== */}
-          <Route
-            path="/invoice"
-            element={
-              <FeatureGuard featureId="invoices">
-                <InvoicePage />
-              </FeatureGuard>
-            }
-          />
-          <Route
-            path="/expenses"
-            element={
-              <FeatureGuard featureId="invoices">
-                <ExpensesPage />
-              </FeatureGuard>
-            }
-          />
-
-          {/* ========== QUOTES ROUTE ========== */}
-          <Route
-            path="/quotes"
-            element={
-              <FeatureGuard featureId="invoices">
-                <QuotesPage />
-              </FeatureGuard>
-            }
-          />
-
-          {/* ========== NOTIFICATIONS ROUTE ========== */}
-          <Route
-            path="/notifications"
-            element={
-              <FeatureGuard featureId="email">
-                <NotificationsPage />
-              </FeatureGuard>
-            }
-          />
-
-          {/* ========== SUPPORT ROUTES ========== */}
-          <Route
-            path="/support/tickets"
-            element={
-              <FeatureGuard featureId="email">
-                <SupportPage />
-              </FeatureGuard>
-            }
-          />
-          <Route
-            path="/support/knowledge-base"
-            element={
-              <FeatureGuard featureId="email">
-                <SupportPage />
-              </FeatureGuard>
-            }
-          />
-          <Route
-            path="/support/faq"
-            element={
-              <FeatureGuard featureId="email">
-                <SupportPage />
-              </FeatureGuard>
-            }
-          />
-
-          {/* ========== DOCUMENTS ROUTE ========== */}
-          <Route
-            path="/documents"
-            element={
-              <FeatureGuard featureId="email">
-                <DocumentsPage />
-              </FeatureGuard>
-            }
-          />
-
-          {/* Invoice routes using Layout wrapper */}
-          <Route element={<Layout />}>
+            {/* ========== DASHBOARD ========== */}
+            <Route path="/dashboard" element={<Index />} />
             <Route
-              path="/invoice/list"
+              path="/tasks"
+              element={
+                <FeatureGuard featureId="tasks">
+                  <TasksPage />
+                </FeatureGuard>
+              }
+            />
+
+            {/* ========== LEAD ROUTES ========== */}
+            <Route
+              path="/leads"
+              element={
+                <FeatureGuard featureId="leads">
+                  <AllLeads />
+                </FeatureGuard>
+              }
+            />
+            <Route
+              path="/leads/pipeline"
+              element={
+                <FeatureGuard featureId="pipeline">
+                  <Pipeline />
+                </FeatureGuard>
+              }
+            />
+            <Route
+              path="/leads/sources"
+              element={
+                <FeatureGuard featureId="leads">
+                  <LeadSources />
+                </FeatureGuard>
+              }
+            />
+            <Route
+              path="/leads/:id"
+              element={
+                <FeatureGuard featureId="leads">
+                  <LeadDetailPage />
+                </FeatureGuard>
+              }
+            />
+
+            {/* ========== CLIENT ROUTES ========== */}
+            <Route
+              path="/client-list"
+              element={
+                <FeatureGuard featureId="companies">
+                  <ClientListPage />
+                </FeatureGuard>
+              }
+            />
+            <Route
+              path="/client-list/add"
+              element={
+                <FeatureGuard featureId="companies">
+                  <AddClientPage />
+                </FeatureGuard>
+              }
+            />
+            <Route
+              path="/client-list/:id"
+              element={
+                <FeatureGuard featureId="companies">
+                  <ClientDetailPage />
+                </FeatureGuard>
+              }
+            />
+            <Route
+              path="/client-contact-list"
+              element={
+                <FeatureGuard featureId="contacts">
+                  <ClientContactListPage />
+                </FeatureGuard>
+              }
+            />
+            <Route
+              path="/contacts"
+              element={
+                <FeatureGuard featureId="contacts">
+                  <ClientContactListPage />
+                </FeatureGuard>
+              }
+            />
+            <Route
+              path="/client-list/:id/edit"
+              element={
+                <FeatureGuard featureId="companies">
+                  <AddClientPage />
+                </FeatureGuard>
+              }
+            />
+            <Route
+              path="/clients/groups"
+              element={
+                <FeatureGuard featureId="companies">
+                  <ClientGroupPage />
+                </FeatureGuard>
+              }
+            />
+            <Route
+              path="/crm"
+              element={
+                <FeatureGuard featureId={["leads", "contacts", "companies"]}>
+                  <CRMPage />
+                </FeatureGuard>
+              }
+            />
+
+            {/* ========== PROJECT ROUTES ========== */}
+            <Route
+              path="/projects"
+              element={
+                <FeatureGuard featureId="tasks">
+                  <ProjectsPage />
+                </FeatureGuard>
+              }
+            />
+            <Route
+              path="/projects/add"
+              element={
+                <FeatureGuard featureId="tasks">
+                  <AddProjectPage />
+                </FeatureGuard>
+              }
+            />
+            <Route
+              path="/kanban"
+              element={
+                <FeatureGuard featureId="tasks">
+                  <KanbanPage />
+                </FeatureGuard>
+              }
+            />
+
+            {/* ✅ Time Tracking Route */}
+            <Route
+              path="/time-tracking"
+              element={
+                <FeatureGuard featureId="tasks">
+                  <TimeTrackingPage />
+                </FeatureGuard>
+              }
+            />
+
+            {/* ========== FINANCE ROUTES ========== */}
+            <Route
+              path="/invoice"
               element={
                 <FeatureGuard featureId="invoices">
-                  <InvoiceList />
+                  <InvoicePage />
                 </FeatureGuard>
               }
             />
             <Route
-              path="/invoice/create"
+              path="/expenses"
               element={
                 <FeatureGuard featureId="invoices">
-                  <CreateInvoice />
+                  <ExpensesPage />
                 </FeatureGuard>
               }
             />
-            {/* ✅ NEW: Employee Management Routes */}
+
+            {/* ========== QUOTES ROUTE ========== */}
             <Route
-              path="/employees"
+              path="/quotes"
               element={
-                <FeatureGuard featureId="api">
-                  <AllEmployeesPage />
+                <FeatureGuard featureId="invoices">
+                  <QuotesPage />
                 </FeatureGuard>
               }
             />
+
+            {/* ========== NOTIFICATIONS ROUTE ========== */}
             <Route
-              path="/employees/all"
+              path="/notifications"
               element={
-                <FeatureGuard featureId="api">
-                  <AllEmployeesPage />
+                <FeatureGuard featureId="email">
+                  <NotificationsPage />
                 </FeatureGuard>
               }
             />
+
+            {/* ========== SUPPORT ROUTES ========== */}
             <Route
-              path="/employees/departments"
+              path="/support/tickets"
               element={
-                <FeatureGuard featureId="api">
-                  <DepartmentsPage />
-                </FeatureGuard>
-              }
-            />
-            <Route
-              path="/employees/attendance"
-              element={
-                <FeatureGuard featureId="api">
-                  <AttendancePage />
+                <FeatureGuard featureId="email">
+                  <SupportPage />
                 </FeatureGuard>
               }
             />
             <Route
-              path="/employees/leave-requests"
+              path="/support/knowledge-base"
               element={
-                <FeatureGuard featureId="api">
-                  <LeaveRequestsPage />
+                <FeatureGuard featureId="email">
+                  <SupportPage />
                 </FeatureGuard>
               }
             />
-          </Route>
+            <Route
+              path="/support/faq"
+              element={
+                <FeatureGuard featureId="email">
+                  <SupportPage />
+                </FeatureGuard>
+              }
+            />
 
-          {/* ========== BUSINESS ROUTES ========== */}
-          <Route path="/services" element={<ServicesPage />} />
-          <Route
-            path="/bookings"
-            element={
-              <FeatureGuard featureId="calendar">
-                <BookingsPage />
-              </FeatureGuard>
-            }
-          />
-          <Route
-            path="/booking-pages"
-            element={
-              <FeatureGuard featureId="calendar">
-                <BookingPagesPage />
-              </FeatureGuard>
-            }
-          />
-          <Route
-            path="/ecommerce"
-            element={
-              <FeatureGuard featureId="api">
-                <EcommercePage />
-              </FeatureGuard>
-            }
-          />
+            {/* ========== DOCUMENTS ROUTE ========== */}
+            <Route
+              path="/documents"
+              element={
+                <FeatureGuard featureId="email">
+                  <DocumentsPage />
+                </FeatureGuard>
+              }
+            />
 
-          {/* ========== TEAM / EMPLOYEE ROUTES ========== */}
-          {/* Legacy employee page */}
+            {/* Invoice routes using Layout wrapper */}
+            <Route element={<Layout />}>
+              <Route
+                path="/invoice/list"
+                element={
+                  <FeatureGuard featureId="invoices">
+                    <InvoiceList />
+                  </FeatureGuard>
+                }
+              />
+              <Route
+                path="/invoice/create"
+                element={
+                  <FeatureGuard featureId="invoices">
+                    <CreateInvoice />
+                  </FeatureGuard>
+                }
+              />
+              {/* ✅ NEW: Employee Management Routes */}
+              <Route
+                path="/employees"
+                element={
+                  <FeatureGuard featureId="api">
+                    <AllEmployeesPage />
+                  </FeatureGuard>
+                }
+              />
+              <Route
+                path="/employees/all"
+                element={
+                  <FeatureGuard featureId="api">
+                    <AllEmployeesPage />
+                  </FeatureGuard>
+                }
+              />
+              <Route
+                path="/employees/departments"
+                element={
+                  <FeatureGuard featureId="api">
+                    <DepartmentsPage />
+                  </FeatureGuard>
+                }
+              />
+              <Route
+                path="/employees/attendance"
+                element={
+                  <FeatureGuard featureId="api">
+                    <AttendancePage />
+                  </FeatureGuard>
+                }
+              />
+              <Route
+                path="/employees/leave-requests"
+                element={
+                  <FeatureGuard featureId="api">
+                    <LeaveRequestsPage />
+                  </FeatureGuard>
+                }
+              />
+            </Route>
+
+            {/* ========== BUSINESS ROUTES ========== */}
+            <Route path="/services" element={<ServicesPage />} />
+            <Route
+              path="/bookings"
+              element={
+                <FeatureGuard featureId="calendar">
+                  <BookingsPage />
+                </FeatureGuard>
+              }
+            />
+            <Route
+              path="/booking-pages"
+              element={
+                <FeatureGuard featureId="calendar">
+                  <BookingPagesPage />
+                </FeatureGuard>
+              }
+            />
+            <Route
+              path="/ecommerce"
+              element={
+                <FeatureGuard featureId="api">
+                  <EcommercePage />
+                </FeatureGuard>
+              }
+            />
+
+            {/* ========== TEAM / EMPLOYEE ROUTES ========== */}
+            {/* Legacy employee page */}
 
 
 
 
-          {/* Other Team Routes */}
-          <Route
-            path="/users"
-            element={
-              <FeatureGuard featureId="api">
-                <UsersPage />
-              </FeatureGuard>
-            }
-          />
-          <Route
-            path="/applications"
-            element={
-              <FeatureGuard featureId="leads">
-                <Applications />
-              </FeatureGuard>
-            }
-          />
+            {/* Other Team Routes */}
+            <Route
+              path="/users"
+              element={
+                <FeatureGuard featureId="api">
+                  <UsersPage />
+                </FeatureGuard>
+              }
+            />
+            <Route
+              path="/applications"
+              element={
+                <FeatureGuard featureId="leads">
+                  <Applications />
+                </FeatureGuard>
+              }
+            />
 
-          {/* ========== COMMUNICATION ROUTES ========== */}
-          <Route
-            path="/letterbox"
-            element={
-              <FeatureGuard featureId="email">
-                <LetterBoxPage />
-              </FeatureGuard>
-            }
-          />
-          <Route
-            path="/filemanager"
-            element={
-              <FeatureGuard featureId="documents">
-                <FileManagerPage />
-              </FeatureGuard>
-            }
-          />
-          <Route
-            path="/calendar"
-            element={
-              <FeatureGuard featureId="calendar">
-                <CalendarPage />
-              </FeatureGuard>
-            }
-          />
+            {/* ========== COMMUNICATION ROUTES ========== */}
+            <Route
+              path="/letterbox"
+              element={
+                <FeatureGuard featureId="email">
+                  <LetterBoxPage />
+                </FeatureGuard>
+              }
+            />
+            <Route
+              path="/filemanager"
+              element={
+                <FeatureGuard featureId="documents">
+                  <FileManagerPage />
+                </FeatureGuard>
+              }
+            />
+            <Route
+              path="/calendar"
+              element={
+                <FeatureGuard featureId="calendar">
+                  <CalendarPage />
+                </FeatureGuard>
+              }
+            />
 
-          {/* ✅ Chat Route */}
-          <Route
-            path="/chats"
-            element={
-              <FeatureGuard featureId="email">
-                <ChatPage />
-              </FeatureGuard>
-            }
-          />
+            {/* ✅ Chat Route */}
+            <Route
+              path="/chats"
+              element={
+                <FeatureGuard featureId="email">
+                  <ChatPage />
+                </FeatureGuard>
+              }
+            />
 
-          {/* ========== SETTINGS ROUTES ========== */}
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/settings/general" element={<SettingsPage />} />
-          <Route path="/settings/company" element={<SettingsPage />} />
-          <Route path="/settings/billing" element={<SettingsPage />} />
-          <Route path="/settings/email" element={<SettingsPage />} />
-          <Route path="/settings/security" element={<SettingsPage />} />
-          <Route path="/onboarding" element={<Onboarding />} />
+            {/* ========== SETTINGS ROUTES ========== */}
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/settings/general" element={<SettingsPage />} />
+            <Route path="/settings/company" element={<SettingsPage />} />
+            <Route path="/settings/billing" element={<SettingsPage />} />
+            <Route path="/settings/email" element={<SettingsPage />} />
+            <Route path="/settings/security" element={<SettingsPage />} />
+            <Route path="/onboarding" element={<Onboarding />} />
 
-          {/* ========== AI MODULES ========== */}
-          <Route path="/roof-estimator" element={<RoofEstimator />} />
+            {/* ========== AI MODULES ========== */}
+            <Route path="/roof-estimator" element={<RoofEstimator />} />
 
-          {/* ========== HELP CENTER ========== */}
-          <Route path="/help" element={<HelpCenterPage />} />
+            {/* ========== HELP CENTER ========== */}
+            <Route path="/help" element={<HelpCenterPage />} />
 
-          {/* ========== INTEGRATIONS ========== */}
-          <Route path="/integrations" element={<IntegrationsPage />} />
+            {/* ========== INTEGRATIONS ========== */}
+            <Route path="/integrations" element={<IntegrationsPage />} />
 
-          {/* ========== ANALYTICS ========== */}
-          <Route path="/analytics" element={<AnalyticsPage />} />
+            {/* ========== ANALYTICS ========== */}
+            <Route path="/analytics" element={<AnalyticsPage />} />
 
-          {/* ========== REPORTS ========== */}
-          <Route path="/reports/sales" element={<ReportsPage />} />
-          <Route path="/reports/revenue" element={<ReportsPage />} />
-          <Route path="/reports/expenses" element={<ReportsPage />} />
-          <Route path="/reports/custom" element={<ReportsPage />} />
+            {/* ========== REPORTS ========== */}
+            <Route path="/reports/sales" element={<ReportsPage />} />
+            <Route path="/reports/revenue" element={<ReportsPage />} />
+            <Route path="/reports/expenses" element={<ReportsPage />} />
+            <Route path="/reports/custom" element={<ReportsPage />} />
 
-          {/* ========== ROLES ========== */}
-          <Route path="/roles" element={<RolesPage />} />
+            {/* ========== ROLES ========== */}
+            <Route path="/roles" element={<RolesPage />} />
 
-          {/* ========== 404 CATCH-ALL ========== */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-        <GlobalAiFloatingButton />
+            {/* ========== 404 CATCH-ALL ========== */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+          <GlobalAiFloatingButton />
+        </CopilotContextProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

@@ -1,6 +1,5 @@
 export { tasksController } from './tasks.controller';
 export { tasksService } from './tasks.service';
-export { tasksManager } from './tasks.manager';
 export { tasksRepository } from './tasks.repository';
 export * from './tasks.dto';
 export * from './tasks.validators';

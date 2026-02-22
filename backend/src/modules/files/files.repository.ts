@@ -45,7 +45,11 @@ export class FilesRepository {
         return { data, total };
     }
 
-    async update(id: string, data: UpdateFileDto) {
+    async update(id: string, tenantId: string, data: UpdateFileDto) {
+        // Verify tenant ownership
+        const existing = await prisma.file.findFirst({ where: { id, tenantId, deletedAt: null } });
+        if (!existing) throw new Error('File not found or access denied');
+
         const updateData: Prisma.FileUpdateInput = {};
         if (data.name !== undefined) updateData.name = data.name;
         if (data.folderId !== undefined) {
@@ -54,7 +58,10 @@ export class FilesRepository {
         return prisma.file.update({ where: { id }, data: updateData, include: fileInclude });
     }
 
-    async delete(id: string) {
+    async delete(id: string, tenantId: string) {
+        // Tenant-scoped soft delete
+        const existing = await prisma.file.findFirst({ where: { id, tenantId, deletedAt: null } });
+        if (!existing) throw new Error('File not found or access denied');
         return prisma.file.update({ where: { id }, data: { deletedAt: new Date() } });
     }
 }

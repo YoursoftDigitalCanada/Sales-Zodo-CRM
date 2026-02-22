@@ -1,5 +1,9 @@
 import { Application, Router } from 'express';
 import { config } from '../config';
+import { authenticate, loadEmployee } from '../common/middleware/auth.middleware';
+import { tenantContext } from '../common/middleware/tenant.middleware';
+import { moduleGuard } from '../common/middleware/module.middleware';
+import { stripTenantFromBody } from '../common/middleware/sanitize-body.middleware';
 
 // Core module routes
 import authRoutes from '../modules/auth/auth.routes';
@@ -52,76 +56,107 @@ import ecommerceRoutes from '../modules/ecommerce/ecommerce.routes';
 
 // AI modules
 import roofEstimatorRoutes from '../modules/roof-estimator/roof-estimator.routes';
+import copilotRoutes from '../modules/copilot/copilot.routes';
+
+// Timeline module
+import timelineRoutes from '../modules/timeline/timeline.routes';
 
 /**
  * Register all API routes
+ *
+ * Route flow for protected endpoints:
+ *   Request → Auth (JWT) → TenantContext → Module Controllers
+ *
+ * Auth/onboarding routes are exempt from tenant context.
  */
 export function registerRoutes(app: Application): void {
   const apiRouter = Router();
   const apiPrefix = `/api/${config.app.apiVersion}`;
 
+  // ── Global safety net: strip tenantId from ALL request bodies ──────
+  apiRouter.use(stripTenantFromBody);
+
   // =========================================================================
-  // PUBLIC ROUTES (No authentication required)
+  // PUBLIC ROUTES (No authentication or tenant context required)
   // =========================================================================
 
   apiRouter.use('/auth', authRoutes);
 
   // =========================================================================
-  // PROTECTED ROUTES (Authentication required)
+  // PROTECTED ROUTES
+  // =========================================================================
+  // Global middleware chain for ALL protected CRM modules:
+  //   1. authenticate  → verifies JWT, attaches req.user (userId, tenantId, role)
+  //   2. tenantContext  → validates tenantId, loads tenant from DB, blocks if missing
+  //
+  // Individual module routes still apply their own loadEmployee + permission
+  // checks internally, so RBAC is not affected.
   // =========================================================================
 
+  const protectedRouter = Router();
+  protectedRouter.use(authenticate);
+  protectedRouter.use(tenantContext);
+  protectedRouter.use(moduleGuard);
+
   // CRM - Leads
-  apiRouter.use('/leads', leadsRoutes);
-  apiRouter.use('/lead-sources', leadSourcesRoutes);
+  protectedRouter.use('/leads', leadsRoutes);
+  protectedRouter.use('/lead-sources', leadSourcesRoutes);
 
   // CRM - Clients & Contacts
-  apiRouter.use('/clients', clientsRoutes);
-  apiRouter.use('/contacts', contactsRoutes);
-  apiRouter.use('/groups', groupsRoutes);
+  protectedRouter.use('/clients', clientsRoutes);
+  protectedRouter.use('/contacts', contactsRoutes);
+  protectedRouter.use('/groups', groupsRoutes);
 
   // User & Employee Management
-  apiRouter.use('/users', usersRoutes);
-  apiRouter.use('/employees', employeesRoutes);
-  apiRouter.use('/roles', rolesRoutes);
-  apiRouter.use('/tenants', tenantsRoutes);
+  protectedRouter.use('/users', usersRoutes);
+  protectedRouter.use('/employees', employeesRoutes);
+  protectedRouter.use('/roles', rolesRoutes);
+  protectedRouter.use('/tenants', tenantsRoutes);
 
   // Projects & Tasks
-  apiRouter.use('/projects', projectsRoutes);
-  apiRouter.use('/tasks', tasksRoutes);
-  apiRouter.use('/calendar', calendarRoutes);
+  protectedRouter.use('/projects', projectsRoutes);
+  protectedRouter.use('/tasks', tasksRoutes);
+  protectedRouter.use('/calendar', calendarRoutes);
 
   // Finance
-  apiRouter.use('/invoices', invoicesRoutes);
-  apiRouter.use('/expenses', expensesRoutes);
-  apiRouter.use('/bookings', bookingsRoutes);
+  protectedRouter.use('/invoices', invoicesRoutes);
+  protectedRouter.use('/expenses', expensesRoutes);
+  protectedRouter.use('/bookings', bookingsRoutes);
 
   // File Management
-  apiRouter.use('/files', filesRoutes);
-  apiRouter.use('/folders', foldersRoutes);
+  protectedRouter.use('/files', filesRoutes);
+  protectedRouter.use('/folders', foldersRoutes);
 
   // Communication
-  apiRouter.use('/emails', emailsRoutes);
-  apiRouter.use('/chat', chatRoutes);
+  protectedRouter.use('/emails', emailsRoutes);
+  protectedRouter.use('/chat', chatRoutes);
 
   // System
-  apiRouter.use('/settings', settingsRoutes);
-  apiRouter.use('/analytics', analyticsRoutes);
+  protectedRouter.use('/settings', settingsRoutes);
+  protectedRouter.use('/analytics', analyticsRoutes);
 
   // Tags & Notifications (shared)
-  apiRouter.use('/tags', tagsRoutes);
-  apiRouter.use('/notifications', notificationsRoutes);
+  protectedRouter.use('/tags', tagsRoutes);
+  protectedRouter.use('/notifications', notificationsRoutes);
 
   // Applications
-  apiRouter.use('/applications', applicationsRoutes);
+  protectedRouter.use('/applications', applicationsRoutes);
 
   // Permissions
-  apiRouter.use('/permissions', permissionsRoutes);
+  protectedRouter.use('/permissions', permissionsRoutes);
 
   // E-commerce
-  apiRouter.use('/ecommerce', ecommerceRoutes);
+  protectedRouter.use('/ecommerce', ecommerceRoutes);
 
   // AI Modules
-  apiRouter.use('/roof-estimator', roofEstimatorRoutes);
+  protectedRouter.use('/roof-estimator', roofEstimatorRoutes);
+  protectedRouter.use('/copilot', copilotRoutes);
+
+  // Timeline
+  protectedRouter.use('/timeline', timelineRoutes);
+
+  // Mount protected router on the main API router
+  apiRouter.use(protectedRouter);
 
   // =========================================================================
   // REGISTER API ROUTER
@@ -182,6 +217,7 @@ export function registerRoutes(app: Application): void {
         ecommerce: `${apiPrefix}/ecommerce`,
         // AI Modules
         roofEstimator: `${apiPrefix}/roof-estimator`,
+        copilot: `${apiPrefix}/copilot`,
       },
     });
   });

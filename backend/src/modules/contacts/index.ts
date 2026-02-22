@@ -1,6 +1,5 @@
 export { contactsController } from './contacts.controller';
 export { contactsService } from './contacts.service';
-export { contactsManager } from './contacts.manager';
 export { contactsRepository } from './contacts.repository';
 export * from './contacts.dto';
 export * from './contacts.validators';

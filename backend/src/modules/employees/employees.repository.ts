@@ -49,7 +49,11 @@ export class EmployeesRepository {
         return { data, total };
     }
 
-    async update(id: string, data: UpdateEmployeeDto) {
+    async update(id: string, tenantId: string, data: UpdateEmployeeDto) {
+        // Verify tenant ownership
+        const existing = await prisma.employee.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Employee not found or access denied');
+
         return prisma.employee.update({
             where: { id },
             data: {
@@ -64,7 +68,10 @@ export class EmployeesRepository {
         });
     }
 
-    async delete(id: string) {
+    async delete(id: string, tenantId: string) {
+        // Tenant-scoped delete
+        const existing = await prisma.employee.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Employee not found or access denied');
         return prisma.employee.delete({ where: { id } });
     }
 }

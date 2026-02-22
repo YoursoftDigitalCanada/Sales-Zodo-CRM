@@ -72,6 +72,10 @@ export class RoofEstimatorRepository {
     }
 
     async update(id: string, tenantId: string, data: UpdateEstimateDto) {
+        // Verify tenant ownership
+        const existing = await prisma.roofEstimate.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Estimate not found or access denied');
+
         return prisma.roofEstimate.update({
             where: { id },
             data: {
@@ -87,6 +91,9 @@ export class RoofEstimatorRepository {
     }
 
     async delete(id: string, tenantId: string) {
+        // Tenant-scoped delete
+        const existing = await prisma.roofEstimate.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Estimate not found or access denied');
         return prisma.roofEstimate.delete({ where: { id } });
     }
 

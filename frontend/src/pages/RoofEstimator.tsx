@@ -1,7 +1,18 @@
 // src/pages/RoofEstimator.tsx
 
 import React, { useState, useEffect } from "react";
-import axios from "@/lib/axios";
+import {
+    getEstimates as fetchEstimatesApi,
+    getEstimateSettings,
+    getEstimateStatistics,
+    checkAiHealth as checkAiHealthApi,
+    fetchSatelliteImage,
+    detectRoof as detectRoofApi,
+    saveEstimate as saveEstimateApi,
+    deleteEstimate as deleteEstimateApi,
+    updateEstimateSettings,
+} from "@/features/roof-estimator/services/roof-estimator-service";
+import { getClients } from "@/features/clients/services/clients-service";
 import { Sidebar } from "@/components/Sidebar";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -237,16 +248,16 @@ const RoofEstimator: React.FC = () => {
     // ---- API ----
     const fetchEstimates = async () => {
         try {
-            const res = await axios.get("/roof-estimator?limit=50&sortBy=createdAt&sortOrder=desc");
-            setEstimates(res.data?.data || []);
+            const data = await fetchEstimatesApi();
+            setEstimates(data);
         } catch { /* ignore */ }
     };
 
     const fetchClients = async () => {
         try {
-            const res = await axios.get("/clients?limit=200");
+            const data = await getClients();
             setClients(
-                (res.data?.data || []).map((c: any) => ({
+                (data || []).map((c: any) => ({
                     id: c.id,
                     clientName: c.clientName,
                     companyName: c.companyName,
@@ -257,22 +268,22 @@ const RoofEstimator: React.FC = () => {
 
     const fetchSettings = async () => {
         try {
-            const res = await axios.get("/roof-estimator/settings");
-            setSettings(res.data?.data);
+            const data = await getEstimateSettings();
+            setSettings(data);
         } catch { /* ignore */ }
     };
 
     const fetchStatistics = async () => {
         try {
-            const res = await axios.get("/roof-estimator/statistics");
-            setStatistics(res.data?.data);
+            const data = await getEstimateStatistics();
+            setStatistics(data);
         } catch { /* ignore */ }
     };
 
     const checkAiHealth = async () => {
         try {
-            const res = await axios.get("/roof-estimator/ai-health");
-            setAiHealthy(res.data?.data?.healthy || false);
+            const healthy = await checkAiHealthApi();
+            setAiHealthy(healthy);
         } catch {
             setAiHealthy(false);
         }
@@ -288,9 +299,9 @@ const RoofEstimator: React.FC = () => {
         setSatellite(null);
         setDetection(null);
         try {
-            const res = await axios.post("/roof-estimator/satellite", { address: address.trim() });
-            setSatellite(res.data?.data);
-            toast({ title: "Satellite image loaded", description: res.data?.data?.formattedAddress });
+            const data = await fetchSatelliteImage(address.trim());
+            setSatellite(data);
+            toast({ title: "Satellite image loaded", description: data?.formattedAddress });
         } catch (err: any) {
             toast({ title: "Failed to load satellite", description: err.response?.data?.message || err.message, variant: "destructive" });
         } finally {
@@ -303,13 +314,13 @@ const RoofEstimator: React.FC = () => {
         setLoadingDetection(true);
         setDetection(null);
         try {
-            const res = await axios.post("/roof-estimator/detect", {
+            const data = await detectRoofApi({
                 satelliteImageUrl: satellite.satelliteImageUrl,
                 latitude: satellite.latitude,
                 longitude: satellite.longitude,
             });
-            setDetection(res.data?.data);
-            toast({ title: "Roof detected!", description: `${res.data?.data?.roofAreaSqft} sq ft at ${res.data?.data?.confidence}% confidence` });
+            setDetection(data);
+            toast({ title: "Roof detected!", description: `${data?.roofAreaSqft} sq ft at ${data?.confidence}% confidence` });
         } catch (err: any) {
             toast({ title: "Detection failed", description: err.response?.data?.message || err.message, variant: "destructive" });
         } finally {
@@ -321,7 +332,7 @@ const RoofEstimator: React.FC = () => {
         if (!satellite || !detection) return;
         setSavingEstimate(true);
         try {
-            await axios.post("/roof-estimator", {
+            await saveEstimateApi({
                 address: satellite.formattedAddress,
                 latitude: satellite.latitude,
                 longitude: satellite.longitude,
@@ -351,7 +362,7 @@ const RoofEstimator: React.FC = () => {
 
     const handleDeleteEstimate = async (id: string) => {
         try {
-            await axios.delete(`/roof-estimator/${id}`);
+            await deleteEstimateApi(id);
             toast({ title: "Estimate deleted" });
             fetchEstimates();
             fetchStatistics();
@@ -832,7 +843,7 @@ const RoofEstimator: React.FC = () => {
                                     settings={settings}
                                     onSave={async (data) => {
                                         try {
-                                            await axios.put("/roof-estimator/settings", data);
+                                            await updateEstimateSettings(data);
                                             toast({ title: "Settings saved" });
                                             fetchSettings();
                                         } catch {

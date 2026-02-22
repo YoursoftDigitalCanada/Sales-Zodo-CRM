@@ -56,7 +56,8 @@ import {
 } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
-import api from "@/lib/axios";
+import { getCalendarEvents, createCalendarEvent, updateCalendarEvent, deleteCalendarEvent } from "@/features/calendar";
+import { getEmployees } from "@/features/users";
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -1246,9 +1247,8 @@ const EventFormDialog = ({
   // Fetch employees when dialog opens
   useEffect(() => {
     if (isOpen) {
-      api.get("/employees", { params: { limit: 200 } })
-        .then((res) => {
-          const employees = res.data?.data || [];
+      getEmployees({ limit: 200 })
+        .then((employees: any[]) => {
           setTeamMembers(
             employees.map((emp: any) => ({
               id: emp.id,
@@ -1946,8 +1946,7 @@ const CalendarPage = () => {
   const fetchCalendarEvents = async () => {
     try {
       setIsLoading(true);
-      const res = await api.get('/calendar', { params: { limit: 200 } });
-      const data = res.data?.data || [];
+      const data = await getCalendarEvents({ limit: 200 }) as any[];
       const calendarEvents: CalendarEvent[] = data.map(mapApiEvent);
       setEvents(calendarEvents);
     } catch (error) {
@@ -2039,8 +2038,7 @@ const CalendarPage = () => {
         notes: data.notes || null,
         attendeeIds: data.attendees?.map((a) => a.id) || [],
       };
-      const res = await api.post('/calendar', payload);
-      const created = res.data?.data;
+      const created = await createCalendarEvent(payload) as any;
       if (created) setEvents((prev) => [...prev, mapApiEvent(created)]);
       toast({ title: "Event Created", description: `${data.title} has been added to your calendar.` });
     } catch (error: any) {
@@ -2068,8 +2066,7 @@ const CalendarPage = () => {
       if (data.type) payload.eventType = (data.type === 'meeting' ? 'MEETING' : data.type === 'task' ? 'TASK' : data.type === 'reminder' ? 'REMINDER' : data.type === 'holiday' ? 'HOLIDAY' : data.type === 'personal' ? 'PERSONAL' : 'EVENT');
       if (data.attendees) payload.attendeeIds = data.attendees.map((a) => a.id);
 
-      const res = await api.put(`/calendar/${currentEvent.id}`, payload);
-      const updated = res.data?.data;
+      const updated = await updateCalendarEvent(currentEvent.id, payload) as any;
       if (updated) setEvents((prev) => prev.map((e) => (e.id === currentEvent.id ? mapApiEvent(updated) : e)));
       toast({ title: "Event Updated", description: "The event has been updated successfully." });
     } catch (error: any) {
@@ -2081,7 +2078,7 @@ const CalendarPage = () => {
   const handleDeleteEvent = async () => {
     if (!currentEvent) return;
     try {
-      await api.delete(`/calendar/${currentEvent.id}`);
+      await deleteCalendarEvent(currentEvent.id);
       setEvents((prev) => prev.filter((e) => e.id !== currentEvent.id));
       setIsDeleteAlertOpen(false);
       setIsDetailsOpen(false);

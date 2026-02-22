@@ -61,7 +61,11 @@ export class ProductsRepository {
         return { data, total };
     }
 
-    async update(id: string, data: UpdateProductDto) {
+    async update(id: string, tenantId: string, data: UpdateProductDto) {
+        // Verify tenant ownership
+        const existing = await prisma.product.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Product not found or access denied');
+
         const updateData: any = {};
         if (data.name !== undefined) updateData.name = data.name;
         if (data.description !== undefined) updateData.description = data.description;
@@ -85,7 +89,10 @@ export class ProductsRepository {
         return prisma.product.update({ where: { id }, data: updateData, include: productInclude });
     }
 
-    async delete(id: string) {
+    async delete(id: string, tenantId: string) {
+        // Tenant-scoped delete
+        const existing = await prisma.product.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Product not found or access denied');
         return prisma.product.delete({ where: { id } });
     }
 }

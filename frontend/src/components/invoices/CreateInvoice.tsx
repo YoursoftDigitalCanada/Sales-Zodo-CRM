@@ -99,7 +99,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import api from "@/lib/axios";
+import { createInvoice } from "@/services/invoiceService";
 
 // ============================================
 // TYPES
@@ -296,7 +296,7 @@ const calculateDueDate = (invoiceDate: string, days: number) => {
 
 const numberToWords = (num: number): string => {
   if (num === 0) return "Zero Dollars";
-  
+
   const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
   const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
   const scales = ["", "Thousand", "Million", "Billion"];
@@ -310,7 +310,7 @@ const numberToWords = (num: number): string => {
 
   const dollars = Math.floor(num);
   const cents = Math.round((num - dollars) * 100);
-  
+
   let result = "";
   let scaleIndex = 0;
   let remaining = dollars;
@@ -607,7 +607,7 @@ const LineItemRow = ({
   const quantity = watch(`items.${index}.quantity`) || 0;
   const rate = watch(`items.${index}.rate`) || 0;
   const amount = quantity * rate;
-  
+
   // Calculate taxes based on province
   const gst = taxRates.hst > 0 ? 0 : (amount * taxRates.gst) / 100;
   const pst = (amount * taxRates.pst) / 100;
@@ -687,8 +687,8 @@ const LineItemRow = ({
       {/* Tax */}
       <td className="py-3 px-2 w-28 text-right">
         <span className="text-sm text-[#94A3B8]">
-          {taxRates.hst > 0 
-            ? formatCurrency(hst) 
+          {taxRates.hst > 0
+            ? formatCurrency(hst)
             : formatCurrency(gst + pst)
           }
         </span>
@@ -1136,11 +1136,11 @@ const CreateInvoicePage = () => {
     const subtotal = items?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
     const discountAmount = discountType === "percentage" ? (subtotal * discount) / 100 : discount;
     const taxableAmount = subtotal - discountAmount;
-    
+
     const gst = taxRates.hst > 0 ? 0 : (taxableAmount * taxRates.gst) / 100;
     const pst = (taxableAmount * taxRates.pst) / 100;
     const hst = (taxableAmount * taxRates.hst) / 100;
-    
+
     const total = taxableAmount + gst + pst + hst;
 
     return { subtotal, gst, pst, hst, discount: discountAmount, total };
@@ -1179,7 +1179,10 @@ const CreateInvoicePage = () => {
   }, [paymentTerms, invoiceDate, setValue]);
 
   // Handlers
+  const selectedClientIdRef = React.useRef<string | null>(null);
+
   const handleSelectClient = (client: Client) => {
+    selectedClientIdRef.current = String(client.id);
     setValue("billedTo.businessName", client.businessName);
     setValue("billedTo.email", client.email);
     setValue("billedTo.phone", client.phone);
@@ -1196,34 +1199,45 @@ const CreateInvoicePage = () => {
     try {
       const apiPayload = {
         invoiceNumber: data.invoiceNumber,
-        invoiceDate: data.invoiceDate,
-        dueDate: data.dueDate,
-        clientId: 1,
-        clientName: data.billedTo.businessName,
-        clientEmail: data.billedTo.email,
+        invoiceDate: new Date(data.invoiceDate).toISOString(),
+        dueDate: new Date(data.dueDate).toISOString(),
         currency: data.currency,
-        subtotal: totals.subtotal,
-        gst: totals.gst,
-        pst: totals.pst,
-        hst: totals.hst,
-        discount: totals.discount,
-        total: totals.total,
-        notes: data.notes,
-        terms: data.terms,
+        // Business (Billed By)
+        businessName: data.billedBy.businessName,
+        businessEmail: data.billedBy.email || null,
+        businessPhone: data.billedBy.phone || null,
+        businessAddress: {
+          address: data.billedBy.address || null,
+          city: data.billedBy.city || null,
+          province: data.billedBy.province || null,
+          postalCode: data.billedBy.postalCode || null,
+        },
+        businessGstHstNumber: data.billedBy.gstNumber || null,
+        // Client (Billed To)
+        clientId: selectedClientIdRef.current || null,
+        clientBusinessName: data.billedTo.businessName || null,
+        clientEmail: data.billedTo.email || null,
+        clientPhone: data.billedTo.phone || null,
+        clientAddress: {
+          address: data.billedTo.address || null,
+          city: data.billedTo.city || null,
+          province: data.billedTo.province || null,
+          postalCode: data.billedTo.postalCode || null,
+        },
+        clientGstHstNumber: data.billedTo.gstNumber || null,
+        // Items
         items: data.items.map((item) => ({
-          name: item.name,
-          description: item.description,
+          itemName: item.name,
+          description: item.description || null,
           quantity: item.quantity,
           rate: item.rate,
-          amount: item.amount,
-          gst: item.gst,
-          pst: item.pst,
-          hst: item.hst,
-          total: item.total,
+          taxApplied: (item.gst || 0) > 0 || (item.pst || 0) > 0 || (item.hst || 0) > 0,
+          lineTotal: item.total || item.quantity * item.rate,
         })),
+        notes: data.notes || null,
       };
 
-      await api.post("/invoices", apiPayload);
+      await createInvoice(apiPayload);
 
       toast({
         title: "Invoice Created!",
@@ -1463,7 +1477,7 @@ const CreateInvoicePage = () => {
                         <Controller
                           name="currency"
                           control={control}
-                                                    render={({ field }) => (
+                          render={({ field }) => (
                             <Select value={field.value} onValueChange={field.onChange}>
                               <SelectTrigger className="h-10 rounded-md border-[rgba(15,23,42,0.06)] text-sm">
                                 <SelectValue />

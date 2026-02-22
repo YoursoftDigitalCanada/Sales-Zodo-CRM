@@ -59,6 +59,12 @@ router.get('/ai-context',
     analyticsController.getAIContext.bind(analyticsController),
 );
 
+// ── SMB Insights — Lifecycle, retention, CLV ────────────────────────────
+router.get('/smb-insights',
+    requirePermission(PERMISSIONS.ANALYTICS_VIEW),
+    analyticsController.getSMBInsights.bind(analyticsController),
+);
+
 // ── AI Business Overview — Human-readable AI summary for dashboards ─────
 router.get('/business-overview',
     requirePermission(PERMISSIONS.ANALYTICS_VIEW),

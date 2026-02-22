@@ -51,7 +51,11 @@ export class ContactsRepository {
         return { data, total };
     }
 
-    async update(id: string, data: UpdateContactDto) {
+    async update(id: string, tenantId: string, data: UpdateContactDto) {
+        // Verify tenant ownership
+        const existing = await prisma.contact.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Contact not found or access denied');
+
         return prisma.contact.update({
             where: { id },
             data: {
@@ -70,7 +74,10 @@ export class ContactsRepository {
         });
     }
 
-    async delete(id: string) {
+    async delete(id: string, tenantId: string) {
+        // Tenant-scoped delete
+        const existing = await prisma.contact.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Contact not found or access denied');
         return prisma.contact.delete({ where: { id } });
     }
 }

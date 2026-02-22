@@ -2,11 +2,21 @@ import { foldersRepository } from './folders.repository';
 import { CreateFolderDto, UpdateFolderDto, FolderQueryDto, toFolderResponseDto } from './folders.dto';
 import { NotFoundError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
+import { activityLogger } from '../../common/services/activity-logger.service';
 
 export class FoldersService {
     async create(tenantId: string, data: CreateFolderDto) {
         const folder = await foldersRepository.create(tenantId, data);
-        return toFolderResponseDto(folder);
+        const dto = toFolderResponseDto(folder);
+
+        activityLogger.log({
+            tenantId, entityType: 'Folder', entityId: dto.id,
+            action: 'CREATE', module: 'folders',
+            description: `Created folder "${(folder as any).name || dto.id}"`,
+            metadata: { folderName: (folder as any).name },
+        });
+
+        return dto;
     }
 
     async getById(id: string, tenantId: string) {
@@ -27,14 +37,30 @@ export class FoldersService {
     async update(id: string, tenantId: string, data: UpdateFolderDto) {
         const existing = await foldersRepository.findById(id, tenantId);
         if (!existing) throw new NotFoundError('Folder not found', ErrorCodes.RESOURCE_NOT_FOUND);
-        const folder = await foldersRepository.update(id, data);
-        return toFolderResponseDto(folder);
+        const folder = await foldersRepository.update(id, tenantId, data);
+        const dto = toFolderResponseDto(folder);
+
+        activityLogger.log({
+            tenantId, entityType: 'Folder', entityId: dto.id,
+            action: 'UPDATE', module: 'folders',
+            description: `Updated folder "${(folder as any).name || dto.id}"`,
+            metadata: { updatedFields: Object.keys(data) },
+        });
+
+        return dto;
     }
 
     async delete(id: string, tenantId: string) {
         const existing = await foldersRepository.findById(id, tenantId);
         if (!existing) throw new NotFoundError('Folder not found', ErrorCodes.RESOURCE_NOT_FOUND);
-        await foldersRepository.delete(id);
+
+        activityLogger.log({
+            tenantId, entityType: 'Folder', entityId: id,
+            action: 'DELETE', module: 'folders',
+            description: `Deleted folder "${(existing as any).name || id}"`,
+        });
+
+        await foldersRepository.delete(id, tenantId);
     }
 }
 

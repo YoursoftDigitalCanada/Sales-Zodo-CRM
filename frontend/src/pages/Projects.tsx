@@ -96,7 +96,7 @@ import {
   Flag,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getProjects, deleteProjectById } from "@/features/projects";
+import { getProjects, deleteProjectById, createProject } from "@/features/projects";
 
 // ============================================
 // CONFIGURATION
@@ -858,9 +858,9 @@ const ProjectsPage = () => {
         priority: p.priority ?? p.Priority ?? "Medium",
         category: p.category ?? p.Category,
         clientName: p.clientName ?? p.ClientName,
-        isFavorite: Math.random() > 0.7,
-        tasksCompleted: Math.floor(Math.random() * 20),
-        totalTasks: 20,
+        isFavorite: false,
+        tasksCompleted: p.tasksCompleted ?? 0,
+        totalTasks: p.totalTasks ?? 0,
       }));
       setProjects(mapped);
     } catch (err) {
@@ -902,7 +902,7 @@ const ProjectsPage = () => {
     if (selectedProjects.length === 0) return;
 
     try {
-      // In production, you'd make API calls here
+      await Promise.all(selectedProjects.map((id) => deleteProjectById(id)));
       setProjects((prev) => prev.filter((p) => !selectedProjects.includes(p.id)));
       toast({
         title: "Deleted",
@@ -1038,20 +1038,38 @@ const ProjectsPage = () => {
     );
   };
 
-  const handleDuplicate = (project: Project) => {
-    const newProject = {
-      ...project,
-      id: Date.now(),
-      name: `${project.name} (Copy)`,
-      progress: 0,
-      status: "Not Started",
-      isFavorite: false,
-    };
-    setProjects((prev) => [newProject, ...prev]);
-    toast({
-      title: "Duplicated",
-      description: `Project "${project.name}" has been duplicated.`,
-    });
+  const handleDuplicate = async (project: Project) => {
+    try {
+      const duplicateData = {
+        projectTitle: `${project.name} (Copy)`,
+        description: project.description || "",
+        status: "NOT_STARTED",
+        priority: project.priority?.toUpperCase() || "MEDIUM",
+        budget: project.budget || 0,
+        startDate: project.startDate ? new Date(project.startDate).toISOString() : null,
+        dueDate: project.dueDate ? new Date(project.dueDate).toISOString() : null,
+      };
+      const result = await createProject(duplicateData);
+      const newProject = {
+        ...project,
+        id: result.id || result.Id || Date.now(),
+        name: `${project.name} (Copy)`,
+        progress: 0,
+        status: "Not Started",
+        isFavorite: false,
+      };
+      setProjects((prev) => [newProject, ...prev]);
+      toast({
+        title: "Duplicated",
+        description: `Project "${project.name}" has been duplicated.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to duplicate project",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleExport = () => {

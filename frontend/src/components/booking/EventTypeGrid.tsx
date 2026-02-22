@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Share2 } from "lucide-react";
 import AvatarStack from "@/components/AvatarStack";
+import { getBookings } from "@/features/bookings/services/bookings-service";
 
 type EventType = {
   id: string | number;
@@ -13,17 +14,6 @@ type EventType = {
 
 const API_PREFIX = "/api/v1";
 
-const normalizeApiBase = (base: string): string =>
-  (base || "")
-    .replace(/\/+$/, "")
-    .replace(/\/api(?:\/v1)?$/i, "");
-
-const extractArray = (payload: any): any[] => {
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.data)) return payload.data;
-  return [];
-};
-
 export default function EventTypeGrid({ api }: { api: string }) {
   const [types, setTypes] = useState<EventType[]>([]);
   const [loading, setLoading] = useState(false);
@@ -31,12 +21,7 @@ export default function EventTypeGrid({ api }: { api: string }) {
   const load = async () => {
     setLoading(true);
     try {
-      const base = normalizeApiBase(api);
-      const res = await fetch(`${base}${API_PREFIX}/bookings`);
-      if (!res.ok) throw new Error(`Failed to load bookings: ${res.status}`);
-
-      const payload = await res.json();
-      const bookings = extractArray(payload);
+      const bookings = (await getBookings()) as any[];
       const eventTypeMap = new Map<string, EventType>();
 
       bookings.forEach((booking: any) => {
@@ -61,7 +46,7 @@ export default function EventTypeGrid({ api }: { api: string }) {
     } catch (e) { console.error(e); } finally { setLoading(false); }
   };
 
-  useEffect(()=>{ load(); }, []);
+  useEffect(() => { load(); }, []);
 
   return (
     <div>
@@ -88,7 +73,7 @@ export default function EventTypeGrid({ api }: { api: string }) {
 
             <div className="mt-4 flex items-center justify-between">
               <AvatarStack users={[]} />
-              <div className="text-sm text-muted-foreground"> {/* hosts or count */ } </div>
+              <div className="text-sm text-muted-foreground"> {/* hosts or count */} </div>
             </div>
           </div>
         ))}

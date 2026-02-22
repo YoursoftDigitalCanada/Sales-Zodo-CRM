@@ -1,6 +1,8 @@
 import { Request } from 'express';
 import { clientsService } from './clients.service';
 import { CreateClientDto, UpdateClientDto } from './clients.dto';
+import { auditService } from '../audit/audit.service';
+import { eventBus } from '../../common/events/event-bus';
 
 /**
  * Clients Manager
@@ -17,8 +19,21 @@ export class ClientsManager {
     ) {
         const client = await clientsService.create(tenantId, data);
 
-        // TODO: Add audit logging
-        // await auditService.log(req, 'CREATE', 'Client', client.id);
+        await auditService.logCreate(req, 'clients', 'Client', client.id, {
+            clientName: client.clientName,
+            clientType: client.clientType,
+            primaryEmail: client.primaryEmail,
+            status: client.status,
+        });
+
+        // Emit event for automation
+        eventBus.emit('client.created', {
+            tenantId,
+            clientId: client.id,
+            clientName: client.clientName,
+            clientType: client.clientType,
+            ownerUserId: req.user?.userId,
+        });
 
         return client;
     }
@@ -32,10 +47,10 @@ export class ClientsManager {
         tenantId: string,
         data: UpdateClientDto
     ) {
+        const existing = await clientsService.getById(id, tenantId);
         const client = await clientsService.update(id, tenantId, data);
 
-        // TODO: Add audit logging
-        // await auditService.log(req, 'UPDATE', 'Client', id);
+        await auditService.logUpdate(req, 'clients', 'Client', id, existing, client);
 
         return client;
     }
@@ -44,10 +59,12 @@ export class ClientsManager {
      * Delete client with audit logging
      */
     async deleteClient(req: Request, id: string, tenantId: string) {
+        const existing = await clientsService.getById(id, tenantId);
         await clientsService.delete(id, tenantId);
 
-        // TODO: Add audit logging
-        // await auditService.log(req, 'DELETE', 'Client', id);
+        await auditService.logDelete(req, 'clients', 'Client', id, {
+            clientName: (existing as any)?.clientName,
+        });
     }
 }
 

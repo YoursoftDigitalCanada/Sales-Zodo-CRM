@@ -272,6 +272,102 @@ export class AnalyticsRepository {
 
         return { total, pending, confirmed, cancelled, upcoming };
     }
+
+    // ── SMB Lifecycle & Retention ──────────────────────────────────────
+
+    /**
+     * Group clients by lifecycle stage for the given tenant.
+     * Uses raw SQL grouping to avoid stale Prisma type cache issues.
+     */
+    async getClientLifecycleBreakdown(tenantId: string) {
+        const results = await prisma.$queryRaw<
+            Array<{ lifecycleStage: string; count: bigint }>
+        >`
+            SELECT "lifecycleStage", COUNT(*)::bigint as count
+            FROM "Client"
+            WHERE "tenantId" = ${tenantId} AND "status" = 'ACTIVE'
+            GROUP BY "lifecycleStage"
+            ORDER BY count DESC
+        `;
+
+        const stages = results.map(r => ({
+            stage: r.lifecycleStage,
+            count: Number(r.count),
+        }));
+        const total = stages.reduce((sum, s) => sum + s.count, 0);
+
+        return {
+            total,
+            stages: stages.map(s => ({
+                ...s,
+                percentage: total > 0 ? Math.round((s.count / total) * 100) : 0,
+            })),
+        };
+    }
+
+    /**
+     * Repeat customer metrics — clients with 2+ PAID invoices.
+     */
+    async getRepeatCustomerStats(tenantId: string) {
+        // Count invoices per client (only PAID)
+        const invoicesByClient = await prisma.invoice.groupBy({
+            by: ['clientId'],
+            where: { tenantId, status: 'PAID' },
+            _count: { _all: true },
+        });
+
+        const totalClients = invoicesByClient.length;
+        const repeatClients = invoicesByClient.filter(c => c._count._all >= 2).length;
+        const totalInvoices = invoicesByClient.reduce((sum, c) => sum + c._count._all, 0);
+
+        return {
+            totalClients,
+            repeatClients,
+            repeatRate: totalClients > 0 ? Math.round((repeatClients / totalClients) * 100) : 0,
+            averageInvoicesPerClient: totalClients > 0
+                ? Math.round((totalInvoices / totalClients) * 10) / 10
+                : 0,
+        };
+    }
+
+    /**
+     * Top clients by total paid invoice amount (CLV approximation).
+     */
+    async getTopClientsByRevenue(tenantId: string, limit = 10) {
+        const topClients = await prisma.invoice.groupBy({
+            by: ['clientId'],
+            where: { tenantId, status: 'PAID' },
+            _sum: { total: true },
+            _count: { _all: true },
+            orderBy: { _sum: { total: 'desc' } },
+            take: limit,
+        });
+
+        // Enrich with client names
+        const clientIds = topClients.map(c => c.clientId);
+        const clients = await prisma.client.findMany({
+            where: { id: { in: clientIds }, tenantId },
+            select: { id: true, clientName: true },
+        });
+        const nameMap = new Map(clients.map(c => [c.id, c.clientName]));
+
+        const totalRevenue = topClients.reduce(
+            (sum, c) => sum + Number(c._sum.total || 0), 0
+        );
+        const totalClients = topClients.length;
+
+        return {
+            averageCLV: totalClients > 0 ? Math.round(totalRevenue / totalClients) : 0,
+            totalRevenue,
+            totalClients,
+            topClients: topClients.map(c => ({
+                clientId: c.clientId,
+                clientName: nameMap.get(c.clientId) || 'Unknown',
+                totalRevenue: Number(c._sum.total || 0),
+                invoiceCount: c._count._all,
+            })),
+        };
+    }
 }
 
 export const analyticsRepository = new AnalyticsRepository();

@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import { clientsService } from './clients.service';
-import { clientsManager } from './clients.manager';
 import {
     sendSuccess,
     sendCreated,
@@ -19,7 +18,7 @@ export class ClientsController {
             const tenantId = req.context.tenantId;
             const data = sanitizeBody<CreateClientDto>(req.body);
 
-            const client = await clientsManager.createClient(req, tenantId, data as CreateClientDto);
+            const client = await clientsService.create(tenantId, data as CreateClientDto, req.user?.userId);
 
             sendCreated(res, client, 'Client created successfully');
         } catch (error) {
@@ -71,7 +70,7 @@ export class ClientsController {
             const { id } = req.params;
             const data = sanitizeBody<UpdateClientDto>(req.body);
 
-            const client = await clientsManager.updateClient(req, id, tenantId, data as UpdateClientDto);
+            const client = await clientsService.update(id, tenantId, data as UpdateClientDto);
 
             sendSuccess(res, client, 'Client updated successfully');
         } catch (error) {
@@ -88,7 +87,7 @@ export class ClientsController {
             const tenantId = req.context.tenantId;
             const { id } = req.params;
 
-            await clientsManager.deleteClient(req, id, tenantId);
+            await clientsService.delete(id, tenantId);
 
             sendNoContent(res);
         } catch (error) {

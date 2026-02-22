@@ -5,6 +5,7 @@ import {
     PipelineHealthDto,
     LeadSourceStatDto,
     MonthlyRevenueDto,
+    SMBInsightsDto,
 } from './analytics.dto';
 
 // ============================================================================
@@ -101,6 +102,26 @@ export class AnalyticsService {
     async getBookingStats(tenantId: string) {
         return analyticsRepository.getBookingStats(tenantId);
     }
+
+    /**
+     * SMB Insights — lifecycle breakdown, repeat customer rate, CLV.
+     * Aggregates all retention-focused metrics in a single call.
+     */
+    async getSMBInsights(tenantId: string): Promise<SMBInsightsDto> {
+        const [lifecycle, retention, clv] = await Promise.all([
+            analyticsRepository.getClientLifecycleBreakdown(tenantId),
+            analyticsRepository.getRepeatCustomerStats(tenantId),
+            analyticsRepository.getTopClientsByRevenue(tenantId),
+        ]);
+
+        return {
+            lifecycle,
+            retention,
+            clv,
+            generatedAt: new Date().toISOString(),
+        };
+    }
 }
 
 export const analyticsService = new AnalyticsService();
+

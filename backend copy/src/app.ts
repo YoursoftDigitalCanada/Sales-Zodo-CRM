@@ -21,6 +21,9 @@ import { registerRoutes } from './routes';
 // Swagger
 import { setupSwagger } from './config/swagger';
 
+// Automation engine
+import { automationService } from './modules/automation/automation.service';
+
 /**
  * Create and configure Express application
  */
@@ -119,6 +122,12 @@ export function createApp(): Application {
   if (!config.app.isProduction) {
     setupSwagger(app);
   }
+
+  // =========================================================================
+  // AUTOMATION ENGINE (must initialize before routes)
+  // =========================================================================
+
+  automationService.initialize();
 
   // =========================================================================
   // API ROUTES

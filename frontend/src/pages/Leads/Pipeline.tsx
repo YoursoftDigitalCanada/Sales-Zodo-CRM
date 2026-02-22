@@ -1,7 +1,7 @@
 // src/pages/Leads/Pipeline.tsx
 
 import React, { useState, useCallback, useEffect, useRef } from "react";
-import axios from "@/lib/axios";
+import { getLeads, deleteLead, updateLeadStatus } from "@/features/leads";
 import { Sidebar } from "@/components/Sidebar";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -55,7 +55,7 @@ import {
   User,
   type LucideIcon,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 // ============================================
 // TYPES
@@ -119,7 +119,7 @@ const stageIdToStatus: Record<string, string> = {
 function mapApiLeadToPipeline(apiLead: any): Lead {
   const assignee = apiLead.assignedTo?.user;
   const assignedToName = assignee
-    ? `${assignee.firstName || ""} ${assignee.lastName || ""}`.trim()
+    ? `${assignee.firstName || ""} ${assignee.lastName || ""} `.trim()
     : "Unassigned";
   const createdDate = new Date(apiLead.createdAt);
   const daysInStage = Math.max(0, Math.floor((Date.now() - createdDate.getTime()) / 86400000));
@@ -166,7 +166,7 @@ const getTemperatureInfo = (temp: string) => {
 };
 
 const getInitials = (firstName: string, lastName: string): string =>
-  `${(firstName || "?")[0]}${(lastName || "?")[0]}`.toUpperCase();
+  `${(firstName || "?")[0]}${(lastName || "?")[0]} `.toUpperCase();
 
 const getScoreColor = (score: number): string => {
   if (score >= 80) return "#10B981";
@@ -277,7 +277,7 @@ const PipelineLeadCard = ({
         <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
           <div
             className="h-full rounded-full transition-all"
-            style={{ width: `${lead.score}%`, backgroundColor: getScoreColor(lead.score) }}
+            style={{ width: `${lead.score}% `, backgroundColor: getScoreColor(lead.score) }}
           />
         </div>
       </div>
@@ -342,11 +342,11 @@ const PipelineColumn = ({
       {/* Column Header */}
       <div
         className="rounded-t-xl p-4 border border-b-0"
-        style={{ backgroundColor: stage.bgColor, borderColor: `${stage.color}30` }}
+        style={{ backgroundColor: stage.bgColor, borderColor: `${stage.color} 30` }}
       >
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-md flex items-center justify-center" style={{ backgroundColor: `${stage.color}20` }}>
+            <div className="w-8 h-8 rounded-md flex items-center justify-center" style={{ backgroundColor: `${stage.color} 20` }}>
               <StageIcon size={16} style={{ color: stage.color }} />
             </div>
             <div>
@@ -354,7 +354,7 @@ const PipelineColumn = ({
               <p className="text-xs text-[#94A3B8]">{stage.leads.length} leads</p>
             </div>
           </div>
-          <span className="px-2 py-1 rounded-md text-xs font-bold" style={{ backgroundColor: `${stage.color}20`, color: stage.color }}>
+          <span className="px-2 py-1 rounded-md text-xs font-bold" style={{ backgroundColor: `${stage.color} 20`, color: stage.color }}>
             {stage.leads.length}
           </span>
         </div>
@@ -381,7 +381,7 @@ const PipelineColumn = ({
             ? "bg-blue-50/80 border-blue-300 ring-2 ring-blue-200 ring-inset"
             : "bg-[#F8FAFC]/50"
         )}
-        style={{ borderColor: isDragOver ? undefined : `${stage.color}20` }}
+        style={{ borderColor: isDragOver ? undefined : `${stage.color} 20` }}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -407,7 +407,7 @@ const PipelineColumn = ({
 
         {stage.leads.length === 0 && !isDragOver && (
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="w-12 h-12 rounded-full flex items-center justify-center mb-3" style={{ backgroundColor: `${stage.color}10` }}>
+            <div className="w-12 h-12 rounded-full flex items-center justify-center mb-3" style={{ backgroundColor: `${stage.color} 10` }}>
               <StageIcon size={20} style={{ color: stage.color }} />
             </div>
             <p className="text-sm text-[#94A3B8] mb-2">No leads in this stage</p>
@@ -439,7 +439,7 @@ const LeadDetailPanel = ({ lead, onClose, stageColor }: { lead: Lead; onClose: (
       className="fixed top-0 right-0 h-full w-[420px] glass-2xl border-l border-[rgba(15,23,42,0.06)] z-50 flex flex-col"
     >
       {/* Header */}
-      <div className="p-6 border-b border-[rgba(15,23,42,0.06)]" style={{ background: `linear-gradient(135deg, ${stageColor}10, transparent)` }}>
+      <div className="p-6 border-b border-[rgba(15,23,42,0.06)]" style={{ background: `linear - gradient(135deg, ${stageColor}10, transparent)` }}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-[#0F172A]">Lead Details</h2>
           <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" onClick={onClose}>
@@ -498,7 +498,7 @@ const LeadDetailPanel = ({ lead, onClose, stageColor }: { lead: Lead; onClose: (
                 <Mail size={16} className="text-[#475569] flex-shrink-0" />
                 <div>
                   <p className="text-xs text-[#475569]">Email</p>
-                  <a href={`mailto:${lead.email}`} className="text-sm text-[#0891B2] hover:underline">{lead.email}</a>
+                  <a href={`mailto:${lead.email} `} className="text-sm text-[#0891B2] hover:underline">{lead.email}</a>
                 </div>
               </div>
             )}
@@ -507,7 +507,7 @@ const LeadDetailPanel = ({ lead, onClose, stageColor }: { lead: Lead; onClose: (
                 <Phone size={16} className="text-[#475569] flex-shrink-0" />
                 <div>
                   <p className="text-xs text-[#475569]">Phone</p>
-                  <a href={`tel:${lead.phone}`} className="text-sm text-[#0F172A]">{lead.phone}</a>
+                  <a href={`tel:${lead.phone} `} className="text-sm text-[#0F172A]">{lead.phone}</a>
                 </div>
               </div>
             )}
@@ -589,6 +589,7 @@ const LeadDetailPanel = ({ lead, onClose, stageColor }: { lead: Lead; onClose: (
 
 const Pipeline = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [pipeline, setPipeline] = useState<PipelineStage[]>(buildEmptyPipeline());
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -599,8 +600,7 @@ const Pipeline = () => {
     const fetchLeads = async () => {
       try {
         setLoading(true);
-        const response = await axios.get("/leads", { params: { limit: 100 } });
-        const apiLeads = response.data?.data || response.data || [];
+        const apiLeads = await getLeads();
         const stages = buildEmptyPipeline();
         const leads: Lead[] = Array.isArray(apiLeads) ? apiLeads.map(mapApiLeadToPipeline) : [];
 
@@ -631,16 +631,16 @@ const Pipeline = () => {
     : "#22D3EE";
 
   const handleLeadView = (lead: Lead) => {
-    setSelectedLead(lead);
+    navigate(`/leads/${lead.id}`);
   };
 
   const handleLeadEdit = (lead: Lead) => {
-    toast({ title: "Edit Lead", description: `Editing ${lead.firstName} ${lead.lastName}` });
+    toast({ title: "Edit Lead", description: `Editing ${lead.firstName} ${lead.lastName} ` });
   };
 
   const handleLeadDelete = async (lead: Lead) => {
     try {
-      await axios.delete(`/leads/${lead.id}`);
+      await deleteLead(lead.id);
       setPipeline((prev) => prev.map((stage) => ({ ...stage, leads: stage.leads.filter((l) => l.id !== lead.id) })));
       if (selectedLead?.id === lead.id) setSelectedLead(null);
       toast({ title: "Lead Deleted", description: `${lead.firstName} ${lead.lastName} has been removed.`, variant: "destructive" });
@@ -651,7 +651,7 @@ const Pipeline = () => {
   };
 
   const handleAddLead = (stageId: string) => {
-    toast({ title: "Add Lead", description: `Adding new lead to ${stageId} stage` });
+    navigate("/leads");
   };
 
   // Drag & Drop: move lead to a new stage and update backend status
@@ -689,7 +689,7 @@ const Pipeline = () => {
 
     // Call backend to update status
     try {
-      await axios.patch(`/leads/${leadId}/status`, { status: newStatus });
+      await updateLeadStatus(leadId, newStatus);
       const targetStageName = pipelineStageConfig.find((s) => s.id === targetStageId)?.name || targetStageId;
       toast({
         title: "Lead Moved",

@@ -38,3 +38,13 @@ export async function getProjects(): Promise<ProjectEntity[]> {
 export async function deleteProjectById(projectId: number): Promise<void> {
   await api.delete(`/projects/${projectId}`);
 }
+
+export async function createProject(data: Record<string, unknown>): Promise<ProjectEntity> {
+  const response = await api.post("/projects", data);
+  return response.data?.data || response.data;
+}
+
+export async function updateProject(projectId: number, data: Record<string, unknown>): Promise<ProjectEntity> {
+  const response = await api.put(`/projects/${projectId}`, data);
+  return response.data?.data || response.data;
+}

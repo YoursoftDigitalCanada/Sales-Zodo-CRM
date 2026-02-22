@@ -60,7 +60,11 @@ export class CalendarRepository {
         return { data, total };
     }
 
-    async update(id: string, data: UpdateCalendarEventDto) {
+    async update(id: string, tenantId: string, data: UpdateCalendarEventDto) {
+        // Verify tenant ownership
+        const existing = await prisma.calendarEvent.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Calendar event not found or access denied');
+
         if (data.attendeeIds) {
             await prisma.calendarEventAttendee.deleteMany({ where: { eventId: id } });
         }
@@ -94,7 +98,11 @@ export class CalendarRepository {
         });
     }
 
-    async delete(id: string) {
+    async delete(id: string, tenantId: string) {
+        // Verify tenant ownership
+        const existing = await prisma.calendarEvent.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Calendar event not found or access denied');
+
         await prisma.calendarEventAttendee.deleteMany({ where: { eventId: id } });
         return prisma.calendarEvent.delete({ where: { id } });
     }

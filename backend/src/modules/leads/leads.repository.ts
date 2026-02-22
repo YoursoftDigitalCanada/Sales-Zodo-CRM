@@ -159,6 +159,10 @@ export class LeadsRepository {
    * Update lead
    */
   async update(id: string, tenantId: string, data: UpdateLeadDto) {
+    // Verify tenant ownership
+    const existing = await prisma.lead.findFirst({ where: { id, tenantId } });
+    if (!existing) throw new Error('Lead not found or access denied');
+
     const { tagIds, ...leadData } = data;
 
     // If tagIds provided, update tags
@@ -206,6 +210,10 @@ export class LeadsRepository {
    * Update lead status
    */
   async updateStatus(id: string, tenantId: string, status: LeadStatus) {
+    // Verify tenant ownership
+    const existing = await prisma.lead.findFirst({ where: { id, tenantId } });
+    if (!existing) throw new Error('Lead not found or access denied');
+
     return prisma.lead.update({
       where: { id },
       data: { status },
@@ -217,6 +225,10 @@ export class LeadsRepository {
    * Assign lead to employee
    */
   async assign(id: string, tenantId: string, assignedToId: string | null) {
+    // Verify tenant ownership
+    const existing = await prisma.lead.findFirst({ where: { id, tenantId } });
+    if (!existing) throw new Error('Lead not found or access denied');
+
     return prisma.lead.update({
       where: { id },
       data: { assignedToId },
@@ -254,6 +266,10 @@ export class LeadsRepository {
    * Mark lead as converted
    */
   async markConverted(id: string, tenantId: string, clientId: string) {
+    // Verify tenant ownership
+    const existing = await prisma.lead.findFirst({ where: { id, tenantId } });
+    if (!existing) throw new Error('Lead not found or access denied');
+
     return prisma.lead.update({
       where: { id },
       data: {

@@ -10,6 +10,8 @@ import {
     NotFoundError,
 } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
+import { activityLogger } from '../../common/services/activity-logger.service';
+import { eventBus } from '../../common/events/event-bus';
 
 export class ContactsService {
     /**
@@ -17,7 +19,23 @@ export class ContactsService {
      */
     async create(tenantId: string, data: CreateContactDto): Promise<ContactResponseDto> {
         const contact = await contactsRepository.create(tenantId, data);
-        return toContactResponseDto(contact);
+        const dto = toContactResponseDto(contact);
+
+        activityLogger.log({
+            tenantId, entityType: 'Contact', entityId: dto.id,
+            action: 'CREATE', module: 'contacts',
+            description: `Created contact "${dto.contactName}"`,
+            metadata: { contactName: dto.contactName, companyId: data.companyId },
+        });
+
+        eventBus.emit('contact.created', {
+            tenantId,
+            contactId: dto.id,
+            contactName: dto.contactName,
+            companyId: data.companyId || undefined,
+        });
+
+        return dto;
     }
 
     /**
@@ -64,8 +82,24 @@ export class ContactsService {
             throw new NotFoundError('Contact not found', ErrorCodes.RESOURCE_NOT_FOUND);
         }
 
-        const contact = await contactsRepository.update(id, data);
-        return toContactResponseDto(contact);
+        const contact = await contactsRepository.update(id, tenantId, data);
+        const dto = toContactResponseDto(contact);
+
+        activityLogger.log({
+            tenantId, entityType: 'Contact', entityId: dto.id,
+            action: 'UPDATE', module: 'contacts',
+            description: `Updated contact "${dto.contactName}"`,
+            metadata: { updatedFields: Object.keys(data) },
+        });
+
+        eventBus.emit('contact.updated', {
+            tenantId,
+            contactId: dto.id,
+            contactName: dto.contactName,
+            updatedFields: Object.keys(data),
+        });
+
+        return dto;
     }
 
     /**
@@ -77,7 +111,21 @@ export class ContactsService {
             throw new NotFoundError('Contact not found', ErrorCodes.RESOURCE_NOT_FOUND);
         }
 
-        await contactsRepository.delete(id);
+        const contactName = (existing as any).contactName || '';
+
+        activityLogger.log({
+            tenantId, entityType: 'Contact', entityId: id,
+            action: 'DELETE', module: 'contacts',
+            description: `Deleted contact "${contactName}"`,
+        });
+
+        eventBus.emit('contact.deleted', {
+            tenantId,
+            contactId: id,
+            contactName,
+        });
+
+        await contactsRepository.delete(id, tenantId);
     }
 }
 

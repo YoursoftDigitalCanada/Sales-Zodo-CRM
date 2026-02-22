@@ -47,7 +47,11 @@ export class BookingsRepository {
         return { data, total };
     }
 
-    async update(id: string, data: UpdateBookingDto) {
+    async update(id: string, tenantId: string, data: UpdateBookingDto) {
+        // Verify tenant ownership
+        const existing = await prisma.booking.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Booking not found or access denied');
+
         return prisma.booking.update({
             where: { id },
             data: {
@@ -65,15 +69,24 @@ export class BookingsRepository {
         });
     }
 
-    async delete(id: string) {
+    async delete(id: string, tenantId: string) {
+        // Tenant-scoped delete
+        const existing = await prisma.booking.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Booking not found or access denied');
         return prisma.booking.delete({ where: { id } });
     }
 
-    async confirm(id: string) {
+    async confirm(id: string, tenantId: string) {
+        // Verify tenant ownership
+        const existing = await prisma.booking.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Booking not found or access denied');
         return prisma.booking.update({ where: { id }, data: { status: 'CONFIRMED' }, include: bookingInclude });
     }
 
-    async cancel(id: string) {
+    async cancel(id: string, tenantId: string) {
+        // Verify tenant ownership
+        const existing = await prisma.booking.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Booking not found or access denied');
         return prisma.booking.update({ where: { id }, data: { status: 'CANCELLED' }, include: bookingInclude });
     }
 }

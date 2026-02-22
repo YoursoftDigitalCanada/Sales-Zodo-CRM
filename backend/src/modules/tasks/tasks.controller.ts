@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import { tasksService } from './tasks.service';
-import { tasksManager } from './tasks.manager';
 import {
     sendSuccess,
     sendCreated,
@@ -16,7 +15,7 @@ export class TasksController {
             const employeeId = req.user!.employeeId;
             const data = sanitizeBody<CreateTaskDto>(req.body);
 
-            const task = await tasksManager.createTask(req, tenantId, data as CreateTaskDto, employeeId);
+            const task = await tasksService.create(tenantId, data as CreateTaskDto, employeeId);
 
             sendCreated(res, task, 'Task created successfully');
         } catch (error) {
@@ -81,7 +80,7 @@ export class TasksController {
             const { id } = req.params;
             const data = sanitizeBody<UpdateTaskDto>(req.body);
 
-            const task = await tasksManager.updateTask(req, id, tenantId, data as UpdateTaskDto);
+            const task = await tasksService.update(id, tenantId, data as UpdateTaskDto);
 
             sendSuccess(res, task, 'Task updated successfully');
         } catch (error) {
@@ -95,7 +94,7 @@ export class TasksController {
             const { id } = req.params;
             const { status } = req.body;
 
-            const task = await tasksManager.updateTaskStatus(req, id, tenantId, status);
+            const task = await tasksService.updateStatus(id, tenantId, status, req.user?.userId);
 
             sendSuccess(res, task, 'Task status updated');
         } catch (error) {
@@ -109,7 +108,7 @@ export class TasksController {
             const { id } = req.params;
             const { assignedToId } = req.body;
 
-            const task = await tasksManager.assignTask(req, id, tenantId, assignedToId);
+            const task = await tasksService.assign(id, tenantId, assignedToId);
 
             sendSuccess(res, task, 'Task assigned successfully');
         } catch (error) {
@@ -122,7 +121,7 @@ export class TasksController {
             const tenantId = req.context.tenantId;
             const { id } = req.params;
 
-            await tasksManager.deleteTask(req, id, tenantId);
+            await tasksService.delete(id, tenantId);
 
             sendNoContent(res);
         } catch (error) {

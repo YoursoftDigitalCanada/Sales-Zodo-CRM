@@ -1,5 +1,7 @@
 // src/components/bookings/NewAppointmentModal.tsx
 import React, { useEffect, useState } from "react";
+import { getBookings, createBooking } from "@/features/bookings/services/bookings-service";
+import { getUsers } from "@/features/users/services/users-service";
 
 /**
  * NewAppointmentModal
@@ -15,31 +17,20 @@ type UserOption = { id: string | number; fullName: string };
 
 const API_PREFIX = "/api/v1";
 
-const normalizeApiBase = (base: string): string =>
-  (base || "")
-    .replace(/\/+$/, "")
-    .replace(/\/api(?:\/v1)?$/i, "");
-
-const extractArray = (payload: any): any[] => {
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.data)) return payload.data;
-  return [];
-};
-
-export default function NewAppointmentModal({ apiBase, onClose }: { apiBase: string; onClose: ()=>void }) {
+export default function NewAppointmentModal({ apiBase, onClose }: { apiBase: string; onClose: () => void }) {
   const [eventTypes, setEventTypes] = useState<EventTypeOption[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
   const [loading, setLoading] = useState(true);
 
   // form fields
-  const [eventTypeId, setEventTypeId] = useState<number | string | "">("");
-  const [hostUserId, setHostUserId] = useState<number | string | "">("");
+  const [eventTypeId, setEventTypeId] = useState<number | string | "">("")
+  const [hostUserId, setHostUserId] = useState<number | string | "">("")
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [date, setDate] = useState<string>(() => {
     // default to today yyyy-mm-dd
     const d = new Date();
-    return d.toISOString().slice(0,10);
+    return d.toISOString().slice(0, 10);
   });
   const [time, setTime] = useState<string>("09:00");
   const [saving, setSaving] = useState(false);
@@ -47,18 +38,14 @@ export default function NewAppointmentModal({ apiBase, onClose }: { apiBase: str
   useEffect(() => {
     // load event types and users in parallel
     const load = async () => {
-      const base = normalizeApiBase(apiBase);
       try {
-        const [bookingsRes, usersRes] = await Promise.all([
-          fetch(`${base}${API_PREFIX}/bookings`),
-          fetch(`${base}${API_PREFIX}/users`)
+        const [bookingsData, usersData] = await Promise.all([
+          getBookings() as Promise<any[]>,
+          getUsers() as Promise<any[]>,
         ]);
 
-        const bookingsPayload = bookingsRes.ok ? await bookingsRes.json() : null;
-        const usersPayload = usersRes.ok ? await usersRes.json() : null;
-
-        const bookings = extractArray(bookingsPayload);
-        const userRecords = extractArray(usersPayload);
+        const bookings = bookingsData || [];
+        const userRecords = usersData || [];
 
         const eventTypeMap = new Map<string, EventTypeOption>();
         bookings.forEach((booking: any) => {
@@ -86,9 +73,8 @@ export default function NewAppointmentModal({ apiBase, onClose }: { apiBase: str
           derivedEventTypes.length > 0 ? derivedEventTypes : fallbackEventTypes;
 
         const mappedUsers: UserOption[] = userRecords.map((user: any, index: number) => {
-          const fullName = `${user?.firstName || user?.user?.firstName || ""} ${
-            user?.lastName || user?.user?.lastName || ""
-          }`.trim();
+          const fullName = `${user?.firstName || user?.user?.firstName || ""} ${user?.lastName || user?.user?.lastName || ""
+            }`.trim();
           return {
             id: user?.id ?? `user-${index}`,
             fullName: fullName || user?.email || "User",
@@ -107,7 +93,7 @@ export default function NewAppointmentModal({ apiBase, onClose }: { apiBase: str
       }
     };
     load();
-  }, [apiBase]);
+  }, []);
 
   const handleSave = async () => {
     // validation
@@ -139,20 +125,11 @@ export default function NewAppointmentModal({ apiBase, onClose }: { apiBase: str
 
     setSaving(true);
     try {
-      const base = normalizeApiBase(apiBase);
-      const res = await fetch(`${base}${API_PREFIX}/bookings`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || `${res.status}`);
-      }
+      await createBooking(payload);
       // success -> notify appointment list to reload
       window.dispatchEvent(new Event("bookings:reload"));
       onClose();
-    } catch (e:any) {
+    } catch (e: any) {
       console.error("Failed to create booking", e);
       alert("Create failed: " + (e.message || e));
     } finally {
@@ -197,12 +174,12 @@ export default function NewAppointmentModal({ apiBase, onClose }: { apiBase: str
 
             <div>
               <label className="block text-sm mb-1">Date</label>
-              <input type="date" className="w-full border rounded p-2" value={date} onChange={e=>setDate(e.target.value)} />
+              <input type="date" className="w-full border rounded p-2" value={date} onChange={e => setDate(e.target.value)} />
             </div>
 
             <div>
               <label className="block text-sm mb-1">Time</label>
-              <input type="time" className="w-full border rounded p-2" value={time} onChange={e=>setTime(e.target.value)} />
+              <input type="time" className="w-full border rounded p-2" value={time} onChange={e => setTime(e.target.value)} />
             </div>
 
             <div className="col-span-2 flex justify-end gap-2 mt-3">

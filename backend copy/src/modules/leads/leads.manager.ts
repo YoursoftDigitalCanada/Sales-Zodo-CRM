@@ -14,6 +14,7 @@ import { NotFoundError, BadRequestError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
 import { logger } from '../../common/utils/logger';
 import { Request } from 'express';
+import { eventBus } from '../../common/events/event-bus';
 
 /**
  * Leads Manager
@@ -59,6 +60,16 @@ export class LeadsManager {
       leadId: lead.id,
       tenantId,
       createdBy: createdById,
+    });
+
+    // Emit event for automation
+    eventBus.emit('lead.created', {
+      tenantId,
+      leadId: lead.id,
+      leadName: lead.fullName,
+      ownerId: data.assignedToId,
+      ownerUserId: lead.assignedTo?.userId,
+      source: lead.leadSource?.name,
     });
 
     return lead;
@@ -162,6 +173,17 @@ export class LeadsManager {
       tenantId,
       oldStatus,
       newStatus: status,
+    });
+
+    // Emit event for automation
+    eventBus.emit('lead.statusChanged', {
+      tenantId,
+      leadId: id,
+      leadName: `${existing.firstName} ${existing.lastName}`,
+      oldStatus,
+      newStatus: status,
+      ownerId: existing.assignedToId || undefined,
+      ownerUserId: lead.assignedTo?.userId,
     });
 
     return lead;
@@ -356,6 +378,17 @@ export class LeadsManager {
       clientId: result.client.id,
       contactId: result.contact?.id,
       tenantId,
+    });
+
+    // Emit event for automation
+    eventBus.emit('lead.converted', {
+      tenantId,
+      leadId,
+      leadName: `${lead.firstName} ${lead.lastName}`,
+      clientId: result.client.id,
+      clientType: options.clientType,
+      convertedByUserId: req.user?.userId || '',
+      ownerUserId: lead.assignedTo?.user?.id,
     });
 
     return {

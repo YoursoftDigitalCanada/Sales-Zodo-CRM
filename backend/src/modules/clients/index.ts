@@ -1,6 +1,5 @@
 export { clientsController } from './clients.controller';
 export { clientsService } from './clients.service';
-export { clientsManager } from './clients.manager';
 export { clientsRepository } from './clients.repository';
 export * from './clients.dto';
 export * from './clients.validators';

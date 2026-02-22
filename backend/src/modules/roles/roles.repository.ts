@@ -42,7 +42,11 @@ export class RolesRepository {
         return { data, total };
     }
 
-    async update(id: string, data: UpdateRoleDto) {
+    async update(id: string, tenantId: string, data: UpdateRoleDto) {
+        // Verify tenant ownership
+        const existing = await prisma.role.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Role not found or access denied');
+
         // If permissionIds provided, replace all permissions
         if (data.permissionIds) {
             await prisma.rolePermission.deleteMany({ where: { roleId: id } });
@@ -64,7 +68,11 @@ export class RolesRepository {
         });
     }
 
-    async delete(id: string) {
+    async delete(id: string, tenantId: string) {
+        // Verify tenant ownership
+        const existing = await prisma.role.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Role not found or access denied');
+
         await prisma.rolePermission.deleteMany({ where: { roleId: id } });
         return prisma.role.delete({ where: { id } });
     }

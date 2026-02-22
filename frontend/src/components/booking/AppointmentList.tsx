@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { MoreHorizontal, Calendar, Clock } from "lucide-react";
 import AvatarStack from "@/components/AvatarStack";
+import { getBookings } from "@/features/bookings/services/bookings-service";
 
 type Booking = {
   id: string | number;
@@ -17,17 +18,6 @@ type Booking = {
 };
 
 const API_PREFIX = "/api/v1";
-
-const normalizeApiBase = (base: string): string =>
-  (base || "")
-    .replace(/\/+$/, "")
-    .replace(/\/api(?:\/v1)?$/i, "");
-
-const extractArray = (payload: any): any[] => {
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.data)) return payload.data;
-  return [];
-};
 
 const toDisplayStatus = (status?: string): string => {
   const normalized = status?.toUpperCase();
@@ -47,11 +37,7 @@ export default function AppointmentList({ api }: { api: string }) {
     setLoading(true);
     setError(null);
     try {
-      const base = normalizeApiBase(api);
-      const res = await fetch(`${base}${API_PREFIX}/bookings`);
-      if (!res.ok) throw new Error(`Failed to load bookings: ${res.status}`);
-      const payload = await res.json();
-      const rows = extractArray(payload);
+      const rows = (await getBookings()) as any[];
       const now = Date.now();
 
       const mapped: Booking[] = rows.map((item: any) => {
@@ -61,8 +47,8 @@ export default function AppointmentList({ api }: { api: string }) {
           id: item?.id,
           bookingId: item?.bookingId || String(item?.id || "").slice(0, 8),
           eventType: { title: item?.title || item?.eventType?.title || "Appointment" },
-          hostUserId: item?.assignedToId || item?.hostUserId || null,
-          customerName: item?.client?.clientName || item?.customerName || "Client",
+          hostUserId: item?.assignedTo?.id || item?.assignedToId || item?.hostUserId || null,
+          customerName: item?.client?.displayName || item?.client?.clientName || item?.customerName || "Client",
           customerEmail: item?.customerEmail,
           paymentStatus: item?.paymentStatus || "N/A",
           status: toDisplayStatus(item?.status),
@@ -87,7 +73,7 @@ export default function AppointmentList({ api }: { api: string }) {
     } finally {
       setLoading(false);
     }
-  }, [api, filter]);
+  }, [filter]);
 
   // initial load + reload when filter changes
   useEffect(() => {
@@ -209,13 +195,12 @@ export default function AppointmentList({ api }: { api: string }) {
 
                 <div className="col-span-1">
                   <span
-                    className={`px-3 py-1 rounded text-sm ${
-                      b.status === "Upcoming"
+                    className={`px-3 py-1 rounded text-sm ${b.status === "Upcoming"
                         ? "bg-primary/10 text-primary"
                         : b.status === "Completed"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-red-100 text-red-700"
-                    }`}
+                          ? "bg-green-100 text-green-700"
+                          : "bg-red-100 text-red-700"
+                      }`}
                   >
                     {b.status}
                   </span>

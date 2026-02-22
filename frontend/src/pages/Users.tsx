@@ -68,7 +68,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
-import api from "@/lib/axios";
+import { getUsers, createUser as createUserApi, updateUser as updateUserApi, deleteUser as deleteUserApi } from "@/features/users";
 import {
   Bell,
   Search,
@@ -1418,7 +1418,7 @@ const UserProfileDialog = ({
                   </div>
                 )}
               </div>
-                          </TabsContent>
+            </TabsContent>
 
             {/* Permissions Tab */}
             <TabsContent value="permissions" className="space-y-4">
@@ -1961,8 +1961,7 @@ export default function UsersPage() {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const res = await api.get("/users");
-      const data = res.data?.data || [];
+      const data = await getUsers() as any[];
       const mapped = (data || []).map((u: any) => ({
         id: u.id,
         fullName: u.fullName || `${u.firstName || ""} ${u.lastName || ""}`.trim(),
@@ -2078,15 +2077,13 @@ export default function UsersPage() {
     if (!deletingUser) return;
 
     try {
-      const res = await api.delete(`/users/${deletingUser.id}`);
+      await deleteUserApi(deletingUser.id);
 
-      if (res.status >= 200 && res.status < 300) {
-        setUsers((prev) => prev.filter((u) => u.id !== deletingUser.id));
-        toast({
-          title: "User Deleted",
-          description: `${deletingUser.fullName} has been removed.`,
-        });
-      }
+      setUsers((prev) => prev.filter((u) => u.id !== deletingUser.id));
+      toast({
+        title: "User Deleted",
+        description: `${deletingUser.fullName} has been removed.`,
+      });
     } catch (e) {
       // For demo, just remove locally
       setUsers((prev) => prev.filter((u) => u.id !== deletingUser.id));
@@ -2108,27 +2105,18 @@ export default function UsersPage() {
 
       if (editingUser) {
         // Update existing user
-        const res = await api.put(`/users/${editingUser.id}`, {
+        await updateUserApi(editingUser.id, {
           firstName: firstName || undefined,
           lastName: lastName || undefined,
           phone: data.phone || null,
           isActive: data.status ? data.status === "active" : undefined,
         });
 
-        if (res.status >= 200 && res.status < 300) {
-          setUsers((prev) =>
-            prev.map((u) =>
-              u.id === editingUser.id ? { ...u, ...data, updatedAt: new Date().toISOString() } : u
-            )
-          );
-        } else {
-          // For demo, update locally
-          setUsers((prev) =>
-            prev.map((u) =>
-              u.id === editingUser.id ? { ...u, ...data, updatedAt: new Date().toISOString() } : u
-            )
-          );
-        }
+        setUsers((prev) =>
+          prev.map((u) =>
+            u.id === editingUser.id ? { ...u, ...data, updatedAt: new Date().toISOString() } : u
+          )
+        );
 
         toast({
           title: "User Updated",
@@ -2136,17 +2124,17 @@ export default function UsersPage() {
         });
       } else {
         // Create new user
-        const res = await api.post("/users", {
+        const resData = await createUserApi({
           email: data.email,
           password: "ChangeMe123!",
           firstName: firstName || "User",
           lastName: lastName || "Account",
           phone: data.phone || null,
           isActive: data.status ? data.status !== "inactive" : true,
-        });
+        }) as any;
 
         const newUser: User = {
-          id: res.data?.data?.id || Date.now(),
+          id: resData?.id || Date.now(),
           fullName: data.fullName || "",
           email: data.email || "",
           phone: data.phone,
@@ -2162,13 +2150,7 @@ export default function UsersPage() {
           projectsCount: 0,
         };
 
-        if (res.ok) {
-          const created = await res.json();
-          setUsers((prev) => [created, ...prev]);
-        } else {
-          // For demo, add locally
-          setUsers((prev) => [newUser, ...prev]);
-        }
+        setUsers((prev) => [newUser, ...prev]);
 
         toast({
           title: "User Created",

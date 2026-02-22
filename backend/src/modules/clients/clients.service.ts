@@ -10,14 +10,37 @@ import {
     NotFoundError,
 } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
+import { eventBus } from '../../common/events/event-bus';
+import { activityLogger } from '../../common/services/activity-logger.service';
+import { clientLifecycleService } from '../../common/services/client-lifecycle.service';
 
 export class ClientsService {
     /**
      * Create a new client
      */
-    async create(tenantId: string, data: CreateClientDto): Promise<ClientResponseDto> {
+    async create(tenantId: string, data: CreateClientDto, createdByUserId?: string): Promise<ClientResponseDto> {
         const client = await clientsRepository.create(tenantId, data);
-        return toClientResponseDto(client);
+        const dto = toClientResponseDto(client);
+
+        // Domain event: client created
+        eventBus.emit('client.created', {
+            tenantId,
+            clientId: dto.id,
+            clientName: dto.clientName,
+            clientType: dto.clientType,
+            ownerUserId: createdByUserId,
+        });
+
+        // Timeline: log creation
+        activityLogger.log({
+            tenantId, entityType: 'Client', entityId: dto.id,
+            action: 'CREATE', module: 'clients',
+            description: `Created client "${dto.clientName}"`,
+            userId: createdByUserId,
+            metadata: { clientName: dto.clientName, clientType: dto.clientType },
+        });
+
+        return dto;
     }
 
     /**
@@ -65,8 +88,25 @@ export class ClientsService {
             throw new NotFoundError('Client not found', ErrorCodes.RESOURCE_NOT_FOUND);
         }
 
-        const client = await clientsRepository.update(id, data);
-        return toClientResponseDto(client);
+        const client = await clientsRepository.update(id, tenantId, data);
+        const dto = toClientResponseDto(client);
+
+        eventBus.emit('client.updated', {
+            tenantId,
+            clientId: dto.id,
+            clientName: dto.clientName,
+            updatedFields: Object.keys(data),
+        });
+
+        // Timeline: log update
+        activityLogger.log({
+            tenantId, entityType: 'Client', entityId: dto.id,
+            action: 'UPDATE', module: 'clients',
+            description: `Updated client "${dto.clientName}"`,
+            metadata: { updatedFields: Object.keys(data) },
+        });
+
+        return dto;
     }
 
     /**
@@ -78,7 +118,25 @@ export class ClientsService {
             throw new NotFoundError('Client not found', ErrorCodes.RESOURCE_NOT_FOUND);
         }
 
-        await clientsRepository.delete(id);
+        const clientName = (existing as any).clientName || '';
+
+        // Lifecycle: mark client as churned before deletion
+        await clientLifecycleService.progressTo(id, tenantId, 'CHURNED');
+
+        await clientsRepository.delete(id, tenantId);
+
+        eventBus.emit('client.deleted', {
+            tenantId,
+            clientId: id,
+            clientName,
+        });
+
+        // Timeline: log deletion
+        activityLogger.log({
+            tenantId, entityType: 'Client', entityId: id,
+            action: 'DELETE', module: 'clients',
+            description: `Deleted client "${clientName}"`,
+        });
     }
 }
 

@@ -92,7 +92,7 @@ import {
   MoreVertical,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import api from "@/lib/axios";
+import { getClients, deleteClient } from "@/services/clientService";
 
 // ============================================
 // TYPES
@@ -906,21 +906,14 @@ const ClientListPage = () => {
   const fetchClients = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get("/clients");
-      const payload = response.data;
-      const clientsData = Array.isArray(payload)
-        ? payload
-        : Array.isArray(payload?.data)
-          ? payload.data
-          : [];
+      const clientsData = await getClients() as any[];
 
       const enrichedData = clientsData.map((client: any) => {
         const mappedClient = mapClientFromApi(client);
         return {
           ...mappedClient,
-          totalRevenue:
-            mappedClient.totalRevenue || Math.floor(Math.random() * 50000),
-          isFavorite: Math.random() > 0.7,
+          totalRevenue: mappedClient.totalRevenue || 0,
+          isFavorite: false,
         };
       });
       setClients(enrichedData);
@@ -941,7 +934,7 @@ const ClientListPage = () => {
 
     setIsDeleting(true);
     try {
-      await api.delete(`/clients/${clientToDelete.id}`);
+      await deleteClient(clientToDelete.id);
       setClients((prev) => prev.filter((c) => c.id !== clientToDelete.id));
       toast({
         title: "Deleted",
@@ -964,7 +957,7 @@ const ClientListPage = () => {
     setIsDeleting(true);
     try {
       await Promise.all(
-        selectedClients.map((id) => api.delete(`/clients/${id}`))
+        selectedClients.map((id) => deleteClient(id))
       );
 
       setClients((prev) => prev.filter((c) => !selectedClients.includes(c.id)));

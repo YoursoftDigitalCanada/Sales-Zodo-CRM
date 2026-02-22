@@ -6,7 +6,7 @@ import { sanitizeBody } from '../../common/utils/sanitize-body';
 export class ProjectsController {
     async create(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const project = await projectsService.create(req.context.tenantId, sanitizeBody(req.body));
+            const project = await projectsService.create(req.context.tenantId, sanitizeBody(req.body), req.user?.userId);
             sendCreated(res, project, 'Project created');
         } catch (e) { next(e); }
     }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
-import axios from "@/lib/axios";
+import { getLeads, createLead, updateLead, deleteLead, updateLeadStatus } from "@/features/leads";
+import { getEmployees } from "@/features/users";
 import { Sidebar } from "@/components/Sidebar";
 import { AiInsightBadge, getLeadInsights } from "@/components/ai/AiInsightBadge";
 import { motion, AnimatePresence } from "framer-motion";
@@ -130,7 +131,7 @@ import {
   Snowflake,
   type LucideIcon,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 // ============================================
 // TYPES
@@ -796,9 +797,8 @@ const LeadFormDialog = ({
   // Fetch employees for the Assigned To dropdown
   useEffect(() => {
     if (isOpen) {
-      axios.get("/employees", { params: { limit: 200 } })
-        .then((res) => {
-          const emps = res.data?.data || [];
+      getEmployees()
+        .then((emps) => {
           setEmployees(
             emps.map((emp: any) => ({
               id: emp.id,
@@ -1573,6 +1573,7 @@ const mapApiLead = (apiLead: any): Lead => ({
 
 const AllLeads = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   // State
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -1599,9 +1600,9 @@ const AllLeads = () => {
     const fetchLeads = async () => {
       try {
         setLoading(true);
-        const response = await axios.get("/leads", { params: { limit: 100 } });
-        const apiLeads = response.data?.data || response.data || [];
-        const mapped = Array.isArray(apiLeads) ? apiLeads.map(mapApiLead) : [];
+        const response = await getLeads();
+        const apiLeads = Array.isArray(response) ? response : [];
+        const mapped = apiLeads.map(mapApiLead);
         setLeads(mapped);
       } catch (error) {
         console.error("Failed to fetch leads:", error);
@@ -1705,8 +1706,8 @@ const AllLeads = () => {
         apiData.assignedTo = data.assignedTo;
       }
 
-      const response = await axios.post("/leads", apiData);
-      const newLead = mapApiLead(response.data);
+      const responseData = await createLead(apiData);
+      const newLead = mapApiLead(responseData);
       setLeads((prev) => [newLead, ...prev]);
       toast({
         title: "Lead Added",
@@ -1748,8 +1749,8 @@ const AllLeads = () => {
         apiData.assignedTo = null;
       }
 
-      const response = await axios.put(`/leads/${currentLead.id}`, apiData);
-      const updatedLead = mapApiLead(response.data);
+      const responseData = await updateLead(currentLead.id, apiData);
+      const updatedLead = mapApiLead(responseData);
       setLeads((prev) =>
         prev.map((l) => (l.id === currentLead.id ? updatedLead : l))
       );
@@ -1770,7 +1771,7 @@ const AllLeads = () => {
   const handleDeleteLead = async () => {
     if (!leadToDelete) return;
     try {
-      await axios.delete(`/leads/${leadToDelete.id}`);
+      await deleteLead(leadToDelete.id);
       setLeads((prev) => prev.filter((l) => l.id !== leadToDelete.id));
       setSelectedLeads((prev) => {
         const newSet = new Set(prev);
@@ -1796,7 +1797,7 @@ const AllLeads = () => {
 
   const handleStatusChange = async (lead: Lead, status: Lead["status"]) => {
     try {
-      await axios.patch(`/leads/${lead.id}/status`, { status: status.toUpperCase() });
+      await updateLeadStatus(lead.id, status.toUpperCase());
       setLeads((prev) =>
         prev.map((l) =>
           l.id === lead.id
@@ -2215,8 +2216,7 @@ const AllLeads = () => {
                             isSelected={selectedLeads.has(lead.id)}
                             onSelect={() => toggleSelectLead(lead.id)}
                             onView={() => {
-                              setCurrentLead(lead);
-                              setIsDetailsOpen(true);
+                              navigate(`/leads/${lead.id}`);
                             }}
                             onEdit={() => {
                               setCurrentLead(lead);
@@ -2249,8 +2249,7 @@ const AllLeads = () => {
                         isSelected={selectedLeads.has(lead.id)}
                         onSelect={() => toggleSelectLead(lead.id)}
                         onView={() => {
-                          setCurrentLead(lead);
-                          setIsDetailsOpen(true);
+                          navigate(`/leads/${lead.id}`);
                         }}
                         onEdit={() => {
                           setCurrentLead(lead);

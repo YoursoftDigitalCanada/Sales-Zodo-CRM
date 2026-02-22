@@ -85,7 +85,11 @@ export class ClientsRepository {
         return { data, total };
     }
 
-    async update(id: string, data: UpdateClientDto) {
+    async update(id: string, tenantId: string, data: UpdateClientDto) {
+        // Verify tenant ownership
+        const existing = await prisma.client.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Client not found or access denied');
+
         return prisma.client.update({
             where: { id },
             data: {
@@ -135,7 +139,10 @@ export class ClientsRepository {
         });
     }
 
-    async delete(id: string) {
+    async delete(id: string, tenantId: string) {
+        // Tenant-scoped delete
+        const existing = await prisma.client.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Client not found or access denied');
         return prisma.client.delete({ where: { id } });
     }
 }

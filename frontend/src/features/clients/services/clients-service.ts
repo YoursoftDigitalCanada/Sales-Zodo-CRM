@@ -39,3 +39,22 @@ export async function getClients(): Promise<ClientEntity[]> {
   const response = await api.get("/clients");
   return extractApiArray<ClientEntity>(response.data);
 }
+
+export async function getClientById(id: string | number): Promise<ClientEntity> {
+  const response = await api.get(`/clients/${id}`);
+  return response.data?.data || response.data;
+}
+
+export async function createClient(data: Record<string, unknown>): Promise<ClientEntity> {
+  const response = await api.post("/clients", data);
+  return response.data?.data || response.data;
+}
+
+export async function updateClient(id: string | number, data: Record<string, unknown>): Promise<ClientEntity> {
+  const response = await api.put(`/clients/${id}`, data);
+  return response.data?.data || response.data;
+}
+
+export async function deleteClient(id: string | number): Promise<void> {
+  await api.delete(`/clients/${id}`);
+}

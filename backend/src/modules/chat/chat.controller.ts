@@ -26,7 +26,7 @@ export class ChatController {
 
     async sendMessage(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const message = await chatService.sendMessage(req.params.id, req.user!.employeeId!, req.body);
+            const message = await chatService.sendMessage(req.params.id, req.user!.tenantId!, req.user!.employeeId!, req.body);
             sendCreated(res, message, 'Message sent');
         } catch (e) { next(e); }
     }

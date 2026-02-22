@@ -107,7 +107,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import api from "@/lib/axios";
+import { getBookings } from "@/features/bookings";
+import { getUsers } from "@/features/users";
 
 // ============================================
 // TYPES
@@ -1170,17 +1171,17 @@ const BookingPagesPage = () => {
     setIsLoading(true);
     try {
       const [pagesResult, usersResult] = await Promise.allSettled([
-        api.get("/bookingpages"),
-        api.get("/users"),
+        getBookings(),
+        getUsers(),
       ]);
 
       const pData =
         pagesResult.status === "fulfilled"
-          ? pagesResult.value.data?.data || pagesResult.value.data || []
+          ? (pagesResult.value as any[]) || []
           : [];
       const uData =
         usersResult.status === "fulfilled"
-          ? usersResult.value.data?.data || usersResult.value.data || []
+          ? (usersResult.value as any[]) || []
           : [];
 
       // Enhance pages with mock data
@@ -1457,7 +1458,7 @@ const BookingPagesPage = () => {
                         animate={{ opacity: 1 }}
                         className="text-center py-8 bg-white rounded-md border border-[rgba(15,23,42,0.06)]"
                       >
-                                                <Users size={40} className="mx-auto text-[#475569] mb-3" />
+                        <Users size={40} className="mx-auto text-[#475569] mb-3" />
                         <p className="text-[#94A3B8]">No team members found</p>
                         <Button
                           variant="outline"

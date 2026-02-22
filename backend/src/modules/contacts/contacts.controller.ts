@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import { contactsService } from './contacts.service';
-import { contactsManager } from './contacts.manager';
 import {
     sendSuccess,
     sendCreated,
@@ -15,7 +14,7 @@ export class ContactsController {
             const tenantId = req.context.tenantId;
             const data = sanitizeBody<CreateContactDto>(req.body);
 
-            const contact = await contactsManager.createContact(req, tenantId, data);
+            const contact = await contactsService.create(tenantId, data);
 
             sendCreated(res, contact, 'Contact created successfully');
         } catch (error) {
@@ -55,7 +54,7 @@ export class ContactsController {
             const { id } = req.params;
             const data = sanitizeBody<UpdateContactDto>(req.body);
 
-            const contact = await contactsManager.updateContact(req, id, tenantId, data);
+            const contact = await contactsService.update(id, tenantId, data);
 
             sendSuccess(res, contact, 'Contact updated successfully');
         } catch (error) {
@@ -68,7 +67,7 @@ export class ContactsController {
             const tenantId = req.context.tenantId;
             const { id } = req.params;
 
-            await contactsManager.deleteContact(req, id, tenantId);
+            await contactsService.delete(id, tenantId);
 
             sendNoContent(res);
         } catch (error) {

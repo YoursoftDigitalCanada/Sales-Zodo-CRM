@@ -50,6 +50,7 @@ import {
   isOnboardingCompleted,
 } from "@/lib/enabled-features";
 import { useLocation, useNavigate } from "react-router-dom";
+import apiClient from "@/services/api/http-client";
 import {
   ArrowRight,
   ArrowLeft,
@@ -695,12 +696,12 @@ const ProgressIndicator = ({
       <GlassCard className="p-6 h-full">
         {/* Logo and Progress */}
         <div className="mb-8">
-          <motion.div 
+          <motion.div
             className="flex items-center gap-3 mb-6"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
           >
-            <motion.div 
+            <motion.div
               className="w-12 h-12 bg-gradient-to-br from-[#23D3EE] to-[#0F172A] rounded-2xl flex items-center justify-center shadow-lg shadow-[#23D3EE]/30"
               whileHover={{ scale: 1.1, rotate: 5 }}
               transition={{ type: "spring", stiffness: 400 }}
@@ -712,7 +713,7 @@ const ProgressIndicator = ({
               <p className="text-sm text-slate-500">Step {currentIndex + 1} of {steps.length}</p>
             </div>
           </motion.div>
-          
+
           {/* Animated Progress Bar */}
           <div className="relative h-3 bg-slate-100 rounded-full overflow-hidden">
             <motion.div
@@ -752,8 +753,8 @@ const ProgressIndicator = ({
                   isCurrent
                     ? "bg-gradient-to-r from-[#23D3EE]/20 to-[#0F172A]/10 border border-[#23D3EE]/30 shadow-lg shadow-[#23D3EE]/10"
                     : isCompleted
-                    ? "hover:bg-white/50"
-                    : "opacity-40 cursor-not-allowed"
+                      ? "hover:bg-white/50"
+                      : "opacity-40 cursor-not-allowed"
                 )}
               >
                 <motion.div
@@ -762,8 +763,8 @@ const ProgressIndicator = ({
                     isCurrent
                       ? "bg-gradient-to-br from-[#23D3EE] to-[#0F172A] text-white shadow-lg shadow-[#23D3EE]/30"
                       : isCompleted
-                      ? "bg-gradient-to-br from-green-400 to-green-600 text-white"
-                      : "bg-slate-100 text-slate-400"
+                        ? "bg-gradient-to-br from-green-400 to-green-600 text-white"
+                        : "bg-slate-100 text-slate-400"
                   )}
                   whileHover={isCurrent ? { scale: 1.1 } : {}}
                 >
@@ -911,7 +912,7 @@ const WelcomeStep = ({ onNext }: { onNext: () => void }) => {
               <Rocket size={48} className="text-white" />
             </motion.div>
           </div>
-          
+
           {/* Orbiting particles */}
           {[...Array(3)].map((_, i) => (
             <motion.div
@@ -943,7 +944,7 @@ const WelcomeStep = ({ onNext }: { onNext: () => void }) => {
           transition={{ delay: 0.4 }}
           className="text-3xl lg:text-4xl font-bold text-[#0F172A] mb-4"
         >
-          Welcome to Your New CRM! 
+          Welcome to Your New CRM!
           <motion.span
             animate={{ rotate: [0, 20, -20, 0] }}
             transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 2 }}
@@ -1089,7 +1090,7 @@ const ProfileStep = ({
         </div>
 
         {/* Avatar Upload */}
-        <motion.div 
+        <motion.div
           className="flex justify-center mb-8"
           whileHover={{ scale: 1.02 }}
         >
@@ -1121,7 +1122,7 @@ const ProfileStep = ({
         {/* Form Fields */}
         <div className="space-y-5">
           <div className="grid grid-cols-2 gap-4">
-            <motion.div 
+            <motion.div
               className="space-y-2"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1150,7 +1151,7 @@ const ProfileStep = ({
                 </motion.p>
               )}
             </motion.div>
-            <motion.div 
+            <motion.div
               className="space-y-2"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1181,7 +1182,7 @@ const ProfileStep = ({
             </motion.div>
           </div>
 
-          <motion.div 
+          <motion.div
             className="space-y-2"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1215,7 +1216,7 @@ const ProfileStep = ({
             )}
           </motion.div>
 
-          <motion.div 
+          <motion.div
             className="space-y-2"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1237,7 +1238,7 @@ const ProfileStep = ({
             </div>
           </motion.div>
 
-          <motion.div 
+          <motion.div
             className="grid grid-cols-2 gap-4"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1277,7 +1278,7 @@ const ProfileStep = ({
         </div>
 
         {/* Navigation Buttons */}
-        <motion.div 
+        <motion.div
           className="flex justify-between mt-10"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -2699,7 +2700,7 @@ const CompleteStep = ({
     };
 
     window.addEventListener("resize", handleResize);
-    
+
     // Stop confetti after 5 seconds
     const timer = setTimeout(() => setShowConfetti(false), 5000);
 
@@ -2760,7 +2761,7 @@ const CompleteStep = ({
             }}
             transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
           />
-          
+
           {/* Trophy icon */}
           <motion.div
             className="absolute inset-0 bg-gradient-to-br from-[#23D3EE] to-[#0F172A] rounded-full flex items-center justify-center shadow-2xl shadow-[#23D3EE]/40"
@@ -3230,6 +3231,17 @@ const Onboarding: React.FC = () => {
       setOnboardingCompleted(true);
       localStorage.setItem("onboardingData", JSON.stringify(data));
 
+      // ── Persist businessType to backend (fire-and-forget) ──────────
+      // Maps the frontend industry ID to the backend BusinessType enum.
+      // The backend normalizes unknown values to "general".
+      const selectedIndustry = data.industry || data.company?.industry || "general";
+      apiClient
+        .patch("/tenants/business-type", { businessType: selectedIndustry })
+        .catch(() => {
+          // Best-effort — don't block onboarding if API fails
+          console.warn("[Onboarding] Failed to persist businessType to backend");
+        });
+
       // Keep local user/tenant in sync so header/sidebar reflect onboarding edits.
       const safeJsonParse = <T,>(value: string | null): T | null => {
         if (!value) return null;
@@ -3266,6 +3278,7 @@ const Onboarding: React.FC = () => {
           name: data.company.name,
           website: data.company.website,
           industry: data.company.industry,
+          businessType: selectedIndustry,
           size: data.company.size,
           address: data.company.address,
           city: data.company.city,

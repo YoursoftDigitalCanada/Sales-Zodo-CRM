@@ -35,7 +35,7 @@ import {
   EmployeeStatus,
   EmploymentType,
 } from '@/components/employees';
-import api from "@/lib/axios";
+import { getEmployees } from "@/features/users";
 
 interface FilterState {
   departments: string[];
@@ -70,8 +70,7 @@ const AllEmployeesPage: React.FC = () => {
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
-        const response = await api.get("/employees");
-        const data = response.data?.data || [];
+        const data = await getEmployees() as any[] || [];
         if (data.length > 0) {
           const mapped: Employee[] = data.map((e: any) => ({
             id: e.id,

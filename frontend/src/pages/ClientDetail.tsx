@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Sidebar } from "@/components/Sidebar"; 
-import { 
-  Breadcrumb, 
-  BreadcrumbItem, 
-  BreadcrumbLink, 
-  BreadcrumbList, 
-  BreadcrumbPage, 
-  BreadcrumbSeparator 
+import { Sidebar } from "@/components/Sidebar";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,10 +17,10 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import api from "@/lib/axios";
-import { 
-  Bell, Mail, Phone, MapPin, Star, Tag, User, Calendar, Plus, MoreHorizontal, 
-  Pencil, MessageSquare, FileText, CheckSquare, TrendingUp, FolderOpen, 
+import { getClientById } from "@/services/clientService";
+import {
+  Bell, Mail, Phone, MapPin, Star, Tag, User, Calendar, Plus, MoreHorizontal,
+  Pencil, MessageSquare, FileText, CheckSquare, TrendingUp, FolderOpen,
   Send, ArrowLeft, Loader2, DollarSign, Clock, Users, Download, Trash2, X,
   Image as ImageIcon, File, Files, Clock3
 } from "lucide-react";
@@ -211,8 +211,7 @@ const ClientDetailPage = () => {
 
   const fetchClient = async () => {
     try {
-      const response = await api.get(`/clients/${id}`);
-      const data = response.data?.data || response.data;
+      const data = await getClientById(id!) as any;
       if (data) {
         setClient(mapClientFromApi(data));
       } else {
@@ -322,7 +321,7 @@ const ClientDetailPage = () => {
 
         <div className="p-4 md:p-6">
           <div className="grid grid-cols-12 gap-4 md:gap-6">
-            
+
             {/* Left Panel */}
             <div className="col-span-12 lg:col-span-4 xl:col-span-3 space-y-4 md:space-y-6">
               <Card className="overflow-hidden border-none shadow-md">
@@ -369,7 +368,7 @@ const ClientDetailPage = () => {
                 <CardContent>
                   <div className="flex flex-wrap gap-2">
                     {client.tags ? client.tags.split(',').map((tag, index) => (
-                      <span key={index} className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-white/5 text-slate-200"><Tag size={12} className="mr-1.5 opacity-50"/> {tag.trim()}</span>
+                      <span key={index} className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-white/5 text-slate-200"><Tag size={12} className="mr-1.5 opacity-50" /> {tag.trim()}</span>
                     )) : <span className="text-sm text-[#475569] italic">No tags assigned</span>}
                   </div>
                 </CardContent>
@@ -380,12 +379,12 @@ const ClientDetailPage = () => {
             <div className="col-span-12 lg:col-span-8 xl:col-span-9">
               <Card className="h-full border-none shadow-md bg-white">
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-                  
+
                   <CardHeader className="pb-0 border-b px-0">
                     <div className="px-6 overflow-x-auto scrollbar-hide">
                       <TabsList className="bg-transparent h-auto p-0 gap-6 inline-flex w-max min-w-full justify-start">
                         {tabs.map((tab) => (
-                          <TabsTrigger 
+                          <TabsTrigger
                             key={tab.id}
                             value={tab.id}
                             className="px-0 py-4 rounded-none border-b-2 bg-transparent text-sm font-medium text-[#475569]
@@ -400,7 +399,7 @@ const ClientDetailPage = () => {
                   </CardHeader>
 
                   <CardContent className="p-6 flex-1 bg-[#F8FAFC]/30">
-                    
+
                     {/* Deals */}
                     <TabsContent value="deals" className="m-0 space-y-4">
                       {mockDeals.map((deal) => (
@@ -424,23 +423,22 @@ const ClientDetailPage = () => {
                     {/* Timeline */}
                     <TabsContent value="timeline" className="m-0 space-y-6 px-2">
                       {mockActivities.map((activity, index) => (
-                         <div key={activity.id} className="flex gap-4">
-                           <div className="flex flex-col items-center">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center z-10 ring-4 ring-white ${
-                              activity.type === 'email' ? 'bg-blue-100 text-[#0891B2]' :
-                              activity.type === 'call' ? 'bg-green-100 text-green-600' : 'bg-purple-100 text-purple-600'
-                            }`}>
+                        <div key={activity.id} className="flex gap-4">
+                          <div className="flex flex-col items-center">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center z-10 ring-4 ring-white ${activity.type === 'email' ? 'bg-blue-100 text-[#0891B2]' :
+                                activity.type === 'call' ? 'bg-green-100 text-green-600' : 'bg-purple-100 text-purple-600'
+                              }`}>
                               {activity.type === 'email' ? <Mail size={14} /> : activity.type === 'call' ? <Phone size={14} /> : <FileText size={14} />}
                             </div>
                             {index !== mockActivities.length - 1 && <div className="w-0.5 h-full bg-gray-200 my-2" />}
                           </div>
                           <div className="flex-1 pb-4">
                             <div className="bg-white p-4 rounded-md border border-[rgba(15,23,42,0.06)] shadow-sm">
-                               <div className="flex justify-between items-start mb-1"><h4 className="font-medium text-[#0F172A] text-sm">{activity.title}</h4><span className="text-xs text-[#94A3B8]">{activity.date}</span></div>
-                               <p className="text-sm text-[#475569]">{activity.description}</p>
+                              <div className="flex justify-between items-start mb-1"><h4 className="font-medium text-[#0F172A] text-sm">{activity.title}</h4><span className="text-xs text-[#94A3B8]">{activity.date}</span></div>
+                              <p className="text-sm text-[#475569]">{activity.description}</p>
                             </div>
                           </div>
-                         </div>
+                        </div>
                       ))}
                     </TabsContent>
 
@@ -452,12 +450,12 @@ const ClientDetailPage = () => {
                         <div className="flex justify-end mt-3"><Button size="sm" className="bg-[#0891B2] text-white" onClick={handleAddNote}>Save Note</Button></div>
                       </div>
                       <div className="space-y-4">
-                         {notes.map((note) => (
-                            <div key={note.id} className="bg-yellow-50/50 p-4 rounded-md border border-yellow-100">
-                               <p className="text-[#0F172A] text-sm">{note.content}</p>
-                               <div className="mt-2 text-xs text-[#94A3B8]">{note.author} • {note.date}</div>
-                            </div>
-                         ))}
+                        {notes.map((note) => (
+                          <div key={note.id} className="bg-yellow-50/50 p-4 rounded-md border border-yellow-100">
+                            <p className="text-[#0F172A] text-sm">{note.content}</p>
+                            <div className="mt-2 text-xs text-[#94A3B8]">{note.author} • {note.date}</div>
+                          </div>
+                        ))}
                       </div>
                     </TabsContent>
 
@@ -465,11 +463,11 @@ const ClientDetailPage = () => {
                     <TabsContent value="tasks" className="m-0 space-y-4">
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="font-semibold text-[#0F172A]">To-Do List</h3>
-                        <Button variant="outline" size="sm" onClick={() => setIsTaskModalOpen(true)} className="bg-white hover:bg-[#F8FAFC]"><Plus className="h-3 w-3 mr-1"/> New Task</Button>
+                        <Button variant="outline" size="sm" onClick={() => setIsTaskModalOpen(true)} className="bg-white hover:bg-[#F8FAFC]"><Plus className="h-3 w-3 mr-1" /> New Task</Button>
                       </div>
                       {tasks.map(task => (
                         <div key={task.id} className="flex items-center gap-3 p-3 bg-white rounded-md hover:shadow-sm transition-shadow">
-                          <Checkbox id={`task-${task.id}`} checked={task.completed} onCheckedChange={() => toggleTask(task.id)}/>
+                          <Checkbox id={`task-${task.id}`} checked={task.completed} onCheckedChange={() => toggleTask(task.id)} />
                           <div className="flex-1">
                             <label htmlFor={`task-${task.id}`} className={`text-sm font-medium cursor-pointer ${task.completed ? 'text-[#94A3B8] line-through' : 'text-[#0F172A]'}`}>{task.title}</label>
                             <div className="flex items-center gap-2 mt-0.5">
@@ -483,10 +481,10 @@ const ClientDetailPage = () => {
 
                     {/* --- DOCUMENTS TAB (REVISED LAYOUT) --- */}
                     <TabsContent value="documents" className="m-0 space-y-6">
-                      
+
                       {/* Top Row: 3 Square Boxes */}
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        
+
                         {/* Box 1: Images */}
                         <Card className="aspect-square flex flex-col items-center justify-center p-4 hover:border-indigo-500 hover:shadow-md cursor-pointer transition-all group bg-white border-[rgba(15,23,42,0.06)]">
                           <div className="w-12 h-12 bg-purple-50 rounded-full flex items-center justify-center mb-3 group-hover:bg-purple-100 transition-colors">
@@ -532,11 +530,10 @@ const ClientDetailPage = () => {
                             {recentFiles.map((file) => (
                               <div key={file.id} className="p-4 hover:bg-[#F8FAFC] transition-colors flex items-center justify-between group cursor-pointer">
                                 <div className="flex items-center gap-4">
-                                  <div className={`w-10 h-10 rounded-md flex items-center justify-center ${
-                                    file.type === 'PDF' ? 'bg-red-50 text-red-600' :
-                                    file.type === 'Image' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-[#0891B2]'
-                                  }`}>
-                                    {file.type === 'Image' ? <ImageIcon size={20}/> : <FileText size={20}/>}
+                                  <div className={`w-10 h-10 rounded-md flex items-center justify-center ${file.type === 'PDF' ? 'bg-red-50 text-red-600' :
+                                      file.type === 'Image' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-[#0891B2]'
+                                    }`}>
+                                    {file.type === 'Image' ? <ImageIcon size={20} /> : <FileText size={20} />}
                                   </div>
                                   <div>
                                     <h5 className="text-sm font-medium text-[#0F172A]">{file.name}</h5>
@@ -563,7 +560,7 @@ const ClientDetailPage = () => {
                       </Card>
 
                     </TabsContent>
-                    
+
                     {/* Mail */}
                     <TabsContent value="mail" className="m-0"><div className="text-center py-10 text-[#94A3B8]">No recent emails found.</div></TabsContent>
 

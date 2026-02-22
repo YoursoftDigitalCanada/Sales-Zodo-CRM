@@ -1,23 +1,24 @@
 import { v4 as uuidv4 } from 'uuid';
 import { authRepository } from './auth.repository';
-import { 
-  generateAccessToken, 
-  generateRefreshToken, 
+import {
+  generateAccessToken,
+  generateRefreshToken,
   verifyRefreshToken,
   getTokenExpiry,
 } from '../../common/utils/jwt';
 import { hashPassword, comparePassword } from '../../common/utils/password';
-import { 
-  UnauthorizedError, 
-  BadRequestError, 
+import {
+  UnauthorizedError,
+  BadRequestError,
   NotFoundError,
   ConflictError,
+  ForbiddenError,
 } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
-import { 
-  LoginInput, 
-  RegisterInput, 
-  AuthResponse, 
+import {
+  LoginInput,
+  RegisterInput,
+  AuthResponse,
   TokenResponse,
   ChangePasswordInput,
 } from './auth.types';
@@ -25,6 +26,7 @@ import { prisma } from '../../config/database';
 import { config } from '../../config';
 import { logger } from '../../common/utils/logger';
 import { getModulesForPermissions } from '../../common/constants/modules';
+import { onboardingService } from '../tenants/onboarding.service';
 
 export class AuthService {
   /**
@@ -35,7 +37,7 @@ export class AuthService {
     metadata: { userAgent?: string; ipAddress?: string }
   ): Promise<AuthResponse> {
     const user = await authRepository.findUserByEmail(input.email.toLowerCase());
-    
+
     if (!user) {
       throw new UnauthorizedError(
         'Invalid email or password',
@@ -67,7 +69,7 @@ export class AuthService {
 
     // Verify password
     const isPasswordValid = await comparePassword(input.password, user.passwordHash);
-    
+
     if (!isPasswordValid) {
       throw new UnauthorizedError(
         'Invalid email or password',
@@ -77,7 +79,7 @@ export class AuthService {
 
     // Get the first active employee (for now - could be extended to handle multiple tenants)
     const employee = user.employees[0];
-    
+
     if (!employee) {
       throw new UnauthorizedError(
         'You are not associated with any organization',
@@ -93,12 +95,13 @@ export class AuthService {
       );
     }
 
-    // Generate tokens
+    // Generate tokens (tenantId + role from DB, not frontend)
     const tokens = await this.generateTokens(
       user.id,
       user.email,
       employee.tenantId,
       employee.id,
+      employee.role.name,
       metadata
     );
 
@@ -150,7 +153,7 @@ export class AuthService {
    */
   async register(input: RegisterInput): Promise<AuthResponse> {
     const existingUser = await authRepository.findUserByEmail(input.email.toLowerCase());
-    
+
     if (existingUser) {
       throw new ConflictError(
         'An account with this email already exists',
@@ -187,32 +190,15 @@ export class AuthService {
         },
       });
 
-      // Create default Owner role for the tenant
-      const ownerRole = await tx.role.create({
-        data: {
-          name: 'Owner',
-          description: 'Full access to all features',
-          isSystemRole: true,
-          tenantId: tenant.id,
-        },
-      });
+      // ── ONBOARDING: seed roles, permissions, lead sources, tags, settings ──
+      const onboarding = await onboardingService.seedTenant(tx, tenant.id);
 
-      // Assign all permissions to Owner role
-      const allPermissions = await tx.permission.findMany();
-      
-      await tx.rolePermission.createMany({
-        data: allPermissions.map((permission) => ({
-          roleId: ownerRole.id,
-          permissionId: permission.id,
-        })),
-      });
-
-      // Create employee record
+      // Create employee record linked to Owner role
       const employee = await tx.employee.create({
         data: {
           userId: user.id,
           tenantId: tenant.id,
-          roleId: ownerRole.id,
+          roleId: onboarding.roles.owner,
           isActive: true,
         },
         include: {
@@ -235,13 +221,6 @@ export class AuthService {
         data: { tenantId: tenant.id },
       });
 
-      // Create tenant settings
-      await tx.tenantSettings.create({
-        data: {
-          tenantId: tenant.id,
-        },
-      });
-
       // Create user preferences
       await tx.userPreferences.create({
         data: {
@@ -252,12 +231,13 @@ export class AuthService {
       return { user, employee, tenant };
     });
 
-    // Generate tokens
+    // Generate tokens (tenantId + role from DB)
     const tokens = await this.generateTokens(
       result.user.id,
       result.user.email,
       result.tenant.id,
       result.employee.id,
+      result.employee.role.name,
       {}
     );
 
@@ -269,9 +249,9 @@ export class AuthService {
     // Get sidebar modules
     const sidebarModules = getModulesForPermissions(permissions);
 
-    logger.info(`New user registered: ${result.user.email}`, { 
-      userId: result.user.id, 
-      tenantId: result.tenant.id 
+    logger.info(`New user registered: ${result.user.email}`, {
+      userId: result.user.id,
+      tenantId: result.tenant.id
     });
 
     return {
@@ -318,8 +298,8 @@ export class AuthService {
     // Check if token is revoked
     if (storedToken.revokedAt) {
       await authRepository.revokeAllUserRefreshTokens(storedToken.userId);
-      
-      logger.warn('Refresh token reuse detected', { 
+
+      logger.warn('Refresh token reuse detected', {
         userId: storedToken.userId,
         tokenId: storedToken.id,
       });
@@ -358,12 +338,13 @@ export class AuthService {
       );
     }
 
-    // Generate new tokens (token rotation)
+    // Generate new tokens (token rotation — tenantId + role from DB)
     const newTokens = await this.generateTokens(
       user.id,
       user.email,
       employee.tenantId,
       employee.id,
+      employee.role?.name || '',
       metadata
     );
 
@@ -378,7 +359,7 @@ export class AuthService {
    */
   async logout(refreshToken: string): Promise<void> {
     const storedToken = await authRepository.findRefreshToken(refreshToken);
-    
+
     if (storedToken && !storedToken.revokedAt) {
       await authRepository.revokeRefreshToken(refreshToken);
       logger.info('User logged out', { userId: storedToken.userId });
@@ -401,7 +382,7 @@ export class AuthService {
     input: ChangePasswordInput
   ): Promise<void> {
     const user = await authRepository.findUserById(userId);
-    
+
     if (!user) {
       throw new NotFoundError('User not found', ErrorCodes.USER_NOT_FOUND);
     }
@@ -450,7 +431,7 @@ export class AuthService {
    */
   async getProfile(userId: string, tenantId: string): Promise<any> {
     const employee = await authRepository.findEmployeeWithPermissions(userId, tenantId);
-    
+
     if (!employee) {
       throw new NotFoundError('Employee not found', ErrorCodes.EMPLOYEE_NOT_FOUND);
     }
@@ -498,12 +479,16 @@ export class AuthService {
   }
 
   /**
-   * Switch tenant for users with multiple tenant memberships
+   * Switch tenant for users with multiple tenant memberships.
+   *
+   * Security: Verifies user is an active employee of the target tenant
+   * via DB lookup. Returns 403 Forbidden if not a member.
+   * Issues a new JWT scoped to the validated target tenant.
    */
   async switchTenant(
     userId: string,
     targetTenantId: string,
-    metadata: { userAgent?: string; ipAddress?: string }
+    metadata: { userAgent?: string; ipAddress?: string; sourceTenantId?: string }
   ): Promise<AuthResponse> {
     const user = await authRepository.findUserById(userId);
 
@@ -511,13 +496,21 @@ export class AuthService {
       throw new NotFoundError('User not found', ErrorCodes.USER_NOT_FOUND);
     }
 
-    // Find employee record for target tenant
+    // ── DB ownership check: user must be an active employee of target tenant
     const employee = user.employees.find(
       (emp) => emp.tenantId === targetTenantId && emp.isActive
     );
 
     if (!employee) {
-      throw new UnauthorizedError(
+      logger.warn('Tenant switch denied — user is not a member', {
+        userId: user.id,
+        email: user.email,
+        targetTenantId,
+        sourceTenantId: metadata.sourceTenantId,
+        ipAddress: metadata.ipAddress,
+        userAgent: metadata.userAgent,
+      });
+      throw new ForbiddenError(
         'You do not have access to this organization',
         ErrorCodes.TENANT_ACCESS_DENIED
       );
@@ -541,12 +534,13 @@ export class AuthService {
       );
     }
 
-    // Generate new tokens for the target tenant
+    // Generate new tokens for the target tenant (role from DB)
     const tokens = await this.generateTokens(
       user.id,
       user.email,
       targetTenantId,
       employeeWithPermissions.id,
+      employeeWithPermissions.role.name,
       metadata
     );
 
@@ -557,9 +551,15 @@ export class AuthService {
 
     const sidebarModules = getModulesForPermissions(permissions);
 
-    logger.info(`User switched tenant: ${user.email}`, { 
-      userId: user.id, 
-      tenantId: targetTenantId 
+    logger.info('Tenant switch successful', {
+      userId: user.id,
+      email: user.email,
+      sourceTenantId: metadata.sourceTenantId || 'none',
+      targetTenantId,
+      targetTenantName: employeeWithPermissions.tenant.name,
+      targetRole: employeeWithPermissions.role.name,
+      ipAddress: metadata.ipAddress,
+      userAgent: metadata.userAgent,
     });
 
     return {
@@ -621,7 +621,7 @@ export class AuthService {
     // 2. Finding the user
     // 3. Marking email as verified
     // For now, this is a stub - implement based on your verification token strategy
-    
+
     // Example implementation:
     // const decoded = verifyEmailToken(token);
     // await authRepository.updateUser(decoded.userId, {
@@ -629,7 +629,7 @@ export class AuthService {
     //   emailVerifiedAt: new Date(),
     //   status: 'ACTIVE',
     // });
-    
+
     logger.info('Email verification requested', { token: token.substring(0, 10) + '...' });
     throw new BadRequestError('Email verification not implemented');
   }
@@ -654,7 +654,7 @@ export class AuthService {
 
     // For now, just log the request
     logger.info('Password reset requested', { userId: user.id, email });
-    
+
     // TODO: Implement email sending
     // const resetToken = generateResetToken();
     // await sendPasswordResetEmail(user.email, resetToken);
@@ -684,6 +684,7 @@ export class AuthService {
     email: string,
     tenantId: string,
     employeeId: string,
+    role: string,
     metadata: { userAgent?: string; ipAddress?: string }
   ): Promise<TokenResponse> {
     const tokenPayload = {
@@ -691,6 +692,7 @@ export class AuthService {
       email,
       tenantId,
       employeeId,
+      role,
     };
 
     const accessToken = generateAccessToken(tokenPayload);
@@ -714,7 +716,7 @@ export class AuthService {
 
     // Parse access token expiry for response
     const accessExpiresAt = getTokenExpiry(accessToken);
-    const expiresIn = accessExpiresAt 
+    const expiresIn = accessExpiresAt
       ? Math.floor((accessExpiresAt.getTime() - Date.now()) / 1000)
       : 900; // Default 15 minutes
 

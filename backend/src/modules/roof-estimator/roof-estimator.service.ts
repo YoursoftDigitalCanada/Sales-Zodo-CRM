@@ -5,6 +5,7 @@ import {
     CreateEstimateDto, UpdateEstimateDto, EstimateQueryDto, UpdateSettingsDto,
 } from './roof-estimator.dto';
 import { logger } from '../../common/utils/logger';
+import { activityLogger } from '../../common/services/activity-logger.service';
 
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || '';
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8001';
@@ -111,7 +112,17 @@ export class RoofEstimatorService {
     // ---- CRUD operations (delegate to repository) ----
 
     async create(tenantId: string, data: CreateEstimateDto, createdBy: string) {
-        return roofEstimatorRepository.create(tenantId, data, createdBy);
+        const estimate = await roofEstimatorRepository.create(tenantId, data, createdBy);
+
+        activityLogger.log({
+            tenantId, entityType: 'RoofEstimate', entityId: (estimate as any).id,
+            action: 'CREATE', module: 'roof-estimator',
+            description: `Created roof estimate for "${data.address || 'unknown address'}"`,
+            userId: createdBy,
+            metadata: { address: data.address, roofArea: (estimate as any).roofAreaSqft },
+        });
+
+        return estimate;
     }
 
     async getById(id: string, tenantId: string) {
@@ -142,11 +153,27 @@ export class RoofEstimatorService {
 
     async update(id: string, tenantId: string, data: UpdateEstimateDto) {
         await this.getById(id, tenantId); // ensure exists in tenant
-        return roofEstimatorRepository.update(id, tenantId, data);
+        const estimate = await roofEstimatorRepository.update(id, tenantId, data);
+
+        activityLogger.log({
+            tenantId, entityType: 'RoofEstimate', entityId: id,
+            action: 'UPDATE', module: 'roof-estimator',
+            description: `Updated roof estimate`,
+            metadata: { updatedFields: Object.keys(data) },
+        });
+
+        return estimate;
     }
 
     async delete(id: string, tenantId: string) {
         await this.getById(id, tenantId); // ensure exists in tenant
+
+        activityLogger.log({
+            tenantId, entityType: 'RoofEstimate', entityId: id,
+            action: 'DELETE', module: 'roof-estimator',
+            description: `Deleted roof estimate`,
+        });
+
         return roofEstimatorRepository.delete(id, tenantId);
     }
 

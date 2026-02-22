@@ -1,1 +1,1 @@
-export { getClients } from "@/features/clients";
+export { getClients, getClientById, createClient, updateClient, deleteClient } from "@/features/clients";

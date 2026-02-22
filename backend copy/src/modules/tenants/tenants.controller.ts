@@ -1,11 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import { tenantsService } from './tenants.service';
 import { sendSuccess, sendCreated, sendNoContent } from '../../common/utils/responseFormatter';
+import { sanitizeBody } from '../../common/utils/sanitize-body';
 
 export class TenantsController {
     async create(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenant = await tenantsService.create(req.body);
+            const tenant = await tenantsService.create(sanitizeBody(req.body));
             sendCreated(res, tenant, 'Tenant created');
         } catch (e) { next(e); }
     }
@@ -26,7 +27,7 @@ export class TenantsController {
 
     async update(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const tenant = await tenantsService.update(req.params.id, req.body);
+            const tenant = await tenantsService.update(req.params.id, sanitizeBody(req.body));
             sendSuccess(res, tenant, 'Tenant updated');
         } catch (e) { next(e); }
     }
@@ -35,6 +36,28 @@ export class TenantsController {
         try {
             await tenantsService.delete(req.params.id);
             sendNoContent(res);
+        } catch (e) { next(e); }
+    }
+
+    /**
+     * PATCH /tenants/business-type
+     * Updates the current tenant's businessType in settings.
+     * Uses the authenticated employee's tenantId — no ID in URL needed.
+     */
+    async updateBusinessType(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const tenantId = (req as any).tenantContext?.tenantId || (req as any).employee?.tenantId;
+            if (!tenantId) {
+                res.status(400).json({ success: false, message: 'Tenant context not found' });
+                return;
+            }
+            const { businessType } = sanitizeBody(req.body);
+            if (!businessType || typeof businessType !== 'string') {
+                res.status(400).json({ success: false, message: 'businessType is required' });
+                return;
+            }
+            const result = await tenantsService.updateBusinessType(tenantId, businessType);
+            sendSuccess(res, result, 'Business type updated');
         } catch (e) { next(e); }
     }
 }

@@ -39,7 +39,11 @@ export class GroupsRepository {
         return { data, total };
     }
 
-    async update(id: string, data: UpdateGroupDto) {
+    async update(id: string, tenantId: string, data: UpdateGroupDto) {
+        // Verify tenant ownership
+        const existing = await prisma.clientGroup.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Group not found or access denied');
+
         return prisma.clientGroup.update({
             where: { id },
             data: {
@@ -53,7 +57,11 @@ export class GroupsRepository {
         });
     }
 
-    async delete(id: string) {
+    async delete(id: string, tenantId: string) {
+        // Verify tenant ownership
+        const existing = await prisma.clientGroup.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Group not found or access denied');
+
         await prisma.clientGroupMember.deleteMany({ where: { groupId: id } });
         return prisma.clientGroup.delete({ where: { id } });
     }

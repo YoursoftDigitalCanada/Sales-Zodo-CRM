@@ -10,6 +10,7 @@ import {
 } from './lead-sources.dto';
 import { NotFoundError, ConflictError, BadRequestError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
+import { activityLogger } from '../../common/services/activity-logger.service';
 
 export class LeadSourcesService {
   /**
@@ -23,7 +24,16 @@ export class LeadSourcesService {
     }
 
     const source = await leadSourcesRepository.create(tenantId, data);
-    return toLeadSourceResponseDto(source);
+    const dto = toLeadSourceResponseDto(source);
+
+    activityLogger.log({
+      tenantId, entityType: 'LeadSource', entityId: dto.id,
+      action: 'CREATE', module: 'lead-sources',
+      description: `Created lead source "${data.name}"`,
+      metadata: { sourceName: data.name },
+    });
+
+    return dto;
   }
 
   /**
@@ -94,7 +104,16 @@ export class LeadSourcesService {
     }
 
     const source = await leadSourcesRepository.update(id, tenantId, data);
-    return toLeadSourceResponseDto(source);
+    const dto = toLeadSourceResponseDto(source);
+
+    activityLogger.log({
+      tenantId, entityType: 'LeadSource', entityId: dto.id,
+      action: 'UPDATE', module: 'lead-sources',
+      description: `Updated lead source "${(source as any).name || dto.id}"`,
+      metadata: { updatedFields: Object.keys(data) },
+    });
+
+    return dto;
   }
 
   /**
@@ -114,6 +133,12 @@ export class LeadSourcesService {
         'Cannot delete lead source that has associated leads. Consider deactivating it instead.'
       );
     }
+
+    activityLogger.log({
+      tenantId, entityType: 'LeadSource', entityId: id,
+      action: 'DELETE', module: 'lead-sources',
+      description: `Deleted lead source "${existing.name}"`,
+    });
 
     await leadSourcesRepository.delete(id, tenantId);
   }

@@ -13,17 +13,22 @@ export function validate(schema: AnyZodObject) {
     next: NextFunction
   ): Promise<void> => {
     try {
-      await schema.parseAsync({
+      const parsed = await schema.parseAsync({
         body: req.body,
         query: req.query,
         params: req.params,
       });
-      
+
+      // Write coerced/transformed values back to req
+      if (parsed.body) req.body = parsed.body;
+      if (parsed.query) req.query = parsed.query;
+      if (parsed.params) req.params = parsed.params;
+
       next();
     } catch (error) {
       if (error instanceof ZodError) {
         const formattedErrors = formatZodErrors(error);
-        
+
         next(
           new ValidationError('Validation failed', {
             errors: formattedErrors,
@@ -52,7 +57,7 @@ export function validateBody(schema: AnyZodObject) {
     } catch (error) {
       if (error instanceof ZodError) {
         const formattedErrors = formatZodErrors(error);
-        
+
         next(
           new ValidationError('Validation failed', {
             errors: formattedErrors,
@@ -81,7 +86,7 @@ export function validateQuery(schema: AnyZodObject) {
     } catch (error) {
       if (error instanceof ZodError) {
         const formattedErrors = formatZodErrors(error);
-        
+
         next(
           new ValidationError('Invalid query parameters', {
             errors: formattedErrors,
@@ -110,7 +115,7 @@ export function validateParams(schema: AnyZodObject) {
     } catch (error) {
       if (error instanceof ZodError) {
         const formattedErrors = formatZodErrors(error);
-        
+
         next(
           new ValidationError('Invalid URL parameters', {
             errors: formattedErrors,

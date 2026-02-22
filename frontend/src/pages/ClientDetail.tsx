@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Sidebar } from "@/components/Sidebar";
 import {
@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getClientById } from "@/services/clientService";
+import { ActivityTimeline } from "@/components/ActivityTimeline";
 import {
   Bell, Mail, Phone, MapPin, Star, Tag, User, Calendar, Plus, MoreHorizontal,
   Pencil, MessageSquare, FileText, CheckSquare, TrendingUp, FolderOpen,
@@ -89,31 +90,7 @@ interface Document {
   date: string;
 }
 
-// --- MOCK DATA ---
-const mockDeals: Deal[] = [
-  { id: 1, title: "Website Redesign", description: "Full overhaul of corporate site", amount: 12500.00, status: "In Progress", date: "2 days ago", assignedTo: ["BJ", "CA"] },
-  { id: 2, title: "SEO Campaign", description: "Q4 Marketing push", amount: 4500.00, status: "Won Deal", date: "1 week ago", assignedTo: ["RO"] },
-];
 
-const mockActivities: Activity[] = [
-  { id: 1, type: 'email', title: 'Email sent to client', description: 'Sent proposal document v2', date: '2 hours ago', user: 'Mark Hansen' },
-  { id: 2, type: 'call', title: 'Phone call completed', description: 'Discussed project requirements and timeline', date: '1 day ago', user: 'Sarah Wilson' },
-];
-
-const initialNotes: Note[] = [
-  { id: 1, content: "Client is very interested in the premium support package.", date: "Oct 24, 2025", author: "Mark Hansen" },
-];
-
-const initialTasks: Task[] = [
-  { id: 1, title: "Send updated invoice", dueDate: "Tomorrow", completed: false, priority: "High" },
-  { id: 2, title: "Schedule onboarding call", dueDate: "Next Week", completed: true, priority: "Medium" },
-];
-
-const recentFiles: Document[] = [
-  { id: 1, name: "Project_Proposal_v2.pdf", type: "PDF", size: "2.4 MB", date: "Just now" },
-  { id: 2, name: "Site_Mockup_Final.png", type: "Image", size: "5.1 MB", date: "2 hours ago" },
-  { id: 3, name: "Contract_Draft.docx", type: "DOC", size: "1.2 MB", date: "Yesterday" },
-];
 
 const toClientTypeLabel = (clientType?: string) => {
   if (!clientType) return "Business";
@@ -195,9 +172,9 @@ const ClientDetailPage = () => {
   const [activeTab, setActiveTab] = useState("deals");
 
   // State for interactivity
-  const [notes, setNotes] = useState<Note[]>(initialNotes);
+  const [notes, setNotes] = useState<Note[]>([]);
   const [newNote, setNewNote] = useState("");
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const [tasks, setTasks] = useState<Task[]>([]);
 
   // Task Modal State
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
@@ -205,37 +182,27 @@ const ClientDetailPage = () => {
   const [newTaskDate, setNewTaskDate] = useState("");
   const [newTaskPriority, setNewTaskPriority] = useState<"High" | "Medium" | "Low">("Medium");
 
-  useEffect(() => {
-    fetchClient();
-  }, [id]);
-
-  const fetchClient = async () => {
+  const fetchClient = useCallback(async () => {
     try {
+      setIsLoading(true);
       const data = await getClientById(id!) as any;
       if (data) {
         setClient(mapClientFromApi(data));
-      } else {
-        setClient({
-          id: 1,
-          clientName: "Acme Corp",
-          clientType: "Enterprise",
-          primaryContactName: "John Doe",
-          primaryEmail: "john@acme.com",
-          phone: "+1 (555) 123-4567",
-          city: "New York",
-          status: "Active",
-          tags: "VIP, Tech",
-          rating: 4,
-          assignedOwner: "Mark Hansen",
-          createdAt: "2025-01-15"
-        });
+        // Load notes from internal notes if available
+        if (data.internalNotes) {
+          setNotes([{ id: 1, content: data.internalNotes, date: data.createdAt ? new Date(data.createdAt).toLocaleDateString() : "—", author: "System" }]);
+        }
       }
     } catch (error) {
       console.error("Error fetching client:", error);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    fetchClient();
+  }, [fetchClient]);
 
   const handleAddNote = () => {
     if (!newNote.trim()) return;
@@ -402,44 +369,18 @@ const ClientDetailPage = () => {
 
                     {/* Deals */}
                     <TabsContent value="deals" className="m-0 space-y-4">
-                      {mockDeals.map((deal) => (
-                        <div key={deal.id} className="p-4 border border-[rgba(15,23,42,0.06)] rounded-md bg-white hover:border-indigo-200 transition-colors shadow-sm">
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                            <div className="flex gap-4">
-                              <div className="w-10 h-10 rounded-md bg-[#0891B2]/10 flex items-center justify-center text-[#0891B2]"><DollarSign className="h-5 w-5" /></div>
-                              <div><h4 className="font-semibold text-[#0F172A]">{deal.title}</h4><p className="text-sm text-[#475569] mt-0.5">{deal.description}</p></div>
-                            </div>
-                            <div className="flex items-center gap-3 sm:text-right">
-                              <div className="flex flex-col items-start sm:items-end">
-                                <span className="font-bold text-[#0F172A] text-lg">{formatCurrency(deal.amount)}</span>
-                                <Badge variant="outline" className={`mt-1 font-normal ${getStatusColor(deal.status)}`}>{deal.status}</Badge>
-                              </div>
-                            </div>
-                          </div>
+                      <div className="flex flex-col items-center justify-center py-16 text-center">
+                        <div className="w-16 h-16 rounded-full bg-[#0891B2]/10 flex items-center justify-center mb-4">
+                          <DollarSign className="h-8 w-8 text-[#0891B2]" />
                         </div>
-                      ))}
+                        <h3 className="text-lg font-semibold text-[#0F172A] mb-1">No Deals Yet</h3>
+                        <p className="text-sm text-[#475569] max-w-sm">Deals associated with this client will appear here once they are created.</p>
+                      </div>
                     </TabsContent>
 
                     {/* Timeline */}
-                    <TabsContent value="timeline" className="m-0 space-y-6 px-2">
-                      {mockActivities.map((activity, index) => (
-                        <div key={activity.id} className="flex gap-4">
-                          <div className="flex flex-col items-center">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center z-10 ring-4 ring-white ${activity.type === 'email' ? 'bg-blue-100 text-[#0891B2]' :
-                                activity.type === 'call' ? 'bg-green-100 text-green-600' : 'bg-purple-100 text-purple-600'
-                              }`}>
-                              {activity.type === 'email' ? <Mail size={14} /> : activity.type === 'call' ? <Phone size={14} /> : <FileText size={14} />}
-                            </div>
-                            {index !== mockActivities.length - 1 && <div className="w-0.5 h-full bg-gray-200 my-2" />}
-                          </div>
-                          <div className="flex-1 pb-4">
-                            <div className="bg-white p-4 rounded-md border border-[rgba(15,23,42,0.06)] shadow-sm">
-                              <div className="flex justify-between items-start mb-1"><h4 className="font-medium text-[#0F172A] text-sm">{activity.title}</h4><span className="text-xs text-[#94A3B8]">{activity.date}</span></div>
-                              <p className="text-sm text-[#475569]">{activity.description}</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                    <TabsContent value="timeline" className="m-0 px-2">
+                      <ActivityTimeline entityType="Client" entityId={id!} />
                     </TabsContent>
 
                     {/* Notes */}
@@ -450,7 +391,9 @@ const ClientDetailPage = () => {
                         <div className="flex justify-end mt-3"><Button size="sm" className="bg-[#0891B2] text-white" onClick={handleAddNote}>Save Note</Button></div>
                       </div>
                       <div className="space-y-4">
-                        {notes.map((note) => (
+                        {notes.length === 0 ? (
+                          <div className="text-center py-10 text-[#94A3B8]">No notes yet. Add one above.</div>
+                        ) : notes.map((note) => (
                           <div key={note.id} className="bg-yellow-50/50 p-4 rounded-md border border-yellow-100">
                             <p className="text-[#0F172A] text-sm">{note.content}</p>
                             <div className="mt-2 text-xs text-[#94A3B8]">{note.author} • {note.date}</div>
@@ -465,7 +408,15 @@ const ClientDetailPage = () => {
                         <h3 className="font-semibold text-[#0F172A]">To-Do List</h3>
                         <Button variant="outline" size="sm" onClick={() => setIsTaskModalOpen(true)} className="bg-white hover:bg-[#F8FAFC]"><Plus className="h-3 w-3 mr-1" /> New Task</Button>
                       </div>
-                      {tasks.map(task => (
+                      {tasks.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-12 text-center">
+                          <div className="w-14 h-14 rounded-full bg-orange-50 flex items-center justify-center mb-3">
+                            <CheckSquare className="h-6 w-6 text-orange-500" />
+                          </div>
+                          <h4 className="text-sm font-semibold text-[#0F172A] mb-1">No Tasks Yet</h4>
+                          <p className="text-xs text-[#475569]">Create a task to keep track of to-dos for this client.</p>
+                        </div>
+                      ) : tasks.map(task => (
                         <div key={task.id} className="flex items-center gap-3 p-3 bg-white rounded-md hover:shadow-sm transition-shadow">
                           <Checkbox id={`task-${task.id}`} checked={task.completed} onCheckedChange={() => toggleTask(task.id)} />
                           <div className="flex-1">
@@ -479,86 +430,15 @@ const ClientDetailPage = () => {
                       ))}
                     </TabsContent>
 
-                    {/* --- DOCUMENTS TAB (REVISED LAYOUT) --- */}
+                    {/* --- DOCUMENTS TAB --- */}
                     <TabsContent value="documents" className="m-0 space-y-6">
-
-                      {/* Top Row: 3 Square Boxes */}
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-
-                        {/* Box 1: Images */}
-                        <Card className="aspect-square flex flex-col items-center justify-center p-4 hover:border-indigo-500 hover:shadow-md cursor-pointer transition-all group bg-white border-[rgba(15,23,42,0.06)]">
-                          <div className="w-12 h-12 bg-purple-50 rounded-full flex items-center justify-center mb-3 group-hover:bg-purple-100 transition-colors">
-                            <ImageIcon className="h-6 w-6 text-purple-600" />
-                          </div>
-                          <span className="font-semibold text-[#0F172A]">Images</span>
-                          <span className="text-xs text-[#475569] mt-1">12 Files</span>
-                        </Card>
-
-                        {/* Box 2: Documents */}
-                        <Card className="aspect-square flex flex-col items-center justify-center p-4 hover:border-blue-500 hover:shadow-md cursor-pointer transition-all group bg-white border-[rgba(15,23,42,0.06)]">
-                          <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mb-3 group-hover:bg-blue-100 transition-colors">
-                            <FileText className="h-6 w-6 text-[#0891B2]" />
-                          </div>
-                          <span className="font-semibold text-[#0F172A]">Documents</span>
-                          <span className="text-xs text-[#475569] mt-1">8 Files</span>
-                        </Card>
-
-                        {/* Box 3: All Files */}
-                        <Card className="aspect-square flex flex-col items-center justify-center p-4 hover:border-indigo-500 hover:shadow-md cursor-pointer transition-all group bg-white border-[rgba(15,23,42,0.06)]">
-                          <div className="w-12 h-12 bg-[#0891B2]/10 rounded-full flex items-center justify-center mb-3 group-hover:bg-indigo-100 transition-colors">
-                            <Files className="h-6 w-6 text-[#0891B2]" />
-                          </div>
-                          <span className="font-semibold text-[#0F172A]">All Files</span>
-                          <span className="text-xs text-[#475569] mt-1">20 Files</span>
-                        </Card>
-
+                      <div className="flex flex-col items-center justify-center py-16 text-center">
+                        <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-4">
+                          <FolderOpen className="h-8 w-8 text-[#0891B2]" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-[#0F172A] mb-1">No Documents</h3>
+                        <p className="text-sm text-[#475569] max-w-sm">Documents linked to this client will appear here.</p>
                       </div>
-
-                      {/* Bottom Section: Recent Files (The "Main Box") */}
-                      <Card className="bg-white border-[rgba(15,23,42,0.06)] shadow-sm overflow-hidden">
-                        <CardHeader className="bg-[#F8FAFC]/50 border-b border-[rgba(15,23,42,0.06)] pb-3">
-                          <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-2">
-                              <Clock3 className="h-4 w-4 text-[#475569]" />
-                              <CardTitle className="text-sm font-semibold text-slate-200">Recently Opened Files</CardTitle>
-                            </div>
-                            <Button variant="ghost" size="sm" className="h-6 text-xs text-[#0891B2] hover:text-indigo-700 hover:bg-[#0891B2]/10">View All</Button>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="p-0">
-                          <div className="divide-y divide-[rgba(15,23,42,0.06)]">
-                            {recentFiles.map((file) => (
-                              <div key={file.id} className="p-4 hover:bg-[#F8FAFC] transition-colors flex items-center justify-between group cursor-pointer">
-                                <div className="flex items-center gap-4">
-                                  <div className={`w-10 h-10 rounded-md flex items-center justify-center ${file.type === 'PDF' ? 'bg-red-50 text-red-600' :
-                                      file.type === 'Image' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-[#0891B2]'
-                                    }`}>
-                                    {file.type === 'Image' ? <ImageIcon size={20} /> : <FileText size={20} />}
-                                  </div>
-                                  <div>
-                                    <h5 className="text-sm font-medium text-[#0F172A]">{file.name}</h5>
-                                    <p className="text-xs text-[#475569]">{file.size} • {file.date}</p>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-[#94A3B8] hover:text-[#0891B2]">
-                                    <Download size={16} />
-                                  </Button>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-[#94A3B8] hover:text-red-600">
-                                    <Trash2 size={16} />
-                                  </Button>
-                                </div>
-                              </div>
-                            ))}
-                            {/* Upload Placeholder Row */}
-                            <div className="p-4 flex items-center justify-center border-t border-dashed border-[rgba(15,23,42,0.06)] hover:bg-[#F8FAFC] cursor-pointer text-[#94A3B8] hover:text-[#0891B2] transition-colors gap-2">
-                              <Plus size={16} />
-                              <span className="text-sm font-medium">Upload New File</span>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-
                     </TabsContent>
 
                     {/* Mail */}

@@ -1,12 +1,17 @@
 // src/pages/Leads/Pipeline.tsx
 
 import React, { useState, useCallback, useEffect, useRef } from "react";
-import { getLeads, deleteLead, updateLeadStatus } from "@/features/leads";
+import { getLeads, deleteLead, updateLeadStatus, convertLead } from "@/features/leads";
 import { Sidebar } from "@/components/Sidebar";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -48,6 +53,8 @@ import {
   XCircle,
   Clock,
   Sparkles,
+  Loader2,
+  ArrowRightLeft,
   X,
   Building2,
   Briefcase,
@@ -595,6 +602,13 @@ const Pipeline = () => {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // ── Conversion dialog state ──
+  const [convertingLead, setConvertingLead] = useState<{ lead: Lead; sourceStageId: string } | null>(null);
+  const [convertClientType, setConvertClientType] = useState<"INDIVIDUAL" | "COMPANY">("INDIVIDUAL");
+  const [convertCreateContact, setConvertCreateContact] = useState(true);
+  const [convertLoading, setConvertLoading] = useState(false);
+  const [convertError, setConvertError] = useState<string | null>(null);
+
   // Fetch leads from API and distribute into pipeline stages
   useEffect(() => {
     const fetchLeads = async () => {
@@ -674,6 +688,15 @@ const Pipeline = () => {
     const newStatus = stageIdToStatus[targetStageId];
     if (!newStatus) return;
 
+    // ── Special handling: dropping into "Won" triggers conversion dialog ──
+    if (targetStageId === "won") {
+      setConvertClientType(movedLead.company ? "COMPANY" : "INDIVIDUAL");
+      setConvertCreateContact(true);
+      setConvertError(null);
+      setConvertingLead({ lead: movedLead, sourceStageId: sourceStageId! });
+      return;
+    }
+
     // Optimistically update the UI
     setPipeline((prev) =>
       prev.map((stage) => {
@@ -711,6 +734,48 @@ const Pipeline = () => {
       );
       toast({ title: "Error", description: "Failed to update lead status. Change has been reverted.", variant: "destructive" });
     }
+  };
+
+  // ── Conversion handlers ──
+  const handleConvertConfirm = async () => {
+    if (!convertingLead) return;
+    const { lead, sourceStageId } = convertingLead;
+
+    setConvertLoading(true);
+    setConvertError(null);
+    try {
+      await convertLead(lead.id, { clientType: convertClientType, createContact: convertCreateContact });
+
+      // Move lead to Won in UI
+      setPipeline((prev) =>
+        prev.map((stage) => {
+          if (stage.id === sourceStageId) {
+            return { ...stage, leads: stage.leads.filter((l) => l.id !== lead.id) };
+          }
+          if (stage.id === "won") {
+            return { ...stage, leads: [...stage.leads, { ...lead, status: "won", daysInStage: 0 }] };
+          }
+          return stage;
+        })
+      );
+
+      toast({
+        title: "🎉 Lead Converted!",
+        description: `${lead.firstName} ${lead.lastName} is now a client.`,
+      });
+      setConvertingLead(null);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || "Conversion failed. Please try again.";
+      setConvertError(msg);
+      toast({ title: "Conversion Failed", description: msg, variant: "destructive" });
+    } finally {
+      setConvertLoading(false);
+    }
+  };
+
+  const handleConvertCancel = () => {
+    setConvertingLead(null);
+    setConvertError(null);
   };
 
   return (
@@ -837,6 +902,106 @@ const Pipeline = () => {
           </>
         )}
       </AnimatePresence>
+
+      {/* Convert Lead to Client Dialog */}
+      <Dialog open={!!convertingLead} onOpenChange={(open) => { if (!open) handleConvertCancel(); }}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <ArrowRightLeft className="h-5 w-5 text-[#0891B2]" />
+              Convert Lead to Client
+            </DialogTitle>
+            <DialogDescription>
+              This will create a new client from <strong>{convertingLead?.lead.firstName} {convertingLead?.lead.lastName}</strong>
+              {convertingLead?.lead.company && <> at <strong>{convertingLead.lead.company}</strong></>}.
+              The lead will be marked as <strong>Won</strong>.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-2">
+            {/* Client Type */}
+            <div className="space-y-3">
+              <Label className="text-sm font-semibold text-[#0F172A]">Client Type</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setConvertClientType("INDIVIDUAL")}
+                  className={`p-4 rounded-lg border-2 text-center transition-all ${convertClientType === "INDIVIDUAL"
+                      ? "border-[#0891B2] bg-[#0891B2]/5 shadow-sm"
+                      : "border-gray-200 hover:border-gray-300"
+                    }`}
+                >
+                  <User size={24} className={`mx-auto mb-2 ${convertClientType === "INDIVIDUAL" ? "text-[#0891B2]" : "text-gray-400"}`} />
+                  <p className={`text-sm font-medium ${convertClientType === "INDIVIDUAL" ? "text-[#0891B2]" : "text-gray-600"}`}>Individual</p>
+                  <p className="text-xs text-gray-400 mt-1">Person / Freelancer</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConvertClientType("COMPANY")}
+                  className={`p-4 rounded-lg border-2 text-center transition-all ${convertClientType === "COMPANY"
+                      ? "border-[#0891B2] bg-[#0891B2]/5 shadow-sm"
+                      : "border-gray-200 hover:border-gray-300"
+                    }`}
+                >
+                  <Building2 size={24} className={`mx-auto mb-2 ${convertClientType === "COMPANY" ? "text-[#0891B2]" : "text-gray-400"}`} />
+                  <p className={`text-sm font-medium ${convertClientType === "COMPANY" ? "text-[#0891B2]" : "text-gray-600"}`}>Company</p>
+                  <p className="text-xs text-gray-400 mt-1">Business / Organization</p>
+                </button>
+              </div>
+            </div>
+
+            {/* Create Contact Toggle */}
+            {convertClientType === "COMPANY" && (
+              <div className="flex items-center justify-between p-4 rounded-lg bg-[#F8FAFC] border">
+                <div>
+                  <Label className="text-sm font-medium text-[#0F172A]">Create Primary Contact</Label>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Add {convertingLead?.lead.firstName} {convertingLead?.lead.lastName} as the contact person
+                  </p>
+                </div>
+                <Switch checked={convertCreateContact} onCheckedChange={setConvertCreateContact} />
+              </div>
+            )}
+
+            {/* Preview */}
+            <div className="p-4 rounded-lg border bg-gray-50/50 space-y-2">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">What will be created</p>
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 text-sm">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  <span>New <strong>{convertClientType === "COMPANY" ? "Company" : "Individual"}</strong> client</span>
+                </div>
+                {convertClientType === "COMPANY" && convertCreateContact && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    <span>Primary contact: <strong>{convertingLead?.lead.firstName} {convertingLead?.lead.lastName}</strong></span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2 text-sm">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  <span>Lead marked as <strong>Won</strong></span>
+                </div>
+              </div>
+            </div>
+
+            {convertError && (
+              <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">{convertError}</div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={handleConvertCancel} disabled={convertLoading}>Cancel</Button>
+            <Button
+              onClick={handleConvertConfirm}
+              disabled={convertLoading}
+              className="bg-green-600 hover:bg-green-700 text-white gap-2"
+            >
+              {convertLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRightLeft className="h-4 w-4" />}
+              {convertLoading ? "Converting..." : "Convert to Client"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Custom Scrollbar Styles */}
       <style>{`

@@ -17,8 +17,10 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { getClientById } from "@/services/clientService";
+import { getClientById, updateClient } from "@/services/clientService";
+import { getTasks, createTask, updateTask } from "@/features/tasks/services/tasks-service";
 import { ActivityTimeline } from "@/components/ActivityTimeline";
+import { useToast } from "@/hooks/use-toast";
 import {
   Bell, Mail, Phone, MapPin, Star, Tag, User, Calendar, Plus, MoreHorizontal,
   Pencil, MessageSquare, FileText, CheckSquare, TrendingUp, FolderOpen,
@@ -67,27 +69,12 @@ interface Activity {
   user: string;
 }
 
-interface Note {
-  id: number;
-  content: string;
-  date: string;
-  author: string;
-}
-
-interface Task {
-  id: number;
+interface ClientTask {
+  id: string;
   title: string;
   dueDate: string;
   completed: boolean;
   priority: 'High' | 'Medium' | 'Low';
-}
-
-interface Document {
-  id: number;
-  name: string;
-  type: string;
-  size: string;
-  date: string;
 }
 
 
@@ -100,6 +87,13 @@ const toClientTypeLabel = (clientType?: string) => {
   if (normalized === "INDIVIDUAL") return "Individual";
 
   return clientType;
+};
+
+const mapPriority = (p: string): 'High' | 'Medium' | 'Low' => {
+  const u = (p || '').toUpperCase();
+  if (u === 'HIGH' || u === 'URGENT') return 'High';
+  if (u === 'LOW') return 'Low';
+  return 'Medium';
 };
 
 const toStatusLabel = (status?: string) => {
@@ -167,31 +161,35 @@ const mapClientFromApi = (data: any): Client => {
 const ClientDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [client, setClient] = useState<Client | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("deals");
 
-  // State for interactivity
-  const [notes, setNotes] = useState<Note[]>([]);
+  // State for notes (persisted as internalNotes on Client)
+  const [internalNotes, setInternalNotes] = useState("");
   const [newNote, setNewNote] = useState("");
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [savingNote, setSavingNote] = useState(false);
+
+  // State for tasks (persisted via Tasks API)
+  const [tasks, setTasks] = useState<ClientTask[]>([]);
+  const [loadingTasks, setLoadingTasks] = useState(false);
 
   // Task Modal State
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskDate, setNewTaskDate] = useState("");
   const [newTaskPriority, setNewTaskPriority] = useState<"High" | "Medium" | "Low">("Medium");
+  const [savingTask, setSavingTask] = useState(false);
 
+  // Fetch client data
   const fetchClient = useCallback(async () => {
     try {
       setIsLoading(true);
       const data = await getClientById(id!) as any;
       if (data) {
         setClient(mapClientFromApi(data));
-        // Load notes from internal notes if available
-        if (data.internalNotes) {
-          setNotes([{ id: 1, content: data.internalNotes, date: data.createdAt ? new Date(data.createdAt).toLocaleDateString() : "—", author: "System" }]);
-        }
+        setInternalNotes(data.internalNotes || "");
       }
     } catch (error) {
       console.error("Error fetching client:", error);
@@ -200,35 +198,91 @@ const ClientDetailPage = () => {
     }
   }, [id]);
 
+  // Fetch tasks for this client
+  const fetchTasks = useCallback(async () => {
+    try {
+      setLoadingTasks(true);
+      const data = await getTasks({ clientId: id!, limit: 100 }) as any[];
+      setTasks(data.map((t: any) => ({
+        id: t.id,
+        title: t.title,
+        dueDate: t.dueDate ? new Date(t.dueDate).toLocaleDateString() : "No Date",
+        completed: t.status === "DONE" || t.status === "COMPLETED",
+        priority: mapPriority(t.priority),
+      })));
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+    } finally {
+      setLoadingTasks(false);
+    }
+  }, [id]);
+
   useEffect(() => {
     fetchClient();
-  }, [fetchClient]);
+    fetchTasks();
+  }, [fetchClient, fetchTasks]);
 
-  const handleAddNote = () => {
+  // Save note to backend as internalNotes
+  const handleAddNote = async () => {
     if (!newNote.trim()) return;
-    const note: Note = { id: Date.now(), content: newNote, date: "Just now", author: "You" };
-    setNotes([note, ...notes]);
-    setNewNote("");
+    setSavingNote(true);
+    try {
+      // Append the new note to existing internal notes
+      const updated = internalNotes
+        ? `${newNote.trim()}\n\n---\n\n${internalNotes}`
+        : newNote.trim();
+      await updateClient(id!, { internalNotes: updated });
+      setInternalNotes(updated);
+      setNewNote("");
+      toast({ title: "Note Saved", description: "Your note has been saved." });
+    } catch (error) {
+      console.error("Error saving note:", error);
+      toast({ title: "Error", description: "Failed to save note.", variant: "destructive" });
+    } finally {
+      setSavingNote(false);
+    }
   };
 
-  const toggleTask = (taskId: number) => {
+  // Toggle task completion via API
+  const toggleTask = async (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    const newStatus = task.completed ? "TODO" : "DONE";
+    // Optimistic update
     setTasks(tasks.map(t => t.id === taskId ? { ...t, completed: !t.completed } : t));
+    try {
+      await updateTask(taskId, { status: newStatus });
+    } catch (error) {
+      // Revert on failure
+      setTasks(tasks.map(t => t.id === taskId ? { ...t, completed: task.completed } : t));
+      toast({ title: "Error", description: "Failed to update task.", variant: "destructive" });
+    }
   };
 
-  const handleAddTask = () => {
+  // Create task via API
+  const handleAddTask = async () => {
     if (!newTaskTitle.trim()) return;
-    const task: Task = {
-      id: Date.now(),
-      title: newTaskTitle,
-      dueDate: newTaskDate || "No Date",
-      priority: newTaskPriority,
-      completed: false
-    };
-    setTasks([task, ...tasks]);
-    setNewTaskTitle("");
-    setNewTaskDate("");
-    setNewTaskPriority("Medium");
-    setIsTaskModalOpen(false);
+    setSavingTask(true);
+    try {
+      await createTask({
+        title: newTaskTitle,
+        dueDate: newTaskDate || undefined,
+        priority: newTaskPriority.toUpperCase(),
+        clientId: id,
+        status: "TODO",
+      });
+      setNewTaskTitle("");
+      setNewTaskDate("");
+      setNewTaskPriority("Medium");
+      setIsTaskModalOpen(false);
+      toast({ title: "Task Created", description: "Task has been added." });
+      fetchTasks(); // refetch from API
+    } catch (error) {
+      console.error("Error creating task:", error);
+      toast({ title: "Error", description: "Failed to create task.", variant: "destructive" });
+    } finally {
+      setSavingTask(false);
+    }
   };
 
   const formatCurrency = (amount?: number) => {
@@ -388,15 +442,19 @@ const ClientDetailPage = () => {
                       <div className="bg-white p-4 rounded-md border border-[rgba(15,23,42,0.06)] shadow-sm">
                         <label className="text-sm font-medium text-slate-200 mb-2 block">Add a new note</label>
                         <Textarea placeholder="Type your note here..." className="resize-none min-h-[80px]" value={newNote} onChange={(e) => setNewNote(e.target.value)} />
-                        <div className="flex justify-end mt-3"><Button size="sm" className="bg-[#0891B2] text-white" onClick={handleAddNote}>Save Note</Button></div>
+                        <div className="flex justify-end mt-3">
+                          <Button size="sm" className="bg-[#0891B2] text-white" onClick={handleAddNote} disabled={savingNote || !newNote.trim()}>
+                            {savingNote ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+                            {savingNote ? "Saving..." : "Save Note"}
+                          </Button>
+                        </div>
                       </div>
                       <div className="space-y-4">
-                        {notes.length === 0 ? (
+                        {!internalNotes ? (
                           <div className="text-center py-10 text-[#94A3B8]">No notes yet. Add one above.</div>
-                        ) : notes.map((note) => (
-                          <div key={note.id} className="bg-yellow-50/50 p-4 rounded-md border border-yellow-100">
-                            <p className="text-[#0F172A] text-sm">{note.content}</p>
-                            <div className="mt-2 text-xs text-[#94A3B8]">{note.author} • {note.date}</div>
+                        ) : internalNotes.split('\n\n---\n\n').map((note, index) => (
+                          <div key={index} className="bg-yellow-50/50 p-4 rounded-md border border-yellow-100">
+                            <p className="text-[#0F172A] text-sm whitespace-pre-wrap">{note}</p>
                           </div>
                         ))}
                       </div>

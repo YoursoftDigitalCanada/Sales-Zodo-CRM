@@ -1694,16 +1694,14 @@ const AllLeads = () => {
         jobTitle: data.jobTitle || undefined,
         website: data.website && data.website.trim() ? data.website.trim() : undefined,
         location: data.location || undefined,
-        leadSource: data.source || "website",
         status: (data.status || "new").toUpperCase(),
         temperature: (data.temperature || "warm").toUpperCase(),
         potentialValue: data.value || 0,
         notes: data.notes || undefined,
-        tags: data.tags || [],
       };
-      // Only send assignedTo if a valid employee is selected
+      // Only send assignedToId if a valid employee is selected
       if (data.assignedTo && data.assignedTo !== "unassigned" && data.assignedTo !== "") {
-        apiData.assignedTo = data.assignedTo;
+        apiData.assignedToId = data.assignedTo;
       }
 
       const responseData = await createLead(apiData);
@@ -1735,18 +1733,16 @@ const AllLeads = () => {
         jobTitle: data.jobTitle || undefined,
         website: data.website && data.website.trim() ? data.website.trim() : undefined,
         location: data.location || undefined,
-        leadSource: data.source,
         status: data.status?.toUpperCase(),
         temperature: data.temperature?.toUpperCase(),
         potentialValue: data.value || 0,
         notes: data.notes || undefined,
-        tags: data.tags || [],
       };
-      // Only send assignedTo if a valid employee is selected
+      // Only send assignedToId if a valid employee is selected
       if (data.assignedTo && data.assignedTo !== "unassigned" && data.assignedTo !== "") {
-        apiData.assignedTo = data.assignedTo;
+        apiData.assignedToId = data.assignedTo;
       } else {
-        apiData.assignedTo = null;
+        apiData.assignedToId = null;
       }
 
       const responseData = await updateLead(currentLead.id, apiData);

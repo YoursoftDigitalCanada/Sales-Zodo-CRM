@@ -19,12 +19,12 @@ export const createLeadSchema = z.object({
     website: z.string().url().optional().nullable().or(z.literal('')),
 
     // Lead Details
-    leadSource: z.string().max(100).optional().nullable(),
+    leadSourceId: z.string().uuid().optional().nullable(),
     status: z.enum(['NEW', 'CONTACTED', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATION', 'WON', 'LOST']).default('NEW'),
     temperature: z.enum(['COLD', 'WARM', 'HOT']).default('COLD'),
     potentialValue: z.number().min(0).optional().nullable(),
-    assignedTo: z.string().uuid().optional().nullable(),
-    tags: z.array(z.string()).default([]),
+    assignedToId: z.string().uuid().optional().nullable(),
+    tagIds: z.array(z.string().uuid()).default([]),
     notes: z.string().optional().nullable(),
   }),
 });
@@ -44,12 +44,12 @@ export const updateLeadSchema = z.object({
     website: z.string().url().optional().nullable().or(z.literal('')),
 
     // Lead Details
-    leadSource: z.string().max(100).optional().nullable(),
+    leadSourceId: z.string().uuid().optional().nullable(),
     status: z.enum(['NEW', 'CONTACTED', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATION', 'WON', 'LOST']).optional(),
     temperature: z.enum(['COLD', 'WARM', 'HOT']).optional(),
     potentialValue: z.number().min(0).optional().nullable(),
-    assignedTo: z.string().uuid().optional().nullable(),
-    tags: z.array(z.string()).optional(),
+    assignedToId: z.string().uuid().optional().nullable(),
+    tagIds: z.array(z.string().uuid()).optional(),
     notes: z.string().optional().nullable(),
   }),
 });

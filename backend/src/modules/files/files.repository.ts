@@ -30,11 +30,13 @@ export class FilesRepository {
     }
 
     async findMany(tenantId: string, query: FileQueryDto) {
-        const { page = 1, limit = 20, search, folderId, mimeType, sortBy = 'createdAt', sortOrder = 'desc' } = query;
+        const { page = 1, limit = 20, search, folderId, clientId, projectId, mimeType, sortBy = 'createdAt', sortOrder = 'desc' } = query;
         const where: Prisma.FileWhereInput = {
             tenantId,
             deletedAt: null,
             ...(folderId && { folderId }),
+            ...(clientId && { clientId }),
+            ...(projectId && { projectId }),
             ...(mimeType && { mimeType: { contains: mimeType } }),
             ...(search && { name: { contains: search, mode: 'insensitive' as const } }),
         };

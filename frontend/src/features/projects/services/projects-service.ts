@@ -30,8 +30,8 @@ export interface ProjectEntity {
   ClientName?: string;
 }
 
-export async function getProjects(): Promise<ProjectEntity[]> {
-  const response = await api.get("/projects");
+export async function getProjects(params?: Record<string, unknown>): Promise<ProjectEntity[]> {
+  const response = await api.get("/projects", { params });
   return extractApiArray<ProjectEntity>(response.data);
 }
 

@@ -22,6 +22,8 @@ export interface FileQueryDto {
     limit?: number;
     search?: string;
     folderId?: string;
+    clientId?: string;
+    projectId?: string;
     mimeType?: string;
     sortBy?: 'name' | 'createdAt' | 'size';
     sortOrder?: 'asc' | 'desc';

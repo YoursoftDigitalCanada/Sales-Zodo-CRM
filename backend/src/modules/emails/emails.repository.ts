@@ -35,11 +35,12 @@ export class EmailsRepository {
     }
 
     async findMany(tenantId: string, query: EmailQueryDto) {
-        const { page = 1, limit = 20, search, folder, labelId, sortBy = 'receivedAt', sortOrder = 'desc' } = query;
+        const { page = 1, limit = 20, search, folder, clientId, labelId, sortBy = 'receivedAt', sortOrder = 'desc' } = query;
         const where: Prisma.EmailWhereInput = {
             tenantId,
             deletedAt: null,
             ...(folder && { folder }),
+            ...(clientId && { clientId }),
             ...(labelId && { labels: { some: { labelId } } }),
             ...(search && {
                 OR: [

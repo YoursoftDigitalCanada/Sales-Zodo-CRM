@@ -19,6 +19,9 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getClientById, updateClient } from "@/services/clientService";
 import { getTasks, createTask, updateTask } from "@/features/tasks/services/tasks-service";
+import { getProjects } from "@/features/projects/services/projects-service";
+import { getFiles } from "@/features/files/services/files-service";
+import { getEmails } from "@/features/emails/services/emails-service";
 import { ActivityTimeline } from "@/components/ActivityTimeline";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -175,6 +178,18 @@ const ClientDetailPage = () => {
   const [tasks, setTasks] = useState<ClientTask[]>([]);
   const [loadingTasks, setLoadingTasks] = useState(false);
 
+  // State for deals (projects with clientId)
+  const [deals, setDeals] = useState<any[]>([]);
+  const [loadingDeals, setLoadingDeals] = useState(false);
+
+  // State for documents (files with clientId)
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [loadingDocs, setLoadingDocs] = useState(false);
+
+  // State for emails (emails with clientId)
+  const [emails, setEmails] = useState<any[]>([]);
+  const [loadingEmails, setLoadingEmails] = useState(false);
+
   // Task Modal State
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -217,10 +232,52 @@ const ClientDetailPage = () => {
     }
   }, [id]);
 
+  // Fetch deals (projects) for this client
+  const fetchDeals = useCallback(async () => {
+    try {
+      setLoadingDeals(true);
+      const data = await getProjects({ clientId: id!, limit: 100 });
+      setDeals(data);
+    } catch (error) {
+      console.error("Error fetching deals:", error);
+    } finally {
+      setLoadingDeals(false);
+    }
+  }, [id]);
+
+  // Fetch documents (files) for this client
+  const fetchDocuments = useCallback(async () => {
+    try {
+      setLoadingDocs(true);
+      const data = await getFiles({ clientId: id!, limit: 100 });
+      setDocuments(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Error fetching documents:", error);
+    } finally {
+      setLoadingDocs(false);
+    }
+  }, [id]);
+
+  // Fetch emails for this client
+  const fetchEmails = useCallback(async () => {
+    try {
+      setLoadingEmails(true);
+      const data = await getEmails({ clientId: id!, limit: 50 });
+      setEmails(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Error fetching emails:", error);
+    } finally {
+      setLoadingEmails(false);
+    }
+  }, [id]);
+
   useEffect(() => {
     fetchClient();
     fetchTasks();
-  }, [fetchClient, fetchTasks]);
+    fetchDeals();
+    fetchDocuments();
+    fetchEmails();
+  }, [fetchClient, fetchTasks, fetchDeals, fetchDocuments, fetchEmails]);
 
   // Save note to backend as internalNotes
   const handleAddNote = async () => {
@@ -423,13 +480,53 @@ const ClientDetailPage = () => {
 
                     {/* Deals */}
                     <TabsContent value="deals" className="m-0 space-y-4">
-                      <div className="flex flex-col items-center justify-center py-16 text-center">
-                        <div className="w-16 h-16 rounded-full bg-[#0891B2]/10 flex items-center justify-center mb-4">
-                          <DollarSign className="h-8 w-8 text-[#0891B2]" />
+                      {loadingDeals ? (
+                        <div className="flex items-center justify-center py-12">
+                          <Loader2 className="animate-spin text-[#0891B2] mr-2" size={20} />
+                          <span className="text-sm text-[#94A3B8]">Loading deals…</span>
                         </div>
-                        <h3 className="text-lg font-semibold text-[#0F172A] mb-1">No Deals Yet</h3>
-                        <p className="text-sm text-[#475569] max-w-sm">Deals associated with this client will appear here once they are created.</p>
-                      </div>
+                      ) : deals.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-16 text-center">
+                          <div className="w-16 h-16 rounded-full bg-[#0891B2]/10 flex items-center justify-center mb-4">
+                            <DollarSign className="h-8 w-8 text-[#0891B2]" />
+                          </div>
+                          <h3 className="text-lg font-semibold text-[#0F172A] mb-1">No Deals Yet</h3>
+                          <p className="text-sm text-[#475569] max-w-sm">Deals associated with this client will appear here once they are created.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {deals.map((deal: any) => {
+                            const status = (deal.status || deal.Status || 'IN_PROGRESS').toUpperCase();
+                            const statusColor = status === 'COMPLETED' ? 'bg-green-100 text-green-700' : status === 'ON_HOLD' ? 'bg-amber-100 text-amber-700' : status === 'CANCELLED' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700';
+                            const statusLabel = status === 'IN_PROGRESS' ? 'In Progress' : status === 'ON_HOLD' ? 'On Hold' : status.charAt(0) + status.slice(1).toLowerCase();
+                            return (
+                              <div key={deal.id || deal.Id} className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-100 hover:shadow-sm transition-shadow">
+                                <div className="flex-1">
+                                  <h4 className="font-medium text-[#0F172A] text-sm">{deal.name || deal.Name}</h4>
+                                  <div className="flex items-center gap-3 mt-1">
+                                    {(deal.budget || deal.Budget) && (
+                                      <span className="text-xs text-[#475569] flex items-center gap-1">
+                                        <DollarSign size={10} />
+                                        {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(deal.budget || deal.Budget))}
+                                      </span>
+                                    )}
+                                    {(deal.dueDate || deal.DueDate) && (
+                                      <span className="text-xs text-[#94A3B8] flex items-center gap-1">
+                                        <Calendar size={10} />
+                                        {new Date(deal.dueDate || deal.DueDate).toLocaleDateString()}
+                                      </span>
+                                    )}
+                                    {(deal.progress !== undefined || deal.Progress !== undefined) && (
+                                      <span className="text-xs text-[#475569]">{deal.progress ?? deal.Progress}%</span>
+                                    )}
+                                  </div>
+                                </div>
+                                <Badge className={`${statusColor} text-xs font-medium`}>{statusLabel}</Badge>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </TabsContent>
 
                     {/* Timeline */}
@@ -490,17 +587,85 @@ const ClientDetailPage = () => {
 
                     {/* --- DOCUMENTS TAB --- */}
                     <TabsContent value="documents" className="m-0 space-y-6">
-                      <div className="flex flex-col items-center justify-center py-16 text-center">
-                        <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-4">
-                          <FolderOpen className="h-8 w-8 text-[#0891B2]" />
+                      {loadingDocs ? (
+                        <div className="flex items-center justify-center py-12">
+                          <Loader2 className="animate-spin text-[#0891B2] mr-2" size={20} />
+                          <span className="text-sm text-[#94A3B8]">Loading documents…</span>
                         </div>
-                        <h3 className="text-lg font-semibold text-[#0F172A] mb-1">No Documents</h3>
-                        <p className="text-sm text-[#475569] max-w-sm">Documents linked to this client will appear here.</p>
-                      </div>
+                      ) : documents.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-16 text-center">
+                          <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-4">
+                            <FolderOpen className="h-8 w-8 text-[#0891B2]" />
+                          </div>
+                          <h3 className="text-lg font-semibold text-[#0F172A] mb-1">No Documents</h3>
+                          <p className="text-sm text-[#475569] max-w-sm">Documents linked to this client will appear here.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {documents.map((doc: any) => {
+                            const ext = doc.extension || doc.name?.split('.').pop() || '';
+                            const sizeKb = doc.size ? (Number(doc.size) / 1024).toFixed(1) : '—';
+                            return (
+                              <div key={doc.id} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-100 hover:shadow-sm transition-shadow">
+                                <div className="w-9 h-9 rounded-md bg-blue-50 flex items-center justify-center flex-shrink-0">
+                                  <FileText className="h-4 w-4 text-blue-600" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-[#0F172A] truncate">{doc.originalName || doc.name}</p>
+                                  <p className="text-xs text-[#94A3B8]">{sizeKb} KB · {ext.toUpperCase()} · {doc.createdAt ? new Date(doc.createdAt).toLocaleDateString() : ''}</p>
+                                </div>
+                                <a href={doc.path} target="_blank" rel="noreferrer" className="text-[#0891B2] hover:text-[#0891B2]/80">
+                                  <Download size={16} />
+                                </a>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </TabsContent>
 
                     {/* Mail */}
-                    <TabsContent value="mail" className="m-0"><div className="text-center py-10 text-[#94A3B8]">No recent emails found.</div></TabsContent>
+                    <TabsContent value="mail" className="m-0 space-y-4">
+                      {loadingEmails ? (
+                        <div className="flex items-center justify-center py-12">
+                          <Loader2 className="animate-spin text-[#0891B2] mr-2" size={20} />
+                          <span className="text-sm text-[#94A3B8]">Loading emails…</span>
+                        </div>
+                      ) : emails.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-12 text-center">
+                          <div className="w-14 h-14 rounded-full bg-purple-50 flex items-center justify-center mb-3">
+                            <Mail className="h-6 w-6 text-purple-500" />
+                          </div>
+                          <h4 className="text-sm font-semibold text-[#0F172A] mb-1">No Emails</h4>
+                          <p className="text-xs text-[#475569]">Emails linked to this client will appear here.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {emails.map((email: any) => (
+                            <div key={email.id} className={`flex items-start gap-3 p-3 bg-white rounded-lg border border-gray-100 hover:shadow-sm transition-shadow ${!email.isRead ? 'border-l-2 border-l-[#0891B2]' : ''}`}>
+                              <div className="w-9 h-9 rounded-full bg-purple-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <Mail className="h-4 w-4 text-purple-600" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between">
+                                  <p className={`text-sm truncate ${!email.isRead ? 'font-semibold text-[#0F172A]' : 'font-medium text-[#475569]'}`}>{email.subject || '(No Subject)'}</p>
+                                  <span className="text-xs text-[#94A3B8] ml-2 whitespace-nowrap">
+                                    {email.sentAt ? new Date(email.sentAt).toLocaleDateString() : email.receivedAt ? new Date(email.receivedAt).toLocaleDateString() : ''}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-[#94A3B8] mt-0.5 truncate">
+                                  {email.fromName || email.fromAddress || '—'}
+                                </p>
+                                {email.bodyText && (
+                                  <p className="text-xs text-[#64748B] mt-1 line-clamp-2">{email.bodyText.slice(0, 150)}</p>
+                                )}
+                              </div>
+                              {email.isStarred && <Star size={14} className="text-amber-400 fill-amber-400 flex-shrink-0 mt-1" />}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </TabsContent>
 
                   </CardContent>
                 </Tabs>

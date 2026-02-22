@@ -21,6 +21,7 @@ export interface EmailQueryDto {
     limit?: number;
     search?: string;
     folder?: EmailFolder;
+    clientId?: string;
     labelId?: string;
     sortBy?: 'receivedAt' | 'subject';
     sortOrder?: 'asc' | 'desc';

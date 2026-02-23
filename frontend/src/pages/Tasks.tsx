@@ -942,148 +942,152 @@ const KanbanColumn = ({
             const dueToday = isDueToday(task);
 
             return (
-              <motion.div
+              <div
                 key={task.id}
-                layout
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ delay: index * 0.05 }}
-                whileHover={{ y: -2 }}
                 draggable
-                onDragStart={(e: any) => {
+                onDragStart={(e) => {
                   e.dataTransfer.setData("text/plain", task.id);
                   e.dataTransfer.effectAllowed = "move";
                 }}
-                onClick={() => onTaskClick(task)}
-                className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-3 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-slate-300 transition-all group"
+                className="cursor-grab active:cursor-grabbing"
               >
-                {/* Priority Bar */}
-                <div
-                  className="w-full h-1 rounded-full mb-3"
-                  style={{ backgroundColor: priorityInfo.color }}
-                />
+                <motion.div
+                  layout
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ delay: index * 0.05 }}
+                  whileHover={{ y: -2 }}
+                  onClick={() => onTaskClick(task)}
+                  className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-3 hover:shadow-md hover:border-slate-300 transition-all group"
+                >
+                  {/* Priority Bar */}
+                  <div
+                    className="w-full h-1 rounded-full mb-3"
+                    style={{ backgroundColor: priorityInfo.color }}
+                  />
 
-                {/* Title */}
-                <div className="flex items-start gap-2 mb-2">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onToggleComplete(task);
-                    }}
-                    className={cn(
-                      "w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0 mt-0.5",
-                      task.status === "completed"
-                        ? "bg-green-500 border-green-500 text-[#0F172A]"
-                        : "border-slate-300 hover:border-[#22D3EE]"
-                    )}
-                  >
-                    {task.status === "completed" && <Check size={10} />}
-                  </button>
-                  <h4
-                    className={cn(
-                      "font-medium text-[#0F172A] text-sm line-clamp-2",
-                      task.status === "completed" && "line-through text-[#475569]"
-                    )}
-                  >
-                    {task.title}
-                  </h4>
-                </div>
-
-                {/* Project */}
-                {task.project && (
-                  <span
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium mb-2"
-                    style={{
-                      backgroundColor: `${task.projectColor}15`,
-                      color: task.projectColor,
-                    }}
-                  >
-                    <Hash size={10} />
-                    {task.project}
-                  </span>
-                )}
-
-                {/* Due Date */}
-                {task.dueDate && (
-                  <div className="mb-2">
-                    <span
-                      className={cn(
-                        "inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium",
-                        overdue && "bg-red-100 text-red-600",
-                        dueToday && !overdue && "bg-yellow-100 text-yellow-600",
-                        !overdue && !dueToday && "bg-white/5 text-[#94A3B8]"
-                      )}
-                    >
-                      <CalendarIcon size={10} />
-                      {overdue ? "Overdue" : dueToday ? "Today" : formatShortDate(task.dueDate)}
-                    </span>
-                  </div>
-                )}
-
-                {/* Subtasks */}
-                {task.subtasks && task.subtasks.length > 0 && (
-                  <div className="mb-2">
-                    <div className="flex items-center gap-2 text-xs text-[#94A3B8]">
-                      <ListChecks size={12} />
-                      <span>
-                        {task.subtasks.filter((st) => st.completed).length}/{task.subtasks.length}
-                      </span>
-                      <Progress
-                        value={getSubtaskProgress(task.subtasks)}
-                        className="h-1 flex-1"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Footer */}
-                <div className="flex items-center justify-between pt-2 border-t border-[rgba(15,23,42,0.06)]">
-                  {/* Assignees */}
-                  <div className="flex -space-x-1">
-                    {task.assignees?.slice(0, 3).map((assignee) => (
-                      <Avatar key={assignee.id} className="h-5 w-5 border border-white">
-                        <AvatarImage src={assignee.avatar} />
-                        <AvatarFallback className="text-[8px] bg-slate-200">
-                          {getInitials(assignee.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                    ))}
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {/* Title */}
+                  <div className="flex items-start gap-2 mb-2">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        onToggleStar(task);
+                        onToggleComplete(task);
                       }}
-                      className="p-1 rounded hover:bg-white/10"
-                    >
-                      {task.isStarred ? (
-                        <Star size={12} className="text-yellow-500 fill-yellow-500" />
-                      ) : (
-                        <Star size={12} className="text-[#475569]" />
+                      className={cn(
+                        "w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0 mt-0.5",
+                        task.status === "completed"
+                          ? "bg-green-500 border-green-500 text-[#0F172A]"
+                          : "border-slate-300 hover:border-[#22D3EE]"
                       )}
+                    >
+                      {task.status === "completed" && <Check size={10} />}
                     </button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <button className="p-1 rounded hover:bg-white/10">
-                          <MoreHorizontal size={12} className="text-[#475569]" />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-40 rounded-md">
-                        <DropdownMenuItem onClick={() => onEdit(task)} className="rounded-md text-sm">
-                          <Pencil size={12} className="mr-2" /> Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onDelete(task)} className="rounded-md text-sm text-red-600">
-                          <Trash2 size={12} className="mr-2" /> Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <h4
+                      className={cn(
+                        "font-medium text-[#0F172A] text-sm line-clamp-2",
+                        task.status === "completed" && "line-through text-[#475569]"
+                      )}
+                    >
+                      {task.title}
+                    </h4>
                   </div>
-                </div>
-              </motion.div>
+
+                  {/* Project */}
+                  {task.project && (
+                    <span
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium mb-2"
+                      style={{
+                        backgroundColor: `${task.projectColor}15`,
+                        color: task.projectColor,
+                      }}
+                    >
+                      <Hash size={10} />
+                      {task.project}
+                    </span>
+                  )}
+
+                  {/* Due Date */}
+                  {task.dueDate && (
+                    <div className="mb-2">
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium",
+                          overdue && "bg-red-100 text-red-600",
+                          dueToday && !overdue && "bg-yellow-100 text-yellow-600",
+                          !overdue && !dueToday && "bg-white/5 text-[#94A3B8]"
+                        )}
+                      >
+                        <CalendarIcon size={10} />
+                        {overdue ? "Overdue" : dueToday ? "Today" : formatShortDate(task.dueDate)}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Subtasks */}
+                  {task.subtasks && task.subtasks.length > 0 && (
+                    <div className="mb-2">
+                      <div className="flex items-center gap-2 text-xs text-[#94A3B8]">
+                        <ListChecks size={12} />
+                        <span>
+                          {task.subtasks.filter((st) => st.completed).length}/{task.subtasks.length}
+                        </span>
+                        <Progress
+                          value={getSubtaskProgress(task.subtasks)}
+                          className="h-1 flex-1"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Footer */}
+                  <div className="flex items-center justify-between pt-2 border-t border-[rgba(15,23,42,0.06)]">
+                    {/* Assignees */}
+                    <div className="flex -space-x-1">
+                      {task.assignees?.slice(0, 3).map((assignee) => (
+                        <Avatar key={assignee.id} className="h-5 w-5 border border-white">
+                          <AvatarImage src={assignee.avatar} />
+                          <AvatarFallback className="text-[8px] bg-slate-200">
+                            {getInitials(assignee.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                      ))}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onToggleStar(task);
+                        }}
+                        className="p-1 rounded hover:bg-white/10"
+                      >
+                        {task.isStarred ? (
+                          <Star size={12} className="text-yellow-500 fill-yellow-500" />
+                        ) : (
+                          <Star size={12} className="text-[#475569]" />
+                        )}
+                      </button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                          <button className="p-1 rounded hover:bg-white/10">
+                            <MoreHorizontal size={12} className="text-[#475569]" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40 rounded-md">
+                          <DropdownMenuItem onClick={() => onEdit(task)} className="rounded-md text-sm">
+                            <Pencil size={12} className="mr-2" /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => onDelete(task)} className="rounded-md text-sm text-red-600">
+                            <Trash2 size={12} className="mr-2" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
             );
           })}
         </AnimatePresence>

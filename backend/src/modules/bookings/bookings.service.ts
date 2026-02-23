@@ -18,6 +18,18 @@ export class BookingsService {
             serviceType: (booking as any).serviceType || (booking as any).type,
         });
 
+        // If a service was attached, emit service.selected
+        const serviceId = (booking as any).serviceId || (data as any).serviceId;
+        if (serviceId) {
+            eventBus.emit('service.selected', {
+                tenantId,
+                serviceId,
+                serviceName: (booking as any).service?.name || '',
+                clientId: (booking as any).clientId,
+                bookingId: dto.id,
+            });
+        }
+
         activityLogger.log({
             tenantId, entityType: 'Booking', entityId: dto.id,
             action: 'CREATE', module: 'bookings',

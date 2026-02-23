@@ -33,6 +33,10 @@ import {
     ServiceCreatedEvent,
     ServiceUpdatedEvent,
     ServiceDeletedEvent,
+    ServiceSelectedEvent,
+    ClientLifecycleChangedEvent,
+    ProjectStatusChangedEvent,
+    InvoiceSentEvent,
 } from '../../common/events/event-bus';
 import { notificationsService } from '../notifications/notifications.service';
 import { tasksService } from '../tasks/tasks.service';
@@ -568,6 +572,106 @@ export class AutomationService {
             // Extensibility: notify assigned bookings, update catalogs.
         });
 
+        // ── Service Selected ──
+        eventBus.on('service.selected', async (event: ServiceSelectedEvent) => {
+            logger.info('[Automation] service.selected received', {
+                serviceId: event.serviceId, serviceName: event.serviceName,
+                clientId: event.clientId, bookingId: event.bookingId,
+                tenantId: event.tenantId,
+            });
+            // Extensibility: track popular services, recommend upsells, auto-configure pricing.
+        });
+
+        // ── Client Lifecycle Changed ──
+        eventBus.on('client.lifecycleChanged', async (event: ClientLifecycleChangedEvent) => {
+            logger.info('[Automation] client.lifecycleChanged received', {
+                clientId: event.clientId, previousStage: event.previousStage,
+                newStage: event.newStage, tenantId: event.tenantId,
+            });
+
+            try {
+                // Notify admins about significant lifecycle transitions
+                const significantTransitions = ['VIP', 'AT_RISK', 'CHURNED', 'ONBOARDING'];
+                if (significantTransitions.includes(event.newStage)) {
+                    const adminEmployees = await prisma.employee.findMany({
+                        where: {
+                            tenantId: event.tenantId,
+                            isActive: true,
+                            role: { name: { in: ['Admin', 'Owner'] }, isSystemRole: true },
+                        },
+                        select: { userId: true },
+                    });
+
+                    const stageLabels: Record<string, string> = {
+                        VIP: '🌟 Client Promoted to VIP',
+                        AT_RISK: '⚠️ Client Moved to At Risk',
+                        CHURNED: '🔴 Client Churned',
+                        ONBOARDING: '🆕 Client Onboarding Started',
+                    };
+
+                    for (const admin of adminEmployees) {
+                        await notificationsService.create({
+                            title: stageLabels[event.newStage] || `Client Lifecycle: ${event.newStage}`,
+                            message: `"${event.clientName || 'Unknown'}" moved from ${event.previousStage} → ${event.newStage}.`,
+                            type: event.newStage === 'VIP' ? 'SUCCESS' : 'INFO',
+                            userId: admin.userId,
+                            tenantId: event.tenantId,
+                            actionUrl: `/client-list/${event.clientId}`,
+                            actionLabel: 'View Client',
+                        });
+                    }
+                }
+            } catch (err) {
+                logger.error('[Automation] client.lifecycleChanged handler failed', { err });
+            }
+        });
+
+        // ── Project Status Changed ──
+        eventBus.on('project.statusChanged', async (event: ProjectStatusChangedEvent) => {
+            logger.info('[Automation] project.statusChanged received', {
+                projectId: event.projectId, projectName: event.projectName,
+                previousStatus: event.previousStatus, newStatus: event.newStatus,
+                tenantId: event.tenantId,
+            });
+
+            try {
+                // Notify on project completion
+                if (event.newStatus === 'COMPLETED') {
+                    const adminEmployees = await prisma.employee.findMany({
+                        where: {
+                            tenantId: event.tenantId,
+                            isActive: true,
+                            role: { name: { in: ['Admin', 'Owner', 'Manager'] }, isSystemRole: true },
+                        },
+                        select: { userId: true },
+                    });
+
+                    for (const admin of adminEmployees) {
+                        await notificationsService.create({
+                            title: '🎉 Project Completed',
+                            message: `Project "${event.projectName}" has been marked as completed.`,
+                            type: 'SUCCESS',
+                            userId: admin.userId,
+                            tenantId: event.tenantId,
+                            actionUrl: `/projects/${event.projectId}`,
+                            actionLabel: 'View Project',
+                        });
+                    }
+                }
+            } catch (err) {
+                logger.error('[Automation] project.statusChanged handler failed', { err });
+            }
+        });
+
+        // ── Invoice Sent ──
+        eventBus.on('invoice.sent', async (event: InvoiceSentEvent) => {
+            logger.info('[Automation] invoice.sent received', {
+                invoiceId: event.invoiceId, invoiceNumber: event.invoiceNumber,
+                clientId: event.clientId, tenantId: event.tenantId,
+            });
+            // Extensibility: schedule payment reminders, update analytics, track collection pipeline.
+        });
+
         // ── Lifecycle: AT_RISK → Re-engagement notification to admin team ──
         eventBus.on('lifecycle.atRisk', async (event: LifecycleAtRiskEvent) => {
             logger.info('[Automation] lifecycle.atRisk received', {
@@ -668,6 +772,10 @@ export class AutomationService {
             'service.updated → observability',
             'service.deleted → observability',
             'lifecycle.atRisk → re-engagement notification + task',
+            'service.selected → observability',
+            'client.lifecycleChanged → admin notification (VIP/AT_RISK/CHURNED/ONBOARDING)',
+            'project.statusChanged → completion notification',
+            'invoice.sent → observability',
         ];
     }
 }

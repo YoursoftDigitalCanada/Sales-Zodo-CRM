@@ -81,6 +81,33 @@ export class InvoicesService {
         await invoicesRepository.delete(id, tenantId);
     }
 
+    async sendInvoice(id: string, tenantId: string, recipientEmail?: string) {
+        const existing = await invoicesRepository.findById(id, tenantId);
+        if (!existing) throw new NotFoundError('Invoice not found', ErrorCodes.RESOURCE_NOT_FOUND);
+
+        // Mark invoice as SENT
+        const invoice = await invoicesRepository.update(id, tenantId, { status: 'SENT' } as any);
+        const dto = toInvoiceResponseDto(invoice);
+
+        // Domain event: invoice sent
+        eventBus.emit('invoice.sent', {
+            tenantId,
+            invoiceId: id,
+            invoiceNumber: (existing as any).invoiceNumber || '',
+            clientId: (existing as any).clientId || (existing as any).client?.id,
+            recipientEmail,
+        });
+
+        activityLogger.log({
+            tenantId, entityType: 'Invoice', entityId: id,
+            action: 'STATUS_CHANGE', module: 'invoices',
+            description: `Invoice "${(existing as any).invoiceNumber || id}" sent${recipientEmail ? ` to ${recipientEmail}` : ''}`,
+            metadata: { newStatus: 'SENT', recipientEmail },
+        });
+
+        return dto;
+    }
+
     async markAsPaid(id: string, tenantId: string, actorUserId?: string) {
         const existing = await invoicesRepository.findById(id, tenantId);
         if (!existing) throw new NotFoundError('Invoice not found', ErrorCodes.RESOURCE_NOT_FOUND);

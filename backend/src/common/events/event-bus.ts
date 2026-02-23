@@ -249,6 +249,38 @@ export interface ServiceSelectedEvent {
     projectId?: string;
 }
 
+// ── Client Lifecycle Events ─────────────────────────────────────────────
+
+export interface ClientLifecycleChangedEvent {
+    tenantId: string;
+    clientId: string;
+    clientName?: string;
+    previousStage: string;
+    newStage: string;
+    trigger?: string;
+}
+
+// ── Project Status Events ───────────────────────────────────────────────
+
+export interface ProjectStatusChangedEvent {
+    tenantId: string;
+    projectId: string;
+    projectName: string;
+    previousStatus: string;
+    newStatus: string;
+    clientId?: string;
+}
+
+// ── Invoice Sent Event ──────────────────────────────────────────────────
+
+export interface InvoiceSentEvent {
+    tenantId: string;
+    invoiceId: string;
+    invoiceNumber: string;
+    clientId?: string;
+    recipientEmail?: string;
+}
+
 // ── Event Map ───────────────────────────────────────────────────────────
 
 export interface CRMEventMap {
@@ -285,6 +317,9 @@ export interface CRMEventMap {
     'service.updated': ServiceUpdatedEvent;
     'service.deleted': ServiceDeletedEvent;
     'service.selected': ServiceSelectedEvent;
+    'client.lifecycleChanged': ClientLifecycleChangedEvent;
+    'project.statusChanged': ProjectStatusChangedEvent;
+    'invoice.sent': InvoiceSentEvent;
 }
 
 export type CRMEventName = keyof CRMEventMap;

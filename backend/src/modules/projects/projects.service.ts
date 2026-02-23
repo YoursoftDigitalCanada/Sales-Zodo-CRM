@@ -125,6 +125,20 @@ export class ProjectsService {
         const project = await projectsRepository.update(id, tenantId, dto);
         const responseDto = toProjectResponseDto(project);
 
+        // Detect status change and emit event
+        const oldStatus = (existing as any).status;
+        const newStatus = (project as any).status;
+        if (oldStatus && newStatus && oldStatus !== newStatus) {
+            eventBus.emit('project.statusChanged', {
+                tenantId,
+                projectId: responseDto.id,
+                projectName: (project as any).name || responseDto.id,
+                previousStatus: oldStatus,
+                newStatus,
+                clientId: (project as any).clientId || (project as any).client?.id,
+            });
+        }
+
         activityLogger.log({
             tenantId, entityType: 'Project', entityId: responseDto.id,
             action: 'UPDATE', module: 'projects',

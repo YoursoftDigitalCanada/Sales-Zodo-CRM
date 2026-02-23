@@ -93,9 +93,20 @@ class ClientLifecycleService {
             }
 
             // Apply the transition
-            await prisma.client.update({
+            const updated = await prisma.client.update({
                 where: { id: clientId },
                 data: { lifecycleStage: targetStage },
+                select: { id: true, clientName: true, lifecycleStage: true },
+            });
+
+            // Emit lifecycle changed event for automation workflows
+            eventBus.emit('client.lifecycleChanged', {
+                tenantId,
+                clientId,
+                clientName: updated.clientName || undefined,
+                previousStage: currentStage,
+                newStage: targetStage,
+                trigger: 'progressTo',
             });
 
             logger.info('[ClientLifecycle] Stage updated', {

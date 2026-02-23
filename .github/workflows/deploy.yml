@@ -21,8 +21,9 @@ jobs:
             echo "📦 Pulling latest code..."
             cd /var/www/zodo-crm
             
-            # Pull latest changes
-            git pull origin main
+            # Reset any local changes (e.g. package-lock.json modified by npm ci)
+            git fetch origin main
+            git reset --hard origin/main
             
             echo "🔧 Installing backend dependencies..."
             cd /var/www/zodo-crm/backend

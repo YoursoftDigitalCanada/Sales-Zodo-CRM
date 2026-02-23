@@ -5,7 +5,7 @@ import { z } from 'zod';
 // ============================================================================
 
 const milestoneSchema = z.object({
-    title: z.string().min(1).max(255),
+    title: z.string().max(255),
     dueDate: z.string().datetime().optional().nullable(),
     isCompleted: z.boolean().default(false),
 });

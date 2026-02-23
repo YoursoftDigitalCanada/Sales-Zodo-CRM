@@ -250,13 +250,17 @@ const TeamMemberSelector = ({
     <div className="space-y-3">
       {members.map((member, index) => (
         <motion.div
-          key={member.id}
+          key={String(member.id)}
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: index * 0.05 }}
-          onClick={() => onToggle(member.id)}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onToggle(member.id);
+          }}
           className={cn(
-            "flex items-center gap-3 p-3 rounded-md border cursor-pointer transition-all",
+            "flex items-center gap-3 p-3 rounded-md border cursor-pointer transition-all select-none",
             selectedMembers.includes(member.id)
               ? "border-[#22D3EE] bg-[#0891B2]/5"
               : "border-[rgba(15,23,42,0.06)] hover:border-slate-300 hover:bg-[#F8FAFC]"
@@ -282,7 +286,8 @@ const TeamMemberSelector = ({
           </div>
           <Checkbox
             checked={selectedMembers.includes(member.id)}
-            className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
+            onCheckedChange={() => onToggle(member.id)}
+            className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE] pointer-events-none"
           />
         </motion.div>
       ))}

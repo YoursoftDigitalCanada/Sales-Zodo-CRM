@@ -29,6 +29,7 @@ import CreateInvoice from "./components/invoices/CreateInvoice";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import ProjectsPage from "./pages/Projects";
+import ProjectDetailPage from "./pages/ProjectDetail";
 import ClientListPage from "./pages/ClientList";
 import ClientContactListPage from "./pages/ClientContactList";
 import AddProjectPage from "./pages/AddProject";
@@ -230,6 +231,22 @@ const App = () => (
             />
             <Route
               path="/projects/add"
+              element={
+                <FeatureGuard featureId="tasks">
+                  <AddProjectPage />
+                </FeatureGuard>
+              }
+            />
+            <Route
+              path="/projects/:id"
+              element={
+                <FeatureGuard featureId="tasks">
+                  <ProjectDetailPage />
+                </FeatureGuard>
+              }
+            />
+            <Route
+              path="/projects/:id/edit"
               element={
                 <FeatureGuard featureId="tasks">
                   <AddProjectPage />

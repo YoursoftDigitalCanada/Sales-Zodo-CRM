@@ -35,6 +35,11 @@ export async function getProjects(params?: Record<string, unknown>): Promise<Pro
   return extractApiArray<ProjectEntity>(response.data);
 }
 
+export async function getProjectById(id: string | number): Promise<any> {
+  const response = await api.get(`/projects/${id}`);
+  return response.data?.data || response.data;
+}
+
 export async function deleteProjectById(projectId: number): Promise<void> {
   await api.delete(`/projects/${projectId}`);
 }

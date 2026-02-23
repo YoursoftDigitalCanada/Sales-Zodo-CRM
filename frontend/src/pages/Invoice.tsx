@@ -188,9 +188,9 @@ const getInitials = (name: string) => {
     .slice(0, 2);
 };
 
-const formatCurrency = (amount?: number, currency = "INR") => {
-  if (amount === undefined || amount === null) return "₹0";
-  return new Intl.NumberFormat("en-IN", {
+const formatCurrency = (amount?: number, currency = "CAD") => {
+  if (amount === undefined || amount === null) return "$0";
+  return new Intl.NumberFormat("en-CA", {
     style: "currency",
     currency: currency,
     minimumFractionDigits: 0,
@@ -1103,10 +1103,39 @@ const InvoicePage = () => {
     setIsLoading(true);
     try {
       const data = await getInvoices();
-      const enhanced = (data || []).map((inv: any) => ({
-        ...inv,
-        amountPaid: inv.amountPaid ?? 0,
-      }));
+      const enhanced = (data || []).map((inv: any) => {
+        // Normalize status from UPPER_CASE backend enum to Title Case for UI
+        const rawStatus = (inv.status || "Draft").toString();
+        const statusMap: Record<string, string> = {
+          DRAFT: "Draft", SENT: "Sent", PAID: "Paid",
+          OVERDUE: "Overdue", CANCELLED: "Cancelled", PARTIAL: "Partial",
+        };
+        return {
+          id: inv.id,
+          invoiceNumber: inv.invoiceNumber || "",
+          clientId: inv.client?.id || inv.clientId || undefined,
+          clientName: inv.client?.clientName || inv.clientName || "Unknown Client",
+          clientEmail: inv.clientEmail || "",
+          invoiceDate: inv.issueDate || inv.invoiceDate || inv.createdAt || "",
+          dueDate: inv.dueDate || "",
+          status: statusMap[rawStatus.toUpperCase()] || rawStatus,
+          subtotal: Number(inv.subtotal) || 0,
+          tax: Number(inv.taxAmount) || 0,
+          discount: Number(inv.discountAmount) || 0,
+          total: Number(inv.total) || 0,
+          amountPaid: Number(inv.amountPaid) || 0,
+          notes: inv.notes || "",
+          items: (inv.items || []).map((item: any) => ({
+            id: item.id || item.sortOrder,
+            description: item.description || "",
+            quantity: Number(item.quantity) || 0,
+            rate: Number(item.unitPrice) || 0,
+            amount: Number(item.amount) || 0,
+          })),
+          createdAt: inv.createdAt || "",
+          currency: inv.currency || "CAD",
+        };
+      });
       setInvoices(enhanced);
     } catch (err) {
       console.error("Failed to load invoices:", err);

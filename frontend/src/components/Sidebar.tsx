@@ -240,6 +240,12 @@ const navigationItems: NavigationItem[] = [
     badgeColor: "blue",
   },
   {
+    title: "Services",
+    icon: Layers,
+    path: "/services",
+    featureId: "calendar",
+  },
+  {
     title: "Ecommerce",
     icon: ShoppingCart,
     featureId: "api",

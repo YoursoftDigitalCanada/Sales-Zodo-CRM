@@ -30,6 +30,9 @@ import {
     GroupCreatedEvent,
     GroupUpdatedEvent,
     LifecycleAtRiskEvent,
+    ServiceCreatedEvent,
+    ServiceUpdatedEvent,
+    ServiceDeletedEvent,
 } from '../../common/events/event-bus';
 import { notificationsService } from '../notifications/notifications.service';
 import { tasksService } from '../tasks/tasks.service';
@@ -541,6 +544,30 @@ export class AutomationService {
             });
         });
 
+        // ── Service Created ──
+        eventBus.on('service.created', async (event: ServiceCreatedEvent) => {
+            logger.debug('[Automation] service.created received', {
+                serviceId: event.serviceId, tenantId: event.tenantId,
+            });
+            // Extensibility: auto-attach to default booking types, sync service catalog.
+        });
+
+        // ── Service Updated ──
+        eventBus.on('service.updated', async (event: ServiceUpdatedEvent) => {
+            logger.debug('[Automation] service.updated received', {
+                serviceId: event.serviceId, tenantId: event.tenantId,
+            });
+            // Extensibility: propagate pricing changes to active bookings/invoices.
+        });
+
+        // ── Service Deleted ──
+        eventBus.on('service.deleted', async (event: ServiceDeletedEvent) => {
+            logger.debug('[Automation] service.deleted received', {
+                serviceId: event.serviceId, tenantId: event.tenantId,
+            });
+            // Extensibility: notify assigned bookings, update catalogs.
+        });
+
         // ── Lifecycle: AT_RISK → Re-engagement notification to admin team ──
         eventBus.on('lifecycle.atRisk', async (event: LifecycleAtRiskEvent) => {
             logger.info('[Automation] lifecycle.atRisk received', {
@@ -637,6 +664,9 @@ export class AutomationService {
             'file.uploaded → audit enrichment',
             'group.created → observability',
             'group.updated → observability',
+            'service.created → observability',
+            'service.updated → observability',
+            'service.deleted → observability',
             'lifecycle.atRisk → re-engagement notification + task',
         ];
     }

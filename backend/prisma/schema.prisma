@@ -299,6 +299,7 @@ model Tenant {
   expenses              Expense[]
   expenseBudgets        ExpenseBudget[]
   bookings              Booking[]
+  services              Service[]
   products              Product[]
   productCategories     ProductCategory[]
   orders                Order[]
@@ -1418,13 +1419,51 @@ model Booking {
   confirmedAt     DateTime?
   cancelledAt     DateTime?
 
-  // FUTURE: Create Booking form fields will be added here
+  // Service relation (optional)
+  serviceId       String?
+  service         Service?        @relation(fields: [serviceId], references: [id], onDelete: SetNull)
 
   @@index([tenantId])
   @@index([status])
   @@index([startTime])
   @@index([clientId])
   @@index([assignedToId])
+  @@index([serviceId])
+}
+
+// ============================================================================
+// SERVICES MODULE
+// ============================================================================
+
+model Service {
+  id              String    @id @default(uuid())
+
+  // Service Info
+  name            String
+  description     String?   @db.Text
+  category        String?
+
+  // Pricing & Duration
+  basePrice       Decimal?  @db.Decimal(15, 2)
+  durationMinutes Int?
+
+  // Status
+  isActive        Boolean   @default(true)
+
+  // Tenant relation
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  bookings        Booking[]
+
+  @@index([tenantId])
+  @@index([category])
+  @@index([isActive])
 }
 
 // ============================================================================

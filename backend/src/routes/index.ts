@@ -32,6 +32,7 @@ import calendarRoutes from '../modules/calendar/calendar.routes';
 import invoicesRoutes from '../modules/invoices/invoices.routes';
 import expensesRoutes from '../modules/expenses/expenses.routes';
 import bookingsRoutes from '../modules/bookings/bookings.routes';
+import servicesRoutes from '../modules/services/services.routes';
 
 // File management modules
 import filesRoutes from '../modules/files/files.routes';
@@ -122,6 +123,7 @@ export function registerRoutes(app: Application): void {
   protectedRouter.use('/invoices', invoicesRoutes);
   protectedRouter.use('/expenses', expensesRoutes);
   protectedRouter.use('/bookings', bookingsRoutes);
+  protectedRouter.use('/services', servicesRoutes);
 
   // File Management
   protectedRouter.use('/files', filesRoutes);
@@ -198,6 +200,7 @@ export function registerRoutes(app: Application): void {
         invoices: `${apiPrefix}/invoices`,
         expenses: `${apiPrefix}/expenses`,
         bookings: `${apiPrefix}/bookings`,
+        services: `${apiPrefix}/services`,
         // Files
         files: `${apiPrefix}/files`,
         folders: `${apiPrefix}/folders`,

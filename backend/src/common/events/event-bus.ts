@@ -218,6 +218,37 @@ export interface LifecycleAtRiskEvent {
     inactivityDays: number;
 }
 
+// ── Service Events ──────────────────────────────────────────────────────
+
+export interface ServiceCreatedEvent {
+    tenantId: string;
+    serviceId: string;
+    serviceName: string;
+    category?: string;
+}
+
+export interface ServiceUpdatedEvent {
+    tenantId: string;
+    serviceId: string;
+    serviceName: string;
+    updatedFields: string[];
+}
+
+export interface ServiceDeletedEvent {
+    tenantId: string;
+    serviceId: string;
+    serviceName: string;
+}
+
+export interface ServiceSelectedEvent {
+    tenantId: string;
+    serviceId: string;
+    serviceName: string;
+    clientId?: string;
+    bookingId?: string;
+    projectId?: string;
+}
+
 // ── Event Map ───────────────────────────────────────────────────────────
 
 export interface CRMEventMap {
@@ -250,6 +281,10 @@ export interface CRMEventMap {
     'group.created': GroupCreatedEvent;
     'group.updated': GroupUpdatedEvent;
     'lifecycle.atRisk': LifecycleAtRiskEvent;
+    'service.created': ServiceCreatedEvent;
+    'service.updated': ServiceUpdatedEvent;
+    'service.deleted': ServiceDeletedEvent;
+    'service.selected': ServiceSelectedEvent;
 }
 
 export type CRMEventName = keyof CRMEventMap;

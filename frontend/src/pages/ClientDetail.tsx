@@ -22,13 +22,14 @@ import { getTasks, createTask, updateTask } from "@/features/tasks/services/task
 import { getProjects } from "@/features/projects/services/projects-service";
 import { getFiles } from "@/features/files/services/files-service";
 import { getEmails } from "@/features/emails/services/emails-service";
+import { getInvoices } from "@/features/invoices/services/invoice-service";
 import { ActivityTimeline } from "@/components/ActivityTimeline";
 import { useToast } from "@/hooks/use-toast";
 import {
   Bell, Mail, Phone, MapPin, Star, Tag, User, Calendar, Plus, MoreHorizontal,
   Pencil, MessageSquare, FileText, CheckSquare, TrendingUp, FolderOpen,
   Send, ArrowLeft, Loader2, DollarSign, Clock, Users, Download, Trash2, X,
-  Image as ImageIcon, File, Files, Clock3
+  Image as ImageIcon, File, Files, Clock3, Receipt
 } from "lucide-react";
 
 // --- INTERFACES ---
@@ -190,6 +191,10 @@ const ClientDetailPage = () => {
   const [emails, setEmails] = useState<any[]>([]);
   const [loadingEmails, setLoadingEmails] = useState(false);
 
+  // State for invoices
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [loadingInvoices, setLoadingInvoices] = useState(false);
+
   // Task Modal State
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -271,13 +276,27 @@ const ClientDetailPage = () => {
     }
   }, [id]);
 
+  // Fetch invoices for this client
+  const fetchInvoices = useCallback(async () => {
+    try {
+      setLoadingInvoices(true);
+      const data = await getInvoices({ clientId: id! });
+      setInvoices(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Error fetching invoices:", error);
+    } finally {
+      setLoadingInvoices(false);
+    }
+  }, [id]);
+
   useEffect(() => {
     fetchClient();
     fetchTasks();
     fetchDeals();
     fetchDocuments();
     fetchEmails();
-  }, [fetchClient, fetchTasks, fetchDeals, fetchDocuments, fetchEmails]);
+    fetchInvoices();
+  }, [fetchClient, fetchTasks, fetchDeals, fetchDocuments, fetchEmails, fetchInvoices]);
 
   // Save note to backend as internalNotes
   const handleAddNote = async () => {
@@ -369,6 +388,7 @@ const ClientDetailPage = () => {
     { id: 'notes', label: 'Notes', icon: FileText },
     { id: 'tasks', label: 'Tasks', icon: CheckSquare },
     { id: 'documents', label: 'Documents', icon: FolderOpen },
+    { id: 'invoices', label: 'Invoices', icon: Receipt },
     { id: 'mail', label: 'Mail', icon: Mail },
   ];
 
@@ -663,6 +683,75 @@ const ClientDetailPage = () => {
                               {email.isStarred && <Star size={14} className="text-amber-400 fill-amber-400 flex-shrink-0 mt-1" />}
                             </div>
                           ))}
+                        </div>
+                      )}
+                    </TabsContent>
+
+                    {/* Invoices */}
+                    <TabsContent value="invoices" className="m-0 space-y-4">
+                      {loadingInvoices ? (
+                        <div className="flex items-center justify-center py-12">
+                          <Loader2 className="animate-spin text-[#0891B2] mr-2" size={20} />
+                          <span className="text-sm text-[#94A3B8]">Loading invoices…</span>
+                        </div>
+                      ) : invoices.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-12 text-center">
+                          <div className="w-14 h-14 rounded-full bg-teal-50 flex items-center justify-center mb-3">
+                            <Receipt className="h-6 w-6 text-[#0891B2]" />
+                          </div>
+                          <h4 className="text-sm font-semibold text-[#0F172A] mb-1">No Invoices</h4>
+                          <p className="text-xs text-[#475569]">Invoices for this client will appear here.</p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="mt-4 text-[#0891B2] border-[#0891B2]/30 hover:bg-[#0891B2]/5"
+                            onClick={() => navigate('/invoice/create')}
+                          >
+                            <Plus className="h-4 w-4 mr-1" /> Create Invoice
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {invoices.map((inv: any) => {
+                            const status = (inv.status || 'DRAFT').toString();
+                            const statusColor =
+                              status === 'PAID' ? 'bg-green-100 text-green-700' :
+                                status === 'SENT' ? 'bg-blue-100 text-blue-700' :
+                                  status === 'OVERDUE' ? 'bg-red-100 text-red-700' :
+                                    status === 'CANCELLED' ? 'bg-gray-100 text-gray-600' :
+                                      'bg-slate-100 text-slate-600';
+                            const total = Number(inv.total) || 0;
+                            const amountPaid = Number(inv.amountPaid) || 0;
+                            const amountDue = Number(inv.amountDue) || (total - amountPaid);
+                            return (
+                              <div key={inv.id} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-100 hover:shadow-sm transition-shadow cursor-pointer" onClick={() => navigate('/invoice')}>
+                                <div className="w-9 h-9 rounded-full bg-teal-50 flex items-center justify-center flex-shrink-0">
+                                  <Receipt className="h-4 w-4 text-[#0891B2]" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between">
+                                    <p className="text-sm font-semibold text-[#0F172A]">{inv.invoiceNumber || 'N/A'}</p>
+                                    <Badge className={`text-[10px] px-2 py-0.5 ${statusColor}`}>{status}</Badge>
+                                  </div>
+                                  <div className="flex items-center justify-between mt-1">
+                                    <span className="text-xs text-[#94A3B8]">
+                                      {inv.issueDate ? new Date(inv.issueDate).toLocaleDateString() : inv.createdAt ? new Date(inv.createdAt).toLocaleDateString() : '—'}
+                                    </span>
+                                    <div className="text-right">
+                                      <span className="text-sm font-bold text-[#0F172A]">
+                                        {new Intl.NumberFormat('en-CA', { style: 'currency', currency: inv.currency || 'CAD' }).format(total)}
+                                      </span>
+                                      {amountDue > 0 && status !== 'PAID' && (
+                                        <span className="block text-[10px] text-amber-600">
+                                          Due: {new Intl.NumberFormat('en-CA', { style: 'currency', currency: inv.currency || 'CAD' }).format(amountDue)}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </TabsContent>

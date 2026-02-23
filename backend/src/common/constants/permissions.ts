@@ -116,6 +116,12 @@ export const PERMISSIONS = {
   BOOKINGS_CONFIRM: 'bookings.confirm',
   BOOKINGS_CANCEL: 'bookings.cancel',
 
+  // Services
+  SERVICES_VIEW: 'services.view',
+  SERVICES_CREATE: 'services.create',
+  SERVICES_UPDATE: 'services.update',
+  SERVICES_DELETE: 'services.delete',
+
   // Products
   PRODUCTS_VIEW: 'products.view',
   PRODUCTS_CREATE: 'products.create',
@@ -323,6 +329,12 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { code: PERMISSIONS.BOOKINGS_DELETE, name: 'Delete Bookings', description: 'Remove bookings', module: 'bookings', action: 'delete' },
   { code: PERMISSIONS.BOOKINGS_CONFIRM, name: 'Confirm Bookings', description: 'Confirm bookings', module: 'bookings', action: 'confirm' },
   { code: PERMISSIONS.BOOKINGS_CANCEL, name: 'Cancel Bookings', description: 'Cancel bookings', module: 'bookings', action: 'cancel' },
+
+  // Services
+  { code: PERMISSIONS.SERVICES_VIEW, name: 'View Services', description: 'View service offerings', module: 'services', action: 'view' },
+  { code: PERMISSIONS.SERVICES_CREATE, name: 'Create Services', description: 'Create new services', module: 'services', action: 'create' },
+  { code: PERMISSIONS.SERVICES_UPDATE, name: 'Update Services', description: 'Edit services', module: 'services', action: 'update' },
+  { code: PERMISSIONS.SERVICES_DELETE, name: 'Delete Services', description: 'Remove or deactivate services', module: 'services', action: 'delete' },
 
   // Products
   { code: PERMISSIONS.PRODUCTS_VIEW, name: 'View Products', description: 'View products', module: 'products', action: 'view' },

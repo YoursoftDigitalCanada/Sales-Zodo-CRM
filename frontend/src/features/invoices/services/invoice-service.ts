@@ -6,8 +6,8 @@ export interface InvoiceEntity {
   [key: string]: unknown;
 }
 
-export async function getInvoices() {
-  const response = await api.get("/invoices");
+export async function getInvoices(params?: Record<string, string>) {
+  const response = await api.get("/invoices", { params });
   return extractApiArray<InvoiceEntity>(response.data);
 }
 

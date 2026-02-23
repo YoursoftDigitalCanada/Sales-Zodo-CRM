@@ -36,11 +36,11 @@ export class InvoicesRepository {
                 amountPaid: 0,
                 amountDue,
                 items: {
-                    create: data.items.map((item, index) => ({
-                        description: item.description,
+                    create: data.items.map((item: any, index: number) => ({
+                        description: item.description || item.itemName || '',
                         quantity: item.quantity,
-                        unitPrice: item.unitPrice,
-                        amount: item.amount,
+                        unitPrice: item.unitPrice ?? item.rate ?? 0,
+                        amount: item.amount || (item.quantity * (item.unitPrice ?? item.rate ?? 0)),
                         taxRate: item.taxRate,
                         sortOrder: item.sortOrder || index,
                     })),

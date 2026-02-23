@@ -100,6 +100,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createInvoice } from "@/services/invoiceService";
+import { getClients } from "@/features/clients/services/clients-service";
 
 // ============================================
 // TYPES
@@ -189,12 +190,7 @@ const currencyOptions = [
   { value: "USD", label: "USD - US Dollar", symbol: "$" },
 ];
 
-// Mock Clients
-const mockClients: Client[] = [
-  { id: 1, businessName: "Maple Tech Solutions", email: "contact@mapletech.ca", phone: "+1 (416) 555-0123", address: "123 Bay Street", city: "Toronto", province: "ON", postalCode: "M5J 2N8", country: "Canada", gstNumber: "123456789RT0001" },
-  { id: 2, businessName: "Pacific Digital Inc.", email: "info@pacificdigital.ca", phone: "+1 (604) 555-0456", address: "456 Granville St", city: "Vancouver", province: "BC", postalCode: "V6C 1T2", country: "Canada", gstNumber: "987654321RT0001" },
-  { id: 3, businessName: "Prairie Innovations", email: "hello@prairieinnovations.ca", phone: "+1 (403) 555-0789", address: "789 Stephen Ave", city: "Calgary", province: "AB", postalCode: "T2P 1G8", country: "Canada" },
-];
+// Clients are fetched from the API in the component below
 
 // Mock Products
 const mockProducts: Product[] = [
@@ -1045,6 +1041,7 @@ const CreateInvoicePage = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
+  const [clients, setClients] = useState<Client[]>([]);
 
   // Form
   const methods = useForm<InvoiceFormData>({
@@ -1169,6 +1166,31 @@ const CreateInvoicePage = () => {
       }
     }
   }, [setValue]);
+
+  // Fetch real clients from API
+  useEffect(() => {
+    const fetchClients = async () => {
+      try {
+        const data = await getClients();
+        const mapped: Client[] = (data || []).map((c: any) => ({
+          id: c.id || c.Id || 0,
+          businessName: c.clientName || c.ClientName || c.companyName || c.name || "",
+          email: c.primaryEmail || c.contactEmail || c.email || "",
+          phone: c.primaryPhone || c.contactNo || c.phone || "",
+          address: c.streetAddress || c.address || "",
+          city: c.city || "",
+          province: c.province || "ON",
+          postalCode: c.postalCode || "",
+          country: c.country || "Canada",
+          gstNumber: c.gstHstNumber || "",
+        }));
+        setClients(mapped);
+      } catch (err) {
+        console.error("Failed to load clients:", err);
+      }
+    };
+    fetchClients();
+  }, []);
 
   // Update due date when payment terms change
   useEffect(() => {
@@ -1593,7 +1615,7 @@ const CreateInvoicePage = () => {
                         register={register}
                         errors={errors}
                         showClientSelector
-                        clients={mockClients}
+                        clients={clients}
                         onSelectClient={handleSelectClient}
                       />
                     </SectionCard>

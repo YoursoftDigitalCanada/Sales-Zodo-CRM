@@ -6,15 +6,56 @@ import { eventBus } from '../../common/events/event-bus';
 import { clientLifecycleService } from '../../common/services/client-lifecycle.service';
 import { activityLogger } from '../../common/services/activity-logger.service';
 
+/**
+ * Maps the validated request body (from the validator schema) to the
+ * CreateProjectDto / UpdateProjectDto that the repository understands.
+ * This bridges the naming gap between the API contract and the Prisma model.
+ */
+function mapBodyToDto(body: Record<string, any>): Record<string, any> {
+    const mapped: Record<string, any> = { ...body };
+
+    // projectTitle → name
+    if (mapped.projectTitle !== undefined) {
+        mapped.name = mapped.projectTitle;
+        delete mapped.projectTitle;
+    }
+
+    // dueDate → endDate
+    if (mapped.dueDate !== undefined) {
+        mapped.endDate = mapped.dueDate;
+        delete mapped.dueDate;
+    }
+
+    // progressPercentage → progress
+    if (mapped.progressPercentage !== undefined) {
+        mapped.progress = mapped.progressPercentage;
+        delete mapped.progressPercentage;
+    }
+
+    // Strip fields the repository doesn't handle (stored as-is or ignored)
+    // These prevent Prisma errors for unknown columns
+    delete mapped.priority;
+    delete mapped.category;
+    delete mapped.estimatedHours;
+    delete mapped.tags;
+    delete mapped.milestones;
+    delete mapped.attachments;
+    delete mapped.notifyTeamMembers;
+    delete mapped.projectManagerId;
+
+    return mapped;
+}
+
 export class ProjectsService {
-    async create(tenantId: string, data: CreateProjectDto, createdByUserId?: string) {
-        const project = await projectsRepository.create(tenantId, data);
-        const dto = toProjectResponseDto(project);
+    async create(tenantId: string, data: any, createdByUserId?: string) {
+        const dto = mapBodyToDto(data) as CreateProjectDto;
+        const project = await projectsRepository.create(tenantId, dto);
+        const responseDto = toProjectResponseDto(project);
 
         // Domain event: project created
         eventBus.emit('project.created', {
             tenantId,
-            projectId: dto.id,
+            projectId: responseDto.id,
             projectName: (project as any).name,
             clientId: (project as any).clientId || (project as any).client?.id,
             assignedToUserId: createdByUserId,
@@ -28,14 +69,14 @@ export class ProjectsService {
         }
 
         activityLogger.log({
-            tenantId, entityType: 'Project', entityId: dto.id,
+            tenantId, entityType: 'Project', entityId: responseDto.id,
             action: 'CREATE', module: 'projects',
-            description: `Created project "${(project as any).name || dto.id}"`,
+            description: `Created project "${(project as any).name || responseDto.id}"`,
             userId: createdByUserId,
             metadata: { projectName: (project as any).name, clientId },
         });
 
-        return dto;
+        return responseDto;
     }
 
     async getById(id: string, tenantId: string) {
@@ -53,20 +94,21 @@ export class ProjectsService {
         };
     }
 
-    async update(id: string, tenantId: string, data: UpdateProjectDto) {
+    async update(id: string, tenantId: string, data: any) {
         const existing = await projectsRepository.findById(id, tenantId);
         if (!existing) throw new NotFoundError('Project not found', ErrorCodes.RESOURCE_NOT_FOUND);
-        const project = await projectsRepository.update(id, tenantId, data);
-        const dto = toProjectResponseDto(project);
+        const dto = mapBodyToDto(data) as UpdateProjectDto;
+        const project = await projectsRepository.update(id, tenantId, dto);
+        const responseDto = toProjectResponseDto(project);
 
         activityLogger.log({
-            tenantId, entityType: 'Project', entityId: dto.id,
+            tenantId, entityType: 'Project', entityId: responseDto.id,
             action: 'UPDATE', module: 'projects',
-            description: `Updated project "${(project as any).name || dto.id}"`,
+            description: `Updated project "${(project as any).name || responseDto.id}"`,
             metadata: { updatedFields: Object.keys(data) },
         });
 
-        return dto;
+        return responseDto;
     }
 
     async delete(id: string, tenantId: string) {

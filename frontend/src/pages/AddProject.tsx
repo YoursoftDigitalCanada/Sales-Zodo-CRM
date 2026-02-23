@@ -73,14 +73,14 @@ import {
 import { cn } from "@/lib/utils";
 import { createProject } from "@/features/projects";
 import { getClients } from "@/features/clients/services/clients-service";
-import { getUsers } from "@/features/users/services/users-service";
+import { getEmployees } from "@/features/users/services/users-service";
 
 // ============================================
 // TYPES
 // ============================================
 
 interface TeamMember {
-  id: number;
+  id: string | number;
   name: string;
   role: string;
   avatar?: string;
@@ -242,8 +242,8 @@ const TeamMemberSelector = ({
   onToggle,
   members,
 }: {
-  selectedMembers: number[];
-  onToggle: (id: number) => void;
+  selectedMembers: (string | number)[];
+  onToggle: (id: string | number) => void;
   members: TeamMember[];
 }) => {
   return (
@@ -625,7 +625,7 @@ const AddProjectPage = () => {
   const [estimatedHours, setEstimatedHours] = useState("");
   const [category, setCategory] = useState("");
   const [tags, setTags] = useState<string[]>([]);
-  const [selectedTeamMembers, setSelectedTeamMembers] = useState<number[]>([]);
+  const [selectedTeamMembers, setSelectedTeamMembers] = useState<(string | number)[]>([]);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [files, setFiles] = useState<File[]>([]);
   const [sendNotification, setSendNotification] = useState(true);
@@ -667,12 +667,12 @@ const AddProjectPage = () => {
         console.error("Failed to load clients");
       }
       try {
-        const usersData = await getUsers();
+        const employeesData = await getEmployees();
         setApiTeamMembers(
-          (usersData || []).map((u: any, i: number) => ({
-            id: typeof u.id === "number" ? u.id : i + 1,
-            name: [u.firstName, u.lastName].filter(Boolean).join(" ") || u.email || "User",
-            role: u.role || u.jobTitle || "Team Member",
+          (employeesData || []).map((emp: any) => ({
+            id: emp.id,
+            name: [emp.user?.firstName || emp.firstName, emp.user?.lastName || emp.lastName].filter(Boolean).join(" ") || emp.email || "Employee",
+            role: emp.position || emp.jobTitle || emp.role || "Team Member",
           }))
         );
       } catch {
@@ -686,7 +686,7 @@ const AddProjectPage = () => {
   // HANDLERS
   // ============================================
 
-  const handleTeamMemberToggle = (id: number) => {
+  const handleTeamMemberToggle = (id: string | number) => {
     setSelectedTeamMembers((prev) =>
       prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id]
     );

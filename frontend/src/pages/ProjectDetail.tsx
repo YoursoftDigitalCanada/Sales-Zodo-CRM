@@ -11,13 +11,23 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ActivityTimeline } from "@/components/ActivityTimeline";
 import { getProjectById } from "@/features/projects/services/projects-service";
-import { getTasks } from "@/features/tasks/services/tasks-service";
+import { getTasks, createTask } from "@/features/tasks/services/tasks-service";
+import { getEmployees } from "@/features/users/services/users-service";
 import { getFiles } from "@/features/files/services/files-service";
 import {
     ArrowLeft, Calendar, DollarSign, Users, FileText, CheckSquare, Loader2,
     Clock, TrendingUp, Building2, FolderOpen, ListTodo, BarChart3, Pencil,
-    Hash, Download, Briefcase, Target, Timer
+    Hash, Download, Briefcase, Target, Timer, Plus, AlertTriangle
 } from "lucide-react";
+import {
+    Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+    Select, SelectContent, SelectItem, SelectTrigger, SelectValue
+} from "@/components/ui/select";
+import { useToast } from "@/components/ui/use-toast";
 
 // Status config
 const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
@@ -38,6 +48,7 @@ const getInitials = (first?: string, last?: string) =>
 const ProjectDetailPage = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const { toast } = useToast();
 
     const [project, setProject] = useState<any>(null);
     const [tasks, setTasks] = useState<any[]>([]);
@@ -45,6 +56,19 @@ const ProjectDetailPage = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [loadingTasks, setLoadingTasks] = useState(false);
     const [loadingFiles, setLoadingFiles] = useState(false);
+
+    // Add Task dialog state
+    const [showAddTask, setShowAddTask] = useState(false);
+    const [creatingTask, setCreatingTask] = useState(false);
+    const [employees, setEmployees] = useState<any[]>([]);
+    const [newTask, setNewTask] = useState({
+        title: "",
+        description: "",
+        priority: "MEDIUM",
+        status: "TODO",
+        dueDate: "",
+        assignedToId: "",
+    });
 
     const fetchProject = useCallback(async () => {
         if (!id) return;
@@ -90,6 +114,35 @@ const ProjectDetailPage = () => {
         fetchTasks();
         fetchFiles();
     }, [fetchProject, fetchTasks, fetchFiles]);
+
+    useEffect(() => {
+        getEmployees().then((data: any[]) => setEmployees(data || [])).catch(() => { });
+    }, []);
+
+    const handleCreateTask = async () => {
+        if (!newTask.title.trim()) return;
+        setCreatingTask(true);
+        try {
+            await createTask({
+                title: newTask.title.trim(),
+                description: newTask.description.trim() || null,
+                priority: newTask.priority,
+                status: newTask.status,
+                dueDate: newTask.dueDate ? new Date(newTask.dueDate).toISOString() : null,
+                assignedToId: newTask.assignedToId || null,
+                projectId: id,
+            });
+            toast({ title: "Task Created", description: `"${newTask.title}" has been added to this project.` });
+            setShowAddTask(false);
+            setNewTask({ title: "", description: "", priority: "MEDIUM", status: "TODO", dueDate: "", assignedToId: "" });
+            fetchTasks();
+        } catch (error) {
+            console.error("Error creating task:", error);
+            toast({ title: "Error", description: "Failed to create task.", variant: "destructive" });
+        } finally {
+            setCreatingTask(false);
+        }
+    };
 
     // --- Loading State ---
     if (isLoading) {
@@ -407,6 +460,18 @@ const ProjectDetailPage = () => {
 
                                         {/* === TASKS TAB === */}
                                         <TabsContent value="tasks" className="m-0 space-y-3">
+                                            {/* Add Task Button */}
+                                            <div className="flex items-center justify-between mb-2">
+                                                <p className="text-xs text-[#94A3B8]">{tasks.length} task{tasks.length !== 1 ? "s" : ""}</p>
+                                                <Button
+                                                    size="sm"
+                                                    onClick={() => setShowAddTask(true)}
+                                                    className="gap-1.5 bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-lg"
+                                                >
+                                                    <Plus size={14} /> Add Task
+                                                </Button>
+                                            </div>
+
                                             {loadingTasks ? (
                                                 <div className="flex items-center justify-center py-12">
                                                     <Loader2 className="animate-spin text-[#0891B2] mr-2" size={20} />
@@ -418,7 +483,15 @@ const ProjectDetailPage = () => {
                                                         <CheckSquare className="h-6 w-6 text-orange-500" />
                                                     </div>
                                                     <h4 className="text-sm font-semibold text-[#0F172A] mb-1">No Tasks Yet</h4>
-                                                    <p className="text-xs text-[#475569] max-w-xs">Tasks linked to this project will appear here once they are created.</p>
+                                                    <p className="text-xs text-[#475569] max-w-xs mb-3">Create a task to get started. Tasks will also appear in the main Tasks module.</p>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => setShowAddTask(true)}
+                                                        className="gap-1.5"
+                                                    >
+                                                        <Plus size={14} /> Create First Task
+                                                    </Button>
                                                 </div>
                                             ) : (
                                                 <>
@@ -514,6 +587,137 @@ const ProjectDetailPage = () => {
                         </div>
                     </div>
                 </div>
+                {/* ========== ADD TASK DIALOG ========== */}
+                <Dialog open={showAddTask} onOpenChange={setShowAddTask}>
+                    <DialogContent className="sm:max-w-[520px]">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-lg bg-[#0891B2]/10 flex items-center justify-center">
+                                    <CheckSquare size={16} className="text-[#0891B2]" />
+                                </div>
+                                Add Task to Project
+                            </DialogTitle>
+                            <DialogDescription>
+                                This task will be linked to <span className="font-medium text-[#0F172A]">{project.name}</span> and will also appear in the Tasks module.
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="space-y-4 py-2">
+                            {/* Title */}
+                            <div className="space-y-1.5">
+                                <Label htmlFor="task-title" className="text-sm font-medium">Title *</Label>
+                                <Input
+                                    id="task-title"
+                                    placeholder="e.g. Design homepage mockup"
+                                    value={newTask.title}
+                                    onChange={(e) => setNewTask((prev) => ({ ...prev, title: e.target.value }))}
+                                    className="rounded-lg"
+                                />
+                            </div>
+
+                            {/* Description */}
+                            <div className="space-y-1.5">
+                                <Label htmlFor="task-desc" className="text-sm font-medium">Description</Label>
+                                <textarea
+                                    id="task-desc"
+                                    rows={3}
+                                    placeholder="Optional task description…"
+                                    value={newTask.description}
+                                    onChange={(e) => setNewTask((prev) => ({ ...prev, description: e.target.value }))}
+                                    className="flex w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
+                                />
+                            </div>
+
+                            {/* Priority & Status */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <Label className="text-sm font-medium">Priority</Label>
+                                    <Select
+                                        value={newTask.priority}
+                                        onValueChange={(v) => setNewTask((prev) => ({ ...prev, priority: v }))}
+                                    >
+                                        <SelectTrigger className="rounded-lg">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="LOW">Low</SelectItem>
+                                            <SelectItem value="MEDIUM">Medium</SelectItem>
+                                            <SelectItem value="HIGH">High</SelectItem>
+                                            <SelectItem value="URGENT">Urgent</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label className="text-sm font-medium">Status</Label>
+                                    <Select
+                                        value={newTask.status}
+                                        onValueChange={(v) => setNewTask((prev) => ({ ...prev, status: v }))}
+                                    >
+                                        <SelectTrigger className="rounded-lg">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="TODO">To Do</SelectItem>
+                                            <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                                            <SelectItem value="REVIEW">Review</SelectItem>
+                                            <SelectItem value="DONE">Done</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+
+                            {/* Due Date & Assignee */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="task-due" className="text-sm font-medium">Due Date</Label>
+                                    <Input
+                                        id="task-due"
+                                        type="date"
+                                        value={newTask.dueDate}
+                                        onChange={(e) => setNewTask((prev) => ({ ...prev, dueDate: e.target.value }))}
+                                        className="rounded-lg"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label className="text-sm font-medium">Assign To</Label>
+                                    <Select
+                                        value={newTask.assignedToId}
+                                        onValueChange={(v) => setNewTask((prev) => ({ ...prev, assignedToId: v }))}
+                                    >
+                                        <SelectTrigger className="rounded-lg">
+                                            <SelectValue placeholder="Unassigned" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="">Unassigned</SelectItem>
+                                            {employees.map((emp: any) => (
+                                                <SelectItem key={emp.id} value={String(emp.id)}>
+                                                    {emp.firstName || emp.name || ""} {emp.lastName || ""}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <DialogFooter className="gap-2">
+                            <Button variant="outline" onClick={() => setShowAddTask(false)} className="rounded-lg">
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={handleCreateTask}
+                                disabled={creatingTask || !newTask.title.trim()}
+                                className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-lg gap-1.5"
+                            >
+                                {creatingTask ? (
+                                    <><Loader2 size={14} className="animate-spin" /> Creating…</>
+                                ) : (
+                                    <><Plus size={14} /> Create Task</>
+                                )}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </main>
         </div>
     );

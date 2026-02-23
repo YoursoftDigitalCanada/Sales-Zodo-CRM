@@ -876,6 +876,7 @@ const KanbanColumn = ({
   onToggleStar,
   onEdit,
   onDelete,
+  onStatusChange,
 }: {
   status: typeof taskStatuses[0];
   tasks: Task[];
@@ -884,8 +885,10 @@ const KanbanColumn = ({
   onToggleStar: (task: Task) => void;
   onEdit: (task: Task) => void;
   onDelete: (task: Task) => void;
+  onStatusChange: (taskId: string, newStatus: string) => void;
 }) => {
   const StatusIcon = status.icon;
+  const [isDragOver, setIsDragOver] = useState(false);
 
   return (
     <div className="flex-shrink-0 w-[320px]">
@@ -918,8 +921,19 @@ const KanbanColumn = ({
 
       {/* Column Body */}
       <div
-        className="min-h-[400px] max-h-[calc(100vh-350px)] overflow-y-auto p-3 space-y-3 rounded-b-xl border border-t-0 bg-[#F8FAFC]/50"
+        className={cn(
+          "min-h-[400px] max-h-[calc(100vh-350px)] overflow-y-auto p-3 space-y-3 rounded-b-xl border border-t-0 transition-all duration-200",
+          isDragOver ? "bg-[#0891B2]/5 ring-2 ring-[#22D3EE] ring-inset" : "bg-[#F8FAFC]/50"
+        )}
         style={{ borderColor: `${status.color}20` }}
+        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setIsDragOver(true); }}
+        onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragOver(false); }}
+        onDrop={(e) => {
+          e.preventDefault();
+          setIsDragOver(false);
+          const taskId = e.dataTransfer.getData("text/plain");
+          if (taskId) onStatusChange(taskId, status.id);
+        }}
       >
         <AnimatePresence>
           {tasks.map((task, index) => {
@@ -936,6 +950,11 @@ const KanbanColumn = ({
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ delay: index * 0.05 }}
                 whileHover={{ y: -2 }}
+                draggable
+                onDragStart={(e: any) => {
+                  e.dataTransfer.setData("text/plain", task.id);
+                  e.dataTransfer.effectAllowed = "move";
+                }}
                 onClick={() => onTaskClick(task)}
                 className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-3 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-slate-300 transition-all group"
               >
@@ -1073,6 +1092,14 @@ const KanbanColumn = ({
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <StatusIcon size={24} className="text-[#475569] mb-2" />
             <p className="text-sm text-[#94A3B8]">No tasks</p>
+            <p className="text-xs text-[#CBD5E1] mt-0.5">Drag tasks here</p>
+          </div>
+        )}
+
+        {/* Drop indicator */}
+        {isDragOver && (
+          <div className="border-2 border-dashed border-[#22D3EE] rounded-lg p-3 flex items-center justify-center">
+            <p className="text-xs text-[#0891B2] font-medium">Drop to move to {status.name}</p>
           </div>
         )}
       </div>
@@ -2123,7 +2150,7 @@ const TasksPage = () => {
           createdAt: new Date(t.createdAt),
           updatedAt: t.updatedAt ? new Date(t.updatedAt) : undefined,
         }));
-        setTasks(apiTasks);
+        setTasks(apiTasks as Task[]);
       } catch (error) {
         console.error('Failed to fetch tasks:', error);
         setTasks([]);
@@ -2253,6 +2280,63 @@ const TasksPage = () => {
       return acc;
     }, {} as Record<string, Task[]>);
   }, [filteredTasks]);
+
+  // Kanban drag-and-drop status change
+  const handleKanbanStatusChange = async (taskId: string, newStatusId: string) => {
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task || task.status === newStatusId) return;
+
+    // Optimistic update
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, status: newStatusId as Task["status"] } : t))
+    );
+
+    try {
+      // Map frontend status IDs to backend enum values
+      const statusMap: Record<string, string> = {
+        todo: "TODO",
+        in_progress: "IN_PROGRESS",
+        in_review: "REVIEW",
+        completed: "DONE",
+        cancelled: "DONE",
+      };
+      await updateTaskStatus(taskId, statusMap[newStatusId] || newStatusId.toUpperCase());
+      toast({ title: "Status Updated", description: `Task moved to ${taskStatuses.find(s => s.id === newStatusId)?.name || newStatusId}.` });
+    } catch (error) {
+      console.error("Failed to update task status", error);
+      // Revert by re-fetching
+      try {
+        const response = await fetchTasksApi() as any[];
+        const apiTasks = (Array.isArray(response) ? response : []).map((t: any) => ({
+          id: t.id,
+          title: t.title,
+          description: t.description || '',
+          status: (t.status === 'DONE' ? 'completed' : t.status === 'REVIEW' ? 'in_review' : t.status === 'IN_PROGRESS' ? 'in_progress' : 'todo') as Task["status"],
+          priority: (t.priority?.toLowerCase() || 'medium') as Task["priority"],
+          dueDate: t.dueDate ? new Date(t.dueDate) : undefined,
+          startDate: t.startDate ? new Date(t.startDate) : undefined,
+          completedDate: t.completedAt ? new Date(t.completedAt) : undefined,
+          project: t.project?.name || undefined,
+          projectColor: '#8B5CF6',
+          category: t.category || 'development',
+          tags: t.tags || [],
+          assignees: t.assignedTo ? [{ id: t.assignedTo.id, name: `${t.assignedTo.user?.firstName || ''} ${t.assignedTo.user?.lastName || ''}`.trim(), email: t.assignedTo.user?.email || '', avatar: undefined }] : [],
+          subtasks: [],
+          attachments: t.attachmentCount || 0,
+          comments: t.commentCount || 0,
+          isStarred: false,
+          isRecurring: false,
+          estimatedTime: t.estimatedTime || undefined,
+          actualTime: undefined,
+          createdBy: t.createdBy?.user?.firstName || 'System',
+          createdAt: new Date(t.createdAt),
+          updatedAt: t.updatedAt ? new Date(t.updatedAt) : undefined,
+        }));
+        setTasks(apiTasks as Task[]);
+      } catch { /* ignore */ }
+      toast({ title: "Error", description: "Failed to update task status.", variant: "destructive" });
+    }
+  };
 
   // Handlers
   const handleAddTask = async (data: Partial<Task>) => {
@@ -2761,6 +2845,7 @@ const TasksPage = () => {
                               setCurrentTask(task);
                               setIsDeleteAlertOpen(true);
                             }}
+                            onStatusChange={handleKanbanStatusChange}
                           />
                         ))}
                       </div>

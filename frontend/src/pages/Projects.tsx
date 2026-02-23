@@ -52,6 +52,8 @@ import {
   SlidersHorizontal,
   LayoutGrid,
   List,
+  Kanban,
+  GripVertical,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -96,7 +98,7 @@ import {
   Flag,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getProjects, deleteProjectById, createProject } from "@/features/projects";
+import { getProjects, deleteProjectById, createProject, updateProject } from "@/features/projects";
 
 // ============================================
 // CONFIGURATION
@@ -211,11 +213,13 @@ const getStatusConfig = (status: string) => {
     not_started: { bg: "bg-white/5", text: "text-[#475569]", dot: "bg-slate-400", icon: CircleDot },
     planning: { bg: "bg-blue-100", text: "text-[#0891B2]", dot: "bg-[#0891B2]", icon: Target },
     in_progress: { bg: "bg-[#0891B2]/10", text: "text-[#0891B2]", dot: "bg-[#0891B2]", icon: PlayCircle },
+    active: { bg: "bg-[#0891B2]/10", text: "text-[#0891B2]", dot: "bg-[#0891B2]", icon: PlayCircle },
     on_hold: { bg: "bg-amber-100", text: "text-amber-600", dot: "bg-amber-500", icon: PauseCircle },
     completed: { bg: "bg-green-100", text: "text-green-600", dot: "bg-green-500", icon: CheckCircle2 },
     cancelled: { bg: "bg-red-100", text: "text-red-600", dot: "bg-red-500", icon: XCircle },
+    archived: { bg: "bg-slate-100", text: "text-slate-500", dot: "bg-slate-400", icon: Archive },
   };
-  return configs[status?.toLowerCase().replace(" ", "_")] || configs.not_started;
+  return configs[status?.toLowerCase().replace(" ", "_")] || configs.planning;
 };
 
 const getPriorityConfig = (priority: string) => {
@@ -769,6 +773,257 @@ const ProjectCard = ({
 // ============================================
 // EMPTY STATE COMPONENT
 // ============================================
+// KANBAN BOARD COMPONENT
+// ============================================
+
+const KANBAN_COLUMNS: { status: string; label: string }[] = [
+  { status: "PLANNING", label: "Planning" },
+  { status: "ACTIVE", label: "Active" },
+  { status: "ON_HOLD", label: "On Hold" },
+  { status: "COMPLETED", label: "Completed" },
+  { status: "CANCELLED", label: "Cancelled" },
+];
+
+const KanbanBoard = ({
+  projects,
+  onStatusChange,
+  onView,
+  onEdit,
+  onDelete,
+}: {
+  projects: Project[];
+  onStatusChange: (projectId: number, newStatus: string) => void;
+  onView: (id: number) => void;
+  onEdit: (id: number) => void;
+  onDelete: (project: Project) => void;
+}) => {
+  const [draggedProject, setDraggedProject] = useState<Project | null>(null);
+  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, project: Project) => {
+    setDraggedProject(project);
+    e.dataTransfer.effectAllowed = "move";
+    // Store project id for the drop
+    e.dataTransfer.setData("text/plain", String(project.id));
+  };
+
+  const handleDragOver = (e: React.DragEvent, status: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverColumn(status);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverColumn(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, newStatus: string) => {
+    e.preventDefault();
+    setDragOverColumn(null);
+    if (draggedProject && draggedProject.status !== newStatus) {
+      onStatusChange(draggedProject.id, newStatus);
+    }
+    setDraggedProject(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedProject(null);
+    setDragOverColumn(null);
+  };
+
+  return (
+    <div className="p-6 overflow-x-auto">
+      <div className="flex gap-4 min-w-max">
+        {KANBAN_COLUMNS.map((col) => {
+          const columnProjects = projects.filter(
+            (p) => p.status.toUpperCase() === col.status
+          );
+          const config = getStatusConfig(col.status);
+          const StatusIcon = config.icon;
+          const isOver = dragOverColumn === col.status;
+
+          return (
+            <div
+              key={col.status}
+              className={cn(
+                "w-[300px] flex-shrink-0 rounded-lg border-2 transition-all duration-200",
+                isOver
+                  ? "border-[#22D3EE] bg-[#0891B2]/5"
+                  : "border-transparent bg-[#F8FAFC]/60"
+              )}
+              onDragOver={(e) => handleDragOver(e, col.status)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, col.status)}
+            >
+              {/* Column Header */}
+              <div className="flex items-center justify-between px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <div className={cn("w-3 h-3 rounded-full", config.dot)} />
+                  <h3 className="font-semibold text-sm text-[#0F172A]">{col.label}</h3>
+                  <span className={cn(
+                    "text-xs font-bold px-2 py-0.5 rounded-full",
+                    config.bg, config.text
+                  )}>
+                    {columnProjects.length}
+                  </span>
+                </div>
+              </div>
+
+              {/* Cards Container */}
+              <div className="px-3 pb-3 space-y-3 min-h-[120px]">
+                <AnimatePresence>
+                  {columnProjects.map((project) => {
+                    const isDragging = draggedProject?.id === project.id;
+                    const priorityConfig = getPriorityConfig(project.priority || "medium");
+
+                    return (
+                      <motion.div
+                        key={project.id}
+                        layout
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: isDragging ? 0.5 : 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        draggable
+                        onDragStart={(e: any) => handleDragStart(e, project)}
+                        onDragEnd={handleDragEnd}
+                        className={cn(
+                          "bg-white rounded-lg border border-[rgba(15,23,42,0.08)] p-4 cursor-grab active:cursor-grabbing",
+                          "hover:border-[#22D3EE]/40 hover:shadow-md transition-all group",
+                          isDragging && "opacity-50 shadow-lg"
+                        )}
+                      >
+                        {/* Card Header */}
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1 min-w-0">
+                            <h4
+                              className="font-semibold text-sm text-[#0F172A] truncate cursor-pointer hover:text-[#0891B2] transition-colors"
+                              onClick={() => onView(project.id)}
+                            >
+                              {project.name}
+                            </h4>
+                            {project.clientName && (
+                              <p className="text-xs text-[#94A3B8] mt-0.5 flex items-center gap-1">
+                                <Building2 size={10} />
+                                {project.clientName}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); onView(project.id); }}
+                              className="p-1 rounded hover:bg-[#F1F5F9] text-[#94A3B8] hover:text-[#0891B2] transition-colors"
+                            >
+                              <Eye size={14} />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); onEdit(project.id); }}
+                              className="p-1 rounded hover:bg-[#F1F5F9] text-[#94A3B8] hover:text-[#475569] transition-colors"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Description */}
+                        {project.description && (
+                          <p className="text-xs text-[#94A3B8] mb-3 line-clamp-2">
+                            {project.description}
+                          </p>
+                        )}
+
+                        {/* Progress Bar */}
+                        <div className="mb-3">
+                          <div className="flex items-center justify-between text-xs mb-1">
+                            <span className="text-[#94A3B8]">Progress</span>
+                            <span className={cn(
+                              "font-semibold",
+                              project.progress >= 75 ? "text-[#0891B2]" : "text-[#475569]"
+                            )}>
+                              {project.progress}%
+                            </span>
+                          </div>
+                          <div className="h-1.5 bg-[#F1F5F9] rounded-full overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${project.progress}%` }}
+                              className={cn("h-full rounded-full", getProgressColor(project.progress))}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="flex items-center justify-between">
+                          <span className={cn(
+                            "inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium border",
+                            priorityConfig.bg,
+                            priorityConfig.text,
+                            priorityConfig.border
+                          )}>
+                            <Flag size={8} />
+                            {project.priority || "Medium"}
+                          </span>
+
+                          {project.dueDate && !isNaN(new Date(project.dueDate).getTime()) && (
+                            <div className={cn(
+                              "flex items-center gap-1 text-[10px]",
+                              isOverdue(project.dueDate) && project.status !== "COMPLETED"
+                                ? "text-red-500 font-semibold"
+                                : "text-[#94A3B8]"
+                            )}>
+                              <CalendarDays size={10} />
+                              {getRelativeTime(project.dueDate)}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Drag Handle Hint */}
+                        <div className="flex items-center justify-center mt-2 opacity-0 group-hover:opacity-40 transition-opacity">
+                          <GripVertical size={14} className="text-[#94A3B8]" />
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
+
+                {/* Empty Column State */}
+                {columnProjects.length === 0 && !isOver && (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center mb-2", config.bg)}>
+                      <StatusIcon size={18} className={config.text} />
+                    </div>
+                    <p className="text-xs text-[#94A3B8]">
+                      No {col.label.toLowerCase()} projects
+                    </p>
+                    <p className="text-[10px] text-[#CBD5E1] mt-0.5">
+                      Drag projects here
+                    </p>
+                  </div>
+                )}
+
+                {/* Drop Zone Indicator */}
+                {isOver && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="border-2 border-dashed border-[#22D3EE] rounded-lg p-4 flex items-center justify-center"
+                  >
+                    <p className="text-xs text-[#0891B2] font-medium">
+                      Drop to move to {col.label}
+                    </p>
+                  </motion.div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// ============================================
+// EMPTY STATE COMPONENT
+// ============================================
 
 const EmptyState = ({ onAdd }: { onAdd: () => void }) => (
   <motion.div
@@ -806,7 +1061,7 @@ const ProjectsPage = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [viewMode, setViewMode] = useState<"table" | "grid">("table");
+  const [viewMode, setViewMode] = useState<"table" | "grid" | "kanban">("table");
   const [selectedProjects, setSelectedProjects] = useState<number[]>([]);
   const [columns, setColumns] = useState<ColumnConfig[]>(defaultColumns);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
@@ -1042,6 +1297,31 @@ const ProjectsPage = () => {
         p.id === id ? { ...p, isFavorite: !p.isFavorite } : p
       )
     );
+  };
+
+  // Kanban drag-and-drop status change
+  const handleKanbanStatusChange = async (projectId: number, newStatus: string) => {
+    // Optimistic update
+    setProjects((prev) =>
+      prev.map((p) => (p.id === projectId ? { ...p, status: newStatus } : p))
+    );
+
+    try {
+      await updateProject(projectId, { status: newStatus });
+      toast({
+        title: "Status Updated",
+        description: `Project moved to ${newStatus.replace("_", " ").charAt(0) + newStatus.replace("_", " ").slice(1).toLowerCase()}.`,
+      });
+    } catch (error) {
+      console.error("Failed to update project status", error);
+      // Revert optimistic update
+      fetchProjects();
+      toast({
+        title: "Error",
+        description: "Failed to update project status.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDuplicate = async (project: Project) => {
@@ -1416,6 +1696,17 @@ const ProjectsPage = () => {
                   >
                     <LayoutGrid size={18} />
                   </button>
+                  <button
+                    onClick={() => setViewMode("kanban")}
+                    className={cn(
+                      "p-2 rounded-md transition-all",
+                      viewMode === "kanban"
+                        ? "bg-white text-[#0891B2] shadow-sm"
+                        : "text-[#94A3B8] hover:text-slate-200"
+                    )}
+                  >
+                    <Kanban size={18} />
+                  </button>
                 </div>
               </div>
             </div>
@@ -1435,6 +1726,17 @@ const ProjectsPage = () => {
               </div>
             ) : filteredProjects.length === 0 ? (
               <EmptyState onAdd={() => navigate("/projects/add")} />
+            ) : viewMode === "kanban" ? (
+              <KanbanBoard
+                projects={filteredProjects}
+                onStatusChange={handleKanbanStatusChange}
+                onView={(id) => navigate(`/projects/${id}`)}
+                onEdit={(id) => navigate(`/projects/${id}/edit`)}
+                onDelete={(project) => {
+                  setProjectToDelete(project);
+                  setDeleteDialogOpen(true);
+                }}
+              />
             ) : viewMode === "table" ? (
               <>
                 {/* Table View */}

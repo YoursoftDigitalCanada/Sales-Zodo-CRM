@@ -756,7 +756,7 @@ const AddProjectPage = () => {
     try {
       const projectData = {
         projectTitle: name,
-        description,
+        description: description || null,
         clientId: clientId || null,
         projectManagerId: projectManager || null,
         status: isDraft ? "NOT_STARTED" : status.toUpperCase().replace(/ /g, "_"),
@@ -766,14 +766,16 @@ const AddProjectPage = () => {
         dueDate: dueDate ? new Date(dueDate).toISOString() : null,
         budget: budget ? parseFloat(budget) : null,
         estimatedHours: estimatedHours ? parseInt(estimatedHours) : null,
-        category,
+        category: category || null,
         tags,
         teamMembers: selectedTeamMembers.map(String),
-        milestones: milestones.map(m => ({
-          title: m.title,
-          dueDate: m.dueDate ? new Date(m.dueDate).toISOString() : null,
-          isCompleted: m.completed || false,
-        })),
+        milestones: milestones
+          .filter(m => m.title && m.title.trim().length > 0)
+          .map(m => ({
+            title: m.title.trim(),
+            dueDate: m.dueDate ? new Date(m.dueDate).toISOString() : null,
+            isCompleted: m.completed || false,
+          })),
         notifyTeamMembers: sendNotification,
       };
 

@@ -67,7 +67,7 @@ const ProjectDetailPage = () => {
         priority: "MEDIUM",
         status: "TODO",
         dueDate: "",
-        assignedToId: "",
+        assignedToId: "none",
     });
 
     const fetchProject = useCallback(async () => {
@@ -129,12 +129,12 @@ const ProjectDetailPage = () => {
                 priority: newTask.priority,
                 status: newTask.status,
                 dueDate: newTask.dueDate ? new Date(newTask.dueDate).toISOString() : null,
-                assignedToId: newTask.assignedToId || null,
+                assignedToId: newTask.assignedToId && newTask.assignedToId !== "none" ? newTask.assignedToId : null,
                 projectId: id,
             });
             toast({ title: "Task Created", description: `"${newTask.title}" has been added to this project.` });
             setShowAddTask(false);
-            setNewTask({ title: "", description: "", priority: "MEDIUM", status: "TODO", dueDate: "", assignedToId: "" });
+            setNewTask({ title: "", description: "", priority: "MEDIUM", status: "TODO", dueDate: "", assignedToId: "none" });
             fetchTasks();
         } catch (error) {
             console.error("Error creating task:", error);
@@ -688,7 +688,7 @@ const ProjectDetailPage = () => {
                                             <SelectValue placeholder="Unassigned" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="">Unassigned</SelectItem>
+                                            <SelectItem value="none">Unassigned</SelectItem>
                                             {employees.map((emp: any) => (
                                                 <SelectItem key={emp.id} value={String(emp.id)}>
                                                     {emp.firstName || emp.name || ""} {emp.lastName || ""}

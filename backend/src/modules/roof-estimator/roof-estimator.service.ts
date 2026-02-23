@@ -1,4 +1,5 @@
 import axios from 'axios';
+import OpenAI from 'openai';
 import { config } from '../../config';
 import { roofEstimatorRepository } from './roof-estimator.repository';
 import {
@@ -7,7 +8,9 @@ import {
 import { logger } from '../../common/utils/logger';
 import { activityLogger } from '../../common/services/activity-logger.service';
 
-const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || '';
+const GOOGLE_GEOCODING_API_KEY = process.env.GOOGLE_GEOCODING_API_KEY || '';
+const GOOGLE_STATIC_MAPS_API_KEY = process.env.GOOGLE_STATIC_MAPS_API_KEY || '';
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8001';
 
 export class RoofEstimatorService {
@@ -15,12 +18,12 @@ export class RoofEstimatorService {
      * Geocode an address using Google Geocoding API
      */
     async geocodeAddress(address: string): Promise<{ lat: number; lng: number; formattedAddress: string }> {
-        if (!GOOGLE_MAPS_API_KEY) {
-            throw new Error('GOOGLE_MAPS_API_KEY is not configured');
+        if (!GOOGLE_GEOCODING_API_KEY) {
+            throw new Error('GOOGLE_GEOCODING_API_KEY is not configured');
         }
 
         const response = await axios.get('https://maps.googleapis.com/maps/api/geocode/json', {
-            params: { address, key: GOOGLE_MAPS_API_KEY },
+            params: { address, key: GOOGLE_GEOCODING_API_KEY },
             timeout: 10000,
         });
 
@@ -40,11 +43,11 @@ export class RoofEstimatorService {
      * Fetch satellite image URL from Google Maps Static API
      */
     getSatelliteImageUrl(lat: number, lng: number, zoom = 20, size = '640x640'): string {
-        if (!GOOGLE_MAPS_API_KEY) {
-            throw new Error('GOOGLE_MAPS_API_KEY is not configured');
+        if (!GOOGLE_STATIC_MAPS_API_KEY) {
+            throw new Error('GOOGLE_STATIC_MAPS_API_KEY is not configured');
         }
 
-        return `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=${zoom}&size=${size}&maptype=satellite&key=${GOOGLE_MAPS_API_KEY}`;
+        return `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=${zoom}&size=${size}&maptype=satellite&key=${GOOGLE_STATIC_MAPS_API_KEY}`;
     }
 
     /**
@@ -106,6 +109,84 @@ export class RoofEstimatorService {
             return response.data?.status === 'healthy';
         } catch {
             return false;
+        }
+    }
+
+    /**
+     * Generate a detailed roofing cost estimate using OpenAI GPT-4o-mini
+     */
+    async generateEstimate(params: {
+        roofAreaSqft: number;
+        roofType: string;
+        material: string;
+        location?: string;
+        stories?: number;
+        pitch?: string;
+        currentCondition?: string;
+    }): Promise<{
+        summary: string;
+        laborCost: number;
+        materialCost: number;
+        totalEstimate: number;
+        breakdown: Array<{ item: string; quantity?: string; unitPrice?: number; total: number }>;
+        timeline: string;
+        notes: string[];
+    }> {
+        if (!OPENAI_API_KEY) {
+            throw new Error('OPENAI_API_KEY is not configured');
+        }
+
+        const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
+
+        const prompt = `You are an expert roofing contractor estimator in Canada. Generate a detailed cost estimate for the following roof job.
+
+Roof Details:
+- Area: ${params.roofAreaSqft} sq ft
+- Roof Type: ${params.roofType}
+- Material: ${params.material}
+- Location: ${params.location || 'Canada'}
+- Stories: ${params.stories || 1}
+- Pitch: ${params.pitch || 'Standard (4/12 to 6/12)'}
+- Current Condition: ${params.currentCondition || 'Unknown'}
+
+Provide a realistic estimate in CAD. Return ONLY valid JSON with this exact structure:
+{
+  "summary": "Brief description of the job",
+  "laborCost": <number>,
+  "materialCost": <number>,
+  "totalEstimate": <number>,
+  "breakdown": [
+    { "item": "description", "quantity": "amount with unit", "unitPrice": <number>, "total": <number> }
+  ],
+  "timeline": "estimated completion time",
+  "notes": ["important note 1", "important note 2"]
+}
+
+Be realistic with Canadian pricing. Include removal & disposal, underlayment, flashing, ventilation, labor, and cleanup.`;
+
+        try {
+            const completion = await openai.chat.completions.create({
+                model: 'gpt-4o-mini',
+                messages: [{ role: 'user', content: prompt }],
+                temperature: 0.3,
+                max_tokens: 2000,
+                response_format: { type: 'json_object' },
+            });
+
+            const content = completion.choices[0]?.message?.content;
+            if (!content) throw new Error('No response from OpenAI');
+
+            const parsed = JSON.parse(content);
+            logger.info('OpenAI estimate generated', {
+                roofArea: params.roofAreaSqft,
+                material: params.material,
+                total: parsed.totalEstimate,
+            });
+
+            return parsed;
+        } catch (error: any) {
+            logger.error('OpenAI estimate generation failed', { error: error.message });
+            throw new Error(`Failed to generate estimate: ${error.message}`);
         }
     }
 

@@ -1,6 +1,6 @@
 // src/pages/Ecommerce.tsx
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -112,6 +112,12 @@ import {
   Store,
   type LucideIcon,
 } from "lucide-react";
+import {
+  getProducts as fetchProductsApi,
+  getOrders as fetchOrdersApi,
+  createProduct as createProductApi,
+  updateOrder as updateOrderApi,
+} from "@/features/ecommerce";
 
 // ============================================
 // TYPES
@@ -1446,7 +1452,7 @@ const AddProductDialog = ({
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="Enter product name"
               required
-                            className="h-11 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
+              className="h-11 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
             />
           </div>
 
@@ -1667,7 +1673,7 @@ const OrderDetailsDialog = ({
                   const StepIcon = step.icon;
                   const isCompleted = index <= currentStepIndex;
                   const isCurrent = index === currentStepIndex;
-                  
+
                   return (
                     <React.Fragment key={step.key}>
                       <div className="flex flex-col items-center">
@@ -1891,8 +1897,78 @@ const EcommercePage = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [searchTerm, setSearchTerm] = useState("");
-  const [productList, setProductList] = useState<Product[]>(products);
-  const [orderList, setOrderList] = useState<Order[]>(orders);
+  const [productList, setProductList] = useState<Product[]>([]);
+  const [orderList, setOrderList] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch from API
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoading(true);
+        const [prodData, ordData] = await Promise.allSettled([
+          fetchProductsApi(),
+          fetchOrdersApi(),
+        ]);
+        if (!cancelled) {
+          if (prodData.status === 'fulfilled' && Array.isArray(prodData.value) && prodData.value.length) {
+            setProductList(prodData.value.map((p: any) => ({
+              id: p.id,
+              name: p.name || '',
+              description: p.description || '',
+              sku: p.sku || '',
+              category: p.category?.name || p.categoryId || 'Uncategorized',
+              price: p.price ?? 0,
+              comparePrice: p.compareAtPrice,
+              cost: (p as any).cost ?? 0,
+              stock: p.stock ?? 0,
+              lowStockThreshold: (p as any).lowStockThreshold ?? 10,
+              status: p.status || 'active',
+              images: p.images || [],
+              tags: (p as any).tags || [],
+              sales: (p as any).sales ?? 0,
+              revenue: (p as any).revenue ?? 0,
+              rating: (p as any).rating ?? 0,
+              reviews: (p as any).reviews ?? 0,
+              createdAt: p.createdAt || new Date().toISOString(),
+              updatedAt: p.updatedAt || new Date().toISOString(),
+            })));
+          } else {
+            setProductList(products);
+          }
+          if (ordData.status === 'fulfilled' && Array.isArray(ordData.value) && ordData.value.length) {
+            setOrderList(ordData.value.map((o: any) => ({
+              id: o.id,
+              orderNumber: o.orderNumber || o.id,
+              customer: { id: o.customerId || o.id, name: o.customerName || 'Unknown', email: o.customerEmail || '' },
+              items: (o.items || []).map((it: any) => ({ ...it, total: it.total || it.price * it.quantity })),
+              subtotal: o.subtotal ?? o.total ?? 0,
+              tax: o.tax ?? 0,
+              shipping: o.shipping ?? 0,
+              discount: o.discount ?? 0,
+              total: o.total ?? 0,
+              status: o.status || 'pending',
+              paymentStatus: o.paymentStatus || 'pending',
+              paymentMethod: o.paymentMethod || 'Unknown',
+              shippingAddress: o.shippingAddress || { name: '', line1: '', city: '', state: '', postalCode: '', country: '' },
+              billingAddress: o.billingAddress || { name: '', line1: '', city: '', state: '', postalCode: '', country: '' },
+              notes: o.notes,
+              createdAt: o.createdAt || new Date().toISOString(),
+              updatedAt: o.updatedAt || new Date().toISOString(),
+            })));
+          } else {
+            setOrderList(orders);
+          }
+        }
+      } catch {
+        if (!cancelled) { setProductList(products); setOrderList(orders); }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // Dialogs
   const [showAddProduct, setShowAddProduct] = useState(false);
@@ -1910,7 +1986,7 @@ const EcommercePage = () => {
   }, [productList, searchTerm]);
 
   // Handlers
-  const handleAddProduct = (productData: Partial<Product>) => {
+  const handleAddProduct = async (productData: Partial<Product>) => {
     const newProduct: Product = {
       id: `prod_${Date.now()}`,
       name: productData.name || "",
@@ -1934,13 +2010,28 @@ const EcommercePage = () => {
     };
 
     setProductList((prev) => [newProduct, ...prev]);
+
+    try {
+      const created = await createProductApi({
+        name: newProduct.name,
+        description: newProduct.description,
+        price: newProduct.price,
+        sku: newProduct.sku,
+        stock: newProduct.stock,
+        status: newProduct.status,
+      });
+      setProductList((prev) =>
+        prev.map((p) => (p.id === newProduct.id ? { ...p, id: created.id } : p))
+      );
+    } catch { /* optimistic */ }
+
     toast({
       title: "Product Added",
       description: `"${newProduct.name}" has been added successfully.`,
     });
   };
 
-  const handleUpdateOrderStatus = (orderId: string, status: Order["status"]) => {
+  const handleUpdateOrderStatus = async (orderId: string, status: Order["status"]) => {
     setOrderList((prev) =>
       prev.map((o) =>
         o.id === orderId
@@ -1954,6 +2045,8 @@ const EcommercePage = () => {
         prev ? { ...prev, status, updatedAt: new Date().toISOString() } : null
       );
     }
+
+    try { await updateOrderApi(orderId, { status }); } catch { /* optimistic */ }
 
     toast({
       title: "Order Updated",

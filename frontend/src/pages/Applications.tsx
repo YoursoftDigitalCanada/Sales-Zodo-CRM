@@ -289,6 +289,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { getApplications as fetchApplicationsApi } from "@/features/applications";
 
 // ============================================
 // TYPES & INTERFACES
@@ -1166,8 +1167,8 @@ const StatCard = ({
       onClick={onClick}
       className={cn(
         "relative bg-white rounded-md p-5 border transition-all overflow-hidden group cursor-pointer",
-        isActive 
-          ? "border-[#22D3EE]  ring-2 ring-[#22D3EE]/20" 
+        isActive
+          ? "border-[#22D3EE]  ring-2 ring-[#22D3EE]/20"
           : "border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg "
       )}
     >
@@ -1206,14 +1207,14 @@ const StatCard = ({
 };
 
 // Status Badge Component
-const StatusBadge = ({ 
-  status, 
+const StatusBadge = ({
+  status,
   size = "default",
   showIcon = true,
   interactive = false,
   onClick,
-}: { 
-  status: ApplicationStatus; 
+}: {
+  status: ApplicationStatus;
   size?: "xs" | "small" | "default" | "large";
   showIcon?: boolean;
   interactive?: boolean;
@@ -1248,11 +1249,11 @@ const StatusBadge = ({
 };
 
 // Priority Badge Component
-const PriorityBadge = ({ 
-  priority, 
+const PriorityBadge = ({
+  priority,
   size = "default",
   showLabel = true,
-}: { 
+}: {
   priority: Priority;
   size?: "small" | "default";
   showLabel?: boolean;
@@ -1275,18 +1276,18 @@ const PriorityBadge = ({
 };
 
 // Rating Stars Component
-const RatingStars = ({ 
-  rating, 
+const RatingStars = ({
+  rating,
   maxRating = 5,
   size = "default",
-  onChange, 
+  onChange,
   readonly = false,
   showValue = false,
-}: { 
+}: {
   rating: number;
   maxRating?: number;
   size?: "small" | "default" | "large";
-  onChange?: (rating: number) => void; 
+  onChange?: (rating: number) => void;
   readonly?: boolean;
   showValue?: boolean;
 }) => {
@@ -1295,7 +1296,7 @@ const RatingStars = ({
 
   return (
     <div className="flex items-center gap-1">
-      <div 
+      <div
         className="flex items-center gap-0.5"
         onMouseLeave={() => setHoverRating(0)}
       >
@@ -1316,8 +1317,8 @@ const RatingStars = ({
               size={starSize}
               className={cn(
                 "transition-colors",
-                (hoverRating || rating) >= star 
-                  ? "fill-yellow-400 text-yellow-400" 
+                (hoverRating || rating) >= star
+                  ? "fill-yellow-400 text-yellow-400"
                   : "text-slate-200"
               )}
             />
@@ -1332,12 +1333,12 @@ const RatingStars = ({
 };
 
 // Score Circle Component
-const ScoreCircle = ({ 
-  score, 
+const ScoreCircle = ({
+  score,
   size = "default",
   showLabel = true,
   label,
-}: { 
+}: {
   score: number;
   size?: "small" | "default" | "large";
   showLabel?: boolean;
@@ -1377,7 +1378,7 @@ const ScoreCircle = ({
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
-          <span 
+          <span
             className={cn(
               "font-bold",
               size === "small" ? "text-xs" : size === "large" ? "text-lg" : "text-sm"
@@ -1396,15 +1397,15 @@ const ScoreCircle = ({
 };
 
 // Score Bar Component
-const ScoreBar = ({ 
-  label, 
-  score, 
+const ScoreBar = ({
+  label,
+  score,
   color,
   showPercentage = true,
   animate = true,
-}: { 
-  label: string; 
-  score: number; 
+}: {
+  label: string;
+  score: number;
   color?: string;
   showPercentage?: boolean;
   animate?: boolean;
@@ -3305,10 +3306,10 @@ const ApplicationDetailsSheet = ({
                                   skill.level === "expert"
                                     ? "bg-[#0891B2]/20 text-[#0891B2]"
                                     : skill.level === "advanced"
-                                    ? "bg-blue-100 text-blue-700"
-                                    : skill.level === "intermediate"
-                                    ? "bg-amber-100 text-amber-700"
-                                    : "bg-white/5 text-[#475569]"
+                                      ? "bg-blue-100 text-blue-700"
+                                      : skill.level === "intermediate"
+                                        ? "bg-amber-100 text-amber-700"
+                                        : "bg-white/5 text-[#475569]"
                                 )}
                               >
                                 {skill.name}
@@ -3492,10 +3493,10 @@ const ApplicationDetailsSheet = ({
                           doc.category === "resume"
                             ? "bg-blue-100"
                             : doc.category === "cover_letter"
-                            ? "bg-purple-100"
-                            : doc.category === "portfolio"
-                            ? "bg-pink-100"
-                            : "bg-slate-200"
+                              ? "bg-purple-100"
+                              : doc.category === "portfolio"
+                                ? "bg-pink-100"
+                                : "bg-slate-200"
                         )}
                       >
                         <FileText
@@ -3504,10 +3505,10 @@ const ApplicationDetailsSheet = ({
                             doc.category === "resume"
                               ? "text-[#0891B2]"
                               : doc.category === "cover_letter"
-                              ? "text-purple-600"
-                              : doc.category === "portfolio"
-                              ? "text-pink-600"
-                              : "text-[#94A3B8]"
+                                ? "text-purple-600"
+                                : doc.category === "portfolio"
+                                  ? "text-pink-600"
+                                  : "text-[#94A3B8]"
                           )}
                         />
                       </div>
@@ -3595,10 +3596,10 @@ const ApplicationDetailsSheet = ({
                           interview.status === "scheduled" || interview.status === "confirmed"
                             ? "bg-[#0891B2]"
                             : interview.status === "completed"
-                            ? "bg-green-500"
-                            : interview.status === "cancelled"
-                            ? "bg-red-500"
-                            : "bg-slate-300"
+                              ? "bg-green-500"
+                              : interview.status === "cancelled"
+                                ? "bg-red-500"
+                                : "bg-slate-300"
                         )}
                       />
                       <CardContent className="p-4">
@@ -3610,10 +3611,10 @@ const ApplicationDetailsSheet = ({
                                 interview.type === "video"
                                   ? "bg-blue-100"
                                   : interview.type === "phone"
-                                  ? "bg-green-100"
-                                  : interview.type === "technical"
-                                  ? "bg-purple-100"
-                                  : "bg-white/5"
+                                    ? "bg-green-100"
+                                    : interview.type === "technical"
+                                      ? "bg-purple-100"
+                                      : "bg-white/5"
                               )}
                             >
                               {interview.type === "video" ? (
@@ -3640,10 +3641,10 @@ const ApplicationDetailsSheet = ({
                               interview.status === "scheduled" || interview.status === "confirmed"
                                 ? "bg-[#0891B2]/10 text-[#0891B2]"
                                 : interview.status === "completed"
-                                ? "bg-green-100 text-green-700"
-                                : interview.status === "cancelled"
-                                ? "bg-red-100 text-red-700"
-                                : "bg-white/5 text-[#475569]"
+                                  ? "bg-green-100 text-green-700"
+                                  : interview.status === "cancelled"
+                                    ? "bg-red-100 text-red-700"
+                                    : "bg-white/5 text-[#475569]"
                             )}
                           >
                             {interview.status.replace("_", " ")}
@@ -3693,10 +3694,10 @@ const ApplicationDetailsSheet = ({
                                         fb.recommendation === "strong_yes"
                                           ? "bg-green-100 text-green-700"
                                           : fb.recommendation === "yes"
-                                          ? "bg-[#0891B2]/10 text-[#0891B2]"
-                                          : fb.recommendation === "neutral"
-                                          ? "bg-amber-100 text-amber-700"
-                                          : "bg-red-100 text-red-700"
+                                            ? "bg-[#0891B2]/10 text-[#0891B2]"
+                                            : fb.recommendation === "neutral"
+                                              ? "bg-amber-100 text-amber-700"
+                                              : "bg-red-100 text-red-700"
                                       )}
                                     >
                                       {fb.recommendation.replace("_", " ")}
@@ -3767,10 +3768,10 @@ const ApplicationDetailsSheet = ({
                                 assessment.type === "technical"
                                   ? "bg-blue-100"
                                   : assessment.type === "personality"
-                                  ? "bg-purple-100"
-                                  : assessment.type === "cognitive"
-                                  ? "bg-amber-100"
-                                  : "bg-white/5"
+                                    ? "bg-purple-100"
+                                    : assessment.type === "cognitive"
+                                      ? "bg-amber-100"
+                                      : "bg-white/5"
                               )}
                             >
                               <ClipboardCheck
@@ -3779,10 +3780,10 @@ const ApplicationDetailsSheet = ({
                                   assessment.type === "technical"
                                     ? "text-[#0891B2]"
                                     : assessment.type === "personality"
-                                    ? "text-purple-600"
-                                    : assessment.type === "cognitive"
-                                    ? "text-amber-600"
-                                    : "text-[#475569]"
+                                      ? "text-purple-600"
+                                      : assessment.type === "cognitive"
+                                        ? "text-amber-600"
+                                        : "text-[#475569]"
                                 )}
                               />
                             </div>
@@ -3802,10 +3803,10 @@ const ApplicationDetailsSheet = ({
                               assessment.status === "completed"
                                 ? "bg-green-100 text-green-700"
                                 : assessment.status === "in_progress"
-                                ? "bg-blue-100 text-blue-700"
-                                : assessment.status === "pending"
-                                ? "bg-amber-100 text-amber-700"
-                                : "bg-red-100 text-red-700"
+                                  ? "bg-blue-100 text-blue-700"
+                                  : assessment.status === "pending"
+                                    ? "bg-amber-100 text-amber-700"
+                                    : "bg-red-100 text-red-700"
                             )}
                           >
                             {assessment.status.replace("_", " ")}
@@ -4021,12 +4022,12 @@ const ApplicationDetailsSheet = ({
                             activity.type === "status_change"
                               ? "bg-blue-100"
                               : activity.type === "note_added"
-                              ? "bg-purple-100"
-                              : activity.type === "interview_scheduled"
-                              ? "bg-[#0891B2]/20"
-                              : activity.type === "document_uploaded"
-                              ? "bg-amber-100"
-                              : "bg-white/5"
+                                ? "bg-purple-100"
+                                : activity.type === "interview_scheduled"
+                                  ? "bg-[#0891B2]/20"
+                                  : activity.type === "document_uploaded"
+                                    ? "bg-amber-100"
+                                    : "bg-white/5"
                           )}
                         >
                           {activity.type === "status_change" ? (
@@ -4491,7 +4492,7 @@ const QuickDateFilter = ({
 
 const Applications = () => {
   // State Management
-  const [applications, setApplications] = useState<Application[]>(mockApplications);
+  const [applications, setApplications] = useState<Application[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [selectedApplications, setSelectedApplications] = useState<Set<string>>(new Set());
@@ -4529,10 +4530,49 @@ const Applications = () => {
   const { toast } = useToast();
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Simulate loading
+  // Fetch applications from API (falls back to mock if API empty)
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 1000);
-    return () => clearTimeout(timer);
+    let cancelled = false;
+    (async () => {
+      try {
+        setIsLoading(true);
+        const data = await fetchApplicationsApi();
+        if (!cancelled) {
+          if (data && data.length > 0) {
+            // Normalise API data to match local Application shape
+            const normalised: Application[] = (data as any[]).map((a: any, i: number) => ({
+              ...mockApplications[i % mockApplications.length], // base shape
+              id: a.id,
+              referenceNumber: a.referenceNumber || a.id,
+              status: a.status || 'new',
+              priority: a.priority || 'medium',
+              position: a.position,
+              source: a.source || 'Direct Application',
+              rating: a.rating ?? 0,
+              applicant: {
+                ...(mockApplications[i % mockApplications.length]?.applicant || {}),
+                id: a.id,
+                name: a.candidateName || 'Unknown',
+                firstName: (a.candidateName || '').split(' ')[0] || '',
+                lastName: (a.candidateName || '').split(' ').slice(1).join(' ') || '',
+                email: a.email || '',
+                phone: a.phone,
+              },
+              submittedAt: new Date(a.appliedAt || a.createdAt || Date.now()),
+              lastUpdated: new Date(a.updatedAt || Date.now()),
+            }));
+            setApplications(normalised);
+          } else {
+            setApplications(mockApplications);
+          }
+        }
+      } catch {
+        if (!cancelled) setApplications(mockApplications);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   // Keyboard shortcuts
@@ -4799,23 +4839,23 @@ const Applications = () => {
         prev.map((app) =>
           app.id === appId
             ? {
-                ...app,
-                previousStatus: app.status,
-                status: newStatus,
-                lastUpdated: new Date(),
-                activities: [
-                  {
-                    id: `activity_${Date.now()}`,
-                    type: "status_change",
-                    description: `Status changed from ${statusConfig[app.status].label} to ${statusConfig[newStatus].label}`,
-                    user: "Current User",
-                    userId: "current_user",
-                    timestamp: new Date(),
-                    changes: [{ field: "status", from: app.status, to: newStatus }],
-                  },
-                  ...app.activities,
-                ],
-              }
+              ...app,
+              previousStatus: app.status,
+              status: newStatus,
+              lastUpdated: new Date(),
+              activities: [
+                {
+                  id: `activity_${Date.now()}`,
+                  type: "status_change",
+                  description: `Status changed from ${statusConfig[app.status].label} to ${statusConfig[newStatus].label}`,
+                  user: "Current User",
+                  userId: "current_user",
+                  timestamp: new Date(),
+                  changes: [{ field: "status", from: app.status, to: newStatus }],
+                },
+                ...app.activities,
+              ],
+            }
             : app
         )
       );

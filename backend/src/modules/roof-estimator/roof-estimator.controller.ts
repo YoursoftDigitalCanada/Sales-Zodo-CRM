@@ -183,6 +183,29 @@ export class RoofEstimatorController {
             next(error);
         }
     }
+
+    /**
+     * POST /generate-estimate — Generate cost estimate via OpenAI
+     */
+    async generateEstimate(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const { roofAreaSqft, roofType, material, location, stories, pitch, currentCondition } = req.body;
+
+            const estimate = await roofEstimatorService.generateEstimate({
+                roofAreaSqft,
+                roofType,
+                material,
+                location,
+                stories,
+                pitch,
+                currentCondition,
+            });
+
+            sendSuccess(res, estimate, 'Estimate generated successfully');
+        } catch (error) {
+            next(error);
+        }
+    }
 }
 
 export const roofEstimatorController = new RoofEstimatorController();

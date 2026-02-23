@@ -1,5 +1,5 @@
 // src/pages/Notifications.tsx
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sidebar } from "@/components/Sidebar";
 import { Button } from "@/components/ui/button";
@@ -8,19 +8,23 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import {
-  Bell, BellOff, BellRing, Search, X, Check, CheckCheck, Trash2, MoreHorizontal,
-  Filter, RefreshCw, Sparkles, Archive, Mail, MailOpen, Users, Calendar,
-  DollarSign, FileText, AlertTriangle, CheckCircle2, Info, MessageSquare,
-  UserPlus, Briefcase, Clock, Star, StarOff, ChevronLeft, ChevronRight,
-  Settings, Eye, Volume2, VolumeX, Zap, TrendingUp, Target,
+  Bell, BellOff, BellRing, Search, X, CheckCheck, Trash2,
+  Archive, Mail, MailOpen, Users, Calendar,
+  DollarSign, Settings, AlertTriangle, CheckCircle2, Info, MessageSquare,
+  Star, StarOff, Sparkles, TrendingUp, RefreshCw, Loader2,
   type LucideIcon,
 } from "lucide-react";
+import {
+  getNotifications,
+  getNotificationCounts,
+  markNotificationAsRead,
+  markManyAsRead,
+  markAllAsRead,
+  deleteNotification as deleteNotificationApi,
+} from "@/features/notifications";
 
 // ============================================
 // TYPES
@@ -41,13 +45,8 @@ interface Notification {
 }
 
 // ============================================
-// CONSTANTS & MOCK DATA
+// CONSTANTS
 // ============================================
-const now = new Date();
-const minsAgo = (m: number) => new Date(now.getTime() - m * 60000).toISOString();
-const hoursAgo = (h: number) => new Date(now.getTime() - h * 3600000).toISOString();
-const daysAgo = (d: number) => new Date(now.getTime() - d * 86400000).toISOString();
-
 const typeConfig: Record<string, { icon: LucideIcon; color: string; bg: string }> = {
   info: { icon: Info, color: "text-blue-600", bg: "bg-blue-100" },
   success: { icon: CheckCircle2, color: "text-green-600", bg: "bg-green-100" },
@@ -70,26 +69,26 @@ const categoryOptions = [
   { value: "system", label: "System" },
 ];
 
-const mockNotifications: Notification[] = [
-  { id: "n1", type: "deal", title: "New Deal Won", message: "Maple Leaf Digital accepted the $19,840 website redesign quote.", timestamp: minsAgo(5), read: false, starred: true, archived: false, sender: { name: "System" }, category: "crm", actionLabel: "View Deal", actionUrl: "/quotes" },
-  { id: "n2", type: "mention", title: "You were mentioned", message: "@Admin mentioned you in the PCV Holdings project discussion.", timestamp: minsAgo(12), read: false, starred: false, archived: false, sender: { name: "Jane Smith" }, category: "team", actionLabel: "View Comment" },
-  { id: "n3", type: "calendar", title: "Meeting in 30 minutes", message: "Client review meeting with Northern Lights Studios at 2:30 PM.", timestamp: minsAgo(30), read: false, starred: false, archived: false, category: "general", actionLabel: "Join Meeting" },
-  { id: "n4", type: "task", title: "Task Completed", message: "Sarah completed 'Update API documentation' in the CRM Setup project.", timestamp: hoursAgo(1), read: false, starred: false, archived: false, sender: { name: "Sarah Chen" }, category: "team", actionLabel: "View Task", actionUrl: "/kanban" },
-  { id: "n5", type: "warning", title: "Quote Expiring Soon", message: "Quote QT-2026-004 for Rocky Mountain Tech expires in 3 days.", timestamp: hoursAgo(2), read: false, starred: true, archived: false, category: "crm", actionLabel: "View Quote", actionUrl: "/quotes" },
-  { id: "n6", type: "success", title: "Invoice Paid", message: "Invoice INV-2026-015 ($8,500) has been paid by Maritime Solutions.", timestamp: hoursAgo(3), read: true, starred: false, archived: false, category: "finance", actionLabel: "View Invoice", actionUrl: "/invoice" },
-  { id: "n7", type: "message", title: "New Message", message: "Hi, I wanted to follow up on the proposal we discussed last week...", timestamp: hoursAgo(4), read: true, starred: false, archived: false, sender: { name: "Mike Johnson" }, category: "general", actionLabel: "Reply" },
-  { id: "n8", type: "info", title: "New Lead Assigned", message: "Lead 'TechFlow Solutions' has been assigned to your pipeline.", timestamp: hoursAgo(6), read: true, starred: false, archived: false, category: "crm", actionLabel: "View Lead", actionUrl: "/leads" },
-  { id: "n9", type: "system", title: "System Update", message: "ZODO CRM v4.2 is now live with new AI scheduling features.", timestamp: daysAgo(1), read: true, starred: false, archived: false, category: "system" },
-  { id: "n10", type: "error", title: "Payment Failed", message: "Auto-charge failed for Tundra Consulting — card declined.", timestamp: daysAgo(1), read: true, starred: true, archived: false, category: "finance", actionLabel: "Retry Payment" },
-  { id: "n11", type: "calendar", title: "Event Reminder", message: "Team standup tomorrow at 9:00 AM — 5 attendees confirmed.", timestamp: daysAgo(1), read: true, starred: false, archived: false, category: "general" },
-  { id: "n12", type: "task", title: "Task Overdue", message: "'Design mockups for e-commerce module' is 2 days overdue.", timestamp: daysAgo(2), read: true, starred: false, archived: false, category: "team", actionLabel: "View Task", actionUrl: "/kanban" },
-  { id: "n13", type: "success", title: "New Client Added", message: "Prairie Innovations has been added as a new client.", timestamp: daysAgo(2), read: true, starred: false, archived: false, sender: { name: "Admin" }, category: "crm", actionLabel: "View Client", actionUrl: "/client-list" },
-  { id: "n14", type: "info", title: "Weekly Report Ready", message: "Your weekly CRM analytics report is ready for review.", timestamp: daysAgo(3), read: true, starred: false, archived: false, category: "system", actionLabel: "View Report", actionUrl: "/analytics" },
-  { id: "n15", type: "deal", title: "Deal Stage Updated", message: "Great Lakes Logistics moved from 'Proposal' to 'Negotiation'.", timestamp: daysAgo(3), read: true, starred: false, archived: false, category: "crm" },
-];
+/** Normalise an API record into the local Notification shape */
+const normalise = (n: Record<string, any>): Notification => ({
+  id: n.id,
+  type: n.type ?? "info",
+  title: n.title ?? "",
+  message: n.message ?? n.description ?? "",
+  timestamp: n.createdAt ?? n.timestamp ?? new Date().toISOString(),
+  read: n.isRead ?? n.read ?? false,
+  starred: n.starred ?? false,
+  archived: n.archived ?? false,
+  actionUrl: n.link ?? n.actionUrl,
+  actionLabel: n.actionLabel,
+  sender: n.sender,
+  category: n.category ?? "general",
+});
 
 const formatTimestamp = (ts: string) => {
+  const now = new Date();
   const date = new Date(ts);
+  if (isNaN(date.getTime())) return "";
   const diff = (now.getTime() - date.getTime()) / 1000;
   if (diff < 60) return "Just now";
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
@@ -105,11 +104,28 @@ const getInitials = (name: string) => name.split(" ").map(n => n[0]).join("").to
 // ============================================
 const NotificationsPage = () => {
   const { toast } = useToast();
-  const [notifications, setNotifications] = useState(mockNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "unread" | "read" | "starred">("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // ── Fetch ───────────────────────────────────────────
+  const fetchNotifications = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getNotifications();
+      setNotifications(data.map(normalise));
+    } catch (err) {
+      console.error("Failed to load notifications", err);
+      toast({ title: "Error", description: "Failed to load notifications", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => { fetchNotifications(); }, [fetchNotifications]);
 
   // Stats
   const stats = useMemo(() => ({
@@ -125,7 +141,7 @@ const NotificationsPage = () => {
     if (stats.unread > 5) insights.push({ icon: BellRing, text: `${stats.unread} unread notifications — you may be falling behind.`, type: "warning" });
     const urgentCount = notifications.filter(n => !n.read && (n.type === "error" || n.type === "warning")).length;
     if (urgentCount > 0) insights.push({ icon: AlertTriangle, text: `${urgentCount} urgent notification${urgentCount > 1 ? 's' : ''} requiring attention.`, type: "danger" });
-    const dealsToday = notifications.filter(n => n.type === "deal" && (now.getTime() - new Date(n.timestamp).getTime()) < 86400000).length;
+    const dealsToday = notifications.filter(n => n.type === "deal" && (Date.now() - new Date(n.timestamp).getTime()) < 86400000).length;
     if (dealsToday > 0) insights.push({ icon: TrendingUp, text: `${dealsToday} deal update${dealsToday > 1 ? 's' : ''} today — check your pipeline.`, type: "success" });
     return insights;
   }, [notifications, stats]);
@@ -146,6 +162,7 @@ const NotificationsPage = () => {
 
   // Grouped by time
   const grouped = useMemo(() => {
+    const now = new Date();
     const today: Notification[] = [], yesterday: Notification[] = [], older: Notification[] = [];
     const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
     const yesterdayStart = new Date(todayStart); yesterdayStart.setDate(yesterdayStart.getDate() - 1);
@@ -158,35 +175,44 @@ const NotificationsPage = () => {
     return { today, yesterday, older };
   }, [filtered]);
 
-  // Handlers
-  const markAsRead = (id: string) => setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+  // Handlers — call backend APIs
+  const markAsRead = async (id: string) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    try { await markNotificationAsRead(id); } catch { /* optimistic */ }
+  };
   const markAsUnread = (id: string) => setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: false } : n));
   const toggleStar = (id: string) => setNotifications(prev => prev.map(n => n.id === id ? { ...n, starred: !n.starred } : n));
   const archiveNotification = (id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, archived: true } : n));
     toast({ title: "Archived", description: "Notification moved to archive." });
   };
-  const deleteNotification = (id: string) => {
+  const handleDeleteNotification = async (id: string) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
+    try { await deleteNotificationApi(id); } catch { /* optimistic */ }
     toast({ title: "Deleted", description: "Notification deleted." });
   };
-  const markAllRead = () => {
+  const handleMarkAllRead = async () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    try { await markAllAsRead(); } catch { /* optimistic */ }
     toast({ title: "All Read", description: "All notifications marked as read." });
   };
-  const bulkMarkRead = () => {
+  const bulkMarkRead = async () => {
+    const ids = Array.from(selectedIds);
     setNotifications(prev => prev.map(n => selectedIds.has(n.id) ? { ...n, read: true } : n));
     setSelectedIds(new Set());
-    toast({ title: "Marked as Read", description: `${selectedIds.size} notifications marked as read.` });
+    try { await markManyAsRead(ids); } catch { /* optimistic */ }
+    toast({ title: "Marked as Read", description: `${ids.length} notifications marked as read.` });
   };
   const bulkArchive = () => {
     setNotifications(prev => prev.map(n => selectedIds.has(n.id) ? { ...n, archived: true } : n));
     toast({ title: "Archived", description: `${selectedIds.size} notifications archived.` });
     setSelectedIds(new Set());
   };
-  const bulkDelete = () => {
+  const bulkDelete = async () => {
+    const ids = Array.from(selectedIds);
     setNotifications(prev => prev.filter(n => !selectedIds.has(n.id)));
-    toast({ title: "Deleted", description: `${selectedIds.size} notifications deleted.` });
+    for (const id of ids) { try { await deleteNotificationApi(id); } catch { /* optimistic */ } }
+    toast({ title: "Deleted", description: `${ids.length} notifications deleted.` });
     setSelectedIds(new Set());
   };
 
@@ -247,7 +273,7 @@ const NotificationsPage = () => {
                 className="p-1.5 rounded-md hover:bg-white/10 transition-colors" title="Archive">
                 <Archive size={14} className="text-[#94A3B8]" />
               </motion.button>
-              <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={(e) => { e.stopPropagation(); deleteNotification(n.id); }}
+              <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={(e) => { e.stopPropagation(); handleDeleteNotification(n.id); }}
                 className="p-1.5 rounded-md hover:bg-red-50 transition-colors" title="Delete">
                 <Trash2 size={14} className="text-[#94A3B8] hover:text-red-500" />
               </motion.button>
@@ -288,10 +314,10 @@ const NotificationsPage = () => {
             </div>
             <div className="flex items-center gap-3">
               <Button variant="outline" size="sm" className="rounded-md border-[rgba(15,23,42,0.06)]"
-                onClick={() => { setNotifications([...mockNotifications]); toast({ title: "Refreshed" }); }}>
-                <RefreshCw size={16} className="mr-2" />Refresh
+                onClick={fetchNotifications} disabled={loading}>
+                {loading ? <Loader2 size={16} className="mr-2 animate-spin" /> : <RefreshCw size={16} className="mr-2" />}Refresh
               </Button>
-              <Button variant="outline" size="sm" className="rounded-md border-[rgba(15,23,42,0.06)]" onClick={markAllRead}
+              <Button variant="outline" size="sm" className="rounded-md border-[rgba(15,23,42,0.06)]" onClick={handleMarkAllRead}
                 disabled={stats.unread === 0}>
                 <CheckCheck size={16} className="mr-2" />Mark All Read
               </Button>
@@ -332,7 +358,7 @@ const NotificationsPage = () => {
               { label: "Unread", value: stats.unread, icon: BellRing, color: "text-[#0891B2]", bg: "bg-[#0891B2]/10", onClick: () => setStatusFilter("unread") },
               { label: "Starred", value: stats.starred, icon: Star, color: "text-amber-600", bg: "bg-amber-100", onClick: () => setStatusFilter("starred") },
               { label: "Total", value: stats.total, icon: Bell, color: "text-[#475569]", bg: "bg-[#F1F5F9]", onClick: () => setStatusFilter("all") },
-              { label: "Archived", value: stats.archived, icon: Archive, color: "text-purple-600", bg: "bg-purple-100", onClick: () => {} },
+              { label: "Archived", value: stats.archived, icon: Archive, color: "text-purple-600", bg: "bg-purple-100", onClick: () => { } },
             ].map((stat, i) => (
               <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
                 whileHover={{ y: -4 }} onClick={stat.onClick}
@@ -397,7 +423,12 @@ const NotificationsPage = () => {
 
           {/* Notification List */}
           <div className="bg-white rounded-b-md border border-[rgba(15,23,42,0.06)] border-t-0 overflow-hidden">
-            {filtered.length === 0 ? (
+            {loading ? (
+              <div className="p-16 text-center">
+                <Loader2 size={32} className="text-[#0891B2] animate-spin mx-auto mb-4" />
+                <p className="text-[#94A3B8]">Loading notifications...</p>
+              </div>
+            ) : filtered.length === 0 ? (
               <div className="p-16 text-center">
                 <div className="w-16 h-16 rounded-full bg-[#F1F5F9] flex items-center justify-center mx-auto mb-4">
                   <BellOff size={32} className="text-[#94A3B8]" />

@@ -1,24 +1,82 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import {
     Download, Filter, CalendarDays, RefreshCw, ChevronDown,
     ArrowUpRight, ArrowDownRight, TrendingUp, BarChart3,
-    Info, Maximize2, Share2, Printer,
+    Info, Maximize2, Share2, Printer, Loader2,
 } from "lucide-react";
 import {
-    analyticsTabs, kpiCards, revenueData, pipelineStages,
-    topDeals, teamPerformance, leadSources, activityMetrics,
-    forecastData,
+    analyticsTabs,
+    kpiCards as defaultKpiCards,
+    revenueData as defaultRevenueData,
+    pipelineStages as defaultPipelineStages,
+    topDeals as defaultTopDeals,
+    teamPerformance as defaultTeamPerformance,
+    leadSources as defaultLeadSources,
+    activityMetrics as defaultActivityMetrics,
+    forecastData as defaultForecastData,
     type AnalyticsTab,
+    type KpiCard,
+    type RevenueDataPoint,
+    type PipelineStage,
+    type TopDeal,
+    type TeamPerformance,
+    type LeadSource,
+    type ActivityMetric,
+    type ForecastQuarter,
 } from "./data";
+import {
+    getRevenueReport,
+    getPipelineHealth,
+    getLeadSourcesReport,
+    getLeadsReport,
+    getRevenueTrend,
+    getBookingStats,
+    getDashboardKPIs,
+} from "@/features/analytics";
 
 export default function AnalyticsPage() {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [activeTab, setActiveTab] = useState<AnalyticsTab>("overview");
     const [dateRange, setDateRange] = useState("last_12_months");
     const { toast } = useToast();
+    const [loading, setLoading] = useState(true);
+
+    // Data state — fallback to ./data defaults
+    const [kpiCards, setKpiCards] = useState<KpiCard[]>(defaultKpiCards);
+    const [revenueData, setRevenueData] = useState<RevenueDataPoint[]>(defaultRevenueData);
+    const [pipelineStages, setPipelineStages] = useState<PipelineStage[]>(defaultPipelineStages);
+    const [topDeals, setTopDeals] = useState<TopDeal[]>(defaultTopDeals);
+    const [teamPerformance, setTeamPerformance] = useState<TeamPerformance[]>(defaultTeamPerformance);
+    const [leadSources, setLeadSources] = useState<LeadSource[]>(defaultLeadSources);
+    const [activityMetrics, setActivityMetrics] = useState<ActivityMetric[]>(defaultActivityMetrics);
+    const [forecastData, setForecastData] = useState<ForecastQuarter[]>(defaultForecastData);
+
+    // Fetch from backend
+    const fetchAnalytics = useCallback(async () => {
+        try {
+            setLoading(true);
+            const [kpis, revenue, pipeline, leads, revTrend] = await Promise.allSettled([
+                getDashboardKPIs(),
+                getRevenueReport(),
+                getPipelineHealth(),
+                getLeadSourcesReport(),
+                getRevenueTrend(),
+            ]);
+            if (kpis.status === 'fulfilled' && Array.isArray(kpis.value) && kpis.value.length) setKpiCards(kpis.value as any);
+            if (revenue.status === 'fulfilled' && Array.isArray(revenue.value) && revenue.value.length) setRevenueData(revenue.value as any);
+            if (pipeline.status === 'fulfilled' && Array.isArray(pipeline.value) && pipeline.value.length) setPipelineStages(pipeline.value as any);
+            if (leads.status === 'fulfilled' && Array.isArray(leads.value) && leads.value.length) setLeadSources(leads.value as any);
+        } catch (err) {
+            console.error('Analytics fetch failed', err);
+        } finally {
+            setLoading(false);
+        }
+    }, [dateRange]);
+
+    useEffect(() => { fetchAnalytics(); }, [fetchAnalytics]);
 
     // Chart helpers
     const maxRevenue = Math.max(...revenueData.map((d) => Math.max(d.revenue, d.target)));
@@ -31,6 +89,7 @@ export default function AnalyticsPage() {
     };
 
     const handleRefresh = () => {
+        fetchAnalytics();
         toast({ title: "Data Refreshed", description: "Analytics data has been updated." });
     };
 

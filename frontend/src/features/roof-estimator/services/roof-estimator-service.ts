@@ -115,3 +115,35 @@ export async function deleteEstimate(id: string): Promise<void> {
 export async function updateEstimateSettings(data: Partial<EstimateSettings>): Promise<void> {
     await api.put("/roof-estimator/settings", data);
 }
+
+// ── OpenAI-powered estimate generation ─────────────────────────────────
+
+export interface EstimateBreakdownItem {
+    item: string;
+    quantity?: string;
+    unitPrice?: number;
+    total: number;
+}
+
+export interface GeneratedEstimate {
+    summary: string;
+    laborCost: number;
+    materialCost: number;
+    totalEstimate: number;
+    breakdown: EstimateBreakdownItem[];
+    timeline: string;
+    notes: string[];
+}
+
+export async function generateEstimate(params: {
+    roofAreaSqft: number;
+    roofType: string;
+    material: string;
+    location?: string;
+    stories?: number;
+    pitch?: string;
+    currentCondition?: string;
+}): Promise<GeneratedEstimate> {
+    const res = await api.post("/roof-estimator/generate-estimate", params);
+    return res.data?.data || res.data;
+}

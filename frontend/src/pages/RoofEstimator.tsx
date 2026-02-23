@@ -11,7 +11,9 @@ import {
     saveEstimate as saveEstimateApi,
     deleteEstimate as deleteEstimateApi,
     updateEstimateSettings,
+    generateEstimate as generateEstimateApi,
 } from "@/features/roof-estimator/services/roof-estimator-service";
+import type { GeneratedEstimate } from "@/features/roof-estimator/services/roof-estimator-service";
 import { getClients } from "@/features/clients/services/clients-service";
 import { Sidebar } from "@/components/Sidebar";
 import { motion, AnimatePresence } from "framer-motion";
@@ -80,6 +82,8 @@ import {
     MoreVertical,
     ArrowUpRight,
     Search,
+    Sparkles,
+    Hammer,
     type LucideIcon,
 } from "lucide-react";
 
@@ -211,6 +215,15 @@ const RoofEstimator: React.FC = () => {
     const [loadingSatellite, setLoadingSatellite] = useState(false);
     const [loadingDetection, setLoadingDetection] = useState(false);
     const [savingEstimate, setSavingEstimate] = useState(false);
+    const [generatingEstimate, setGeneratingEstimate] = useState(false);
+
+    // AI Estimate
+    const [aiEstimate, setAiEstimate] = useState<GeneratedEstimate | null>(null);
+    const [roofType, setRoofType] = useState("Gable");
+    const [material, setMaterial] = useState("Asphalt Shingles");
+    const [stories, setStories] = useState(1);
+    const [pitch, setPitch] = useState("Standard (4/12 to 6/12)");
+    const [currentCondition, setCurrentCondition] = useState("Fair");
 
     // Data
     const [estimates, setEstimates] = useState<RoofEstimate[]>([]);
@@ -368,6 +381,29 @@ const RoofEstimator: React.FC = () => {
             fetchStatistics();
         } catch {
             toast({ title: "Delete failed", variant: "destructive" });
+        }
+    };
+
+    const handleGenerateEstimate = async () => {
+        if (!detection) return;
+        setGeneratingEstimate(true);
+        setAiEstimate(null);
+        try {
+            const result = await generateEstimateApi({
+                roofAreaSqft: adjustedArea,
+                roofType,
+                material,
+                location: satellite?.formattedAddress,
+                stories,
+                pitch,
+                currentCondition,
+            });
+            setAiEstimate(result);
+            toast({ title: "AI Estimate Generated!", description: `Total: $${result.totalEstimate?.toLocaleString()} CAD` });
+        } catch (err: any) {
+            toast({ title: "Estimate generation failed", description: err.response?.data?.message || err.message, variant: "destructive" });
+        } finally {
+            setGeneratingEstimate(false);
         }
     };
 
@@ -660,7 +696,7 @@ const RoofEstimator: React.FC = () => {
                                                     <div className="bg-white rounded-md border-2 border-[#22D3EE]/30 p-6">
                                                         <div className="flex items-center justify-between">
                                                             <div>
-                                                                <div className="text-xs text-[#94A3B8] mb-1">Total Estimate</div>
+                                                                <div className="text-xs text-[#94A3B8] mb-1">Quick Estimate</div>
                                                                 <div className="text-4xl font-bold text-[#0F172A]">
                                                                     {formatCurrency(totalEstimate)}
                                                                 </div>
@@ -678,6 +714,174 @@ const RoofEstimator: React.FC = () => {
                                                             </div>
                                                         </div>
                                                     </div>
+
+                                                    {/* ── AI-Powered Estimate Generation ── */}
+                                                    <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-5">
+                                                        <div className="flex items-center gap-2 mb-4">
+                                                            <Sparkles className="w-4 h-4 text-amber-500" />
+                                                            <h3 className="text-sm font-semibold text-[#0F172A]">AI Cost Estimate (OpenAI)</h3>
+                                                            {aiEstimate && (
+                                                                <span className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-amber-50 text-amber-600">
+                                                                    <CheckCircle2 className="w-3 h-3" /> Generated
+                                                                </span>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Materials & Config Form */}
+                                                        <div className="grid grid-cols-2 gap-3 mb-4">
+                                                            <div>
+                                                                <Label className="text-xs text-[#94A3B8]">Roof Type</Label>
+                                                                <Select value={roofType} onValueChange={setRoofType}>
+                                                                    <SelectTrigger className="mt-1 border-[rgba(15,23,42,0.1)]">
+                                                                        <SelectValue />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        {["Gable", "Hip", "Flat", "Mansard", "Gambrel", "Shed", "Butterfly", "Dormer"].map(t => (
+                                                                            <SelectItem key={t} value={t}>{t}</SelectItem>
+                                                                        ))}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            </div>
+                                                            <div>
+                                                                <Label className="text-xs text-[#94A3B8]">Material</Label>
+                                                                <Select value={material} onValueChange={setMaterial}>
+                                                                    <SelectTrigger className="mt-1 border-[rgba(15,23,42,0.1)]">
+                                                                        <SelectValue />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        {["Asphalt Shingles", "Metal Roofing", "Cedar Shakes", "Slate", "Clay Tiles", "TPO Membrane", "EPDM Rubber", "Standing Seam Metal"].map(m => (
+                                                                            <SelectItem key={m} value={m}>{m}</SelectItem>
+                                                                        ))}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            </div>
+                                                            <div>
+                                                                <Label className="text-xs text-[#94A3B8]">Pitch</Label>
+                                                                <Select value={pitch} onValueChange={setPitch}>
+                                                                    <SelectTrigger className="mt-1 border-[rgba(15,23,42,0.1)]">
+                                                                        <SelectValue />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        {["Low (2/12 to 3/12)", "Standard (4/12 to 6/12)", "Moderate (7/12 to 9/12)", "Steep (10/12 to 12/12)", "Flat"].map(p => (
+                                                                            <SelectItem key={p} value={p}>{p}</SelectItem>
+                                                                        ))}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            </div>
+                                                            <div>
+                                                                <Label className="text-xs text-[#94A3B8]">Condition</Label>
+                                                                <Select value={currentCondition} onValueChange={setCurrentCondition}>
+                                                                    <SelectTrigger className="mt-1 border-[rgba(15,23,42,0.1)]">
+                                                                        <SelectValue />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        {["New", "Good", "Fair", "Poor", "Damaged", "Leaking"].map(c => (
+                                                                            <SelectItem key={c} value={c}>{c}</SelectItem>
+                                                                        ))}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            </div>
+                                                        </div>
+
+                                                        <Button
+                                                            onClick={handleGenerateEstimate}
+                                                            disabled={generatingEstimate || !detection}
+                                                            className="w-full h-12 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold shadow-md"
+                                                        >
+                                                            {generatingEstimate ? (
+                                                                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating AI estimate...</>
+                                                            ) : (
+                                                                <><Sparkles className="w-4 h-4 mr-2" /> Generate Detailed AI Estimate</>
+                                                            )}
+                                                        </Button>
+                                                    </div>
+
+                                                    {/* AI Estimate Results */}
+                                                    <AnimatePresence>
+                                                        {aiEstimate && (
+                                                            <motion.div
+                                                                initial={{ opacity: 0, y: 20 }}
+                                                                animate={{ opacity: 1, y: 0 }}
+                                                                exit={{ opacity: 0 }}
+                                                                className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-md border-2 border-amber-200 p-6 space-y-5"
+                                                            >
+                                                                <div className="flex items-center gap-2">
+                                                                    <Sparkles className="w-5 h-5 text-amber-500" />
+                                                                    <h3 className="text-base font-bold text-[#0F172A]">AI-Generated Estimate</h3>
+                                                                </div>
+
+                                                                <p className="text-sm text-[#475569]">{aiEstimate.summary}</p>
+
+                                                                {/* Cost Summary */}
+                                                                <div className="grid grid-cols-3 gap-3">
+                                                                    {[
+                                                                        { label: "Labor", value: aiEstimate.laborCost, icon: Hammer, color: "#6366F1" },
+                                                                        { label: "Materials", value: aiEstimate.materialCost, icon: Ruler, color: "#0891B2" },
+                                                                        { label: "Total", value: aiEstimate.totalEstimate, icon: DollarSign, color: "#16A34A" },
+                                                                    ].map(item => (
+                                                                        <div key={item.label} className="bg-white rounded-md border border-amber-100 p-4 text-center">
+                                                                            <item.icon className="w-5 h-5 mx-auto mb-2" style={{ color: item.color }} />
+                                                                            <div className="text-xl font-bold text-[#0F172A]">{formatCurrency(item.value)}</div>
+                                                                            <div className="text-[10px] text-[#94A3B8] mt-1">{item.label}</div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+
+                                                                {/* Breakdown Table */}
+                                                                {aiEstimate.breakdown?.length > 0 && (
+                                                                    <div className="bg-white rounded-md border border-amber-100 overflow-hidden">
+                                                                        <Table>
+                                                                            <TableHeader>
+                                                                                <TableRow className="hover:bg-transparent">
+                                                                                    <TableHead className="text-[#94A3B8] text-xs">Item</TableHead>
+                                                                                    <TableHead className="text-[#94A3B8] text-xs">Qty</TableHead>
+                                                                                    <TableHead className="text-[#94A3B8] text-xs">Unit Price</TableHead>
+                                                                                    <TableHead className="text-[#94A3B8] text-xs text-right">Total</TableHead>
+                                                                                </TableRow>
+                                                                            </TableHeader>
+                                                                            <TableBody>
+                                                                                {aiEstimate.breakdown.map((row, i) => (
+                                                                                    <TableRow key={i} className="hover:bg-amber-50/50">
+                                                                                        <TableCell className="text-sm font-medium text-[#0F172A]">{row.item}</TableCell>
+                                                                                        <TableCell className="text-sm text-[#94A3B8]">{row.quantity || "—"}</TableCell>
+                                                                                        <TableCell className="text-sm text-[#94A3B8]">{row.unitPrice ? formatCurrency(row.unitPrice) : "—"}</TableCell>
+                                                                                        <TableCell className="text-sm font-semibold text-[#0F172A] text-right">{formatCurrency(row.total)}</TableCell>
+                                                                                    </TableRow>
+                                                                                ))}
+                                                                            </TableBody>
+                                                                        </Table>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Timeline & Notes */}
+                                                                <div className="grid grid-cols-2 gap-4">
+                                                                    <div className="bg-white rounded-md border border-amber-100 p-4">
+                                                                        <div className="flex items-center gap-2 mb-2">
+                                                                            <Clock className="w-4 h-4 text-[#6366F1]" />
+                                                                            <span className="text-xs font-semibold text-[#0F172A]">Timeline</span>
+                                                                        </div>
+                                                                        <p className="text-sm text-[#475569]">{aiEstimate.timeline}</p>
+                                                                    </div>
+                                                                    {aiEstimate.notes?.length > 0 && (
+                                                                        <div className="bg-white rounded-md border border-amber-100 p-4">
+                                                                            <div className="flex items-center gap-2 mb-2">
+                                                                                <FileText className="w-4 h-4 text-amber-500" />
+                                                                                <span className="text-xs font-semibold text-[#0F172A]">Important Notes</span>
+                                                                            </div>
+                                                                            <ul className="space-y-1">
+                                                                                {aiEstimate.notes.map((note, i) => (
+                                                                                    <li key={i} className="text-xs text-[#475569] flex items-start gap-1.5">
+                                                                                        <span className="w-1 h-1 rounded-full bg-amber-400 mt-1.5 flex-shrink-0" />
+                                                                                        {note}
+                                                                                    </li>
+                                                                                ))}
+                                                                            </ul>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </motion.div>
+                                                        )}
+                                                    </AnimatePresence>
 
                                                     {/* Save */}
                                                     <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-5 space-y-3">

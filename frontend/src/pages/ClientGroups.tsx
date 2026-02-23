@@ -1,7 +1,17 @@
 
 // src/pages/ClientGroups.tsx
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import {
+  getGroups,
+  createGroup as createGroupApi,
+  updateGroup as updateGroupApi,
+  deleteGroup as deleteGroupApi,
+  addGroupMembers,
+  removeGroupMember,
+} from "@/features/groups";
+import { getClients } from "@/features/clients";
+import { Loader2 } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -1594,8 +1604,9 @@ const ClientGroupsPage = () => {
   const { toast } = useToast();
 
   // State
-  const [groups, setGroups] = useState<ClientGroup[]>(initialGroups);
-  const [clients] = useState<Client[]>(sampleClients);
+  const [groups, setGroups] = useState<ClientGroup[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState<string>("all");
@@ -1608,135 +1619,227 @@ const ClientGroupsPage = () => {
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [currentGroup, setCurrentGroup] = useState<ClientGroup | null>(null);
 
-        // Continue from where the code was cut off...
+  // ── Fetch data from API ───────────────────────────
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [groupsData, clientsData] = await Promise.all([
+        getGroups(),
+        getClients().catch(() => []),
+      ]);
 
-const filteredGroups = useMemo(() => {
-  let result = [...groups];
+      const normClients: Client[] = (clientsData as any[]).map((c: any) => ({
+        id: c.id,
+        name: c.name || c.contactName || '',
+        email: c.email || c.contactEmail || '',
+        phone: c.phone || c.contactPhone || '',
+        company: c.company || c.name || '',
+        avatar: c.avatar,
+        status: c.status || 'active',
+        totalRevenue: Number(c.totalRevenue || c.revenue || 0),
+        projectsCount: Number(c.projectsCount || c.projects?.length || 0),
+        lastActivity: new Date(c.updatedAt || c.lastActivity || Date.now()),
+        joinedDate: new Date(c.createdAt || c.joinedDate || Date.now()),
+        tags: c.tags || [],
+      }));
 
-  // Search filter
-  if (searchQuery) {
-    const query = searchQuery.toLowerCase();
-    result = result.filter(
-      (g) =>
-        g.name.toLowerCase().includes(query) ||
-        g.description?.toLowerCase().includes(query)
-    );
-  }
+      const normGroups: ClientGroup[] = (groupsData as any[]).map((g: any) => {
+        const members = (g.members || []).map((m: any) => {
+          const client = normClients.find(c => c.id === (m.clientId || m.id));
+          return client || {
+            id: m.clientId || m.id,
+            name: m.clientName || m.name || '',
+            email: m.email || '',
+            phone: m.phone || '',
+            company: m.company || '',
+            status: 'active' as const,
+            totalRevenue: 0,
+            projectsCount: 0,
+            lastActivity: new Date(),
+            joinedDate: new Date(),
+          };
+        });
+        const totalRevenue = members.reduce((acc: number, m: Client) => acc + m.totalRevenue, 0);
+        return {
+          id: g.id,
+          name: g.name,
+          description: g.description || '',
+          color: g.color || '#3B82F6',
+          icon: g.icon || 'users',
+          type: g.type || 'custom',
+          members,
+          memberCount: g.memberCount ?? members.length,
+          totalRevenue,
+          avgRevenue: members.length > 0 ? totalRevenue / members.length : 0,
+          isDefault: g.isDefault || false,
+          isAutomatic: g.isAutomatic || false,
+          rules: g.rules || [],
+          createdBy: g.createdBy || 'System',
+          createdAt: new Date(g.createdAt || Date.now()),
+          updatedAt: g.updatedAt ? new Date(g.updatedAt) : undefined,
+        };
+      });
 
-  // Type filter
-  if (selectedType !== "all") {
-    result = result.filter((g) => g.type === selectedType);
-  }
-
-  // Sorting
-  result.sort((a, b) => {
-    switch (sortBy) {
-      case "members":
-        return b.memberCount - a.memberCount;
-      case "revenue":
-        return b.totalRevenue - a.totalRevenue;
-      case "created":
-        return b.createdAt.getTime() - a.createdAt.getTime();
-      default:
-        return a.name.localeCompare(b.name);
+      setGroups(normGroups);
+      setClients(normClients);
+    } catch (err) {
+      console.error('Failed to load groups', err);
+      toast({ title: 'Error', description: 'Failed to load client groups', variant: 'destructive' });
+    } finally {
+      setLoading(false);
     }
-  });
+  }, [toast]);
 
-  return result;
-}, [groups, searchQuery, selectedType, sortBy]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
-// Calculate stats
-const stats: GroupStats = useMemo(() => {
-  const totalRevenue = groups.reduce((acc, g) => acc + g.totalRevenue, 0);
-  const topGroup = groups.reduce((max, g) => 
-    g.totalRevenue > max.totalRevenue ? g : max, groups[0]
-  );
-  
-  return {
-    totalGroups: groups.length,
-    totalClients: clients.length,
-    avgGroupSize: Math.round(groups.reduce((acc, g) => acc + g.memberCount, 0) / groups.length),
-    totalRevenue,
-    topGroup: topGroup?.name || "N/A",
+  // Continue from where the code was cut off...
+
+  const filteredGroups = useMemo(() => {
+    let result = [...groups];
+
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        (g) =>
+          g.name.toLowerCase().includes(query) ||
+          g.description?.toLowerCase().includes(query)
+      );
+    }
+
+    // Type filter
+    if (selectedType !== "all") {
+      result = result.filter((g) => g.type === selectedType);
+    }
+
+    // Sorting
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case "members":
+          return b.memberCount - a.memberCount;
+        case "revenue":
+          return b.totalRevenue - a.totalRevenue;
+        case "created":
+          return b.createdAt.getTime() - a.createdAt.getTime();
+        default:
+          return a.name.localeCompare(b.name);
+      }
+    });
+
+    return result;
+  }, [groups, searchQuery, selectedType, sortBy]);
+
+  // Calculate stats
+  const stats: GroupStats = useMemo(() => {
+    const totalRevenue = groups.reduce((acc, g) => acc + g.totalRevenue, 0);
+    const topGroup = groups.reduce((max, g) =>
+      g.totalRevenue > max.totalRevenue ? g : max, groups[0]
+    );
+
+    return {
+      totalGroups: groups.length,
+      totalClients: clients.length,
+      avgGroupSize: Math.round(groups.reduce((acc, g) => acc + g.memberCount, 0) / groups.length),
+      totalRevenue,
+      topGroup: topGroup?.name || "N/A",
+    };
+  }, [groups, clients]);
+
+  // Handlers
+  const handleCreateGroup = () => {
+    setCurrentGroup(null);
+    setIsFormOpen(true);
   };
-}, [groups, clients]);
 
-// Handlers
-const handleCreateGroup = () => {
-  setCurrentGroup(null);
-  setIsFormOpen(true);
-};
+  const handleEditGroup = (group: ClientGroup) => {
+    setCurrentGroup(group);
+    setIsFormOpen(true);
+  };
 
-const handleEditGroup = (group: ClientGroup) => {
-  setCurrentGroup(group);
-  setIsFormOpen(true);
-};
+  const handleViewGroup = (group: ClientGroup) => {
+    setCurrentGroup(group);
+    setIsDetailsOpen(true);
+  };
 
-const handleViewGroup = (group: ClientGroup) => {
-  setCurrentGroup(group);
-  setIsDetailsOpen(true);
-};
+  const handleManageMembers = (group: ClientGroup) => {
+    setCurrentGroup(group);
+    setIsMembersOpen(true);
+  };
 
-const handleManageMembers = (group: ClientGroup) => {
-  setCurrentGroup(group);
-  setIsMembersOpen(true);
-};
+  const handleDeleteGroup = (group: ClientGroup) => {
+    setCurrentGroup(group);
+    setIsDeleteAlertOpen(true);
+  };
 
-const handleDeleteGroup = (group: ClientGroup) => {
-  setCurrentGroup(group);
-  setIsDeleteAlertOpen(true);
-};
+  const handleFormSubmit = async (data: Partial<ClientGroup>) => {
+    try {
+      if (currentGroup) {
+        // Update existing group via API
+        await updateGroupApi(currentGroup.id, {
+          name: data.name,
+          description: data.description,
+          color: data.color,
+          icon: data.icon,
+          type: data.type,
+        });
+        setGroups((prev) =>
+          prev.map((g) =>
+            g.id === currentGroup.id
+              ? { ...g, ...data, updatedAt: new Date() }
+              : g
+          )
+        );
+        toast({
+          title: "Group Updated",
+          description: `"${data.name}" has been updated successfully.`,
+        });
+      } else {
+        // Create new group via API
+        const created = await createGroupApi({
+          name: data.name || "",
+          description: data.description,
+          color: data.color,
+          icon: data.icon,
+          type: data.type,
+        });
+        const newGroup: ClientGroup = {
+          id: (created as any).id || `group_${Date.now()}`,
+          name: data.name || "",
+          description: data.description,
+          color: data.color || "#3B82F6",
+          icon: data.icon || "users",
+          type: data.type || "custom",
+          members: [],
+          memberCount: 0,
+          totalRevenue: 0,
+          avgRevenue: 0,
+          isDefault: false,
+          isAutomatic: data.isAutomatic || false,
+          createdBy: "Current User",
+          createdAt: new Date(),
+        };
+        setGroups((prev) => [...prev, newGroup]);
+        toast({
+          title: "Group Created",
+          description: `"${data.name}" has been created successfully.`,
+        });
+      }
+    } catch (err) {
+      console.error('Group save failed', err);
+      toast({ title: 'Error', description: 'Failed to save group', variant: 'destructive' });
+    }
+  };
 
-const handleFormSubmit = (data: Partial<ClientGroup>) => {
-  if (currentGroup) {
-    // Update existing group
+  const handleUpdateMembers = (members: Client[]) => {
+    if (!currentGroup) return;
+
+    const totalRevenue = members.reduce((acc, m) => acc + m.totalRevenue, 0);
+    const avgRevenue = members.length > 0 ? totalRevenue / members.length : 0;
+
     setGroups((prev) =>
       prev.map((g) =>
         g.id === currentGroup.id
-          ? { ...g, ...data, updatedAt: new Date() }
-          : g
-      )
-    );
-    toast({
-      title: "Group Updated",
-      description: `"${data.name}" has been updated successfully.`,
-    });
-  } else {
-    // Create new group
-    const newGroup: ClientGroup = {
-      id: `group_${Date.now()}`,
-      name: data.name || "",
-      description: data.description,
-      color: data.color || "#3B82F6",
-      icon: data.icon || "users",
-      type: data.type || "custom",
-      members: [],
-      memberCount: 0,
-      totalRevenue: 0,
-      avgRevenue: 0,
-      isDefault: false,
-      isAutomatic: data.isAutomatic || false,
-      createdBy: "Current User",
-      createdAt: new Date(),
-    };
-    setGroups((prev) => [...prev, newGroup]);
-    toast({
-      title: "Group Created",
-      description: `"${data.name}" has been created successfully.`,
-    });
-  }
-};
-
-const handleUpdateMembers = (members: Client[]) => {
-  if (!currentGroup) return;
-
-  const totalRevenue = members.reduce((acc, m) => acc + m.totalRevenue, 0);
-  const avgRevenue = members.length > 0 ? totalRevenue / members.length : 0;
-
-  setGroups((prev) =>
-    prev.map((g) =>
-      g.id === currentGroup.id
-        ? {
+          ? {
             ...g,
             members,
             memberCount: members.length,
@@ -1744,70 +1847,248 @@ const handleUpdateMembers = (members: Client[]) => {
             avgRevenue,
             updatedAt: new Date(),
           }
-        : g
-    )
-  );
+          : g
+      )
+    );
 
-  toast({
-    title: "Members Updated",
-    description: `${members.length} members in "${currentGroup.name}".`,
-  });
-};
+    toast({
+      title: "Members Updated",
+      description: `${members.length} members in "${currentGroup.name}".`,
+    });
+  };
 
-const confirmDeleteGroup = () => {
-  if (!currentGroup) return;
+  const confirmDeleteGroup = async () => {
+    if (!currentGroup) return;
 
-  setGroups((prev) => prev.filter((g) => g.id !== currentGroup.id));
-  setIsDeleteAlertOpen(false);
-  setCurrentGroup(null);
+    try {
+      await deleteGroupApi(currentGroup.id);
+      setGroups((prev) => prev.filter((g) => g.id !== currentGroup.id));
+      setIsDeleteAlertOpen(false);
+      setCurrentGroup(null);
+      toast({
+        title: "Group Deleted",
+        description: `"${currentGroup.name}" has been deleted.`,
+        variant: "destructive",
+      });
+    } catch (err) {
+      console.error('Delete failed', err);
+      toast({ title: 'Error', description: 'Failed to delete group', variant: 'destructive' });
+    }
+  };
 
-  toast({
-    title: "Group Deleted",
-    description: `"${currentGroup.name}" has been deleted.`,
-    variant: "destructive",
-  });
-};
+  // ============================================
+  // RENDER
+  // ============================================
 
-// ============================================
-// RENDER
-// ============================================
+  return (
+    <div className="flex h-screen bg-[#F8FAFC]">
+      <Sidebar />
 
-return (
-  <div className="flex h-screen bg-[#F8FAFC]">
-    <Sidebar />
-
-    <main className="flex-1 overflow-auto">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-[rgba(15,23,42,0.06)]">
-        <div className="px-8 py-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <div className="flex items-center gap-2 text-sm text-[#94A3B8] mb-1">
-                <Link to="/dashboard" className="hover:text-[#0891B2]">
-                  Dashboard
-                </Link>
-                <ChevronRight size={14} />
-                <Link to="/clients" className="hover:text-[#0891B2]">
-                  Clients
-                </Link>
-                <ChevronRight size={14} />
-                <span className="text-[#0F172A]">Groups</span>
+      <main className="flex-1 overflow-auto">
+        {/* Header */}
+        <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-[rgba(15,23,42,0.06)]">
+          <div className="px-8 py-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <div className="flex items-center gap-2 text-sm text-[#94A3B8] mb-1">
+                  <Link to="/dashboard" className="hover:text-[#0891B2]">
+                    Dashboard
+                  </Link>
+                  <ChevronRight size={14} />
+                  <Link to="/clients" className="hover:text-[#0891B2]">
+                    Clients
+                  </Link>
+                  <ChevronRight size={14} />
+                  <span className="text-[#0F172A]">Groups</span>
+                </div>
+                <h1 className="text-2xl font-bold text-[#0F172A]">Client Groups</h1>
+                <p className="text-[#94A3B8] mt-1">
+                  Organize and segment your clients for targeted management
+                </p>
               </div>
-              <h1 className="text-2xl font-bold text-[#0F172A]">Client Groups</h1>
-              <p className="text-[#94A3B8] mt-1">
-                Organize and segment your clients for targeted management
-              </p>
+
+              <div className="flex items-center gap-3">
+                <Button variant="outline" className="rounded-md gap-2">
+                  <Upload size={16} />
+                  Import
+                </Button>
+                <Button variant="outline" className="rounded-md gap-2">
+                  <Download size={16} />
+                  Export
+                </Button>
+                <Button
+                  onClick={handleCreateGroup}
+                  className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md gap-2"
+                >
+                  <Plus size={16} />
+                  Create Group
+                </Button>
+              </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <Button variant="outline" className="rounded-md gap-2">
-                <Upload size={16} />
-                Import
+            {/* Stats */}
+            <div className="grid grid-cols-5 gap-4">
+              <StatCard
+                title="Total Groups"
+                value={stats.totalGroups}
+                icon={Layers}
+                color="#8B5CF6"
+                delay={0}
+              />
+              <StatCard
+                title="Total Clients"
+                value={stats.totalClients}
+                icon={Users}
+                color="#3B82F6"
+                delay={0.05}
+              />
+              <StatCard
+                title="Avg Group Size"
+                value={stats.avgGroupSize}
+                subtitle="clients per group"
+                icon={Target}
+                color="#10B981"
+                delay={0.1}
+              />
+              <StatCard
+                title="Total Revenue"
+                value={formatCurrency(stats.totalRevenue)}
+                icon={CircleDollarSign}
+                color="#22D3EE"
+                trend={{ value: 12.5, label: "vs last month" }}
+                delay={0.15}
+              />
+              <StatCard
+                title="Top Group"
+                value={stats.topGroup}
+                subtitle="by revenue"
+                icon={Crown}
+                color="#FBBF24"
+                delay={0.2}
+              />
+            </div>
+          </div>
+
+          {/* Filters Bar */}
+          <div className="px-8 py-4 border-t border-[rgba(15,23,42,0.06)] flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 flex-1">
+              {/* Search */}
+              <div className="relative w-80">
+                <Search
+                  size={16}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]"
+                />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search groups..."
+                  className="pl-9 h-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-[#22D3EE]/20"
+                />
+              </div>
+
+              {/* Type Filter */}
+              <Select value={selectedType} onValueChange={setSelectedType}>
+                <SelectTrigger className="w-44 h-10 rounded-md">
+                  <Filter size={14} className="mr-2 text-[#475569]" />
+                  <SelectValue placeholder="Filter by type" />
+                </SelectTrigger>
+                <SelectContent className="rounded-md">
+                  <SelectItem value="all" className="rounded-md">
+                    All Types
+                  </SelectItem>
+                  {groupTypes.map((type) => (
+                    <SelectItem key={type.id} value={type.id} className="rounded-md">
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Sort */}
+              <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+                <SelectTrigger className="w-40 h-10 rounded-md">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent className="rounded-md">
+                  <SelectItem value="name" className="rounded-md">
+                    Name
+                  </SelectItem>
+                  <SelectItem value="members" className="rounded-md">
+                    Members
+                  </SelectItem>
+                  <SelectItem value="revenue" className="rounded-md">
+                    Revenue
+                  </SelectItem>
+                  <SelectItem value="created" className="rounded-md">
+                    Date Created
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Clear Filters */}
+              {(searchQuery || selectedType !== "all") && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSelectedType("all");
+                  }}
+                  className="rounded-md text-[#94A3B8]"
+                >
+                  <X size={14} className="mr-1" />
+                  Clear
+                </Button>
+              )}
+            </div>
+
+            {/* View Toggle */}
+            <div className="flex items-center gap-1 bg-white/5 p-1 rounded-md">
+              <Button
+                variant={viewMode === "grid" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("grid")}
+                className={cn(
+                  "rounded-md h-8 w-8 p-0",
+                  viewMode === "grid" && "bg-white"
+                )}
+              >
+                <LayoutGrid size={16} />
               </Button>
-              <Button variant="outline" className="rounded-md gap-2">
-                <Download size={16} />
-                Export
+              <Button
+                variant={viewMode === "list" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("list")}
+                className={cn(
+                  "rounded-md h-8 w-8 p-0",
+                  viewMode === "list" && "bg-white"
+                )}
+              >
+                <List size={16} />
               </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-8">
+          {filteredGroups.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex flex-col items-center justify-center py-20"
+            >
+              <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-4">
+                <Folder size={32} className="text-[#475569]" />
+              </div>
+              <h3 className="text-lg font-semibold text-[#0F172A] mb-2">
+                No groups found
+              </h3>
+              <p className="text-[#94A3B8] mb-6 text-center max-w-md">
+                {searchQuery || selectedType !== "all"
+                  ? "Try adjusting your search or filters"
+                  : "Create your first client group to start organizing your clients"}
+              </p>
               <Button
                 onClick={handleCreateGroup}
                 className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md gap-2"
@@ -1815,291 +2096,118 @@ return (
                 <Plus size={16} />
                 Create Group
               </Button>
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-5 gap-4">
-            <StatCard
-              title="Total Groups"
-              value={stats.totalGroups}
-              icon={Layers}
-              color="#8B5CF6"
-              delay={0}
-            />
-            <StatCard
-              title="Total Clients"
-              value={stats.totalClients}
-              icon={Users}
-              color="#3B82F6"
-              delay={0.05}
-            />
-            <StatCard
-              title="Avg Group Size"
-              value={stats.avgGroupSize}
-              subtitle="clients per group"
-              icon={Target}
-              color="#10B981"
-              delay={0.1}
-            />
-            <StatCard
-              title="Total Revenue"
-              value={formatCurrency(stats.totalRevenue)}
-              icon={CircleDollarSign}
-              color="#22D3EE"
-              trend={{ value: 12.5, label: "vs last month" }}
-              delay={0.15}
-            />
-            <StatCard
-              title="Top Group"
-              value={stats.topGroup}
-              subtitle="by revenue"
-              icon={Crown}
-              color="#FBBF24"
-              delay={0.2}
-            />
-          </div>
-        </div>
-
-        {/* Filters Bar */}
-        <div className="px-8 py-4 border-t border-[rgba(15,23,42,0.06)] flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 flex-1">
-            {/* Search */}
-            <div className="relative w-80">
-              <Search
-                size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]"
-              />
-              <Input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search groups..."
-                className="pl-9 h-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-[#22D3EE]/20"
-              />
-            </div>
-
-            {/* Type Filter */}
-            <Select value={selectedType} onValueChange={setSelectedType}>
-              <SelectTrigger className="w-44 h-10 rounded-md">
-                <Filter size={14} className="mr-2 text-[#475569]" />
-                <SelectValue placeholder="Filter by type" />
-              </SelectTrigger>
-              <SelectContent className="rounded-md">
-                <SelectItem value="all" className="rounded-md">
-                  All Types
-                </SelectItem>
-                {groupTypes.map((type) => (
-                  <SelectItem key={type.id} value={type.id} className="rounded-md">
-                    {type.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Sort */}
-            <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
-              <SelectTrigger className="w-40 h-10 rounded-md">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent className="rounded-md">
-                <SelectItem value="name" className="rounded-md">
-                  Name
-                </SelectItem>
-                <SelectItem value="members" className="rounded-md">
-                  Members
-                </SelectItem>
-                <SelectItem value="revenue" className="rounded-md">
-                  Revenue
-                </SelectItem>
-                <SelectItem value="created" className="rounded-md">
-                  Date Created
-                </SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Clear Filters */}
-            {(searchQuery || selectedType !== "all") && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setSearchQuery("");
-                  setSelectedType("all");
-                }}
-                className="rounded-md text-[#94A3B8]"
-              >
-                <X size={14} className="mr-1" />
-                Clear
-              </Button>
-            )}
-          </div>
-
-          {/* View Toggle */}
-          <div className="flex items-center gap-1 bg-white/5 p-1 rounded-md">
-            <Button
-              variant={viewMode === "grid" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("grid")}
-              className={cn(
-                "rounded-md h-8 w-8 p-0",
-                viewMode === "grid" && "bg-white"
-              )}
-            >
-              <LayoutGrid size={16} />
-            </Button>
-            <Button
-              variant={viewMode === "list" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("list")}
-              className={cn(
-                "rounded-md h-8 w-8 p-0",
-                viewMode === "list" && "bg-white"
-              )}
-            >
-              <List size={16} />
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="p-8">
-        {filteredGroups.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center justify-center py-20"
-          >
-            <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-4">
-              <Folder size={32} className="text-[#475569]" />
-            </div>
-            <h3 className="text-lg font-semibold text-[#0F172A] mb-2">
-              No groups found
-            </h3>
-            <p className="text-[#94A3B8] mb-6 text-center max-w-md">
-              {searchQuery || selectedType !== "all"
-                ? "Try adjusting your search or filters"
-                : "Create your first client group to start organizing your clients"}
-            </p>
-            <Button
-              onClick={handleCreateGroup}
-              className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md gap-2"
-            >
-              <Plus size={16} />
-              Create Group
-            </Button>
-          </motion.div>
-        ) : viewMode === "grid" ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <AnimatePresence mode="popLayout">
-              {filteredGroups.map((group, index) => (
-                <GroupCard
-                  key={group.id}
-                  group={group}
-                  onClick={() => handleViewGroup(group)}
-                  onEdit={() => handleEditGroup(group)}
-                  onDelete={() => handleDeleteGroup(group)}
-                  onManageMembers={() => handleManageMembers(group)}
-                  delay={index * 0.05}
-                />
-              ))}
-            </AnimatePresence>
-          </div>
-        ) : (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden"
-          >
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-[#F8FAFC]">
-                  <TableHead className="font-semibold">Group</TableHead>
-                  <TableHead className="font-semibold">Type</TableHead>
-                  <TableHead className="font-semibold">Members</TableHead>
-                  <TableHead className="font-semibold">Total Revenue</TableHead>
-                  <TableHead className="font-semibold">Avg Revenue</TableHead>
-                  <TableHead className="font-semibold">Created</TableHead>
-                  <TableHead className="w-[100px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredGroups.map((group) => (
-                  <GroupTableRow
+            </motion.div>
+          ) : viewMode === "grid" ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <AnimatePresence mode="popLayout">
+                {filteredGroups.map((group, index) => (
+                  <GroupCard
                     key={group.id}
                     group={group}
                     onClick={() => handleViewGroup(group)}
                     onEdit={() => handleEditGroup(group)}
                     onDelete={() => handleDeleteGroup(group)}
                     onManageMembers={() => handleManageMembers(group)}
+                    delay={index * 0.05}
                   />
                 ))}
-              </TableBody>
-            </Table>
-          </motion.div>
-        )}
+              </AnimatePresence>
+            </div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden"
+            >
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-[#F8FAFC]">
+                    <TableHead className="font-semibold">Group</TableHead>
+                    <TableHead className="font-semibold">Type</TableHead>
+                    <TableHead className="font-semibold">Members</TableHead>
+                    <TableHead className="font-semibold">Total Revenue</TableHead>
+                    <TableHead className="font-semibold">Avg Revenue</TableHead>
+                    <TableHead className="font-semibold">Created</TableHead>
+                    <TableHead className="w-[100px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredGroups.map((group) => (
+                    <GroupTableRow
+                      key={group.id}
+                      group={group}
+                      onClick={() => handleViewGroup(group)}
+                      onEdit={() => handleEditGroup(group)}
+                      onDelete={() => handleDeleteGroup(group)}
+                      onManageMembers={() => handleManageMembers(group)}
+                    />
+                  ))}
+                </TableBody>
+              </Table>
+            </motion.div>
+          )}
 
-        {/* Results Count */}
-        {filteredGroups.length > 0 && (
-          <div className="mt-6 text-center text-sm text-[#94A3B8]">
-            Showing {filteredGroups.length} of {groups.length} groups
-          </div>
-        )}
-      </div>
-    </main>
+          {/* Results Count */}
+          {filteredGroups.length > 0 && (
+            <div className="mt-6 text-center text-sm text-[#94A3B8]">
+              Showing {filteredGroups.length} of {groups.length} groups
+            </div>
+          )}
+        </div>
+      </main>
 
-    {/* Dialogs */}
-    <GroupFormDialog
-      isOpen={isFormOpen}
-      onClose={() => setIsFormOpen(false)}
-      group={currentGroup}
-      onSubmit={handleFormSubmit}
-    />
+      {/* Dialogs */}
+      <GroupFormDialog
+        isOpen={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
+        group={currentGroup}
+        onSubmit={handleFormSubmit}
+      />
 
-    <GroupDetailsDialog
-      isOpen={isDetailsOpen}
-      onClose={() => setIsDetailsOpen(false)}
-      group={currentGroup}
-      onEdit={() => {
-        setIsDetailsOpen(false);
-        setIsFormOpen(true);
-      }}
-      onManageMembers={() => {
-        setIsDetailsOpen(false);
-        setIsMembersOpen(true);
-      }}
-    />
+      <GroupDetailsDialog
+        isOpen={isDetailsOpen}
+        onClose={() => setIsDetailsOpen(false)}
+        group={currentGroup}
+        onEdit={() => {
+          setIsDetailsOpen(false);
+          setIsFormOpen(true);
+        }}
+        onManageMembers={() => {
+          setIsDetailsOpen(false);
+          setIsMembersOpen(true);
+        }}
+      />
 
-    <ManageMembersDialog
-      isOpen={isMembersOpen}
-      onClose={() => setIsMembersOpen(false)}
-      group={currentGroup}
-      allClients={clients}
-      onUpdateMembers={handleUpdateMembers}
-    />
+      <ManageMembersDialog
+        isOpen={isMembersOpen}
+        onClose={() => setIsMembersOpen(false)}
+        group={currentGroup}
+        allClients={clients}
+        onUpdateMembers={handleUpdateMembers}
+      />
 
-    <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
-      <AlertDialogContent className="rounded-md">
-        <AlertDialogHeader>
-          <AlertDialogTitle>Delete Group</AlertDialogTitle>
-          <AlertDialogDescription>
-            Are you sure you want to delete "{currentGroup?.name}"? This action cannot
-            be undone. The clients in this group will not be deleted.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel className="rounded-md">Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={confirmDeleteGroup}
-            className="bg-red-600 hover:bg-red-700 rounded-md"
-          >
-            Delete Group
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  </div>
-);
+      <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+        <AlertDialogContent className="rounded-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Group</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{currentGroup?.name}"? This action cannot
+              be undone. The clients in this group will not be deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-md">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteGroup}
+              className="bg-red-600 hover:bg-red-700 rounded-md"
+            >
+              Delete Group
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
 };
 
 export default ClientGroupsPage;

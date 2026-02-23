@@ -1,6 +1,6 @@
 // src/pages/Chat.tsx
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { AnimatePresence } from "framer-motion";
 import { Sidebar } from "@/components/Sidebar";
 import {
@@ -10,27 +10,75 @@ import {
   NewChatDialog,
   currentUser,
   mockUsers,
-  mockConversations,
-  generateMockMessages,
   Conversation,
   Message,
   Attachment,
   User,
 } from "@/components/chat";
+import {
+  getConversations,
+  getMessages,
+  sendMessage as sendMessageApi,
+  deleteMessage as deleteMessageApi,
+  createConversation as createConversationApi,
+} from "@/features/chat";
 
 export default function ChatPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [conversations, setConversations] = useState<Conversation[]>(mockConversations);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [showInfoPanel, setShowInfoPanel] = useState(false);
   const [showNewChatDialog, setShowNewChatDialog] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch conversations from API
+  const fetchConversations = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getConversations();
+      const normalised: Conversation[] = (data as any[]).map((c: any) => ({
+        id: c.id,
+        type: c.type || 'direct',
+        name: c.name || c.title,
+        participants: c.participants || [],
+        lastMessage: c.lastMessage,
+        unreadCount: c.unreadCount || 0,
+        isPinned: c.isPinned || false,
+        isMuted: c.isMuted || false,
+        createdAt: new Date(c.createdAt || Date.now()),
+        updatedAt: new Date(c.updatedAt || Date.now()),
+      }));
+      setConversations(normalised);
+    } catch (err) {
+      console.error('Failed to load conversations', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchConversations(); }, [fetchConversations]);
 
   // Load messages when conversation changes
   useEffect(() => {
     if (selectedConversation) {
-      setMessages(generateMockMessages(selectedConversation.id));
+      (async () => {
+        try {
+          const data = await getMessages(selectedConversation.id);
+          const msgs: Message[] = (data as any[]).map((m: any) => ({
+            id: m.id,
+            senderId: m.senderId || m.sender?.id || currentUser.id,
+            content: m.content || m.body || '',
+            timestamp: new Date(m.createdAt || m.timestamp || Date.now()),
+            status: m.status || 'delivered',
+            attachments: m.attachments,
+          }));
+          setMessages(msgs);
+        } catch {
+          setMessages([]);
+        }
+      })();
       // Mark conversation as read
       setConversations((prev) =>
         prev.map((c) => (c.id === selectedConversation.id ? { ...c, unreadCount: 0 } : c))
@@ -50,7 +98,7 @@ export default function ChatPage() {
   }, [selectedConversation?.id]);
 
   // Send message handler
-  const handleSendMessage = (content: string, attachments?: Attachment[]) => {
+  const handleSendMessage = async (content: string, attachments?: Attachment[]) => {
     if (!content.trim() && !attachments?.length) return;
 
     const newMessage: Message = {
@@ -64,22 +112,17 @@ export default function ChatPage() {
 
     setMessages((prev) => [...prev, newMessage]);
 
-    // Simulate message delivery
-    setTimeout(() => {
-      setMessages((prev) =>
-        prev.map((m) => (m.id === newMessage.id ? { ...m, status: "delivered" } : m))
-      );
-    }, 1000);
-
-    // Simulate message read
-    setTimeout(() => {
-      setMessages((prev) =>
-        prev.map((m) => (m.id === newMessage.id ? { ...m, status: "read" } : m))
-      );
-    }, 2000);
-
-    // Update conversation's last message
+    // Send via API
     if (selectedConversation) {
+      try {
+        const sent = await sendMessageApi(selectedConversation.id, { content, attachments: attachments as any });
+        setMessages((prev) =>
+          prev.map((m) => (m.id === newMessage.id ? { ...m, id: (sent as any).id || m.id, status: "delivered" } : m))
+        );
+      } catch {
+        // Optimistic — message stays in UI
+      }
+
       setConversations((prev) =>
         prev.map((c) =>
           c.id === selectedConversation.id
@@ -91,8 +134,11 @@ export default function ChatPage() {
   };
 
   // Delete message handler
-  const handleDeleteMessage = (messageId: string) => {
+  const handleDeleteMessage = async (messageId: string) => {
     setMessages((prev) => prev.filter((m) => m.id !== messageId));
+    if (selectedConversation) {
+      try { await deleteMessageApi(selectedConversation.id, messageId); } catch { /* optimistic */ }
+    }
   };
 
   // Pin conversation handler
@@ -203,7 +249,7 @@ export default function ChatPage() {
               currentUser={currentUser}
               onClose={() => setShowInfoPanel(false)}
               onMute={() => handleMuteConversation(selectedConversation.id)}
-              onArchive={() => {}}
+              onArchive={() => { }}
               onDelete={() => handleDeleteConversation(selectedConversation.id)}
             />
           )}

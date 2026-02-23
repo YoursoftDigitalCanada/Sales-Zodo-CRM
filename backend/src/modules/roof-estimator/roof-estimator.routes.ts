@@ -15,6 +15,7 @@ import {
     estimateIdSchema,
     estimateQuerySchema,
     updateSettingsSchema,
+    generateEstimateSchema,
 } from './roof-estimator.validators';
 
 const router = Router();
@@ -35,6 +36,14 @@ router.post(
     requirePermission(PERMISSIONS.ROOF_ESTIMATOR_CREATE),
     validate(detectRoofSchema),
     roofEstimatorController.detectRoof.bind(roofEstimatorController)
+);
+
+// OpenAI cost estimate generation
+router.post(
+    '/generate-estimate',
+    requirePermission(PERMISSIONS.ROOF_ESTIMATOR_CREATE),
+    validate(generateEstimateSchema),
+    roofEstimatorController.generateEstimate.bind(roofEstimatorController)
 );
 
 // AI health check

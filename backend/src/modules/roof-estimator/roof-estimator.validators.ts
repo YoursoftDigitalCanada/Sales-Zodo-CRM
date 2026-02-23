@@ -74,3 +74,15 @@ export const updateSettingsSchema = z.object({
         pdfFooterText: z.string().max(1000).optional(),
     }),
 });
+
+export const generateEstimateSchema = z.object({
+    body: z.object({
+        roofAreaSqft: z.number().positive('Roof area must be positive'),
+        roofType: z.string().min(1),
+        material: z.string().min(1),
+        location: z.string().optional(),
+        stories: z.number().min(1).max(5).optional().default(1),
+        pitch: z.string().optional(),
+        currentCondition: z.string().optional(),
+    }),
+});

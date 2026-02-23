@@ -23,7 +23,7 @@ export const createProjectSchema = z.object({
         startDate: z.string().datetime().optional().nullable(),
         dueDate: z.string().datetime().optional().nullable(),
         progressPercentage: z.number().min(0).max(100).default(0),
-        status: z.enum(['PLANNING', 'NOT_STARTED', 'IN_PROGRESS', 'ON_HOLD', 'COMPLETED', 'CANCELLED']).default('NOT_STARTED'),
+        status: z.enum(['PLANNING', 'NOT_STARTED', 'IN_PROGRESS', 'ACTIVE', 'ON_HOLD', 'COMPLETED', 'CANCELLED', 'ARCHIVED']).default('PLANNING'),
 
         // Milestones
         milestones: z.array(milestoneSchema).default([]),
@@ -64,7 +64,7 @@ export const updateProjectSchema = z.object({
         startDate: z.string().datetime().optional().nullable(),
         dueDate: z.string().datetime().optional().nullable(),
         progressPercentage: z.number().min(0).max(100).optional(),
-        status: z.enum(['PLANNING', 'NOT_STARTED', 'IN_PROGRESS', 'ON_HOLD', 'COMPLETED', 'CANCELLED']).optional(),
+        status: z.enum(['PLANNING', 'NOT_STARTED', 'IN_PROGRESS', 'ACTIVE', 'ON_HOLD', 'COMPLETED', 'CANCELLED', 'ARCHIVED']).optional(),
 
         // Milestones
         milestones: z.array(milestoneSchema).optional(),

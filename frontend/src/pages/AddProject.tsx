@@ -43,6 +43,7 @@ import {
   Paperclip,
   Plus,
   X,
+  Check,
   CheckCircle2,
   AlertCircle,
   Info,
@@ -248,49 +249,57 @@ const TeamMemberSelector = ({
 }) => {
   return (
     <div className="space-y-3">
-      {members.map((member, index) => (
-        <motion.div
-          key={String(member.id)}
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: index * 0.05 }}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onToggle(member.id);
-          }}
-          className={cn(
-            "flex items-center gap-3 p-3 rounded-md border cursor-pointer transition-all select-none",
-            selectedMembers.includes(member.id)
-              ? "border-[#22D3EE] bg-[#0891B2]/5"
-              : "border-[rgba(15,23,42,0.06)] hover:border-slate-300 hover:bg-[#F8FAFC]"
-          )}
-        >
-          <div className="relative">
-            <div className="w-10 h-10 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] font-semibold text-sm">
-              {getInitials(member.name)}
-            </div>
-            {selectedMembers.includes(member.id) && (
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="absolute -top-1 -right-1 w-5 h-5 bg-[#0891B2] rounded-full flex items-center justify-center"
-              >
-                <CheckCircle2 size={12} className="text-[#0F172A]" />
-              </motion.div>
+      {members.map((member, index) => {
+        const isSelected = selectedMembers.includes(member.id);
+        return (
+          <motion.div
+            key={String(member.id)}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: index * 0.05 }}
+            role="button"
+            tabIndex={0}
+            onClick={() => onToggle(member.id)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onToggle(member.id); }}
+            className={cn(
+              "flex items-center gap-3 p-3 rounded-md border cursor-pointer transition-all select-none",
+              isSelected
+                ? "border-[#22D3EE] bg-[#0891B2]/5"
+                : "border-[rgba(15,23,42,0.06)] hover:border-slate-300 hover:bg-[#F8FAFC]"
             )}
-          </div>
-          <div className="flex-1">
-            <p className="font-medium text-[#0F172A] text-sm">{member.name}</p>
-            <p className="text-xs text-[#475569]">{member.role}</p>
-          </div>
-          <Checkbox
-            checked={selectedMembers.includes(member.id)}
-            onCheckedChange={() => onToggle(member.id)}
-            className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE] pointer-events-none"
-          />
-        </motion.div>
-      ))}
+          >
+            <div className="relative">
+              <div className="w-10 h-10 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] font-semibold text-sm">
+                {getInitials(member.name)}
+              </div>
+              {isSelected && (
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="absolute -top-1 -right-1 w-5 h-5 bg-[#0891B2] rounded-full flex items-center justify-center"
+                >
+                  <CheckCircle2 size={12} className="text-white" />
+                </motion.div>
+              )}
+            </div>
+            <div className="flex-1">
+              <p className="font-medium text-[#0F172A] text-sm">{member.name}</p>
+              <p className="text-xs text-[#475569]">{member.role}</p>
+            </div>
+            {/* Simple visual checkbox — no Radix component to swallow click events */}
+            <div
+              className={cn(
+                "w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors",
+                isSelected
+                  ? "bg-[#0891B2] border-[#0891B2]"
+                  : "border-slate-300 bg-white"
+              )}
+            >
+              {isSelected && <Check size={14} className="text-white" />}
+            </div>
+          </motion.div>
+        );
+      })}
     </div>
   );
 };

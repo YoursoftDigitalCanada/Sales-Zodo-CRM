@@ -11,6 +11,19 @@ import { activityLogger } from '../../common/services/activity-logger.service';
  * CreateProjectDto / UpdateProjectDto that the repository understands.
  * This bridges the naming gap between the API contract and the Prisma model.
  */
+
+/** Map frontend status names → Prisma ProjectStatus enum values */
+const STATUS_MAP: Record<string, string> = {
+    NOT_STARTED: 'PLANNING',
+    IN_PROGRESS: 'ACTIVE',
+    PLANNING: 'PLANNING',
+    ACTIVE: 'ACTIVE',
+    ON_HOLD: 'ON_HOLD',
+    COMPLETED: 'COMPLETED',
+    CANCELLED: 'CANCELLED',
+    ARCHIVED: 'ARCHIVED',
+};
+
 function mapBodyToDto(body: Record<string, any>): Record<string, any> {
     const mapped: Record<string, any> = { ...body };
 
@@ -30,6 +43,17 @@ function mapBodyToDto(body: Record<string, any>): Record<string, any> {
     if (mapped.progressPercentage !== undefined) {
         mapped.progress = mapped.progressPercentage;
         delete mapped.progressPercentage;
+    }
+
+    // Map status to valid Prisma enum value
+    if (mapped.status) {
+        mapped.status = STATUS_MAP[mapped.status] || 'PLANNING';
+    }
+
+    // Auto-generate a project code if not supplied
+    if (!mapped.code) {
+        const prefix = (mapped.name || 'PRJ').substring(0, 3).toUpperCase();
+        mapped.code = `${prefix}-${Date.now().toString(36).toUpperCase()}`;
     }
 
     // Strip fields the repository doesn't handle (stored as-is or ignored)

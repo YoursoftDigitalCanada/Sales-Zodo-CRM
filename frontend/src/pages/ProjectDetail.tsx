@@ -689,11 +689,16 @@ const ProjectDetailPage = () => {
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="none">Unassigned</SelectItem>
-                                            {employees.map((emp: any) => (
-                                                <SelectItem key={emp.id} value={String(emp.id)}>
-                                                    {emp.firstName || emp.name || ""} {emp.lastName || ""}
-                                                </SelectItem>
-                                            ))}
+                                            {employees.map((emp: any) => {
+                                                const userId = emp.user?.id || emp.id;
+                                                const name = `${emp.user?.firstName || emp.firstName || ""} ${emp.user?.lastName || emp.lastName || ""}`.trim();
+                                                if (!userId || !name) return null;
+                                                return (
+                                                    <SelectItem key={userId} value={String(userId)}>
+                                                        {name}
+                                                    </SelectItem>
+                                                );
+                                            })}
                                         </SelectContent>
                                     </Select>
                                 </div>

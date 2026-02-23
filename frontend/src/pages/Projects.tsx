@@ -491,26 +491,30 @@ const ProjectRow = ({
       {/* Due Date */}
       {columns.find((c) => c.key === "dueDate")?.visible && (
         <td className="py-4 px-4">
-          <div className={cn(
-            "flex items-center gap-2 text-sm",
-            overdue ? "text-red-600" : "text-[#475569]"
-          )}>
-            <CalendarDays size={14} className={overdue ? "text-red-400" : "text-[#475569]"} />
-            <div>
-              <div>{new Date(project.dueDate).toLocaleDateString()}</div>
-              <div className={cn(
-                "text-xs",
-                overdue ? "text-red-500 font-semibold" : "text-[#475569]"
-              )}>
-                {getRelativeTime(project.dueDate)}
+          {project.dueDate && !isNaN(new Date(project.dueDate).getTime()) ? (
+            <div className={cn(
+              "flex items-center gap-2 text-sm",
+              overdue ? "text-red-600" : "text-[#475569]"
+            )}>
+              <CalendarDays size={14} className={overdue ? "text-red-400" : "text-[#475569]"} />
+              <div>
+                <div>{new Date(project.dueDate).toLocaleDateString()}</div>
+                <div className={cn(
+                  "text-xs",
+                  overdue ? "text-red-500 font-semibold" : "text-[#475569]"
+                )}>
+                  {getRelativeTime(project.dueDate)}
+                </div>
               </div>
+              {overdue && (
+                <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-600 text-[10px] font-semibold">
+                  OVERDUE
+                </span>
+              )}
             </div>
-            {overdue && (
-              <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-600 text-[10px] font-semibold">
-                OVERDUE
-              </span>
-            )}
-          </div>
+          ) : (
+            <span className="text-sm text-[#94A3B8]">No date</span>
+          )}
         </td>
       )}
 
@@ -847,20 +851,22 @@ const ProjectsPage = () => {
       const mapped = (data || []).map((p: any, index: number) => ({
         id: p.id ?? p.Id ?? index,
         name: p.name ?? p.Name ?? "Untitled Project",
-        projectManager: p.projectManager ?? p.ProjectManager ?? "",
+        projectManager: p.teamMembers?.[0]
+          ? `${p.teamMembers[0].employee?.user?.firstName || ""} ${p.teamMembers[0].employee?.user?.lastName || ""}`.trim()
+          : (p.projectManager ?? p.ProjectManager ?? ""),
         description: p.description ?? p.Description ?? "",
         progress: p.progress ?? p.Progress ?? 0,
-        status: p.status ?? p.Status ?? "Not Started",
-        dueDate: p.dueDate ?? p.DueDate ?? "",
+        status: p.status ?? p.Status ?? "PLANNING",
+        dueDate: p.endDate ?? p.dueDate ?? p.DueDate ?? "",
         startDate: p.startDate ?? p.StartDate,
-        budget: p.budget ?? p.Budget,
+        budget: p.budget ? Number(p.budget) : (p.Budget ? Number(p.Budget) : undefined),
         spent: p.spent ?? p.Spent,
         priority: p.priority ?? p.Priority ?? "Medium",
         category: p.category ?? p.Category,
-        clientName: p.clientName ?? p.ClientName,
+        clientName: p.client?.clientName ?? p.clientName ?? p.ClientName ?? "",
         isFavorite: false,
         tasksCompleted: p.tasksCompleted ?? 0,
-        totalTasks: p.totalTasks ?? 0,
+        totalTasks: p.totalTasks ?? p.tasksCount ?? 0,
       }));
       setProjects(mapped);
     } catch (err) {

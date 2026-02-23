@@ -1,6 +1,6 @@
 // src/pages/RoofEstimator.tsx
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
     getEstimates as fetchEstimatesApi,
     getEstimateSettings,
@@ -12,6 +12,7 @@ import {
     deleteEstimate as deleteEstimateApi,
     updateEstimateSettings,
     generateEstimate as generateEstimateApi,
+    autocompleteAddress as autocompleteAddressApi,
 } from "@/features/roof-estimator/services/roof-estimator-service";
 import type { GeneratedEstimate } from "@/features/roof-estimator/services/roof-estimator-service";
 import { getClients } from "@/features/clients/services/clients-service";
@@ -232,6 +233,12 @@ const RoofEstimator: React.FC = () => {
     const [settings, setSettings] = useState<EstimateSettings | null>(null);
     const [aiHealthy, setAiHealthy] = useState<boolean | null>(null);
 
+    // Autocomplete
+    const [suggestions, setSuggestions] = useState<Array<{ description: string; placeId: string }>>([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const autocompleteRef = useRef<HTMLDivElement>(null);
+    const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+
     // UI
     const [activeTab, setActiveTab] = useState<"estimator" | "history" | "settings">("estimator");
     const [viewEstimate, setViewEstimate] = useState<RoofEstimate | null>(null);
@@ -257,6 +264,44 @@ const RoofEstimator: React.FC = () => {
             setSnowMode(settings.snowModeDefault);
         }
     }, [settings]);
+
+    // Close autocomplete on outside click
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (autocompleteRef.current && !autocompleteRef.current.contains(e.target as Node)) {
+                setShowSuggestions(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    // Debounced autocomplete
+    const handleAddressChange = useCallback((value: string) => {
+        setAddress(value);
+        if (debounceTimer.current) clearTimeout(debounceTimer.current);
+        if (value.length < 3) {
+            setSuggestions([]);
+            setShowSuggestions(false);
+            return;
+        }
+        debounceTimer.current = setTimeout(async () => {
+            try {
+                const results = await autocompleteAddressApi(value);
+                setSuggestions(results);
+                setShowSuggestions(results.length > 0);
+            } catch {
+                setSuggestions([]);
+                setShowSuggestions(false);
+            }
+        }, 300);
+    }, []);
+
+    const selectSuggestion = (description: string) => {
+        setAddress(description);
+        setSuggestions([]);
+        setShowSuggestions(false);
+    };
 
     // ---- API ----
     const fetchEstimates = async () => {
@@ -505,13 +550,41 @@ const RoofEstimator: React.FC = () => {
                                             </div>
                                             <div className="space-y-3">
                                                 <Label className="text-xs text-[#94A3B8]">Street Address</Label>
-                                                <Input
-                                                    placeholder="e.g. 123 Main St, Toronto, ON"
-                                                    value={address}
-                                                    onChange={(e) => setAddress(e.target.value)}
-                                                    onKeyDown={(e) => e.key === "Enter" && handleLoadSatellite()}
-                                                    className="border-[rgba(15,23,42,0.1)] focus:border-[#22D3EE] focus:ring-[#22D3EE]/20"
-                                                />
+                                                <div className="relative" ref={autocompleteRef}>
+                                                    <div className="relative">
+                                                        <Search className="w-4 h-4 text-[#94A3B8] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                                        <Input
+                                                            placeholder="e.g. 123 Main St, Toronto, ON"
+                                                            value={address}
+                                                            onChange={(e) => handleAddressChange(e.target.value)}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === "Enter") {
+                                                                    setShowSuggestions(false);
+                                                                    handleLoadSatellite();
+                                                                }
+                                                            }}
+                                                            onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                                                            className="pl-9 border-[rgba(15,23,42,0.1)] focus:border-[#22D3EE] focus:ring-[#22D3EE]/20"
+                                                            autoComplete="off"
+                                                        />
+                                                    </div>
+                                                    {/* Autocomplete dropdown */}
+                                                    {showSuggestions && suggestions.length > 0 && (
+                                                        <div className="absolute z-50 w-full mt-1 bg-white rounded-md border border-[rgba(15,23,42,0.1)] shadow-lg max-h-[240px] overflow-y-auto">
+                                                            {suggestions.map((s, i) => (
+                                                                <button
+                                                                    key={s.placeId || i}
+                                                                    type="button"
+                                                                    onClick={() => selectSuggestion(s.description)}
+                                                                    className="w-full text-left px-3 py-2.5 text-sm text-[#0F172A] hover:bg-[#F0FDFA] flex items-center gap-2.5 transition-colors border-b border-[rgba(15,23,42,0.04)] last:border-b-0"
+                                                                >
+                                                                    <MapPin className="w-3.5 h-3.5 text-[#0891B2] flex-shrink-0" />
+                                                                    <span className="truncate">{s.description}</span>
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
                                                 <Button
                                                     onClick={handleLoadSatellite}
                                                     disabled={loadingSatellite || !address.trim()}

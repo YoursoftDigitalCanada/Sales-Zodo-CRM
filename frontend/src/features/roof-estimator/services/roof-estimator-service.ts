@@ -116,7 +116,13 @@ export async function updateEstimateSettings(data: Partial<EstimateSettings>): P
     await api.put("/roof-estimator/settings", data);
 }
 
-// ── OpenAI-powered estimate generation ─────────────────────────────────
+/**
+ * Autocomplete address suggestions (Google Places)
+ */
+export async function autocompleteAddress(input: string): Promise<Array<{ description: string; placeId: string }>> {
+    const res = await api.get("/roof-estimator/autocomplete", { params: { input } });
+    return res.data?.data || [];
+}
 
 export interface EstimateBreakdownItem {
     item: string;

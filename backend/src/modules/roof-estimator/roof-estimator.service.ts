@@ -10,10 +10,42 @@ import { activityLogger } from '../../common/services/activity-logger.service';
 
 const GOOGLE_GEOCODING_API_KEY = process.env.GOOGLE_GEOCODING_API_KEY || '';
 const GOOGLE_STATIC_MAPS_API_KEY = process.env.GOOGLE_STATIC_MAPS_API_KEY || '';
+const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY || process.env.GOOGLE_GEOCODING_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8001';
 
 export class RoofEstimatorService {
+    /**
+     * Autocomplete address using Google Places API
+     */
+    async autocompleteAddress(input: string): Promise<Array<{ description: string; placeId: string }>> {
+        const apiKey = GOOGLE_PLACES_API_KEY;
+        if (!apiKey) {
+            throw new Error('GOOGLE_PLACES_API_KEY is not configured');
+        }
+
+        const response = await axios.get('https://maps.googleapis.com/maps/api/place/autocomplete/json', {
+            params: {
+                input,
+                key: apiKey,
+                types: 'address',
+                components: 'country:ca',
+                language: 'en',
+            },
+            timeout: 5000,
+        });
+
+        if (response.data.status !== 'OK' && response.data.status !== 'ZERO_RESULTS') {
+            logger.warn('Places autocomplete failed', { status: response.data.status });
+            return [];
+        }
+
+        return (response.data.predictions || []).map((p: any) => ({
+            description: p.description,
+            placeId: p.place_id,
+        }));
+    }
+
     /**
      * Geocode an address using Google Geocoding API
      */

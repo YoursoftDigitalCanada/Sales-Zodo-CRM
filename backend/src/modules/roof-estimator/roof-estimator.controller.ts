@@ -13,6 +13,23 @@ import { sanitizeBody } from '../../common/utils/sanitize-body';
 
 export class RoofEstimatorController {
     /**
+     * GET /autocomplete — Address autocomplete suggestions
+     */
+    async autocomplete(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const input = req.query.input as string;
+            if (!input || input.length < 3) {
+                sendSuccess(res, [], 'Type at least 3 characters');
+                return;
+            }
+            const suggestions = await roofEstimatorService.autocompleteAddress(input);
+            sendSuccess(res, suggestions, 'Address suggestions');
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    /**
      * POST /satellite — Geocode address and return satellite image URL
      */
     async getSatellite(req: Request, res: Response, next: NextFunction): Promise<void> {

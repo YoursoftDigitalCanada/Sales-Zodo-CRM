@@ -23,6 +23,13 @@ const router = Router();
 router.use(authenticate);
 router.use(loadEmployee);
 
+// Address autocomplete
+router.get(
+    '/autocomplete',
+    requirePermission(PERMISSIONS.ROOF_ESTIMATOR_VIEW),
+    roofEstimatorController.autocomplete.bind(roofEstimatorController)
+);
+
 // Satellite & AI detection
 router.post(
     '/satellite',

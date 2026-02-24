@@ -461,15 +461,15 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
                         <>
                           {clients
                             .filter(c => {
-                              const name = c.clientName || c.ClientName || c.name || c.Name || "";
+                              const name = String(c.clientName || "");
                               return name.toLowerCase().includes(recipientSearch.toLowerCase());
                             })
                             .slice(0, 10)
                             .map(c => {
-                              const cId = String(c.id || c.Id || "");
-                              const cName = c.clientName || c.ClientName || c.name || c.Name || "";
-                              const cEmail = c.primaryEmail || c.contactEmail || c.ContactEmail || c.email || "";
-                              const cCompany = c.primaryContactName || c.contactPerson || c.ContactPerson || "";
+                              const cId = String(c.id || "");
+                              const cName = String(c.clientName || "");
+                              const cEmail = String(c.primaryEmail || "");
+                              const cCompany = String((c as any).companyName || "");
                               return (
                                 <button key={cId} type="button"
                                   className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm border-b last:border-b-0"
@@ -482,7 +482,7 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
                                 </button>
                               );
                             })}
-                          {clients.filter(c => (c.clientName || c.ClientName || c.name || c.Name || "").toLowerCase().includes(recipientSearch.toLowerCase())).length === 0 && (
+                          {clients.filter(c => String(c.clientName || "").toLowerCase().includes(recipientSearch.toLowerCase())).length === 0 && (
                             <p className="px-3 py-2 text-sm text-[#94A3B8]">No clients found</p>
                           )}
                         </>
@@ -490,15 +490,15 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
                         <>
                           {leads
                             .filter(l => {
-                              const name = String(l.contactName || l.name || l.companyName || "");
+                              const name = [l.firstName, l.lastName].filter(Boolean).join(" ") || String(l.companyName || "");
                               return name.toLowerCase().includes(recipientSearch.toLowerCase());
                             })
                             .slice(0, 10)
                             .map(l => {
                               const lId = String(l.id);
-                              const lName = String(l.contactName || l.name || l.companyName || "");
-                              const lEmail = String(l.email || l.contactEmail || "");
-                              const lCompany = String(l.companyName || l.company || "");
+                              const lName = [l.firstName, l.lastName].filter(Boolean).join(" ") || String(l.companyName || "");
+                              const lEmail = String(l.email || "");
+                              const lCompany = String(l.companyName || "");
                               return (
                                 <button key={lId} type="button"
                                   className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm border-b last:border-b-0"
@@ -512,9 +512,12 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
                                 </button>
                               );
                             })}
-                          {leads.filter(l => String(l.contactName || l.name || l.companyName || "").toLowerCase().includes(recipientSearch.toLowerCase())).length === 0 && (
-                            <p className="px-3 py-2 text-sm text-[#94A3B8]">No leads found</p>
-                          )}
+                          {leads.filter(l => {
+                            const name = [l.firstName, l.lastName].filter(Boolean).join(" ") || String(l.companyName || "");
+                            return name.toLowerCase().includes(recipientSearch.toLowerCase());
+                          }).length === 0 && (
+                              <p className="px-3 py-2 text-sm text-[#94A3B8]">No leads found</p>
+                            )}
                         </>
                       )}
                     </div>

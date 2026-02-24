@@ -120,12 +120,16 @@ const QuoteRow = ({ quote, isSelected, onSelect, onView, onEdit, onDelete, onSen
       </td>
       <td className="py-4 px-4">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] text-xs font-semibold">
-            {getInitials(quote.clientName)}
+          <div className={cn("w-8 h-8 rounded-md flex items-center justify-center text-xs font-semibold",
+            quote.leadId ? "bg-[#D97706]/10 text-[#D97706]" : "bg-[#F1F5F9] text-[#0F172A]")}>
+            {getInitials(quote.leadId ? (quote.leadName || quote.clientName) : quote.clientName)}
           </div>
           <div>
-            <p className="text-sm font-medium text-[#0F172A]">{quote.clientName}</p>
-            {quote.clientEmail && <p className="text-xs text-[#475569]">{quote.clientEmail}</p>}
+            <p className="text-sm font-medium text-[#0F172A]">{quote.leadId ? (quote.leadName || quote.clientName) : quote.clientName}</p>
+            <span className={cn("inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-full mt-0.5",
+              quote.leadId ? "bg-[#D97706]/10 text-[#D97706]" : "bg-[#0891B2]/10 text-[#0891B2]")}>
+              {quote.leadId ? "Lead" : "Client"}
+            </span>
           </div>
         </div>
       </td>
@@ -1173,7 +1177,7 @@ const QuotesPage = () => {
                           className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]" />
                       </th>
                       <th className="py-3 px-4 text-left text-xs font-semibold text-[#475569] uppercase tracking-wider">Quote</th>
-                      <th className="py-3 px-4 text-left text-xs font-semibold text-[#475569] uppercase tracking-wider">Client</th>
+                      <th className="py-3 px-4 text-left text-xs font-semibold text-[#475569] uppercase tracking-wider">Client / Lead</th>
                       <th className="py-3 px-4 text-left text-xs font-semibold text-[#475569] uppercase tracking-wider">Valid Until</th>
                       <th className="py-3 px-4 text-left text-xs font-semibold text-[#475569] uppercase tracking-wider">Status</th>
                       <th className="py-3 px-4 text-right text-xs font-semibold text-[#475569] uppercase tracking-wider">Amount</th>

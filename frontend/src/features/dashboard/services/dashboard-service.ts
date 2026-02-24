@@ -54,23 +54,27 @@ export interface DashboardPayload {
   totalEarnings: number;
 }
 
-// ── Fetch everything in parallel ────────────────────────────────────────
+// ── Helper: safe request that returns [] on failure ─────────────────────
+async function safeGet<T>(url: string, params?: Record<string, unknown>): Promise<T[]> {
+  try {
+    const res = await api.get(url, params ? { params } : undefined);
+    return extractApiArray<T>(res.data);
+  } catch (err) {
+    console.warn(`Dashboard: failed to fetch ${url}`, err);
+    return [];
+  }
+}
+
+// ── Fetch everything in parallel (resilient — one failure won't crash all) ──
 
 export async function fetchDashboardData(): Promise<DashboardPayload> {
-  const [leadsRes, invoicesRes, projectsRes, clientsRes, tasksRes] =
-    await Promise.all([
-      api.get("/leads", { params: { limit: 20, sortBy: "createdAt", sortOrder: "desc" } }),
-      api.get("/invoices", { params: { limit: 20 } }),
-      api.get("/projects", { params: { limit: 20 } }),
-      api.get("/clients"),
-      api.get("/tasks"),
-    ]);
-
-  const leads = extractApiArray<DashboardLead>(leadsRes.data);
-  const invoices = extractApiArray<DashboardInvoice>(invoicesRes.data);
-  const projects = extractApiArray<DashboardProject>(projectsRes.data);
-  const clients = extractApiArray<unknown>(clientsRes.data);
-  const tasks = extractApiArray<DashboardTask>(tasksRes.data);
+  const [leads, invoices, projects, clients, tasks] = await Promise.all([
+    safeGet<DashboardLead>("/leads", { limit: 20, sortBy: "createdAt", sortOrder: "desc" }),
+    safeGet<DashboardInvoice>("/invoices", { limit: 20, sortBy: "invoiceDate", sortOrder: "desc" }),
+    safeGet<DashboardProject>("/projects", { limit: 20 }),
+    safeGet<unknown>("/clients"),
+    safeGet<DashboardTask>("/tasks"),
+  ]);
 
   const pendingTasks = tasks.filter(
     (t) => t.status === "TODO" || t.status === "IN_PROGRESS"

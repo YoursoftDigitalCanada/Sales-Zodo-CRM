@@ -211,6 +211,12 @@ enum CalendarEventRecurrence {
   YEARLY
 }
 
+enum CalendarEventStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
 enum EmailStatus {
   DRAFT
   SENT
@@ -314,6 +320,7 @@ model Tenant {
   roofEstimates         RoofEstimate[]
   roofEstimateSettings  RoofEstimateSettings?
   payments              InvoicePayment[]
+  quotes                Quote[]
 
   @@index([status])
   @@index([slug])
@@ -412,6 +419,7 @@ model Employee {
   chatParticipations    ChatParticipant[]
   calendarEvents        CalendarEvent[] @relation("CreatedByEmployee")
   eventAttendees        CalendarEventAttendee[]
+  createdQuotes         Quote[]         @relation("CreatedByEmployee")
 
   @@unique([tenantId, userId])
   @@unique([tenantId, employeeNumber])
@@ -561,6 +569,7 @@ model Lead {
   
   // Relations
   tags              LeadTag[]
+  calendarEvents    CalendarEvent[]
   activities        LeadActivity[]
 
   @@index([tenantId])
@@ -669,6 +678,7 @@ model Client {
   groups                  ClientGroupMember[]
   projects                Project[]
   invoices                Invoice[]
+  quotes                  Quote[]
   orders                  Order[]
   bookings                Booking[]
   tasks                   Task[]
@@ -676,6 +686,7 @@ model Client {
   emails                  Email[]
   payments                InvoicePayment[]
   roofEstimates           RoofEstimate[]
+  calendarEvents          CalendarEvent[]
 
   @@index([tenantId])
   @@index([status])
@@ -991,6 +1002,7 @@ model CalendarEvent {
   
   // Type & Color
   eventType       CalendarEventType         @default(MEETING)
+  status          CalendarEventStatus       @default(SCHEDULED)
   color           String?
   
   // Timing
@@ -1022,6 +1034,12 @@ model CalendarEvent {
   tenantId        String
   tenant          Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   
+  // Client / Lead linking (for automation context)
+  clientId        String?
+  client          Client?                   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  leadId          String?
+  lead            Lead?                     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
   // Timestamps
   createdAt       DateTime                  @default(now())
   updatedAt       DateTime                  @updatedAt
@@ -1033,7 +1051,10 @@ model CalendarEvent {
   @@index([startTime])
   @@index([endTime])
   @@index([eventType])
+  @@index([status])
   @@index([createdById])
+  @@index([clientId])
+  @@index([leadId])
 }
 
 model CalendarEventAttendee {
@@ -2113,4 +2134,96 @@ model RoofEstimateSettings {
 
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+}
+
+// ============================================================================
+// QUOTES / PROPOSALS MODULE
+// ============================================================================
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+model Quote {
+  id                String          @id @default(uuid())
+  
+  // Quote Number (auto-generated like invoices)
+  quoteNumber       String
+  
+  // Status
+  status            QuoteStatus     @default(DRAFT)
+  
+  // Client (optional — may be lead-only)
+  clientId          String?
+  client            Client?         @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  
+  // Lead (optional — for pre-client quotes)
+  leadId            String?
+  
+  // Dates
+  issueDate         DateTime        @default(now())
+  validUntil        DateTime
+  
+  // Currency
+  currency          String          @default("CAD")
+  
+  // Amounts
+  subtotal          Decimal         @db.Decimal(15, 2)
+  taxRate           Decimal?        @db.Decimal(5, 2)
+  taxAmount         Decimal         @default(0) @db.Decimal(15, 2)
+  discountAmount    Decimal         @default(0) @db.Decimal(15, 2)
+  total             Decimal         @db.Decimal(15, 2)
+  
+  // Notes & Terms
+  notes             String?         @db.Text
+  terms             String?         @db.Text
+  
+  // Source context (which meeting triggered this)
+  sourceEventId     String?         // Calendar event that triggered quote creation
+  
+  // Created by
+  createdById       String?
+  createdBy         Employee?       @relation("CreatedByEmployee", fields: [createdById], references: [id], onDelete: SetNull)
+  
+  // Tenant relation
+  tenantId          String
+  tenant            Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  sentAt            DateTime?
+  acceptedAt        DateTime?
+  
+  // Relations
+  items             QuoteItem[]
+
+  @@unique([tenantId, quoteNumber])
+  @@index([tenantId])
+  @@index([status])
+  @@index([clientId])
+  @@index([leadId])
+  @@index([validUntil])
+}
+
+model QuoteItem {
+  id            String    @id @default(uuid())
+  
+  description   String
+  quantity      Decimal   @default(1) @db.Decimal(10, 2)
+  unitPrice     Decimal   @db.Decimal(15, 2)
+  total         Decimal   @db.Decimal(15, 2)
+  
+  // Sort order
+  sortOrder     Int       @default(0)
+  
+  // Parent Quote
+  quoteId       String
+  quote         Quote     @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  @@index([quoteId])
 }

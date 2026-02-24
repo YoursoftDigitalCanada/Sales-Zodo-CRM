@@ -15,5 +15,6 @@ router.post('/', requirePermission(PERMISSIONS.CALENDAR_CREATE), validate(create
 router.get('/:id', requirePermission(PERMISSIONS.CALENDAR_VIEW), validate(calendarEventIdSchema), calendarController.getById.bind(calendarController));
 router.put('/:id', requirePermission(PERMISSIONS.CALENDAR_UPDATE), validate(calendarEventIdSchema), validate(updateCalendarEventSchema), calendarController.update.bind(calendarController));
 router.delete('/:id', requirePermission(PERMISSIONS.CALENDAR_DELETE), validate(calendarEventIdSchema), calendarController.delete.bind(calendarController));
+router.patch('/:id/status', requirePermission(PERMISSIONS.CALENDAR_UPDATE), calendarController.updateStatus.bind(calendarController));
 
 export default router;

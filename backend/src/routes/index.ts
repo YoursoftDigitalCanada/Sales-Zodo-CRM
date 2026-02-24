@@ -30,6 +30,7 @@ import calendarRoutes from '../modules/calendar/calendar.routes';
 
 // Finance modules
 import invoicesRoutes from '../modules/invoices/invoices.routes';
+import quotesRoutes from '../modules/quotes/quotes.routes';
 import expensesRoutes from '../modules/expenses/expenses.routes';
 import bookingsRoutes from '../modules/bookings/bookings.routes';
 import servicesRoutes from '../modules/services/services.routes';
@@ -121,6 +122,7 @@ export function registerRoutes(app: Application): void {
 
   // Finance
   protectedRouter.use('/invoices', invoicesRoutes);
+  protectedRouter.use('/quotes', quotesRoutes);
   protectedRouter.use('/expenses', expensesRoutes);
   protectedRouter.use('/bookings', bookingsRoutes);
   protectedRouter.use('/services', servicesRoutes);

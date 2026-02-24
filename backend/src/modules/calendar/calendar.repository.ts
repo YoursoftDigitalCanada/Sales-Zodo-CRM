@@ -98,6 +98,17 @@ export class CalendarRepository {
         });
     }
 
+    async updateStatus(id: string, tenantId: string, status: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED') {
+        const existing = await prisma.calendarEvent.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Calendar event not found or access denied');
+
+        return prisma.calendarEvent.update({
+            where: { id },
+            data: { status },
+            include: calendarEventInclude,
+        });
+    }
+
     async delete(id: string, tenantId: string) {
         // Verify tenant ownership
         const existing = await prisma.calendarEvent.findFirst({ where: { id, tenantId } });

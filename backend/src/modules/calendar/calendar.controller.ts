@@ -37,6 +37,12 @@ export class CalendarController {
             sendNoContent(res);
         } catch (e) { next(e); }
     }
+    async updateStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const event = await calendarService.updateStatus(req.params.id, req.context.tenantId, req.body.status);
+            sendSuccess(res, event, 'Event status updated');
+        } catch (e) { next(e); }
+    }
 }
 
 export const calendarController = new CalendarController();

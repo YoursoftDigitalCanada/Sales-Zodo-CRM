@@ -284,6 +284,44 @@ export interface InvoiceSentEvent {
     clientId?: string;
     recipientEmail?: string;
 }
+// ── Calendar Completion Events ──────────────────────────────────────────
+
+export interface CalendarEventCompletedEvent {
+    tenantId: string;
+    eventId: string;
+    title: string;
+    eventType: string;
+    category?: string;
+    leadId?: string;
+    clientId?: string;
+    createdById?: string;
+    createdByUserId?: string;
+    description?: string;
+}
+
+// ── Quote Events ────────────────────────────────────────────────────────
+
+export interface QuoteCreatedEvent {
+    tenantId: string;
+    quoteId: string;
+    quoteNumber: string;
+    clientId?: string;
+    leadId?: string;
+    total?: number | string;
+}
+
+export interface QuoteStatusChangedEvent {
+    tenantId: string;
+    quoteId: string;
+    quoteNumber: string;
+    oldStatus: string;
+    newStatus: string;
+    clientId?: string;
+    leadId?: string;
+    total: number;
+    createdById?: string;
+    items: { description: string; quantity: number; unitPrice: number; total: number }[];
+}
 
 // ── Event Map ───────────────────────────────────────────────────────────
 
@@ -324,6 +362,9 @@ export interface CRMEventMap {
     'client.lifecycleChanged': ClientLifecycleChangedEvent;
     'project.statusChanged': ProjectStatusChangedEvent;
     'invoice.sent': InvoiceSentEvent;
+    'calendar.completed': CalendarEventCompletedEvent;
+    'quote.created': QuoteCreatedEvent;
+    'quote.statusChanged': QuoteStatusChangedEvent;
 }
 
 export type CRMEventName = keyof CRMEventMap;

@@ -71,6 +71,38 @@ export class CalendarService {
 
         await calendarRepository.delete(id, tenantId);
     }
+    async updateStatus(id: string, tenantId: string, status: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED') {
+        const existing = await calendarRepository.findById(id, tenantId);
+        if (!existing) throw new NotFoundError('Calendar event not found', ErrorCodes.RESOURCE_NOT_FOUND);
+
+        const event = await calendarRepository.updateStatus(id, tenantId, status);
+        const dto = toCalendarEventResponseDto(event);
+
+        activityLogger.log({
+            tenantId, entityType: 'CalendarEvent', entityId: dto.id,
+            action: 'UPDATE', module: 'calendar',
+            description: `Marked calendar event "${(event as any).title || dto.id}" as ${status}`,
+            metadata: { status },
+        });
+
+        // ▸ Emit calendar.completed for automation engine
+        if (status === 'COMPLETED') {
+            eventBus.emit('calendar.completed', {
+                tenantId,
+                eventId: dto.id,
+                title: (event as any).title || '',
+                eventType: (event as any).eventType || '',
+                category: (event as any).category,
+                leadId: (event as any).leadId || undefined,
+                clientId: (event as any).clientId || undefined,
+                createdById: (event as any).createdById || undefined,
+                createdByUserId: (event as any).createdBy?.userId || undefined,
+                description: (event as any).description || undefined,
+            });
+        }
+
+        return dto;
+    }
 }
 
 export const calendarService = new CalendarService();

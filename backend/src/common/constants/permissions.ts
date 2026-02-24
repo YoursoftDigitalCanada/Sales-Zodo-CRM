@@ -100,6 +100,12 @@ export const PERMISSIONS = {
   INVOICES_SEND: 'invoices.send',
   INVOICES_MARK_PAID: 'invoices.mark-paid',
 
+  // Quotes / Proposals
+  QUOTES_VIEW: 'quotes.view',
+  QUOTES_CREATE: 'quotes.create',
+  QUOTES_UPDATE: 'quotes.update',
+  QUOTES_DELETE: 'quotes.delete',
+
   // Expenses
   EXPENSES_VIEW: 'expenses.view',
   EXPENSES_CREATE: 'expenses.create',
@@ -313,6 +319,12 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { code: PERMISSIONS.INVOICES_DELETE, name: 'Delete Invoices', description: 'Remove invoices', module: 'invoices', action: 'delete' },
   { code: PERMISSIONS.INVOICES_SEND, name: 'Send Invoices', description: 'Send invoices to clients', module: 'invoices', action: 'send' },
   { code: PERMISSIONS.INVOICES_MARK_PAID, name: 'Mark Invoices Paid', description: 'Mark invoices as paid', module: 'invoices', action: 'mark-paid' },
+
+  // Quotes
+  { code: PERMISSIONS.QUOTES_VIEW, name: 'View Quotes', description: 'View quotes and proposals', module: 'quotes', action: 'view' },
+  { code: PERMISSIONS.QUOTES_CREATE, name: 'Create Quotes', description: 'Create new quotes', module: 'quotes', action: 'create' },
+  { code: PERMISSIONS.QUOTES_UPDATE, name: 'Update Quotes', description: 'Edit quotes', module: 'quotes', action: 'update' },
+  { code: PERMISSIONS.QUOTES_DELETE, name: 'Delete Quotes', description: 'Remove quotes', module: 'quotes', action: 'delete' },
 
   // Expenses
   { code: PERMISSIONS.EXPENSES_VIEW, name: 'View Expenses', description: 'View expenses', module: 'expenses', action: 'view' },

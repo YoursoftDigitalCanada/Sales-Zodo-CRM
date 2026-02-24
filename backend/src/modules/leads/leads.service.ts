@@ -88,6 +88,8 @@ export class LeadsService {
       ownerId: data.assignedToId,
       ownerUserId: dto.assignedTo?.userId,
       source: dto.leadSource?.name,
+      email: dto.email,
+      companyName: dto.companyName,
     });
 
     // ▸ Audit: centralized audit trail

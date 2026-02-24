@@ -10,6 +10,8 @@ export interface LeadCreatedEvent {
     ownerId?: string;
     ownerUserId?: string;
     source?: string;
+    email?: string;
+    companyName?: string;
 }
 
 export interface LeadStatusChangedEvent {

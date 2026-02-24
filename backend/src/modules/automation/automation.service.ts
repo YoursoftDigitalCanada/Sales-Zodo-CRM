@@ -41,6 +41,7 @@ import {
 import { notificationsService } from '../notifications/notifications.service';
 import { tasksService } from '../tasks/tasks.service';
 import { logger } from '../../common/utils/logger';
+import { calendarService } from '../calendar/calendar.service';
 import { activityLogger } from '../../common/services/activity-logger.service';
 import { clientLifecycleService } from '../../common/services/client-lifecycle.service';
 import { prisma } from '../../config/database';
@@ -130,19 +131,131 @@ export class AutomationService {
     // ── Built-In Notification Handlers (Preserved) ─────────────────────
 
     private registerBuiltInNotifications(): void {
-        // ── Lead Created ──
+        // ── Lead Created — Full Automation Workflow ──
         eventBus.on('lead.created', async (event: LeadCreatedEvent) => {
+            const ctx = { leadId: event.leadId, tenantId: event.tenantId };
+            const label = event.companyName
+                ? `${event.leadName} (${event.companyName})`
+                : event.leadName;
+
+            // 1️⃣  Notify the assigned owner
             if (event.ownerUserId) {
-                await notificationsService.create({
-                    title: '🆕 New Lead Assigned',
-                    message: `A new lead "${event.leadName}" has been assigned to you${event.source ? ` from ${event.source}` : ''}.`,
-                    type: 'INFO',
-                    userId: event.ownerUserId,
-                    tenantId: event.tenantId,
-                    actionUrl: `/leads/${event.leadId}`,
-                    actionLabel: 'View Lead',
+                try {
+                    await notificationsService.create({
+                        title: '🆕 New Lead Assigned',
+                        message: `A new lead "${label}" has been assigned to you${event.source ? ` from ${event.source}` : ''}.`,
+                        type: 'INFO',
+                        userId: event.ownerUserId,
+                        tenantId: event.tenantId,
+                        actionUrl: `/leads/${event.leadId}`,
+                        actionLabel: 'View Lead',
+                    });
+                    logger.debug('[Automation] lead.created → owner notification sent', ctx);
+                } catch (err) {
+                    logger.error('[Automation] lead.created → owner notification failed', { ...ctx, err });
+                }
+            }
+
+            // 2️⃣  Notify all admins / owners
+            try {
+                const adminEmployees = await prisma.employee.findMany({
+                    where: {
+                        tenantId: event.tenantId,
+                        isActive: true,
+                        role: { name: { in: ['Admin', 'Owner'] }, isSystemRole: true },
+                    },
+                    select: { userId: true },
                 });
-                logger.debug('[Automation] lead.created → notification sent', { leadId: event.leadId });
+                for (const admin of adminEmployees) {
+                    if (admin.userId === event.ownerUserId) continue; // already notified
+                    await notificationsService.create({
+                        title: '📥 New Lead Captured',
+                        message: `"${label}" was added${event.source ? ` via ${event.source}` : ''}. ${event.email ? `Contact: ${event.email}` : ''}`,
+                        type: 'INFO',
+                        userId: admin.userId,
+                        tenantId: event.tenantId,
+                        actionUrl: `/leads/${event.leadId}`,
+                        actionLabel: 'View Lead',
+                    });
+                }
+                logger.debug('[Automation] lead.created → admin notifications sent', { ...ctx, adminCount: adminEmployees.length });
+            } catch (err) {
+                logger.error('[Automation] lead.created → admin notifications failed', { ...ctx, err });
+            }
+
+            // 3️⃣  Auto-create follow-up task (due in 2 days, HIGH priority)
+            try {
+                const dueDate = new Date();
+                dueDate.setDate(dueDate.getDate() + 2);
+
+                await tasksService.create(event.tenantId, {
+                    title: `Follow up with lead: ${label}`,
+                    description: [
+                        `New lead captured${event.source ? ` from ${event.source}` : ''}.`,
+                        event.email ? `Email: ${event.email}` : '',
+                        event.companyName ? `Company: ${event.companyName}` : '',
+                        '',
+                        'Action items:',
+                        '• Send introduction email',
+                        '• Schedule discovery call',
+                        '• Qualify budget & timeline',
+                    ].filter(Boolean).join('\n'),
+                    priority: 'HIGH',
+                    dueDate,
+                    assignedToId: event.ownerId || null,
+                });
+                logger.info('[Automation] lead.created → follow-up task created', ctx);
+            } catch (err) {
+                logger.error('[Automation] lead.created → task creation failed', { ...ctx, err });
+            }
+
+            // 4️⃣  Auto-create discovery call calendar event (next business day, 30 min)
+            try {
+                const nextBizDay = this.getNextBusinessDay();
+                nextBizDay.setHours(10, 0, 0, 0); // 10:00 AM
+                const endTime = new Date(nextBizDay);
+                endTime.setMinutes(endTime.getMinutes() + 30);
+
+                await calendarService.create(event.tenantId, {
+                    title: `Discovery Call — ${label}`,
+                    description: [
+                        `Introductory call with new lead "${event.leadName}".`,
+                        event.companyName ? `Company: ${event.companyName}` : '',
+                        event.email ? `Contact: ${event.email}` : '',
+                        event.source ? `Source: ${event.source}` : '',
+                    ].filter(Boolean).join('\n'),
+                    startTime: nextBizDay,
+                    endTime,
+                    eventType: 'MEETING',
+                    priority: 'HIGH',
+                    category: 'lead-follow-up',
+                    color: '#22D3EE',
+                });
+                logger.info('[Automation] lead.created → discovery call event created', ctx);
+            } catch (err) {
+                logger.error('[Automation] lead.created → calendar event creation failed', { ...ctx, err });
+            }
+
+            // 5️⃣  Analytics — enrich audit trail with lead source tracking
+            try {
+                activityLogger.log({
+                    tenantId: event.tenantId,
+                    entityType: 'Lead',
+                    entityId: event.leadId,
+                    action: 'CREATE',
+                    module: 'automation',
+                    description: `Lead automation triggered for "${label}"`,
+                    metadata: {
+                        leadName: event.leadName,
+                        source: event.source || 'Direct',
+                        email: event.email,
+                        companyName: event.companyName,
+                        automationActions: ['notification', 'task', 'calendar', 'analytics'],
+                    },
+                });
+                logger.debug('[Automation] lead.created → analytics logged', ctx);
+            } catch (err) {
+                logger.error('[Automation] lead.created → analytics logging failed', { ...ctx, err });
             }
         });
 
@@ -737,11 +850,26 @@ export class AutomationService {
         }
     }
 
+    // ── Utilities ────────────────────────────────────────────────────────
+
+    /**
+     * Returns the next business day (skips Saturday and Sunday).
+     */
+    private getNextBusinessDay(): Date {
+        const date = new Date();
+        date.setDate(date.getDate() + 1);
+        // Skip Saturday (6) and Sunday (0)
+        while (date.getDay() === 0 || date.getDay() === 6) {
+            date.setDate(date.getDate() + 1);
+        }
+        return date;
+    }
+
     // ── Observability ───────────────────────────────────────────────────
 
     private getBuiltInRuleNames(): string[] {
         return [
-            'lead.created → notification',
+            'lead.created → notification + admin broadcast + follow-up task + discovery call + analytics',
             'lead.converted → notification',
             'lead.statusChanged → notification (WON/LOST)',
             'client.created → notification',

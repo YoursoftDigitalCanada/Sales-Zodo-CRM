@@ -1,11 +1,19 @@
-import nodemailer from 'nodemailer';
 import { config } from '../../config';
 
+// Dynamic import to prevent crash if nodemailer is not installed
+let nodemailer: any;
+try {
+    nodemailer = require('nodemailer');
+} catch {
+    console.warn('⚠️ nodemailer not installed — emails will be skipped');
+}
+
 class MailerService {
-    private transporter: nodemailer.Transporter | null = null;
+    private transporter: any = null;
     private ready = false;
 
     constructor() {
+        if (!nodemailer) return;
         const { host, port, user, pass } = config.email;
         if (host && user && pass) {
             this.transporter = nodemailer.createTransport({
@@ -19,7 +27,7 @@ class MailerService {
                     this.ready = true;
                     console.log('✅ Mailer ready —', user);
                 })
-                .catch((err) => {
+                .catch((err: any) => {
                     console.warn('⚠️ Mailer not available:', err.message);
                 });
         } else {

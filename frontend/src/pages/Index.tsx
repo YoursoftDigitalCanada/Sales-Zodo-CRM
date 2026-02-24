@@ -465,10 +465,10 @@ const Index = () => {
 
           {/* ===== STAT CARDS ===== */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 stagger-enter">
-            <StatCard title="Active Projects" value={stats.projectsCount} subtitle="Total projects" trend={10} comparison="+2 vs last week" icon={FolderKanban} color="cyan" isLoading={isLoading} lastUpdated="Updated 1h ago" aiInsight="Delivery pace on track" />
-            <StatCard title="Total Earnings" value={`$${stats.earnings.toLocaleString()}`} subtitle="Paid invoices" trend={25} comparison="+$1.2k vs last month" icon={DollarSign} color="orange" isLoading={isLoading} lastUpdated="Updated 2h ago" aiInsight="Revenue trending +12%" />
-            <StatCard title="Total Clients" value={stats.clientsCount} subtitle="Active clients" trend={5} comparison="+3 vs last month" icon={Users} color="green" isLoading={isLoading} lastUpdated="Updated 30m ago" aiInsight={stats.clientsCount > 0 ? `${Math.min(stats.clientsCount, 3)} new this week` : undefined} />
-            <StatCard title="Pending Tasks" value={stats.pendingTasks} subtitle="Due this week" trend={-3} comparison="−2 vs yesterday" icon={Clock} color="purple" isLoading={isLoading} lastUpdated="Updated just now" aiInsight={stats.pendingTasks > 5 ? "Prioritize overdue items" : "On track"} />
+            <StatCard title="Active Projects" value={stats.projectsCount} subtitle="Total projects" trend={0} comparison="Current" icon={FolderKanban} color="cyan" isLoading={isLoading} lastUpdated="Updated just now" aiInsight={stats.projectsCount > 0 ? "Delivery pace on track" : undefined} />
+            <StatCard title="Total Earnings" value={`$${stats.earnings.toLocaleString()}`} subtitle="Paid invoices" trend={0} comparison="Current" icon={DollarSign} color="orange" isLoading={isLoading} lastUpdated="Updated just now" aiInsight={stats.earnings > 0 ? "From paid invoices" : undefined} />
+            <StatCard title="Total Clients" value={stats.clientsCount} subtitle="Active clients" trend={0} comparison="Current" icon={Users} color="green" isLoading={isLoading} lastUpdated="Updated just now" aiInsight={stats.clientsCount > 0 ? `${stats.clientsCount} active` : undefined} />
+            <StatCard title="Pending Tasks" value={stats.pendingTasks} subtitle="Needs action" trend={0} comparison="Current" icon={Clock} color="purple" isLoading={isLoading} lastUpdated="Updated just now" aiInsight={stats.pendingTasks > 5 ? "Prioritize overdue items" : "On track"} />
           </div>
 
           {/* ===== LEADS & INVOICES ROW ===== */}

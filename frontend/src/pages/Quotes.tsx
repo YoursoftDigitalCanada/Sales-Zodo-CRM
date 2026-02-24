@@ -42,6 +42,7 @@ import {
   getQuotes, createQuote, updateQuote, deleteQuote as deleteQuoteApi,
   updateQuoteStatus, type QuoteEntity,
 } from "@/features/quotes";
+import { getClients, type ClientEntity } from "@/features/clients/services/clients-service";
 
 // ============================================
 // STAT CARD
@@ -297,17 +298,25 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
   onSubmit: (data: Partial<Quote>) => void;
 }) => {
   const [formData, setFormData] = useState({
-    title: "", clientName: "", clientEmail: "", clientCompany: "", projectName: "",
+    title: "", clientId: "", clientName: "", clientEmail: "", clientCompany: "", projectName: "",
     description: "", notes: "", terms: "50% upfront, 50% on delivery. Net 30 terms.",
     validUntil: "", priority: "medium" as Quote["priority"], status: "draft" as Quote["status"],
     items: [{ id: "new-1", description: "", quantity: 1, rate: 0, amount: 0 }] as QuoteItem[],
     discount: 0, tax: 13,
   });
+  const [clients, setClients] = useState<ClientEntity[]>([]);
+  const [clientSearch, setClientSearch] = useState("");
+
+  useEffect(() => {
+    if (isOpen) {
+      getClients().then(setClients).catch(() => { });
+    }
+  }, [isOpen]);
 
   useState(() => {
     if (quote) {
       setFormData({
-        title: quote.title, clientName: quote.clientName, clientEmail: quote.clientEmail || "",
+        title: quote.title, clientId: quote.clientId || "", clientName: quote.clientName, clientEmail: quote.clientEmail || "",
         clientCompany: quote.clientCompany || "", projectName: quote.projectName || "",
         description: quote.description || "", notes: quote.notes || "", terms: quote.terms || "",
         validUntil: quote.validUntil ? new Date(quote.validUntil).toISOString().split("T")[0] : "",
@@ -349,7 +358,7 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
     e.preventDefault();
     const validUntilDate = formData.validUntil || new Date(Date.now() + 30 * 86400000).toISOString();
     onSubmit({
-      title: formData.title, clientName: formData.clientName, clientEmail: formData.clientEmail,
+      title: formData.title, clientId: formData.clientId || undefined, clientName: formData.clientName, clientEmail: formData.clientEmail,
       clientCompany: formData.clientCompany, projectName: formData.projectName,
       description: formData.description, notes: formData.notes, terms: formData.terms,
       validUntil: validUntilDate, priority: formData.priority, status: formData.status,
@@ -387,8 +396,60 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div><Label className="text-xs text-[#475569]">Client Name *</Label>
-                <Input value={formData.clientName} onChange={e => setFormData(p => ({ ...p, clientName: e.target.value }))}
-                  placeholder="Client name" className="mt-1 rounded-md" required />
+                <div className="relative mt-1">
+                  <Input
+                    value={clientSearch || formData.clientName}
+                    onChange={e => {
+                      setClientSearch(e.target.value);
+                      setFormData(p => ({ ...p, clientName: e.target.value, clientId: "" }));
+                    }}
+                    placeholder="Search clients..."
+                    className="rounded-md"
+                    required
+                  />
+                  {clientSearch && clients.length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                      {clients
+                        .filter(c => {
+                          const name = c.clientName || c.ClientName || c.name || c.Name || "";
+                          return name.toLowerCase().includes(clientSearch.toLowerCase());
+                        })
+                        .slice(0, 10)
+                        .map(c => {
+                          const cId = String(c.id || c.Id || "");
+                          const cName = c.clientName || c.ClientName || c.name || c.Name || "";
+                          const cEmail = c.primaryEmail || c.contactEmail || c.ContactEmail || c.email || "";
+                          const cCompany = c.primaryContactName || c.contactPerson || c.ContactPerson || "";
+                          return (
+                            <button
+                              key={cId}
+                              type="button"
+                              className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm border-b last:border-b-0"
+                              onClick={() => {
+                                setFormData(p => ({
+                                  ...p,
+                                  clientId: cId,
+                                  clientName: cName,
+                                  clientEmail: cEmail,
+                                  clientCompany: cCompany,
+                                }));
+                                setClientSearch("");
+                              }}
+                            >
+                              <p className="font-medium text-[#0F172A]">{cName}</p>
+                              {cEmail && <p className="text-xs text-[#94A3B8]">{cEmail}</p>}
+                            </button>
+                          );
+                        })}
+                      {clients.filter(c => {
+                        const name = c.clientName || c.ClientName || c.name || c.Name || "";
+                        return name.toLowerCase().includes(clientSearch.toLowerCase());
+                      }).length === 0 && (
+                          <p className="px-3 py-2 text-sm text-[#94A3B8]">No clients found</p>
+                        )}
+                    </div>
+                  )}
+                </div>
               </div>
               <div><Label className="text-xs text-[#475569]">Client Email</Label>
                 <Input value={formData.clientEmail} onChange={e => setFormData(p => ({ ...p, clientEmail: e.target.value }))}
@@ -713,6 +774,7 @@ const QuotesPage = () => {
   const handleCreateQuote = async (data: Partial<Quote>) => {
     try {
       const apiPayload: Record<string, unknown> = {
+        clientId: data.clientId || null,
         validUntil: data.validUntil || new Date(Date.now() + 30 * 86400000).toISOString(),
         currency: data.currency || "CAD",
         taxRate: 13,
@@ -740,6 +802,7 @@ const QuotesPage = () => {
     if (!currentQuote) return;
     try {
       const apiPayload: Record<string, unknown> = {
+        clientId: data.clientId || null,
         validUntil: data.validUntil,
         currency: data.currency || "CAD",
         discountAmount: data.discount || 0,

@@ -177,7 +177,7 @@ const QuoteRow = ({ quote, isSelected, onSelect, onView, onEdit, onDelete, onSen
               <DropdownMenuItem onClick={onEdit} className="rounded-md"><Pencil size={14} className="mr-2" />Edit Quote</DropdownMenuItem>
               <DropdownMenuItem onClick={onDuplicate} className="rounded-md"><Copy size={14} className="mr-2" />Duplicate</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onSend} className="rounded-md"><Send size={14} className="mr-2" />Send to Client</DropdownMenuItem>
+              <DropdownMenuItem onClick={onSend} className="rounded-md"><Send size={14} className="mr-2" />{quote.leadId ? "Send to Lead" : "Send to Client"}</DropdownMenuItem>
               <DropdownMenuItem className="rounded-md"><FileDown size={14} className="mr-2" />Download PDF</DropdownMenuItem>
               <DropdownMenuItem className="rounded-md"><Printer size={14} className="mr-2" />Print</DropdownMenuItem>
               {quote.status === "accepted" && !quote.linkedInvoiceId && (
@@ -722,7 +722,7 @@ const QuoteDetailDialog = ({ isOpen, onClose, quote, onEdit, onDelete, onSend, o
             <Trash2 size={16} className="mr-2" />Delete
           </Button>
           <div className="flex-1" />
-          {quote.status === "draft" && <Button onClick={onSend} className="rounded-md bg-[#0891B2] hover:bg-[#0891B2]/90 text-white"><Send size={16} className="mr-2" />Send to Client</Button>}
+          {quote.status === "draft" && <Button onClick={onSend} className="rounded-md bg-[#0891B2] hover:bg-[#0891B2]/90 text-white"><Send size={16} className="mr-2" />{quote.leadId ? "Send to Lead" : "Send to Client"}</Button>}
           {quote.status === "accepted" && !quote.linkedInvoiceId && <Button onClick={onConvert} className="rounded-md bg-green-600 hover:bg-green-700 text-white"><Receipt size={16} className="mr-2" />Convert to Invoice</Button>}
           <Button onClick={onEdit} className="rounded-md bg-[#0891B2] hover:bg-[#0891B2]/90 text-white"><Pencil size={16} className="mr-2" />Edit</Button>
         </DialogFooter>

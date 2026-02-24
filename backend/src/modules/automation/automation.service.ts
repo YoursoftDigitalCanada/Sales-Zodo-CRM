@@ -441,6 +441,58 @@ export class AutomationService {
                 });
                 logger.debug('[Automation] client.created → notification sent', { clientId: event.clientId });
             }
+
+            // Auto-bootstrap project + milestones from latest accepted quote context
+            // when a client was auto-created from a lead conversion.
+            try {
+                const quoteContext = await this.findLatestAcceptedQuoteForClient(event.tenantId, event.clientId);
+                if (!quoteContext) {
+                    logger.debug('[Automation] client.created → no accepted quote context found; project bootstrap skipped', {
+                        tenantId: event.tenantId,
+                        clientId: event.clientId,
+                    });
+                    return;
+                }
+
+                let ownerEmployeeId: string | undefined;
+                if (event.ownerUserId) {
+                    const ownerEmployee = await prisma.employee.findFirst({
+                        where: { tenantId: event.tenantId, userId: event.ownerUserId },
+                        select: { id: true },
+                    });
+                    ownerEmployeeId = ownerEmployee?.id;
+                }
+
+                const ensured = await this.ensureProjectFromQuoteData({
+                    tenantId: event.tenantId,
+                    quoteId: quoteContext.quoteId,
+                    quoteNumber: quoteContext.quoteNumber,
+                    clientId: event.clientId,
+                    clientName: event.clientName,
+                    total: quoteContext.total,
+                    items: quoteContext.items,
+                    ownerEmployeeId,
+                    trigger: 'client.created',
+                });
+
+                if (ensured.projectId) {
+                    logger.info('[Automation] client.created → project + milestones ensured from quote context', {
+                        tenantId: event.tenantId,
+                        clientId: event.clientId,
+                        quoteId: quoteContext.quoteId,
+                        quoteNumber: quoteContext.quoteNumber,
+                        projectId: ensured.projectId,
+                        projectCreated: ensured.created,
+                        milestoneTasksCreated: ensured.milestoneTasksCreated,
+                    });
+                }
+            } catch (err) {
+                logger.error('[Automation] client.created → quote-based project bootstrap failed', {
+                    tenantId: event.tenantId,
+                    clientId: event.clientId,
+                    err,
+                });
+            }
         });
 
         // ══════════════════════════════════════════════════════════════════
@@ -1905,16 +1957,24 @@ export class AutomationService {
 
             // ── Step 2: Projects — Create project from quote ──
             try {
-                const project = await projectsService.create(event.tenantId, {
-                    projectTitle: `${event.quoteNumber} — ${clientName || 'New Project'}`,
-                    description: `Auto-created from approved quote ${event.quoteNumber}. Total: $${event.total.toLocaleString()}.\n\nLine items:\n${event.items.map(i => `• ${i.description} (${i.quantity} × $${i.unitPrice})`).join('\n')}`,
-                    clientId: clientId || undefined,
-                    status: 'PLANNING',
-                    startDate: new Date().toISOString(),
-                    budget: event.total,
-                }, event.createdById);
-                projectId = project.id;
-                logger.info('[Automation] Step 2 ✓ Project created', { ...ctx, projectId });
+                const ensured = await this.ensureProjectFromQuoteData({
+                    tenantId: event.tenantId,
+                    quoteId: event.quoteId,
+                    quoteNumber: event.quoteNumber,
+                    clientId,
+                    clientName,
+                    total: event.total,
+                    items: event.items,
+                    ownerEmployeeId: event.createdById,
+                    trigger: 'quote.statusChanged(ACCEPTED)',
+                });
+                projectId = ensured.projectId;
+                logger.info('[Automation] Step 2 ✓ Project + milestones ensured', {
+                    ...ctx,
+                    projectId,
+                    projectCreated: ensured.created,
+                    milestoneTasksCreated: ensured.milestoneTasksCreated,
+                });
             } catch (err) {
                 logger.error('[Automation] Step 2 ✗ Project creation failed', { ...ctx, err });
             }
@@ -2277,6 +2337,274 @@ export class AutomationService {
     }
 
     /**
+     * Find the most relevant accepted quote for a newly created client.
+     * This supports the lead-conversion path where quote may still be linked by leadId.
+     */
+    private async findLatestAcceptedQuoteForClient(
+        tenantId: string,
+        clientId: string,
+    ): Promise<{
+        quoteId: string;
+        quoteNumber: string;
+        total: number;
+        items: { description: string; quantity: number; unitPrice: number; total: number }[];
+    } | null> {
+        const byClient = await prisma.quote.findFirst({
+            where: { tenantId, status: 'ACCEPTED', clientId },
+            orderBy: [{ acceptedAt: 'desc' }, { updatedAt: 'desc' }],
+            include: { items: { orderBy: { sortOrder: 'asc' } } },
+        });
+        if (byClient) {
+            return {
+                quoteId: byClient.id,
+                quoteNumber: byClient.quoteNumber,
+                total: Number(byClient.total),
+                items: (byClient.items || []).map((i) => ({
+                    description: i.description,
+                    quantity: Number(i.quantity),
+                    unitPrice: Number(i.unitPrice),
+                    total: Number(i.total),
+                })),
+            };
+        }
+
+        const convertedLead = await prisma.lead.findFirst({
+            where: { tenantId, convertedToClientId: clientId },
+            select: { id: true },
+        });
+        if (!convertedLead) return null;
+
+        const byLead = await prisma.quote.findFirst({
+            where: { tenantId, status: 'ACCEPTED', leadId: convertedLead.id },
+            orderBy: [{ acceptedAt: 'desc' }, { updatedAt: 'desc' }],
+            include: { items: { orderBy: { sortOrder: 'asc' } } },
+        });
+        if (!byLead) return null;
+
+        return {
+            quoteId: byLead.id,
+            quoteNumber: byLead.quoteNumber,
+            total: Number(byLead.total),
+            items: (byLead.items || []).map((i) => ({
+                description: i.description,
+                quantity: Number(i.quantity),
+                unitPrice: Number(i.unitPrice),
+                total: Number(i.total),
+            })),
+        };
+    }
+
+    private buildQuoteProjectCode(quoteNumber: string): string {
+        const clean = (quoteNumber || '')
+            .toUpperCase()
+            .replace(/[^A-Z0-9]/g, '')
+            .slice(0, 30);
+        return `Q-${clean || 'QUOTE'}`;
+    }
+
+    private async resolveQuoteItemsForAutomation(
+        tenantId: string,
+        quoteId: string,
+        incomingItems: { description: string; quantity: number; unitPrice: number; total: number }[],
+    ): Promise<{ description: string; quantity: number; unitPrice: number; total: number }[]> {
+        if (incomingItems && incomingItems.length > 0) return incomingItems;
+
+        const quote = await prisma.quote.findFirst({
+            where: { id: quoteId, tenantId },
+            include: { items: { orderBy: { sortOrder: 'asc' } } },
+        });
+        if (!quote) return [];
+
+        return (quote.items || []).map((item) => ({
+            description: item.description,
+            quantity: Number(item.quantity),
+            unitPrice: Number(item.unitPrice),
+            total: Number(item.total),
+        }));
+    }
+
+    private async ensureProjectFromQuoteData(params: {
+        tenantId: string;
+        quoteId: string;
+        quoteNumber: string;
+        clientId?: string;
+        clientName?: string;
+        total: number;
+        items: { description: string; quantity: number; unitPrice: number; total: number }[];
+        ownerEmployeeId?: string;
+        trigger: string;
+    }): Promise<{ projectId?: string; created: boolean; milestoneTasksCreated: number }> {
+        const {
+            tenantId,
+            quoteId,
+            quoteNumber,
+            clientId,
+            clientName,
+            total,
+            items,
+            ownerEmployeeId,
+            trigger,
+        } = params;
+
+        if (!clientId) return { created: false, milestoneTasksCreated: 0 };
+
+        const projectCode = this.buildQuoteProjectCode(quoteNumber);
+        const resolvedItems = await this.resolveQuoteItemsForAutomation(tenantId, quoteId, items);
+        const projectTitle = `${quoteNumber} — ${clientName || 'New Project'}`;
+        const lineItemText = resolvedItems.length > 0
+            ? resolvedItems.map((i) => `• ${i.description} (${i.quantity} × $${i.unitPrice})`).join('\n')
+            : '• Quote items not available in event payload';
+
+        let projectId: string | undefined;
+        let created = false;
+
+        const existing = await prisma.project.findFirst({
+            where: { tenantId, code: projectCode },
+            select: { id: true },
+        });
+
+        if (existing) {
+            projectId = existing.id;
+        } else {
+            try {
+                const project = await projectsService.create(tenantId, {
+                    projectTitle,
+                    code: projectCode,
+                    description: `Auto-created from approved quote ${quoteNumber}. Total: $${total.toLocaleString()}.\n\nLine items:\n${lineItemText}`,
+                    clientId,
+                    status: 'PLANNING',
+                    startDate: new Date().toISOString(),
+                    budget: total,
+                }, ownerEmployeeId);
+                projectId = project.id;
+                created = true;
+            } catch (err) {
+                // Handle race where another handler created the same quote project first.
+                const raced = await prisma.project.findFirst({
+                    where: { tenantId, code: projectCode },
+                    select: { id: true },
+                });
+                if (!raced) throw err;
+                projectId = raced.id;
+            }
+        }
+
+        let milestoneTasksCreated = 0;
+        if (projectId) {
+            milestoneTasksCreated = await this.ensureQuoteMilestoneTasks({
+                tenantId,
+                projectId,
+                clientId,
+                quoteNumber,
+                items: resolvedItems,
+                ownerEmployeeId,
+            });
+        }
+
+        activityLogger.log({
+            tenantId,
+            entityType: 'Project',
+            entityId: projectId || quoteId,
+            action: created ? 'CREATE' : 'UPDATE',
+            module: 'automation',
+            description: `Quote project ensured from ${trigger} for ${quoteNumber}`,
+            metadata: {
+                trigger,
+                quoteId,
+                quoteNumber,
+                clientId,
+                projectId,
+                projectCode,
+                projectCreated: created,
+                milestoneTasksCreated,
+            },
+        });
+
+        return { projectId, created, milestoneTasksCreated };
+    }
+
+    private async ensureQuoteMilestoneTasks(params: {
+        tenantId: string;
+        projectId: string;
+        clientId: string;
+        quoteNumber: string;
+        items: { description: string; quantity: number; unitPrice: number; total: number }[];
+        ownerEmployeeId?: string;
+    }): Promise<number> {
+        const { tenantId, projectId, clientId, quoteNumber, items, ownerEmployeeId } = params;
+
+        const existingMilestones = await prisma.task.count({
+            where: {
+                tenantId,
+                projectId,
+                title: { startsWith: 'Milestone ' },
+                description: { contains: `Quote ${quoteNumber}` },
+            },
+        });
+        if (existingMilestones > 0) return 0;
+
+        const seeds = items.length > 0
+            ? items.map((item, idx) => ({
+                title: `Milestone ${idx + 1} - ${item.description || `Line Item ${idx + 1}`}`,
+                description: `Quote ${quoteNumber}\nDeliverable: ${item.description || `Line Item ${idx + 1}`}\nQuantity: ${item.quantity}\nRate: $${item.unitPrice}\nAmount: $${item.total}`,
+                priority: idx === 0 ? 'HIGH' as const : 'MEDIUM' as const,
+                offsetDays: idx * 7,
+            }))
+            : [
+                {
+                    title: `Milestone 1 - Kickoff (${quoteNumber})`,
+                    description: `Quote ${quoteNumber}\nKickoff and implementation planning.`,
+                    priority: 'HIGH' as const,
+                    offsetDays: 0,
+                },
+                {
+                    title: `Milestone 2 - Midpoint Review (${quoteNumber})`,
+                    description: `Quote ${quoteNumber}\nReview progress, quality, and scope alignment.`,
+                    priority: 'MEDIUM' as const,
+                    offsetDays: 7,
+                },
+                {
+                    title: `Milestone 3 - Final Delivery (${quoteNumber})`,
+                    description: `Quote ${quoteNumber}\nFinal delivery, QA sign-off, and handover.`,
+                    priority: 'HIGH' as const,
+                    offsetDays: 14,
+                },
+            ];
+
+        let created = 0;
+        for (const seed of seeds) {
+            try {
+                const dueDate = this.getNextBusinessDay();
+                dueDate.setDate(dueDate.getDate() + seed.offsetDays);
+                while (dueDate.getDay() === 0 || dueDate.getDay() === 6) {
+                    dueDate.setDate(dueDate.getDate() + 1);
+                }
+
+                await tasksService.create(tenantId, {
+                    title: seed.title,
+                    description: seed.description,
+                    priority: seed.priority,
+                    projectId,
+                    clientId,
+                    assignedToId: ownerEmployeeId || null,
+                    dueDate: dueDate.toISOString(),
+                });
+                created += 1;
+            } catch (err) {
+                logger.error('[Automation] quote milestone task creation failed', {
+                    tenantId,
+                    projectId,
+                    quoteNumber,
+                    title: seed.title,
+                    err,
+                });
+            }
+        }
+
+        return created;
+    }
+
+    /**
      * Returns the next business day (skips Saturday and Sunday).
      */
     private getNextBusinessDay(): Date {
@@ -2296,7 +2624,7 @@ export class AutomationService {
             'lead.created → notification + admin broadcast + follow-up task + discovery call + analytics',
             'lead.converted → notification',
             'lead.statusChanged → QUALIFIED (meeting + proposal task + notification) / WON|LOST (notification)',
-            'client.created → notification',
+            'client.created → notification + accepted-quote project bootstrap + milestones',
             'project.created → phase tasks + team notification + project folder + admin notification + audit',
             'invoice.statusChanged (OVERDUE) → task + collection call | (PAID) → PAYMENT + BI ENGINE: 10-step cascade (revenue + conversion + CLV + AI prediction)',
             'task.completed → notification',

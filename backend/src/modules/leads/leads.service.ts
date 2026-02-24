@@ -287,6 +287,8 @@ export class LeadsService {
       newStatus: status,
       ownerId: existing.assignedToId || undefined,
       ownerUserId: dto.assignedTo?.userId,
+      email: dto.email,
+      companyName: dto.companyName,
     });
 
     // ▸ Audit: centralized audit trail

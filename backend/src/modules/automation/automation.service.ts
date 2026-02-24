@@ -289,23 +289,130 @@ export class AutomationService {
             });
         });
 
-        // ── Lead Status Changed (WON/LOST) ──
+        // ── Lead Status Changed (QUALIFIED / WON / LOST) ──
         eventBus.on('lead.statusChanged', async (event: LeadStatusChangedEvent) => {
+            const ctx = { leadId: event.leadId, tenantId: event.tenantId, newStatus: event.newStatus };
+            const label = event.companyName
+                ? `${event.leadName} (${event.companyName})`
+                : event.leadName;
+
+            // ── QUALIFIED → Calendar meeting + proposal task + notification ──
+            if (event.newStatus === 'QUALIFIED') {
+                // 1️⃣  Notify lead owner about qualification
+                if (event.ownerUserId) {
+                    try {
+                        await notificationsService.create({
+                            title: '🎯 Lead Qualified',
+                            message: `"${label}" is now qualified! A qualification meeting and proposal task have been auto-created.`,
+                            type: 'SUCCESS',
+                            userId: event.ownerUserId,
+                            tenantId: event.tenantId,
+                            actionUrl: `/leads/${event.leadId}`,
+                            actionLabel: 'View Lead',
+                        });
+                        logger.debug('[Automation] lead.statusChanged (QUALIFIED) → owner notification sent', ctx);
+                    } catch (err) {
+                        logger.error('[Automation] lead.statusChanged (QUALIFIED) → owner notification failed', { ...ctx, err });
+                    }
+                }
+
+                // 2️⃣  Auto-create Qualification Meeting calendar event (next biz day, 45 min @ 2 PM)
+                try {
+                    const meetingDate = this.getNextBusinessDay();
+                    meetingDate.setHours(14, 0, 0, 0); // 2:00 PM
+                    const endTime = new Date(meetingDate);
+                    endTime.setMinutes(endTime.getMinutes() + 45);
+
+                    await calendarService.create(event.tenantId, {
+                        title: `Qualification Meeting — ${label}`,
+                        description: [
+                            `Qualified lead "${event.leadName}" is ready for a deeper conversation.`,
+                            event.companyName ? `Company: ${event.companyName}` : '',
+                            event.email ? `Contact: ${event.email}` : '',
+                            '',
+                            'Agenda:',
+                            '• Review needs & pain points',
+                            '• Present relevant solutions',
+                            '• Discuss budget & timeline',
+                            '• Agree on next steps / proposal',
+                        ].filter(Boolean).join('\n'),
+                        startTime: meetingDate,
+                        endTime,
+                        eventType: 'MEETING',
+                        priority: 'HIGH',
+                        category: 'lead-qualification',
+                        color: '#A855F7', // purple for qualification stage
+                    });
+                    logger.info('[Automation] lead.statusChanged (QUALIFIED) → qualification meeting created', ctx);
+                } catch (err) {
+                    logger.error('[Automation] lead.statusChanged (QUALIFIED) → calendar event failed', { ...ctx, err });
+                }
+
+                // 3️⃣  Auto-create "Prepare Proposal" task (due in 3 days)
+                try {
+                    const dueDate = new Date();
+                    dueDate.setDate(dueDate.getDate() + 3);
+
+                    await tasksService.create(event.tenantId, {
+                        title: `Prepare proposal for: ${label}`,
+                        description: [
+                            `Lead "${event.leadName}" moved to QUALIFIED.`,
+                            event.email ? `Email: ${event.email}` : '',
+                            event.companyName ? `Company: ${event.companyName}` : '',
+                            '',
+                            'Deliverables:',
+                            '• Draft proposal / scope of work',
+                            '• Prepare pricing options',
+                            '• Gather case studies / references',
+                            '• Send proposal within 3 days',
+                        ].filter(Boolean).join('\n'),
+                        priority: 'HIGH',
+                        dueDate,
+                        assignedToId: event.ownerId || null,
+                    });
+                    logger.info('[Automation] lead.statusChanged (QUALIFIED) → proposal task created', ctx);
+                } catch (err) {
+                    logger.error('[Automation] lead.statusChanged (QUALIFIED) → task creation failed', { ...ctx, err });
+                }
+
+                // 4️⃣  Analytics audit
+                try {
+                    activityLogger.log({
+                        tenantId: event.tenantId,
+                        entityType: 'Lead',
+                        entityId: event.leadId,
+                        action: 'STATUS_CHANGE',
+                        module: 'automation',
+                        description: `Qualified automation triggered for "${label}"`,
+                        metadata: {
+                            leadName: event.leadName,
+                            oldStatus: event.oldStatus,
+                            newStatus: event.newStatus,
+                            automationActions: ['notification', 'calendar-meeting', 'proposal-task', 'analytics'],
+                        },
+                    });
+                } catch (err) {
+                    logger.error('[Automation] lead.statusChanged (QUALIFIED) → analytics failed', { ...ctx, err });
+                }
+            }
+
+            // ── WON / LOST → Terminal state notification ──
             if (event.ownerUserId && (event.newStatus === 'WON' || event.newStatus === 'LOST')) {
                 const emoji = event.newStatus === 'WON' ? '🏆' : '❌';
-                await notificationsService.create({
-                    title: `${emoji} Lead ${event.newStatus === 'WON' ? 'Won' : 'Lost'}`,
-                    message: `Lead "${event.leadName}" has been marked as ${event.newStatus}.`,
-                    type: event.newStatus === 'WON' ? 'SUCCESS' : 'WARNING',
-                    userId: event.ownerUserId,
-                    tenantId: event.tenantId,
-                    actionUrl: `/leads/${event.leadId}`,
-                    actionLabel: 'View Lead',
-                });
-                logger.debug('[Automation] lead.statusChanged (terminal) → notification sent', {
-                    leadId: event.leadId,
-                    newStatus: event.newStatus,
-                });
+                try {
+                    await notificationsService.create({
+                        title: `${emoji} Lead ${event.newStatus === 'WON' ? 'Won' : 'Lost'}`,
+                        message: `Lead "${event.leadName}" has been marked as ${event.newStatus}.`,
+                        type: event.newStatus === 'WON' ? 'SUCCESS' : 'WARNING',
+                        userId: event.ownerUserId,
+                        tenantId: event.tenantId,
+                        actionUrl: `/leads/${event.leadId}`,
+                        actionLabel: 'View Lead',
+                    });
+                    logger.debug('[Automation] lead.statusChanged (terminal) → notification sent', ctx);
+                } catch (err) {
+                    logger.error('[Automation] lead.statusChanged (terminal) → notification failed', { ...ctx, err });
+                }
             }
         });
 
@@ -871,7 +978,7 @@ export class AutomationService {
         return [
             'lead.created → notification + admin broadcast + follow-up task + discovery call + analytics',
             'lead.converted → notification',
-            'lead.statusChanged → notification (WON/LOST)',
+            'lead.statusChanged → QUALIFIED (meeting + proposal task + notification) / WON|LOST (notification)',
             'client.created → notification',
             'project.created → notification',
             'invoice.statusChanged → notification (OVERDUE/PAID)',

@@ -22,6 +22,8 @@ export interface LeadStatusChangedEvent {
     newStatus: string;
     ownerId?: string;
     ownerUserId?: string;
+    email?: string;
+    companyName?: string;
 }
 
 export interface LeadConvertedEvent {

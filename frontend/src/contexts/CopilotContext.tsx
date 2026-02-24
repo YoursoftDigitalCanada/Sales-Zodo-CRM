@@ -99,9 +99,6 @@ const ROUTE_PATTERNS: RoutePattern[] = [
     // E-commerce
     { match: /^\/ecommerce$/, module: "ecommerce", page: "overview", label: "E-Commerce" },
 
-    // Applications
-    { match: /^\/applications$/, module: "applications", page: "list", label: "Applications" },
-
     // Settings
     { match: /^\/settings/, module: "settings", page: "settings", label: "Settings" },
 

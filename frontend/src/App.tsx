@@ -47,7 +47,6 @@ import ExpensesPage from "./pages/Expenses";
 
 import EcommercePage from "./pages/Ecommerce";
 import ServicesPage from "./pages/ServicesPage";
-import Applications from "./pages/Applications";
 
 // ✅ Chat Page Import
 import ChatPage from "./pages/Chat";
@@ -449,14 +448,7 @@ const App = () => (
                 </FeatureGuard>
               }
             />
-            <Route
-              path="/applications"
-              element={
-                <FeatureGuard featureId="leads">
-                  <Applications />
-                </FeatureGuard>
-              }
-            />
+
 
             {/* ========== COMMUNICATION ROUTES ========== */}
             <Route

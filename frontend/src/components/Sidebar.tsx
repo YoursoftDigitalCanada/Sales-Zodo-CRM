@@ -54,7 +54,6 @@ import {
   Megaphone,
   Building2,
   UserPlus,
-  ClipboardList,
   GitBranch,
   Layers,
   Award,
@@ -151,14 +150,6 @@ const navigationItems: NavigationItem[] = [
     icon: Contact,
     path: "/contacts",
     featureId: "contacts",
-  },
-  {
-    title: "Applications",
-    icon: ClipboardList,
-    path: "/applications",
-    featureId: "leads",
-    badge: 3,
-    badgeColor: "gold",
   },
 
   // ===== PROJECT MANAGEMENT =====

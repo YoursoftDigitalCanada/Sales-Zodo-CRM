@@ -84,3 +84,8 @@ export async function updateQuoteStatus(id: string, status: string): Promise<Quo
     const response = await api.patch(`/quotes/${id}/status`, { status });
     return response.data?.data || response.data;
 }
+
+export async function sendQuoteEmail(id: string): Promise<{ success: boolean; message: string }> {
+    const response = await api.post(`/quotes/${id}/send`);
+    return response.data;
+}

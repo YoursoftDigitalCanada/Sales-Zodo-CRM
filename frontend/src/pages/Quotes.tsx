@@ -40,7 +40,7 @@ import {
 } from "./quotes-data";
 import {
   getQuotes, createQuote, updateQuote, deleteQuote as deleteQuoteApi,
-  updateQuoteStatus, type QuoteEntity,
+  updateQuoteStatus, sendQuoteEmail, type QuoteEntity,
 } from "@/features/quotes";
 import { getClients, type ClientEntity } from "@/features/clients/services/clients-service";
 import { getLeads, type LeadEntity } from "@/features/leads/services/leads-service";
@@ -925,12 +925,13 @@ const QuotesPage = () => {
 
   const handleSendQuote = async (quoteId: string) => {
     try {
-      await updateQuoteStatus(quoteId, "SENT");
+      await sendQuoteEmail(quoteId);
       setQuotes(prev => prev.map(q => q.id === quoteId ? { ...q, status: "sent" as const, sentAt: new Date().toISOString() } : q));
-      toast({ title: "Quote Sent", description: "Quote has been sent to the client." });
-    } catch (err) {
+      toast({ title: "Quote Sent", description: "Quote has been emailed to the recipient." });
+    } catch (err: any) {
       console.error("Failed to send quote:", err);
-      toast({ title: "Error", description: "Failed to send quote", variant: "destructive" });
+      const msg = err?.response?.data?.message || "Failed to send quote";
+      toast({ title: "Error", description: msg, variant: "destructive" });
     }
   };
 

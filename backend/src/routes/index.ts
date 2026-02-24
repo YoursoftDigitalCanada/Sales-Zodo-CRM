@@ -31,6 +31,7 @@ import calendarRoutes from '../modules/calendar/calendar.routes';
 // Finance modules
 import invoicesRoutes from '../modules/invoices/invoices.routes';
 import quotesRoutes from '../modules/quotes/quotes.routes';
+import quotesPublicRoutes from '../modules/quotes/quotes.public-routes';
 import expensesRoutes from '../modules/expenses/expenses.routes';
 import bookingsRoutes from '../modules/bookings/bookings.routes';
 import servicesRoutes from '../modules/services/services.routes';
@@ -83,6 +84,7 @@ export function registerRoutes(app: Application): void {
   // =========================================================================
 
   apiRouter.use('/auth', authRoutes);
+  apiRouter.use('/public', quotesPublicRoutes);
 
   // =========================================================================
   // PROTECTED ROUTES

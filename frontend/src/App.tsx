@@ -14,6 +14,7 @@ import { FeatureGuard } from "@/components/FeatureGuard";
 
 // Page Imports
 import LandingPage from "./pages/LandingPage";
+import PublicQuoteView from "./pages/PublicQuoteView";
 import Onboarding from "./pages/Onboarding";
 import TasksPage from "./pages/Tasks";
 import AllLeads from "./pages/Leads/AllLeads";
@@ -107,6 +108,7 @@ const App = () => (
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
+            <Route path="/quote/:token" element={<PublicQuoteView />} />
 
             {/* ========== DASHBOARD ========== */}
             <Route path="/dashboard" element={<Index />} />

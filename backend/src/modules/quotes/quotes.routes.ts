@@ -16,5 +16,6 @@ router.get('/:id', requirePermission(PERMISSIONS.QUOTES_VIEW), quotesController.
 router.put('/:id', requirePermission(PERMISSIONS.QUOTES_UPDATE), validateBody(updateQuoteSchema), quotesController.update.bind(quotesController));
 router.delete('/:id', requirePermission(PERMISSIONS.QUOTES_DELETE), quotesController.delete.bind(quotesController));
 router.patch('/:id/status', requirePermission(PERMISSIONS.QUOTES_UPDATE), quotesController.updateStatus.bind(quotesController));
+router.post('/:id/send', requirePermission(PERMISSIONS.QUOTES_UPDATE), quotesController.send.bind(quotesController));
 
 export default router;

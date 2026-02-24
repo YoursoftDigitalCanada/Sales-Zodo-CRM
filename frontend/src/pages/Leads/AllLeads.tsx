@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { getLeads, createLead, updateLead, deleteLead, updateLeadStatus } from "@/features/leads";
 import { createCalendarEvent } from "@/features/calendar";
+import { autocompleteAddress } from "@/features/roof-estimator/services/roof-estimator-service";
 import { getEmployees } from "@/features/users";
 import { Sidebar } from "@/components/Sidebar";
 import { AiInsightBadge, getLeadInsights } from "@/components/ai/AiInsightBadge";
@@ -1568,6 +1569,47 @@ const ScheduleMeetingDialog = ({
   const [meetingLink, setMeetingLink] = useState("");
   const [meetingNotes, setMeetingNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [locSuggestions, setLocSuggestions] = useState<Array<{ description: string; placeId: string }>>([]);
+  const [showLocSuggestions, setShowLocSuggestions] = useState(false);
+  const locAutocompleteRef = useRef<HTMLDivElement>(null);
+  const locDebounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+  // Close location autocomplete on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (locAutocompleteRef.current && !locAutocompleteRef.current.contains(e.target as Node)) {
+        setShowLocSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleLocationChange = useCallback((value: string) => {
+    setMeetingLocation(value);
+    if (locDebounceTimer.current) clearTimeout(locDebounceTimer.current);
+    if (value.length < 3) {
+      setLocSuggestions([]);
+      setShowLocSuggestions(false);
+      return;
+    }
+    locDebounceTimer.current = setTimeout(async () => {
+      try {
+        const results = await autocompleteAddress(value);
+        setLocSuggestions(results);
+        setShowLocSuggestions(results.length > 0);
+      } catch {
+        setLocSuggestions([]);
+        setShowLocSuggestions(false);
+      }
+    }, 300);
+  }, []);
+
+  const selectLocSuggestion = (description: string) => {
+    setMeetingLocation(description);
+    setLocSuggestions([]);
+    setShowLocSuggestions(false);
+  };
 
   // Reset form when dialog opens
   useEffect(() => {
@@ -1641,8 +1683,8 @@ const ScheduleMeetingDialog = ({
                 type="button"
                 onClick={() => setMeetingType("online")}
                 className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 ${meetingType === "online"
-                    ? "border-[#0891B2] bg-[#0891B2]/5 shadow-sm"
-                    : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                  ? "border-[#0891B2] bg-[#0891B2]/5 shadow-sm"
+                  : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
                   }`}
               >
                 <div className={`w-12 h-12 rounded-full flex items-center justify-center ${meetingType === "online" ? "bg-[#0891B2]/10" : "bg-gray-100"
@@ -1663,8 +1705,8 @@ const ScheduleMeetingDialog = ({
                 type="button"
                 onClick={() => setMeetingType("offline")}
                 className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 ${meetingType === "offline"
-                    ? "border-[#F59E0B] bg-[#F59E0B]/5 shadow-sm"
-                    : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                  ? "border-[#F59E0B] bg-[#F59E0B]/5 shadow-sm"
+                  : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
                   }`}
               >
                 <div className={`w-12 h-12 rounded-full flex items-center justify-center ${meetingType === "offline" ? "bg-[#F59E0B]/10" : "bg-gray-100"
@@ -1755,16 +1797,32 @@ const ScheduleMeetingDialog = ({
           ) : (
             <div>
               <Label htmlFor="meetingLocation" className="text-sm font-medium text-[#475569]">Location</Label>
-              <div className="relative mt-1.5">
-                <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#F59E0B]" />
+              <div className="relative mt-1.5" ref={locAutocompleteRef}>
+                <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#F59E0B] z-10" />
                 <Input
                   id="meetingLocation"
                   value={meetingLocation}
-                  onChange={(e) => setMeetingLocation(e.target.value)}
-                  placeholder="Office address or venue"
+                  onChange={(e) => handleLocationChange(e.target.value)}
+                  placeholder="Start typing an address..."
                   className="pl-9 rounded-lg"
+                  autoComplete="off"
                   required
                 />
+                {showLocSuggestions && locSuggestions.length > 0 && (
+                  <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    {locSuggestions.map((s, i) => (
+                      <button
+                        key={s.placeId || i}
+                        type="button"
+                        className="w-full text-left px-3 py-2.5 text-sm hover:bg-[#f0fdfa] transition-colors flex items-center gap-2 border-b last:border-b-0 border-gray-100"
+                        onClick={() => selectLocSuggestion(s.description)}
+                      >
+                        <MapPin size={14} className="text-[#F59E0B] flex-shrink-0" />
+                        <span className="truncate">{s.description}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1795,8 +1853,8 @@ const ScheduleMeetingDialog = ({
               type="submit"
               disabled={isSubmitting}
               className={`rounded-lg gap-2 text-white ${meetingType === "online"
-                  ? "bg-[#0891B2] hover:bg-[#0891B2]/90"
-                  : "bg-[#F59E0B] hover:bg-[#F59E0B]/90"
+                ? "bg-[#0891B2] hover:bg-[#0891B2]/90"
+                : "bg-[#F59E0B] hover:bg-[#F59E0B]/90"
                 }`}
             >
               {isSubmitting ? (

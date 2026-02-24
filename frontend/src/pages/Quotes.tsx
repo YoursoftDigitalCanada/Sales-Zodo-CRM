@@ -43,6 +43,7 @@ import {
   updateQuoteStatus, type QuoteEntity,
 } from "@/features/quotes";
 import { getClients, type ClientEntity } from "@/features/clients/services/clients-service";
+import { getLeads, type LeadEntity } from "@/features/leads/services/leads-service";
 
 // ============================================
 // STAT CARD
@@ -298,32 +299,39 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
   onSubmit: (data: Partial<Quote>) => void;
 }) => {
   const [formData, setFormData] = useState({
-    title: "", clientId: "", clientName: "", clientEmail: "", clientCompany: "", projectName: "",
+    title: "", clientId: "", clientName: "", clientEmail: "", clientCompany: "",
+    leadId: "", leadName: "", projectName: "",
     description: "", notes: "", terms: "50% upfront, 50% on delivery. Net 30 terms.",
     validUntil: "", priority: "medium" as Quote["priority"], status: "draft" as Quote["status"],
     items: [{ id: "new-1", description: "", quantity: 1, rate: 0, amount: 0 }] as QuoteItem[],
     discount: 0, tax: 13,
   });
+  const [recipientType, setRecipientType] = useState<"client" | "lead">("client");
   const [clients, setClients] = useState<ClientEntity[]>([]);
-  const [clientSearch, setClientSearch] = useState("");
+  const [leads, setLeads] = useState<LeadEntity[]>([]);
+  const [recipientSearch, setRecipientSearch] = useState("");
 
   useEffect(() => {
     if (isOpen) {
       getClients().then(setClients).catch(() => { });
+      getLeads().then(setLeads).catch(() => { });
     }
   }, [isOpen]);
 
   useState(() => {
     if (quote) {
       setFormData({
-        title: quote.title, clientId: quote.clientId || "", clientName: quote.clientName, clientEmail: quote.clientEmail || "",
-        clientCompany: quote.clientCompany || "", projectName: quote.projectName || "",
+        title: quote.title, clientId: quote.clientId || "", clientName: quote.clientName,
+        clientEmail: quote.clientEmail || "", clientCompany: quote.clientCompany || "",
+        leadId: quote.leadId || "", leadName: quote.leadName || "",
+        projectName: quote.projectName || "",
         description: quote.description || "", notes: quote.notes || "", terms: quote.terms || "",
         validUntil: quote.validUntil ? new Date(quote.validUntil).toISOString().split("T")[0] : "",
         priority: quote.priority, status: quote.status,
         items: quote.items.length > 0 ? quote.items : [{ id: "new-1", description: "", quantity: 1, rate: 0, amount: 0 }],
         discount: quote.discount, tax: quote.tax,
       });
+      if (quote.leadId) setRecipientType("lead");
     }
   });
 
@@ -358,8 +366,14 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
     e.preventDefault();
     const validUntilDate = formData.validUntil || new Date(Date.now() + 30 * 86400000).toISOString();
     onSubmit({
-      title: formData.title, clientId: formData.clientId || undefined, clientName: formData.clientName, clientEmail: formData.clientEmail,
-      clientCompany: formData.clientCompany, projectName: formData.projectName,
+      title: formData.title,
+      clientId: recipientType === "client" ? (formData.clientId || undefined) : undefined,
+      clientName: recipientType === "client" ? formData.clientName : (formData.leadName || ""),
+      clientEmail: formData.clientEmail,
+      clientCompany: formData.clientCompany,
+      leadId: recipientType === "lead" ? (formData.leadId || undefined) : undefined,
+      leadName: recipientType === "lead" ? formData.leadName : undefined,
+      projectName: formData.projectName,
       description: formData.description, notes: formData.notes, terms: formData.terms,
       validUntil: validUntilDate, priority: formData.priority, status: formData.status,
       items: formData.items, subtotal, tax: taxAmount, discount: formData.discount, total,
@@ -367,6 +381,8 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
     });
     onClose();
   };
+
+  const hasRecipient = recipientType === "client" ? !!formData.clientName : !!formData.leadName;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -394,66 +410,120 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
                   placeholder="e.g. Web Revamp 2026" className="mt-1 rounded-md" />
               </div>
             </div>
+
+            {/* Recipient Type Toggle */}
+            <div>
+              <Label className="text-xs text-[#475569] mb-2 block">Send To *</Label>
+              <div className="flex gap-2 mb-3">
+                <button type="button"
+                  className={cn("px-4 py-1.5 rounded-full text-sm font-medium transition-all",
+                    recipientType === "client"
+                      ? "bg-[#0891B2] text-white shadow-sm"
+                      : "bg-gray-100 text-[#475569] hover:bg-gray-200")}
+                  onClick={() => setRecipientType("client")}>
+                  <Users className="inline w-3.5 h-3.5 mr-1.5" />Client
+                </button>
+                <button type="button"
+                  className={cn("px-4 py-1.5 rounded-full text-sm font-medium transition-all",
+                    recipientType === "lead"
+                      ? "bg-[#D97706] text-white shadow-sm"
+                      : "bg-gray-100 text-[#475569] hover:bg-gray-200")}
+                  onClick={() => setRecipientType("lead")}>
+                  <Target className="inline w-3.5 h-3.5 mr-1.5" />Lead
+                </button>
+              </div>
+            </div>
+
+            {/* Client / Lead Selector */}
             <div className="grid grid-cols-2 gap-4">
-              <div><Label className="text-xs text-[#475569]">Client Name *</Label>
+              <div>
+                <Label className="text-xs text-[#475569]">
+                  {recipientType === "client" ? "Client Name *" : "Lead Name *"}
+                </Label>
                 <div className="relative mt-1">
                   <Input
-                    value={clientSearch || formData.clientName}
+                    value={recipientSearch || (recipientType === "client" ? formData.clientName : formData.leadName)}
                     onChange={e => {
-                      setClientSearch(e.target.value);
-                      setFormData(p => ({ ...p, clientName: e.target.value, clientId: "" }));
+                      setRecipientSearch(e.target.value);
+                      if (recipientType === "client") {
+                        setFormData(p => ({ ...p, clientName: e.target.value, clientId: "" }));
+                      } else {
+                        setFormData(p => ({ ...p, leadName: e.target.value, leadId: "" }));
+                      }
                     }}
-                    placeholder="Search clients..."
+                    placeholder={recipientType === "client" ? "Search clients..." : "Search leads..."}
                     className="rounded-md"
                     required
                   />
-                  {clientSearch && clients.length > 0 && (
+                  {recipientSearch && (
                     <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
-                      {clients
-                        .filter(c => {
-                          const name = c.clientName || c.ClientName || c.name || c.Name || "";
-                          return name.toLowerCase().includes(clientSearch.toLowerCase());
-                        })
-                        .slice(0, 10)
-                        .map(c => {
-                          const cId = String(c.id || c.Id || "");
-                          const cName = c.clientName || c.ClientName || c.name || c.Name || "";
-                          const cEmail = c.primaryEmail || c.contactEmail || c.ContactEmail || c.email || "";
-                          const cCompany = c.primaryContactName || c.contactPerson || c.ContactPerson || "";
-                          return (
-                            <button
-                              key={cId}
-                              type="button"
-                              className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm border-b last:border-b-0"
-                              onClick={() => {
-                                setFormData(p => ({
-                                  ...p,
-                                  clientId: cId,
-                                  clientName: cName,
-                                  clientEmail: cEmail,
-                                  clientCompany: cCompany,
-                                }));
-                                setClientSearch("");
-                              }}
-                            >
-                              <p className="font-medium text-[#0F172A]">{cName}</p>
-                              {cEmail && <p className="text-xs text-[#94A3B8]">{cEmail}</p>}
-                            </button>
-                          );
-                        })}
-                      {clients.filter(c => {
-                        const name = c.clientName || c.ClientName || c.name || c.Name || "";
-                        return name.toLowerCase().includes(clientSearch.toLowerCase());
-                      }).length === 0 && (
-                          <p className="px-3 py-2 text-sm text-[#94A3B8]">No clients found</p>
-                        )}
+                      {recipientType === "client" ? (
+                        <>
+                          {clients
+                            .filter(c => {
+                              const name = c.clientName || c.ClientName || c.name || c.Name || "";
+                              return name.toLowerCase().includes(recipientSearch.toLowerCase());
+                            })
+                            .slice(0, 10)
+                            .map(c => {
+                              const cId = String(c.id || c.Id || "");
+                              const cName = c.clientName || c.ClientName || c.name || c.Name || "";
+                              const cEmail = c.primaryEmail || c.contactEmail || c.ContactEmail || c.email || "";
+                              const cCompany = c.primaryContactName || c.contactPerson || c.ContactPerson || "";
+                              return (
+                                <button key={cId} type="button"
+                                  className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm border-b last:border-b-0"
+                                  onClick={() => {
+                                    setFormData(p => ({ ...p, clientId: cId, clientName: cName, clientEmail: cEmail, clientCompany: cCompany }));
+                                    setRecipientSearch("");
+                                  }}>
+                                  <p className="font-medium text-[#0F172A]">{cName}</p>
+                                  {cEmail && <p className="text-xs text-[#94A3B8]">{cEmail}</p>}
+                                </button>
+                              );
+                            })}
+                          {clients.filter(c => (c.clientName || c.ClientName || c.name || c.Name || "").toLowerCase().includes(recipientSearch.toLowerCase())).length === 0 && (
+                            <p className="px-3 py-2 text-sm text-[#94A3B8]">No clients found</p>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          {leads
+                            .filter(l => {
+                              const name = String(l.contactName || l.name || l.companyName || "");
+                              return name.toLowerCase().includes(recipientSearch.toLowerCase());
+                            })
+                            .slice(0, 10)
+                            .map(l => {
+                              const lId = String(l.id);
+                              const lName = String(l.contactName || l.name || l.companyName || "");
+                              const lEmail = String(l.email || l.contactEmail || "");
+                              const lCompany = String(l.companyName || l.company || "");
+                              return (
+                                <button key={lId} type="button"
+                                  className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm border-b last:border-b-0"
+                                  onClick={() => {
+                                    setFormData(p => ({ ...p, leadId: lId, leadName: lName, clientEmail: lEmail, clientCompany: lCompany }));
+                                    setRecipientSearch("");
+                                  }}>
+                                  <p className="font-medium text-[#0F172A]">{lName}</p>
+                                  {lEmail && <p className="text-xs text-[#94A3B8]">{lEmail}</p>}
+                                  {lCompany && <p className="text-xs text-[#CBD5E1]">{lCompany}</p>}
+                                </button>
+                              );
+                            })}
+                          {leads.filter(l => String(l.contactName || l.name || l.companyName || "").toLowerCase().includes(recipientSearch.toLowerCase())).length === 0 && (
+                            <p className="px-3 py-2 text-sm text-[#94A3B8]">No leads found</p>
+                          )}
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
               </div>
-              <div><Label className="text-xs text-[#475569]">Client Email</Label>
+              <div><Label className="text-xs text-[#475569]">Email</Label>
                 <Input value={formData.clientEmail} onChange={e => setFormData(p => ({ ...p, clientEmail: e.target.value }))}
-                  placeholder="client@example.com" type="email" className="mt-1 rounded-md" />
+                  placeholder="email@example.com" type="email" className="mt-1 rounded-md" />
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
@@ -546,8 +616,8 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
           </div>
           <DialogFooter className="p-6 pt-0 gap-3 border-t border-[rgba(15,23,42,0.06)]">
             <Button type="button" variant="outline" onClick={onClose} className="rounded-md">Cancel</Button>
-            <Button type="submit" disabled={!formData.title || !formData.clientName}
-              className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md">
+            <Button type="submit" disabled={!formData.title || !hasRecipient}
+              className="bg-[#0891B2] hover:bg-[#0E7490] text-white rounded-md">
               {quote ? <><CheckCircle2 size={16} className="mr-2" />Update Quote</> : <><Plus size={16} className="mr-2" />Create Quote</>}
             </Button>
           </DialogFooter>
@@ -663,13 +733,17 @@ const QuoteDetailDialog = ({ isOpen, onClose, quote, onEdit, onDelete, onSend, o
 // ============================================
 // Helper: map backend QuoteEntity to frontend Quote type
 function mapApiQuote(q: QuoteEntity): Quote {
+  const clientName = q.client?.clientName || "";
+  const leadName = (q as any).lead?.contactName || (q as any).lead?.companyName || "";
   return {
     id: q.id,
     quoteNumber: q.quoteNumber,
     clientId: q.client?.id,
-    clientName: q.client?.clientName || "Unknown Client",
+    clientName: clientName || leadName || "Unknown",
     clientEmail: undefined,
-    title: q.quoteNumber, // use quoteNumber as title if no separate title field
+    leadId: (q as any).leadId || undefined,
+    leadName: leadName || undefined,
+    title: q.quoteNumber,
     items: (q.items || []).map((item, idx) => ({
       id: `item-${idx}`,
       description: item.description,
@@ -775,6 +849,7 @@ const QuotesPage = () => {
     try {
       const apiPayload: Record<string, unknown> = {
         clientId: data.clientId || null,
+        leadId: data.leadId || null,
         validUntil: data.validUntil || new Date(Date.now() + 30 * 86400000).toISOString(),
         currency: data.currency || "CAD",
         taxRate: 13,
@@ -803,6 +878,7 @@ const QuotesPage = () => {
     try {
       const apiPayload: Record<string, unknown> = {
         clientId: data.clientId || null,
+        leadId: data.leadId || null,
         validUntil: data.validUntil,
         currency: data.currency || "CAD",
         discountAmount: data.discount || 0,

@@ -25,6 +25,8 @@ export interface Quote {
     clientEmail?: string;
     clientPhone?: string;
     clientCompany?: string;
+    leadId?: string;
+    leadName?: string;
     projectName?: string;
     title: string;
     description?: string;

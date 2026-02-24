@@ -34,7 +34,7 @@ type PanStart = {
 const MIN_POINTS = 3;
 const MAX_HISTORY = 80;
 const MIN_ZOOM = 0.5;
-const MAX_ZOOM = 8;
+const MAX_ZOOM = 4;
 const EDGE_INSERT_DISTANCE_STAGE_PX = 16;
 
 const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
@@ -142,6 +142,7 @@ export default function RoofPolygonEditor({
   const historyRef = useRef<PolygonPoint[][]>([]);
   const panStartRef = useRef<PanStart | null>(null);
   const pointsRef = useRef<PolygonPoint[]>([]);
+  const lastEmittedSignatureRef = useRef<string>("");
   const baselineRef = useRef<PolygonPoint[]>(sanitizePolygonInput(initialPolygon, width, height));
 
   const [imageElement, setImageElement] = useState<HTMLImageElement | null>(null);
@@ -158,6 +159,11 @@ export default function RoofPolygonEditor({
 
   useEffect(() => {
     pointsRef.current = points;
+
+    const signature = polygonSignature(points);
+    if (signature === lastEmittedSignatureRef.current) return;
+
+    lastEmittedSignatureRef.current = signature;
     onChange?.(clonePoints(points));
   }, [points, onChange]);
 
@@ -165,6 +171,7 @@ export default function RoofPolygonEditor({
     const baseline = sanitizePolygonInput(initialPolygon, width, height);
     baselineRef.current = baseline;
     historyRef.current = [];
+    lastEmittedSignatureRef.current = "";
     setPoints(baseline);
     setSelected(true);
   }, [initialPolygonKey, width, height]);
@@ -198,7 +205,16 @@ export default function RoofPolygonEditor({
     const updateSize = () => {
       const bounds = element.getBoundingClientRect();
       if (bounds.width > 0 && bounds.height > 0) {
-        setViewport({ width: bounds.width, height: bounds.height });
+        const nextWidth = Math.round(bounds.width);
+        const nextHeight = Math.round(bounds.height);
+
+        setViewport((previous) => {
+          if (previous.width === nextWidth && previous.height === nextHeight) {
+            return previous;
+          }
+
+          return { width: nextWidth, height: nextHeight };
+        });
       }
     };
 
@@ -241,7 +257,8 @@ export default function RoofPolygonEditor({
 
   const fitScale = useMemo(() => {
     if (viewport.width <= 0 || viewport.height <= 0) return 1;
-    return Math.min(viewport.width / width, viewport.height / height);
+    // Avoid auto-upscaling source imagery on initial load to keep rendering lightweight.
+    return Math.min(1, viewport.width / width, viewport.height / height);
   }, [viewport.width, viewport.height, width, height]);
 
   const imageScale = fitScale * zoom;
@@ -363,9 +380,9 @@ export default function RoofPolygonEditor({
       const pointer = stage.getPointerPosition();
       if (!pointer) return;
 
-      const zoomDirection = event.evt.deltaY > 0 ? -1 : 1;
-      const zoomFactor = zoomDirection > 0 ? 1.1 : 1 / 1.1;
-
+      // Smooth wheel zoom to avoid runaway scaling from high-resolution trackpads.
+      const normalizedDelta = clamp(event.evt.deltaY, -120, 120);
+      const zoomFactor = Math.exp(-normalizedDelta * 0.0015);
       const nextZoom = clamp(zoom * zoomFactor, MIN_ZOOM, MAX_ZOOM);
       const nextScale = fitScale * nextZoom;
 

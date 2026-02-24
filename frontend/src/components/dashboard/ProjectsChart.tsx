@@ -147,7 +147,7 @@ export function ProjectsChart() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const res = await api.get("/projects", { params: { limit: 500 } });
+      const res = await api.get("/projects", { params: { limit: 100 } });
       const projects = extractApiArray<ProjectApiItem>(res.data);
       setData(buildMonthlyData(projects));
     } catch (err) {

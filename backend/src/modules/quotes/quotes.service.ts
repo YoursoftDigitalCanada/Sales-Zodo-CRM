@@ -269,6 +269,7 @@ export class QuotesService {
             oldStatus: (quote as any).status, newStatus: 'SENT',
             clientId: dto.client?.id, leadId: dto.leadId || undefined,
             total: dto.total, createdById: actorEmployeeId,
+            items: dto.items.map(i => ({ description: i.description, quantity: i.quantity, unitPrice: i.unitPrice, total: i.total })),
         });
 
         return dto;
@@ -352,6 +353,7 @@ export class QuotesService {
             clientId: quote.clientId || undefined,
             leadId: quote.leadId || undefined,
             total: Number(quote.total),
+            items: [],
         });
 
         return { success: true, status: newStatus, quoteNumber: quote.quoteNumber };

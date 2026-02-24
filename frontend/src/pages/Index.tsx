@@ -97,7 +97,7 @@ function mapLead(l: DashboardLead): LeadItem {
     status: isStalled ? "stalled" : temp,
     daysInStage: daysSinceUpdate,
     source: l.leadSource?.name || "Direct",
-    assignee: l.assignedTo ? `${l.assignedTo.firstName[0]}${l.assignedTo.lastName[0]}` : "—",
+    assignee: l.assignedTo ? `${(l.assignedTo.firstName || "?")[0]}${(l.assignedTo.lastName || "?")[0]}` : "—",
   };
 }
 

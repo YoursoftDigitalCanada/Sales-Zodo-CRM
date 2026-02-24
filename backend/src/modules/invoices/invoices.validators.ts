@@ -106,7 +106,7 @@ export const invoiceQuerySchema = z.object({
         clientId: z.string().uuid().optional(),
         startDate: z.string().datetime().optional(),
         endDate: z.string().datetime().optional(),
-        sortBy: z.enum(['invoiceNumber', 'invoiceDate', 'dueDate', 'total']).default('invoiceDate'),
+        sortBy: z.enum(['invoiceNumber', 'issueDate', 'dueDate', 'total']).default('issueDate'),
         sortOrder: z.enum(['asc', 'desc']).default('desc'),
     }),
 });

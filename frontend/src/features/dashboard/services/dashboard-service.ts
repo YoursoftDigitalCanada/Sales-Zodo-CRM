@@ -70,7 +70,7 @@ async function safeGet<T>(url: string, params?: Record<string, unknown>): Promis
 export async function fetchDashboardData(): Promise<DashboardPayload> {
   const [leads, invoices, projects, clients, tasks] = await Promise.all([
     safeGet<DashboardLead>("/leads", { limit: 20, sortBy: "createdAt", sortOrder: "desc" }),
-    safeGet<DashboardInvoice>("/invoices", { limit: 20, sortBy: "invoiceDate", sortOrder: "desc" }),
+    safeGet<DashboardInvoice>("/invoices", { limit: 20, sortBy: "issueDate", sortOrder: "desc" }),
     safeGet<DashboardProject>("/projects", { limit: 20 }),
     safeGet<unknown>("/clients"),
     safeGet<DashboardTask>("/tasks"),

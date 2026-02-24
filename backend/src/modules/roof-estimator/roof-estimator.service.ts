@@ -18,42 +18,71 @@ const NOMINATIM_SEARCH_URL = 'https://nominatim.openstreetmap.org/search';
 
 export class RoofEstimatorService {
     private async geocodeAddressViaNominatim(address: string): Promise<{ lat: number; lng: number; formattedAddress: string }> {
-        const response = await axios.get(NOMINATIM_SEARCH_URL, {
-            params: {
-                q: address,
-                format: 'json',
-                limit: 1,
-                addressdetails: 1,
-                countrycodes: 'ca',
-            },
-            headers: {
-                // Required by Nominatim usage policy
-                'User-Agent': 'ZODO-CRM-RoofEstimator/1.0 (support@zodo.ca)',
-                'Accept-Language': 'en',
-            },
-            timeout: 10000,
-        });
+        const cleanedAddress = address
+            .replace(/[^\x20-\x7E]+/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
 
-        const results = Array.isArray(response.data) ? response.data : [];
-        if (!results.length) {
-            throw new BadRequestError(
-                'Could not find coordinates for this address. Please enter a complete Canadian address.',
-                'GEOCODING_ZERO_RESULTS'
-            );
+        const withoutCountry = cleanedAddress.replace(/,\s*canada$/i, '').trim();
+        const withoutPostal = withoutCountry
+            .replace(/\b[ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTV-Z][ -]?\d[ABCEGHJ-NPRSTV-Z]\d\b/gi, '')
+            .replace(/\s+,/g, ',')
+            .replace(/,+/g, ',')
+            .replace(/\s+/g, ' ')
+            .replace(/,\s*$/, '')
+            .trim();
+
+        const candidates = Array.from(
+            new Set(
+                [
+                    cleanedAddress,
+                    withoutCountry,
+                    withoutPostal,
+                ].filter(Boolean)
+            )
+        ).map((q, idx) => ({
+            q,
+            countrycodes: idx < 2 ? 'ca' : undefined,
+        }));
+
+        for (const candidate of candidates) {
+            const response = await axios.get(NOMINATIM_SEARCH_URL, {
+                params: {
+                    q: candidate.q,
+                    format: 'json',
+                    limit: 1,
+                    addressdetails: 1,
+                    ...(candidate.countrycodes ? { countrycodes: candidate.countrycodes } : {}),
+                },
+                headers: {
+                    // Required by Nominatim usage policy
+                    'User-Agent': 'ZODO-CRM-RoofEstimator/1.0 (support@zodo.ca)',
+                    'Accept-Language': 'en',
+                },
+                timeout: 10000,
+            });
+
+            const results = Array.isArray(response.data) ? response.data : [];
+            if (!results.length) continue;
+
+            const top = results[0];
+            const lat = Number(top.lat);
+            const lng = Number(top.lon);
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                continue;
+            }
+
+            return {
+                lat,
+                lng,
+                formattedAddress: top.display_name || candidate.q,
+            };
         }
 
-        const top = results[0];
-        const lat = Number(top.lat);
-        const lng = Number(top.lon);
-        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-            throw new ServiceUnavailableError('Fallback geocoding returned invalid coordinates.');
-        }
-
-        return {
-            lat,
-            lng,
-            formattedAddress: top.display_name || address,
-        };
+        throw new BadRequestError(
+            'Could not find coordinates for this address. Please enter a complete Canadian address.',
+            'GEOCODING_ZERO_RESULTS'
+        );
     }
 
     private async geocodeAddressWithFallback(

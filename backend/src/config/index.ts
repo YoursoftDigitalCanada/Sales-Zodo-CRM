@@ -57,6 +57,12 @@ const envSchema = z.object({
   // AI / LLM (optional — copilot falls back to deterministic mode if missing)
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_MODEL: z.string().default('gpt-4o-mini'),
+
+  // Roof estimator integrations (optional, required only for roof endpoints)
+  GOOGLE_GEOCODING_API_KEY: z.string().optional(),
+  GOOGLE_STATIC_MAPS_API_KEY: z.string().optional(),
+  GOOGLE_PLACES_API_KEY: z.string().optional(),
+  AI_SERVICE_URL: z.string().default('http://127.0.0.1:8001'),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -122,6 +128,14 @@ export const config = {
   ai: {
     openaiApiKey: parsed.data.OPENAI_API_KEY,
     openaiModel: parsed.data.OPENAI_MODEL,
+  },
+  integrations: {
+    google: {
+      geocodingApiKey: parsed.data.GOOGLE_GEOCODING_API_KEY,
+      staticMapsApiKey: parsed.data.GOOGLE_STATIC_MAPS_API_KEY,
+      placesApiKey: parsed.data.GOOGLE_PLACES_API_KEY || parsed.data.GOOGLE_GEOCODING_API_KEY,
+    },
+    aiServiceUrl: parsed.data.AI_SERVICE_URL,
   },
 } as const;
 

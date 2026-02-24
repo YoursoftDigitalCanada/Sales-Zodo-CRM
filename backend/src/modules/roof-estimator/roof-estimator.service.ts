@@ -7,12 +7,13 @@ import {
 } from './roof-estimator.dto';
 import { logger } from '../../common/utils/logger';
 import { activityLogger } from '../../common/services/activity-logger.service';
+import { BadRequestError, ServiceUnavailableError } from '../../common/errors/HttpErrors';
 
-const GOOGLE_GEOCODING_API_KEY = process.env.GOOGLE_GEOCODING_API_KEY || '';
-const GOOGLE_STATIC_MAPS_API_KEY = process.env.GOOGLE_STATIC_MAPS_API_KEY || '';
-const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY || process.env.GOOGLE_GEOCODING_API_KEY || '';
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8001';
+const GOOGLE_GEOCODING_API_KEY = config.integrations.google.geocodingApiKey || '';
+const GOOGLE_STATIC_MAPS_API_KEY = config.integrations.google.staticMapsApiKey || '';
+const GOOGLE_PLACES_API_KEY = config.integrations.google.placesApiKey || '';
+const OPENAI_API_KEY = config.ai.openaiApiKey || '';
+const AI_SERVICE_URL = config.integrations.aiServiceUrl;
 
 export class RoofEstimatorService {
     /**
@@ -65,7 +66,9 @@ export class RoofEstimatorService {
      */
     async geocodeAddress(address: string): Promise<{ lat: number; lng: number; formattedAddress: string }> {
         if (!GOOGLE_GEOCODING_API_KEY) {
-            throw new Error('GOOGLE_GEOCODING_API_KEY is not configured. Please set it in your .env file.');
+            throw new ServiceUnavailableError(
+                'Roof estimator geocoding is not configured. Set GOOGLE_GEOCODING_API_KEY on the backend.'
+            );
         }
 
         try {
@@ -79,15 +82,45 @@ export class RoofEstimatorService {
                 timeout: 10000,
             });
 
-            if (response.data.status !== 'OK' || !response.data.results?.length) {
+            const status = response.data.status as string;
+            const errorMessage = response.data.error_message as string | undefined;
+            if (status !== 'OK' || !response.data.results?.length) {
                 logger.warn('Geocoding API returned non-OK status', {
-                    status: response.data.status,
-                    errorMessage: response.data.error_message,
+                    status,
+                    errorMessage,
                     address,
                 });
-                throw new Error(
-                    response.data.error_message
-                    || `Geocoding failed (${response.data.status}). Could not find coordinates for the given address.`
+
+                if (status === 'ZERO_RESULTS') {
+                    throw new BadRequestError(
+                        'Could not find coordinates for this address. Please enter a complete Canadian address.',
+                        'GEOCODING_ZERO_RESULTS'
+                    );
+                }
+
+                if (status === 'INVALID_REQUEST') {
+                    throw new BadRequestError(
+                        'Invalid address input. Please provide a valid street address.',
+                        'GEOCODING_INVALID_REQUEST'
+                    );
+                }
+
+                if (status === 'REQUEST_DENIED') {
+                    throw new ServiceUnavailableError(
+                        errorMessage
+                            ? `Google Geocoding API denied the request: ${errorMessage}`
+                            : 'Google Geocoding API denied the request. Check key restrictions and billing.'
+                    );
+                }
+
+                if (status === 'OVER_DAILY_LIMIT' || status === 'OVER_QUERY_LIMIT') {
+                    throw new ServiceUnavailableError(
+                        'Google Geocoding API quota exceeded. Check quota and billing in Google Cloud.'
+                    );
+                }
+
+                throw new ServiceUnavailableError(
+                    errorMessage || `Geocoding failed (${status}). Please try again later.`
                 );
             }
 
@@ -97,17 +130,28 @@ export class RoofEstimatorService {
                 lng: result.geometry.location.lng,
                 formattedAddress: result.formatted_address,
             };
-        } catch (err: any) {
-            // Re-throw errors we already created with meaningful messages
-            if (err.message && !err.response) throw err;
+        } catch (err: unknown) {
+            if (err instanceof BadRequestError || err instanceof ServiceUnavailableError) {
+                throw err;
+            }
 
+            const axiosError = axios.isAxiosError(err) ? err : null;
             logger.error('Geocoding request failed', {
-                message: err.message,
-                status: err.response?.status,
-                data: err.response?.data,
+                message: axiosError?.message || (err as Error).message,
+                status: axiosError?.response?.status,
+                data: axiosError?.response?.data,
                 address,
             });
-            throw new Error(`Geocoding request failed: ${err.message}`);
+
+            if (axiosError?.code === 'ECONNABORTED') {
+                throw new ServiceUnavailableError('Geocoding request timed out. Please try again.');
+            }
+
+            throw new ServiceUnavailableError(
+                axiosError?.message
+                    ? `Geocoding request failed: ${axiosError.message}`
+                    : 'Geocoding request failed. Please try again.'
+            );
         }
     }
 
@@ -116,7 +160,9 @@ export class RoofEstimatorService {
      */
     getSatelliteImageUrl(lat: number, lng: number, zoom = 20, size = '640x640'): string {
         if (!GOOGLE_STATIC_MAPS_API_KEY) {
-            throw new Error('GOOGLE_STATIC_MAPS_API_KEY is not configured');
+            throw new ServiceUnavailableError(
+                'Roof estimator satellite imagery is not configured. Set GOOGLE_STATIC_MAPS_API_KEY on the backend.'
+            );
         }
 
         return `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=${zoom}&size=${size}&maptype=satellite&key=${GOOGLE_STATIC_MAPS_API_KEY}`;

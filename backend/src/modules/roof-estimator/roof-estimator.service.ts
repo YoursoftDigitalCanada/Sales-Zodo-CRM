@@ -297,21 +297,33 @@ export class RoofEstimatorService {
     /**
      * Send image to Python AI microservice for roof detection
      */
-    async detectRoof(imageBuffer: Buffer): Promise<{
+    async detectRoof(params: {
+        imageBuffer: Buffer;
+        latitude?: number;
+        zoom?: number;
+    }): Promise<{
         roof_area_sqft: number;
         confidence: number;
         processing_time_seconds: number;
         model: string;
     }> {
         const FormData = (await import('form-data')).default;
-        const formData = new FormData();
-        formData.append('file', imageBuffer, { filename: 'satellite.png', contentType: 'image/png' });
 
         let retries = 2;
         let lastError: Error | null = null;
 
         while (retries >= 0) {
             try {
+                // Recreate form-data on every retry attempt to avoid reusing consumed streams.
+                const formData = new FormData();
+                formData.append('file', params.imageBuffer, { filename: 'satellite.png', contentType: 'image/png' });
+                if (Number.isFinite(params.latitude)) {
+                    formData.append('latitude', String(params.latitude));
+                }
+                if (Number.isFinite(params.zoom)) {
+                    formData.append('zoom', String(params.zoom));
+                }
+
                 const response = await axios.post(`${AI_SERVICE_URL}/detect-roof`, formData, {
                     headers: formData.getHeaders(),
                     timeout: 30000, // 30s timeout for AI inference
@@ -324,6 +336,8 @@ export class RoofEstimatorService {
                 if (retries >= 0) {
                     logger.warn(`AI service call failed, retrying... (${retries + 1} retries left)`, {
                         error: error.message,
+                        status: error?.response?.status,
+                        data: error?.response?.data,
                     });
                     await new Promise((r) => setTimeout(r, 1000));
                 }

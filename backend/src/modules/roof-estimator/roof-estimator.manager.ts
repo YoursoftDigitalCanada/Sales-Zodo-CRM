@@ -4,6 +4,16 @@ import { CreateEstimateDto, UpdateEstimateDto } from './roof-estimator.dto';
 import { logger } from '../../common/utils/logger';
 
 export class RoofEstimatorManager {
+    private parseZoomFromSatelliteUrl(satelliteImageUrl: string): number | undefined {
+        try {
+            const url = new URL(satelliteImageUrl);
+            const zoom = Number(url.searchParams.get('zoom'));
+            return Number.isFinite(zoom) ? zoom : undefined;
+        } catch {
+            return undefined;
+        }
+    }
+
     /**
      * Full satellite + AI detection flow
      */
@@ -35,9 +45,14 @@ export class RoofEstimatorManager {
     async detectRoof(tenantId: string, satelliteImageUrl: string, latitude: number, longitude: number) {
         // 1. Fetch image buffer
         const imageBuffer = await roofEstimatorService.fetchSatelliteImageBuffer(satelliteImageUrl);
+        const zoom = this.parseZoomFromSatelliteUrl(satelliteImageUrl);
 
         // 2. Send to AI service
-        const result = await roofEstimatorService.detectRoof(imageBuffer);
+        const result = await roofEstimatorService.detectRoof({
+            imageBuffer,
+            latitude,
+            zoom,
+        });
 
         logger.info('Roof detection completed', {
             tenantId,

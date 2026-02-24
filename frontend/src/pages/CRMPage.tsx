@@ -91,7 +91,7 @@ const Button = ({
   const sizes = {
     sm: "px-4 py-2 text-sm min-h-[36px]",
     default: "px-6 py-3 min-h-[48px]",
-    lg: "px-8 py-4 text-lg min-h-[56px]"
+    lg: "px-4 py-3 sm:px-6 sm:py-4 lg:px-8 text-lg min-h-[56px]"
   };
 
   const variants = {
@@ -473,7 +473,7 @@ export default function CRMPage() {
                 {/* Dashboard */}
                 <div className="p-6 space-y-4">
                   {/* Top Stats */}
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                     {[
                       { label: 'Revenue', value: '$124.5K', change: '+18%', icon: DollarSign },
                       { label: 'Active Clients', value: '847', change: '+12%', icon: Users },
@@ -531,7 +531,7 @@ export default function CRMPage() {
                     <TrendingUp size={24} className="text-green-600" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-gray-900">+127%</div>
+                    <div className="text-xl sm:text-2xl font-bold text-gray-900">+127%</div>
                     <div className="text-sm text-gray-500">Revenue Growth</div>
                   </div>
                 </div>
@@ -553,7 +553,7 @@ export default function CRMPage() {
       </div>
       <div className="flex flex-wrap justify-center items-center gap-12 opacity-50 grayscale">
         {['Shopify', 'RBC', 'TD Bank', 'Bell', 'Rogers', 'Lululemon'].map((brand) => (
-          <span key={brand} className="text-2xl font-bold text-gray-600">{brand}</span>
+          <span key={brand} className="text-xl sm:text-2xl font-bold text-gray-600">{brand}</span>
         ))}
       </div>
     </Section>
@@ -736,7 +736,7 @@ export default function CRMPage() {
           {/* Tab Content */}
           <div className="lg:w-2/3">
             <div className="bg-gray-800 rounded-3xl p-8 border border-gray-700">
-              <h3 className="text-2xl font-bold text-white mb-4">{activeTabData.heading}</h3>
+              <h3 className="text-xl sm:text-2xl font-bold text-white mb-4">{activeTabData.heading}</h3>
               <p className="text-gray-400 mb-6 leading-relaxed">{activeTabData.description}</p>
               
               <div className="grid grid-cols-2 gap-4 mb-8">
@@ -884,7 +884,7 @@ export default function CRMPage() {
                 </span>
               )}
               
-              <h3 className={`text-2xl font-bold mb-2 ${plan.popular ? 'text-white' : 'text-gray-900'}`}>
+              <h3 className={`text-xl sm:text-2xl font-bold mb-2 ${plan.popular ? 'text-white' : 'text-gray-900'}`}>
                 {plan.name}
               </h3>
               <p className={`text-sm mb-6 ${plan.popular ? 'text-red-200' : 'text-gray-500'}`}>
@@ -961,7 +961,7 @@ export default function CRMPage() {
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {testimonials.map((testimonial, i) => (
-            <GlassCard key={i} className="p-8">
+            <GlassCard key={i} className="p-4 sm:p-6 lg:p-8">
               <div className="flex gap-1 mb-4">
                 {[...Array(testimonial.rating)].map((_, j) => (
                   <Star key={j} size={18} className="fill-yellow-400 text-yellow-400" />

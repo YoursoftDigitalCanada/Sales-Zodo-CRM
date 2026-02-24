@@ -615,7 +615,7 @@ const StatCard = ({
       <div className="relative flex items-start justify-between">
         <div>
           <p className="text-sm text-[#94A3B8] mb-1">{title}</p>
-          <p className="text-2xl font-bold text-[#0F172A]">
+          <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">
             {typeof value === "number" ? formatNumber(value) : value}
           </p>
           {subtitle && <p className="text-xs text-[#475569] mt-1">{subtitle}</p>}
@@ -775,7 +775,7 @@ const GroupCard = ({
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
           <div className="text-center p-3 bg-[#F8FAFC] rounded-md">
             <p className="text-lg font-bold text-[#0F172A]">{group.memberCount}</p>
             <p className="text-xs text-[#94A3B8]">Members</p>
@@ -1418,7 +1418,7 @@ const GroupDetailsDialog = ({
               </div>
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <h2 className="text-2xl font-bold text-[#0F172A]">{group.name}</h2>
+                  <h2 className="text-xl sm:text-2xl font-bold text-[#0F172A]">{group.name}</h2>
                   {group.isDefault && (
                     <span className="px-2 py-0.5 bg-slate-200 text-[#475569] text-xs font-medium rounded">
                       Default
@@ -1445,21 +1445,21 @@ const GroupDetailsDialog = ({
 
         <div className="p-6 space-y-6">
           {/* Stats Grid */}
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <div className="p-4 bg-[#F8FAFC] rounded-md text-center">
-              <p className="text-2xl font-bold text-[#0F172A]">{group.memberCount}</p>
+              <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">{group.memberCount}</p>
               <p className="text-sm text-[#94A3B8]">Total Members</p>
             </div>
             <div className="p-4 bg-green-50 rounded-md text-center">
-              <p className="text-2xl font-bold text-green-600">{activeMembers}</p>
+              <p className="text-xl sm:text-2xl font-bold text-green-600">{activeMembers}</p>
               <p className="text-sm text-[#94A3B8]">Active</p>
             </div>
             <div className="p-4 bg-[#0891B2]/10 rounded-md text-center">
-              <p className="text-2xl font-bold text-[#0891B2]">{formatCurrency(group.totalRevenue)}</p>
+              <p className="text-xl sm:text-2xl font-bold text-[#0891B2]">{formatCurrency(group.totalRevenue)}</p>
               <p className="text-sm text-[#94A3B8]">Total Revenue</p>
             </div>
             <div className="p-4 bg-[#D97706]/10 rounded-md text-center">
-              <p className="text-2xl font-bold text-[#D97706]">{avgProjects}</p>
+              <p className="text-xl sm:text-2xl font-bold text-[#D97706]">{avgProjects}</p>
               <p className="text-sm text-[#94A3B8]">Avg Projects</p>
             </div>
           </div>
@@ -1901,7 +1901,7 @@ const ClientGroupsPage = () => {
                   <ChevronRight size={14} />
                   <span className="text-[#0F172A]">Groups</span>
                 </div>
-                <h1 className="text-2xl font-bold text-[#0F172A]">Client Groups</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Client Groups</h1>
                 <p className="text-[#94A3B8] mt-1">
                   Organize and segment your clients for targeted management
                 </p>
@@ -1927,7 +1927,7 @@ const ClientGroupsPage = () => {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
               <StatCard
                 title="Total Groups"
                 value={stats.totalGroups}
@@ -1970,7 +1970,7 @@ const ClientGroupsPage = () => {
           </div>
 
           {/* Filters Bar */}
-          <div className="px-8 py-4 border-t border-[rgba(15,23,42,0.06)] flex items-center justify-between gap-4">
+          <div className="px-4 py-3 sm:px-6 sm:py-4 lg:px-8 border-t border-[rgba(15,23,42,0.06)] flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 flex-1">
               {/* Search */}
               <div className="relative w-80">
@@ -2071,7 +2071,7 @@ const ClientGroupsPage = () => {
         </div>
 
         {/* Content */}
-        <div className="p-8">
+        <div className="p-4 sm:p-6 lg:p-8">
           {filteredGroups.length === 0 ? (
             <motion.div
               initial={{ opacity: 0, y: 20 }}

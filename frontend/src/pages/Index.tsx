@@ -6,7 +6,12 @@ import { StatCard } from "@/components/dashboard/StatCard";
 import { ProjectsChart } from "@/components/dashboard/ProjectsChart";
 import { CalendarWidget } from "@/components/dashboard/CalendarWidget";
 import { ProjectsTable } from "@/components/dashboard/ProjectsTable";
-import { fetchDashboardStats } from "@/features/dashboard";
+import {
+  fetchDashboardData,
+  type DashboardLead,
+  type DashboardInvoice,
+  type DashboardProject,
+} from "@/features/dashboard";
 import { AiCopilotPanel } from "@/components/ai/AiCopilotPanel";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -17,10 +22,6 @@ import {
   Eye, Send, ExternalLink, MoreHorizontal, RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  pendingLeads, invoiceItems, projectItems, smartAlerts,
-  type LeadItem, type InvoiceItem, type ProjectItem, type SmartAlert,
-} from "./dashboard-data";
 
 // ============================================
 // TYPES
@@ -30,8 +31,29 @@ type ThemeColor = "teal" | "gold" | "navy" | "green" | "blue" | "purple";
 interface User { firstName: string; lastName: string; email?: string; role?: string; }
 interface DashboardStats { projectsCount: number; clientsCount: number; earnings: number; pendingTasks: number; }
 interface QuickAction { title: string; icon: React.ElementType; color: ThemeColor; path: string; description: string; }
-interface ActivityItem { id: number; type: string; message: string; time: string; icon: React.ElementType; color: ThemeColor; }
+interface ActivityItem { id: string; type: string; message: string; time: string; icon: React.ElementType; color: ThemeColor; }
 interface Notification { id: number; title: string; message: string; time: string; icon: React.ElementType; color: ThemeColor; read: boolean; }
+
+// Mapped UI types derived from API data
+interface LeadItem {
+  id: string; name: string; company: string; value: number;
+  status: "hot" | "warm" | "cold" | "stalled";
+  daysInStage: number; source: string; assignee: string;
+}
+interface InvoiceItem {
+  id: string; client: string; amount: number; dueDate: string;
+  status: "overdue" | "pending" | "paid" | "draft";
+  daysOverdue?: number; invoiceNo: string;
+}
+interface ProjectItem {
+  id: string; name: string; client: string; progress: number;
+  status: "on-track" | "at-risk" | "delayed" | "completed";
+  deadline: string; team: string[]; budget: number; spent: number;
+}
+interface SmartAlert {
+  id: string; type: "warning" | "danger" | "info" | "success";
+  title: string; message: string; action: string; actionPath: string;
+}
 
 // ============================================
 // THEME COLORS
@@ -56,18 +78,85 @@ const quickActions: QuickAction[] = [
   { title: "Schedule Meeting", icon: Calendar, color: "purple", path: "/bookings/new", description: "Book a meeting" },
 ];
 
-const recentActivity: ActivityItem[] = [
-  { id: 1, type: "project", message: "New project 'E-commerce Website' created", time: "2 min ago", icon: FolderKanban, color: "teal" },
-  { id: 2, type: "payment", message: "Payment received from TechStart Inc.", time: "15 min ago", icon: DollarSign, color: "green" },
-  { id: 3, type: "client", message: "New client 'GreenLeaf Co.' added", time: "1 hour ago", icon: Users, color: "gold" },
-  { id: 4, type: "task", message: "Task 'Design Homepage' completed", time: "2 hours ago", icon: CheckCircle2, color: "blue" },
-];
-
 const initialNotifications: Notification[] = [
   { id: 1, title: "New Message", message: "New message from client", time: "2 min ago", icon: MessageSquare, color: "teal", read: false },
   { id: 2, title: "Payment Received", message: "Payment received - $2,500", time: "1 hour ago", icon: DollarSign, color: "gold", read: false },
   { id: 3, title: "Deadline Reminder", message: "Project deadline tomorrow", time: "3 hours ago", icon: FolderKanban, color: "navy", read: false },
 ];
+
+// ── Data mappers ───────────────────────────────────────────────────────
+function mapLead(l: DashboardLead): LeadItem {
+  const daysSinceUpdate = Math.floor((Date.now() - new Date(l.updatedAt).getTime()) / 86400000);
+  const temp = (l.temperature || "WARM").toLowerCase() as "hot" | "warm" | "cold";
+  const isStalled = daysSinceUpdate > 7 && temp !== "hot";
+  return {
+    id: l.id,
+    name: `${l.firstName} ${l.lastName}`,
+    company: l.companyName || "—",
+    value: Number(l.potentialValue || 0),
+    status: isStalled ? "stalled" : temp,
+    daysInStage: daysSinceUpdate,
+    source: l.leadSource?.name || "Direct",
+    assignee: l.assignedTo ? `${l.assignedTo.firstName[0]}${l.assignedTo.lastName[0]}` : "—",
+  };
+}
+
+function mapInvoice(inv: DashboardInvoice): InvoiceItem {
+  const due = new Date(inv.dueDate);
+  const now = new Date();
+  const daysOverdue = inv.status === "OVERDUE" ? Math.max(0, Math.floor((now.getTime() - due.getTime()) / 86400000)) : undefined;
+  const clientName = inv.client?.companyName || [inv.client?.firstName, inv.client?.lastName].filter(Boolean).join(" ") || "—";
+  const statusMap: Record<string, InvoiceItem["status"]> = { OVERDUE: "overdue", SENT: "pending", VIEWED: "pending", PARTIALLY_PAID: "pending", PAID: "paid", DRAFT: "draft", CANCELLED: "draft", REFUNDED: "draft" };
+  return {
+    id: inv.id,
+    client: clientName,
+    amount: Number(inv.total || 0),
+    dueDate: due.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+    status: statusMap[inv.status] || "draft",
+    daysOverdue,
+    invoiceNo: inv.invoiceNumber,
+  };
+}
+
+function mapProject(p: DashboardProject): ProjectItem {
+  const clientName = p.client?.companyName || [p.client?.firstName, p.client?.lastName].filter(Boolean).join(" ") || "—";
+  const statusMap: Record<string, ProjectItem["status"]> = { ACTIVE: "on-track", PLANNING: "on-track", ON_HOLD: "delayed", COMPLETED: "completed", CANCELLED: "delayed", ARCHIVED: "completed" };
+  const members = (p.members || []).map((m) => m.employee ? `${m.employee.firstName[0]}${m.employee.lastName[0]}` : "??");
+  return {
+    id: p.id,
+    name: p.name,
+    client: clientName,
+    progress: p.progress || 0,
+    status: statusMap[p.status] || "on-track",
+    deadline: p.endDate ? new Date(p.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—",
+    team: members.length ? members : ["—"],
+    budget: Number(p.budget || 0),
+    spent: 0,
+  };
+}
+
+function buildAlerts(leads: LeadItem[], invoices: InvoiceItem[], projects: ProjectItem[]): SmartAlert[] {
+  const alerts: SmartAlert[] = [];
+  const overdue = invoices.filter((i) => i.status === "overdue");
+  if (overdue.length > 0) {
+    const total = overdue.reduce((s, i) => s + i.amount, 0);
+    alerts.push({ id: "a-overdue", type: "danger", title: `${overdue.length} Invoice${overdue.length > 1 ? "s" : ""} Overdue`, message: `$${total.toLocaleString()} in overdue payments need immediate attention`, action: "View Invoices", actionPath: "/invoices" });
+  }
+  const stalled = leads.filter((l) => l.status === "stalled");
+  if (stalled.length > 0) {
+    alerts.push({ id: "a-stalled", type: "warning", title: `${stalled.length} Lead${stalled.length > 1 ? "s" : ""} Stalled`, message: `${stalled.map((l) => l.name).slice(0, 2).join(" and ")} haven't progressed in 7+ days`, action: "Follow Up", actionPath: "/leads" });
+  }
+  const atRisk = projects.filter((p) => p.status === "at-risk" || p.status === "delayed");
+  if (atRisk.length > 0) {
+    alerts.push({ id: "a-risk", type: "warning", title: `${atRisk.length} Project${atRisk.length > 1 ? "s" : ""} At Risk`, message: `${atRisk.map((p) => p.name).slice(0, 2).join(", ")} need attention`, action: "View Projects", actionPath: "/projects" });
+  }
+  const hot = leads.filter((l) => l.status === "hot");
+  if (hot.length > 0) {
+    const val = hot.reduce((s, l) => s + l.value, 0);
+    alerts.push({ id: "a-hot", type: "info", title: `${hot.length} Hot Lead${hot.length > 1 ? "s" : ""}`, message: `${hot.map((l) => `${l.name} ($${(l.value / 1000).toFixed(0)}K)`).slice(0, 2).join(" and ")} ready to close`, action: "View Pipeline", actionPath: "/leads" });
+  }
+  return alerts;
+}
 
 // ============================================
 // MAIN COMPONENT
@@ -78,7 +167,7 @@ const Index = () => {
 
   // Existing state
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [stats, setStats] = useState<DashboardStats>({ projectsCount: 0, clientsCount: 0, earnings: 0, pendingTasks: 12 });
+  const [stats, setStats] = useState<DashboardStats>({ projectsCount: 0, clientsCount: 0, earnings: 0, pendingTasks: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -90,11 +179,12 @@ const Index = () => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showCopilot, setShowCopilot] = useState(false);
 
-  // New state for dashboard sections
+  // API-backed dashboard state
   const [dismissedAlerts, setDismissedAlerts] = useState<string[]>([]);
-  const [leads] = useState(pendingLeads);
-  const [invoices] = useState(invoiceItems);
-  const [projects] = useState(projectItems);
+  const [leads, setLeads] = useState<LeadItem[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
+  const [projects, setProjects] = useState<ProjectItem[]>([]);
+  const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
 
   // Refs
   const notificationRef = useRef<HTMLDivElement>(null);
@@ -120,17 +210,32 @@ const Index = () => {
   }, []);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const loadDashboard = async () => {
       setIsLoading(true);
       try {
-        const serverStats = await fetchDashboardStats();
-        setStats({ projectsCount: serverStats.projectsCount || 0, clientsCount: serverStats.clientsCount || 0, earnings: 0, pendingTasks: serverStats.pendingTasks || 0 });
+        const data = await fetchDashboardData();
+        setStats({
+          projectsCount: data.projectsCount || 0,
+          clientsCount: data.clientsCount || 0,
+          earnings: data.totalEarnings || 0,
+          pendingTasks: data.pendingTasks || 0,
+        });
+        setLeads(data.leads.map(mapLead));
+        setInvoices(data.invoices.map(mapInvoice));
+        setProjects(data.projects.map(mapProject));
+
+        // Build recent activity from latest data
+        const acts: ActivityItem[] = [];
+        data.projects.slice(0, 2).forEach((p, i) => acts.push({ id: `p-${p.id}`, type: "project", message: `Project '${p.name}' — ${p.status.toLowerCase().replace("_", " ")}`, time: new Date(p.startDate || p.endDate || Date.now()).toLocaleDateString(), icon: FolderKanban, color: "teal" }));
+        data.invoices.filter((inv) => inv.status === "PAID").slice(0, 1).forEach((inv) => acts.push({ id: `inv-${inv.id}`, type: "payment", message: `Payment received — $${Number(inv.total).toLocaleString()}`, time: inv.paidAt ? new Date(inv.paidAt).toLocaleDateString() : "Recently", icon: DollarSign, color: "green" }));
+        data.leads.slice(0, 1).forEach((l) => acts.push({ id: `l-${l.id}`, type: "lead", message: `Lead '${l.firstName} ${l.lastName}' added`, time: new Date(l.createdAt).toLocaleDateString(), icon: Users, color: "gold" }));
+        setRecentActivity(acts.length ? acts : [{ id: "empty", type: "info", message: "No recent activity", time: "Now", icon: CheckCircle2, color: "blue" }]);
       } catch (error) {
-        console.error("Error fetching dashboard stats:", error);
+        console.error("Error fetching dashboard data:", error);
         setStats({ projectsCount: 0, clientsCount: 0, earnings: 0, pendingTasks: 0 });
       } finally { setIsLoading(false); }
     };
-    fetchStats();
+    loadDashboard();
   }, []);
 
   useEffect(() => {
@@ -165,6 +270,7 @@ const Index = () => {
   const handleFollowUpLead = (lead: LeadItem) => { toast({ title: "Follow-up Initiated", description: `Email queued for ${lead.name} at ${lead.company}.` }); };
   const handleSendReminder = (inv: InvoiceItem) => { toast({ title: "Reminder Sent", description: `Payment reminder sent for ${inv.invoiceNo} to ${inv.client}.` }); };
 
+  const smartAlerts = buildAlerts(leads, invoices, projects);
   const visibleAlerts = smartAlerts.filter((a) => !dismissedAlerts.includes(a.id));
   const stalledLeads = leads.filter((l) => l.status === "stalled");
   const hotLeads = leads.filter((l) => l.status === "hot");

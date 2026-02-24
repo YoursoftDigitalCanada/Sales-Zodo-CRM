@@ -183,7 +183,7 @@ const StatCard = ({
             <div className="relative flex items-start justify-between">
                 <div>
                     <p className="text-sm text-[#94A3B8] mb-1">{title}</p>
-                    <p className="text-2xl font-bold text-[#0F172A]">
+                    <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">
                         {typeof value === "number" ? value.toLocaleString() : value}
                     </p>
                 </div>
@@ -522,7 +522,7 @@ const RoofEstimator: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="p-8">
+                <div className="p-4 sm:p-6 lg:p-8">
                     <AnimatePresence mode="wait">
                         {/* ============================================ */}
                         {/* ESTIMATOR TAB */}
@@ -531,7 +531,7 @@ const RoofEstimator: React.FC = () => {
                             <motion.div key="estimator" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                                 {/* Stats */}
                                 {statistics && (
-                                    <div className="grid grid-cols-4 gap-4 mb-8">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
                                         <StatCard title="Total Estimates" value={statistics.totalEstimates} icon={BarChart3} color="teal" delay={0} />
                                         <StatCard title="Total Revenue" value={formatCurrency(statistics.totalRevenue)} icon={DollarSign} color="green" delay={0.05} />
                                         <StatCard title="Avg Roof Area" value={`${statistics.avgRoofArea.toLocaleString()} sqft`} icon={Ruler} color="gold" delay={0.1} />
@@ -689,7 +689,7 @@ const RoofEstimator: React.FC = () => {
                                                             <Activity className="w-4 h-4 text-[#0891B2]" />
                                                             <h3 className="text-sm font-semibold text-[#0F172A]">Detection Results</h3>
                                                         </div>
-                                                        <div className="grid grid-cols-3 gap-4">
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                                                             {[
                                                                 { label: "Roof Area (sq ft)", value: detection.roofAreaSqft.toLocaleString(), icon: Ruler, color: "#0891B2" },
                                                                 { label: "Confidence", value: `${detection.confidence}%`, icon: TrendingUp, color: "#22C55E" },
@@ -697,7 +697,7 @@ const RoofEstimator: React.FC = () => {
                                                             ].map((item) => (
                                                                 <div key={item.label} className="bg-[#F8FAFC] rounded-md border border-[rgba(15,23,42,0.06)] p-4 text-center">
                                                                     <item.icon className="w-5 h-5 mx-auto mb-2" style={{ color: item.color }} />
-                                                                    <div className="text-2xl font-bold text-[#0F172A]">{item.value}</div>
+                                                                    <div className="text-xl sm:text-2xl font-bold text-[#0F172A]">{item.value}</div>
                                                                     <div className="text-[10px] text-[#94A3B8] mt-1">{item.label}</div>
                                                                 </div>
                                                             ))}
@@ -886,7 +886,7 @@ const RoofEstimator: React.FC = () => {
                                                                 <p className="text-sm text-[#475569]">{aiEstimate.summary}</p>
 
                                                                 {/* Cost Summary */}
-                                                                <div className="grid grid-cols-3 gap-3">
+                                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                                                     {[
                                                                         { label: "Labor", value: aiEstimate.laborCost, icon: Hammer, color: "#6366F1" },
                                                                         { label: "Materials", value: aiEstimate.materialCost, icon: Ruler, color: "#0891B2" },

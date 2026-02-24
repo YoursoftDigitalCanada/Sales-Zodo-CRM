@@ -301,7 +301,7 @@ const StatCard = ({
         <div>
           <p className="text-sm text-[#94A3B8] mb-1">{title}</p>
           <div className="flex items-baseline gap-2">
-            <p className="text-2xl font-bold text-[#0F172A]">{value}</p>
+            <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">{value}</p>
             {trend && (
               <span className={cn(
                 "flex items-center text-xs font-semibold",
@@ -1487,7 +1487,7 @@ const InvoicePage = () => {
                 <Receipt size={24} className="text-[#0F172A]" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-[#0F172A]">Invoices</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Invoices</h1>
                 <p className="text-[#94A3B8]">Manage billing and payments</p>
               </div>
             </div>
@@ -1523,7 +1523,7 @@ const InvoicePage = () => {
           </motion.div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
             <StatCard
               title="Total Invoiced"
               value={formatCurrency(stats.total)}
@@ -1568,9 +1568,9 @@ const InvoicePage = () => {
             />
           </div>
 
-          <div className="grid grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
             {/* Main Content - 3 columns */}
-            <div className="col-span-3 space-y-4">
+            <div className="col-span-full lg:col-span-3 space-y-4">
               {/* Filters & Actions Bar */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}

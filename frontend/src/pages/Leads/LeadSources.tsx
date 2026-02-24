@@ -300,7 +300,7 @@ const StatCard = ({
       <div className="relative flex items-start justify-between">
         <div>
           <p className="text-sm text-[#94A3B8] mb-1">{title}</p>
-          <p className="text-2xl font-bold text-[#0F172A]">
+          <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">
             {prefix}
             {typeof value === "number" ? formatNumber(value) : value}
             {suffix}
@@ -1057,7 +1057,7 @@ const LeadSources = () => {
       <main className="flex-1 ml-0">
         {/* Header */}
         <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-[rgba(15,23,42,0.06)]">
-          <div className="px-8 py-4">
+          <div className="px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
             <div className="flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-2 text-sm text-[#94A3B8] mb-1">
@@ -1071,7 +1071,7 @@ const LeadSources = () => {
                   <ChevronRight size={14} />
                   <span className="text-[#0F172A] font-medium">Sources</span>
                 </div>
-                <h1 className="text-2xl font-bold text-[#0F172A]">Lead Sources</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Lead Sources</h1>
               </div>
 
               <div className="flex items-center gap-3">
@@ -1101,9 +1101,9 @@ const LeadSources = () => {
           </div>
         </header>
 
-        <div className="p-8">
+        <div className="p-4 sm:p-6 lg:p-8">
           {/* Stats Cards */}
-          <div className="grid grid-cols-5 gap-6 mb-8">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4 lg:gap-4 lg:gap-6 mb-4 lg:mb-8">
             <StatCard
               title="Total Sources"
               value={stats.totalSources}
@@ -1213,7 +1213,7 @@ const LeadSources = () => {
             {/* Content */}
             <AnimatePresence mode="wait">
               {viewMode === "grid" ? (
-                <div className="p-6 grid grid-cols-3 gap-6">
+                <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
                   {filteredSources.length === 0 ? (
                     <div className="col-span-3 text-center py-12">
                       <Target size={48} className="text-[#475569] mx-auto mb-3" />
@@ -1340,7 +1340,7 @@ const LeadSources = () => {
             </div>
 
             {/* Quick Stats */}
-            <div className="grid grid-cols-4 gap-4 mt-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-6">
               {filteredSources.slice(0, 4).map((source) => {
                 const SourceIcon = source.icon;
                 return (

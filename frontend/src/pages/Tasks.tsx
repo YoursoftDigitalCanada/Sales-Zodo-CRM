@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { getTasks as fetchTasksApi, createTask as createTaskApi, updateTask as updateTaskApi, deleteTask as deleteTaskApi, updateTaskStatus } from "@/features/tasks";
+import api from "@/lib/axios";
+import { extractApiArray } from "@/types/api";
 import { getUsers } from "@/features/users";
 import { Sidebar } from "@/components/Sidebar";
 import { AiInsightBadge, getTaskInsights } from "@/components/ai/AiInsightBadge";
@@ -237,13 +239,7 @@ const taskCategories: TaskCategory[] = [
   { id: "other", name: "Other", icon: FolderOpen, color: "#06B6D4" },
 ];
 
-const projects: Project[] = [
-  { id: "proj_1", name: "Website Redesign", color: "#3B82F6", taskCount: 24 },
-  { id: "proj_2", name: "Mobile App", color: "#10B981", taskCount: 18 },
-  { id: "proj_3", name: "CRM Development", color: "#8B5CF6", taskCount: 32 },
-  { id: "proj_4", name: "Marketing Campaign", color: "#F59E0B", taskCount: 12 },
-  { id: "proj_5", name: "Client Onboarding", color: "#EC4899", taskCount: 8 },
-];
+const PROJECT_COLORS = ["#3B82F6", "#10B981", "#8B5CF6", "#F59E0B", "#EC4899", "#EF4444", "#06B6D4", "#F97316"];
 
 
 
@@ -1959,6 +1955,9 @@ const TaskSidebar = ({
   showStarredOnly,
   onToggleStarredOnly,
   taskCounts,
+  quickFilter,
+  onSelectQuickFilter,
+  projects,
 }: {
   selectedProject: string;
   onSelectProject: (projectId: string) => void;
@@ -1976,6 +1975,9 @@ const TaskSidebar = ({
     starred: number;
     completed: number;
   };
+  quickFilter: "" | "today" | "upcoming" | "overdue";
+  onSelectQuickFilter: (filter: "" | "today" | "upcoming" | "overdue") => void;
+  projects: Project[];
 }) => {
   return (
     <div className="space-y-6">
@@ -1987,10 +1989,11 @@ const TaskSidebar = ({
             onClick={() => {
               onSelectProject("");
               onSelectCategory("");
+              onSelectQuickFilter("");
             }}
             className={cn(
               "w-full flex items-center justify-between px-3 py-2 rounded-md transition-colors",
-              !selectedProject && !selectedCategory
+              !selectedProject && !selectedCategory && !quickFilter && !showStarredOnly
                 ? "bg-[#0891B2]/10 text-[#0891B2]"
                 : "hover:bg-[#F8FAFC] text-[#475569]"
             )}
@@ -2016,21 +2019,45 @@ const TaskSidebar = ({
             </div>
             <span className="text-sm">{taskCounts.starred}</span>
           </button>
-          <button className="w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-[#F8FAFC] text-[#475569] transition-colors">
+          <button
+            onClick={() => onSelectQuickFilter("today")}
+            className={cn(
+              "w-full flex items-center justify-between px-3 py-2 rounded-md transition-colors",
+              quickFilter === "today"
+                ? "bg-[#0891B2]/10 text-[#0891B2]"
+                : "hover:bg-[#F8FAFC] text-[#475569]"
+            )}
+          >
             <div className="flex items-center gap-2">
               <CalendarIcon size={16} />
               <span className="font-medium">Today</span>
             </div>
             <span className="text-sm">{taskCounts.today}</span>
           </button>
-          <button className="w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-[#F8FAFC] text-[#475569] transition-colors">
+          <button
+            onClick={() => onSelectQuickFilter("upcoming")}
+            className={cn(
+              "w-full flex items-center justify-between px-3 py-2 rounded-md transition-colors",
+              quickFilter === "upcoming"
+                ? "bg-[#0891B2]/10 text-[#0891B2]"
+                : "hover:bg-[#F8FAFC] text-[#475569]"
+            )}
+          >
             <div className="flex items-center gap-2">
               <CalendarDays size={16} />
               <span className="font-medium">Upcoming</span>
             </div>
             <span className="text-sm">{taskCounts.upcoming}</span>
           </button>
-          <button className="w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-red-50 text-red-600 transition-colors">
+          <button
+            onClick={() => onSelectQuickFilter("overdue")}
+            className={cn(
+              "w-full flex items-center justify-between px-3 py-2 rounded-md transition-colors",
+              quickFilter === "overdue"
+                ? "bg-red-50 text-red-600"
+                : "hover:bg-red-50 text-red-600"
+            )}
+          >
             <div className="flex items-center gap-2">
               <AlertCircle size={16} />
               <span className="font-medium">Overdue</span>
@@ -2165,6 +2192,25 @@ const TasksPage = () => {
     };
     fetchTasks();
   }, [toast]);
+
+  // Fetch projects from API for sidebar
+  const [apiProjects, setApiProjects] = useState<Project[]>([]);
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const res = await api.get("/projects");
+        const raw = extractApiArray<any>(res.data);
+        setApiProjects(raw.map((p: any, i: number) => ({
+          id: p.id,
+          name: p.name,
+          color: PROJECT_COLORS[i % PROJECT_COLORS.length],
+          taskCount: p._count?.tasks ?? 0,
+        })));
+      } catch { setApiProjects([]); }
+    };
+    fetchProjects();
+  }, []);
+  const projects = apiProjects;
   const [viewMode, setViewMode] = useState<"list" | "grid" | "kanban">("list");
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -2172,8 +2218,10 @@ const TasksPage = () => {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [showCompleted, setShowCompleted] = useState(true);
   const [showStarredOnly, setShowStarredOnly] = useState(false);
+  const [quickFilter, setQuickFilter] = useState<"" | "today" | "upcoming" | "overdue">("");
   const [sortBy, setSortBy] = useState<"dueDate" | "priority" | "created" | "title">("dueDate");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
 
   // Dialog states
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -2213,6 +2261,15 @@ const TasksPage = () => {
       result = result.filter((t) => t.status === "in_review");
     } else if (activeTab === "completed") {
       result = result.filter((t) => t.status === "completed");
+    }
+
+    // Quick filter (sidebar)
+    if (quickFilter === "today") {
+      result = result.filter((t) => isDueToday(t) && t.status !== "completed");
+    } else if (quickFilter === "upcoming") {
+      result = result.filter((t) => isDueSoon(t) && t.status !== "completed");
+    } else if (quickFilter === "overdue") {
+      result = result.filter((t) => isOverdue(t));
     }
 
     // Filter by search
@@ -2275,7 +2332,7 @@ const TasksPage = () => {
     });
 
     return result;
-  }, [tasks, activeTab, searchQuery, selectedProject, selectedCategory, showCompleted, showStarredOnly, sortBy, sortOrder]);
+  }, [tasks, activeTab, searchQuery, selectedProject, selectedCategory, showCompleted, showStarredOnly, quickFilter, sortBy, sortOrder]);
 
   // Group tasks by status for Kanban view
   const tasksByStatus = useMemo(() => {
@@ -2533,16 +2590,27 @@ const TasksPage = () => {
       <main className="flex-1 ml-0">
         {/* Header */}
         <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-[rgba(15,23,42,0.06)]">
-          <div className="px-8 py-4">
-            <div className="flex items-center justify-between">
+          <div className="px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
+            <div className="flex items-center justify-between flex-wrap gap-3">
               <div>
-                <h1 className="text-2xl font-bold text-[#0F172A]">Tasks</h1>
-                <p className="text-[#94A3B8]">Manage and track your tasks</p>
+                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Tasks</h1>
+                <p className="text-[#94A3B8] text-sm sm:text-base">Manage and track your tasks</p>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
+                {/* Mobile sidebar toggle */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="lg:hidden rounded-md"
+                  onClick={() => setShowMobileSidebar(!showMobileSidebar)}
+                >
+                  <Filter size={16} className="mr-1" />
+                  Filters
+                </Button>
+
                 {/* View Mode Toggle */}
-                <div className="flex items-center bg-white/5 rounded-md p-1">
+                <div className="hidden sm:flex items-center bg-white/5 rounded-md p-1">
                   <Button
                     variant={viewMode === "list" ? "secondary" : "ghost"}
                     size="sm"
@@ -2550,7 +2618,7 @@ const TasksPage = () => {
                     onClick={() => setViewMode("list")}
                   >
                     <List size={16} className="mr-1" />
-                    List
+                    <span className="hidden md:inline">List</span>
                   </Button>
                   <Button
                     variant={viewMode === "grid" ? "secondary" : "ghost"}
@@ -2559,7 +2627,7 @@ const TasksPage = () => {
                     onClick={() => setViewMode("grid")}
                   >
                     <LayoutGrid size={16} className="mr-1" />
-                    Grid
+                    <span className="hidden md:inline">Grid</span>
                   </Button>
                   <Button
                     variant={viewMode === "kanban" ? "secondary" : "ghost"}
@@ -2568,7 +2636,7 @@ const TasksPage = () => {
                     onClick={() => setViewMode("kanban")}
                   >
                     <KanbanSquare size={16} className="mr-1" />
-                    Kanban
+                    <span className="hidden md:inline">Kanban</span>
                   </Button>
                 </div>
 
@@ -2577,19 +2645,20 @@ const TasksPage = () => {
                     setCurrentTask(null);
                     setIsFormOpen(true);
                   }}
-                  className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md gap-2"
+                  className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md gap-1 sm:gap-2"
+                  size="sm"
                 >
                   <Plus size={18} />
-                  Add Task
+                  <span className="hidden sm:inline">Add Task</span>
                 </Button>
               </div>
             </div>
           </div>
         </header>
 
-        <div className="p-8">
+        <div className="p-4 sm:p-6 lg:p-8">
           {/* Stats Cards */}
-          <div className="grid grid-cols-5 gap-6 mb-8">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4 lg:gap-6 mb-6 lg:mb-8">
             <StatCard
               title="Total Tasks"
               value={tasks.length}
@@ -2628,9 +2697,12 @@ const TasksPage = () => {
             />
           </div>
 
-          <div className="grid grid-cols-4 gap-8">
-            {/* Sidebar */}
-            <div className="col-span-1">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-8">
+            {/* Sidebar — hidden on mobile unless toggled */}
+            <div className={cn(
+              "lg:col-span-1",
+              showMobileSidebar ? "block" : "hidden lg:block"
+            )}>
               <TaskSidebar
                 selectedProject={selectedProject}
                 onSelectProject={setSelectedProject}
@@ -2641,21 +2713,24 @@ const TasksPage = () => {
                 showStarredOnly={showStarredOnly}
                 onToggleStarredOnly={() => setShowStarredOnly(!showStarredOnly)}
                 taskCounts={taskCounts}
+                quickFilter={quickFilter}
+                onSelectQuickFilter={(f) => setQuickFilter(f === quickFilter ? "" : f)}
+                projects={projects}
               />
             </div>
 
             {/* Main Content */}
-            <div className="col-span-3">
+            <div className="lg:col-span-3">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden"
               >
                 {/* Tabs & Filters */}
-                <div className="p-4 border-b border-[rgba(15,23,42,0.06)]">
+                <div className="p-3 sm:p-4 border-b border-[rgba(15,23,42,0.06)]">
                   <Tabs value={activeTab} onValueChange={setActiveTab}>
-                    <div className="flex items-center justify-between mb-4">
-                      <TabsList className="bg-white/5 rounded-md p-1">
+                    <div className="flex items-center justify-between mb-3 sm:mb-4 overflow-x-auto">
+                      <TabsList className="bg-white/5 rounded-md p-1 flex-shrink-0">
                         <TabsTrigger value="all" className="rounded-md data-[state=active]:bg-white">
                           All ({filteredTasks.length})
                         </TabsTrigger>
@@ -2794,7 +2869,7 @@ const TasksPage = () => {
                           <p className="text-[#475569] text-sm">Try adjusting your filters</p>
                         </div>
                       ) : (
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                           {filteredTasks.map((task, index) => (
                             <TaskCard
                               key={task.id}

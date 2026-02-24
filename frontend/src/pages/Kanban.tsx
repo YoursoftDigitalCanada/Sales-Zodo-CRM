@@ -1185,7 +1185,7 @@ const KanbanPage: React.FC = () => {
                       <col.icon size={14} className="text-[#0891B2]" />
                       <span className="text-xs text-[#475569]">{col.title}</span>
                     </div>
-                    <span className="text-2xl font-bold text-[#0F172A]">
+                    <span className="text-xl sm:text-2xl font-bold text-[#0F172A]">
                       {col.tasks.length}
                     </span>
                   </motion.div>

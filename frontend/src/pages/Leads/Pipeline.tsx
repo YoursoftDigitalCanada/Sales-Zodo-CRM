@@ -785,7 +785,7 @@ const Pipeline = () => {
       <main className="flex-1 ml-0">
         {/* Header */}
         <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-[rgba(15,23,42,0.06)]">
-          <div className="px-8 py-4">
+          <div className="px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
             <div className="flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-2 text-sm text-[#94A3B8] mb-1">
@@ -796,7 +796,7 @@ const Pipeline = () => {
                   <span className="text-[#0F172A] font-medium">Pipeline</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <h1 className="text-2xl font-bold text-[#0F172A]">Sales Pipeline</h1>
+                  <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Sales Pipeline</h1>
                   <span className="px-2 py-1 bg-[#0891B2]/10 text-[#0891B2] text-xs font-bold rounded-md">LIVE</span>
                 </div>
               </div>
@@ -844,7 +844,7 @@ const Pipeline = () => {
         </header>
 
         {/* Pipeline Board */}
-        <div className="p-8">
+        <div className="p-4 sm:p-6 lg:p-8">
           {/* Pipeline Flow Indicator */}
           <div className="mb-6 flex items-center justify-center">
             <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-md border border-[rgba(15,23,42,0.06)] shadow-sm">

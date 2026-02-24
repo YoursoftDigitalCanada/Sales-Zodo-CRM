@@ -274,7 +274,7 @@ const StatCard = ({
         <div>
           <p className="text-sm text-[#94A3B8] mb-1">{title}</p>
           <div className="flex items-baseline gap-2">
-            <p className="text-2xl font-bold text-[#0F172A]">{value}</p>
+            <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">{value}</p>
             {trend && (
               <span className={cn(
                 "flex items-center text-xs font-semibold",
@@ -353,17 +353,17 @@ const WorkspaceBookingCard = ({
         </p>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-3 gap-3 mb-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-5">
           <div className="bg-[#F8FAFC] rounded-md p-3 text-center">
-            <p className="text-2xl font-bold text-[#0F172A]">{pages.length}</p>
+            <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">{pages.length}</p>
             <p className="text-xs text-[#94A3B8]">Event Types</p>
           </div>
           <div className="bg-[#F8FAFC] rounded-md p-3 text-center">
-            <p className="text-2xl font-bold text-[#0891B2]">{totalViews}</p>
+            <p className="text-xl sm:text-2xl font-bold text-[#0891B2]">{totalViews}</p>
             <p className="text-xs text-[#94A3B8]">Total Views</p>
           </div>
           <div className="bg-[#F8FAFC] rounded-md p-3 text-center">
-            <p className="text-2xl font-bold text-[#D97706]">{totalBookings}</p>
+            <p className="text-xl sm:text-2xl font-bold text-[#D97706]">{totalBookings}</p>
             <p className="text-xs text-[#94A3B8]">Bookings</p>
           </div>
         </div>
@@ -670,7 +670,7 @@ const ThemeCustomizationDialog = ({
 
             {/* Layout Tab */}
             <TabsContent value="layout" className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {layoutOptions.map((layout) => {
                   const Icon = layout.icon;
                   return (
@@ -870,7 +870,7 @@ const ShareDialog = ({
           {/* Share Options */}
           <div className="space-y-2">
             <Label className="text-sm font-medium text-[#475569]">Share via</Label>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {shareOptions.map((option) => (
                 <motion.button
                   key={option.name}
@@ -1345,7 +1345,7 @@ const BookingPagesPage = () => {
                 <CalendarDays size={24} className="text-[#0F172A]" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-[#0F172A]">Booking Pages</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Booking Pages</h1>
                 <p className="text-[#94A3B8]">Manage your scheduling pages and event types</p>
               </div>
             </div>
@@ -1371,7 +1371,7 @@ const BookingPagesPage = () => {
           </motion.div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <StatCard
               title="Total Views"
               value={stats.totalViews.toLocaleString()}
@@ -1482,7 +1482,7 @@ const BookingPagesPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="grid grid-cols-3 gap-4"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4"
           >
             {/* Recent Bookings */}
             <div className="col-span-2 bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-5">
@@ -1622,14 +1622,14 @@ const BookingPagesPage = () => {
             </div>
 
             {/* Chart Placeholder */}
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               {/* Mini Stat Cards */}
               <div className="bg-[#F8FAFC] rounded-md p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <MousePointerClick size={16} className="text-[#0891B2]" />
                   <span className="text-sm text-[#94A3B8]">Page Visits</span>
                 </div>
-                <p className="text-2xl font-bold text-[#0F172A]">1,247</p>
+                <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">1,247</p>
                 <span className="text-xs text-green-600">+18% vs last week</span>
               </div>
 
@@ -1638,7 +1638,7 @@ const BookingPagesPage = () => {
                   <CalendarCheck size={16} className="text-[#D97706]" />
                   <span className="text-sm text-[#94A3B8]">Bookings</span>
                 </div>
-                <p className="text-2xl font-bold text-[#0F172A]">89</p>
+                <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">89</p>
                 <span className="text-xs text-green-600">+12% vs last week</span>
               </div>
 
@@ -1647,7 +1647,7 @@ const BookingPagesPage = () => {
                   <Timer size={16} className="text-purple-500" />
                   <span className="text-sm text-[#94A3B8]">Avg Duration</span>
                 </div>
-                <p className="text-2xl font-bold text-[#0F172A]">32m</p>
+                <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">32m</p>
                 <span className="text-xs text-[#475569]">No change</span>
               </div>
 
@@ -1656,7 +1656,7 @@ const BookingPagesPage = () => {
                   <Activity size={16} className="text-blue-500" />
                   <span className="text-sm text-[#94A3B8]">Show Rate</span>
                 </div>
-                <p className="text-2xl font-bold text-[#0F172A]">94%</p>
+                <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">94%</p>
                 <span className="text-xs text-green-600">+2% vs last week</span>
               </div>
             </div>

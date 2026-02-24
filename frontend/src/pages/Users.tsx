@@ -520,7 +520,7 @@ const StatCard = ({
       <div className="relative flex items-start justify-between">
         <div>
           <p className="text-sm text-[#94A3B8] mb-1">{title}</p>
-          <p className="text-2xl font-bold text-[#0F172A]">{value}</p>
+          <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">{value}</p>
           {change !== undefined && (
             <div className="flex items-center gap-1 mt-2">
               {change >= 0 ? (
@@ -655,7 +655,7 @@ const UserCard = ({
               className="w-20 h-20 rounded-md object-cover mx-auto"
             />
           ) : (
-            <div className="w-20 h-20 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] text-2xl font-bold mx-auto">
+            <div className="w-20 h-20 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] text-xl sm:text-2xl font-bold mx-auto">
               {getInitials(user.fullName)}
             </div>
           )}
@@ -959,7 +959,7 @@ const UserFormDialog = ({
                   className="w-20 h-20 rounded-md object-cover"
                 />
               ) : (
-                <div className="w-20 h-20 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] text-2xl font-bold">
+                <div className="w-20 h-20 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] text-xl sm:text-2xl font-bold">
                   {formData.fullName ? getInitials(formData.fullName) : <User size={32} />}
                 </div>
               )}
@@ -1243,7 +1243,7 @@ const UserProfileDialog = ({
               </div>
               <div className="flex-1 pb-2">
                 <div className="flex items-center gap-3 mb-1">
-                  <h2 className="text-2xl font-bold text-[#0F172A]">{user.fullName}</h2>
+                  <h2 className="text-xl sm:text-2xl font-bold text-[#0F172A]">{user.fullName}</h2>
                   <span
                     className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium"
                     style={{ backgroundColor: `${roleInfo.color}15`, color: roleInfo.color }}
@@ -1301,21 +1301,21 @@ const UserProfileDialog = ({
             {/* Overview Tab */}
             <TabsContent value="overview" className="space-y-6">
               {/* Stats Grid */}
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 <div className="p-4 bg-[#F8FAFC] rounded-md text-center">
-                  <p className="text-2xl font-bold text-[#0F172A]">{user.tasksCompleted || 0}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">{user.tasksCompleted || 0}</p>
                   <p className="text-sm text-[#94A3B8]">Tasks Completed</p>
                 </div>
                 <div className="p-4 bg-[#F8FAFC] rounded-md text-center">
-                  <p className="text-2xl font-bold text-[#0891B2]">{user.projectsCount || 0}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-[#0891B2]">{user.projectsCount || 0}</p>
                   <p className="text-sm text-[#94A3B8]">Projects</p>
                 </div>
                 <div className="p-4 bg-[#F8FAFC] rounded-md text-center">
-                  <p className="text-2xl font-bold text-[#D97706]">{user.loginCount || 0}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-[#D97706]">{user.loginCount || 0}</p>
                   <p className="text-sm text-[#94A3B8]">Total Logins</p>
                 </div>
                 <div className="p-4 bg-[#F8FAFC] rounded-md text-center">
-                  <p className="text-2xl font-bold text-purple-500">
+                  <p className="text-xl sm:text-2xl font-bold text-purple-500">
                     {user.teams?.length || 0}
                   </p>
                   <p className="text-sm text-[#94A3B8]">Teams</p>
@@ -2286,7 +2286,7 @@ export default function UsersPage() {
                   <ChevronRight size={14} />
                   <span className="text-[#0891B2] font-medium">Users</span>
                 </div>
-                <h1 className="text-2xl font-bold text-[#0F172A]">User Management</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">User Management</h1>
               </div>
 
               {/* Header Actions */}

@@ -559,7 +559,7 @@ const StatCard = ({
         <div>
           <p className="text-sm text-[#94A3B8] mb-1">{title}</p>
           <div className="flex items-baseline gap-2">
-            <p className="text-2xl font-bold text-[#0F172A]">{value}</p>
+            <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">{value}</p>
             {trend && (
               <span className={cn(
                 "flex items-center text-xs font-semibold",
@@ -1315,7 +1315,7 @@ const ShareDialog = ({
           {/* Access Type */}
           <div className="space-y-2">
             <Label className="text-sm font-medium text-[#475569]">Access Type</Label>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {[
                 { id: "view", icon: Eye, label: "View Only" },
                 { id: "comment", icon: FileText, label: "Can Comment" },
@@ -1680,7 +1680,7 @@ const FileManagerPage = () => {
                 <div className="w-20 h-20 mx-auto mb-6 rounded-md bg-[#0891B2]/10 flex items-center justify-center">
                   <CloudUpload size={40} className="text-[#0891B2]" />
                 </div>
-                <h2 className="text-2xl font-bold text-[#0F172A] mb-2">Drop files here</h2>
+                <h2 className="text-xl sm:text-2xl font-bold text-[#0F172A] mb-2">Drop files here</h2>
                 <p className="text-[#94A3B8]">Release to upload your files</p>
               </motion.div>
             </motion.div>
@@ -1698,7 +1698,7 @@ const FileManagerPage = () => {
                   <ChevronRight size={14} />
                   <span className="text-[#0891B2] font-medium">File Manager</span>
                 </div>
-                <h1 className="text-2xl font-bold text-[#0F172A]">File Manager</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">File Manager</h1>
               </div>
 
               {/* Header Actions */}

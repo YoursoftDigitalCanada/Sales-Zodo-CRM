@@ -64,7 +64,7 @@ const StatCard = ({ title, value, subtitle, icon: Icon, color, trend, delay = 0 
         <div>
           <p className="text-sm text-[#94A3B8] mb-1">{title}</p>
           <div className="flex items-baseline gap-2">
-            <p className="text-2xl font-bold text-[#0F172A]">{value}</p>
+            <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">{value}</p>
             {trend && (
               <span className={cn("flex items-center text-xs font-semibold", trend.positive ? "text-green-600" : "text-red-600")}>
                 {trend.positive ? <ArrowUp size={12} /> : <ArrowDown size={12} />}{trend.value}%
@@ -391,7 +391,7 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
                   placeholder="client@example.com" type="email" className="mt-1 rounded-md" />
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               <div><Label className="text-xs text-[#475569]">Company</Label>
                 <Input value={formData.clientCompany} onChange={e => setFormData(p => ({ ...p, clientCompany: e.target.value }))}
                   placeholder="Company name" className="mt-1 rounded-md" />
@@ -518,7 +518,7 @@ const QuoteDetailDialog = ({ isOpen, onClose, quote, onEdit, onDelete, onSend, o
               </div>
               <p className="text-sm text-[#475569]">{quote.title}</p>
             </div>
-            <p className="text-2xl font-bold text-[#0891B2]">{formatCurrency(quote.total)}</p>
+            <p className="text-xl sm:text-2xl font-bold text-[#0891B2]">{formatCurrency(quote.total)}</p>
           </div>
         </div>
         <div className="p-6 space-y-5">
@@ -533,7 +533,7 @@ const QuoteDetailDialog = ({ isOpen, onClose, quote, onEdit, onDelete, onSend, o
             </div>
           </div>
           {/* Dates */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             <div className="p-3 bg-[#F8FAFC] rounded-md"><p className="text-xs text-[#94A3B8]">Created</p><p className="text-sm font-medium text-[#0F172A]">{formatDate(quote.createdAt)}</p></div>
             <div className="p-3 bg-[#F8FAFC] rounded-md"><p className="text-xs text-[#94A3B8]">Valid Until</p>
               <p className={cn("text-sm font-medium", expired ? "text-amber-600" : "text-[#0F172A]")}>{formatDate(quote.validUntil)}</p>
@@ -738,7 +738,7 @@ const QuotesPage = () => {
                   <FileStack size={20} className="text-[#0891B2]" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-[#0F172A]">Quotes</h1>
+                  <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Quotes</h1>
                   <p className="text-sm text-[#94A3B8]">{stats.totalCount} quotes · Pipeline value {formatCurrency(stats.totalValue)}</p>
                 </div>
               </div>

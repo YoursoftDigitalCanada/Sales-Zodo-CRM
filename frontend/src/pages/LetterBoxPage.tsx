@@ -1381,7 +1381,7 @@ const LetterBoxPage = () => {
                   <ChevronRight size={14} />
                   <span className="text-[#0891B2] font-medium">Letter Box</span>
                 </div>
-                <h1 className="text-2xl font-bold text-[#0F172A]">Letter Box</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Letter Box</h1>
               </div>
 
               {/* Header Actions */}

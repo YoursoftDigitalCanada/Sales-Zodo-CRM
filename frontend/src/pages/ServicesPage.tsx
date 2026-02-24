@@ -222,7 +222,7 @@ const StatCard = ({
       <div className="relative flex items-start justify-between">
         <div>
           <p className="text-sm text-[#94A3B8] mb-1">{title}</p>
-          <p className="text-2xl font-bold text-[#0F172A]">
+          <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">
             {typeof value === "number" ? value.toLocaleString() : value}
           </p>
           {subtitle && (
@@ -485,7 +485,7 @@ const ServiceCard = ({
 
         {/* Price */}
         <div className="mb-4">
-          <span className="text-2xl font-bold text-[#0F172A]">
+          <span className="text-xl sm:text-2xl font-bold text-[#0F172A]">
             {formatCurrency(service.basePrice)}
           </span>
           {service.durationMinutes > 0 && (
@@ -992,7 +992,7 @@ export default function ServicesPage() {
           {/* ── HEADER ── */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-[#0F172A]">Services</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Services</h1>
               <p className="text-sm text-[#94A3B8] mt-1">Manage your service catalog and offerings</p>
             </div>
             <div className="flex items-center gap-3">

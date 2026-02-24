@@ -333,7 +333,7 @@ const StatCard = ({
       <div className="relative flex items-start justify-between">
         <div>
           <p className="text-sm text-[#94A3B8] mb-1">{title}</p>
-          <p className="text-2xl font-bold text-[#0F172A]">
+          <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">
             {prefix}{typeof value === "number" ? value.toLocaleString() : value}
           </p>
           {change !== undefined && (
@@ -627,7 +627,7 @@ const ExpenseCard = ({
 
         {/* Amount */}
         <div className="mb-4">
-          <span className="text-2xl font-bold text-[#0F172A]">
+          <span className="text-xl sm:text-2xl font-bold text-[#0F172A]">
             {formatCurrency(expense.amount, expense.currency)}
           </span>
         </div>
@@ -1090,7 +1090,7 @@ const ExpenseDetailsDialog = ({
               )}
             </div>
             <div className="text-right">
-              <p className="text-2xl font-bold text-[#0F172A]">
+              <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">
                 {formatCurrency(expense.amount, expense.currency)}
               </p>
               <p className="text-sm text-[#475569]">{formatDate(expense.date)}</p>
@@ -1287,7 +1287,7 @@ const BudgetOverview = () => {
             <p className="text-sm text-[#94A3B8]">January 2024</p>
           </div>
           <div className="text-right">
-            <p className="text-2xl font-bold text-[#0F172A]">{formatCurrency(totalSpent)}</p>
+            <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">{formatCurrency(totalSpent)}</p>
             <p className="text-sm text-[#94A3B8]">of {formatCurrency(totalBudget)}</p>
           </div>
         </div>
@@ -1745,10 +1745,10 @@ const Expenses = () => {
       <main className="flex-1 ml-0">
         {/* Header */}
         <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-[rgba(15,23,42,0.06)]">
-          <div className="px-8 py-4">
+          <div className="px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-bold text-[#0F172A]">Expenses</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Expenses</h1>
                 <p className="text-[#94A3B8]">Track and manage business expenses</p>
               </div>
 
@@ -1779,9 +1779,9 @@ const Expenses = () => {
           </div>
         </header>
 
-        <div className="p-8">
+        <div className="p-4 sm:p-6 lg:p-8">
           {/* Stats Cards */}
-          <div className="grid grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-4 lg:gap-6 mb-4 lg:mb-8">
             <StatCard
               title="Total Expenses"
               value={formatCurrency(defaultExpenseStats.totalExpenses)}
@@ -1818,9 +1818,9 @@ const Expenses = () => {
           </div>
 
           {/* Main Content */}
-          <div className="grid grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-8">
             {/* Expenses List */}
-            <div className="col-span-2">
+            <div className="col-span-full lg:col-span-2">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -2111,7 +2111,7 @@ const Expenses = () => {
             </div>
 
             {/* Sidebar - Budget Overview */}
-            <div className="col-span-1">
+            <div className="col-span-full lg:col-span-1">
               <BudgetOverview />
             </div>
           </div>

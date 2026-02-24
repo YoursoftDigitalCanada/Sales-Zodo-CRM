@@ -295,7 +295,7 @@ const StatCard = ({
         <div>
           <p className="text-sm text-[#94A3B8] mb-1">{title}</p>
           <div className="flex items-baseline gap-2">
-            <p className="text-2xl font-bold text-[#0F172A]">{value}</p>
+            <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">{value}</p>
             {trend && (
               <span className={cn(
                 "flex items-center text-xs font-semibold",
@@ -1454,7 +1454,7 @@ const ProjectsPage = () => {
                 <Briefcase size={24} className="text-[#0F172A]" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-[#0F172A]">Projects</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Projects</h1>
                 <p className="text-[#94A3B8]">
                   Manage and track all your projects
                 </p>
@@ -1492,7 +1492,7 @@ const ProjectsPage = () => {
           </motion.div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
             <StatCard
               title="Total Projects"
               value={stats.total}
@@ -2000,7 +2000,7 @@ const ProjectsPage = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4 }}
-            className="grid grid-cols-4 gap-4"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4"
           >
             {/* Status Distribution */}
             <div className="col-span-2 bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-5">

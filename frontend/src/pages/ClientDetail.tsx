@@ -428,7 +428,7 @@ const ClientDetailPage = () => {
                   <div className="flex flex-col items-center text-center">
                     <Avatar className="h-24 w-24 border-4 border-white card-shadow bg-white">
                       <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${client.clientName}`} />
-                      <AvatarFallback className="bg-indigo-100 text-[#0891B2] text-2xl font-bold">{getInitials(client.clientName)}</AvatarFallback>
+                      <AvatarFallback className="bg-indigo-100 text-[#0891B2] text-xl sm:text-2xl font-bold">{getInitials(client.clientName)}</AvatarFallback>
                     </Avatar>
                     <h2 className="text-xl font-bold text-[#0F172A] mt-3">{client.clientName}</h2>
                     <p className="text-sm text-[#475569]">{client.clientType}</p>

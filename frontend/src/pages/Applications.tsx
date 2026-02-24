@@ -3149,23 +3149,23 @@ const ApplicationDetailsSheet = ({
             {/* Overview Tab */}
             <TabsContent value="overview" className="p-6 space-y-6 m-0">
               {/* Quick Stats */}
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 <div className="p-4 bg-[#F8FAFC] rounded-md text-center">
                   <ScoreCircle score={application.scores.overall} size="default" showLabel={false} />
                   <p className="text-xs text-[#94A3B8] mt-2">Overall Score</p>
                 </div>
                 <div className="p-4 bg-[#F8FAFC] rounded-md text-center">
-                  <p className="text-2xl font-bold text-[#0F172A]">{application.yearsOfExperience || 0}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">{application.yearsOfExperience || 0}</p>
                   <p className="text-xs text-[#94A3B8] mt-1">Years Experience</p>
                 </div>
                 <div className="p-4 bg-[#F8FAFC] rounded-md text-center">
-                  <p className="text-2xl font-bold text-[#0891B2]">
+                  <p className="text-xl sm:text-2xl font-bold text-[#0891B2]">
                     {application.expectedSalary ? formatCurrency(application.expectedSalary.min) : "N/A"}
                   </p>
                   <p className="text-xs text-[#94A3B8] mt-1">Expected Salary</p>
                 </div>
                 <div className="p-4 bg-[#F8FAFC] rounded-md text-center">
-                  <p className="text-2xl font-bold text-[#0F172A]">{application.noticePeriod || "N/A"}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">{application.noticePeriod || "N/A"}</p>
                   <p className="text-xs text-[#94A3B8] mt-1">Notice Period</p>
                 </div>
               </div>
@@ -3818,14 +3818,14 @@ const ApplicationDetailsSheet = ({
                             <div className="flex items-center justify-between">
                               <div>
                                 <p className="text-sm text-[#94A3B8]">Score</p>
-                                <p className="text-2xl font-bold" style={{ color: getScoreColor(assessment.score) }}>
+                                <p className="text-xl sm:text-2xl font-bold" style={{ color: getScoreColor(assessment.score) }}>
                                   {assessment.score}/{assessment.maxScore}
                                 </p>
                               </div>
                               {assessment.percentile && (
                                 <div className="text-right">
                                   <p className="text-sm text-[#94A3B8]">Percentile</p>
-                                  <p className="text-2xl font-bold text-[#0F172A]">{assessment.percentile}%</p>
+                                  <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">{assessment.percentile}%</p>
                                 </div>
                               )}
                             </div>
@@ -5149,7 +5149,7 @@ const Applications = () => {
         >
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-2xl font-bold text-[#0F172A]">Applications</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Applications</h1>
               <p className="text-[#94A3B8] text-sm">
                 Manage and track all applications in one place
               </p>

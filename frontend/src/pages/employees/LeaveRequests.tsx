@@ -199,7 +199,7 @@ const LeaveRequestsPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#0F172A]">Leave Requests</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Leave Requests</h1>
           <p className="text-[#475569] mt-1">
             Manage and approve employee leave requests
           </p>

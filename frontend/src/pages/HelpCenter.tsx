@@ -346,7 +346,7 @@ export default function HelpCenterPage() {
                                 <HelpCircle size={20} className="text-[#0891B2]" />
                             </div>
                             <div>
-                                <h1 className="text-2xl font-bold text-[#0F172A]">Help Center</h1>
+                                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Help Center</h1>
                                 <p className="text-sm text-[#475569] mt-0.5">Everything you need to master ZODO CRM</p>
                             </div>
                         </div>
@@ -380,7 +380,7 @@ export default function HelpCenterPage() {
                             </div>
 
                             <div className="relative">
-                                <h2 className="text-2xl font-bold text-white mb-2">How can we help you?</h2>
+                                <h2 className="text-xl sm:text-2xl font-bold text-white mb-2">How can we help you?</h2>
                                 <p className="text-white/70 text-sm mb-6">Search our knowledge base, FAQs, and tutorials</p>
 
                                 <div className="relative max-w-2xl">

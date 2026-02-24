@@ -856,7 +856,7 @@ const MobileProgressBar = ({
             </div>
           </div>
           <div className="text-right">
-            <p className="text-2xl font-bold text-[#23D3EE]">{Math.round(progress)}%</p>
+            <p className="text-xl sm:text-2xl font-bold text-[#23D3EE]">{Math.round(progress)}%</p>
           </div>
         </div>
         <div className="relative h-2 bg-slate-100 rounded-full overflow-hidden">
@@ -885,7 +885,7 @@ const WelcomeStep = ({ onNext }: { onNext: () => void }) => {
       exit={{ opacity: 0 }}
       className="max-w-2xl mx-auto text-center py-8 lg:py-12"
     >
-      <GlassCard className="p-8 lg:p-12">
+      <GlassCard className="p-4 sm:p-6 lg:p-8 lg:p-12">
         {/* Animated Logo */}
         <motion.div
           initial={{ scale: 0, rotate: -180 }}
@@ -1074,7 +1074,7 @@ const ProfileStep = ({
       exit={{ opacity: 0, x: -50 }}
       className="max-w-xl mx-auto"
     >
-      <GlassCard className="p-8">
+      <GlassCard className="p-4 sm:p-6 lg:p-8">
         {/* Header */}
         <div className="text-center mb-8">
           <motion.div
@@ -1085,7 +1085,7 @@ const ProfileStep = ({
           >
             <User size={32} className="text-[#23D3EE]" />
           </motion.div>
-          <h2 className="text-2xl font-bold text-[#0F172A] mb-2">Tell us about yourself</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-[#0F172A] mb-2">Tell us about yourself</h2>
           <p className="text-slate-500">This helps us personalize your experience</p>
         </div>
 
@@ -1104,7 +1104,7 @@ const ProfileStep = ({
             />
             <Avatar className="relative w-28 h-28 border-4 border-white shadow-xl">
               <AvatarImage src={data.avatar || undefined} />
-              <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#0F172A] text-white text-2xl font-bold">
+              <AvatarFallback className="bg-gradient-to-br from-[#23D3EE] to-[#0F172A] text-white text-xl sm:text-2xl font-bold">
                 {data.firstName && data.lastName ? getInitials(data.firstName, data.lastName) : "?"}
               </AvatarFallback>
             </Avatar>
@@ -1341,7 +1341,7 @@ const CompanyStep = ({
       exit={{ opacity: 0, x: -50 }}
       className="max-w-xl mx-auto"
     >
-      <GlassCard className="p-8">
+      <GlassCard className="p-4 sm:p-6 lg:p-8">
         {/* Header */}
         <div className="text-center mb-8">
           <motion.div
@@ -1352,7 +1352,7 @@ const CompanyStep = ({
           >
             <Building2 size={32} className="text-[#23D3EE]" />
           </motion.div>
-          <h2 className="text-2xl font-bold text-[#0F172A] mb-2">Company Details</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-[#0F172A] mb-2">Company Details</h2>
           <p className="text-slate-500">Tell us about your organization</p>
         </div>
 
@@ -1545,7 +1545,7 @@ const TeamSizeStep = ({
       exit={{ opacity: 0, x: -50 }}
       className="max-w-2xl mx-auto"
     >
-      <GlassCard className="p-8">
+      <GlassCard className="p-4 sm:p-6 lg:p-8">
         {/* Header */}
         <div className="text-center mb-8">
           <motion.div
@@ -1556,7 +1556,7 @@ const TeamSizeStep = ({
           >
             <Users size={32} className="text-[#23D3EE]" />
           </motion.div>
-          <h2 className="text-2xl font-bold text-[#0F172A] mb-2">How big is your team?</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-[#0F172A] mb-2">How big is your team?</h2>
           <p className="text-slate-500">This helps us recommend the right plan for you</p>
         </div>
 
@@ -1671,7 +1671,7 @@ const IndustryStep = ({
       exit={{ opacity: 0, x: -50 }}
       className="max-w-3xl mx-auto"
     >
-      <GlassCard className="p-8">
+      <GlassCard className="p-4 sm:p-6 lg:p-8">
         {/* Header */}
         <div className="text-center mb-8">
           <motion.div
@@ -1682,7 +1682,7 @@ const IndustryStep = ({
           >
             <Briefcase size={32} className="text-[#23D3EE]" />
           </motion.div>
-          <h2 className="text-2xl font-bold text-[#0F172A] mb-2">What industry are you in?</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-[#0F172A] mb-2">What industry are you in?</h2>
           <p className="text-slate-500">We'll customize your experience based on your industry</p>
         </div>
 
@@ -1791,7 +1791,7 @@ const GoalsStep = ({
       exit={{ opacity: 0, x: -50 }}
       className="max-w-3xl mx-auto"
     >
-      <GlassCard className="p-8">
+      <GlassCard className="p-4 sm:p-6 lg:p-8">
         {/* Header */}
         <div className="text-center mb-8">
           <motion.div
@@ -1802,7 +1802,7 @@ const GoalsStep = ({
           >
             <Target size={32} className="text-[#23D3EE]" />
           </motion.div>
-          <h2 className="text-2xl font-bold text-[#0F172A] mb-2">What are your main goals?</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-[#0F172A] mb-2">What are your main goals?</h2>
           <p className="text-slate-500">Select all that apply - we'll prioritize these features for you</p>
         </div>
 
@@ -1939,7 +1939,7 @@ const FeaturesStep = ({
       exit={{ opacity: 0, x: -50 }}
       className="max-w-3xl mx-auto"
     >
-      <GlassCard className="p-8">
+      <GlassCard className="p-4 sm:p-6 lg:p-8">
         {/* Header */}
         <div className="text-center mb-8">
           <motion.div
@@ -1950,7 +1950,7 @@ const FeaturesStep = ({
           >
             <Zap size={32} className="text-[#23D3EE]" />
           </motion.div>
-          <h2 className="text-2xl font-bold text-[#0F172A] mb-2">Choose your key features</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-[#0F172A] mb-2">Choose your key features</h2>
           <p className="text-slate-500">We'll enable these features in your workspace</p>
         </div>
 
@@ -2088,7 +2088,7 @@ const IntegrationsStep = ({
       exit={{ opacity: 0, x: -50 }}
       className="max-w-3xl mx-auto"
     >
-      <GlassCard className="p-8">
+      <GlassCard className="p-4 sm:p-6 lg:p-8">
         {/* Header */}
         <div className="text-center mb-8">
           <motion.div
@@ -2099,7 +2099,7 @@ const IntegrationsStep = ({
           >
             <LinkIcon size={32} className="text-[#23D3EE]" />
           </motion.div>
-          <h2 className="text-2xl font-bold text-[#0F172A] mb-2">Connect your tools</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-[#0F172A] mb-2">Connect your tools</h2>
           <p className="text-slate-500">Integrate with the apps you already use</p>
           <Badge variant="outline" className="mt-2">
             Optional - Skip if you prefer
@@ -2280,7 +2280,7 @@ const InviteTeamStep = ({
       exit={{ opacity: 0, x: -50 }}
       className="max-w-2xl mx-auto"
     >
-      <GlassCard className="p-8">
+      <GlassCard className="p-4 sm:p-6 lg:p-8">
         {/* Header */}
         <div className="text-center mb-8">
           <motion.div
@@ -2291,7 +2291,7 @@ const InviteTeamStep = ({
           >
             <UserPlus size={32} className="text-[#23D3EE]" />
           </motion.div>
-          <h2 className="text-2xl font-bold text-[#0F172A] mb-2">Invite your team</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-[#0F172A] mb-2">Invite your team</h2>
           <p className="text-slate-500">Collaborate together from day one</p>
           <Badge variant="outline" className="mt-2">
             Optional - You can invite later
@@ -2449,7 +2449,7 @@ const PreferencesStep = ({
       exit={{ opacity: 0, x: -50 }}
       className="max-w-2xl mx-auto"
     >
-      <GlassCard className="p-8">
+      <GlassCard className="p-4 sm:p-6 lg:p-8">
         {/* Header */}
         <div className="text-center mb-8">
           <motion.div
@@ -2460,7 +2460,7 @@ const PreferencesStep = ({
           >
             <Settings size={32} className="text-[#23D3EE]" />
           </motion.div>
-          <h2 className="text-2xl font-bold text-[#0F172A] mb-2">Personalize your workspace</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-[#0F172A] mb-2">Personalize your workspace</h2>
           <p className="text-slate-500">Set up your preferences</p>
         </div>
 
@@ -2473,7 +2473,7 @@ const PreferencesStep = ({
             transition={{ delay: 0.1 }}
           >
             <Label className="text-sm font-medium text-[#0F172A] mb-3 block">Theme</Label>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {[
                 { id: "light", icon: Sun, label: "Light" },
                 { id: "dark", icon: Moon, label: "Dark" },
@@ -2560,7 +2560,7 @@ const PreferencesStep = ({
             transition={{ delay: 0.3 }}
           >
             <Label className="text-sm font-medium text-[#0F172A] mb-3 block">Default View</Label>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {[
                 { id: "list", icon: List, label: "List" },
                 { id: "grid", icon: LayoutGrid, label: "Grid" },
@@ -2736,7 +2736,7 @@ const CompleteStep = ({
         />
       )}
 
-      <GlassCard className="p-8 lg:p-12">
+      <GlassCard className="p-4 sm:p-6 lg:p-8 lg:p-12">
         {/* Success Animation */}
         <motion.div
           initial={{ scale: 0 }}
@@ -2852,7 +2852,7 @@ const CompleteStep = ({
                   <Icon size={20} className="text-[#23D3EE]" />
                 </motion.div>
                 <motion.p
-                  className="text-2xl font-bold text-[#0F172A]"
+                  className="text-xl sm:text-2xl font-bold text-[#0F172A]"
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ delay: 0.9 + index * 0.1, type: "spring" }}

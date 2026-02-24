@@ -308,7 +308,7 @@ const NotificationsPage = () => {
                 <Bell size={20} className="text-[#0891B2]" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-[#0F172A]">Notifications</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Notifications</h1>
                 <p className="text-sm text-[#94A3B8]">{stats.unread} unread · {stats.total} total</p>
               </div>
             </div>
@@ -353,7 +353,7 @@ const NotificationsPage = () => {
           )}
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
             {[
               { label: "Unread", value: stats.unread, icon: BellRing, color: "text-[#0891B2]", bg: "bg-[#0891B2]/10", onClick: () => setStatusFilter("unread") },
               { label: "Starred", value: stats.starred, icon: Star, color: "text-amber-600", bg: "bg-amber-100", onClick: () => setStatusFilter("starred") },
@@ -366,7 +366,7 @@ const NotificationsPage = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs text-[#94A3B8]">{stat.label}</p>
-                    <p className="text-2xl font-bold text-[#0F172A]">{stat.value}</p>
+                    <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">{stat.value}</p>
                   </div>
                   <div className={cn("w-10 h-10 rounded-md flex items-center justify-center", stat.bg)}>
                     <stat.icon size={18} className={stat.color} />

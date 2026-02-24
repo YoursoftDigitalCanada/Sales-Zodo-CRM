@@ -200,7 +200,7 @@ export default function IntegrationsPage() {
                                 <Plug size={20} className="text-[#0891B2]" />
                             </div>
                             <div>
-                                <h1 className="text-2xl font-bold text-[#0F172A]">Integrations</h1>
+                                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Integrations</h1>
                                 <p className="text-sm text-[#475569] mt-0.5">
                                     {connectedIntegrations.length} connected · {totalEventsToday.toLocaleString()} events today
                                 </p>

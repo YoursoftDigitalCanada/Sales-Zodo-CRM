@@ -141,7 +141,7 @@ export default function SettingsPage() {
                             <Settings size={20} className="text-[#0891B2]" />
                         </div>
                         <div>
-                            <h1 className="text-2xl font-bold text-[#0F172A]">Settings</h1>
+                            <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Settings</h1>
                             <p className="text-sm text-[#475569] mt-0.5">Manage your workspace preferences and configuration</p>
                         </div>
                     </div>
@@ -256,7 +256,7 @@ export default function SettingsPage() {
                                     <div className="bg-white rounded-lg card-shadow p-6">
                                         <h3 className="font-semibold text-[#0F172A] mb-4">Brand & Logo</h3>
                                         <div className="flex items-center gap-6">
-                                            <div className="w-24 h-24 rounded-xl bg-gradient-to-br from-[#0891B2] to-[#0E7490] flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+                                            <div className="w-24 h-24 rounded-xl bg-gradient-to-br from-[#0891B2] to-[#0E7490] flex items-center justify-center text-white text-xl sm:text-2xl font-bold shadow-lg">
                                                 ZD
                                             </div>
                                             <div className="space-y-2">

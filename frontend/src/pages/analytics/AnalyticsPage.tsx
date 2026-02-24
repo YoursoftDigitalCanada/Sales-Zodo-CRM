@@ -119,7 +119,7 @@ export default function AnalyticsPage() {
                                 <BarChart3 size={20} className="text-[#0891B2]" />
                             </div>
                             <div>
-                                <h1 className="text-2xl font-bold text-[#0F172A]">Analytics</h1>
+                                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Analytics</h1>
                                 <p className="text-sm text-[#475569] mt-0.5">AI-powered insights and performance metrics</p>
                             </div>
                         </div>
@@ -193,7 +193,7 @@ export default function AnalyticsPage() {
                                                     {kpi.change}
                                                 </span>
                                             </div>
-                                            <p className="text-2xl font-bold text-[#0F172A]">{kpi.value}</p>
+                                            <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">{kpi.value}</p>
                                             <p className="text-xs text-[#94A3B8] mt-1">{kpi.label}</p>
                                         </div>
                                     ))}

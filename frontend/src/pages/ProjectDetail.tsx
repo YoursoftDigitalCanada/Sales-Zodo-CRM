@@ -254,7 +254,7 @@ const ProjectDetailPage = () => {
                                         <TrendingUp className="h-4 w-4 text-blue-600" />
                                     </div>
                                 </div>
-                                <p className="text-2xl font-bold text-[#0F172A]">{progress}%</p>
+                                <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">{progress}%</p>
                                 <div className="w-full h-2 rounded-full bg-gray-100 mt-2 overflow-hidden">
                                     <div className={`h-full rounded-full ${getProgressColor(progress)} transition-all duration-500`} style={{ width: `${progress}%` }} />
                                 </div>
@@ -270,7 +270,7 @@ const ProjectDetailPage = () => {
                                         <DollarSign className="h-4 w-4 text-green-600" />
                                     </div>
                                 </div>
-                                <p className="text-2xl font-bold text-[#0F172A]">{formatCurrency(project.budget)}</p>
+                                <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">{formatCurrency(project.budget)}</p>
                                 <p className="text-xs text-[#94A3B8] mt-1">{project.currency || "USD"}</p>
                             </CardContent>
                         </Card>
@@ -284,7 +284,7 @@ const ProjectDetailPage = () => {
                                         <Calendar className="h-4 w-4 text-purple-600" />
                                     </div>
                                 </div>
-                                <p className="text-2xl font-bold text-[#0F172A]">{project.endDate ? new Date(project.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}</p>
+                                <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">{project.endDate ? new Date(project.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}</p>
                                 {daysRemaining !== null && (
                                     <p className={`text-xs mt-1 ${daysRemaining < 0 ? 'text-red-500' : daysRemaining <= 7 ? 'text-amber-500' : 'text-[#94A3B8]'}`}>
                                         {daysRemaining < 0 ? `${Math.abs(daysRemaining)} days overdue` : `${daysRemaining} days remaining`}
@@ -302,7 +302,7 @@ const ProjectDetailPage = () => {
                                         <CheckSquare className="h-4 w-4 text-amber-600" />
                                     </div>
                                 </div>
-                                <p className="text-2xl font-bold text-[#0F172A]">{doneTasks}/{tasks.length || tasksCount}</p>
+                                <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">{doneTasks}/{tasks.length || tasksCount}</p>
                                 <p className="text-xs text-[#94A3B8] mt-1">{openTasks} open</p>
                             </CardContent>
                         </Card>

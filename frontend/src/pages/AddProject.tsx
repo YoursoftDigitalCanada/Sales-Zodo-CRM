@@ -889,14 +889,14 @@ const AddProjectPage = () => {
                 <FolderPlus size={24} className="text-[#0F172A]" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-[#0F172A]">Create New Project</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Create New Project</h1>
                 <p className="text-[#94A3B8]">Fill in the details to start a new project</p>
               </div>
             </div>
           </motion.div>
 
           <form onSubmit={(e) => handleSubmit(e, false)}>
-            <div className="grid grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
               {/* ============================================ */}
               {/* LEFT COLUMN - Main Details */}
               {/* ============================================ */}

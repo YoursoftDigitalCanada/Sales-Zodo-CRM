@@ -239,7 +239,7 @@ const StatCard = ({
       <div className="relative flex items-start justify-between">
         <div>
           <p className="text-sm text-[#94A3B8] mb-1">{title}</p>
-          <p className="text-2xl font-bold text-[#0F172A]">{value}</p>
+          <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">{value}</p>
           <p className="text-xs text-[#475569] mt-1">{subtitle}</p>
         </div>
         <div className={cn("w-10 h-10 rounded-md flex items-center justify-center", colors.light)}>

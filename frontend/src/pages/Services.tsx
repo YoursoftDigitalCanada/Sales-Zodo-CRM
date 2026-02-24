@@ -61,7 +61,7 @@ export default function Services() {
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-[#0F172A]">Services Menu</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Services Menu</h1>
             <p className="text-[#475569]">Manage what your company provides</p>
           </div>
           <button

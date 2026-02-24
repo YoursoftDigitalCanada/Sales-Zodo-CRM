@@ -222,7 +222,7 @@ const DocumentsPage = () => {
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-md bg-[#0891B2]/10 flex items-center justify-center"><FileText size={20} className="text-[#0891B2]" /></div>
               <div>
-                <h1 className="text-2xl font-bold text-[#0F172A]">Documents</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Documents</h1>
                 <p className="text-sm text-[#94A3B8]">{stats.totalFiles} files · {formatFileSize(stats.totalSize)} total</p>
               </div>
             </div>
@@ -263,7 +263,7 @@ const DocumentsPage = () => {
           )}
 
           {/* Stats */}
-          <div className="grid grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
             {[
               { label: "Total Files", value: stats.totalFiles, icon: FileText, color: "text-[#0891B2]", bg: "bg-[#0891B2]/10" },
               { label: "Storage Used", value: formatFileSize(stats.totalSize), icon: HardDrive, color: "text-purple-600", bg: "bg-purple-100" },
@@ -274,7 +274,7 @@ const DocumentsPage = () => {
                 whileHover={{ y: -4 }}
                 className="bg-white rounded-md p-4 border border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg transition-all">
                 <div className="flex items-center justify-between">
-                  <div><p className="text-xs text-[#94A3B8]">{s.label}</p><p className="text-2xl font-bold text-[#0F172A]">{s.value}</p></div>
+                  <div><p className="text-xs text-[#94A3B8]">{s.label}</p><p className="text-xl sm:text-2xl font-bold text-[#0F172A]">{s.value}</p></div>
                   <div className={cn("w-10 h-10 rounded-md flex items-center justify-center", s.bg)}><s.icon size={18} className={s.color} /></div>
                 </div>
               </motion.div>

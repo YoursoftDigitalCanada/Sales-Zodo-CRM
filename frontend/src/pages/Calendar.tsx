@@ -921,7 +921,7 @@ const DayView = ({
         <div className="flex items-center justify-center gap-3">
           <span
             className={cn(
-              "w-12 h-12 flex items-center justify-center rounded-md text-2xl font-bold",
+              "w-12 h-12 flex items-center justify-center rounded-md text-xl sm:text-2xl font-bold",
               isToday(currentDate)
                 ? "bg-[#0891B2] text-white"
                 : "bg-slate-200 text-[#0F172A]"
@@ -2163,7 +2163,7 @@ const CalendarPage = () => {
       <main className="flex-1 ml-0">
         {/* Header */}
         <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-[rgba(15,23,42,0.06)]">
-          <div className="px-8 py-4">
+          <div className="px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-6">
                 <div className="flex items-center gap-2">
@@ -2171,7 +2171,7 @@ const CalendarPage = () => {
                   <Button variant="outline" size="icon" className="rounded-md" onClick={navigateNext}><ChevronRight size={18} /></Button>
                   <Button variant="outline" className="rounded-md" onClick={goToToday}>Today</Button>
                 </div>
-                <h1 className="text-2xl font-bold text-[#0F172A]">{getPeriodTitle()}</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">{getPeriodTitle()}</h1>
               </div>
               <div className="flex items-center gap-3">
                 <div className="flex items-center bg-white/5 rounded-md p-1">
@@ -2250,9 +2250,9 @@ const CalendarPage = () => {
           )}
 
           {/* ===== MAIN GRID ===== */}
-          <div className="grid grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
             {/* Main Calendar View */}
-            <div className="col-span-3">
+            <div className="col-span-full lg:col-span-3">
               <AnimatePresence mode="wait">
                 {viewMode === "month" && (
                   <motion.div key="month" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
@@ -2278,7 +2278,7 @@ const CalendarPage = () => {
             </div>
 
             {/* Right Sidebar */}
-            <div className="col-span-1 space-y-5">
+            <div className="col-span-full lg:col-span-1 space-y-5">
 
               {/* Quick Stats - Enhanced */}
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-lg border border-[rgba(15,23,42,0.06)] p-4" style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.04), 0 4px 12px rgba(15,23,42,0.04)' }}>

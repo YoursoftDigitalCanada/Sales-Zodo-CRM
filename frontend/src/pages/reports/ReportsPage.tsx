@@ -98,7 +98,7 @@ export default function ReportsPage() {
         <div className="bg-white rounded-lg card-shadow p-5">
             <p className="text-xs text-[#94A3B8] mb-1">{label}</p>
             <div className="flex items-end justify-between">
-                <p className="text-2xl font-bold text-[#0F172A]">{value}</p>
+                <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">{value}</p>
                 <span className={cn("flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full",
                     trend === "up" ? "bg-[#16A34A]/10 text-[#16A34A]" : "bg-[#DC2626]/10 text-[#DC2626]"
                 )}>
@@ -122,7 +122,7 @@ export default function ReportsPage() {
                                 <BarChart3 size={20} className="text-[#0891B2]" />
                             </div>
                             <div>
-                                <h1 className="text-2xl font-bold text-[#0F172A]">Reports</h1>
+                                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Reports</h1>
                                 <p className="text-sm text-[#475569] mt-0.5">Comprehensive business intelligence and reporting</p>
                             </div>
                         </div>

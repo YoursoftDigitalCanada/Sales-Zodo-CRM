@@ -331,7 +331,7 @@ const StatCard = ({
       <div className="relative flex items-start justify-between">
         <div>
           <p className="text-sm text-[#94A3B8] mb-1">{title}</p>
-          <p className="text-2xl font-bold text-[#0F172A]">{value}</p>
+          <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">{value}</p>
           <p className="text-xs text-[#475569] mt-1">{subtitle}</p>
         </div>
         <div className="flex flex-col items-end gap-2">
@@ -2041,7 +2041,7 @@ const ClientListPage = () => {
                     <p className="text-xs text-emerald-600 uppercase tracking-wider mb-1">
                       Total Revenue
                     </p>
-                    <p className="text-2xl font-bold text-emerald-700">
+                    <p className="text-xl sm:text-2xl font-bold text-emerald-700">
                       {formatCurrency(quickViewClient.totalRevenue)}
                     </p>
                   </div>
@@ -2065,7 +2065,7 @@ const ClientListPage = () => {
                     </p>
                     <p
                       className={cn(
-                        "text-2xl font-bold",
+                        "text-xl sm:text-2xl font-bold",
                         (quickViewClient.outstandingBalance || 0) > 0
                           ? "text-red-700"
                           : "text-emerald-700"

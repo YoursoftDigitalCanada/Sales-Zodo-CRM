@@ -325,7 +325,7 @@ const StatCard = ({
         <div>
           <p className="text-sm text-[#94A3B8] mb-1">{title}</p>
           <div className="flex items-baseline gap-2">
-            <p className="text-2xl font-bold text-[#0F172A]">{value}</p>
+            <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">{value}</p>
             {trend && (
               <span className={cn(
                 "flex items-center text-xs font-semibold",
@@ -1242,7 +1242,7 @@ const CreateBookingWizard = ({
                 {/* Price Summary */}
                 <div className="flex items-center justify-between p-4 bg-[#0891B2]/10 rounded-md">
                   <span className="font-medium text-[#0F172A]">Total Amount</span>
-                  <span className="text-2xl font-bold text-[#0891B2]">
+                  <span className="text-xl sm:text-2xl font-bold text-[#0891B2]">
                     ${selectedService?.price || 0}
                   </span>
                 </div>
@@ -1788,7 +1788,7 @@ const BookingsPage = () => {
                 <CalendarDays size={24} className="text-[#0F172A]" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-[#0F172A]">Bookings</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Bookings</h1>
                 <p className="text-[#94A3B8]">Manage appointments and schedules</p>
               </div>
             </div>
@@ -1824,7 +1824,7 @@ const BookingsPage = () => {
           </motion.div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
             <StatCard
               title="Today's Bookings"
               value={stats.todayCount}
@@ -1868,9 +1868,9 @@ const BookingsPage = () => {
             />
           </div>
 
-          <div className="grid grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
             {/* Main Content - 3 columns */}
-            <div className="col-span-3 space-y-4">
+            <div className="col-span-full lg:col-span-3 space-y-4">
               {/* Filters & Actions Bar */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}

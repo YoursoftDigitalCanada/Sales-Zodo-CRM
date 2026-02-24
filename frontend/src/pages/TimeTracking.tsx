@@ -176,7 +176,7 @@ export default function TimeTrackingPage() {
         <header className="bg-white border-b border-[rgba(15,23,42,0.06)] px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-[#0F172A]">Time Tracking</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Time Tracking</h1>
               <p className="text-sm text-[#475569] mt-1">Track and manage your work hours</p>
             </div>
 

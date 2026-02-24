@@ -21,29 +21,43 @@ export class RoofEstimatorService {
     async autocompleteAddress(input: string): Promise<Array<{ description: string; placeId: string }>> {
         const apiKey = GOOGLE_PLACES_API_KEY;
         if (!apiKey) {
-            throw new Error('GOOGLE_PLACES_API_KEY is not configured');
-        }
-
-        const response = await axios.get('https://maps.googleapis.com/maps/api/place/autocomplete/json', {
-            params: {
-                input,
-                key: apiKey,
-                types: 'address',
-                components: 'country:ca',
-                language: 'en',
-            },
-            timeout: 5000,
-        });
-
-        if (response.data.status !== 'OK' && response.data.status !== 'ZERO_RESULTS') {
-            logger.warn('Places autocomplete failed', { status: response.data.status });
+            logger.error('Google Places API key not configured — set GOOGLE_PLACES_API_KEY or GOOGLE_GEOCODING_API_KEY in .env');
             return [];
         }
 
-        return (response.data.predictions || []).map((p: any) => ({
-            description: p.description,
-            placeId: p.place_id,
-        }));
+        try {
+            const response = await axios.get('https://maps.googleapis.com/maps/api/place/autocomplete/json', {
+                params: {
+                    input,
+                    key: apiKey,
+                    types: 'address',
+                    components: 'country:ca',
+                    language: 'en',
+                },
+                timeout: 5000,
+            });
+
+            if (response.data.status !== 'OK' && response.data.status !== 'ZERO_RESULTS') {
+                logger.warn('Places autocomplete API error', {
+                    status: response.data.status,
+                    errorMessage: response.data.error_message,
+                    input,
+                });
+                return [];
+            }
+
+            return (response.data.predictions || []).map((p: any) => ({
+                description: p.description,
+                placeId: p.place_id,
+            }));
+        } catch (err: any) {
+            logger.error('Places autocomplete request failed', {
+                message: err.message,
+                status: err.response?.status,
+                data: err.response?.data,
+            });
+            return [];
+        }
     }
 
     /**
@@ -51,24 +65,50 @@ export class RoofEstimatorService {
      */
     async geocodeAddress(address: string): Promise<{ lat: number; lng: number; formattedAddress: string }> {
         if (!GOOGLE_GEOCODING_API_KEY) {
-            throw new Error('GOOGLE_GEOCODING_API_KEY is not configured');
+            throw new Error('GOOGLE_GEOCODING_API_KEY is not configured. Please set it in your .env file.');
         }
 
-        const response = await axios.get('https://maps.googleapis.com/maps/api/geocode/json', {
-            params: { address, key: GOOGLE_GEOCODING_API_KEY },
-            timeout: 10000,
-        });
+        try {
+            const response = await axios.get('https://maps.googleapis.com/maps/api/geocode/json', {
+                params: {
+                    address,
+                    key: GOOGLE_GEOCODING_API_KEY,
+                    components: 'country:CA',
+                    region: 'ca',
+                },
+                timeout: 10000,
+            });
 
-        if (response.data.status !== 'OK' || !response.data.results?.length) {
-            throw new Error(`Geocoding failed: ${response.data.status}. Could not find coordinates for the given address.`);
+            if (response.data.status !== 'OK' || !response.data.results?.length) {
+                logger.warn('Geocoding API returned non-OK status', {
+                    status: response.data.status,
+                    errorMessage: response.data.error_message,
+                    address,
+                });
+                throw new Error(
+                    response.data.error_message
+                    || `Geocoding failed (${response.data.status}). Could not find coordinates for the given address.`
+                );
+            }
+
+            const result = response.data.results[0];
+            return {
+                lat: result.geometry.location.lat,
+                lng: result.geometry.location.lng,
+                formattedAddress: result.formatted_address,
+            };
+        } catch (err: any) {
+            // Re-throw errors we already created with meaningful messages
+            if (err.message && !err.response) throw err;
+
+            logger.error('Geocoding request failed', {
+                message: err.message,
+                status: err.response?.status,
+                data: err.response?.data,
+                address,
+            });
+            throw new Error(`Geocoding request failed: ${err.message}`);
         }
-
-        const result = response.data.results[0];
-        return {
-            lat: result.geometry.location.lat,
-            lng: result.geometry.location.lng,
-            formattedAddress: result.formatted_address,
-        };
     }
 
     /**

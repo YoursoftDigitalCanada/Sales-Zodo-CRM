@@ -771,7 +771,7 @@ const StatCard = ({
       <div className="relative flex items-start justify-between">
         <div>
           <p className="text-sm text-[#94A3B8] mb-1">{title}</p>
-          <p className="text-2xl font-bold text-[#0F172A]">
+          <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">
             {prefix}{typeof value === 'number' ? formatNumber(value) : value}
           </p>
           {change !== undefined && (
@@ -1502,7 +1502,7 @@ const AddProductDialog = ({
           {/* Pricing */}
           <div className="space-y-3">
             <Label className="text-sm font-medium text-[#475569]">Pricing</Label>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               <div className="space-y-2">
                 <Label className="text-xs text-[#94A3B8]">
                   Price <span className="text-red-500">*</span>
@@ -2080,7 +2080,7 @@ const EcommercePage = () => {
                   <ChevronRight size={14} />
                   <span className="text-[#0891B2] font-medium">Ecommerce</span>
                 </div>
-                <h1 className="text-2xl font-bold text-[#0F172A]">Ecommerce</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Ecommerce</h1>
               </div>
 
               {/* Header Actions */}
@@ -2332,7 +2332,7 @@ const EcommercePage = () => {
                       stat.color
                     )}
                   >
-                    <p className="text-2xl font-bold">{stat.count}</p>
+                    <p className="text-xl sm:text-2xl font-bold">{stat.count}</p>
                     <p className="text-sm font-medium">{stat.label}</p>
                   </motion.div>
                 ))}

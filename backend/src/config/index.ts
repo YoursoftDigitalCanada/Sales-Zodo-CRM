@@ -62,6 +62,7 @@ const envSchema = z.object({
   GOOGLE_GEOCODING_API_KEY: z.string().optional(),
   GOOGLE_STATIC_MAPS_API_KEY: z.string().optional(),
   GOOGLE_PLACES_API_KEY: z.string().optional(),
+  GOOGLE_MAPS_JS_API_KEY: z.string().optional(),
   AI_SERVICE_URL: z.string().default('http://127.0.0.1:8001'),
 });
 
@@ -131,9 +132,12 @@ export const config = {
   },
   integrations: {
     google: {
-      geocodingApiKey: parsed.data.GOOGLE_GEOCODING_API_KEY,
-      staticMapsApiKey: parsed.data.GOOGLE_STATIC_MAPS_API_KEY,
-      placesApiKey: parsed.data.GOOGLE_PLACES_API_KEY || parsed.data.GOOGLE_GEOCODING_API_KEY,
+      geocodingApiKey: parsed.data.GOOGLE_GEOCODING_API_KEY || parsed.data.GOOGLE_MAPS_JS_API_KEY,
+      staticMapsApiKey: parsed.data.GOOGLE_STATIC_MAPS_API_KEY || parsed.data.GOOGLE_MAPS_JS_API_KEY,
+      placesApiKey:
+        parsed.data.GOOGLE_PLACES_API_KEY
+        || parsed.data.GOOGLE_GEOCODING_API_KEY
+        || parsed.data.GOOGLE_MAPS_JS_API_KEY,
     },
     aiServiceUrl: parsed.data.AI_SERVICE_URL,
   },

@@ -22,7 +22,7 @@ export class RoofEstimatorService {
     async autocompleteAddress(input: string): Promise<Array<{ description: string; placeId: string }>> {
         const apiKey = GOOGLE_PLACES_API_KEY;
         if (!apiKey) {
-            logger.error('Google Places API key not configured — set GOOGLE_PLACES_API_KEY or GOOGLE_GEOCODING_API_KEY in .env');
+            logger.error('Google Places API key not configured — set GOOGLE_PLACES_API_KEY, GOOGLE_GEOCODING_API_KEY, or GOOGLE_MAPS_JS_API_KEY in .env');
             return [];
         }
 
@@ -67,7 +67,7 @@ export class RoofEstimatorService {
     async geocodeAddress(address: string): Promise<{ lat: number; lng: number; formattedAddress: string }> {
         if (!GOOGLE_GEOCODING_API_KEY) {
             throw new ServiceUnavailableError(
-                'Roof estimator geocoding is not configured. Set GOOGLE_GEOCODING_API_KEY on the backend.'
+                'Roof estimator geocoding is not configured. Set GOOGLE_GEOCODING_API_KEY (or GOOGLE_MAPS_JS_API_KEY) on the backend.'
             );
         }
 
@@ -161,7 +161,7 @@ export class RoofEstimatorService {
     getSatelliteImageUrl(lat: number, lng: number, zoom = 20, size = '640x640'): string {
         if (!GOOGLE_STATIC_MAPS_API_KEY) {
             throw new ServiceUnavailableError(
-                'Roof estimator satellite imagery is not configured. Set GOOGLE_STATIC_MAPS_API_KEY on the backend.'
+                'Roof estimator satellite imagery is not configured. Set GOOGLE_STATIC_MAPS_API_KEY (or GOOGLE_MAPS_JS_API_KEY) on the backend.'
             );
         }
 

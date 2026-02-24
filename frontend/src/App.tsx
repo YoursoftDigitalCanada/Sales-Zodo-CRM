@@ -63,6 +63,7 @@ import LeaveRequestsPage from "./pages/employees/LeaveRequests";
 
 // AI Modules
 import RoofEstimator from "./pages/RoofEstimator";
+import RoofEstimatorPolygonEditor from "./pages/RoofEstimatorPolygonEditor";
 
 // Help Center
 import HelpCenterPage from "./pages/HelpCenter";
@@ -499,6 +500,14 @@ const App = () => (
 
             {/* ========== AI MODULES ========== */}
             <Route path="/roof-estimator" element={<RoofEstimator />} />
+            <Route
+              path="/roof-estimator/editor"
+              element={
+                <FeatureGuard featureId="api">
+                  <RoofEstimatorPolygonEditor />
+                </FeatureGuard>
+              }
+            />
 
             {/* ========== HELP CENTER ========== */}
             <Route path="/help" element={<HelpCenterPage />} />

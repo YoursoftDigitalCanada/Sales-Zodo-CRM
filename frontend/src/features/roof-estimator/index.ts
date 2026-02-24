@@ -10,6 +10,10 @@ export {
     updateEstimateSettings,
     generateEstimate,
 } from "./services/roof-estimator-service";
+export {
+    calculatePolygonAreaPixels,
+    calculateRoofAreaSqFt,
+} from "./utils/area";
 export type {
     RoofEstimate,
     EstimateSettings,
@@ -20,3 +24,6 @@ export type {
     GeneratedEstimate,
     EstimateBreakdownItem,
 } from "./services/roof-estimator-service";
+export type {
+    PolygonPoint as RoofPolygonPoint,
+} from "./utils/area";

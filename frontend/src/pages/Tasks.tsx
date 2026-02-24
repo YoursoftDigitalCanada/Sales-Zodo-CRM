@@ -1116,11 +1116,13 @@ const TaskFormDialog = ({
   onClose,
   task,
   onSubmit,
+  projects = [],
 }: {
   isOpen: boolean;
   onClose: () => void;
   task: Task | null;
   onSubmit: (data: Partial<Task>) => void;
+  projects?: Project[];
 }) => {
   const [formData, setFormData] = useState({
     title: "",
@@ -2946,6 +2948,7 @@ const TasksPage = () => {
         }}
         task={currentTask}
         onSubmit={currentTask ? handleEditTask : handleAddTask}
+        projects={projects}
       />
 
       <TaskDetailsDialog

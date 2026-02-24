@@ -1,5 +1,5 @@
 // src/pages/Quotes.tsx
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sidebar } from "@/components/Sidebar";
@@ -34,10 +34,14 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import {
-  Quote, QuoteItem, mockQuotes, quoteStatusOptions, dateFilterOptions,
+  Quote, QuoteItem, quoteStatusOptions, dateFilterOptions,
   getInitials, formatCurrency, formatDate, getRelativeTime, getDaysUntilExpiry,
   isExpired, getStatusConfig, getAiInsights,
 } from "./quotes-data";
+import {
+  getQuotes, createQuote, updateQuote, deleteQuote as deleteQuoteApi,
+  updateQuoteStatus, type QuoteEntity,
+} from "@/features/quotes";
 
 // ============================================
 // STAT CARD
@@ -128,7 +132,7 @@ const QuoteRow = ({ quote, isSelected, onSelect, onView, onEdit, onDelete, onSen
           <CalendarDays size={14} className={expired ? "text-red-400" : "text-[#475569]"} />
           <div>
             <p className="text-sm">{formatDate(quote.validUntil)}</p>
-            {daysLeft !== null && !["accepted","converted","declined"].includes(quote.status) && (
+            {daysLeft !== null && !["accepted", "converted", "declined"].includes(quote.status) && (
               <p className={cn("text-xs", expired ? "text-red-500 font-semibold" : "text-[#475569]")}>
                 {expired ? `Expired ${Math.abs(daysLeft)} days ago` : daysLeft === 0 ? "Expires today" : `${daysLeft} days left`}
               </p>
@@ -138,10 +142,10 @@ const QuoteRow = ({ quote, isSelected, onSelect, onView, onEdit, onDelete, onSen
       </td>
       <td className="py-4 px-4">
         <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold",
-          expired && !["accepted","converted","declined"].includes(quote.status) ? "bg-amber-100 text-amber-600" : statusConfig.bg,
-          expired && !["accepted","converted","declined"].includes(quote.status) ? "" : statusConfig.text)}>
-          {expired && !["accepted","converted","declined"].includes(quote.status) ? <AlertTriangle size={12} /> : <StatusIcon size={12} />}
-          {expired && !["accepted","converted","declined"].includes(quote.status) ? "Expired" : quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
+          expired && !["accepted", "converted", "declined"].includes(quote.status) ? "bg-amber-100 text-amber-600" : statusConfig.bg,
+          expired && !["accepted", "converted", "declined"].includes(quote.status) ? "" : statusConfig.text)}>
+          {expired && !["accepted", "converted", "declined"].includes(quote.status) ? <AlertTriangle size={12} /> : <StatusIcon size={12} />}
+          {expired && !["accepted", "converted", "declined"].includes(quote.status) ? "Expired" : quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
         </span>
       </td>
       <td className="py-4 px-4 text-right">
@@ -238,10 +242,10 @@ const QuoteCard = ({ quote, isSelected, onSelect, onView, onEdit, onDelete, onSe
           <div className="flex items-center gap-2 mb-1">
             <h3 className="font-bold text-[#0F172A] group-hover:text-[#0891B2] transition-colors">{quote.quoteNumber}</h3>
             <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold",
-              expired && !["accepted","converted","declined"].includes(quote.status) ? "bg-amber-100 text-amber-600" : statusConfig.bg,
-              expired && !["accepted","converted","declined"].includes(quote.status) ? "" : statusConfig.text)}>
-              {expired && !["accepted","converted","declined"].includes(quote.status) ? <AlertTriangle size={10} /> : <StatusIcon size={10} />}
-              {expired && !["accepted","converted","declined"].includes(quote.status) ? "Expired" : quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
+              expired && !["accepted", "converted", "declined"].includes(quote.status) ? "bg-amber-100 text-amber-600" : statusConfig.bg,
+              expired && !["accepted", "converted", "declined"].includes(quote.status) ? "" : statusConfig.text)}>
+              {expired && !["accepted", "converted", "declined"].includes(quote.status) ? <AlertTriangle size={10} /> : <StatusIcon size={10} />}
+              {expired && !["accepted", "converted", "declined"].includes(quote.status) ? "Expired" : quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
             </span>
           </div>
           <p className="text-xs text-[#475569] truncate">{quote.title}</p>
@@ -596,10 +600,45 @@ const QuoteDetailDialog = ({ isOpen, onClose, quote, onEdit, onDelete, onSend, o
 // ============================================
 // MAIN QUOTES PAGE
 // ============================================
+// Helper: map backend QuoteEntity to frontend Quote type
+function mapApiQuote(q: QuoteEntity): Quote {
+  return {
+    id: q.id,
+    quoteNumber: q.quoteNumber,
+    clientId: q.client?.id,
+    clientName: q.client?.clientName || "Unknown Client",
+    clientEmail: undefined,
+    title: q.quoteNumber, // use quoteNumber as title if no separate title field
+    items: (q.items || []).map((item, idx) => ({
+      id: `item-${idx}`,
+      description: item.description,
+      quantity: item.quantity,
+      rate: item.unitPrice,
+      amount: item.total,
+    })),
+    subtotal: q.subtotal,
+    tax: q.taxAmount,
+    discount: q.discountAmount,
+    total: q.total,
+    status: q.status.toLowerCase() as Quote["status"],
+    priority: "medium",
+    validUntil: q.validUntil,
+    createdAt: q.createdAt,
+    updatedAt: q.updatedAt,
+    sentAt: q.sentAt || undefined,
+    acceptedAt: q.acceptedAt || undefined,
+    notes: q.notes || undefined,
+    terms: q.terms || undefined,
+    currency: q.currency || "CAD",
+    createdBy: "System",
+  };
+}
+
 const QuotesPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [quotes, setQuotes] = useState<Quote[]>(mockQuotes);
+  const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
@@ -613,6 +652,22 @@ const QuotesPage = () => {
   const [dismissedInsights, setDismissedInsights] = useState<string[]>([]);
   const itemsPerPage = 10;
 
+  // Fetch quotes from API
+  const fetchQuotes = useCallback(async () => {
+    try {
+      setLoading(true);
+      const result = await getQuotes({ limit: 200 });
+      setQuotes(result.data.map(mapApiQuote));
+    } catch (err) {
+      console.error("Failed to load quotes:", err);
+      toast({ title: "Error", description: "Failed to load quotes", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => { fetchQuotes(); }, [fetchQuotes]);
+
   // Stats
   const stats = useMemo(() => {
     const totalValue = quotes.reduce((s, q) => s + q.total, 0);
@@ -620,7 +675,7 @@ const QuotesPage = () => {
     const pendingValue = quotes.filter(q => ["draft", "sent", "viewed"].includes(q.status)).reduce((s, q) => s + q.total, 0);
     const conversionRate = quotes.length > 0 ? Math.round(((quotes.filter(q => q.status === "accepted" || q.status === "converted").length) / quotes.length) * 100) : 0;
     const avgValue = quotes.length > 0 ? totalValue / quotes.length : 0;
-    const expiringSoonCount = quotes.filter(q => { const d = getDaysUntilExpiry(q.validUntil); return d !== null && d >= 0 && d <= 7 && !["accepted","declined","converted","expired"].includes(q.status); }).length;
+    const expiringSoonCount = quotes.filter(q => { const d = getDaysUntilExpiry(q.validUntil); return d !== null && d >= 0 && d <= 7 && !["accepted", "declined", "converted", "expired"].includes(q.status); }).length;
     return { totalValue, acceptedValue, pendingValue, conversionRate, avgValue, expiringSoonCount, totalCount: quotes.length };
   }, [quotes]);
 
@@ -655,69 +710,147 @@ const QuotesPage = () => {
   const paginatedQuotes = filteredQuotes.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   // Handlers
-  const handleCreateQuote = (data: Partial<Quote>) => {
-    const newQuote: Quote = {
-      id: `q-${Date.now()}`, quoteNumber: `QT-2026-${String(quotes.length + 1).padStart(3, "0")}`,
-      clientName: data.clientName || "", clientEmail: data.clientEmail, clientCompany: data.clientCompany,
-      projectName: data.projectName, title: data.title || "", description: data.description,
-      items: data.items || [], subtotal: data.subtotal || 0, tax: data.tax || 0, discount: data.discount || 0,
-      total: data.total || 0, status: "draft", priority: data.priority || "medium",
-      validUntil: data.validUntil || new Date(Date.now() + 30 * 86400000).toISOString(),
-      createdAt: new Date().toISOString(), currency: data.currency || "CAD",
-      createdBy: "Admin User", notes: data.notes, terms: data.terms,
-    };
-    setQuotes(prev => [newQuote, ...prev]);
-    toast({ title: "Quote Created", description: `${newQuote.quoteNumber} has been created successfully.` });
+  const handleCreateQuote = async (data: Partial<Quote>) => {
+    try {
+      const apiPayload: Record<string, unknown> = {
+        validUntil: data.validUntil || new Date(Date.now() + 30 * 86400000).toISOString(),
+        currency: data.currency || "CAD",
+        taxRate: 13,
+        discountAmount: data.discount || 0,
+        notes: data.notes,
+        terms: data.terms,
+        items: (data.items || []).map((item, idx) => ({
+          description: item.description,
+          quantity: item.quantity,
+          unitPrice: item.rate,
+          total: item.amount,
+          sortOrder: idx,
+        })),
+      };
+      await createQuote(apiPayload);
+      toast({ title: "Quote Created", description: "New quote has been created successfully." });
+      fetchQuotes();
+    } catch (err) {
+      console.error("Failed to create quote:", err);
+      toast({ title: "Error", description: "Failed to create quote", variant: "destructive" });
+    }
   };
 
-  const handleEditQuote = (data: Partial<Quote>) => {
+  const handleEditQuote = async (data: Partial<Quote>) => {
     if (!currentQuote) return;
-    setQuotes(prev => prev.map(q => q.id === currentQuote.id ? { ...q, ...data, updatedAt: new Date().toISOString() } : q));
-    toast({ title: "Quote Updated", description: `${currentQuote.quoteNumber} has been updated.` });
+    try {
+      const apiPayload: Record<string, unknown> = {
+        validUntil: data.validUntil,
+        currency: data.currency || "CAD",
+        discountAmount: data.discount || 0,
+        notes: data.notes,
+        terms: data.terms,
+        items: (data.items || []).map((item, idx) => ({
+          description: item.description,
+          quantity: item.quantity,
+          unitPrice: item.rate,
+          total: item.amount,
+          sortOrder: idx,
+        })),
+      };
+      await updateQuote(currentQuote.id, apiPayload);
+      toast({ title: "Quote Updated", description: `${currentQuote.quoteNumber} has been updated.` });
+      fetchQuotes();
+    } catch (err) {
+      console.error("Failed to update quote:", err);
+      toast({ title: "Error", description: "Failed to update quote", variant: "destructive" });
+    }
   };
 
-  const handleDeleteQuote = () => {
+  const handleDeleteQuote = async () => {
     if (!deleteQuoteId) return;
     const qt = quotes.find(q => q.id === deleteQuoteId);
-    setQuotes(prev => prev.filter(q => q.id !== deleteQuoteId));
-    setDeleteQuoteId(null);
-    setIsDetailOpen(false);
-    toast({ title: "Quote Deleted", description: `${qt?.quoteNumber || "Quote"} has been deleted.` });
+    try {
+      await deleteQuoteApi(deleteQuoteId);
+      setQuotes(prev => prev.filter(q => q.id !== deleteQuoteId));
+      setDeleteQuoteId(null);
+      setIsDetailOpen(false);
+      toast({ title: "Quote Deleted", description: `${qt?.quoteNumber || "Quote"} has been deleted.` });
+    } catch (err) {
+      console.error("Failed to delete quote:", err);
+      toast({ title: "Error", description: "Failed to delete quote", variant: "destructive" });
+    }
   };
 
-  const handleSendQuote = (quoteId: string) => {
-    setQuotes(prev => prev.map(q => q.id === quoteId ? { ...q, status: "sent" as const, sentAt: new Date().toISOString() } : q));
-    toast({ title: "Quote Sent", description: "Quote has been sent to the client." });
+  const handleSendQuote = async (quoteId: string) => {
+    try {
+      await updateQuoteStatus(quoteId, "SENT");
+      setQuotes(prev => prev.map(q => q.id === quoteId ? { ...q, status: "sent" as const, sentAt: new Date().toISOString() } : q));
+      toast({ title: "Quote Sent", description: "Quote has been sent to the client." });
+    } catch (err) {
+      console.error("Failed to send quote:", err);
+      toast({ title: "Error", description: "Failed to send quote", variant: "destructive" });
+    }
   };
 
-  const handleConvertToInvoice = (quoteId: string) => {
-    setQuotes(prev => prev.map(q => q.id === quoteId ? { ...q, status: "converted" as const, linkedInvoiceId: `inv-${Date.now()}` } : q));
-    toast({ title: "Converted to Invoice", description: "Quote has been converted to an invoice." });
-    navigate("/invoice");
+  const handleConvertToInvoice = async (quoteId: string) => {
+    try {
+      await updateQuoteStatus(quoteId, "CONVERTED");
+      setQuotes(prev => prev.map(q => q.id === quoteId ? { ...q, status: "converted" as const, linkedInvoiceId: `inv-${Date.now()}` } : q));
+      toast({ title: "Converted to Invoice", description: "Quote has been converted to an invoice." });
+      navigate("/invoice");
+    } catch (err) {
+      console.error("Failed to convert quote:", err);
+      toast({ title: "Error", description: "Failed to convert quote", variant: "destructive" });
+    }
   };
 
-  const handleDuplicate = (quoteId: string) => {
+  const handleDuplicate = async (quoteId: string) => {
     const original = quotes.find(q => q.id === quoteId);
     if (!original) return;
-    const dup: Quote = {
-      ...original, id: `q-${Date.now()}`, quoteNumber: `QT-2026-${String(quotes.length + 1).padStart(3, "0")}`,
-      status: "draft", createdAt: new Date().toISOString(), sentAt: undefined, acceptedAt: undefined,
-      linkedInvoiceId: undefined, validUntil: new Date(Date.now() + 30 * 86400000).toISOString(),
-    };
-    setQuotes(prev => [dup, ...prev]);
-    toast({ title: "Quote Duplicated", description: `${dup.quoteNumber} created from ${original.quoteNumber}.` });
+    try {
+      const apiPayload: Record<string, unknown> = {
+        validUntil: new Date(Date.now() + 30 * 86400000).toISOString(),
+        currency: original.currency || "CAD",
+        taxRate: 13,
+        discountAmount: original.discount || 0,
+        notes: original.notes,
+        terms: original.terms,
+        items: (original.items || []).map((item, idx) => ({
+          description: item.description,
+          quantity: item.quantity,
+          unitPrice: item.rate,
+          total: item.amount,
+          sortOrder: idx,
+        })),
+      };
+      await createQuote(apiPayload);
+      toast({ title: "Quote Duplicated", description: `New quote created from ${original.quoteNumber}.` });
+      fetchQuotes();
+    } catch (err) {
+      console.error("Failed to duplicate quote:", err);
+      toast({ title: "Error", description: "Failed to duplicate quote", variant: "destructive" });
+    }
   };
 
-  const handleBulkDelete = () => {
-    setQuotes(prev => prev.filter(q => !selectedQuotes.has(q.id)));
-    toast({ title: "Quotes Deleted", description: `${selectedQuotes.size} quotes deleted.` });
-    setSelectedQuotes(new Set());
+  const handleBulkDelete = async () => {
+    try {
+      await Promise.allSettled(Array.from(selectedQuotes).map(id => deleteQuoteApi(id)));
+      setQuotes(prev => prev.filter(q => !selectedQuotes.has(q.id)));
+      toast({ title: "Quotes Deleted", description: `${selectedQuotes.size} quotes deleted.` });
+      setSelectedQuotes(new Set());
+    } catch (err) {
+      console.error("Failed to bulk delete:", err);
+      toast({ title: "Error", description: "Failed to delete some quotes", variant: "destructive" });
+    }
   };
 
-  const handleBulkSend = () => {
-    setQuotes(prev => prev.map(q => selectedQuotes.has(q.id) && q.status === "draft" ? { ...q, status: "sent" as const, sentAt: new Date().toISOString() } : q));
-    toast({ title: "Quotes Sent", description: "Selected draft quotes have been sent." });
-    setSelectedQuotes(new Set());
+  const handleBulkSend = async () => {
+    const draftIds = Array.from(selectedQuotes).filter(id => quotes.find(q => q.id === id)?.status === "draft");
+    try {
+      await Promise.allSettled(draftIds.map(id => updateQuoteStatus(id, "SENT")));
+      setQuotes(prev => prev.map(q => selectedQuotes.has(q.id) && q.status === "draft" ? { ...q, status: "sent" as const, sentAt: new Date().toISOString() } : q));
+      toast({ title: "Quotes Sent", description: "Selected draft quotes have been sent." });
+      setSelectedQuotes(new Set());
+    } catch (err) {
+      console.error("Failed to bulk send:", err);
+      toast({ title: "Error", description: "Failed to send some quotes", variant: "destructive" });
+    }
   };
 
   const toggleSelectAll = (checked: boolean) => {
@@ -744,8 +877,8 @@ const QuotesPage = () => {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Button variant="outline" size="sm" className="rounded-md border-[rgba(15,23,42,0.06)]" onClick={() => { setQuotes([...mockQuotes]); toast({ title: "Refreshed" }); }}>
-                <RefreshCw size={16} className="mr-2" />Refresh
+              <Button variant="outline" size="sm" className="rounded-md border-[rgba(15,23,42,0.06)]" onClick={() => fetchQuotes()} disabled={loading}>
+                <RefreshCw size={16} className={`mr-2 ${loading ? "animate-spin" : ""}`} />Refresh
               </Button>
               <Button variant="outline" size="sm" className="rounded-md border-[rgba(15,23,42,0.06)]">
                 <Download size={16} className="mr-2" />Export
@@ -866,7 +999,13 @@ const QuotesPage = () => {
           </motion.div>
 
           {/* Content */}
-          {filteredQuotes.length === 0 ? (
+          {loading ? (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-16 text-center">
+              <RefreshCw size={32} className="text-[#0891B2] animate-spin mx-auto mb-4" />
+              <p className="text-[#94A3B8]">Loading quotes...</p>
+            </motion.div>
+          ) : filteredQuotes.length === 0 ? (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-16 text-center">
               <div className="w-16 h-16 rounded-full bg-[#F1F5F9] flex items-center justify-center mx-auto mb-4">

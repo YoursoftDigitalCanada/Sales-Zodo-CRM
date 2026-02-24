@@ -48,7 +48,7 @@ export const updateQuoteSchema = z.object({
 
 export const quoteQuerySchema = z.object({
     page: z.coerce.number().int().positive().optional().default(1),
-    limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+    limit: z.coerce.number().int().min(1).max(200).optional().default(20),
     search: z.string().optional(),
     status: z.enum(['DRAFT', 'SENT', 'ACCEPTED', 'REJECTED', 'EXPIRED']).optional(),
     clientId: z.string().uuid().optional(),

@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { getLeads, deleteLead, updateLeadStatus, convertLead } from "@/features/leads";
+import { createCalendarEvent } from "@/features/calendar";
 import { Sidebar } from "@/components/Sidebar";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -60,6 +61,9 @@ import {
   Briefcase,
   Globe,
   User,
+  Video,
+  CalendarDays,
+  RefreshCw,
   type LucideIcon,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
@@ -609,6 +613,19 @@ const Pipeline = () => {
   const [convertLoading, setConvertLoading] = useState(false);
   const [convertError, setConvertError] = useState<string | null>(null);
 
+  // ── Meeting dialog state (Qualified prompt) ──
+  const [meetingDialogOpen, setMeetingDialogOpen] = useState(false);
+  const [qualifyingLead, setQualifyingLead] = useState<{ lead: Lead; sourceStageId: string } | null>(null);
+  const [meetingType, setMeetingType] = useState<"online" | "offline">("online");
+  const [meetingTitle, setMeetingTitle] = useState("");
+  const [meetingDate, setMeetingDate] = useState("");
+  const [meetingTime, setMeetingTime] = useState("10:00");
+  const [meetingDuration, setMeetingDuration] = useState("30");
+  const [meetingLocation, setMeetingLocation] = useState("");
+  const [meetingLink, setMeetingLink] = useState("");
+  const [meetingNotes, setMeetingNotes] = useState("");
+  const [meetingSubmitting, setMeetingSubmitting] = useState(false);
+
   // Fetch leads from API and distribute into pipeline stages
   useEffect(() => {
     const fetchLeads = async () => {
@@ -697,6 +714,26 @@ const Pipeline = () => {
       return;
     }
 
+    // ── Special handling: dropping into "Qualified" triggers meeting dialog ──
+    if (targetStageId === "qualified" && sourceStageId !== "qualified") {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      while (tomorrow.getDay() === 0 || tomorrow.getDay() === 6) {
+        tomorrow.setDate(tomorrow.getDate() + 1);
+      }
+      setMeetingType("online");
+      setMeetingTitle(`Meeting with ${movedLead.firstName} ${movedLead.lastName}`);
+      setMeetingDate(tomorrow.toISOString().split("T")[0]);
+      setMeetingTime("10:00");
+      setMeetingDuration("30");
+      setMeetingLocation("");
+      setMeetingLink("");
+      setMeetingNotes("");
+      setQualifyingLead({ lead: movedLead, sourceStageId: sourceStageId! });
+      setMeetingDialogOpen(true);
+      return;
+    }
+
     // Optimistically update the UI
     setPipeline((prev) =>
       prev.map((stage) => {
@@ -776,6 +813,94 @@ const Pipeline = () => {
   const handleConvertCancel = () => {
     setConvertingLead(null);
     setConvertError(null);
+  };
+
+  // ── Meeting (Qualified) handlers ──
+  const handleMeetingSchedule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!qualifyingLead || !meetingDate || !meetingTime) return;
+    const { lead, sourceStageId } = qualifyingLead;
+
+    setMeetingSubmitting(true);
+    try {
+      // 1) Update lead status to QUALIFIED
+      await updateLeadStatus(lead.id, "QUALIFIED");
+
+      // 2) Move lead in pipeline UI
+      setPipeline((prev) =>
+        prev.map((stage) => {
+          if (stage.id === sourceStageId) {
+            return { ...stage, leads: stage.leads.filter((l) => l.id !== lead.id) };
+          }
+          if (stage.id === "qualified") {
+            return { ...stage, leads: [...stage.leads, { ...lead, status: "qualified", daysInStage: 0 }] };
+          }
+          return stage;
+        })
+      );
+
+      // 3) Create calendar event
+      const startTime = new Date(`${meetingDate}T${meetingTime}:00`);
+      const endTime = new Date(startTime.getTime() + parseInt(meetingDuration) * 60000);
+      await createCalendarEvent({
+        title: meetingTitle || `Meeting with ${lead.firstName} ${lead.lastName}`,
+        description: `Qualification meeting with ${lead.firstName} ${lead.lastName}${lead.company ? ` from ${lead.company}` : ""}. ${meetingNotes ? `\n\nNotes: ${meetingNotes}` : ""}`,
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+        eventType: "MEETING",
+        category: "client",
+        location: meetingType === "offline" ? meetingLocation : undefined,
+        meetingLink: meetingType === "online" ? (meetingLink || "https://meet.google.com/new") : undefined,
+        leadId: lead.id,
+        priority: "HIGH",
+      });
+
+      toast({
+        title: "\ud83c\udf89 Lead Qualified & Meeting Scheduled!",
+        description: `${lead.firstName} ${lead.lastName} moved to Qualified with meeting.`,
+      });
+      setMeetingDialogOpen(false);
+      setQualifyingLead(null);
+    } catch (error: any) {
+      console.error("Failed to qualify lead with meeting:", error);
+      toast({ title: "Error", description: error?.response?.data?.message || "Failed to schedule meeting.", variant: "destructive" });
+    } finally {
+      setMeetingSubmitting(false);
+    }
+  };
+
+  const handleMeetingSkip = async () => {
+    if (!qualifyingLead) return;
+    const { lead, sourceStageId } = qualifyingLead;
+
+    try {
+      await updateLeadStatus(lead.id, "QUALIFIED");
+      setPipeline((prev) =>
+        prev.map((stage) => {
+          if (stage.id === sourceStageId) {
+            return { ...stage, leads: stage.leads.filter((l) => l.id !== lead.id) };
+          }
+          if (stage.id === "qualified") {
+            return { ...stage, leads: [...stage.leads, { ...lead, status: "qualified", daysInStage: 0 }] };
+          }
+          return stage;
+        })
+      );
+      toast({
+        title: "Lead Qualified",
+        description: `${lead.firstName} ${lead.lastName} moved to Qualified (no meeting scheduled).`,
+      });
+    } catch (error: any) {
+      console.error("Failed to update status:", error);
+      toast({ title: "Error", description: error?.response?.data?.message || "Failed to update status.", variant: "destructive" });
+    }
+    setMeetingDialogOpen(false);
+    setQualifyingLead(null);
+  };
+
+  const handleMeetingCancel = () => {
+    setMeetingDialogOpen(false);
+    setQualifyingLead(null);
   };
 
   return (
@@ -927,8 +1052,8 @@ const Pipeline = () => {
                   type="button"
                   onClick={() => setConvertClientType("INDIVIDUAL")}
                   className={`p-4 rounded-lg border-2 text-center transition-all ${convertClientType === "INDIVIDUAL"
-                      ? "border-[#0891B2] bg-[#0891B2]/5 shadow-sm"
-                      : "border-gray-200 hover:border-gray-300"
+                    ? "border-[#0891B2] bg-[#0891B2]/5 shadow-sm"
+                    : "border-gray-200 hover:border-gray-300"
                     }`}
                 >
                   <User size={24} className={`mx-auto mb-2 ${convertClientType === "INDIVIDUAL" ? "text-[#0891B2]" : "text-gray-400"}`} />
@@ -939,8 +1064,8 @@ const Pipeline = () => {
                   type="button"
                   onClick={() => setConvertClientType("COMPANY")}
                   className={`p-4 rounded-lg border-2 text-center transition-all ${convertClientType === "COMPANY"
-                      ? "border-[#0891B2] bg-[#0891B2]/5 shadow-sm"
-                      : "border-gray-200 hover:border-gray-300"
+                    ? "border-[#0891B2] bg-[#0891B2]/5 shadow-sm"
+                    : "border-gray-200 hover:border-gray-300"
                     }`}
                 >
                   <Building2 size={24} className={`mx-auto mb-2 ${convertClientType === "COMPANY" ? "text-[#0891B2]" : "text-gray-400"}`} />
@@ -1000,6 +1125,151 @@ const Pipeline = () => {
               {convertLoading ? "Converting..." : "Convert to Client"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Schedule Meeting Dialog (Qualified Prompt) */}
+      <Dialog open={meetingDialogOpen} onOpenChange={(open) => { if (!open) handleMeetingCancel(); }}>
+        <DialogContent className="sm:max-w-[520px] rounded-xl p-0 overflow-hidden">
+          <div className="bg-gradient-to-r from-[#0891B2] to-[#06B6D4] p-6 text-white">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
+                <CalendarDays size={22} />
+                Schedule Meeting
+              </DialogTitle>
+              <DialogDescription className="text-white/80 mt-1">
+                <span className="font-semibold text-white">{qualifyingLead?.lead.firstName} {qualifyingLead?.lead.lastName}</span> has been qualified!
+                Schedule a meeting to move forward.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <form onSubmit={handleMeetingSchedule} className="p-6 space-y-5">
+            {/* Meeting Type */}
+            <div>
+              <Label className="text-sm font-semibold text-[#0F172A] mb-3 block">Meeting Type</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setMeetingType("online")}
+                  className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 ${meetingType === "online"
+                    ? "border-[#0891B2] bg-[#0891B2]/5 shadow-sm"
+                    : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                    }`}
+                >
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${meetingType === "online" ? "bg-[#0891B2]/10" : "bg-gray-100"
+                    }`}>
+                    <Video size={24} className={meetingType === "online" ? "text-[#0891B2]" : "text-gray-400"} />
+                  </div>
+                  <span className={`font-semibold text-sm ${meetingType === "online" ? "text-[#0891B2]" : "text-gray-600"
+                    }`}>Online Meeting</span>
+                  <span className="text-xs text-gray-400">Video call / Google Meet</span>
+                  {meetingType === "online" && (
+                    <div className="absolute top-2 right-2">
+                      <CheckCircle2 size={16} className="text-[#0891B2]" />
+                    </div>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setMeetingType("offline")}
+                  className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 ${meetingType === "offline"
+                    ? "border-[#F59E0B] bg-[#F59E0B]/5 shadow-sm"
+                    : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                    }`}
+                >
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${meetingType === "offline" ? "bg-[#F59E0B]/10" : "bg-gray-100"
+                    }`}>
+                    <MapPin size={24} className={meetingType === "offline" ? "text-[#F59E0B]" : "text-gray-400"} />
+                  </div>
+                  <span className={`font-semibold text-sm ${meetingType === "offline" ? "text-[#F59E0B]" : "text-gray-600"
+                    }`}>Offline Meeting</span>
+                  <span className="text-xs text-gray-400">In-person / On-site</span>
+                  {meetingType === "offline" && (
+                    <div className="absolute top-2 right-2">
+                      <CheckCircle2 size={16} className="text-[#F59E0B]" />
+                    </div>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Meeting Title */}
+            <div>
+              <Label htmlFor="pipeMeetingTitle" className="text-sm font-medium text-[#475569]">Meeting Title</Label>
+              <Input
+                id="pipeMeetingTitle"
+                value={meetingTitle}
+                onChange={(e) => setMeetingTitle(e.target.value)}
+                placeholder="e.g. Discovery Call"
+                className="mt-1.5 rounded-lg"
+              />
+            </div>
+
+            {/* Date & Time */}
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <Label htmlFor="pipeMeetingDate" className="text-sm font-medium text-[#475569]">Date</Label>
+                <Input id="pipeMeetingDate" type="date" value={meetingDate} onChange={(e) => setMeetingDate(e.target.value)} className="mt-1.5 rounded-lg" required />
+              </div>
+              <div>
+                <Label htmlFor="pipeMeetingTime" className="text-sm font-medium text-[#475569]">Time</Label>
+                <Input id="pipeMeetingTime" type="time" value={meetingTime} onChange={(e) => setMeetingTime(e.target.value)} className="mt-1.5 rounded-lg" required />
+              </div>
+              <div>
+                <Label htmlFor="pipeMeetingDuration" className="text-sm font-medium text-[#475569]">Duration</Label>
+                <select value={meetingDuration} onChange={(e) => setMeetingDuration(e.target.value)} className="mt-1.5 w-full h-10 rounded-lg border border-gray-200 px-3 text-sm bg-white">
+                  <option value="15">15 min</option>
+                  <option value="30">30 min</option>
+                  <option value="45">45 min</option>
+                  <option value="60">1 hour</option>
+                  <option value="90">1.5 hours</option>
+                  <option value="120">2 hours</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Conditional fields */}
+            {meetingType === "online" ? (
+              <div>
+                <Label htmlFor="pipeMeetingLink" className="text-sm font-medium text-[#475569]">Meeting Link</Label>
+                <div className="relative mt-1.5">
+                  <Video size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#0891B2]" />
+                  <Input id="pipeMeetingLink" value={meetingLink} onChange={(e) => setMeetingLink(e.target.value)} placeholder="https://meet.google.com/... (auto if empty)" className="pl-9 rounded-lg" />
+                </div>
+              </div>
+            ) : (
+              <div>
+                <Label htmlFor="pipeMeetingLoc" className="text-sm font-medium text-[#475569]">Location</Label>
+                <div className="relative mt-1.5">
+                  <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#F59E0B]" />
+                  <Input id="pipeMeetingLoc" value={meetingLocation} onChange={(e) => setMeetingLocation(e.target.value)} placeholder="Office address or venue" className="pl-9 rounded-lg" required />
+                </div>
+              </div>
+            )}
+
+            {/* Notes */}
+            <div>
+              <Label htmlFor="pipeMeetingNotes" className="text-sm font-medium text-[#475569]">Notes (optional)</Label>
+              <Textarea id="pipeMeetingNotes" value={meetingNotes} onChange={(e) => setMeetingNotes(e.target.value)} placeholder="Agenda, topics..." rows={2} className="mt-1.5 rounded-lg resize-none" />
+            </div>
+
+            <DialogFooter className="gap-2 pt-2">
+              <Button type="button" variant="ghost" onClick={handleMeetingSkip} className="text-gray-500 hover:text-gray-700">
+                Skip for now
+              </Button>
+              <Button
+                type="submit"
+                disabled={meetingSubmitting}
+                className={`rounded-lg gap-2 text-white ${meetingType === "online" ? "bg-[#0891B2] hover:bg-[#0891B2]/90" : "bg-[#F59E0B] hover:bg-[#F59E0B]/90"
+                  }`}
+              >
+                {meetingSubmitting ? <RefreshCw size={16} className="animate-spin" /> : meetingType === "online" ? <Video size={16} /> : <MapPin size={16} />}
+                {meetingSubmitting ? "Scheduling..." : "Schedule Meeting"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 

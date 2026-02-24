@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { getLeads, createLead, updateLead, deleteLead, updateLeadStatus } from "@/features/leads";
+import { createCalendarEvent } from "@/features/calendar";
 import { getEmployees } from "@/features/users";
 import { Sidebar } from "@/components/Sidebar";
 import { AiInsightBadge, getLeadInsights } from "@/components/ai/AiInsightBadge";
@@ -129,6 +130,9 @@ import {
   Thermometer,
   ThermometerSun,
   Snowflake,
+  Video,
+  MapPin,
+  Clock,
   type LucideIcon,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
@@ -1539,6 +1543,279 @@ const LeadDetailsDialog = ({
 };
 
 // ============================================
+// SCHEDULE MEETING DIALOG (Qualified Prompt)
+// ============================================
+
+const ScheduleMeetingDialog = ({
+  isOpen,
+  onClose,
+  lead,
+  onSchedule,
+  onSkip,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  lead: Lead | null;
+  onSchedule: (meetingData: Record<string, unknown>) => Promise<void>;
+  onSkip: () => void;
+}) => {
+  const [meetingType, setMeetingType] = useState<"online" | "offline">("online");
+  const [meetingTitle, setMeetingTitle] = useState("");
+  const [meetingDate, setMeetingDate] = useState("");
+  const [meetingTime, setMeetingTime] = useState("10:00");
+  const [meetingDuration, setMeetingDuration] = useState("30");
+  const [meetingLocation, setMeetingLocation] = useState("");
+  const [meetingLink, setMeetingLink] = useState("");
+  const [meetingNotes, setMeetingNotes] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Reset form when dialog opens
+  useEffect(() => {
+    if (isOpen && lead) {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      // Skip weekends
+      while (tomorrow.getDay() === 0 || tomorrow.getDay() === 6) {
+        tomorrow.setDate(tomorrow.getDate() + 1);
+      }
+      setMeetingDate(tomorrow.toISOString().split("T")[0]);
+      setMeetingTitle(`Meeting with ${lead.firstName} ${lead.lastName}`);
+      setMeetingType("online");
+      setMeetingTime("10:00");
+      setMeetingDuration("30");
+      setMeetingLocation("");
+      setMeetingLink("");
+      setMeetingNotes("");
+    }
+  }, [isOpen, lead]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!meetingDate || !meetingTime || !lead) return;
+    setIsSubmitting(true);
+    try {
+      const startTime = new Date(`${meetingDate}T${meetingTime}:00`);
+      const endTime = new Date(startTime.getTime() + parseInt(meetingDuration) * 60000);
+
+      await onSchedule({
+        title: meetingTitle || `Meeting with ${lead.firstName} ${lead.lastName}`,
+        description: `Qualification meeting with lead ${lead.firstName} ${lead.lastName}${lead.company ? ` from ${lead.company}` : ""}. ${meetingNotes ? `\n\nNotes: ${meetingNotes}` : ""}`,
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+        eventType: "MEETING",
+        category: "client",
+        location: meetingType === "offline" ? meetingLocation : undefined,
+        meetingLink: meetingType === "online" ? (meetingLink || "https://meet.google.com/new") : undefined,
+        leadId: lead.id,
+        priority: "HIGH",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!lead) return null;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[520px] rounded-xl p-0 overflow-hidden">
+        <div className="bg-gradient-to-r from-[#0891B2] to-[#06B6D4] p-6 text-white">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
+              <CalendarDays size={22} />
+              Schedule Meeting
+            </DialogTitle>
+            <DialogDescription className="text-white/80 mt-1">
+              <span className="font-semibold text-white">{lead.firstName} {lead.lastName}</span> has been qualified!
+              Schedule a meeting to move forward.
+            </DialogDescription>
+          </DialogHeader>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          {/* Meeting Type Selection */}
+          <div>
+            <Label className="text-sm font-semibold text-[#0F172A] mb-3 block">Meeting Type</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setMeetingType("online")}
+                className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 ${meetingType === "online"
+                    ? "border-[#0891B2] bg-[#0891B2]/5 shadow-sm"
+                    : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                  }`}
+              >
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${meetingType === "online" ? "bg-[#0891B2]/10" : "bg-gray-100"
+                  }`}>
+                  <Video size={24} className={meetingType === "online" ? "text-[#0891B2]" : "text-gray-400"} />
+                </div>
+                <span className={`font-semibold text-sm ${meetingType === "online" ? "text-[#0891B2]" : "text-gray-600"
+                  }`}>Online Meeting</span>
+                <span className="text-xs text-gray-400">Video call / Google Meet</span>
+                {meetingType === "online" && (
+                  <div className="absolute top-2 right-2">
+                    <Check size={16} className="text-[#0891B2]" />
+                  </div>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMeetingType("offline")}
+                className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 ${meetingType === "offline"
+                    ? "border-[#F59E0B] bg-[#F59E0B]/5 shadow-sm"
+                    : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                  }`}
+              >
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${meetingType === "offline" ? "bg-[#F59E0B]/10" : "bg-gray-100"
+                  }`}>
+                  <MapPin size={24} className={meetingType === "offline" ? "text-[#F59E0B]" : "text-gray-400"} />
+                </div>
+                <span className={`font-semibold text-sm ${meetingType === "offline" ? "text-[#F59E0B]" : "text-gray-600"
+                  }`}>Offline Meeting</span>
+                <span className="text-xs text-gray-400">In-person / On-site</span>
+                {meetingType === "offline" && (
+                  <div className="absolute top-2 right-2">
+                    <Check size={16} className="text-[#F59E0B]" />
+                  </div>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Meeting Title */}
+          <div>
+            <Label htmlFor="meetingTitle" className="text-sm font-medium text-[#475569]">Meeting Title</Label>
+            <Input
+              id="meetingTitle"
+              value={meetingTitle}
+              onChange={(e) => setMeetingTitle(e.target.value)}
+              placeholder="e.g. Discovery Call"
+              className="mt-1.5 rounded-lg"
+            />
+          </div>
+
+          {/* Date & Time Row */}
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <Label htmlFor="meetingDate" className="text-sm font-medium text-[#475569]">Date</Label>
+              <Input
+                id="meetingDate"
+                type="date"
+                value={meetingDate}
+                onChange={(e) => setMeetingDate(e.target.value)}
+                className="mt-1.5 rounded-lg"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="meetingTime" className="text-sm font-medium text-[#475569]">Time</Label>
+              <Input
+                id="meetingTime"
+                type="time"
+                value={meetingTime}
+                onChange={(e) => setMeetingTime(e.target.value)}
+                className="mt-1.5 rounded-lg"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="meetingDuration" className="text-sm font-medium text-[#475569]">Duration</Label>
+              <Select value={meetingDuration} onValueChange={setMeetingDuration}>
+                <SelectTrigger className="mt-1.5 rounded-lg">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-lg">
+                  <SelectItem value="15">15 min</SelectItem>
+                  <SelectItem value="30">30 min</SelectItem>
+                  <SelectItem value="45">45 min</SelectItem>
+                  <SelectItem value="60">1 hour</SelectItem>
+                  <SelectItem value="90">1.5 hours</SelectItem>
+                  <SelectItem value="120">2 hours</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Conditional: Online → Meeting Link, Offline → Location */}
+          {meetingType === "online" ? (
+            <div>
+              <Label htmlFor="meetingLink" className="text-sm font-medium text-[#475569]">Meeting Link</Label>
+              <div className="relative mt-1.5">
+                <Video size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#0891B2]" />
+                <Input
+                  id="meetingLink"
+                  value={meetingLink}
+                  onChange={(e) => setMeetingLink(e.target.value)}
+                  placeholder="https://meet.google.com/... (auto-generated if empty)"
+                  className="pl-9 rounded-lg"
+                />
+              </div>
+            </div>
+          ) : (
+            <div>
+              <Label htmlFor="meetingLocation" className="text-sm font-medium text-[#475569]">Location</Label>
+              <div className="relative mt-1.5">
+                <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#F59E0B]" />
+                <Input
+                  id="meetingLocation"
+                  value={meetingLocation}
+                  onChange={(e) => setMeetingLocation(e.target.value)}
+                  placeholder="Office address or venue"
+                  className="pl-9 rounded-lg"
+                  required
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Notes */}
+          <div>
+            <Label htmlFor="meetingNotes" className="text-sm font-medium text-[#475569]">Notes (optional)</Label>
+            <Textarea
+              id="meetingNotes"
+              value={meetingNotes}
+              onChange={(e) => setMeetingNotes(e.target.value)}
+              placeholder="Agenda, topics to discuss..."
+              rows={2}
+              className="mt-1.5 rounded-lg resize-none"
+            />
+          </div>
+
+          <DialogFooter className="gap-2 pt-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onSkip}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              Skip for now
+            </Button>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className={`rounded-lg gap-2 text-white ${meetingType === "online"
+                  ? "bg-[#0891B2] hover:bg-[#0891B2]/90"
+                  : "bg-[#F59E0B] hover:bg-[#F59E0B]/90"
+                }`}
+            >
+              {isSubmitting ? (
+                <RefreshCw size={16} className="animate-spin" />
+              ) : meetingType === "online" ? (
+                <Video size={16} />
+              ) : (
+                <MapPin size={16} />
+              )}
+              {isSubmitting ? "Scheduling..." : "Schedule Meeting"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// ============================================
 // MAIN ALL LEADS PAGE COMPONENT
 // ============================================
 
@@ -1592,8 +1869,10 @@ const AllLeads = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+  const [isMeetingDialogOpen, setIsMeetingDialogOpen] = useState(false);
   const [currentLead, setCurrentLead] = useState<Lead | null>(null);
   const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
+  const [pendingQualifiedLead, setPendingQualifiedLead] = useState<Lead | null>(null);
 
   // Fetch leads from API
   useEffect(() => {
@@ -1792,6 +2071,13 @@ const AllLeads = () => {
   };
 
   const handleStatusChange = async (lead: Lead, status: Lead["status"]) => {
+    // Intercept QUALIFIED status → show meeting scheduling dialog
+    if (status === "qualified" && lead.status !== "qualified") {
+      setPendingQualifiedLead(lead);
+      setIsMeetingDialogOpen(true);
+      return;
+    }
+
     try {
       await updateLeadStatus(lead.id, status.toUpperCase());
       setLeads((prev) =>
@@ -1813,6 +2099,67 @@ const AllLeads = () => {
         variant: "destructive",
       });
     }
+  };
+
+  // Handle meeting scheduled after QUALIFIED prompt
+  const handleMeetingSchedule = async (meetingData: Record<string, unknown>) => {
+    if (!pendingQualifiedLead) return;
+    try {
+      // 1. Update lead status to QUALIFIED
+      await updateLeadStatus(pendingQualifiedLead.id, "QUALIFIED");
+      setLeads((prev) =>
+        prev.map((l) =>
+          l.id === pendingQualifiedLead.id
+            ? { ...l, status: "qualified" as Lead["status"], updatedAt: new Date().toISOString() }
+            : l
+        )
+      );
+
+      // 2. Create calendar event
+      await createCalendarEvent(meetingData);
+
+      toast({
+        title: "🎉 Lead Qualified & Meeting Scheduled!",
+        description: `Meeting scheduled with ${pendingQualifiedLead.firstName} ${pendingQualifiedLead.lastName}.`,
+      });
+      setIsMeetingDialogOpen(false);
+      setPendingQualifiedLead(null);
+    } catch (error: any) {
+      console.error("Failed to schedule meeting:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to schedule meeting.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle skip meeting (still qualify the lead)
+  const handleSkipMeeting = async () => {
+    if (!pendingQualifiedLead) return;
+    try {
+      await updateLeadStatus(pendingQualifiedLead.id, "QUALIFIED");
+      setLeads((prev) =>
+        prev.map((l) =>
+          l.id === pendingQualifiedLead.id
+            ? { ...l, status: "qualified" as Lead["status"], updatedAt: new Date().toISOString() }
+            : l
+        )
+      );
+      toast({
+        title: "Status Updated",
+        description: `Lead marked as qualified (no meeting scheduled).`,
+      });
+    } catch (error: any) {
+      console.error("Failed to update status:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to update status.",
+        variant: "destructive",
+      });
+    }
+    setIsMeetingDialogOpen(false);
+    setPendingQualifiedLead(null);
   };
 
   const toggleSelectAll = () => {
@@ -2315,6 +2662,17 @@ const AllLeads = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ScheduleMeetingDialog
+        isOpen={isMeetingDialogOpen}
+        onClose={() => {
+          setIsMeetingDialogOpen(false);
+          setPendingQualifiedLead(null);
+        }}
+        lead={pendingQualifiedLead}
+        onSchedule={handleMeetingSchedule}
+        onSkip={handleSkipMeeting}
+      />
     </div>
   );
 };

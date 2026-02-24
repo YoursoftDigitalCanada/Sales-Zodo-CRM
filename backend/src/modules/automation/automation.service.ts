@@ -55,6 +55,7 @@ import { leadsService } from '../leads/leads.service';
 import { filesService } from '../files/files.service';
 import { analyticsService } from '../analytics/analytics.service';
 import { analyticsRepository } from '../analytics/analytics.repository';
+import { LeadStatus, TaskStatus } from '@prisma/client';
 
 // ── Extensible Hook Types ────────────────────────────────────────────────
 
@@ -1725,6 +1726,57 @@ export class AutomationService {
             }
         });
 
+        // ── Quote Created (direct draft) → move proposal task to REVIEW ──
+        eventBus.on('quote.created', async (event: QuoteCreatedEvent) => {
+            const ctx = {
+                quoteId: event.quoteId,
+                quoteNumber: event.quoteNumber,
+                tenantId: event.tenantId,
+                leadId: event.leadId,
+                clientId: event.clientId,
+            };
+            logger.info('[Automation] quote.created received', ctx);
+
+            // Relevant only when quote is tied to a lead/client proposal flow
+            if (!event.leadId && !event.clientId) return;
+
+            try {
+                const proposalTask = event.leadId
+                    ? await this.findProposalTaskForLead(event.tenantId, event.leadId, ['TODO', 'IN_PROGRESS'])
+                    : await this.findProposalTaskForClient(event.tenantId, event.clientId as string, ['TODO', 'IN_PROGRESS']);
+
+                if (!proposalTask) {
+                    logger.debug('[Automation] quote.created → no matching proposal task found', ctx);
+                    return;
+                }
+
+                await tasksService.updateStatus(proposalTask.id, event.tenantId, 'REVIEW');
+                logger.info('[Automation] quote.created → proposal task moved to REVIEW', {
+                    ...ctx,
+                    taskId: proposalTask.id,
+                    previousStatus: proposalTask.status,
+                });
+
+                activityLogger.log({
+                    tenantId: event.tenantId,
+                    entityType: 'Task',
+                    entityId: proposalTask.id,
+                    action: 'STATUS_CHANGE',
+                    module: 'automation',
+                    description: `Quote "${event.quoteNumber}" created → proposal task moved to REVIEW`,
+                    metadata: {
+                        trigger: 'quote.created',
+                        quoteId: event.quoteId,
+                        quoteNumber: event.quoteNumber,
+                        previousTaskStatus: proposalTask.status,
+                        newTaskStatus: 'REVIEW',
+                    },
+                });
+            } catch (err) {
+                logger.error('[Automation] quote.created → proposal task sync failed', { ...ctx, err });
+            }
+        });
+
         // ════════════════════════════════════════════════════════════════════
         // MASTER TRIGGER: Quote Approved → Full System Automation
         // ════════════════════════════════════════════════════════════════════
@@ -1747,6 +1799,70 @@ export class AutomationService {
                 tenantId: event.tenantId, newStatus: event.newStatus,
             };
             logger.info('[Automation] quote.statusChanged received', ctx);
+
+            // ── Quote SENT → complete proposal task + move lead to PROPOSAL ──
+            if (event.newStatus === 'SENT') {
+                try {
+                    const proposalTask = event.leadId
+                        ? await this.findProposalTaskForLead(event.tenantId, event.leadId, ['TODO', 'IN_PROGRESS', 'REVIEW'])
+                        : (event.clientId
+                            ? await this.findProposalTaskForClient(event.tenantId, event.clientId, ['TODO', 'IN_PROGRESS', 'REVIEW'])
+                            : null);
+
+                    if (proposalTask) {
+                        await tasksService.updateStatus(proposalTask.id, event.tenantId, 'DONE');
+                        logger.info('[Automation] quote.statusChanged (SENT) → proposal task moved to DONE', {
+                            ...ctx,
+                            taskId: proposalTask.id,
+                            previousStatus: proposalTask.status,
+                        });
+
+                        activityLogger.log({
+                            tenantId: event.tenantId,
+                            entityType: 'Task',
+                            entityId: proposalTask.id,
+                            action: 'STATUS_CHANGE',
+                            module: 'automation',
+                            description: `Quote "${event.quoteNumber}" sent → proposal task completed`,
+                            metadata: {
+                                trigger: 'quote.statusChanged',
+                                quoteId: event.quoteId,
+                                quoteNumber: event.quoteNumber,
+                                previousTaskStatus: proposalTask.status,
+                                newTaskStatus: 'DONE',
+                            },
+                        });
+                    } else {
+                        logger.debug('[Automation] quote.statusChanged (SENT) → no matching proposal task found', ctx);
+                    }
+                } catch (err) {
+                    logger.error('[Automation] quote.statusChanged (SENT) → proposal task completion failed', { ...ctx, err });
+                }
+
+                if (event.leadId) {
+                    try {
+                        const leadProgress = await this.moveLeadToProposalStage(event.tenantId, event.leadId);
+                        if (leadProgress === 'updated') {
+                            logger.info('[Automation] quote.statusChanged (SENT) → lead moved to PROPOSAL', {
+                                ...ctx,
+                                leadId: event.leadId,
+                            });
+                        } else {
+                            logger.debug('[Automation] quote.statusChanged (SENT) → lead stage unchanged', {
+                                ...ctx,
+                                leadId: event.leadId,
+                                reason: leadProgress,
+                            });
+                        }
+                    } catch (err) {
+                        logger.error('[Automation] quote.statusChanged (SENT) → lead stage update failed', {
+                            ...ctx,
+                            leadId: event.leadId,
+                            err,
+                        });
+                    }
+                }
+            }
 
             // Only fire the master automation for ACCEPTED quotes
             if (event.newStatus !== 'ACCEPTED') return;
@@ -1984,6 +2100,114 @@ export class AutomationService {
     // ── Utilities ────────────────────────────────────────────────────────
 
     /**
+     * Find the best matching "Prepare proposal for:" task for a lead.
+     * Since Task currently has no leadId column, we score recent open proposal tasks
+     * by lead name/company/email presence in title/description.
+     */
+    private async findProposalTaskForLead(
+        tenantId: string,
+        leadId: string,
+        allowedStatuses: TaskStatus[],
+    ): Promise<{ id: string; title: string; status: TaskStatus } | null> {
+        const lead = await prisma.lead.findFirst({
+            where: { id: leadId, tenantId },
+            select: { firstName: true, lastName: true, companyName: true, email: true },
+        });
+        if (!lead) return null;
+
+        const leadName = `${lead.firstName || ''} ${lead.lastName || ''}`.trim().toLowerCase();
+        const companyName = (lead.companyName || '').trim().toLowerCase();
+        const email = (lead.email || '').trim().toLowerCase();
+
+        const candidates = await prisma.task.findMany({
+            where: {
+                tenantId,
+                title: { startsWith: 'Prepare proposal for:' },
+                status: { in: allowedStatuses },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 30,
+            select: {
+                id: true,
+                title: true,
+                description: true,
+                status: true,
+                createdAt: true,
+            },
+        });
+
+        let best: { id: string; title: string; status: TaskStatus; score: number; createdAt: Date } | null = null;
+
+        for (const task of candidates) {
+            const haystack = `${task.title}\n${task.description || ''}`.toLowerCase();
+
+            let score = 0;
+            if (leadName && haystack.includes(leadName)) score += 8;
+            if (companyName && haystack.includes(companyName)) score += 5;
+            if (email && haystack.includes(email)) score += 10;
+            if (leadName && haystack.includes(`lead "${leadName}" moved to qualified`)) score += 12;
+
+            if (score === 0) continue;
+
+            if (!best || score > best.score || (score === best.score && task.createdAt > best.createdAt)) {
+                best = {
+                    id: task.id,
+                    title: task.title,
+                    status: task.status,
+                    score,
+                    createdAt: task.createdAt,
+                };
+            }
+        }
+
+        if (!best) return null;
+        return { id: best.id, title: best.title, status: best.status };
+    }
+
+    /**
+     * Fallback lookup for client-linked proposal tasks.
+     */
+    private async findProposalTaskForClient(
+        tenantId: string,
+        clientId: string,
+        allowedStatuses: TaskStatus[],
+    ): Promise<{ id: string; title: string; status: TaskStatus } | null> {
+        const task = await prisma.task.findFirst({
+            where: {
+                tenantId,
+                clientId,
+                title: { startsWith: 'Prepare proposal for:' },
+                status: { in: allowedStatuses },
+            },
+            orderBy: { createdAt: 'desc' },
+            select: { id: true, title: true, status: true },
+        });
+        return task;
+    }
+
+    /**
+     * Move lead to PROPOSAL stage after quote is sent, but avoid regressing
+     * leads that already reached terminal or later pipeline stages.
+     */
+    private async moveLeadToProposalStage(
+        tenantId: string,
+        leadId: string,
+    ): Promise<'updated' | 'already-proposal-or-later' | 'missing'> {
+        const lead = await prisma.lead.findFirst({
+            where: { id: leadId, tenantId },
+            select: { status: true },
+        });
+        if (!lead) return 'missing';
+
+        const currentStatus = lead.status as LeadStatus;
+        const blocklist: LeadStatus[] = ['PROPOSAL', 'NEGOTIATION', 'WON', 'LOST'];
+        if (blocklist.includes(currentStatus)) return 'already-proposal-or-later';
+
+        await leadsService.updateStatus(leadId, tenantId, 'PROPOSAL');
+        return 'updated';
+    }
+
+    /**
      * Returns the next business day (skips Saturday and Sunday).
      */
     private getNextBusinessDay(): Date {
@@ -2036,6 +2260,8 @@ export class AutomationService {
             'project.statusChanged (COMPLETED) → BILLING ENGINE: invoice + payment reminder + review task + notifications + audit',
             'invoice.sent → observability',
             'calendar.completed → auto-create draft quote + notification + review task',
+            'quote.created (direct draft) → proposal task TODO/IN_PROGRESS → REVIEW',
+            'quote.statusChanged (SENT) → proposal task REVIEW/DONE sync + lead QUALIFIED/CONTACTED/NEW → PROPOSAL',
             'quote.statusChanged (ACCEPTED) → MASTER TRIGGER: lead→client + project + invoice + kickoff + onboarding tasks + notifications + audit',
         ];
     }

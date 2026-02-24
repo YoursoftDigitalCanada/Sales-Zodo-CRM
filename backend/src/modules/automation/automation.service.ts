@@ -1874,22 +1874,26 @@ export class AutomationService {
             let projectId: string | undefined;
             let invoiceNumber: string | undefined;
 
-            // ── Step 1: CRM — Convert lead → client if needed ──
-            if (event.leadId && !clientId) {
+            // ── Step 1: CRM — ACCEPTED quote sync (lead WON + client ensured) ──
+            if (event.leadId) {
                 try {
-                    const conversion = await leadsService.convertToClient(
-                        event.leadId,
+                    const sync = await this.ensureLeadWonAndClientForAcceptedQuote(
                         event.tenantId,
-                        { clientType: 'COMPANY', createContact: true },
+                        event.leadId,
+                        clientId,
                         event.createdById,
                     );
-                    clientId = conversion.clientId;
-                    // Fetch the new client name
-                    const client = await prisma.client.findUnique({ where: { id: clientId }, select: { clientName: true } });
-                    clientName = client?.clientName || '';
-                    logger.info('[Automation] Step 1 ✓ Lead converted to client', { ...ctx, clientId, clientName });
+                    clientId = sync.clientId;
+                    clientName = sync.clientName;
+                    logger.info('[Automation] Step 1 ✓ Lead/client sync complete', {
+                        ...ctx,
+                        leadId: event.leadId,
+                        clientId,
+                        clientName,
+                        source: sync.source,
+                    });
                 } catch (err) {
-                    logger.error('[Automation] Step 1 ✗ Lead→Client conversion failed', { ...ctx, err });
+                    logger.error('[Automation] Step 1 ✗ Lead/client sync failed', { ...ctx, leadId: event.leadId, err });
                 }
             } else if (clientId) {
                 // Existing client — fetch the name
@@ -2208,6 +2212,71 @@ export class AutomationService {
     }
 
     /**
+     * For ACCEPTED quotes tied to leads:
+     * 1) ensure a client exists/links to the lead
+     * 2) ensure lead status is WON
+     */
+    private async ensureLeadWonAndClientForAcceptedQuote(
+        tenantId: string,
+        leadId: string,
+        currentClientId?: string,
+        actorEmployeeId?: string,
+    ): Promise<{ clientId?: string; clientName: string; source: 'event-client' | 'lead-converted' | 'lead-converted-existing' }> {
+        const lead = await prisma.lead.findFirst({
+            where: { id: leadId, tenantId },
+            select: { status: true, convertedToClientId: true },
+        });
+        if (!lead) {
+            throw new Error(`Lead ${leadId} not found for accepted quote automation`);
+        }
+
+        let clientId = currentClientId || lead.convertedToClientId || undefined;
+        let source: 'event-client' | 'lead-converted' | 'lead-converted-existing' =
+            currentClientId ? 'event-client' : (lead.convertedToClientId ? 'lead-converted-existing' : 'lead-converted');
+
+        if (!clientId) {
+            try {
+                const conversion = await leadsService.convertToClient(
+                    leadId,
+                    tenantId,
+                    { clientType: 'COMPANY', createContact: true },
+                    actorEmployeeId,
+                );
+                clientId = conversion.clientId;
+                source = 'lead-converted';
+            } catch (err) {
+                // Race-safe fallback: conversion may have happened elsewhere between reads
+                const refreshedLead = await prisma.lead.findFirst({
+                    where: { id: leadId, tenantId },
+                    select: { convertedToClientId: true },
+                });
+                if (refreshedLead?.convertedToClientId) {
+                    clientId = refreshedLead.convertedToClientId;
+                    source = 'lead-converted-existing';
+                } else {
+                    throw err;
+                }
+            }
+        }
+
+        // Guarantee pipeline outcome for accepted quote
+        if ((lead.status as LeadStatus) !== 'WON') {
+            await leadsService.updateStatus(leadId, tenantId, 'WON');
+        }
+
+        let clientName = '';
+        if (clientId) {
+            const client = await prisma.client.findUnique({
+                where: { id: clientId },
+                select: { clientName: true },
+            });
+            clientName = client?.clientName || '';
+        }
+
+        return { clientId, clientName, source };
+    }
+
+    /**
      * Returns the next business day (skips Saturday and Sunday).
      */
     private getNextBusinessDay(): Date {
@@ -2262,6 +2331,7 @@ export class AutomationService {
             'calendar.completed → auto-create draft quote + notification + review task',
             'quote.created (direct draft) → proposal task TODO/IN_PROGRESS → REVIEW',
             'quote.statusChanged (SENT) → proposal task REVIEW/DONE sync + lead QUALIFIED/CONTACTED/NEW → PROPOSAL',
+            'quote.statusChanged (ACCEPTED) → enforce lead WON + ensure client conversion/link',
             'quote.statusChanged (ACCEPTED) → MASTER TRIGGER: lead→client + project + invoice + kickoff + onboarding tasks + notifications + audit',
         ];
     }

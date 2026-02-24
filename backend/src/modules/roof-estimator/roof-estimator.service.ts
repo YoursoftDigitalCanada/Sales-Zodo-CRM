@@ -10,12 +10,84 @@ import { activityLogger } from '../../common/services/activity-logger.service';
 import { BadRequestError, ServiceUnavailableError } from '../../common/errors/HttpErrors';
 
 const GOOGLE_GEOCODING_API_KEY = config.integrations.google.geocodingApiKey || '';
-const GOOGLE_STATIC_MAPS_API_KEY = config.integrations.google.staticMapsApiKey || '';
+const GOOGLE_STATIC_MAPS_API_KEY = config.integrations.google.staticMapsApiKey || GOOGLE_GEOCODING_API_KEY || '';
 const GOOGLE_PLACES_API_KEY = config.integrations.google.placesApiKey || '';
 const OPENAI_API_KEY = config.ai.openaiApiKey || '';
 const AI_SERVICE_URL = config.integrations.aiServiceUrl;
+const NOMINATIM_SEARCH_URL = 'https://nominatim.openstreetmap.org/search';
 
 export class RoofEstimatorService {
+    private async geocodeAddressViaNominatim(address: string): Promise<{ lat: number; lng: number; formattedAddress: string }> {
+        const response = await axios.get(NOMINATIM_SEARCH_URL, {
+            params: {
+                q: address,
+                format: 'json',
+                limit: 1,
+                addressdetails: 1,
+                countrycodes: 'ca',
+            },
+            headers: {
+                // Required by Nominatim usage policy
+                'User-Agent': 'ZODO-CRM-RoofEstimator/1.0 (support@zodo.ca)',
+                'Accept-Language': 'en',
+            },
+            timeout: 10000,
+        });
+
+        const results = Array.isArray(response.data) ? response.data : [];
+        if (!results.length) {
+            throw new BadRequestError(
+                'Could not find coordinates for this address. Please enter a complete Canadian address.',
+                'GEOCODING_ZERO_RESULTS'
+            );
+        }
+
+        const top = results[0];
+        const lat = Number(top.lat);
+        const lng = Number(top.lon);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+            throw new ServiceUnavailableError('Fallback geocoding returned invalid coordinates.');
+        }
+
+        return {
+            lat,
+            lng,
+            formattedAddress: top.display_name || address,
+        };
+    }
+
+    private async geocodeAddressWithFallback(
+        address: string,
+        reason: string,
+        originalMessage?: string,
+    ): Promise<{ lat: number; lng: number; formattedAddress: string }> {
+        try {
+            const fallback = await this.geocodeAddressViaNominatim(address);
+            logger.warn('Using fallback geocoder for roof estimator', {
+                reason,
+                address,
+                formattedAddress: fallback.formattedAddress,
+            });
+            return fallback;
+        } catch (fallbackErr: unknown) {
+            if (fallbackErr instanceof BadRequestError) {
+                throw fallbackErr;
+            }
+
+            logger.error('Fallback geocoding failed', {
+                reason,
+                address,
+                error: (fallbackErr as Error).message,
+            });
+
+            throw new ServiceUnavailableError(
+                originalMessage
+                    ? `${originalMessage} Fallback geocoder also failed.`
+                    : 'Geocoding is temporarily unavailable. Please try again later.'
+            );
+        }
+    }
+
     /**
      * Autocomplete address using Google Places API
      */
@@ -66,7 +138,9 @@ export class RoofEstimatorService {
      */
     async geocodeAddress(address: string): Promise<{ lat: number; lng: number; formattedAddress: string }> {
         if (!GOOGLE_GEOCODING_API_KEY) {
-            throw new ServiceUnavailableError(
+            return this.geocodeAddressWithFallback(
+                address,
+                'google_key_missing',
                 'Roof estimator geocoding is not configured. Set GOOGLE_GEOCODING_API_KEY (or GOOGLE_MAPS_JS_API_KEY) on the backend.'
             );
         }
@@ -106,7 +180,9 @@ export class RoofEstimatorService {
                 }
 
                 if (status === 'REQUEST_DENIED') {
-                    throw new ServiceUnavailableError(
+                    return this.geocodeAddressWithFallback(
+                        address,
+                        'google_request_denied',
                         errorMessage
                             ? `Google Geocoding API denied the request: ${errorMessage}`
                             : 'Google Geocoding API denied the request. Check key restrictions and billing.'
@@ -114,12 +190,16 @@ export class RoofEstimatorService {
                 }
 
                 if (status === 'OVER_DAILY_LIMIT' || status === 'OVER_QUERY_LIMIT') {
-                    throw new ServiceUnavailableError(
+                    return this.geocodeAddressWithFallback(
+                        address,
+                        'google_quota_exceeded',
                         'Google Geocoding API quota exceeded. Check quota and billing in Google Cloud.'
                     );
                 }
 
-                throw new ServiceUnavailableError(
+                return this.geocodeAddressWithFallback(
+                    address,
+                    `google_status_${status}`,
                     errorMessage || `Geocoding failed (${status}). Please try again later.`
                 );
             }
@@ -144,10 +224,16 @@ export class RoofEstimatorService {
             });
 
             if (axiosError?.code === 'ECONNABORTED') {
-                throw new ServiceUnavailableError('Geocoding request timed out. Please try again.');
+                return this.geocodeAddressWithFallback(
+                    address,
+                    'google_timeout',
+                    'Geocoding request timed out. Please try again.'
+                );
             }
 
-            throw new ServiceUnavailableError(
+            return this.geocodeAddressWithFallback(
+                address,
+                'google_network_error',
                 axiosError?.message
                     ? `Geocoding request failed: ${axiosError.message}`
                     : 'Geocoding request failed. Please try again.'

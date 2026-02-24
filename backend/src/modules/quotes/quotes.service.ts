@@ -277,8 +277,8 @@ export class QuotesService {
 
     // ── Public: get quote by token (no auth) ────────────────────────────────
     async getByPublicToken(token: string) {
-        const quote = await prisma.quote.findUnique({
-            where: { publicToken: token },
+        const quote = await prisma.quote.findFirst({
+            where: { publicToken: token } as any,
             include: {
                 client: { select: { id: true, clientName: true } },
                 items: { orderBy: { sortOrder: 'asc' } },
@@ -323,7 +323,7 @@ export class QuotesService {
 
     // ── Public: accept or reject quote by token ─────────────────────────────
     async respondToQuote(token: string, action: 'accept' | 'reject') {
-        const quote = await prisma.quote.findUnique({ where: { publicToken: token } });
+        const quote = await prisma.quote.findFirst({ where: { publicToken: token } as any });
         if (!quote) throw new NotFoundError('Quote not found or link has expired');
 
         if (quote.status !== 'SENT') {

@@ -506,6 +506,23 @@ export default function EstimateModule(): JSX.Element {
     }
   }, [draftPayload, toast]);
 
+  const polygonAreaPixels = useMemo(
+    () => calculatePolygonAreaPixels(currentPolygon),
+    [currentPolygon],
+  );
+
+  const polygonAreaSqFt = useMemo(
+    () =>
+      satellite
+        ? calculateRoofAreaSqFt({
+            points: currentPolygon,
+            centerLat: satellite.latitude,
+            zoom,
+          })
+        : 0,
+    [currentPolygon, satellite, zoom],
+  );
+
   const handleGenerateProposalPdf = useCallback(() => {
     if (!satellite || !draftPayload) {
       toast({
@@ -601,23 +618,6 @@ export default function EstimateModule(): JSX.Element {
     toast,
     zoom,
   ]);
-
-  const polygonAreaPixels = useMemo(
-    () => calculatePolygonAreaPixels(currentPolygon),
-    [currentPolygon],
-  );
-
-  const polygonAreaSqFt = useMemo(
-    () =>
-      satellite
-        ? calculateRoofAreaSqFt({
-            points: currentPolygon,
-            centerLat: satellite.latitude,
-            zoom,
-          })
-        : 0,
-    [currentPolygon, satellite, zoom],
-  );
 
   return (
     <section className="mx-auto flex w-full max-w-[1500px] flex-col gap-4 p-4 lg:p-6">

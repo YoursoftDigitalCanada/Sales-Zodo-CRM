@@ -339,25 +339,33 @@ export default function EstimateModule(): JSX.Element {
     let mounted = true;
     setLoadingRecipients(true);
 
-    Promise.all([getClients(), getLeads({ limit: 150 })])
-      .then(([clientsData, leadsData]) => {
+    const loadClients = getClients()
+      .then((clientsData) => {
         if (!mounted) return;
-
         const mappedClients = (clientsData || [])
           .map((client) => mapClientOption(client))
           .filter((recipient): recipient is RecipientOption => Boolean(recipient));
-        const mappedLeads = (leadsData || [])
-          .map((lead) => mapLeadOption(lead))
-          .filter((recipient): recipient is RecipientOption => Boolean(recipient));
-
         setClients(mappedClients);
-        setLeads(mappedLeads);
       })
       .catch(() => {
         if (!mounted) return;
         setClients([]);
-        setLeads([]);
+      });
+
+    const loadLeads = getLeads({ limit: 150 })
+      .then((leadsData) => {
+        if (!mounted) return;
+        const mappedLeads = (leadsData || [])
+          .map((lead) => mapLeadOption(lead))
+          .filter((recipient): recipient is RecipientOption => Boolean(recipient));
+        setLeads(mappedLeads);
       })
+      .catch(() => {
+        if (!mounted) return;
+        setLeads([]);
+      });
+
+    Promise.allSettled([loadClients, loadLeads])
       .finally(() => {
         if (!mounted) return;
         setLoadingRecipients(false);
@@ -869,6 +877,13 @@ export default function EstimateModule(): JSX.Element {
                     <SelectItem value="none">
                       {recipientType === "client" ? "No client selected" : "No lead selected"}
                     </SelectItem>
+                    {!loadingRecipients && activeRecipients.length === 0 && (
+                      <SelectItem value="__empty" disabled>
+                        {recipientType === "client"
+                          ? "No clients available"
+                          : "No leads available"}
+                      </SelectItem>
+                    )}
                     {activeRecipients.map((recipient) => (
                       <SelectItem key={`${recipient.type}-${recipient.id}`} value={recipient.id}>
                         {recipient.name}

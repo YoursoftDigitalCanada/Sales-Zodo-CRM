@@ -48,6 +48,8 @@ type GeocodeInput = {
     postalCode: string | null;
     houseNumber: string | null;
     streetToken: string;
+    route: string | null;
+    locality: string | null;
     normalizedAddress: string;
 };
 
@@ -78,21 +80,52 @@ export class RoofEstimatorService {
         return firstSegment.replace(/^(\d{1,8}\s+)/, '').trim();
     }
 
+    private extractLocality(address: string): string | null {
+        const segments = address
+            .split(',')
+            .map((segment) => segment.trim())
+            .filter(Boolean);
+        if (segments.length < 2) return null;
+
+        const provincePattern = /\b(AB|BC|MB|NB|NL|NS|NT|NU|ON|PE|QC|SK|YT)\b/i;
+
+        for (let index = 1; index < segments.length; index += 1) {
+            const segment = segments[index];
+            if (/^canada$/i.test(segment)) continue;
+            if (this.normalizeCanadianPostalCode(segment)) continue;
+            if (provincePattern.test(segment)) continue;
+            if (/^\d/.test(segment)) continue;
+            return segment;
+        }
+
+        return null;
+    }
+
     private buildGeocodeInput(address: string): GeocodeInput {
+        const route = this.extractStreetToken(address);
         return {
             postalCode: this.normalizeCanadianPostalCode(address),
             houseNumber: this.extractHouseNumber(address),
-            streetToken: this.extractStreetToken(address),
+            streetToken: route,
+            route: route || null,
+            locality: this.extractLocality(address),
             normalizedAddress: this.normalizeText(address),
         };
     }
 
     private buildGoogleComponentsForAddress(address: string): string {
         const parsed = this.buildGeocodeInput(address);
+        const components: string[] = ['country:CA'];
         if (parsed.postalCode) {
-            return `country:CA|postal_code:${parsed.postalCode}`;
+            components.push(`postal_code:${parsed.postalCode}`);
         }
-        return 'country:CA';
+        if (parsed.locality) {
+            components.push(`locality:${parsed.locality}`);
+        }
+        if (parsed.route) {
+            components.push(`route:${parsed.route}`);
+        }
+        return components.join('|');
     }
 
     private getGoogleAddressComponent(result: GoogleGeocodingResult, type: string): string | null {

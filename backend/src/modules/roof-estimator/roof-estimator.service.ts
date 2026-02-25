@@ -16,7 +16,212 @@ const OPENAI_API_KEY = config.ai.openaiApiKey || '';
 const AI_SERVICE_URL = config.integrations.aiServiceUrl;
 const NOMINATIM_SEARCH_URL = 'https://nominatim.openstreetmap.org/search';
 
+type GoogleAddressComponent = {
+    long_name: string;
+    short_name: string;
+    types: string[];
+};
+
+type GoogleGeocodingResult = {
+    formatted_address?: string;
+    address_components?: GoogleAddressComponent[];
+    geometry?: {
+        location?: {
+            lat?: number;
+            lng?: number;
+        };
+        location_type?: string;
+    };
+    partial_match?: boolean;
+    types?: string[];
+};
+
+type NominatimResult = {
+    lat?: string;
+    lon?: string;
+    display_name?: string;
+    importance?: number | string;
+    address?: Record<string, string | undefined>;
+};
+
+type GeocodeInput = {
+    postalCode: string | null;
+    houseNumber: string | null;
+    streetToken: string;
+    normalizedAddress: string;
+};
+
 export class RoofEstimatorService {
+    private normalizeText(value: string): string {
+        return value
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]/g, '');
+    }
+
+    private normalizeCanadianPostalCode(value?: string | null): string | null {
+        if (!value) return null;
+        const match = value.toUpperCase().match(/\b([ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTV-Z])[ -]?(\d[ABCEGHJ-NPRSTV-Z]\d)\b/);
+        if (!match) return null;
+        return `${match[1]}${match[2]}`;
+    }
+
+    private extractHouseNumber(address: string): string | null {
+        const firstSegment = (address.split(',')[0] || '').trim();
+        const match = firstSegment.match(/^(\d{1,8})\b/);
+        return match ? match[1] : null;
+    }
+
+    private extractStreetToken(address: string): string {
+        const firstSegment = (address.split(',')[0] || address).trim();
+        return firstSegment.replace(/^(\d{1,8}\s+)/, '').trim();
+    }
+
+    private buildGeocodeInput(address: string): GeocodeInput {
+        return {
+            postalCode: this.normalizeCanadianPostalCode(address),
+            houseNumber: this.extractHouseNumber(address),
+            streetToken: this.extractStreetToken(address),
+            normalizedAddress: this.normalizeText(address),
+        };
+    }
+
+    private buildGoogleComponentsForAddress(address: string): string {
+        const parsed = this.buildGeocodeInput(address);
+        if (parsed.postalCode) {
+            return `country:CA|postal_code:${parsed.postalCode}`;
+        }
+        return 'country:CA';
+    }
+
+    private getGoogleAddressComponent(result: GoogleGeocodingResult, type: string): string | null {
+        const component = (result.address_components || []).find((entry) => entry.types.includes(type));
+        if (!component) return null;
+        return component.long_name || component.short_name || null;
+    }
+
+    private scoreGoogleResult(result: GoogleGeocodingResult, input: GeocodeInput): number {
+        let score = 0;
+
+        const postal = this.normalizeCanadianPostalCode(this.getGoogleAddressComponent(result, 'postal_code'));
+        if (input.postalCode && postal) {
+            if (postal === input.postalCode) score += 120;
+            else if (postal.slice(0, 3) === input.postalCode.slice(0, 3)) score += 45;
+        }
+
+        const house = this.getGoogleAddressComponent(result, 'street_number');
+        if (input.houseNumber && house) {
+            const normalizedHouse = house.replace(/\D/g, '');
+            if (normalizedHouse === input.houseNumber) score += 90;
+        }
+
+        const route = this.getGoogleAddressComponent(result, 'route');
+        const normalizedInputStreet = this.normalizeText(input.streetToken);
+        const normalizedRoute = this.normalizeText(route || '');
+        if (normalizedInputStreet && normalizedRoute) {
+            if (normalizedInputStreet === normalizedRoute) score += 70;
+            else if (normalizedInputStreet.includes(normalizedRoute) || normalizedRoute.includes(normalizedInputStreet)) {
+                score += 40;
+            }
+        }
+
+        if (result.partial_match) score -= 35;
+
+        const locationType = result.geometry?.location_type;
+        if (locationType === 'ROOFTOP') score += 20;
+        else if (locationType === 'RANGE_INTERPOLATED') score += 8;
+
+        if ((result.types || []).includes('street_address')) score += 20;
+        else if ((result.types || []).includes('premise')) score += 12;
+
+        const formattedAddressNormalized = this.normalizeText(result.formatted_address || '');
+        if (formattedAddressNormalized && normalizedInputStreet && formattedAddressNormalized.includes(normalizedInputStreet)) {
+            score += 12;
+        }
+
+        return score;
+    }
+
+    private selectBestGoogleResult(results: GoogleGeocodingResult[], address: string): GoogleGeocodingResult | null {
+        if (!results.length) return null;
+        if (results.length === 1) return results[0];
+
+        const input = this.buildGeocodeInput(address);
+        let best: GoogleGeocodingResult | null = null;
+        let bestScore = Number.NEGATIVE_INFINITY;
+
+        results.forEach((result) => {
+            const score = this.scoreGoogleResult(result, input);
+            if (score > bestScore) {
+                bestScore = score;
+                best = result;
+            }
+        });
+
+        return best || results[0];
+    }
+
+    private scoreNominatimResult(result: NominatimResult, input: GeocodeInput): number {
+        let score = 0;
+        const addr = result.address || {};
+
+        const postal = this.normalizeCanadianPostalCode(addr.postcode);
+        if (input.postalCode && postal) {
+            if (postal === input.postalCode) score += 115;
+            else if (postal.slice(0, 3) === input.postalCode.slice(0, 3)) score += 40;
+        }
+
+        const house = (addr.house_number || '').replace(/\D/g, '');
+        if (input.houseNumber && house && house === input.houseNumber) {
+            score += 85;
+        }
+
+        const street = addr.road || addr.pedestrian || addr.residential || addr.cycleway || '';
+        const normalizedInputStreet = this.normalizeText(input.streetToken);
+        const normalizedStreet = this.normalizeText(street);
+        if (normalizedInputStreet && normalizedStreet) {
+            if (normalizedInputStreet === normalizedStreet) score += 65;
+            else if (normalizedInputStreet.includes(normalizedStreet) || normalizedStreet.includes(normalizedInputStreet)) {
+                score += 36;
+            }
+        }
+
+        const display = this.normalizeText(result.display_name || '');
+        if (input.houseNumber && display.includes(input.houseNumber)) {
+            score += 16;
+        }
+        if (normalizedInputStreet && display.includes(normalizedInputStreet)) {
+            score += 14;
+        }
+
+        const importance = Number(result.importance);
+        if (Number.isFinite(importance)) {
+            score += importance * 5;
+        }
+
+        return score;
+    }
+
+    private selectBestNominatimResult(results: NominatimResult[], address: string): NominatimResult | null {
+        if (!results.length) return null;
+        if (results.length === 1) return results[0];
+
+        const input = this.buildGeocodeInput(address);
+        let best: NominatimResult | null = null;
+        let bestScore = Number.NEGATIVE_INFINITY;
+
+        results.forEach((result) => {
+            const score = this.scoreNominatimResult(result, input);
+            if (score > bestScore) {
+                bestScore = score;
+                best = result;
+            }
+        });
+
+        return best || results[0];
+    }
+
     private async geocodeAddressViaNominatim(address: string): Promise<{ lat: number; lng: number; formattedAddress: string }> {
         const cleanedAddress = address
             .replace(/[^\x20-\x7E]+/g, ' ')
@@ -45,12 +250,14 @@ export class RoofEstimatorService {
             countrycodes: idx < 2 ? 'ca' : undefined,
         }));
 
+        const collectedResults: NominatimResult[] = [];
+
         for (const candidate of candidates) {
             const response = await axios.get(NOMINATIM_SEARCH_URL, {
                 params: {
                     q: candidate.q,
                     format: 'json',
-                    limit: 1,
+                    limit: 8,
                     addressdetails: 1,
                     ...(candidate.countrycodes ? { countrycodes: candidate.countrycodes } : {}),
                 },
@@ -62,21 +269,23 @@ export class RoofEstimatorService {
                 timeout: 10000,
             });
 
-            const results = Array.isArray(response.data) ? response.data : [];
-            if (!results.length) continue;
-
-            const top = results[0];
-            const lat = Number(top.lat);
-            const lng = Number(top.lon);
-            if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-                continue;
+            const results = Array.isArray(response.data) ? (response.data as NominatimResult[]) : [];
+            if (results.length) {
+                collectedResults.push(...results);
             }
+        }
 
-            return {
-                lat,
-                lng,
-                formattedAddress: top.display_name || candidate.q,
-            };
+        const best = this.selectBestNominatimResult(collectedResults, cleanedAddress);
+        if (best) {
+            const lat = Number(best.lat);
+            const lng = Number(best.lon);
+            if (Number.isFinite(lat) && Number.isFinite(lng)) {
+                return {
+                    lat,
+                    lng,
+                    formattedAddress: best.display_name || cleanedAddress,
+                };
+            }
         }
 
         throw new BadRequestError(
@@ -117,6 +326,40 @@ export class RoofEstimatorService {
         }
     }
 
+    private async autocompleteAddressViaNominatim(input: string): Promise<Array<{ description: string; placeId: string }>> {
+        try {
+            const response = await axios.get(NOMINATIM_SEARCH_URL, {
+                params: {
+                    q: input,
+                    format: 'json',
+                    limit: 6,
+                    addressdetails: 1,
+                    countrycodes: 'ca',
+                },
+                headers: {
+                    'User-Agent': 'ZODO-CRM-RoofEstimator/1.0 (support@zodo.ca)',
+                    'Accept-Language': 'en',
+                },
+                timeout: 7000,
+            });
+
+            const results = Array.isArray(response.data) ? (response.data as NominatimResult[]) : [];
+            return results
+                .map((entry) => ({
+                    description: String(entry.display_name || '').trim(),
+                    // Keep empty so frontend won't send a non-Google placeId to geocoder.
+                    placeId: '',
+                }))
+                .filter((entry) => entry.description.length > 0);
+        } catch (err: any) {
+            logger.error('Nominatim autocomplete fallback failed', {
+                message: err.message,
+                status: err.response?.status,
+            });
+            return [];
+        }
+    }
+
     /**
      * Autocomplete address using Google Places API
      */
@@ -124,7 +367,7 @@ export class RoofEstimatorService {
         const apiKey = GOOGLE_PLACES_API_KEY;
         if (!apiKey) {
             logger.error('Google Places API key not configured — set GOOGLE_PLACES_API_KEY, GOOGLE_GEOCODING_API_KEY, or GOOGLE_MAPS_JS_API_KEY in .env');
-            return [];
+            return this.autocompleteAddressViaNominatim(input);
         }
 
         try {
@@ -145,20 +388,23 @@ export class RoofEstimatorService {
                     errorMessage: response.data.error_message,
                     input,
                 });
-                return [];
+                return this.autocompleteAddressViaNominatim(input);
             }
-
-            return (response.data.predictions || []).map((p: any) => ({
+            const predictions = (response.data.predictions || []).map((p: any) => ({
                 description: p.description,
                 placeId: p.place_id,
             }));
+            if (predictions.length > 0) {
+                return predictions;
+            }
+            return this.autocompleteAddressViaNominatim(input);
         } catch (err: any) {
             logger.error('Places autocomplete request failed', {
                 message: err.message,
                 status: err.response?.status,
                 data: err.response?.data,
             });
-            return [];
+            return this.autocompleteAddressViaNominatim(input);
         }
     }
 
@@ -304,11 +550,12 @@ export class RoofEstimatorService {
         }
 
         try {
+            const components = this.buildGoogleComponentsForAddress(address);
             const response = await axios.get('https://maps.googleapis.com/maps/api/geocode/json', {
                 params: {
                     address,
                     key: GOOGLE_GEOCODING_API_KEY,
-                    components: 'country:CA',
+                    components,
                     region: 'ca',
                 },
                 timeout: 10000,
@@ -362,11 +609,19 @@ export class RoofEstimatorService {
                 );
             }
 
-            const result = response.data.results[0];
+            const results = response.data.results as GoogleGeocodingResult[];
+            const bestResult = this.selectBestGoogleResult(results, address) || results[0];
+            const lat = Number(bestResult.geometry?.location?.lat);
+            const lng = Number(bestResult.geometry?.location?.lng);
+
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                throw new ServiceUnavailableError('Geocoding response returned invalid coordinates.');
+            }
+
             return {
-                lat: result.geometry.location.lat,
-                lng: result.geometry.location.lng,
-                formattedAddress: result.formatted_address,
+                lat,
+                lng,
+                formattedAddress: bestResult.formatted_address || address,
             };
         } catch (err: unknown) {
             if (err instanceof BadRequestError || err instanceof ServiceUnavailableError) {

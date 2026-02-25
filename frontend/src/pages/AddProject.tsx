@@ -99,6 +99,41 @@ interface User {
   lastName: string;
 }
 
+const toIdString = (value: unknown): string => {
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value);
+  }
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const candidate = record.id ?? record.value ?? record.uuid;
+    if (typeof candidate === "string" || typeof candidate === "number") {
+      return String(candidate);
+    }
+  }
+  return "";
+};
+
+const toDisplayString = (value: unknown, fallback = ""): string => {
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value).trim() || fallback;
+  }
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const direct =
+      (typeof record.name === "string" && record.name)
+      || (typeof record.clientName === "string" && record.clientName)
+      || (typeof record.companyName === "string" && record.companyName)
+      || (typeof record.label === "string" && record.label);
+    if (direct && direct.trim()) return direct.trim();
+
+    const firstName = typeof record.firstName === "string" ? record.firstName : "";
+    const lastName = typeof record.lastName === "string" ? record.lastName : "";
+    const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
+    if (fullName) return fullName;
+  }
+  return fallback;
+};
+
 // ============================================
 // CONSTANTS
 // ============================================
@@ -672,10 +707,12 @@ const AddProjectPage = () => {
       try {
         const clientsData = await getClients();
         setApiClients(
-          (clientsData || []).map((c: any) => ({
-            id: c.id,
-            name: c.clientName || c.companyName || "Unnamed Client",
-          }))
+          (clientsData || [])
+            .map((c: any) => ({
+              id: toIdString(c?.id ?? c?.Id),
+              name: toDisplayString(c?.clientName ?? c?.companyName ?? c?.name ?? c?.Name, "Unnamed Client"),
+            }))
+            .filter((c) => c.id.length > 0)
         );
       } catch {
         console.error("Failed to load clients");
@@ -683,11 +720,19 @@ const AddProjectPage = () => {
       try {
         const employeesData = await getEmployees();
         setApiTeamMembers(
-          (employeesData || []).map((emp: any) => ({
-            id: emp.id,
-            name: [emp.user?.firstName || emp.firstName, emp.user?.lastName || emp.lastName].filter(Boolean).join(" ") || emp.email || "Employee",
-            role: emp.position || emp.jobTitle || emp.role || "Team Member",
-          }))
+          (employeesData || [])
+            .map((emp: any) => {
+              const firstName = toDisplayString(emp?.user?.firstName ?? emp?.firstName);
+              const lastName = toDisplayString(emp?.user?.lastName ?? emp?.lastName);
+              const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
+
+              return {
+                id: toIdString(emp?.id ?? emp?.Id),
+                name: fullName || toDisplayString(emp?.email, "Employee"),
+                role: toDisplayString(emp?.position ?? emp?.jobTitle ?? emp?.role, "Team Member"),
+              };
+            })
+            .filter((member) => member.id.length > 0)
         );
       } catch {
         console.error("Failed to load team members");

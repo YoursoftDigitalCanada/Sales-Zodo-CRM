@@ -40,6 +40,7 @@ export class QuotesRepository {
                 notes: data.notes,
                 terms: data.terms,
                 sourceEventId: data.sourceEventId || null,
+                roofEstimateId: data.roofEstimateId || null,
                 subtotal,
                 taxAmount,
                 total,
@@ -107,6 +108,7 @@ export class QuotesRepository {
                 ...(data.discountAmount !== undefined && { discountAmount: data.discountAmount }),
                 ...(data.notes !== undefined && { notes: data.notes }),
                 ...(data.terms !== undefined && { terms: data.terms }),
+                ...(data.roofEstimateId !== undefined && { roofEstimateId: data.roofEstimateId || null }),
                 ...totals,
                 ...(data.items && {
                     items: {

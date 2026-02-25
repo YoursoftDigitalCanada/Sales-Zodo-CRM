@@ -25,6 +25,7 @@ export interface CreateQuoteDto {
     notes?: string | null;
     terms?: string | null;
     sourceEventId?: string | null;  // calendar event that triggered this
+    roofEstimateId?: string | null; // linked roof estimate for PDF attachment
     items: QuoteItemDto[];
 }
 
@@ -60,6 +61,7 @@ export interface QuoteResponseDto {
     notes: string | null;
     terms: string | null;
     sourceEventId: string | null;
+    roofEstimateId: string | null;
     items: QuoteItemDto[];
     createdAt: Date;
     updatedAt: Date;
@@ -90,6 +92,7 @@ export function toQuoteResponseDto(q: QuoteWithRelations): QuoteResponseDto {
         notes: q.notes,
         terms: q.terms,
         sourceEventId: q.sourceEventId,
+        roofEstimateId: q.roofEstimateId || null,
         items: (q.items || []).map((i) => ({
             description: i.description,
             quantity: Number(i.quantity),

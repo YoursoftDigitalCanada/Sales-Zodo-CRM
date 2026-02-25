@@ -44,6 +44,7 @@ import {
 } from "@/features/quotes";
 import { getClients, type ClientEntity } from "@/features/clients/services/clients-service";
 import { getLeads, type LeadEntity } from "@/features/leads/services/leads-service";
+import { getEstimates, type RoofEstimate } from "@/features/roof-estimator";
 
 // ============================================
 // STAT CARD
@@ -314,11 +315,14 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
   const [clients, setClients] = useState<ClientEntity[]>([]);
   const [leads, setLeads] = useState<LeadEntity[]>([]);
   const [recipientSearch, setRecipientSearch] = useState("");
+  const [roofEstimates, setRoofEstimates] = useState<RoofEstimate[]>([]);
+  const [selectedEstimateId, setSelectedEstimateId] = useState<string>("");
 
   useEffect(() => {
     if (isOpen) {
       getClients().then(setClients).catch(() => { });
       getLeads().then(setLeads).catch(() => { });
+      getEstimates().then(setRoofEstimates).catch(() => { });
     }
   }, [isOpen]);
 
@@ -336,6 +340,7 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
         discount: quote.discount, tax: quote.tax,
       });
       if (quote.leadId) setRecipientType("lead");
+      if (quote.roofEstimateId) setSelectedEstimateId(quote.roofEstimateId);
     }
   });
 
@@ -382,6 +387,7 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
       validUntil: validUntilDate, priority: formData.priority, status: formData.status,
       items: formData.items, subtotal, tax: taxAmount, discount: formData.discount, total,
       currency: "CAD",
+      roofEstimateId: selectedEstimateId || undefined,
     });
     onClose();
   };
@@ -609,6 +615,33 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
               </div>
             </div>
 
+            {/* Roof Estimate Attachment */}
+            {(() => {
+              const selectedRecipientId = recipientType === "client" ? formData.clientId : formData.leadId;
+              const filteredEstimates = selectedRecipientId
+                ? roofEstimates.filter(e => e.clientId === selectedRecipientId)
+                : roofEstimates;
+              return filteredEstimates.length > 0 ? (
+                <div>
+                  <Label className="text-xs text-[#475569] mb-1.5 block">📎 Attach Roof Estimate PDF</Label>
+                  <Select value={selectedEstimateId} onValueChange={setSelectedEstimateId}>
+                    <SelectTrigger className="rounded-md">
+                      <SelectValue placeholder="Select a roof estimate (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No attachment</SelectItem>
+                      {filteredEstimates.map(est => (
+                        <SelectItem key={est.id} value={est.id}>
+                          {est.address} — {est.roofAreaSqft.toFixed(0)} sq ft — ${est.totalEstimate.toFixed(0)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-[#94A3B8] mt-1">This PDF will be attached when the quote is sent via email.</p>
+                </div>
+              ) : null;
+            })()}
+
             {/* Notes & Terms */}
             <div className="grid grid-cols-2 gap-4">
               <div><Label className="text-xs text-[#475569]">Notes</Label>
@@ -773,6 +806,7 @@ function mapApiQuote(q: QuoteEntity): Quote {
     terms: q.terms || undefined,
     currency: q.currency || "CAD",
     createdBy: "System",
+    roofEstimateId: q.roofEstimateId || undefined,
   };
 }
 
@@ -870,6 +904,7 @@ const QuotesPage = () => {
           total: item.amount,
           sortOrder: idx,
         })),
+        roofEstimateId: data.roofEstimateId || null,
       };
       await createQuote(apiPayload);
       toast({ title: "Quote Created", description: "New quote has been created successfully." });
@@ -898,6 +933,7 @@ const QuotesPage = () => {
           total: item.amount,
           sortOrder: idx,
         })),
+        roofEstimateId: data.roofEstimateId || null,
       };
       await updateQuote(currentQuote.id, apiPayload);
       toast({ title: "Quote Updated", description: `${currentQuote.quoteNumber} has been updated.` });

@@ -40,6 +40,7 @@ class MailerService {
         subject: string;
         html: string;
         text?: string;
+        attachments?: Array<{ filename: string; content: Buffer; contentType?: string }>;
     }): Promise<boolean> {
         if (!this.transporter) {
             console.warn('⚠️ Skipping email — SMTP not configured');
@@ -52,6 +53,11 @@ class MailerService {
                 subject: opts.subject,
                 html: opts.html,
                 text: opts.text,
+                attachments: opts.attachments?.map((a) => ({
+                    filename: a.filename,
+                    content: a.content,
+                    contentType: a.contentType || 'application/pdf',
+                })),
             });
             console.log('📧 Email sent:', info.messageId, '→', opts.to);
             return true;

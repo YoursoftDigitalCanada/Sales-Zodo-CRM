@@ -2111,6 +2111,9 @@ model RoofEstimate {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
+  // Back-relations
+  quotes            Quote[]
+
   @@index([tenantId])
   @@index([clientId])
   @@index([createdAt])
@@ -2185,6 +2188,10 @@ model Quote {
   // Source context (which meeting triggered this)
   sourceEventId     String?         // Calendar event that triggered quote creation
   
+  // Linked roof estimate (for PDF attachment on send)
+  roofEstimateId    String?
+  roofEstimate      RoofEstimate?   @relation(fields: [roofEstimateId], references: [id], onDelete: SetNull)
+  
   // Created by
   createdById       String?
   createdBy         Employee?       @relation("CreatedByEmployee", fields: [createdById], references: [id], onDelete: SetNull)
@@ -2210,6 +2217,7 @@ model Quote {
   @@index([status])
   @@index([clientId])
   @@index([leadId])
+  @@index([roofEstimateId])
   @@index([validUntil])
 }
 

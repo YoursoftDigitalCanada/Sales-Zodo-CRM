@@ -127,18 +127,24 @@ export class QuotesService {
         // Resolve recipient email
         let recipientEmail: string | undefined;
         let recipientName = 'there';
+        let recipientCompany: string | undefined;
+        let recipientPhone: string | undefined;
 
         if (q.leadId) {
             const lead = await prisma.lead.findUnique({ where: { id: q.leadId } });
             if (lead) {
                 recipientEmail = lead.email || undefined;
                 recipientName = [lead.firstName, lead.lastName].filter(Boolean).join(' ') || lead.companyName || 'there';
+                recipientCompany = lead.companyName || undefined;
+                recipientPhone = lead.phone || undefined;
             }
         } else if (q.clientId) {
             const client = await prisma.client.findUnique({ where: { id: q.clientId } });
             if (client) {
                 recipientEmail = client.primaryEmail || undefined;
                 recipientName = client.clientName || 'there';
+                recipientCompany = client.companyName || undefined;
+                recipientPhone = client.primaryPhone || undefined;
             }
         }
 
@@ -176,7 +182,65 @@ export class QuotesService {
 
         const validDate = new Date(q.validUntil).toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' });
 
+        // ── Generate roof estimate PDF attachment (if linked) ────────────
+        const emailAttachments: Array<{ filename: string; content: Buffer; contentType: string }> = [];
+
+        if (q.roofEstimateId) {
+            try {
+                const estimate = await prisma.roofEstimate.findFirst({
+                    where: { id: q.roofEstimateId, tenantId },
+                    include: { client: { select: { clientName: true, companyName: true } } },
+                });
+
+                if (estimate) {
+                    // Get tenant company name from settings
+                    const settings = await prisma.roofEstimateSettings.findUnique({
+                        where: { tenantId },
+                    });
+
+                    const { generateRoofEstimatePdfBuffer } = await import('../roof-estimator/roof-estimate-pdf');
+                    const { buffer, fileName } = generateRoofEstimatePdfBuffer({
+                        companyName: settings?.companyName || 'Zodo Roofing',
+                        recipientName,
+                        recipientType: q.leadId ? 'lead' : 'client',
+                        recipientCompany,
+                        recipientEmail,
+                        recipientPhone,
+                        address: estimate.address,
+                        latitude: estimate.latitude,
+                        longitude: estimate.longitude,
+                        roofAreaSqft: estimate.roofAreaSqft,
+                        pricePerSqft: estimate.pricePerSqft,
+                        manualAdjustment: estimate.manualAdjustment,
+                        totalEstimate: estimate.totalEstimate,
+                        confidence: estimate.confidence,
+                        aiModel: estimate.aiModel,
+                        processingTimeSec: estimate.processingTimeSec,
+                        snowMode: estimate.snowMode,
+                        estimateId: estimate.id,
+                        createdAt: estimate.createdAt.toISOString(),
+                        notes: estimate.notes || undefined,
+                    });
+
+                    emailAttachments.push({
+                        filename: fileName,
+                        content: buffer,
+                        contentType: 'application/pdf',
+                    });
+                }
+            } catch (pdfErr: any) {
+                // Log but don't fail the send — quote email is more important
+                console.error('⚠️ Failed to generate roof estimate PDF attachment:', pdfErr.message);
+            }
+        }
+
         // Send email
+        const attachmentNote = emailAttachments.length > 0
+            ? `<p style="margin:16px 0 0;font-size:13px;color:#475569;line-height:1.6;">
+                📎 <strong>Attached:</strong> Roof Estimate Report (PDF) — AI-powered satellite measurement of the property.
+              </p>`
+            : '';
+
         const html = `
 <!DOCTYPE html>
 <html>
@@ -227,6 +291,8 @@ export class QuotesService {
       <tbody>${itemsHtml}</tbody>
     </table>
 
+    ${attachmentNote}
+
     <!-- CTA Button -->
     <div style="text-align:center;margin:32px 0;">
       <a href="${publicLink}" style="display:inline-block;background:linear-gradient(135deg,#0891B2,#0E7490);color:#fff;text-decoration:none;padding:14px 40px;border-radius:10px;font-size:16px;font-weight:600;letter-spacing:0.3px;box-shadow:0 4px 14px rgba(8,145,178,0.4);">
@@ -252,15 +318,16 @@ export class QuotesService {
             subject: `Quote ${q.quoteNumber} from ZODO`,
             html,
             text: `Hi ${recipientName}, you've received quote ${q.quoteNumber} for ${fmtCurrency(q.total)}. View and respond: ${publicLink}`,
+            attachments: emailAttachments.length > 0 ? emailAttachments : undefined,
         });
 
         // Log activity
         activityLogger.log({
             tenantId, entityType: 'Quote', entityId: dto.id,
             action: 'STATUS_CHANGE', module: 'quotes',
-            description: `Quote "${dto.quoteNumber}" sent to ${recipientEmail}`,
+            description: `Quote "${dto.quoteNumber}" sent to ${recipientEmail}${emailAttachments.length > 0 ? ' (with roof estimate PDF)' : ''}`,
             userId: actorEmployeeId,
-            metadata: { recipientEmail, publicToken },
+            metadata: { recipientEmail, publicToken, hasRoofEstimatePdf: emailAttachments.length > 0 },
         });
 
         // Emit event

@@ -32,6 +32,7 @@ export interface QuoteEntity {
     updatedAt: string;
     sentAt: string | null;
     acceptedAt: string | null;
+    roofEstimateId: string | null;
     [key: string]: unknown;
 }
 

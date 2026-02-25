@@ -48,6 +48,7 @@ export interface Quote {
     createdBy: string;
     tags?: string[];
     linkedInvoiceId?: string;
+    roofEstimateId?: string;
 }
 
 // ============================================

@@ -8,7 +8,7 @@ import React, {
 } from "react";
 import type { KonvaEventObject } from "konva/lib/Node";
 import type Konva from "konva";
-import { Circle, Image as KonvaImage, Layer, Line, Rect, Stage } from "react-konva";
+import { Circle, Image as KonvaImage, Layer, Line, Rect, Stage, Text as KonvaText } from "react-konva";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,9 @@ export interface RoofPolygonEditorProps {
   height?: number;
   onChange?: (points: PolygonPoint[]) => void;
   readOnly?: boolean;
+  centerLat?: number;
+  mapZoom?: number;
+  showEdgeLengths?: boolean;
 }
 
 type PanStart = {
@@ -36,6 +39,10 @@ const MAX_HISTORY = 80;
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 4;
 const EDGE_INSERT_DISTANCE_STAGE_PX = 16;
+const FEET_PER_METER = 3.28084;
+const MIN_VIEWPORT_HEIGHT = 420;
+const MAX_VIEWPORT_HEIGHT = 980;
+const MAX_FIT_SCALE = 1.35;
 
 const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
 
@@ -136,6 +143,9 @@ export default function RoofPolygonEditor({
   height = 1024,
   onChange,
   readOnly = false,
+  centerLat,
+  mapZoom,
+  showEdgeLengths = true,
 }: RoofPolygonEditorProps): JSX.Element {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const stageRef = useRef<Konva.Stage | null>(null);
@@ -152,10 +162,15 @@ export default function RoofPolygonEditor({
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [spacePressed, setSpacePressed] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
+  const [panMode, setPanMode] = useState(false);
   const [addVertexMode, setAddVertexMode] = useState(false);
   const [viewport, setViewport] = useState({
     width,
-    height: clamp(Math.round((width * height) / Math.max(width, 1)), 420, 820),
+    height: clamp(
+      Math.round((width * height) / Math.max(width, 1)),
+      MIN_VIEWPORT_HEIGHT,
+      MAX_VIEWPORT_HEIGHT,
+    ),
   });
   const [points, setPoints] = useState<PolygonPoint[]>(() => sanitizePolygonInput(initialPolygon, width, height));
 
@@ -214,8 +229,8 @@ export default function RoofPolygonEditor({
         // observer feedback loops where canvas height inflates container height.
         const nextHeight = clamp(
           Math.round((nextWidth * height) / Math.max(width, 1)),
-          420,
-          820,
+          MIN_VIEWPORT_HEIGHT,
+          MAX_VIEWPORT_HEIGHT,
         );
 
         setViewport((previous) => {
@@ -244,6 +259,7 @@ export default function RoofPolygonEditor({
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.code === "Escape") {
         setAddVertexMode(false);
+        setPanMode(false);
         return;
       }
 
@@ -273,12 +289,12 @@ export default function RoofPolygonEditor({
   useEffect(() => {
     if (!readOnly) return;
     setAddVertexMode(false);
+    setPanMode(false);
   }, [readOnly]);
 
   const fitScale = useMemo(() => {
     if (viewport.width <= 0 || viewport.height <= 0) return 1;
-    // Avoid auto-upscaling source imagery on initial load to keep rendering lightweight.
-    return Math.min(1, viewport.width / width, viewport.height / height);
+    return Math.min(MAX_FIT_SCALE, viewport.width / width, viewport.height / height);
   }, [viewport.width, viewport.height, width, height]);
 
   const imageScale = fitScale * zoom;
@@ -300,7 +316,53 @@ export default function RoofPolygonEditor({
     [points, imageOffset.x, imageOffset.y, imageScale],
   );
 
-  const anchorRadius = useMemo(() => clamp(6 * zoom, 4, 11), [zoom]);
+  const anchorRadius = useMemo(() => clamp(4.2 * zoom, 2.8, 7), [zoom]);
+
+  const feetPerPixel = useMemo(() => {
+    if (!Number.isFinite(centerLat) || !Number.isFinite(mapZoom)) {
+      return 0;
+    }
+
+    const safeLatitude = clamp(Number(centerLat), -85, 85);
+    const safeZoom = clamp(Number(mapZoom), 1, 23);
+    const metersPerPixel =
+      (156543.03392 * Math.cos((safeLatitude * Math.PI) / 180)) /
+      2 ** safeZoom;
+
+    return metersPerPixel * FEET_PER_METER;
+  }, [centerLat, mapZoom]);
+
+  const edgeLengthLabels = useMemo(() => {
+    if (!showEdgeLengths || points.length < 2 || feetPerPixel <= 0) {
+      return [] as Array<{ id: string; x: number; y: number; text: string }>;
+    }
+
+    return points.map((point, index) => {
+      const nextPoint = points[(index + 1) % points.length];
+      const edgePixelLength = Math.hypot(nextPoint.x - point.x, nextPoint.y - point.y);
+      const edgeFeet = edgePixelLength * feetPerPixel;
+      const midpointX = (point.x + nextPoint.x) / 2;
+      const midpointY = (point.y + nextPoint.y) / 2;
+      const stageX = imageOffset.x + midpointX * imageScale;
+      const stageY = imageOffset.y + midpointY * imageScale;
+
+      return {
+        id: `edge-${index}`,
+        x: clamp(stageX, 34, Math.max(34, viewport.width - 34)),
+        y: clamp(stageY, 14, Math.max(14, viewport.height - 14)),
+        text: `${edgeFeet.toFixed(1)} ft`,
+      };
+    });
+  }, [
+    feetPerPixel,
+    imageOffset.x,
+    imageOffset.y,
+    imageScale,
+    points,
+    showEdgeLengths,
+    viewport.height,
+    viewport.width,
+  ]);
 
   const commitHistory = useCallback((snapshot: PolygonPoint[]) => {
     historyRef.current.push(clonePoints(snapshot));
@@ -347,7 +409,7 @@ export default function RoofPolygonEditor({
       return;
     }
 
-    if (spacePressed) {
+    if (spacePressed || panMode) {
       setStageCursor("grab");
       return;
     }
@@ -358,7 +420,7 @@ export default function RoofPolygonEditor({
     }
 
     setStageCursor(selected ? "crosshair" : "default");
-  }, [addVertexMode, isPanning, readOnly, selected, setStageCursor, spacePressed]);
+  }, [addVertexMode, isPanning, panMode, readOnly, selected, setStageCursor, spacePressed]);
 
   const tryInsertVertexAtPointer = useCallback(
     (
@@ -444,7 +506,11 @@ export default function RoofPolygonEditor({
       const pointer = stage.getPointerPosition();
       if (!pointer) return;
 
-      if (spacePressed && !readOnly && event.evt.button === 0) {
+      const targetName = event.target.name();
+      const isAnchorDrag = targetName === "vertex-anchor";
+      if (isAnchorDrag) return;
+
+      if ((spacePressed || panMode) && !readOnly && event.evt.button === 0) {
         event.evt.preventDefault();
         panStartRef.current = {
           pointerX: pointer.x,
@@ -455,7 +521,7 @@ export default function RoofPolygonEditor({
         setIsPanning(true);
       }
     },
-    [pan.x, pan.y, readOnly, spacePressed],
+    [pan.x, pan.y, panMode, readOnly, spacePressed],
   );
 
   const handleStageMouseMove = useCallback(() => {
@@ -494,6 +560,8 @@ export default function RoofPolygonEditor({
       event.cancelBubble = true;
       setSelected(true);
 
+      if (panMode || isPanning) return;
+
       const stage = stageRef.current;
       if (!stage) return;
 
@@ -503,7 +571,7 @@ export default function RoofPolygonEditor({
       const shouldForceInsert = addVertexMode || event.evt.shiftKey;
       tryInsertVertexAtPointer(pointer.x, pointer.y, { force: shouldForceInsert });
     },
-    [addVertexMode, tryInsertVertexAtPointer],
+    [addVertexMode, isPanning, panMode, tryInsertVertexAtPointer],
   );
 
   const handlePolygonDoubleClick = useCallback((event: KonvaEventObject<MouseEvent>) => {
@@ -556,6 +624,11 @@ export default function RoofPolygonEditor({
     setPan({ x: 0, y: 0 });
   }, []);
 
+  const handleTogglePanMode = useCallback(() => {
+    setAddVertexMode(false);
+    setPanMode((previous) => !previous);
+  }, []);
+
   return (
     <div className="flex min-h-[620px] w-full flex-col rounded-xl border bg-white">
       <div className="flex flex-wrap items-center gap-2 border-b bg-slate-50/80 px-4 py-3">
@@ -566,10 +639,19 @@ export default function RoofPolygonEditor({
           type="button"
           variant={addVertexMode ? "default" : "outline"}
           size="sm"
-          onClick={() => setAddVertexMode((previous) => !previous)}
+          onClick={() =>
+            setAddVertexMode((previous) => {
+              const next = !previous;
+              if (next) setPanMode(false);
+              return next;
+            })
+          }
           disabled={readOnly}
         >
           {addVertexMode ? "Add Dot: ON" : "Add Dot"}
+        </Button>
+        <Button type="button" variant={panMode ? "default" : "outline"} size="sm" onClick={handleTogglePanMode} disabled={readOnly}>
+          {panMode ? "Pan: ON" : "Pan"}
         </Button>
         <Button type="button" variant="outline" size="sm" onClick={handleResetToAI} disabled={readOnly}>
           Reset AI Polygon
@@ -662,11 +744,40 @@ export default function RoofPolygonEditor({
               onDblClick={handlePolygonDoubleClick}
             />
 
+            {edgeLengthLabels.map((label) => {
+              const labelWidth = Math.max(58, label.text.length * 7 + 12);
+              return (
+                <React.Fragment key={label.id}>
+                  <Rect
+                    x={label.x - labelWidth / 2}
+                    y={label.y - 10}
+                    width={labelWidth}
+                    height={20}
+                    fill="rgba(15, 23, 42, 0.8)"
+                    cornerRadius={6}
+                    listening={false}
+                  />
+                  <KonvaText
+                    x={label.x - labelWidth / 2}
+                    y={label.y - 3}
+                    width={labelWidth}
+                    text={label.text}
+                    align="center"
+                    fontSize={11}
+                    fontStyle="bold"
+                    fill="#e2e8f0"
+                    listening={false}
+                  />
+                </React.Fragment>
+              );
+            })}
+
             {points.map((point, index) => {
               const stagePoint = imageToStagePoint(point);
               return (
                 <Circle
                   key={`vertex-${index}`}
+                  name="vertex-anchor"
                   x={stagePoint.x}
                   y={stagePoint.y}
                   radius={anchorRadius}
@@ -691,7 +802,7 @@ export default function RoofPolygonEditor({
                   }}
                   onMouseLeave={() => {
                     if (readOnly) return;
-                    if (spacePressed) {
+                    if (spacePressed || panMode) {
                       setStageCursor("grab");
                       return;
                     }
@@ -713,6 +824,8 @@ export default function RoofPolygonEditor({
           <p className="font-medium">Controls</p>
           <p>Drag blue points to correct the roof outline.</p>
           <p>Enable Add Dot mode to place more points quickly. Shift + click also inserts.</p>
+          <p>Use Pan mode (or hold Space) and drag to move image up/down/sideways.</p>
+          <p>Each edge length is shown in feet and updates live while dragging points.</p>
           <p>Right-click a point to delete it.</p>
         </div>
       </div>

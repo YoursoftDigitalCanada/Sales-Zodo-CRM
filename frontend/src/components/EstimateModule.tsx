@@ -383,6 +383,9 @@ export default function EstimateModule(): JSX.Element {
               width={imageWidth}
               height={imageHeight}
               initialPolygon={initialPolygon}
+              centerLat={satellite.latitude}
+              mapZoom={zoom}
+              showEdgeLengths
               onChange={handlePolygonChange}
             />
           ) : (

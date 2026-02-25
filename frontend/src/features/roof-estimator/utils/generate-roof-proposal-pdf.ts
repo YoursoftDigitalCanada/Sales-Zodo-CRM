@@ -42,6 +42,11 @@ export interface RoofProposalPdfInput {
   termsAndConditions?: string;
 }
 
+export interface RoofProposalPdfBuildResult {
+  fileName: string;
+  blob: Blob;
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
@@ -259,6 +264,26 @@ function addFooter(
 }
 
 export async function generateRoofProposalPdf(input: RoofProposalPdfInput): Promise<string> {
+  const { fileName, blob } = await buildRoofProposalPdf(input);
+  downloadRoofProposalPdfBlob({ fileName, blob });
+  return fileName;
+}
+
+export function downloadRoofProposalPdfBlob(result: RoofProposalPdfBuildResult): void {
+  const blobUrl = URL.createObjectURL(result.blob);
+  const link = document.createElement("a");
+  link.href = blobUrl;
+  link.download = result.fileName;
+  link.rel = "noopener";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.setTimeout(() => {
+    URL.revokeObjectURL(blobUrl);
+  }, 1200);
+}
+
+export async function buildRoofProposalPdf(input: RoofProposalPdfInput): Promise<RoofProposalPdfBuildResult> {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 40;
@@ -549,7 +574,7 @@ export async function generateRoofProposalPdf(input: RoofProposalPdfInput): Prom
     addFooter(doc, page, totalPages);
   }
 
-  const filename = safeFileName(`${input.proposalNumber || "roof-proposal"}.pdf`);
-  doc.save(filename);
-  return filename;
+  const fileName = `${safeFileName(input.proposalNumber || "roof-proposal")}.pdf`;
+  const blob = doc.output("blob") as Blob;
+  return { fileName, blob };
 }

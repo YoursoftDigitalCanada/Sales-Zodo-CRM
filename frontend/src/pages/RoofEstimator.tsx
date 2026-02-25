@@ -17,6 +17,19 @@ import {
 } from "@/features/roof-estimator/services/roof-estimator-service";
 import type { GeneratedEstimate } from "@/features/roof-estimator/services/roof-estimator-service";
 import { getClients } from "@/features/clients/services/clients-service";
+import {
+    buildRoofProposalPdf,
+    downloadRoofProposalPdfBlob,
+    type RoofProposalPdfInput,
+} from "@/features/roof-estimator/utils/generate-roof-proposal-pdf";
+import {
+    denormalizePolygonPoints,
+    parseEstimateNotes,
+} from "@/features/roof-estimator/utils/proposal-note-metadata";
+import {
+    parseStaticMapSize,
+    parseStaticMapZoom,
+} from "@/features/roof-estimator/utils/static-map";
 import { Sidebar } from "@/components/Sidebar";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -81,6 +94,7 @@ import {
     FileText,
     Zap,
     Eye,
+    Download,
     MoreVertical,
     ArrowUpRight,
     Search,
@@ -244,6 +258,9 @@ const RoofEstimator: React.FC = () => {
     // UI
     const [activeTab, setActiveTab] = useState<"estimator" | "history" | "settings">("history");
     const [viewEstimate, setViewEstimate] = useState<RoofEstimate | null>(null);
+    const [viewEstimatePdfUrl, setViewEstimatePdfUrl] = useState<string | null>(null);
+    const [loadingViewEstimatePdf, setLoadingViewEstimatePdf] = useState(false);
+    const [downloadingViewEstimatePdf, setDownloadingViewEstimatePdf] = useState(false);
 
     // Computed
     const adjustedArea = detection
@@ -466,6 +483,166 @@ const RoofEstimator: React.FC = () => {
         if (confidence >= 40) return { label: "Moderate Confidence", bg: "bg-yellow-50", text: "text-yellow-600", dot: "bg-yellow-500" };
         return { label: "Low Confidence", bg: "bg-red-50", text: "text-red-600", dot: "bg-red-500" };
     };
+
+    const createFallbackPolygon = (width: number, height: number) => ([
+        { x: width * 0.28, y: height * 0.3 },
+        { x: width * 0.72, y: height * 0.34 },
+        { x: width * 0.76, y: height * 0.64 },
+        { x: width * 0.58, y: height * 0.75 },
+        { x: width * 0.3, y: height * 0.7 },
+        { x: width * 0.24, y: height * 0.48 },
+    ]);
+
+    const toIsoDate = (date: Date): string => date.toISOString().slice(0, 10);
+
+    const buildProposalPdfInputFromEstimate = useCallback((estimate: RoofEstimate): RoofProposalPdfInput => {
+        const parsedNotes = parseEstimateNotes(estimate.notes);
+        const hasSatelliteUrl = Boolean(estimate.satelliteImageUrl);
+        const staticMapSize = hasSatelliteUrl
+            ? parseStaticMapSize(estimate.satelliteImageUrl as string, { width: 640, height: 640 })
+            : { width: 640, height: 640 };
+        const staticMapZoom = hasSatelliteUrl
+            ? parseStaticMapZoom(estimate.satelliteImageUrl as string, 20)
+            : 20;
+
+        const polygonPoints = parsedNotes.polygonNormalized.length >= 3
+            ? denormalizePolygonPoints(
+                parsedNotes.polygonNormalized,
+                staticMapSize.width,
+                staticMapSize.height,
+            )
+            : createFallbackPolygon(staticMapSize.width, staticMapSize.height);
+
+        const createdAtDate = new Date(estimate.createdAt);
+        const safeIssueDate = Number.isFinite(createdAtDate.getTime()) ? createdAtDate : new Date();
+        const safeValidUntil = new Date(safeIssueDate);
+        safeValidUntil.setDate(safeValidUntil.getDate() + 15);
+        const meta = parsedNotes.proposalMeta;
+
+        return {
+            proposalNumber: meta?.proposalNumber || `RFQ-${estimate.id.slice(0, 8).toUpperCase()}`,
+            proposalTitle: meta?.proposalTitle || "Roof Replacement Proposal",
+            issueDate: meta?.issueDate || toIsoDate(safeIssueDate),
+            validUntil: meta?.validUntil || toIsoDate(safeValidUntil),
+            companyName: meta?.companyName || settings?.companyName || "Zodo Roofing",
+            recipient: {
+                type: meta?.recipientType || (estimate.clientId ? "client" : "lead"),
+                name: meta?.recipientName || estimate.client?.clientName || "Client",
+                company: meta?.recipientCompany || estimate.client?.companyName || undefined,
+                email: meta?.recipientEmail || undefined,
+                phone: meta?.recipientPhone || undefined,
+            },
+            property: {
+                address: estimate.address,
+                latitude: estimate.latitude,
+                longitude: estimate.longitude,
+            },
+            satelliteImageUrl: estimate.satelliteImageUrl || undefined,
+            metrics: {
+                roofAreaSqft: estimate.roofAreaSqft,
+                pixelArea: 0,
+                pricePerSqft: estimate.pricePerSqft,
+                totalEstimate: estimate.totalEstimate,
+                confidence: estimate.confidence,
+                aiModel: estimate.aiModel,
+                processingTimeSec: estimate.processingTimeSec,
+                zoom: staticMapZoom,
+                imageWidth: staticMapSize.width,
+                imageHeight: staticMapSize.height,
+            },
+            polygonPoints,
+            scopeOfWork: meta?.scopeOfWork
+                || "Install full roofing system based on measured roof area. Includes material supply, labor, and site cleanup.",
+            internalNotes: parsedNotes.plainNotes || undefined,
+            termsAndConditions: meta?.termsAndConditions
+                || "Estimate is valid for the period shown above. Final invoice may change if site conditions differ from satellite analysis.",
+        };
+    }, [settings?.companyName]);
+
+    const openEstimateDetails = useCallback((estimate: RoofEstimate) => {
+        setViewEstimate(estimate);
+    }, []);
+
+    const closeEstimateDetails = useCallback(() => {
+        setViewEstimate(null);
+        setLoadingViewEstimatePdf(false);
+        setDownloadingViewEstimatePdf(false);
+        setViewEstimatePdfUrl((previous) => {
+            if (previous) URL.revokeObjectURL(previous);
+            return null;
+        });
+    }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+        if (!viewEstimate) return undefined;
+
+        setLoadingViewEstimatePdf(true);
+        setViewEstimatePdfUrl((previous) => {
+            if (previous) URL.revokeObjectURL(previous);
+            return null;
+        });
+
+        const loadPdf = async () => {
+            try {
+                const input = buildProposalPdfInputFromEstimate(viewEstimate);
+                const result = await buildRoofProposalPdf(input);
+                if (cancelled) return;
+                const blobUrl = URL.createObjectURL(result.blob);
+                if (cancelled) {
+                    URL.revokeObjectURL(blobUrl);
+                    return;
+                }
+                setViewEstimatePdfUrl(blobUrl);
+            } catch (error: any) {
+                if (cancelled) return;
+                toast({
+                    title: "PDF preview failed",
+                    description: error?.message || "Unable to build proposal PDF preview.",
+                    variant: "destructive",
+                });
+            } finally {
+                if (!cancelled) setLoadingViewEstimatePdf(false);
+            }
+        };
+
+        loadPdf();
+        return () => {
+            cancelled = true;
+        };
+    }, [buildProposalPdfInputFromEstimate, toast, viewEstimate]);
+
+    useEffect(() => () => {
+        if (viewEstimatePdfUrl) {
+            URL.revokeObjectURL(viewEstimatePdfUrl);
+        }
+    }, [viewEstimatePdfUrl]);
+
+    const handleDownloadViewEstimatePdf = useCallback(async () => {
+        if (!viewEstimate) return;
+        setDownloadingViewEstimatePdf(true);
+        try {
+            const input = buildProposalPdfInputFromEstimate(viewEstimate);
+            const result = await buildRoofProposalPdf(input);
+            downloadRoofProposalPdfBlob(result);
+            toast({
+                title: "Proposal downloaded",
+                description: `${result.fileName} downloaded successfully.`,
+            });
+        } catch (error: any) {
+            toast({
+                title: "Download failed",
+                description: error?.message || "Unable to download proposal PDF.",
+                variant: "destructive",
+            });
+        } finally {
+            setDownloadingViewEstimatePdf(false);
+        }
+    }, [buildProposalPdfInputFromEstimate, toast, viewEstimate]);
+
+    const viewEstimatePlainNotes = viewEstimate
+        ? parseEstimateNotes(viewEstimate.notes).plainNotes
+        : "";
 
     // ============================================
     // RENDER
@@ -1095,7 +1272,7 @@ const RoofEstimator: React.FC = () => {
                                                                     <TooltipProvider>
                                                                         <Tooltip>
                                                                             <TooltipTrigger asChild>
-                                                                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" onClick={() => setViewEstimate(est)}>
+                                                                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" onClick={() => openEstimateDetails(est)}>
                                                                                     <Eye size={16} className="text-[#475569]" />
                                                                                 </Button>
                                                                             </TooltipTrigger>
@@ -1145,37 +1322,78 @@ const RoofEstimator: React.FC = () => {
                 </div>
 
                 {/* View Estimate Dialog */}
-                <Dialog open={!!viewEstimate} onOpenChange={(open) => !open && setViewEstimate(null)}>
-                    <DialogContent className="max-w-lg">
+                <Dialog open={!!viewEstimate} onOpenChange={(open) => !open && closeEstimateDetails()}>
+                    <DialogContent className="max-w-5xl">
                         <DialogHeader>
                             <DialogTitle className="text-lg text-[#0F172A]">Estimate Details</DialogTitle>
                         </DialogHeader>
                         {viewEstimate && (
                             <div className="space-y-4">
-                                {viewEstimate.satelliteImageUrl && (
-                                    <img src={viewEstimate.satelliteImageUrl} alt="" className="w-full rounded-md" />
-                                )}
-                                <div className="grid grid-cols-2 gap-3 text-sm">
-                                    {[
-                                        { label: "Address", value: viewEstimate.address },
-                                        { label: "Total Estimate", value: formatCurrency(viewEstimate.totalEstimate), bold: true },
-                                        { label: "Roof Area", value: `${viewEstimate.roofAreaSqft.toLocaleString()} sqft` },
-                                        { label: "Confidence", value: `${viewEstimate.confidence}%` },
-                                        { label: "Price/sqft", value: `$${viewEstimate.pricePerSqft}` },
-                                        { label: "Adjustment", value: `${viewEstimate.manualAdjustment}%` },
-                                    ].map((item) => (
-                                        <div key={item.label} className="bg-[#F8FAFC] rounded-md p-3">
-                                            <div className="text-[10px] text-[#94A3B8]">{item.label}</div>
-                                            <div className={cn("text-[#0F172A] mt-0.5", item.bold && "font-bold")}>{item.value}</div>
+                                <div className="grid grid-cols-1 gap-4 xl:grid-cols-[340px_1fr]">
+                                    <div className="space-y-4">
+                                        {viewEstimate.satelliteImageUrl && (
+                                            <img src={viewEstimate.satelliteImageUrl} alt="" className="w-full rounded-md border border-[rgba(15,23,42,0.08)]" />
+                                        )}
+                                        <div className="grid grid-cols-2 gap-3 text-sm">
+                                            {[
+                                                { label: "Address", value: viewEstimate.address },
+                                                { label: "Total Estimate", value: formatCurrency(viewEstimate.totalEstimate), bold: true },
+                                                { label: "Roof Area", value: `${viewEstimate.roofAreaSqft.toLocaleString()} sqft` },
+                                                { label: "Confidence", value: `${viewEstimate.confidence}%` },
+                                                { label: "Price/sqft", value: `$${viewEstimate.pricePerSqft}` },
+                                                { label: "Adjustment", value: `${viewEstimate.manualAdjustment}%` },
+                                            ].map((item) => (
+                                                <div key={item.label} className="bg-[#F8FAFC] rounded-md p-3">
+                                                    <div className="text-[10px] text-[#94A3B8]">{item.label}</div>
+                                                    <div className={cn("text-[#0F172A] mt-0.5", item.bold && "font-bold")}>{item.value}</div>
+                                                </div>
+                                            ))}
                                         </div>
-                                    ))}
-                                </div>
-                                {viewEstimate.notes && (
-                                    <div className="bg-[#F8FAFC] rounded-md p-3 text-sm">
-                                        <div className="text-[10px] text-[#94A3B8] mb-1">Notes</div>
-                                        <div className="text-[#475569]">{viewEstimate.notes}</div>
+                                        {viewEstimatePlainNotes && (
+                                            <div className="bg-[#F8FAFC] rounded-md p-3 text-sm">
+                                                <div className="text-[10px] text-[#94A3B8] mb-1">Notes</div>
+                                                <div className="text-[#475569] whitespace-pre-wrap">{viewEstimatePlainNotes}</div>
+                                            </div>
+                                        )}
                                     </div>
-                                )}
+
+                                    <div className="rounded-md border border-[rgba(15,23,42,0.08)] bg-white overflow-hidden">
+                                        <div className="px-3 py-2 border-b border-[rgba(15,23,42,0.08)] flex items-center justify-between">
+                                            <span className="text-xs font-semibold text-[#0F172A]">Proposal PDF</span>
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={handleDownloadViewEstimatePdf}
+                                                disabled={loadingViewEstimatePdf || downloadingViewEstimatePdf}
+                                                className="h-8 px-3 text-xs"
+                                            >
+                                                {downloadingViewEstimatePdf ? (
+                                                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                                                ) : (
+                                                    <Download className="mr-2 h-3.5 w-3.5" />
+                                                )}
+                                                Download PDF
+                                            </Button>
+                                        </div>
+
+                                        {loadingViewEstimatePdf ? (
+                                            <div className="h-[580px] flex items-center justify-center text-sm text-[#94A3B8]">
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                Building PDF preview...
+                                            </div>
+                                        ) : viewEstimatePdfUrl ? (
+                                            <iframe
+                                                title="Roof estimate proposal preview"
+                                                src={viewEstimatePdfUrl}
+                                                className="h-[580px] w-full"
+                                            />
+                                        ) : (
+                                            <div className="h-[580px] flex items-center justify-center text-sm text-[#94A3B8]">
+                                                Unable to render PDF preview.
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </DialogContent>

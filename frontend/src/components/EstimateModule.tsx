@@ -30,7 +30,19 @@ import {
   calculatePolygonAreaPixels,
   calculateRoofAreaSqFt,
 } from "@/features/roof-estimator/utils/area";
-import { generateRoofProposalPdf } from "@/features/roof-estimator/utils/generate-roof-proposal-pdf";
+import {
+  buildRoofProposalPdf,
+  downloadRoofProposalPdfBlob,
+  type RoofProposalPdfInput,
+} from "@/features/roof-estimator/utils/generate-roof-proposal-pdf";
+import {
+  buildEstimateNotesWithMetadata,
+  type ProposalNoteMetadata,
+} from "@/features/roof-estimator/utils/proposal-note-metadata";
+import {
+  parseStaticMapSize,
+  parseStaticMapZoom,
+} from "@/features/roof-estimator/utils/static-map";
 
 const SQM_PER_SQFT = 1 / 10.7639;
 const DEFAULT_IMAGE_WIDTH = 1024;
@@ -50,37 +62,6 @@ type RecipientOption = {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
-}
-
-function parseStaticMapSize(url: string): { width: number; height: number } {
-  try {
-    const parsed = new URL(url);
-    const size = parsed.searchParams.get("size");
-    if (!size) return { width: DEFAULT_IMAGE_WIDTH, height: DEFAULT_IMAGE_HEIGHT };
-
-    const [rawWidth, rawHeight] = size.split("x").map((value) => Number(value));
-    if (!Number.isFinite(rawWidth) || !Number.isFinite(rawHeight)) {
-      return { width: DEFAULT_IMAGE_WIDTH, height: DEFAULT_IMAGE_HEIGHT };
-    }
-
-    return {
-      width: clamp(rawWidth, 256, 2048),
-      height: clamp(rawHeight, 256, 2048),
-    };
-  } catch {
-    return { width: DEFAULT_IMAGE_WIDTH, height: DEFAULT_IMAGE_HEIGHT };
-  }
-}
-
-function parseStaticMapZoom(url: string): number {
-  try {
-    const parsed = new URL(url);
-    const zoom = Number(parsed.searchParams.get("zoom"));
-    if (!Number.isFinite(zoom)) return DEFAULT_ZOOM;
-    return clamp(zoom, 1, 23);
-  } catch {
-    return DEFAULT_ZOOM;
-  }
 }
 
 function createFallbackPolygon(width: number, height: number): PolygonPoint[] {
@@ -322,7 +303,8 @@ export default function EstimateModule(): JSX.Element {
   const [detecting, setDetecting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loadingRecipients, setLoadingRecipients] = useState(false);
-  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [creatingAndSaving, setCreatingAndSaving] = useState(false);
+  const [downloadingProposal, setDownloadingProposal] = useState(false);
 
   const activeRecipients = useMemo(
     () => (recipientType === "client" ? clients : leads),
@@ -616,31 +598,59 @@ export default function EstimateModule(): JSX.Element {
     [currentPolygon, satellite, zoom],
   );
 
-  const handleGenerateProposalPdf = useCallback(async () => {
-    if (!satellite || !draftPayload) {
-      toast({
-        title: "Missing estimate data",
-        description: "Load satellite and adjust the polygon before generating PDF.",
-        variant: "destructive",
+  const buildProposalMetadata = useCallback(
+    (recipientName: string): ProposalNoteMetadata => ({
+      proposalNumber: proposalNumber.trim() || createProposalNumber(),
+      proposalTitle: proposalTitle.trim() || "Roof Replacement Proposal",
+      issueDate: proposalIssueDate || getTodayIsoDate(),
+      validUntil: proposalValidUntil || getIsoDatePlusDays(15),
+      companyName: proposalCompanyName.trim() || "Zodo Roofing",
+      recipientType,
+      recipientName,
+      recipientCompany: proposalClientCompany.trim() || undefined,
+      recipientEmail: proposalClientEmail.trim() || undefined,
+      recipientPhone: proposalClientPhone.trim() || undefined,
+      scopeOfWork: proposalScope.trim() || undefined,
+      termsAndConditions: proposalTerms.trim() || undefined,
+    }),
+    [
+      proposalClientCompany,
+      proposalClientEmail,
+      proposalClientPhone,
+      proposalCompanyName,
+      proposalIssueDate,
+      proposalNumber,
+      proposalScope,
+      proposalTerms,
+      proposalTitle,
+      proposalValidUntil,
+      recipientType,
+    ],
+  );
+
+  const buildPayloadWithProposalMetadata = useCallback(
+    (payload: SaveEstimatePayload, recipientName: string): SaveEstimatePayload => {
+      const normalizedPolygon = normalizePolygonPoints(currentPolygon, imageWidth, imageHeight);
+      const proposalMeta = buildProposalMetadata(recipientName);
+      const composedNotes = buildEstimateNotesWithMetadata({
+        plainNotes: notes,
+        polygonNormalized: normalizedPolygon,
+        proposalMeta,
       });
-      return;
-    }
 
-    const finalClientName =
-      proposalClientName.trim() || selectedRecipient?.name || "";
+      return {
+        ...payload,
+        notes: composedNotes,
+      };
+    },
+    [buildProposalMetadata, currentPolygon, imageHeight, imageWidth, notes],
+  );
 
-    if (!finalClientName) {
-      toast({
-        title: "Recipient required",
-        description: "Select a client/lead (or set recipient name) before creating the proposal PDF.",
-        variant: "destructive",
-      });
-      return;
-    }
+  const buildProposalPdfInput = useCallback(
+    (payload: SaveEstimatePayload, recipientName: string): RoofProposalPdfInput | null => {
+      if (!satellite) return null;
 
-    setGeneratingPdf(true);
-    try {
-      const fileName = await generateRoofProposalPdf({
+      return {
         proposalNumber: proposalNumber.trim() || createProposalNumber(),
         proposalTitle: proposalTitle.trim() || "Roof Replacement Proposal",
         issueDate: proposalIssueDate || getTodayIsoDate(),
@@ -648,7 +658,7 @@ export default function EstimateModule(): JSX.Element {
         companyName: proposalCompanyName.trim() || "Zodo Roofing",
         recipient: {
           type: recipientType,
-          name: finalClientName,
+          name: recipientName,
           company: proposalClientCompany.trim() || undefined,
           email: proposalClientEmail.trim() || undefined,
           phone: proposalClientPhone.trim() || undefined,
@@ -660,13 +670,13 @@ export default function EstimateModule(): JSX.Element {
         },
         satelliteImageUrl: satellite.satelliteImageUrl,
         metrics: {
-          roofAreaSqft: draftPayload.roofAreaSqft,
+          roofAreaSqft: payload.roofAreaSqft,
           pixelArea: polygonAreaPixels,
-          pricePerSqft: draftPayload.pricePerSqft,
-          totalEstimate: draftPayload.totalEstimate,
-          confidence: draftPayload.confidence,
-          aiModel: draftPayload.aiModel,
-          processingTimeSec: draftPayload.processingTimeSec,
+          pricePerSqft: payload.pricePerSqft,
+          totalEstimate: payload.totalEstimate,
+          confidence: payload.confidence,
+          aiModel: payload.aiModel,
+          processingTimeSec: payload.processingTimeSec,
           zoom,
           imageWidth,
           imageHeight,
@@ -675,45 +685,118 @@ export default function EstimateModule(): JSX.Element {
         scopeOfWork: proposalScope,
         internalNotes: notes,
         termsAndConditions: proposalTerms,
-      });
+      };
+    },
+    [
+      currentPolygon,
+      imageHeight,
+      imageWidth,
+      notes,
+      polygonAreaPixels,
+      proposalClientCompany,
+      proposalClientEmail,
+      proposalClientPhone,
+      proposalCompanyName,
+      proposalIssueDate,
+      proposalNumber,
+      proposalScope,
+      proposalTerms,
+      proposalTitle,
+      proposalValidUntil,
+      recipientType,
+      satellite,
+      zoom,
+    ],
+  );
 
+  const prepareProposalContext = useCallback(() => {
+    if (!satellite || !draftPayload) {
       toast({
-        title: "Proposal PDF generated",
-        description: `${fileName} downloaded with calculations and details.`,
-      });
-    } catch (error: any) {
-      toast({
-        title: "PDF generation failed",
-        description: error?.message || "Unexpected error while generating proposal PDF.",
+        title: "Missing estimate data",
+        description: "Load satellite and adjust the polygon before creating the proposal.",
         variant: "destructive",
       });
-    } finally {
-      setGeneratingPdf(false);
+      return null;
     }
+
+    const recipientName = proposalClientName.trim() || selectedRecipient?.name || "";
+    if (!recipientName) {
+      toast({
+        title: "Recipient required",
+        description: "Select a client/lead (or set recipient name) before continuing.",
+        variant: "destructive",
+      });
+      return null;
+    }
+
+    const payloadWithMetadata = buildPayloadWithProposalMetadata(draftPayload, recipientName);
+    const proposalInput = buildProposalPdfInput(payloadWithMetadata, recipientName);
+    if (!proposalInput) {
+      toast({
+        title: "Proposal setup failed",
+        description: "Unable to prepare proposal PDF input.",
+        variant: "destructive",
+      });
+      return null;
+    }
+
+    return { payloadWithMetadata, proposalInput };
   }, [
-    currentPolygon,
+    buildPayloadWithProposalMetadata,
+    buildProposalPdfInput,
     draftPayload,
-    imageHeight,
-    imageWidth,
-    notes,
-    polygonAreaPixels,
-    proposalClientCompany,
-    proposalClientEmail,
     proposalClientName,
-    proposalClientPhone,
-    proposalCompanyName,
-    proposalIssueDate,
-    proposalNumber,
-    proposalScope,
-    proposalTerms,
-    proposalTitle,
-    proposalValidUntil,
-    recipientType,
     satellite,
     selectedRecipient,
     toast,
-    zoom,
   ]);
+
+  const handleCreateAndSave = useCallback(async () => {
+    const context = prepareProposalContext();
+    if (!context) return;
+
+    setCreatingAndSaving(true);
+    try {
+      await buildRoofProposalPdf(context.proposalInput);
+      await saveEstimate(context.payloadWithMetadata);
+      toast({
+        title: "Proposal created and saved",
+        description: "Estimate is now in history. Open View Details to see the PDF.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Create and save failed",
+        description: error?.response?.data?.message || error?.message || "Unexpected error",
+        variant: "destructive",
+      });
+    } finally {
+      setCreatingAndSaving(false);
+    }
+  }, [prepareProposalContext, toast]);
+
+  const handleDownloadProposal = useCallback(async () => {
+    const context = prepareProposalContext();
+    if (!context) return;
+
+    setDownloadingProposal(true);
+    try {
+      await saveEstimate(context.payloadWithMetadata);
+      const result = await buildRoofProposalPdf(context.proposalInput);
+      downloadRoofProposalPdfBlob(result);
+      toast({
+        title: "Estimate created and downloaded",
+        description: `${result.fileName} was downloaded after saving to history.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Download failed",
+        description: error?.response?.data?.message || error?.message || "Unexpected error",
+        variant: "destructive",
+      });
+    } finally {
+      setDownloadingProposal(false);
+    }
+  }, [prepareProposalContext, toast]);
 
   return (
     <section className="mx-auto flex w-full max-w-[1500px] flex-col gap-4 p-4 lg:p-6">
@@ -1005,19 +1088,35 @@ export default function EstimateModule(): JSX.Element {
                 />
               </div>
 
-              <Button
-                type="button"
-                className="w-full"
-                onClick={handleGenerateProposalPdf}
-                disabled={!draftPayload || generatingPdf}
-              >
-                {generatingPdf ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <FileDown className="mr-2 h-4 w-4" />
-                )}
-                Create Proposal PDF
-              </Button>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <Button
+                  type="button"
+                  className="w-full"
+                  onClick={handleCreateAndSave}
+                  disabled={!draftPayload || creatingAndSaving || downloadingProposal}
+                >
+                  {creatingAndSaving ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="mr-2 h-4 w-4" />
+                  )}
+                  Create and Save
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleDownloadProposal}
+                  disabled={!draftPayload || creatingAndSaving || downloadingProposal}
+                >
+                  {downloadingProposal ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <FileDown className="mr-2 h-4 w-4" />
+                  )}
+                  Download
+                </Button>
+              </div>
             </div>
           </div>
 

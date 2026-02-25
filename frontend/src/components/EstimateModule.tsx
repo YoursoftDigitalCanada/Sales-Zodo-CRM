@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { getClients } from "@/features/clients/services/clients-service";
+import { getLeads } from "@/features/leads/services/leads-service";
 import {
   detectRoof,
   fetchSatelliteImage,
@@ -36,9 +37,12 @@ const DEFAULT_IMAGE_WIDTH = 1024;
 const DEFAULT_IMAGE_HEIGHT = 1024;
 const DEFAULT_ZOOM = 20;
 
-type ClientOption = {
+type RecipientType = "client" | "lead";
+
+type RecipientOption = {
+  type: RecipientType;
   id: string;
-  clientName: string;
+  name: string;
   companyName: string;
   email: string;
   phone: string;
@@ -161,7 +165,7 @@ function pickFirstString(
   return "";
 }
 
-function mapClientOption(raw: unknown): ClientOption | null {
+function mapClientOption(raw: unknown): RecipientOption | null {
   if (!raw || typeof raw !== "object") return null;
   const record = raw as Record<string, unknown>;
 
@@ -201,8 +205,54 @@ function mapClientOption(raw: unknown): ClientOption | null {
   ]);
 
   return {
+    type: "client",
     id,
-    clientName: clientName || companyName || "Client",
+    name: clientName || companyName || "Client",
+    companyName,
+    email,
+    phone,
+  };
+}
+
+function mapLeadOption(raw: unknown): RecipientOption | null {
+  if (!raw || typeof raw !== "object") return null;
+  const record = raw as Record<string, unknown>;
+
+  const idCandidate = record.id ?? record.Id ?? record.leadId ?? record.LeadId;
+  if (idCandidate === undefined || idCandidate === null) return null;
+
+  const id = String(idCandidate).trim();
+  if (!id) return null;
+
+  const firstName = pickFirstString(record, ["firstName", "FirstName"]);
+  const lastName = pickFirstString(record, ["lastName", "LastName"]);
+  const companyName = pickFirstString(record, [
+    "companyName",
+    "CompanyName",
+    "company",
+    "Company",
+  ]);
+  const email = pickFirstString(record, [
+    "email",
+    "Email",
+    "primaryEmail",
+    "contactEmail",
+  ]);
+  const phone = pickFirstString(record, [
+    "phone",
+    "Phone",
+    "mobile",
+    "Mobile",
+    "contactNo",
+    "ContactNo",
+  ]);
+
+  const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
+
+  return {
+    type: "lead",
+    id,
+    name: fullName || companyName || "Lead",
     companyName,
     email,
     phone,
@@ -247,8 +297,10 @@ export default function EstimateModule(): JSX.Element {
   const [zoom, setZoom] = useState(DEFAULT_ZOOM);
   const [pricePerSqft, setPricePerSqft] = useState(5.5);
   const [notes, setNotes] = useState("");
-  const [clients, setClients] = useState<ClientOption[]>([]);
-  const [selectedClientId, setSelectedClientId] = useState("");
+  const [recipientType, setRecipientType] = useState<RecipientType>("client");
+  const [clients, setClients] = useState<RecipientOption[]>([]);
+  const [leads, setLeads] = useState<RecipientOption[]>([]);
+  const [selectedRecipientId, setSelectedRecipientId] = useState("");
   const [draftPayload, setDraftPayload] = useState<SaveEstimatePayload | null>(null);
   const [proposalNumber, setProposalNumber] = useState(() => createProposalNumber());
   const [proposalTitle, setProposalTitle] = useState("Roof Replacement Proposal");
@@ -269,33 +321,46 @@ export default function EstimateModule(): JSX.Element {
   const [loadingSatellite, setLoadingSatellite] = useState(false);
   const [detecting, setDetecting] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [loadingClients, setLoadingClients] = useState(false);
+  const [loadingRecipients, setLoadingRecipients] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
 
-  const selectedClient = useMemo(
-    () => clients.find((client) => client.id === selectedClientId) ?? null,
-    [clients, selectedClientId],
+  const activeRecipients = useMemo(
+    () => (recipientType === "client" ? clients : leads),
+    [clients, leads, recipientType],
+  );
+
+  const selectedRecipient = useMemo(
+    () =>
+      activeRecipients.find((recipient) => recipient.id === selectedRecipientId) ?? null,
+    [activeRecipients, selectedRecipientId],
   );
 
   useEffect(() => {
     let mounted = true;
-    setLoadingClients(true);
+    setLoadingRecipients(true);
 
-    getClients()
-      .then((data) => {
+    Promise.all([getClients(), getLeads({ limit: 150 })])
+      .then(([clientsData, leadsData]) => {
         if (!mounted) return;
-        const mapped = (data || [])
+
+        const mappedClients = (clientsData || [])
           .map((client) => mapClientOption(client))
-          .filter((client): client is ClientOption => Boolean(client));
-        setClients(mapped);
+          .filter((recipient): recipient is RecipientOption => Boolean(recipient));
+        const mappedLeads = (leadsData || [])
+          .map((lead) => mapLeadOption(lead))
+          .filter((recipient): recipient is RecipientOption => Boolean(recipient));
+
+        setClients(mappedClients);
+        setLeads(mappedLeads);
       })
       .catch(() => {
         if (!mounted) return;
         setClients([]);
+        setLeads([]);
       })
       .finally(() => {
         if (!mounted) return;
-        setLoadingClients(false);
+        setLoadingRecipients(false);
       });
 
     return () => {
@@ -319,7 +384,9 @@ export default function EstimateModule(): JSX.Element {
       }
 
       const activeDetection = overrides?.detection ?? detection;
-      const activeClientId = overrides?.clientId ?? selectedClientId;
+      const activeClientId =
+        overrides?.clientId ??
+        (recipientType === "client" ? selectedRecipientId : "");
       const roofAreaSqFt = calculateRoofAreaSqFt({
         points: polygon,
         centerLat: activeSatellite.latitude,
@@ -358,8 +425,9 @@ export default function EstimateModule(): JSX.Element {
       imageWidth,
       notes,
       pricePerSqft,
+      recipientType,
       satellite,
-      selectedClientId,
+      selectedRecipientId,
       zoom,
     ],
   );
@@ -458,23 +526,40 @@ export default function EstimateModule(): JSX.Element {
     [buildPayloadFromPolygon],
   );
 
-  const handleClientSelection = useCallback(
-    (value: string) => {
-      const clientId = value === "none" ? "" : value;
-      const matchedClient =
-        clients.find((client) => client.id === clientId) ?? null;
+  const handleRecipientTypeChange = useCallback(
+    (value: RecipientType) => {
+      setRecipientType(value);
+      setSelectedRecipientId("");
+      setProposalClientName("");
+      setProposalClientCompany("");
+      setProposalClientEmail("");
+      setProposalClientPhone("");
 
-      setSelectedClientId(clientId);
-      setProposalClientName(matchedClient?.clientName || "");
-      setProposalClientCompany(matchedClient?.companyName || "");
-      setProposalClientEmail(matchedClient?.email || "");
-      setProposalClientPhone(matchedClient?.phone || "");
+      if (currentPolygon.length >= 3) {
+        buildPayloadFromPolygon(currentPolygon, { clientId: "" });
+      }
+    },
+    [buildPayloadFromPolygon, currentPolygon],
+  );
+
+  const handleRecipientSelection = useCallback(
+    (value: string) => {
+      const recipientId = value === "none" ? "" : value;
+      const matchedRecipient =
+        activeRecipients.find((recipient) => recipient.id === recipientId) ?? null;
+      const clientId = recipientType === "client" ? recipientId : "";
+
+      setSelectedRecipientId(recipientId);
+      setProposalClientName(matchedRecipient?.name || "");
+      setProposalClientCompany(matchedRecipient?.companyName || "");
+      setProposalClientEmail(matchedRecipient?.email || "");
+      setProposalClientPhone(matchedRecipient?.phone || "");
 
       if (currentPolygon.length >= 3) {
         buildPayloadFromPolygon(currentPolygon, { clientId });
       }
     },
-    [buildPayloadFromPolygon, clients, currentPolygon],
+    [activeRecipients, buildPayloadFromPolygon, currentPolygon, recipientType],
   );
 
   const handleSaveEstimate = useCallback(async () => {
@@ -523,7 +608,7 @@ export default function EstimateModule(): JSX.Element {
     [currentPolygon, satellite, zoom],
   );
 
-  const handleGenerateProposalPdf = useCallback(() => {
+  const handleGenerateProposalPdf = useCallback(async () => {
     if (!satellite || !draftPayload) {
       toast({
         title: "Missing estimate data",
@@ -534,12 +619,12 @@ export default function EstimateModule(): JSX.Element {
     }
 
     const finalClientName =
-      proposalClientName.trim() || selectedClient?.clientName || "";
+      proposalClientName.trim() || selectedRecipient?.name || "";
 
     if (!finalClientName) {
       toast({
-        title: "Client required",
-        description: "Select a client (or set client name) before creating the proposal PDF.",
+        title: "Recipient required",
+        description: "Select a client/lead (or set recipient name) before creating the proposal PDF.",
         variant: "destructive",
       });
       return;
@@ -547,13 +632,14 @@ export default function EstimateModule(): JSX.Element {
 
     setGeneratingPdf(true);
     try {
-      const fileName = generateRoofProposalPdf({
+      const fileName = await generateRoofProposalPdf({
         proposalNumber: proposalNumber.trim() || createProposalNumber(),
         proposalTitle: proposalTitle.trim() || "Roof Replacement Proposal",
         issueDate: proposalIssueDate || getTodayIsoDate(),
         validUntil: proposalValidUntil || getIsoDatePlusDays(15),
         companyName: proposalCompanyName.trim() || "Zodo Roofing",
-        client: {
+        recipient: {
+          type: recipientType,
           name: finalClientName,
           company: proposalClientCompany.trim() || undefined,
           email: proposalClientEmail.trim() || undefined,
@@ -564,6 +650,7 @@ export default function EstimateModule(): JSX.Element {
           latitude: satellite.latitude,
           longitude: satellite.longitude,
         },
+        satelliteImageUrl: satellite.satelliteImageUrl,
         metrics: {
           roofAreaSqft: draftPayload.roofAreaSqft,
           pixelArea: polygonAreaPixels,
@@ -613,8 +700,9 @@ export default function EstimateModule(): JSX.Element {
     proposalTerms,
     proposalTitle,
     proposalValidUntil,
+    recipientType,
     satellite,
-    selectedClient,
+    selectedRecipient,
     toast,
     zoom,
   ]);
@@ -743,22 +831,48 @@ export default function EstimateModule(): JSX.Element {
 
             <div className="space-y-3">
               <div>
-                <Label className="text-xs text-slate-500">Client</Label>
+                <Label className="text-xs text-slate-500">Recipient Type</Label>
                 <Select
-                  value={selectedClientId || "none"}
-                  onValueChange={handleClientSelection}
+                  value={recipientType}
+                  onValueChange={(value) => handleRecipientTypeChange(value as RecipientType)}
+                >
+                  <SelectTrigger className="mt-1 h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="client">Client</SelectItem>
+                    <SelectItem value="lead">Lead</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="text-xs text-slate-500">
+                  {recipientType === "client" ? "Client" : "Lead"}
+                </Label>
+                <Select
+                  value={selectedRecipientId || "none"}
+                  onValueChange={handleRecipientSelection}
                 >
                   <SelectTrigger className="mt-1 h-9">
                     <SelectValue
-                      placeholder={loadingClients ? "Loading clients..." : "Select a client"}
+                      placeholder={
+                        loadingRecipients
+                          ? "Loading recipients..."
+                          : recipientType === "client"
+                            ? "Select a client"
+                            : "Select a lead"
+                      }
                     />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">No client selected</SelectItem>
-                    {clients.map((client) => (
-                      <SelectItem key={client.id} value={client.id}>
-                        {client.clientName}
-                        {client.companyName ? ` — ${client.companyName}` : ""}
+                    <SelectItem value="none">
+                      {recipientType === "client" ? "No client selected" : "No lead selected"}
+                    </SelectItem>
+                    {activeRecipients.map((recipient) => (
+                      <SelectItem key={`${recipient.type}-${recipient.id}`} value={recipient.id}>
+                        {recipient.name}
+                        {recipient.companyName ? ` — ${recipient.companyName}` : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -815,7 +929,9 @@ export default function EstimateModule(): JSX.Element {
 
               <div className="grid grid-cols-1 gap-2">
                 <div>
-                  <Label className="text-xs text-slate-500">Client Name</Label>
+                  <Label className="text-xs text-slate-500">
+                    {recipientType === "client" ? "Client Name" : "Lead Name"}
+                  </Label>
                   <Input
                     value={proposalClientName}
                     onChange={(event) => setProposalClientName(event.target.value)}

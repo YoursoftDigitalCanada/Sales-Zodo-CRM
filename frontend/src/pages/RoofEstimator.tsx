@@ -1,6 +1,7 @@
 // src/pages/RoofEstimator.tsx
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import {
     getEstimates as fetchEstimatesApi,
     getEstimateSettings,
@@ -201,6 +202,7 @@ const StatCard = ({
 
 const RoofEstimator: React.FC = () => {
     const { toast } = useToast();
+    const navigate = useNavigate();
 
     // ---- State ----
     const [address, setAddress] = useState("");
@@ -240,7 +242,7 @@ const RoofEstimator: React.FC = () => {
     const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
     // UI
-    const [activeTab, setActiveTab] = useState<"estimator" | "history" | "settings">("estimator");
+    const [activeTab, setActiveTab] = useState<"estimator" | "history" | "settings">("history");
     const [viewEstimate, setViewEstimate] = useState<RoofEstimate | null>(null);
 
     // Computed
@@ -501,9 +503,18 @@ const RoofEstimator: React.FC = () => {
                                 {aiHealthy === null ? "Checking AI..." : aiHealthy ? "AI Online" : "AI Offline"}
                             </div>
 
+                            <Button
+                                type="button"
+                                onClick={() => navigate("/roof-estimator/editor")}
+                                className="h-9 bg-[#0891B2] px-4 text-xs font-semibold text-white hover:bg-[#0891B2]/90"
+                            >
+                                <Sparkles className="mr-2 h-3.5 w-3.5" />
+                                Create AI Estimate
+                            </Button>
+
                             {/* Tabs */}
                             <div className="flex bg-[#F8FAFC] rounded-md border border-[rgba(15,23,42,0.06)] p-0.5">
-                                {(["estimator", "history", "settings"] as const).map((tab) => (
+                                {(["history", "settings"] as const).map((tab) => (
                                     <button
                                         key={tab}
                                         onClick={() => setActiveTab(tab)}

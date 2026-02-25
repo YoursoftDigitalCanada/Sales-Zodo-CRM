@@ -269,13 +269,6 @@ const navigationItems: NavigationItem[] = [
     badge: "AI",
     badgeColor: "teal",
   },
-  {
-    title: "Roof Polygon Editor",
-    icon: GitBranch,
-    path: "/roof-estimator/editor",
-    featureId: "api",
-    isNew: true,
-  },
 
   // ===== COMMUNICATION =====
   { title: "Communication", isHeader: true },

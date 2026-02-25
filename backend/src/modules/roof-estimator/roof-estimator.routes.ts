@@ -4,7 +4,7 @@ import {
     authenticate,
     loadEmployee,
 } from '../../common/middleware/auth.middleware';
-import { requirePermission } from '../../common/middleware/permission.middleware';
+import { requireAnyPermission, requirePermission } from '../../common/middleware/permission.middleware';
 import { validate } from '../../common/middleware/validate.middleware';
 import { PERMISSIONS } from '../../common/constants/permissions';
 import {
@@ -26,7 +26,7 @@ router.use(loadEmployee);
 // Address autocomplete
 router.get(
     '/autocomplete',
-    requirePermission(PERMISSIONS.ROOF_ESTIMATOR_VIEW),
+    requireAnyPermission([PERMISSIONS.ROOF_ESTIMATOR_VIEW, PERMISSIONS.ROOF_ESTIMATOR_CREATE]),
     roofEstimatorController.autocomplete.bind(roofEstimatorController)
 );
 

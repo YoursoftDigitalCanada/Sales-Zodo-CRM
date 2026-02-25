@@ -273,6 +273,7 @@ export default function EstimateModule(): JSX.Element {
   const [selectedAddressPlaceId, setSelectedAddressPlaceId] = useState("");
   const [addressSuggestions, setAddressSuggestions] = useState<AddressSuggestion[]>([]);
   const [showAddressSuggestions, setShowAddressSuggestions] = useState(false);
+  const [addressSuggestionError, setAddressSuggestionError] = useState<string | null>(null);
   const [satellite, setSatellite] = useState<SatelliteResult | null>(null);
   const [detection, setDetection] = useState<DetectionResult | null>(null);
   const [editorResetToken, setEditorResetToken] = useState(0);
@@ -458,6 +459,7 @@ export default function EstimateModule(): JSX.Element {
   const handleAddressInputChange = useCallback((value: string) => {
     setAddress(value);
     setSelectedAddressPlaceId("");
+    setAddressSuggestionError(null);
 
     if (addressDebounceRef.current) {
       clearTimeout(addressDebounceRef.current);
@@ -477,9 +479,16 @@ export default function EstimateModule(): JSX.Element {
         const results = await autocompleteAddress(normalized);
         setAddressSuggestions(results);
         setShowAddressSuggestions(results.length > 0);
-      } catch {
+        setAddressSuggestionError(null);
+      } catch (error: any) {
         setAddressSuggestions([]);
         setShowAddressSuggestions(false);
+        const status = error?.response?.status;
+        if (status === 403) {
+          setAddressSuggestionError("You do not have permission to load address suggestions.");
+        } else {
+          setAddressSuggestionError("Address suggestions are currently unavailable.");
+        }
       } finally {
         setSearchingAddress(false);
       }
@@ -491,6 +500,7 @@ export default function EstimateModule(): JSX.Element {
     setSelectedAddressPlaceId(suggestion.placeId);
     setAddressSuggestions([]);
     setShowAddressSuggestions(false);
+    setAddressSuggestionError(null);
   }, []);
 
   const handleLoadSatellite = useCallback(async () => {
@@ -873,6 +883,24 @@ export default function EstimateModule(): JSX.Element {
     }
   }, [prepareProposalContext, toast]);
 
+  const addressHelperText = useMemo(() => {
+    const trimmed = address.trim();
+    if (searchingAddress) return "Searching address suggestions...";
+    if (addressSuggestionError) return addressSuggestionError;
+    if (selectedAddressPlaceId) return "Exact suggestion selected.";
+    if (trimmed.length < 3) return "Type at least 3 characters to see address suggestions.";
+    if (trimmed.length >= 3 && addressSuggestions.length === 0) {
+      return "No suggestions found. You can still continue with manual address.";
+    }
+    return "Select a suggestion for exact rooftop match.";
+  }, [
+    address,
+    addressSuggestionError,
+    addressSuggestions.length,
+    searchingAddress,
+    selectedAddressPlaceId,
+  ]);
+
   return (
     <section className="mx-auto flex w-full max-w-[1500px] flex-col gap-4 p-4 lg:p-6">
       <header className="rounded-xl border bg-white p-4">
@@ -886,7 +914,7 @@ export default function EstimateModule(): JSX.Element {
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_360px]">
         <div className="space-y-4">
           <div className="rounded-xl border bg-white p-4">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_auto_auto]">
+            <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-[1fr_auto_auto_auto]">
               <div>
                 <Label className="text-xs text-slate-500">Property Address</Label>
                 <div className="relative mt-1" ref={addressAutocompleteRef}>
@@ -927,11 +955,6 @@ export default function EstimateModule(): JSX.Element {
                     </div>
                   )}
                 </div>
-                <p className="mt-1 text-[11px] text-slate-500">
-                  {searchingAddress
-                    ? "Searching address suggestions..."
-                    : "Type at least 3 characters and select a suggestion for exact match."}
-                </p>
               </div>
 
               <Button type="button" variant="outline" className="mt-auto" onClick={handleLoadSatellite} disabled={loadingSatellite}>
@@ -949,6 +972,7 @@ export default function EstimateModule(): JSX.Element {
                 Save Estimate
               </Button>
             </div>
+            <p className="mt-2 text-[11px] text-slate-500">{addressHelperText}</p>
           </div>
 
           {satellite ? (

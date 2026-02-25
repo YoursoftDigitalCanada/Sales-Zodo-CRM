@@ -152,7 +152,10 @@ export default function RoofPolygonEditor({
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [spacePressed, setSpacePressed] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
-  const [viewport, setViewport] = useState({ width, height: Math.max(420, Math.min(height, 720)) });
+  const [viewport, setViewport] = useState({
+    width,
+    height: clamp(Math.round((width * height) / Math.max(width, 1)), 420, 820),
+  });
   const [points, setPoints] = useState<PolygonPoint[]>(() => sanitizePolygonInput(initialPolygon, width, height));
 
   const initialPolygonKey = useMemo(() => polygonSignature(initialPolygon), [initialPolygon]);
@@ -204,9 +207,15 @@ export default function RoofPolygonEditor({
 
     const updateSize = () => {
       const bounds = element.getBoundingClientRect();
-      if (bounds.width > 0 && bounds.height > 0) {
+      if (bounds.width > 0) {
         const nextWidth = Math.round(bounds.width);
-        const nextHeight = Math.round(bounds.height);
+        // Keep stage height derived from width + source aspect ratio to avoid
+        // observer feedback loops where canvas height inflates container height.
+        const nextHeight = clamp(
+          Math.round((nextWidth * height) / Math.max(width, 1)),
+          420,
+          820,
+        );
 
         setViewport((previous) => {
           if (previous.width === nextWidth && previous.height === nextHeight) {
@@ -228,7 +237,7 @@ export default function RoofPolygonEditor({
     return () => {
       resizeObserver.disconnect();
     };
-  }, []);
+  }, [height, width]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -523,7 +532,7 @@ export default function RoofPolygonEditor({
   }, []);
 
   return (
-    <div className="flex h-full min-h-[620px] w-full flex-col rounded-xl border bg-white">
+    <div className="flex min-h-[620px] w-full flex-col rounded-xl border bg-white">
       <div className="flex flex-wrap items-center gap-2 border-b bg-slate-50/80 px-4 py-3">
         <Button type="button" variant="outline" size="sm" onClick={handleUndo} disabled={historyRef.current.length === 0 || readOnly}>
           Undo
@@ -548,7 +557,11 @@ export default function RoofPolygonEditor({
         </div>
       </div>
 
-      <div ref={containerRef} className="relative h-full min-h-[560px] w-full overflow-hidden rounded-b-xl bg-slate-900/90">
+      <div
+        ref={containerRef}
+        className="relative w-full overflow-hidden rounded-b-xl bg-slate-900/90"
+        style={{ height: `${viewport.height}px` }}
+      >
         <Stage
           ref={stageRef}
           width={Math.max(1, viewport.width)}

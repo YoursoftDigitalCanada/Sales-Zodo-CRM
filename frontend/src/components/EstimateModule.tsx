@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo, useState } from "react";
-import { Loader2, MapPin, Save, Satellite, Sparkles } from "lucide-react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { FileDown, Loader2, MapPin, Save, Satellite, Sparkles, Users } from "lucide-react";
 
 import RoofPolygonEditor, {
   normalizePolygonPoints,
@@ -8,7 +8,15 @@ import RoofPolygonEditor, {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
+import { getClients } from "@/features/clients/services/clients-service";
 import {
   detectRoof,
   fetchSatelliteImage,
@@ -21,11 +29,20 @@ import {
   calculatePolygonAreaPixels,
   calculateRoofAreaSqFt,
 } from "@/features/roof-estimator/utils/area";
+import { generateRoofProposalPdf } from "@/features/roof-estimator/utils/generate-roof-proposal-pdf";
 
 const SQM_PER_SQFT = 1 / 10.7639;
 const DEFAULT_IMAGE_WIDTH = 1024;
 const DEFAULT_IMAGE_HEIGHT = 1024;
 const DEFAULT_ZOOM = 20;
+
+type ClientOption = {
+  id: string;
+  clientName: string;
+  companyName: string;
+  email: string;
+  phone: string;
+};
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
@@ -126,6 +143,92 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
+function toNonEmptyString(value: unknown): string {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : "";
+}
+
+function pickFirstString(
+  record: Record<string, unknown>,
+  keys: string[],
+): string {
+  for (const key of keys) {
+    const value = toNonEmptyString(record[key]);
+    if (value) return value;
+  }
+
+  return "";
+}
+
+function mapClientOption(raw: unknown): ClientOption | null {
+  if (!raw || typeof raw !== "object") return null;
+  const record = raw as Record<string, unknown>;
+
+  const idCandidate = record.id ?? record.Id ?? record.clientId ?? record.ClientId;
+  if (idCandidate === undefined || idCandidate === null) return null;
+
+  const id = String(idCandidate).trim();
+  if (!id) return null;
+
+  const clientName = pickFirstString(record, [
+    "clientName",
+    "ClientName",
+    "name",
+    "Name",
+  ]);
+  const companyName = pickFirstString(record, [
+    "companyName",
+    "CompanyName",
+    "businessName",
+    "BusinessName",
+  ]);
+  const email = pickFirstString(record, [
+    "primaryEmail",
+    "contactEmail",
+    "ContactEmail",
+    "email",
+    "Email",
+  ]);
+  const phone = pickFirstString(record, [
+    "primaryContactPhone",
+    "contactNo",
+    "ContactNo",
+    "phone",
+    "Phone",
+    "mobile",
+    "Mobile",
+  ]);
+
+  return {
+    id,
+    clientName: clientName || companyName || "Client",
+    companyName,
+    email,
+    phone,
+  };
+}
+
+function getTodayIsoDate(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function getIsoDatePlusDays(days: number): string {
+  const next = new Date();
+  next.setDate(next.getDate() + days);
+  return next.toISOString().slice(0, 10);
+}
+
+function createProposalNumber(): string {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  const hh = String(now.getHours()).padStart(2, "0");
+  const min = String(now.getMinutes()).padStart(2, "0");
+  return `RFQ-${yyyy}${mm}${dd}-${hh}${min}`;
+}
+
 export default function EstimateModule(): JSX.Element {
   const { toast } = useToast();
 
@@ -144,23 +247,82 @@ export default function EstimateModule(): JSX.Element {
   const [zoom, setZoom] = useState(DEFAULT_ZOOM);
   const [pricePerSqft, setPricePerSqft] = useState(5.5);
   const [notes, setNotes] = useState("");
+  const [clients, setClients] = useState<ClientOption[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState("");
   const [draftPayload, setDraftPayload] = useState<SaveEstimatePayload | null>(null);
+  const [proposalNumber, setProposalNumber] = useState(() => createProposalNumber());
+  const [proposalTitle, setProposalTitle] = useState("Roof Replacement Proposal");
+  const [proposalIssueDate, setProposalIssueDate] = useState(() => getTodayIsoDate());
+  const [proposalValidUntil, setProposalValidUntil] = useState(() => getIsoDatePlusDays(15));
+  const [proposalCompanyName, setProposalCompanyName] = useState("Zodo Roofing");
+  const [proposalClientName, setProposalClientName] = useState("");
+  const [proposalClientCompany, setProposalClientCompany] = useState("");
+  const [proposalClientEmail, setProposalClientEmail] = useState("");
+  const [proposalClientPhone, setProposalClientPhone] = useState("");
+  const [proposalScope, setProposalScope] = useState(
+    "Install full roofing system based on measured roof area. Includes material supply, labor, and site cleanup.",
+  );
+  const [proposalTerms, setProposalTerms] = useState(
+    "Estimate is valid for the period shown above. Final invoice may change if site conditions differ from satellite analysis.",
+  );
 
   const [loadingSatellite, setLoadingSatellite] = useState(false);
   const [detecting, setDetecting] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [loadingClients, setLoadingClients] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+
+  const selectedClient = useMemo(
+    () => clients.find((client) => client.id === selectedClientId) ?? null,
+    [clients, selectedClientId],
+  );
+
+  useEffect(() => {
+    let mounted = true;
+    setLoadingClients(true);
+
+    getClients()
+      .then((data) => {
+        if (!mounted) return;
+        const mapped = (data || [])
+          .map((client) => mapClientOption(client))
+          .filter((client): client is ClientOption => Boolean(client));
+        setClients(mapped);
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setClients([]);
+      })
+      .finally(() => {
+        if (!mounted) return;
+        setLoadingClients(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const buildPayloadFromPolygon = useCallback(
-    (polygon: PolygonPoint[], overrides?: { detection?: DetectionResult | null }) => {
-      if (!satellite) {
+    (
+      polygon: PolygonPoint[],
+      overrides?: {
+        detection?: DetectionResult | null;
+        clientId?: string;
+        satelliteData?: SatelliteResult;
+      },
+    ) => {
+      const activeSatellite = overrides?.satelliteData ?? satellite;
+      if (!activeSatellite) {
         setDraftPayload(null);
         return;
       }
 
       const activeDetection = overrides?.detection ?? detection;
+      const activeClientId = overrides?.clientId ?? selectedClientId;
       const roofAreaSqFt = calculateRoofAreaSqFt({
         points: polygon,
-        centerLat: satellite.latitude,
+        centerLat: activeSatellite.latitude,
         zoom,
       });
       const totalEstimate = Number((roofAreaSqFt * pricePerSqft).toFixed(2));
@@ -172,10 +334,10 @@ export default function EstimateModule(): JSX.Element {
         : polygonMeta;
 
       const payload: SaveEstimatePayload = {
-        address: satellite.formattedAddress,
-        latitude: satellite.latitude,
-        longitude: satellite.longitude,
-        satelliteImageUrl: satellite.satelliteImageUrl,
+        address: activeSatellite.formattedAddress,
+        latitude: activeSatellite.latitude,
+        longitude: activeSatellite.longitude,
+        satelliteImageUrl: activeSatellite.satelliteImageUrl,
         roofAreaSqft: roofAreaSqFt,
         confidence: activeDetection?.confidence ?? 30,
         processingTimeSec: activeDetection?.processingTimeSec ?? 0,
@@ -185,11 +347,21 @@ export default function EstimateModule(): JSX.Element {
         totalEstimate,
         snowMode: true,
         notes: composedNotes,
+        clientId: activeClientId || undefined,
       };
 
       setDraftPayload(payload);
     },
-    [detection, imageHeight, imageWidth, notes, pricePerSqft, satellite, zoom],
+    [
+      detection,
+      imageHeight,
+      imageWidth,
+      notes,
+      pricePerSqft,
+      satellite,
+      selectedClientId,
+      zoom,
+    ],
   );
 
   const handleLoadSatellite = useCallback(async () => {
@@ -220,7 +392,7 @@ export default function EstimateModule(): JSX.Element {
       setInitialPolygon(fallbackPolygon);
       setCurrentPolygon(fallbackPolygon);
       setEditorResetToken((previous) => previous + 1);
-      buildPayloadFromPolygon(fallbackPolygon, { detection: null });
+      buildPayloadFromPolygon(fallbackPolygon, { detection: null, satelliteData: data });
 
       toast({
         title: "Satellite image loaded",
@@ -286,6 +458,25 @@ export default function EstimateModule(): JSX.Element {
     [buildPayloadFromPolygon],
   );
 
+  const handleClientSelection = useCallback(
+    (value: string) => {
+      const clientId = value === "none" ? "" : value;
+      const matchedClient =
+        clients.find((client) => client.id === clientId) ?? null;
+
+      setSelectedClientId(clientId);
+      setProposalClientName(matchedClient?.clientName || "");
+      setProposalClientCompany(matchedClient?.companyName || "");
+      setProposalClientEmail(matchedClient?.email || "");
+      setProposalClientPhone(matchedClient?.phone || "");
+
+      if (currentPolygon.length >= 3) {
+        buildPayloadFromPolygon(currentPolygon, { clientId });
+      }
+    },
+    [buildPayloadFromPolygon, clients, currentPolygon],
+  );
+
   const handleSaveEstimate = useCallback(async () => {
     if (!draftPayload) {
       toast({
@@ -314,6 +505,102 @@ export default function EstimateModule(): JSX.Element {
       setSaving(false);
     }
   }, [draftPayload, toast]);
+
+  const handleGenerateProposalPdf = useCallback(() => {
+    if (!satellite || !draftPayload) {
+      toast({
+        title: "Missing estimate data",
+        description: "Load satellite and adjust the polygon before generating PDF.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const finalClientName =
+      proposalClientName.trim() || selectedClient?.clientName || "";
+
+    if (!finalClientName) {
+      toast({
+        title: "Client required",
+        description: "Select a client (or set client name) before creating the proposal PDF.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setGeneratingPdf(true);
+    try {
+      const fileName = generateRoofProposalPdf({
+        proposalNumber: proposalNumber.trim() || createProposalNumber(),
+        proposalTitle: proposalTitle.trim() || "Roof Replacement Proposal",
+        issueDate: proposalIssueDate || getTodayIsoDate(),
+        validUntil: proposalValidUntil || getIsoDatePlusDays(15),
+        companyName: proposalCompanyName.trim() || "Zodo Roofing",
+        client: {
+          name: finalClientName,
+          company: proposalClientCompany.trim() || undefined,
+          email: proposalClientEmail.trim() || undefined,
+          phone: proposalClientPhone.trim() || undefined,
+        },
+        property: {
+          address: satellite.formattedAddress,
+          latitude: satellite.latitude,
+          longitude: satellite.longitude,
+        },
+        metrics: {
+          roofAreaSqft: draftPayload.roofAreaSqft,
+          pixelArea: polygonAreaPixels,
+          pricePerSqft: draftPayload.pricePerSqft,
+          totalEstimate: draftPayload.totalEstimate,
+          confidence: draftPayload.confidence,
+          aiModel: draftPayload.aiModel,
+          processingTimeSec: draftPayload.processingTimeSec,
+          zoom,
+          imageWidth,
+          imageHeight,
+        },
+        polygonPoints: currentPolygon,
+        scopeOfWork: proposalScope,
+        internalNotes: notes,
+        termsAndConditions: proposalTerms,
+      });
+
+      toast({
+        title: "Proposal PDF generated",
+        description: `${fileName} downloaded with calculations and details.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "PDF generation failed",
+        description: error?.message || "Unexpected error while generating proposal PDF.",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingPdf(false);
+    }
+  }, [
+    currentPolygon,
+    draftPayload,
+    imageHeight,
+    imageWidth,
+    notes,
+    polygonAreaPixels,
+    proposalClientCompany,
+    proposalClientEmail,
+    proposalClientName,
+    proposalClientPhone,
+    proposalCompanyName,
+    proposalIssueDate,
+    proposalNumber,
+    proposalScope,
+    proposalTerms,
+    proposalTitle,
+    proposalValidUntil,
+    satellite,
+    selectedClient,
+    toast,
+    zoom,
+  ]);
 
   const polygonAreaPixels = useMemo(
     () => calculatePolygonAreaPixels(currentPolygon),
@@ -446,6 +733,161 @@ export default function EstimateModule(): JSX.Element {
               className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm outline-none ring-[#0891B2]/20 focus:ring"
               placeholder="Optional contractor notes..."
             />
+          </div>
+
+          <div className="rounded-xl border bg-white p-4">
+            <div className="mb-3 flex items-center gap-2">
+              <Users className="h-4 w-4 text-[#0891B2]" />
+              <h3 className="text-sm font-semibold text-slate-800">Proposal Form & PDF</h3>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <Label className="text-xs text-slate-500">Client</Label>
+                <Select
+                  value={selectedClientId || "none"}
+                  onValueChange={handleClientSelection}
+                >
+                  <SelectTrigger className="mt-1 h-9">
+                    <SelectValue
+                      placeholder={loadingClients ? "Loading clients..." : "Select a client"}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No client selected</SelectItem>
+                    {clients.map((client) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.clientName}
+                        {client.companyName ? ` — ${client.companyName}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs text-slate-500">Proposal #</Label>
+                  <Input
+                    value={proposalNumber}
+                    onChange={(event) => setProposalNumber(event.target.value)}
+                    className="mt-1 h-9"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-500">Valid Until</Label>
+                  <Input
+                    type="date"
+                    value={proposalValidUntil}
+                    onChange={(event) => setProposalValidUntil(event.target.value)}
+                    className="mt-1 h-9"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs text-slate-500">Proposal Title</Label>
+                <Input
+                  value={proposalTitle}
+                  onChange={(event) => setProposalTitle(event.target.value)}
+                  className="mt-1 h-9"
+                />
+              </div>
+
+              <div>
+                <Label className="text-xs text-slate-500">Issue Date</Label>
+                <Input
+                  type="date"
+                  value={proposalIssueDate}
+                  onChange={(event) => setProposalIssueDate(event.target.value)}
+                  className="mt-1 h-9"
+                />
+              </div>
+
+              <div>
+                <Label className="text-xs text-slate-500">Your Company Name</Label>
+                <Input
+                  value={proposalCompanyName}
+                  onChange={(event) => setProposalCompanyName(event.target.value)}
+                  className="mt-1 h-9"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-2">
+                <div>
+                  <Label className="text-xs text-slate-500">Client Name</Label>
+                  <Input
+                    value={proposalClientName}
+                    onChange={(event) => setProposalClientName(event.target.value)}
+                    className="mt-1 h-9"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-500">Client Company</Label>
+                  <Input
+                    value={proposalClientCompany}
+                    onChange={(event) => setProposalClientCompany(event.target.value)}
+                    className="mt-1 h-9"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs text-slate-500">Client Email</Label>
+                  <Input
+                    type="email"
+                    value={proposalClientEmail}
+                    onChange={(event) => setProposalClientEmail(event.target.value)}
+                    className="mt-1 h-9"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-500">Client Phone</Label>
+                  <Input
+                    value={proposalClientPhone}
+                    onChange={(event) => setProposalClientPhone(event.target.value)}
+                    className="mt-1 h-9"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs text-slate-500">Scope of Work</Label>
+                <textarea
+                  value={proposalScope}
+                  onChange={(event) => setProposalScope(event.target.value)}
+                  rows={3}
+                  className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm outline-none ring-[#0891B2]/20 focus:ring"
+                  placeholder="Describe work included in this proposal..."
+                />
+              </div>
+
+              <div>
+                <Label className="text-xs text-slate-500">Terms & Conditions</Label>
+                <textarea
+                  value={proposalTerms}
+                  onChange={(event) => setProposalTerms(event.target.value)}
+                  rows={3}
+                  className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm outline-none ring-[#0891B2]/20 focus:ring"
+                  placeholder="Payment terms, validity, assumptions..."
+                />
+              </div>
+
+              <Button
+                type="button"
+                className="w-full"
+                onClick={handleGenerateProposalPdf}
+                disabled={!draftPayload || generatingPdf}
+              >
+                {generatingPdf ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <FileDown className="mr-2 h-4 w-4" />
+                )}
+                Create Proposal PDF
+              </Button>
+            </div>
           </div>
 
           <div className="rounded-xl border bg-white p-4">

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -93,7 +93,10 @@ interface NavigationItem {
 interface SidebarProps {
   collapsed?: boolean;
   setCollapsed?: (value: boolean) => void;
+  forceRender?: boolean;
 }
+
+export const SidebarSuppressionContext = createContext<boolean>(false);
 
 // ============================================
 // NAVIGATION CONFIGURATION
@@ -530,8 +533,12 @@ const Tag = ({ type }: { type: "new" | "pro" }) => {
 
 export function Sidebar({
   collapsed: controlledCollapsed,
-  setCollapsed: controlledSetCollapsed
+  setCollapsed: controlledSetCollapsed,
+  forceRender = false,
 }: SidebarProps) {
+  const suppressSidebar = useContext(SidebarSuppressionContext);
+  if (suppressSidebar && !forceRender) return null;
+
   const [internalCollapsed, setInternalCollapsed] = useState(false);
   const collapsed = controlledCollapsed ?? internalCollapsed;
   const setCollapsed = controlledSetCollapsed ?? setInternalCollapsed;

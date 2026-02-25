@@ -1,12 +1,14 @@
 // src/App.tsx
 
+import { useMemo, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { GlobalAiFloatingButton } from "@/components/ai/GlobalAiFloatingButton";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { CopilotContextProvider } from "@/contexts/CopilotContext";
+import { Sidebar, SidebarSuppressionContext } from "@/components/Sidebar";
 
 // Layout
 import Layout from "./components/Layout";
@@ -97,14 +99,35 @@ import RolesPage from "./pages/roles/RolesPage";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <CopilotContextProvider>
-          <Routes>
+const isPublicPath = (pathname: string): boolean => {
+  if (pathname === "/" || pathname === "/login" || pathname === "/signup") {
+    return true;
+  }
+  if (pathname.startsWith("/quote/")) {
+    return true;
+  }
+  return false;
+};
+
+const AppRoutes = () => {
+  const location = useLocation();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const showPersistentSidebar = useMemo(
+    () => !isPublicPath(location.pathname),
+    [location.pathname],
+  );
+
+  return (
+    <>
+      {showPersistentSidebar && (
+        <Sidebar
+          collapsed={sidebarCollapsed}
+          setCollapsed={setSidebarCollapsed}
+          forceRender
+        />
+      )}
+      <SidebarSuppressionContext.Provider value={showPersistentSidebar}>
+        <Routes>
             {/* ========== PUBLIC ROUTES ========== */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
@@ -530,7 +553,20 @@ const App = () => (
             {/* ========== 404 CATCH-ALL ========== */}
             <Route path="*" element={<NotFound />} />
           </Routes>
-          <GlobalAiFloatingButton />
+      </SidebarSuppressionContext.Provider>
+      <GlobalAiFloatingButton />
+    </>
+  );
+};
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <CopilotContextProvider>
+          <AppRoutes />
         </CopilotContextProvider>
       </BrowserRouter>
     </TooltipProvider>

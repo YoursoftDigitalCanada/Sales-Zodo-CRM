@@ -89,8 +89,12 @@ export async function checkAiHealth(): Promise<boolean> {
     return res.data?.data?.healthy || false;
 }
 
-export async function fetchSatelliteImage(address: string): Promise<SatelliteResult> {
-    const res = await api.post("/roof-estimator/satellite", { address });
+export async function fetchSatelliteImage(address: string, placeId?: string): Promise<SatelliteResult> {
+    const payload: Record<string, string> = { address };
+    if (placeId && placeId.trim()) {
+        payload.placeId = placeId.trim();
+    }
+    const res = await api.post("/roof-estimator/satellite", payload);
     return res.data?.data;
 }
 

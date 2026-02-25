@@ -2,6 +2,7 @@
 
 export interface SatelliteRequestDto {
     address: string;
+    placeId?: string;
 }
 
 export interface DetectRoofDto {

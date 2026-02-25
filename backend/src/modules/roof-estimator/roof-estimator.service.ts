@@ -162,10 +162,139 @@ export class RoofEstimatorService {
         }
     }
 
+    private async geocodePlaceIdViaGeocoding(placeId: string): Promise<{ lat: number; lng: number; formattedAddress: string }> {
+        if (!GOOGLE_GEOCODING_API_KEY) {
+            throw new ServiceUnavailableError(
+                'Roof estimator geocoding is not configured. Set GOOGLE_GEOCODING_API_KEY (or GOOGLE_MAPS_JS_API_KEY) on the backend.'
+            );
+        }
+
+        const response = await axios.get('https://maps.googleapis.com/maps/api/geocode/json', {
+            params: {
+                place_id: placeId,
+                key: GOOGLE_GEOCODING_API_KEY,
+                language: 'en',
+            },
+            timeout: 10000,
+        });
+
+        const status = response.data.status as string;
+        const errorMessage = response.data.error_message as string | undefined;
+
+        if (status !== 'OK' || !response.data.results?.length) {
+            if (status === 'ZERO_RESULTS') {
+                throw new BadRequestError(
+                    'Selected address could not be resolved. Please choose another suggestion.',
+                    'GEOCODING_PLACE_ID_ZERO_RESULTS'
+                );
+            }
+
+            if (status === 'INVALID_REQUEST') {
+                throw new BadRequestError(
+                    'Selected address is invalid. Please choose a suggestion again.',
+                    'GEOCODING_PLACE_ID_INVALID_REQUEST'
+                );
+            }
+
+            throw new ServiceUnavailableError(
+                errorMessage
+                    ? `Google Geocoding API failed for selected address: ${errorMessage}`
+                    : `Google Geocoding API failed for selected address (${status}).`
+            );
+        }
+
+        const result = response.data.results[0];
+        return {
+            lat: result.geometry.location.lat,
+            lng: result.geometry.location.lng,
+            formattedAddress: result.formatted_address,
+        };
+    }
+
+    private async geocodePlaceIdViaPlacesDetails(placeId: string): Promise<{ lat: number; lng: number; formattedAddress: string }> {
+        if (!GOOGLE_PLACES_API_KEY) {
+            throw new ServiceUnavailableError(
+                'Google Places API key is not configured for place ID resolution.'
+            );
+        }
+
+        const response = await axios.get('https://maps.googleapis.com/maps/api/place/details/json', {
+            params: {
+                place_id: placeId,
+                key: GOOGLE_PLACES_API_KEY,
+                fields: 'formatted_address,geometry/location',
+                language: 'en',
+            },
+            timeout: 10000,
+        });
+
+        const status = response.data.status as string;
+        const errorMessage = response.data.error_message as string | undefined;
+
+        if (status !== 'OK' || !response.data.result?.geometry?.location) {
+            if (status === 'NOT_FOUND' || status === 'ZERO_RESULTS') {
+                throw new BadRequestError(
+                    'Selected address could not be found. Please choose another suggestion.',
+                    'PLACES_DETAILS_NOT_FOUND'
+                );
+            }
+
+            throw new ServiceUnavailableError(
+                errorMessage
+                    ? `Google Places Details failed for selected address: ${errorMessage}`
+                    : `Google Places Details failed for selected address (${status}).`
+            );
+        }
+
+        const lat = Number(response.data.result.geometry.location.lat);
+        const lng = Number(response.data.result.geometry.location.lng);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+            throw new ServiceUnavailableError('Google Places Details returned invalid coordinates.');
+        }
+
+        return {
+            lat,
+            lng,
+            formattedAddress: response.data.result.formatted_address || placeId,
+        };
+    }
+
+    private async geocodeByPlaceId(placeId: string): Promise<{ lat: number; lng: number; formattedAddress: string }> {
+        try {
+            return await this.geocodePlaceIdViaGeocoding(placeId);
+        } catch (err: unknown) {
+            logger.warn('Place ID geocoding via Geocoding API failed; trying Places Details', {
+                placeId,
+                error: (err as Error).message,
+            });
+        }
+
+        return this.geocodePlaceIdViaPlacesDetails(placeId);
+    }
+
     /**
-     * Geocode an address using Google Geocoding API
+     * Geocode an address using Google Geocoding API.
+     * If a Google placeId is provided, resolve that first for exact matching.
      */
-    async geocodeAddress(address: string): Promise<{ lat: number; lng: number; formattedAddress: string }> {
+    async geocodeAddress(address: string, placeId?: string): Promise<{ lat: number; lng: number; formattedAddress: string }> {
+        const normalizedPlaceId = typeof placeId === 'string' ? placeId.trim() : '';
+        if (normalizedPlaceId) {
+            try {
+                const resolved = await this.geocodeByPlaceId(normalizedPlaceId);
+                logger.info('Resolved address using placeId for roof estimator geocoding', {
+                    placeId: normalizedPlaceId,
+                    formattedAddress: resolved.formattedAddress,
+                });
+                return resolved;
+            } catch (err: unknown) {
+                logger.warn('Failed to geocode by placeId; falling back to address text', {
+                    placeId: normalizedPlaceId,
+                    address,
+                    error: (err as Error).message,
+                });
+            }
+        }
+
         if (!GOOGLE_GEOCODING_API_KEY) {
             return this.geocodeAddressWithFallback(
                 address,

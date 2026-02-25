@@ -35,9 +35,9 @@ export class RoofEstimatorController {
     async getSatellite(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const tenantId = req.context.tenantId;
-            const { address } = req.body;
+            const { address, placeId } = req.body;
 
-            const result = await roofEstimatorManager.getSatellite(tenantId, address);
+            const result = await roofEstimatorManager.getSatellite(tenantId, address, placeId);
 
             sendSuccess(res, result, 'Satellite image retrieved');
         } catch (error) {

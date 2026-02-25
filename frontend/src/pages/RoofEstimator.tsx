@@ -252,6 +252,7 @@ const RoofEstimator: React.FC = () => {
     // Autocomplete
     const [suggestions, setSuggestions] = useState<Array<{ description: string; placeId: string }>>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
+    const [selectedPlaceId, setSelectedPlaceId] = useState<string>("");
     const autocompleteRef = useRef<HTMLDivElement>(null);
     const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -298,6 +299,7 @@ const RoofEstimator: React.FC = () => {
     // Debounced autocomplete
     const handleAddressChange = useCallback((value: string) => {
         setAddress(value);
+        setSelectedPlaceId("");
         if (debounceTimer.current) clearTimeout(debounceTimer.current);
         if (value.length < 3) {
             setSuggestions([]);
@@ -316,8 +318,9 @@ const RoofEstimator: React.FC = () => {
         }, 300);
     }, []);
 
-    const selectSuggestion = (description: string) => {
+    const selectSuggestion = (description: string, placeId: string) => {
         setAddress(description);
+        setSelectedPlaceId(placeId);
         setSuggestions([]);
         setShowSuggestions(false);
     };
@@ -376,7 +379,7 @@ const RoofEstimator: React.FC = () => {
         setSatellite(null);
         setDetection(null);
         try {
-            const data = await fetchSatelliteImage(address.trim());
+            const data = await fetchSatelliteImage(address.trim(), selectedPlaceId || undefined);
             setSatellite(data);
             toast({ title: "Satellite image loaded", description: data?.formattedAddress });
         } catch (err: any) {
@@ -428,7 +431,7 @@ const RoofEstimator: React.FC = () => {
             toast({ title: "Estimate saved!", description: `$${totalEstimate.toLocaleString()} estimate saved.` });
             fetchEstimates();
             fetchStatistics();
-            setAddress(""); setSatellite(null); setDetection(null);
+            setAddress(""); setSelectedPlaceId(""); setSatellite(null); setDetection(null);
             setManualAdjustment(0); setNotes(""); setSelectedClientId("");
         } catch (err: any) {
             toast({ title: "Save failed", description: err.response?.data?.message || err.message, variant: "destructive" });
@@ -763,7 +766,7 @@ const RoofEstimator: React.FC = () => {
                                                                 <button
                                                                     key={s.placeId || i}
                                                                     type="button"
-                                                                    onClick={() => selectSuggestion(s.description)}
+                                                                    onClick={() => selectSuggestion(s.description, s.placeId)}
                                                                     className="w-full text-left px-3 py-2.5 text-sm text-[#0F172A] hover:bg-[#F0FDFA] flex items-center gap-2.5 transition-colors border-b border-[rgba(15,23,42,0.04)] last:border-b-0"
                                                                 >
                                                                     <MapPin className="w-3.5 h-3.5 text-[#0891B2] flex-shrink-0" />

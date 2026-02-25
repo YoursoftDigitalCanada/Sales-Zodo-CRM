@@ -17,9 +17,9 @@ export class RoofEstimatorManager {
     /**
      * Full satellite + AI detection flow
      */
-    async getSatellite(tenantId: string, address: string) {
+    async getSatellite(tenantId: string, address: string, placeId?: string) {
         // 1. Geocode the address
-        const geo = await roofEstimatorService.geocodeAddress(address);
+        const geo = await roofEstimatorService.geocodeAddress(address, placeId);
 
         // 2. Build satellite image URL
         const satelliteImageUrl = roofEstimatorService.getSatelliteImageUrl(geo.lat, geo.lng);

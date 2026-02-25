@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FileDown, Loader2, MapPin, Save, Satellite, Sparkles, Users } from "lucide-react";
 
 import RoofPolygonEditor, {
@@ -19,6 +19,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { getClients } from "@/features/clients/services/clients-service";
 import { getLeads } from "@/features/leads/services/leads-service";
 import {
+  autocompleteAddress,
   detectRoof,
   fetchSatelliteImage,
   saveEstimate,
@@ -58,6 +59,11 @@ type RecipientOption = {
   companyName: string;
   email: string;
   phone: string;
+};
+
+type AddressSuggestion = {
+  description: string;
+  placeId: string;
 };
 
 function clamp(value: number, min: number, max: number): number {
@@ -264,6 +270,9 @@ export default function EstimateModule(): JSX.Element {
   const { toast } = useToast();
 
   const [address, setAddress] = useState("3837 Oak St, Vancouver, BC V6H 2M6, Canada");
+  const [selectedAddressPlaceId, setSelectedAddressPlaceId] = useState("");
+  const [addressSuggestions, setAddressSuggestions] = useState<AddressSuggestion[]>([]);
+  const [showAddressSuggestions, setShowAddressSuggestions] = useState(false);
   const [satellite, setSatellite] = useState<SatelliteResult | null>(null);
   const [detection, setDetection] = useState<DetectionResult | null>(null);
   const [editorResetToken, setEditorResetToken] = useState(0);
@@ -305,6 +314,10 @@ export default function EstimateModule(): JSX.Element {
   const [loadingRecipients, setLoadingRecipients] = useState(false);
   const [creatingAndSaving, setCreatingAndSaving] = useState(false);
   const [downloadingProposal, setDownloadingProposal] = useState(false);
+  const [searchingAddress, setSearchingAddress] = useState(false);
+
+  const addressAutocompleteRef = useRef<HTMLDivElement | null>(null);
+  const addressDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const activeRecipients = useMemo(
     () => (recipientType === "client" ? clients : leads),
@@ -356,6 +369,26 @@ export default function EstimateModule(): JSX.Element {
     return () => {
       mounted = false;
     };
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!addressAutocompleteRef.current) return;
+      if (!addressAutocompleteRef.current.contains(event.target as Node)) {
+        setShowAddressSuggestions(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  useEffect(() => () => {
+    if (addressDebounceRef.current) {
+      clearTimeout(addressDebounceRef.current);
+    }
   }, []);
 
   const buildPayloadFromPolygon = useCallback(
@@ -422,6 +455,44 @@ export default function EstimateModule(): JSX.Element {
     ],
   );
 
+  const handleAddressInputChange = useCallback((value: string) => {
+    setAddress(value);
+    setSelectedAddressPlaceId("");
+
+    if (addressDebounceRef.current) {
+      clearTimeout(addressDebounceRef.current);
+    }
+
+    const normalized = value.trim();
+    if (normalized.length < 3) {
+      setAddressSuggestions([]);
+      setShowAddressSuggestions(false);
+      setSearchingAddress(false);
+      return;
+    }
+
+    addressDebounceRef.current = setTimeout(async () => {
+      setSearchingAddress(true);
+      try {
+        const results = await autocompleteAddress(normalized);
+        setAddressSuggestions(results);
+        setShowAddressSuggestions(results.length > 0);
+      } catch {
+        setAddressSuggestions([]);
+        setShowAddressSuggestions(false);
+      } finally {
+        setSearchingAddress(false);
+      }
+    }, 280);
+  }, []);
+
+  const handleAddressSuggestionSelect = useCallback((suggestion: AddressSuggestion) => {
+    setAddress(suggestion.description);
+    setSelectedAddressPlaceId(suggestion.placeId);
+    setAddressSuggestions([]);
+    setShowAddressSuggestions(false);
+  }, []);
+
   const handleLoadSatellite = useCallback(async () => {
     if (!address.trim()) {
       toast({
@@ -433,11 +504,15 @@ export default function EstimateModule(): JSX.Element {
     }
 
     setLoadingSatellite(true);
+    setShowAddressSuggestions(false);
     setDetection(null);
     setDraftPayload(null);
 
     try {
-      const data = await fetchSatelliteImage(address.trim());
+      const data = await fetchSatelliteImage(
+        address.trim(),
+        selectedAddressPlaceId || undefined,
+      );
       const parsedSize = parseStaticMapSize(data.satelliteImageUrl);
       const parsedZoom = parseStaticMapZoom(data.satelliteImageUrl);
 
@@ -465,7 +540,7 @@ export default function EstimateModule(): JSX.Element {
     } finally {
       setLoadingSatellite(false);
     }
-  }, [address, buildPayloadFromPolygon, toast]);
+  }, [address, buildPayloadFromPolygon, selectedAddressPlaceId, toast]);
 
   const handleDetectAndSeedPolygon = useCallback(async () => {
     if (!satellite) return;
@@ -814,15 +889,49 @@ export default function EstimateModule(): JSX.Element {
             <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_auto_auto]">
               <div>
                 <Label className="text-xs text-slate-500">Property Address</Label>
-                <div className="relative mt-1">
+                <div className="relative mt-1" ref={addressAutocompleteRef}>
                   <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <Input
                     value={address}
-                    onChange={(event) => setAddress(event.target.value)}
+                    onChange={(event) => handleAddressInputChange(event.target.value)}
+                    onFocus={() => {
+                      if (addressSuggestions.length > 0) {
+                        setShowAddressSuggestions(true);
+                      }
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        setShowAddressSuggestions(false);
+                        handleLoadSatellite();
+                      }
+                    }}
                     className="pl-9"
                     placeholder="3837 Oak St, Vancouver, BC"
+                    autoComplete="off"
                   />
+
+                  {showAddressSuggestions && (
+                    <div className="absolute z-50 mt-1 max-h-64 w-full overflow-y-auto rounded-md border border-slate-200 bg-white shadow-lg">
+                      {addressSuggestions.map((suggestion, index) => (
+                        <button
+                          key={`${suggestion.placeId}-${index}`}
+                          type="button"
+                          onClick={() => handleAddressSuggestionSelect(suggestion)}
+                          className="flex w-full items-center gap-2 border-b border-slate-100 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 last:border-b-0"
+                        >
+                          <MapPin className="h-3.5 w-3.5 flex-shrink-0 text-slate-400" />
+                          <span className="truncate">{suggestion.description}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  {searchingAddress
+                    ? "Searching address suggestions..."
+                    : "Type at least 3 characters and select a suggestion for exact match."}
+                </p>
               </div>
 
               <Button type="button" variant="outline" className="mt-auto" onClick={handleLoadSatellite} disabled={loadingSatellite}>

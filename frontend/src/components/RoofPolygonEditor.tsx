@@ -152,6 +152,7 @@ export default function RoofPolygonEditor({
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [spacePressed, setSpacePressed] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
+  const [addVertexMode, setAddVertexMode] = useState(false);
   const [viewport, setViewport] = useState({
     width,
     height: clamp(Math.round((width * height) / Math.max(width, 1)), 420, 820),
@@ -241,6 +242,11 @@ export default function RoofPolygonEditor({
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.code === "Escape") {
+        setAddVertexMode(false);
+        return;
+      }
+
       if (event.code !== "Space") return;
       const target = event.target as HTMLElement | null;
       if (target && ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) return;
@@ -263,6 +269,11 @@ export default function RoofPolygonEditor({
       window.removeEventListener("keyup", handleKeyUp);
     };
   }, []);
+
+  useEffect(() => {
+    if (!readOnly) return;
+    setAddVertexMode(false);
+  }, [readOnly]);
 
   const fitScale = useMemo(() => {
     if (viewport.width <= 0 || viewport.height <= 0) return 1;
@@ -341,21 +352,33 @@ export default function RoofPolygonEditor({
       return;
     }
 
+    if (addVertexMode) {
+      setStageCursor("copy");
+      return;
+    }
+
     setStageCursor(selected ? "crosshair" : "default");
-  }, [isPanning, readOnly, selected, setStageCursor, spacePressed]);
+  }, [addVertexMode, isPanning, readOnly, selected, setStageCursor, spacePressed]);
 
   const tryInsertVertexAtPointer = useCallback(
-    (pointerX: number, pointerY: number) => {
-      if (readOnly) return;
+    (
+      pointerX: number,
+      pointerY: number,
+      options?: { force?: boolean },
+    ): boolean => {
+      if (readOnly) return false;
 
       const targetImagePoint = stageToImagePoint(pointerX, pointerY);
       const currentPoints = pointsRef.current;
       const { edgeStartIndex, distance } = findClosestEdge(currentPoints, targetImagePoint);
 
-      if (edgeStartIndex < 0) return;
+      if (edgeStartIndex < 0) return false;
 
-      const distanceThresholdInImage = EDGE_INSERT_DISTANCE_STAGE_PX / imageScale;
-      if (distance > distanceThresholdInImage) return;
+      const forceInsert = Boolean(options?.force);
+      if (!forceInsert) {
+        const distanceThresholdInImage = EDGE_INSERT_DISTANCE_STAGE_PX / imageScale;
+        if (distance > distanceThresholdInImage) return false;
+      }
 
       commitHistory(currentPoints);
       setPoints((previous) => {
@@ -363,6 +386,7 @@ export default function RoofPolygonEditor({
         next.splice(edgeStartIndex + 1, 0, targetImagePoint);
         return next;
       });
+      return true;
     },
     [commitHistory, imageScale, readOnly, stageToImagePoint],
   );
@@ -476,9 +500,10 @@ export default function RoofPolygonEditor({
       const pointer = stage.getPointerPosition();
       if (!pointer) return;
 
-      tryInsertVertexAtPointer(pointer.x, pointer.y);
+      const shouldForceInsert = addVertexMode || event.evt.shiftKey;
+      tryInsertVertexAtPointer(pointer.x, pointer.y, { force: shouldForceInsert });
     },
-    [tryInsertVertexAtPointer],
+    [addVertexMode, tryInsertVertexAtPointer],
   );
 
   const handlePolygonDoubleClick = useCallback((event: KonvaEventObject<MouseEvent>) => {
@@ -536,6 +561,15 @@ export default function RoofPolygonEditor({
       <div className="flex flex-wrap items-center gap-2 border-b bg-slate-50/80 px-4 py-3">
         <Button type="button" variant="outline" size="sm" onClick={handleUndo} disabled={historyRef.current.length === 0 || readOnly}>
           Undo
+        </Button>
+        <Button
+          type="button"
+          variant={addVertexMode ? "default" : "outline"}
+          size="sm"
+          onClick={() => setAddVertexMode((previous) => !previous)}
+          disabled={readOnly}
+        >
+          {addVertexMode ? "Add Dot: ON" : "Add Dot"}
         </Button>
         <Button type="button" variant="outline" size="sm" onClick={handleResetToAI} disabled={readOnly}>
           Reset AI Polygon
@@ -657,7 +691,11 @@ export default function RoofPolygonEditor({
                   }}
                   onMouseLeave={() => {
                     if (readOnly) return;
-                    setStageCursor(spacePressed ? "grab" : "crosshair");
+                    if (spacePressed) {
+                      setStageCursor("grab");
+                      return;
+                    }
+                    setStageCursor(addVertexMode ? "copy" : "crosshair");
                   }}
                 />
               );
@@ -674,7 +712,8 @@ export default function RoofPolygonEditor({
         <div className="pointer-events-none absolute bottom-3 left-3 rounded-md bg-black/60 px-3 py-2 text-xs text-slate-100">
           <p className="font-medium">Controls</p>
           <p>Drag blue points to correct the roof outline.</p>
-          <p>Click polygon edge to add a vertex. Right-click a point to delete.</p>
+          <p>Enable Add Dot mode to place more points quickly. Shift + click also inserts.</p>
+          <p>Right-click a point to delete it.</p>
         </div>
       </div>
 

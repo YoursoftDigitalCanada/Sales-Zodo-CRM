@@ -401,14 +401,44 @@ export class QuotesService {
         const updateData: any = { status: newStatus };
         if (action === 'accept') updateData.acceptedAt = new Date();
 
+        // ── Auto-convert lead → client on acceptance ────────────────────────
+        let convertedClientId: string | undefined;
+
+        if (action === 'accept' && quote.leadId && !quote.clientId) {
+            try {
+                // Check if lead was already converted
+                const lead = await prisma.lead.findUnique({ where: { id: quote.leadId } });
+
+                if (lead && lead.status === 'WON' && lead.convertedToClientId) {
+                    // Lead already converted — just link the quote to the existing client
+                    convertedClientId = lead.convertedToClientId;
+                    updateData.clientId = convertedClientId;
+                } else if (lead) {
+                    // Convert lead to client
+                    const { leadsService } = await import('../leads/leads.service');
+                    const result = await leadsService.convertToClient(
+                        quote.leadId,
+                        quote.tenantId,
+                        { clientType: lead.companyName ? 'COMPANY' : 'INDIVIDUAL', createContact: !!lead.companyName },
+                    );
+                    convertedClientId = result.clientId;
+                    updateData.clientId = convertedClientId;
+                }
+            } catch (convErr: any) {
+                // Log but don't fail the acceptance — the quote accept is more important
+                console.error('⚠️ Lead-to-client conversion failed during quote accept:', convErr.message);
+            }
+        }
+
         await prisma.quote.update({ where: { id: quote.id }, data: updateData });
 
         // Log & emit event
+        const conversionNote = convertedClientId ? ` (lead auto-converted to client ${convertedClientId})` : '';
         activityLogger.log({
             tenantId: quote.tenantId, entityType: 'Quote', entityId: quote.id,
             action: 'STATUS_CHANGE', module: 'quotes',
-            description: `Quote "${quote.quoteNumber}" ${newStatus.toLowerCase()} via public link`,
-            metadata: { action, newStatus },
+            description: `Quote "${quote.quoteNumber}" ${newStatus.toLowerCase()} via public link${conversionNote}`,
+            metadata: { action, newStatus, convertedClientId },
         });
 
         eventBus.emit('quote.statusChanged', {
@@ -417,13 +447,13 @@ export class QuotesService {
             quoteNumber: quote.quoteNumber,
             oldStatus: 'SENT',
             newStatus,
-            clientId: quote.clientId || undefined,
+            clientId: quote.clientId || convertedClientId || undefined,
             leadId: quote.leadId || undefined,
             total: Number(quote.total),
             items: [],
         });
 
-        return { success: true, status: newStatus, quoteNumber: quote.quoteNumber };
+        return { success: true, status: newStatus, quoteNumber: quote.quoteNumber, convertedClientId };
     }
 }
 

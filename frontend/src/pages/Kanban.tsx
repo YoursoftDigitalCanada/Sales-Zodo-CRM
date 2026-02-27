@@ -1005,7 +1005,7 @@ const KanbanPage: React.FC = () => {
   // Loading State
   if (loading) {
     return (
-      <div className="flex min-h-screen bg-[#F8FAFC]">
+      <div className="min-h-screen bg-[#F8FAFC]">
         <main
           className={cn(
             "flex-1 transition-all duration-300 flex items-center justify-center"
@@ -1027,7 +1027,7 @@ const KanbanPage: React.FC = () => {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-[#F8FAFC]">
 
       <main
         className={cn(

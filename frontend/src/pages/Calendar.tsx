@@ -2157,9 +2157,9 @@ const CalendarPage = () => {
   if (aiSuggestions.length === 0) aiSuggestions.push({ icon: CheckCircle2, text: "Schedule looks balanced. No action needed.", action: "" });
 
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-[#F8FAFC]">
 
-      <main className="flex-1 ml-0">
+      <main className="flex-1">
         {/* Header */}
         <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-[rgba(15,23,42,0.06)]">
           <div className="px-4 py-3 sm:px-6 sm:py-4 lg:px-8">

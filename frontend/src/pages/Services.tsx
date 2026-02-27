@@ -54,7 +54,7 @@ export default function Services() {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-[#F8FAFC]">
       <main className="flex-1 ml-64 p-8">
 
         {/* Header */}

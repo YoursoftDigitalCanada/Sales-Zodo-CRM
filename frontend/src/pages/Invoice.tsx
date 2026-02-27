@@ -1428,7 +1428,7 @@ const InvoicePage = () => {
   // ============================================
 
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-[#F8FAFC]">
 <main
         className={cn(
           "flex-1 transition-all duration-300"

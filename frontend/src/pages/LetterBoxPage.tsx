@@ -1373,7 +1373,7 @@ const LetterBoxPage = () => {
             <div className="flex items-center justify-between">
               {/* Title & Breadcrumb */}
               <div>
-                <div className="flex items-center gap-2 text-sm text-[#94A3B8] mb-1">
+                <div className="hidden sm:flex items-center gap-2 text-sm text-[#94A3B8] mb-1">
                   <span>Dashboard</span>
                   <ChevronRight size={14} />
                   <span className="text-[#0891B2] font-medium">Letter Box</span>

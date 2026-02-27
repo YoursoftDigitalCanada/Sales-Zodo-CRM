@@ -551,7 +551,7 @@ const AddClientPage = () => {
   // Loading State
   if (isFetching) {
     return (
-      <div className="flex min-h-screen bg-[#F8FAFC]">
+      <div className="min-h-screen bg-[#F8FAFC]">
         <main
 
         >
@@ -571,7 +571,7 @@ const AddClientPage = () => {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-[#F8FAFC]">
 
       <main
 

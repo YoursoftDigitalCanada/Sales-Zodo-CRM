@@ -984,8 +984,8 @@ export default function ServicesPage() {
   // ============================================
 
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC]">
-      <main className="flex-1 ml-0">
+    <div className="min-h-screen bg-[#F8FAFC]">
+      <main className="flex-1">
         <div className="max-w-[1600px] mx-auto p-6 lg:p-8 space-y-6">
 
           {/* ── HEADER ── */}

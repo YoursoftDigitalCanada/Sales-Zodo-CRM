@@ -1889,7 +1889,7 @@ const ClientGroupsPage = () => {
           <div className="px-8 py-6">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <div className="flex items-center gap-2 text-sm text-[#94A3B8] mb-1">
+                <div className="hidden sm:flex items-center gap-2 text-sm text-[#94A3B8] mb-1">
                   <Link to="/dashboard" className="hover:text-[#0891B2]">
                     Dashboard
                   </Link>

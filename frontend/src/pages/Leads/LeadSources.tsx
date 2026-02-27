@@ -1051,15 +1051,15 @@ const LeadSources = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-[#F8FAFC]">
 
-      <main className="flex-1 ml-0">
+      <main className="flex-1">
         {/* Header */}
         <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-[rgba(15,23,42,0.06)]">
           <div className="px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
             <div className="flex items-center justify-between">
               <div>
-                <div className="flex items-center gap-2 text-sm text-[#94A3B8] mb-1">
+                <div className="hidden sm:flex items-center gap-2 text-sm text-[#94A3B8] mb-1">
                   <Link to="/dashboard" className="hover:text-[#0891B2]">
                     Dashboard
                   </Link>
@@ -1158,7 +1158,7 @@ const LeadSources = () => {
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Search sources..."
-                      className="pl-9 h-10 w-64 rounded-md border-[rgba(15,23,42,0.06)]"
+                      className="pl-9 h-10 w-full sm:w-64 rounded-md border-[rgba(15,23,42,0.06)]"
                     />
                   </div>
 
@@ -1212,7 +1212,7 @@ const LeadSources = () => {
             {/* Content */}
             <AnimatePresence mode="wait">
               {viewMode === "grid" ? (
-                <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+                <div className="p-3 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
                   {filteredSources.length === 0 ? (
                     <div className="col-span-3 text-center py-12">
                       <Target size={48} className="text-[#475569] mx-auto mb-3" />

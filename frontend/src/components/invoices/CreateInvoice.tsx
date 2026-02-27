@@ -1420,7 +1420,7 @@ const CreateInvoicePage = () => {
                       <FilePlus size={24} className="text-[#0F172A]" />
                     </div>
                     <div>
-                      <h1 className="text-2xl font-bold text-[#0F172A]">Create Invoice</h1>
+                      <h1 className="text-lg sm:text-2xl font-bold text-[#0F172A]">Create Invoice</h1>
                       <p className="text-[#94A3B8]">Fill in the details to generate a new invoice</p>
                     </div>
                   </motion.div>

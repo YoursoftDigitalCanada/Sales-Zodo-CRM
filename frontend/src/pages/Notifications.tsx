@@ -1,7 +1,7 @@
 // src/pages/Notifications.tsx
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sidebar } from "@/components/Sidebar";
+// import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";

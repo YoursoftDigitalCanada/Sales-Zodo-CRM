@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { Sidebar } from "@/components/Sidebar";
+// import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -17,7 +17,7 @@ import {
 } from "./data";
 
 export default function ReportsPage() {
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    // const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Removed: global sidebar
     const [activeTab, setActiveTab] = useState<ReportTab>("sales");
     const { toast } = useToast();
     const location = useLocation();
@@ -111,7 +111,7 @@ export default function ReportsPage() {
 
     return (
         <div className="flex h-screen bg-[#F8FAFC]">
-            <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
+            {/* Sidebar removed: rendered globally in App.tsx */}
 
             <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
                 {/* Header */}
@@ -183,7 +183,7 @@ export default function ReportsPage() {
                                         </div>
                                         <button onClick={() => handleExport("sales-reps")} className="text-xs text-[#0891B2] font-medium hover:text-[#0891B2]/80">Export →</button>
                                     </div>
-                                    <div className="overflow-x-auto">
+                                    <div className="responsive-table">
                                         <table className="w-full text-xs">
                                             <thead>
                                                 <tr className="border-b border-[rgba(15,23,42,0.08)]">
@@ -303,7 +303,7 @@ export default function ReportsPage() {
                                         <h3 className="font-semibold text-[#0F172A]">Revenue Detail</h3>
                                         <button onClick={() => handleExport("revenue-detail")} className="text-xs text-[#0891B2] font-medium hover:text-[#0891B2]/80">Export →</button>
                                     </div>
-                                    <div className="overflow-x-auto">
+                                    <div className="responsive-table">
                                         <table className="w-full text-xs">
                                             <thead>
                                                 <tr className="border-b border-[rgba(15,23,42,0.08)]">
@@ -402,7 +402,7 @@ export default function ReportsPage() {
                                             </select>
                                         </div>
                                     </div>
-                                    <div className="overflow-x-auto">
+                                    <div className="responsive-table">
                                         <table className="w-full text-xs">
                                             <thead>
                                                 <tr className="border-b border-[rgba(15,23,42,0.08)]">

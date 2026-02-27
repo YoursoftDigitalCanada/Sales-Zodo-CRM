@@ -2,7 +2,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sidebar } from "@/components/Sidebar";
+// import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -1057,7 +1057,7 @@ const ProjectsPage = () => {
   const { toast } = useToast();
 
   // State
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  // const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Removed: global sidebar
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -1442,7 +1442,7 @@ const ProjectsPage = () => {
         {/* ============================================ */}
         {/* CONTENT */}
         {/* ============================================ */}
-        <div className="p-6 space-y-6">
+        <div className="p-4 md:p-6 space-y-4 md:space-y-6">
           {/* Page Title */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
@@ -1740,7 +1740,7 @@ const ProjectsPage = () => {
             ) : viewMode === "table" ? (
               <>
                 {/* Table View */}
-                <div className="overflow-x-auto">
+                <div className="responsive-table">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]/50">

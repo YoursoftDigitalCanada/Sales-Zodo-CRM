@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sidebar } from "@/components/Sidebar";
+// import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -36,7 +36,7 @@ const tabs: { id: TabId; label: string; icon: React.ElementType }[] = [
 // ============================================
 
 export default function IntegrationsPage() {
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    // const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Removed: global sidebar
     const [searchQuery, setSearchQuery] = useState("");
     const [activeTab, setActiveTab] = useState<TabId>("marketplace");
     const [activeCategory, setActiveCategory] = useState<IntegrationCategory>("All");
@@ -189,7 +189,7 @@ export default function IntegrationsPage() {
 
     return (
         <div className="flex h-screen bg-[#F8FAFC]">
-            <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
+            {/* Sidebar removed: rendered globally in App.tsx */}
 
             <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
                 {/* Header */}

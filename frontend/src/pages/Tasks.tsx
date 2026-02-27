@@ -5,7 +5,7 @@ import { getTasks as fetchTasksApi, createTask as createTaskApi, updateTask as u
 import api from "@/lib/axios";
 import { extractApiArray } from "@/types/api";
 import { getUsers } from "@/features/users";
-import { Sidebar } from "@/components/Sidebar";
+// import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { AiInsightBadge, getTaskInsights } from "@/components/ai/AiInsightBadge";
 import { motion, AnimatePresence, Reorder } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -1747,7 +1747,7 @@ const TaskDetailsDialog = ({
           </div>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="p-4 md:p-6 space-y-4 md:space-y-6">
           {/* Description */}
           {task.description && (
             <div>

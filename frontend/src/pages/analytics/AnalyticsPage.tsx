@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { Sidebar } from "@/components/Sidebar";
+// import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -38,7 +38,7 @@ import {
 } from "@/features/analytics";
 
 export default function AnalyticsPage() {
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    // const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Removed: global sidebar
     const [activeTab, setActiveTab] = useState<AnalyticsTab>("overview");
     const [dateRange, setDateRange] = useState("last_12_months");
     const { toast } = useToast();
@@ -108,7 +108,7 @@ export default function AnalyticsPage() {
 
     return (
         <div className="flex h-screen bg-[#F8FAFC]">
-            <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
+            {/* Sidebar removed: rendered globally in App.tsx */}
 
             <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
                 {/* Header */}
@@ -255,7 +255,7 @@ export default function AnalyticsPage() {
                                             <h3 className="font-semibold text-[#0F172A]">Activity Metrics</h3>
                                             <button onClick={handleRefresh} className="text-xs text-[#0891B2] font-medium hover:text-[#0891B2]/80">Refresh →</button>
                                         </div>
-                                        <div className="overflow-x-auto">
+                                        <div className="responsive-table">
                                             <table className="w-full text-xs">
                                                 <thead>
                                                     <tr className="border-b border-[rgba(15,23,42,0.06)]">
@@ -361,7 +361,7 @@ export default function AnalyticsPage() {
                                         <h3 className="font-semibold text-[#0F172A]">Top Deals in Pipeline</h3>
                                         <button onClick={() => handleExport("top-deals")} className="text-xs text-[#0891B2] font-medium hover:text-[#0891B2]/80">Export →</button>
                                     </div>
-                                    <div className="overflow-x-auto">
+                                    <div className="responsive-table">
                                         <table className="w-full text-xs">
                                             <thead>
                                                 <tr className="border-b border-[rgba(15,23,42,0.08)]">
@@ -487,7 +487,7 @@ export default function AnalyticsPage() {
                                         </div>
                                         <button onClick={() => handleExport("team-performance")} className="text-xs text-[#0891B2] font-medium hover:text-[#0891B2]/80">Export →</button>
                                     </div>
-                                    <div className="overflow-x-auto">
+                                    <div className="responsive-table">
                                         <table className="w-full text-xs">
                                             <thead>
                                                 <tr className="border-b border-[rgba(15,23,42,0.08)]">
@@ -582,7 +582,7 @@ export default function AnalyticsPage() {
                                         <button onClick={() => handleExport("forecast")} className="text-xs text-[#0891B2] font-medium hover:text-[#0891B2]/80">Export →</button>
                                     </div>
 
-                                    <div className="overflow-x-auto">
+                                    <div className="responsive-table">
                                         <table className="w-full text-xs">
                                             <thead>
                                                 <tr className="border-b border-[rgba(15,23,42,0.08)]">

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Sidebar } from "@/components/Sidebar";
+// import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { Plus, Scissors, DollarSign, Clock, X } from "lucide-react";
 import { getServices, createService, deleteService } from "@/features/services";
 import type { ServiceEntity } from "@/features/services";

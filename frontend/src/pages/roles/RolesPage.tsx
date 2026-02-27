@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Sidebar } from "@/components/Sidebar";
+// import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -13,7 +13,7 @@ import {
 } from "./data";
 
 export default function RolesPage() {
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    // const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Removed: global sidebar
     const [activeTab, setActiveTab] = useState<RolesTab>("roles");
     const { toast } = useToast();
 
@@ -129,7 +129,7 @@ export default function RolesPage() {
 
     return (
         <div className="flex h-screen bg-[#F8FAFC]">
-            <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
+            {/* Sidebar removed: rendered globally in App.tsx */}
 
             <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
                 {/* Header */}
@@ -278,7 +278,7 @@ export default function RolesPage() {
 
                                 {currentMatrixRole && (
                                     <div className="bg-white rounded-lg card-shadow overflow-hidden">
-                                        <div className="overflow-x-auto">
+                                        <div className="responsive-table">
                                             <table className="w-full text-xs">
                                                 <thead>
                                                     <tr className="bg-[#F8FAFC] border-b border-[rgba(15,23,42,0.08)]">
@@ -379,7 +379,7 @@ export default function RolesPage() {
                                 </div>
 
                                 <div className="bg-white rounded-lg card-shadow overflow-hidden">
-                                    <div className="overflow-x-auto">
+                                    <div className="responsive-table">
                                         <table className="w-full text-xs">
                                             <thead>
                                                 <tr className="bg-[#F8FAFC] border-b border-[rgba(15,23,42,0.08)]">
@@ -456,7 +456,7 @@ export default function RolesPage() {
                                 </div>
 
                                 <div className="bg-white rounded-lg card-shadow overflow-hidden">
-                                    <div className="overflow-x-auto">
+                                    <div className="responsive-table">
                                         <table className="w-full text-xs">
                                             <thead>
                                                 <tr className="bg-[#F8FAFC] border-b border-[rgba(15,23,42,0.08)]">

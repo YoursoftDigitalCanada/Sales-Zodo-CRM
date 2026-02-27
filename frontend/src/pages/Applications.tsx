@@ -1,7 +1,7 @@
 // src/pages/Applications.tsx
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { Sidebar } from "@/components/Sidebar";
+// import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { motion, AnimatePresence, Reorder } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -3147,7 +3147,7 @@ const ApplicationDetailsSheet = ({
 
           <ScrollArea className="flex-1">
             {/* Overview Tab */}
-            <TabsContent value="overview" className="p-6 space-y-6 m-0">
+            <TabsContent value="overview" className="p-4 md:p-6 space-y-4 md:space-y-6 m-0">
               {/* Quick Stats */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 <div className="p-4 bg-[#F8FAFC] rounded-md text-center">

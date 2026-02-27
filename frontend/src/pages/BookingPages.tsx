@@ -2,7 +2,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sidebar } from "@/components/Sidebar";
+// import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1130,7 +1130,7 @@ const BookingPagesPage = () => {
   const { toast } = useToast();
 
   // State
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  // const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Removed: global sidebar
   const [pages, setPages] = useState<BookingPage[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -1333,7 +1333,7 @@ const BookingPagesPage = () => {
         {/* ============================================ */}
         {/* CONTENT */}
         {/* ============================================ */}
-        <div className="p-6 space-y-6">
+        <div className="p-4 md:p-6 space-y-4 md:space-y-6">
           {/* Page Title */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
@@ -1418,7 +1418,7 @@ const BookingPagesPage = () => {
           ) : pages.length === 0 && users.length === 0 ? (
             <EmptyState onAdd={() => setCreateDialogOpen(true)} />
           ) : (
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
               {/* Left: Workspace Booking Page */}
               <WorkspaceBookingCard
                 pages={filteredPages}

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { AnimatePresence } from "framer-motion";
-import { Sidebar } from "@/components/Sidebar";
+// import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import {
   ChatSidebar,
   ChatWindow,
@@ -24,7 +24,7 @@ import {
 } from "@/features/chat";
 
 export default function ChatPage() {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  // const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Removed: global sidebar
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -203,7 +203,7 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-screen bg-[#F8FAFC]">
-      <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
+      {/* Sidebar removed: rendered globally in App.tsx */}
 
       {/* Main Chat Container */}
       <div className="flex-1 flex overflow-hidden">

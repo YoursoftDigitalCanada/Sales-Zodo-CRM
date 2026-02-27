@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sidebar } from "@/components/Sidebar";
+// import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -18,7 +18,7 @@ import {
 import { useLocation } from "react-router-dom";
 
 export default function SettingsPage() {
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    // const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Removed: global sidebar
     const [activeTab, setActiveTab] = useState<SettingsTab>("general");
     const { toast } = useToast();
     const location = useLocation();
@@ -131,7 +131,7 @@ export default function SettingsPage() {
 
     return (
         <div className="flex h-screen bg-[#F8FAFC]">
-            <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
+            {/* Sidebar removed: rendered globally in App.tsx */}
 
             <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
                 {/* Header */}

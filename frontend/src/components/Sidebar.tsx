@@ -1,5 +1,6 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
 import { Link, useLocation } from "react-router-dom";
+import useIsMobile from "@/hooks/useIsMobile";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -94,6 +95,8 @@ interface SidebarProps {
   collapsed?: boolean;
   setCollapsed?: (value: boolean) => void;
   forceRender?: boolean;
+  mobileOpen?: boolean;
+  setMobileOpen?: (value: boolean) => void;
 }
 
 export const SidebarSuppressionContext = createContext<boolean>(false);
@@ -528,13 +531,20 @@ export function Sidebar({
   collapsed: controlledCollapsed,
   setCollapsed: controlledSetCollapsed,
   forceRender = false,
+  mobileOpen = false,
+  setMobileOpen,
 }: SidebarProps) {
   const suppressSidebar = useContext(SidebarSuppressionContext);
   if (suppressSidebar && !forceRender) return null;
 
+  const { isMobile, isTablet } = useIsMobile();
   const [internalCollapsed, setInternalCollapsed] = useState(false);
-  const collapsed = controlledCollapsed ?? internalCollapsed;
+  const collapsed = isMobile ? false : (isTablet ? true : (controlledCollapsed ?? internalCollapsed));
   const setCollapsed = controlledSetCollapsed ?? setInternalCollapsed;
+
+  const closeMobileDrawer = useCallback(() => {
+    setMobileOpen?.(false);
+  }, [setMobileOpen]);
 
   const location = useLocation();
   const [enabledFeatures, setEnabledFeaturesState] = useState<FeatureId[]>(() =>
@@ -572,7 +582,9 @@ export function Sidebar({
         }
       }
     });
-  }, [location.pathname, visibleNavigationItems]);
+    // Auto-close mobile drawer on route change
+    closeMobileDrawer();
+  }, [location.pathname, visibleNavigationItems, closeMobileDrawer]);
 
   useEffect(() => {
     const loadUser = () => {
@@ -629,13 +641,27 @@ export function Sidebar({
     return null;
   };
 
+  // On mobile, sidebar is hidden unless mobileOpen is true
+  const sidebarVisible = isMobile ? mobileOpen : true;
+
   return (
     <>
+      {/* Mobile overlay backdrop */}
+      {isMobile && mobileOpen && (
+        <div
+          className="sidebar-overlay"
+          onClick={closeMobileDrawer}
+          aria-hidden
+        />
+      )}
+
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed top-0 left-0 h-screen z-40 transition-all duration-300 flex flex-col bg-white border-r border-[rgba(15,23,42,0.06)]",
-          collapsed ? "w-20" : "w-72"
+          "fixed top-0 left-0 h-screen z-[46] transition-all duration-300 flex flex-col bg-white border-r border-[rgba(15,23,42,0.06)]",
+          collapsed ? "w-20" : "w-72",
+          isMobile && !mobileOpen && "-translate-x-full",
+          isMobile && mobileOpen && "translate-x-0 shadow-2xl",
         )}
       >
 
@@ -1076,13 +1102,15 @@ export function Sidebar({
         )}
       </aside>
 
-      {/* Spacer */}
-      <div
-        className={cn(
-          "flex-shrink-0 transition-all duration-300",
-          collapsed ? "w-20" : "w-72"
-        )}
-      />
+      {/* Spacer — hidden on mobile, matches sidebar width on desktop */}
+      {!isMobile && (
+        <div
+          className={cn(
+            "flex-shrink-0 transition-all duration-300 hide-mobile",
+            collapsed ? "w-20" : "w-72"
+          )}
+        />
+      )}
 
       {/* Custom Scrollbar Styles */}
       <style>{`

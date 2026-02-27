@@ -12,7 +12,7 @@ import {
 } from "@/features/groups";
 import { getClients } from "@/features/clients";
 import { Loader2 } from "lucide-react";
-import { Sidebar } from "@/components/Sidebar";
+// import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1443,7 +1443,7 @@ const GroupDetailsDialog = ({
           </div>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="p-4 md:p-6 space-y-4 md:space-y-6">
           {/* Stats Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <div className="p-4 bg-[#F8FAFC] rounded-md text-center">

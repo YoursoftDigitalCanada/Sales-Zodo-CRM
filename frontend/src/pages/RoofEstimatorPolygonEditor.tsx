@@ -3,7 +3,7 @@ import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import EstimateModule from "@/components/EstimateModule";
-import { Sidebar } from "@/components/Sidebar";
+// import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { Button } from "@/components/ui/button";
 
 export default function RoofEstimatorPolygonEditor(): JSX.Element {

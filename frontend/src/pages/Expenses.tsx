@@ -1,7 +1,7 @@
 // src/pages/Expenses.tsx
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Sidebar } from "@/components/Sidebar";
+// import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1073,7 +1073,7 @@ const ExpenseDetailsDialog = ({
           </DialogHeader>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="p-4 md:p-6 space-y-4 md:space-y-6">
           {/* Header */}
           <div className="flex items-start gap-4">
             <div
@@ -2010,7 +2010,7 @@ const Expenses = () => {
                 {/* Content */}
                 <AnimatePresence mode="wait">
                   {viewMode === "list" ? (
-                    <div className="overflow-x-auto">
+                    <div className="responsive-table">
                       <Table>
                         <TableHeader>
                           <TableRow className="hover:bg-transparent">

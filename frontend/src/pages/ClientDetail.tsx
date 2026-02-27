@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Sidebar } from "@/components/Sidebar";
+// import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import {
   Breadcrumb,
   BreadcrumbItem,

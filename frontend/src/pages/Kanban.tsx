@@ -1,7 +1,7 @@
 // src/pages/KanbanPage.tsx
 import React, { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence, Reorder } from "framer-motion";
-import { Sidebar } from "@/components/Sidebar";
+// import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -754,7 +754,7 @@ const TaskDialog = ({
 
 const KanbanPage: React.FC = () => {
   // State
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  // const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Removed: global sidebar
   const [columns, setColumns] = useState<KanbanColumn[]>(defaultColumns);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -1135,7 +1135,7 @@ const KanbanPage: React.FC = () => {
         {/* ============================================ */}
         {/* MAIN CONTENT */}
         {/* ============================================ */}
-        <div className="p-6 space-y-6">
+        <div className="p-4 md:p-6 space-y-4 md:space-y-6">
           {/* Page Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}

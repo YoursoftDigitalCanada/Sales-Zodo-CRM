@@ -206,7 +206,7 @@ export default function PublicQuoteView() {
                         {/* Line Items */}
                         <div className="mb-8">
                             <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-3">Line Items</h3>
-                            <div className="overflow-x-auto">
+                            <div className="responsive-table">
                                 <table className="w-full text-sm">
                                     <thead>
                                         <tr className="border-b-2 border-slate-100">

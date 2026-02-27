@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sidebar } from "@/components/Sidebar";
+// import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -657,7 +657,7 @@ const AddProjectPage = () => {
   const { toast } = useToast();
 
   // Sidebar
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  // const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Removed: global sidebar
   const [user, setUser] = useState<User | null>(null);
 
   // Form State

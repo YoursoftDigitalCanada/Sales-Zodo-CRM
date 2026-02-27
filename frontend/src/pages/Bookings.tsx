@@ -2,7 +2,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sidebar } from "@/components/Sidebar";
+// import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1336,7 +1336,7 @@ const BookingsPage = () => {
   const { toast } = useToast();
 
   // State
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  // const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Removed: global sidebar
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -1776,7 +1776,7 @@ const BookingsPage = () => {
         {/* ============================================ */}
         {/* CONTENT */}
         {/* ============================================ */}
-        <div className="p-6 space-y-6">
+        <div className="p-4 md:p-6 space-y-4 md:space-y-6">
           {/* Page Title */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
@@ -2027,7 +2027,7 @@ const BookingsPage = () => {
                 ) : viewMode === "table" ? (
                   <>
                     {/* Table View */}
-                    <div className="overflow-x-auto">
+                    <div className="responsive-table">
                       <table className="w-full">
                         <thead>
                           <tr className="border-b border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]/50">

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { getLeadSources, getLeadSourceStats, createLeadSource, updateLeadSource, deleteLeadSource, toggleLeadSourceActive } from "@/features/leads";
-import { Sidebar } from "@/components/Sidebar";
+// import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1247,7 +1247,7 @@ const LeadSources = () => {
                   )}
                 </div>
               ) : (
-                <div className="overflow-x-auto">
+                <div className="responsive-table">
                   <Table>
                     <TableHeader>
                       <TableRow className="hover:bg-transparent">

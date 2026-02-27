@@ -1,7 +1,7 @@
 // src/pages/Ecommerce.tsx
 
 import React, { useState, useMemo, useEffect, useCallback } from "react";
-import { Sidebar } from "@/components/Sidebar";
+// import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1663,7 +1663,7 @@ const OrderDetailsDialog = ({
           </DialogHeader>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="p-4 md:p-6 space-y-4 md:space-y-6">
           {/* Order Status Timeline */}
           {order.status !== "cancelled" && order.status !== "refunded" && (
             <div className="bg-[#F8FAFC] rounded-md p-5">
@@ -1705,7 +1705,7 @@ const OrderDetailsDialog = ({
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             {/* Customer Info */}
             <div className="space-y-4">
               <h4 className="font-semibold text-[#0F172A]">Customer Information</h4>

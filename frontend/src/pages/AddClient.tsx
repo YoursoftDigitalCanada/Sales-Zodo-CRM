@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sidebar } from "@/components/Sidebar";
+// import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -433,7 +433,7 @@ const AddClientPage = () => {
   const isEditMode = Boolean(id);
 
   // State
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  // const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Removed: global sidebar
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -668,7 +668,7 @@ const AddClientPage = () => {
         {/* ============================================ */}
         {/* MAIN CONTENT */}
         {/* ============================================ */}
-        <div className="p-6 space-y-6 max-w-7xl mx-auto">
+        <div className="p-4 md:p-6 space-y-4 md:space-y-6 max-w-7xl mx-auto">
           {/* Page Header Banner */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -763,7 +763,7 @@ const AddClientPage = () => {
                     subtitle="Client's primary details"
                     color="teal"
                   />
-                  <div className="p-6 space-y-6">
+                  <div className="p-4 md:p-6 space-y-4 md:space-y-6">
                     {/* Photo Upload */}
                     <div className="flex items-center gap-6">
                       <div className="relative group">

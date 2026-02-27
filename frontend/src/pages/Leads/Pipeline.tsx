@@ -4,7 +4,7 @@ import React, { useState, useCallback, useEffect, useRef } from "react";
 import { getLeads, deleteLead, updateLeadStatus, convertLead } from "@/features/leads";
 import { createCalendarEvent } from "@/features/calendar";
 import { autocompleteAddress } from "@/features/roof-estimator/services/roof-estimator-service";
-import { Sidebar } from "@/components/Sidebar";
+// import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

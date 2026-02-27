@@ -2,7 +2,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sidebar } from "@/components/Sidebar";
+// import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1204,7 +1204,7 @@ const QuotesPage = () => {
           ) : viewMode === "list" ? (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden">
-              <div className="overflow-x-auto">
+              <div className="responsive-table">
                 <table className="w-full">
                   <thead>
                     <tr className="bg-[#F8FAFC] border-b border-[rgba(15,23,42,0.06)]">

@@ -1,7 +1,7 @@
 // src/pages/UsersPage.tsx
 
 import React, { useEffect, useState, useMemo } from "react";
-import { Sidebar } from "@/components/Sidebar";
+// import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -948,7 +948,7 @@ const UserFormDialog = ({
           </DialogHeader>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="p-4 md:p-6 space-y-4 md:space-y-6">
           {/* Avatar Upload */}
           <div className="flex items-center gap-6">
             <div className="relative">

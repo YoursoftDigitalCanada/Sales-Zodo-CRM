@@ -283,21 +283,19 @@ const Index = () => {
   // RENDER
   // ============================================
   return (
-    <div className={cn("flex min-h-screen w-full bg-[#F8FAFC]")}>
-      <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
-
+    <div className={cn("min-h-screen w-full bg-[#F8FAFC]")}>
       <main>
         {/* ============= HEADER ============= */}
         <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-[rgba(15,23,42,0.06)]">
-          <div className="flex h-12 items-center justify-between px-5">
-            <div className="flex items-center gap-6">
-              <div className="relative">
+          <div className="flex h-12 items-center justify-between px-3 md:px-5">
+            <div className="flex items-center gap-4 md:gap-6 flex-1 min-w-0">
+              <div className="relative flex-1 max-w-xs md:max-w-none md:flex-none md:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#475569]" />
-                <input type="text" placeholder="Search anything..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onClick={() => setShowSearchModal(true)} className="w-64 h-8 pl-9 pr-14 rounded-md bg-white border border-[rgba(15,23,42,0.06)] text-xs text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-1 focus:ring-[#22D3EE]/30 transition-colors" />
-                <kbd className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-0.5 rounded bg-[#F1F5F9] text-[10px] text-[#475569] border border-[rgba(15,23,42,0.06)] font-mono flex items-center gap-1"><Command size={10} />K</kbd>
+                <input type="text" placeholder="Search anything..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onClick={() => setShowSearchModal(true)} className="w-full h-8 pl-9 pr-4 md:pr-14 rounded-md bg-white border border-[rgba(15,23,42,0.06)] text-xs text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-1 focus:ring-[#22D3EE]/30 transition-colors" />
+                <kbd className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-0.5 rounded bg-[#F1F5F9] text-[10px] text-[#475569] border border-[rgba(15,23,42,0.06)] font-mono hidden md:flex items-center gap-1"><Command size={10} />K</kbd>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
               <button onClick={() => setShowCopilot(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0891B2]/8 text-[#0891B2] text-xs font-medium rounded-md hover:bg-[#0891B2]/14 transition-colors border border-[#0891B2]/15">
                 <Sparkles size={14} /><span className="hidden sm:inline">Ask Experts</span>
               </button>
@@ -334,7 +332,7 @@ const Index = () => {
                   )}
                 </AnimatePresence>
               </div>
-              <div ref={profileRef} className="relative flex items-center gap-3 pl-3 ml-3 border-l border-[rgba(15,23,42,0.06)]">
+              <div ref={profileRef} className="relative flex items-center gap-3 pl-3 ml-3 border-l border-[rgba(15,23,42,0.06)] hidden md:flex">
                 <div className="text-right hidden sm:block"><p className="text-sm font-semibold text-[#0F172A]">{user ? `${user.firstName} ${user.lastName}` : "Guest User"}</p><p className="text-xs text-[#94A3B8]">{user?.role || "Administrator"}</p></div>
                 <motion.button whileHover={{ scale: 1.05 }} onClick={() => setShowProfileMenu(!showProfileMenu)} className="relative cursor-pointer flex items-center gap-2">
                   <div className="h-8 w-8 rounded-md bg-[#0891B2] flex items-center justify-center text-white text-xs font-bold">{user ? (user.firstName[0] + user.lastName[0]).toUpperCase() : "GU"}</div>
@@ -360,10 +358,10 @@ const Index = () => {
         </header>
 
         {/* ============= MAIN CONTENT ============= */}
-        <div className="p-6 space-y-6 page-enter">
+        <div className="p-4 md:p-6 space-y-4 md:space-y-6 page-enter">
 
           {/* ===== GREETING + AI OVERVIEW ===== */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <h1 className="text-xl font-bold text-[#0F172A]">{getGreeting()}, {user ? user.firstName : "there"} 👋</h1>
               <p className="text-xs text-[#94A3B8] mt-0.5">{currentTime.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</p>
@@ -405,7 +403,7 @@ const Index = () => {
                 <span className="ai-tag">AI</span>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 divide-x divide-[rgba(15,23,42,0.06)]">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 divide-x divide-y md:divide-y-0 divide-[rgba(15,23,42,0.06)]">
               <div className="px-5 py-4">
                 <div className="flex items-center gap-1.5 mb-2"><Activity size={12} className="text-[#94A3B8]" /><span className="metric-label">Pipeline Health</span></div>
                 <div className="flex items-center gap-2 mb-1"><span className="text-lg font-bold text-[#0F172A] tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>{stalledLeads.length > 0 ? "Medium Risk" : "Healthy"}</span></div>
@@ -451,7 +449,7 @@ const Index = () => {
           </div>
 
           {/* ===== QUICK ACTIONS ===== */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
             {quickActions.map((action, index) => {
               const colors = getColorClasses(action.color); return (
                 <motion.button key={index} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 * index }} whileHover={{ scale: 1.01, y: -2 }} whileTap={{ scale: 0.99 }} onClick={() => handleQuickAction(action.path)} className="flex items-center gap-4 p-4 bg-white rounded-md card-shadow hover:shadow-md transition-all group">
@@ -464,7 +462,7 @@ const Index = () => {
           </div>
 
           {/* ===== STAT CARDS ===== */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 stagger-enter">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 stagger-enter">
             <StatCard title="Active Projects" value={stats.projectsCount} subtitle="Total projects" trend={0} comparison="Current" icon={FolderKanban} color="cyan" isLoading={isLoading} lastUpdated="Updated just now" aiInsight={stats.projectsCount > 0 ? "Delivery pace on track" : undefined} />
             <StatCard title="Total Earnings" value={`$${stats.earnings.toLocaleString()}`} subtitle="Paid invoices" trend={0} comparison="Current" icon={DollarSign} color="orange" isLoading={isLoading} lastUpdated="Updated just now" aiInsight={stats.earnings > 0 ? "From paid invoices" : undefined} />
             <StatCard title="Total Clients" value={stats.clientsCount} subtitle="Active clients" trend={0} comparison="Current" icon={Users} color="green" isLoading={isLoading} lastUpdated="Updated just now" aiInsight={stats.clientsCount > 0 ? `${stats.clientsCount} active` : undefined} />
@@ -472,7 +470,7 @@ const Index = () => {
           </div>
 
           {/* ===== LEADS & INVOICES ROW ===== */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
 
             {/* Leads Tracker */}
             <div className="bg-white rounded-lg card-shadow overflow-hidden">
@@ -558,9 +556,9 @@ const Index = () => {
                 <button onClick={() => navigate("/projects")} className="text-xs text-[#0891B2] font-medium hover:underline flex items-center gap-1">View All <ArrowUpRight size={12} /></button>
               </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead><tr className="bg-[#F8FAFC] border-b border-[rgba(15,23,42,0.08)]">
+            <div className="responsive-table">
+              <table className="w-full text-xs min-w-[700px]">
+                <thead className="sticky-thead"><tr className="bg-[#F8FAFC] border-b border-[rgba(15,23,42,0.08)]">
                   <th className="text-left py-3 px-5 text-[#94A3B8] font-medium">Project</th>
                   <th className="text-left py-3 px-5 text-[#94A3B8] font-medium">Client</th>
                   <th className="text-center py-3 px-5 text-[#94A3B8] font-medium">Progress</th>
@@ -594,13 +592,13 @@ const Index = () => {
           </div>
 
           {/* ===== CHARTS & CALENDAR ===== */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="lg:col-span-2"><ProjectsChart /></motion.div>
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}><CalendarWidget /></motion.div>
           </div>
 
           {/* ===== ACTIVITY & PROJECTS TABLE ===== */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="bg-white border border-[rgba(15,23,42,0.06)] rounded-md overflow-hidden">
               <div className="p-6 border-b border-[rgba(15,23,42,0.06)]">
                 <div className="flex items-center justify-between">
@@ -627,7 +625,7 @@ const Index = () => {
 
         {/* Footer */}
         <footer className="px-6 py-4 bg-[#F8FAFC] border-b border-[rgba(15,23,42,0.06)]">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-[#94A3B8]">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 md:gap-4 text-xs md:text-sm text-[#94A3B8]">
             <div className="flex items-center gap-2"><span>© {new Date().getFullYear()}</span><span className="font-semibold text-[#0F172A]">ZODO</span><span className="text-[#0891B2] font-semibold">CRM</span><span>• All rights reserved</span></div>
             <div className="flex items-center gap-4"><a href="#" className="hover:text-[#0891B2] transition-colors">Privacy</a><a href="#" className="hover:text-[#0891B2] transition-colors">Terms</a><a href="#" className="hover:text-[#0891B2] transition-colors">Support</a></div>
           </div>
@@ -670,6 +668,7 @@ const Index = () => {
       {/* AI Copilot Panel */}
       <AiCopilotPanel isOpen={showCopilot} onClose={() => setShowCopilot(false)} />
     </div>
+
   );
 };
 

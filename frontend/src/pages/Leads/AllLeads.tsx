@@ -3,7 +3,7 @@ import { getLeads, createLead, updateLead, deleteLead, updateLeadStatus } from "
 import { createCalendarEvent } from "@/features/calendar";
 import { autocompleteAddress } from "@/features/roof-estimator/services/roof-estimator-service";
 import { getEmployees } from "@/features/users";
-import { Sidebar } from "@/components/Sidebar";
+// import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { AiInsightBadge, getLeadInsights } from "@/components/ai/AiInsightBadge";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -132,8 +132,6 @@ import {
   ThermometerSun,
   Snowflake,
   Video,
-  MapPin,
-  Clock,
   type LucideIcon,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
@@ -1267,7 +1265,7 @@ const LeadDetailsDialog = ({
           </div>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="p-4 md:p-6 space-y-4 md:space-y-6">
           {/* Score & Value */}
           <div className="grid grid-cols-2 gap-4">
             <div className="p-4 bg-[#F8FAFC] rounded-md">
@@ -2575,7 +2573,7 @@ const AllLeads = () => {
             {/* Content */}
             <AnimatePresence mode="wait">
               {viewMode === "list" ? (
-                <div className="overflow-x-auto">
+                <div className="responsive-table">
                   <Table>
                     <TableHeader>
                       <TableRow className="hover:bg-transparent">

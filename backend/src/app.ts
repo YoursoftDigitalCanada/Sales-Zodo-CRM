@@ -31,6 +31,12 @@ export function createApp(): Application {
   const app = express();
 
   // =========================================================================
+  // TRUST PROXY (required for correct client IP behind Nginx/reverse proxy)
+  // Without this, req.ip returns the proxy's IP → rate limiting blocks ALL users
+  // =========================================================================
+  app.set('trust proxy', 1);
+
+  // =========================================================================
   // SECURITY MIDDLEWARE
   // =========================================================================
 

@@ -4,6 +4,20 @@ import { config } from '../../config';
 import { TooManyRequestsError } from '../errors/HttpErrors';
 
 /**
+ * Extract real client IP from request.
+ * Handles reverse proxies (Nginx) by reading X-Forwarded-For header.
+ */
+function getClientIp(req: Request): string {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (forwarded) {
+    // X-Forwarded-For can be comma-separated: "client, proxy1, proxy2"
+    const first = Array.isArray(forwarded) ? forwarded[0] : forwarded.split(',')[0];
+    return first.trim();
+  }
+  return req.ip || req.socket?.remoteAddress || 'unknown';
+}
+
+/**
  * Default rate limiter configuration
  */
 export const defaultRateLimiter = rateLimit({
@@ -20,8 +34,8 @@ export const defaultRateLimiter = rateLimit({
     });
   },
   keyGenerator: (req: Request) => {
-    // Use user ID if authenticated, otherwise use IP
-    return req.user?.userId || req.ip || 'anonymous';
+    // Use user ID if authenticated, otherwise use real client IP
+    return req.user?.userId || getClientIp(req);
   },
   skip: (req: Request) => {
     // Skip rate limiting for health checks
@@ -47,7 +61,7 @@ export function rateLimiter(options: Partial<Options> = {}) {
       });
     },
     keyGenerator: (req: Request) => {
-      return req.user?.userId || req.ip || 'anonymous';
+      return req.user?.userId || getClientIp(req);
     },
     ...options,
   });
@@ -58,7 +72,7 @@ export function rateLimiter(options: Partial<Options> = {}) {
  */
 export const strictRateLimiter = rateLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 attempts
+  max: 15, // 15 attempts per IP
 });
 
 /**

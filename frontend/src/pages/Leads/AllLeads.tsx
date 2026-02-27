@@ -2247,29 +2247,29 @@ const AllLeads = () => {
   const totalValue = leads.reduce((acc, l) => acc + l.value, 0);
 
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-[#F8FAFC]">
 
-      <main className="flex-1 ml-0">
+      <main className="flex-1">
         {/* Header */}
         <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-[rgba(15,23,42,0.06)]">
           <div className="px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
             <div className="flex items-center justify-between">
               <div>
-                <div className="flex items-center gap-2 text-sm text-[#94A3B8] mb-1">
+                <div className="hidden sm:flex items-center gap-2 text-sm text-[#94A3B8] mb-1">
                   <Link to="/dashboard" className="hover:text-[#0891B2]">
                     Dashboard
                   </Link>
                   <ChevronRight size={14} />
                   <span className="text-[#0F172A] font-medium">Leads</span>
                 </div>
-                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">All Leads</h1>
+                <h1 className="text-lg sm:text-2xl font-bold text-[#0F172A]">All Leads</h1>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="outline" size="icon" className="rounded-md">
+                      <Button variant="outline" size="icon" className="rounded-md hidden sm:inline-flex">
                         <Upload size={18} />
                       </Button>
                     </TooltipTrigger>
@@ -2277,7 +2277,7 @@ const AllLeads = () => {
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="outline" size="icon" className="rounded-md">
+                      <Button variant="outline" size="icon" className="rounded-md hidden sm:inline-flex">
                         <Download size={18} />
                       </Button>
                     </TooltipTrigger>
@@ -2291,9 +2291,11 @@ const AllLeads = () => {
                     setIsFormOpen(true);
                   }}
                   className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md gap-2"
+                  size="sm"
                 >
-                  <UserPlus size={18} />
-                  Add Lead
+                  <UserPlus size={16} />
+                  <span className="hidden sm:inline">Add Lead</span>
+                  <span className="sm:hidden">Add</span>
                 </Button>
               </div>
             </div>
@@ -2302,7 +2304,7 @@ const AllLeads = () => {
 
         <div className="p-4 sm:p-6 lg:p-8">
           {/* Stats Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4 lg:gap-4 lg:gap-6 mb-4 lg:mb-8">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4 lg:gap-6 mb-4 lg:mb-8">
             <StatCard
               title="Total Leads"
               value={leads.length}
@@ -2351,36 +2353,38 @@ const AllLeads = () => {
             className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden"
           >
             {/* Tabs & Filters */}
-            <div className="p-4 border-b border-[rgba(15,23,42,0.06)]">
+            <div className="p-3 sm:p-4 border-b border-[rgba(15,23,42,0.06)]">
               <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <div className="flex items-center justify-between mb-4">
-                  <TabsList className="bg-white/5 rounded-md p-1">
-                    <TabsTrigger value="all" className="rounded-md data-[state=active]:bg-white">
-                      All ({leads.length})
-                    </TabsTrigger>
-                    <TabsTrigger value="new" className="rounded-md data-[state=active]:bg-white">
-                      New ({newCount})
-                    </TabsTrigger>
-                    <TabsTrigger value="qualified" className="rounded-md data-[state=active]:bg-white">
-                      Qualified ({qualifiedCount})
-                    </TabsTrigger>
-                    <TabsTrigger value="hot" className="rounded-md data-[state=active]:bg-white">
-                      <Flame size={14} className="mr-1 text-red-500" />
-                      Hot ({hotCount})
-                    </TabsTrigger>
-                    <TabsTrigger value="won" className="rounded-md data-[state=active]:bg-white">
-                      Won ({wonCount})
-                    </TabsTrigger>
-                    <TabsTrigger value="lost" className="rounded-md data-[state=active]:bg-white">
-                      Lost ({lostCount})
-                    </TabsTrigger>
-                  </TabsList>
+                <div className="flex items-center justify-between mb-3 sm:mb-4 gap-2">
+                  <div className="overflow-x-auto -mx-1 px-1 flex-1 min-w-0">
+                    <TabsList className="bg-white/5 rounded-md p-1 inline-flex w-max">
+                      <TabsTrigger value="all" className="rounded-md data-[state=active]:bg-white text-xs sm:text-sm px-2 sm:px-3">
+                        All ({leads.length})
+                      </TabsTrigger>
+                      <TabsTrigger value="new" className="rounded-md data-[state=active]:bg-white text-xs sm:text-sm px-2 sm:px-3">
+                        New ({newCount})
+                      </TabsTrigger>
+                      <TabsTrigger value="qualified" className="rounded-md data-[state=active]:bg-white text-xs sm:text-sm px-2 sm:px-3">
+                        <span className="hidden sm:inline">Qualified</span><span className="sm:hidden">Qual</span> ({qualifiedCount})
+                      </TabsTrigger>
+                      <TabsTrigger value="hot" className="rounded-md data-[state=active]:bg-white text-xs sm:text-sm px-2 sm:px-3">
+                        <Flame size={14} className="mr-1 text-red-500" />
+                        Hot ({hotCount})
+                      </TabsTrigger>
+                      <TabsTrigger value="won" className="rounded-md data-[state=active]:bg-white text-xs sm:text-sm px-2 sm:px-3">
+                        Won ({wonCount})
+                      </TabsTrigger>
+                      <TabsTrigger value="lost" className="rounded-md data-[state=active]:bg-white text-xs sm:text-sm px-2 sm:px-3">
+                        Lost ({lostCount})
+                      </TabsTrigger>
+                    </TabsList>
+                  </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                     <Button
                       variant={viewMode === "list" ? "secondary" : "ghost"}
                       size="icon"
-                      className="rounded-md h-9 w-9"
+                      className="rounded-md h-8 w-8 sm:h-9 sm:w-9"
                       onClick={() => setViewMode("list")}
                     >
                       <List size={16} />
@@ -2388,7 +2392,7 @@ const AllLeads = () => {
                     <Button
                       variant={viewMode === "grid" ? "secondary" : "ghost"}
                       size="icon"
-                      className="rounded-md h-9 w-9"
+                      className="rounded-md h-8 w-8 sm:h-9 sm:w-9"
                       onClick={() => setViewMode("grid")}
                     >
                       <LayoutGrid size={16} />
@@ -2397,130 +2401,133 @@ const AllLeads = () => {
                 </div>
 
                 {/* Search & Filters */}
-                <div className="flex items-center gap-3">
-                  <div className="relative flex-1 max-w-md">
+                {/* Search & Filters — stacked on mobile, row on desktop */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                  <div className="relative flex-1 sm:max-w-md">
                     <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                     <Input
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Search leads..."
-                      className="pl-9 h-10 rounded-md border-[rgba(15,23,42,0.06)]"
+                      className="pl-9 h-10 rounded-md border-[rgba(15,23,42,0.06)] w-full"
                     />
                   </div>
 
-                  <Select value={selectedSource} onValueChange={setSelectedSource}>
-                    <SelectTrigger className="w-[150px] h-10 rounded-md border-[rgba(15,23,42,0.06)]">
-                      <SelectValue placeholder="Source" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-md">
-                      <SelectItem value="all" className="rounded-md">All Sources</SelectItem>
-                      {leadSources.map((source) => (
-                        <SelectItem key={source.id} value={source.id} className="rounded-md">
+                  <div className="flex items-center gap-2 overflow-x-auto">
+                    <Select value={selectedSource} onValueChange={setSelectedSource}>
+                      <SelectTrigger className="w-[120px] sm:w-[150px] h-9 sm:h-10 rounded-md border-[rgba(15,23,42,0.06)] text-xs sm:text-sm flex-shrink-0">
+                        <SelectValue placeholder="Source" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-md">
+                        <SelectItem value="all" className="rounded-md">All Sources</SelectItem>
+                        {leadSources.map((source) => (
+                          <SelectItem key={source.id} value={source.id} className="rounded-md">
+                            <div className="flex items-center gap-2">
+                              <source.icon size={14} style={{ color: source.color }} />
+                              {source.name}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                      <SelectTrigger className="w-[110px] sm:w-[140px] h-9 sm:h-10 rounded-md border-[rgba(15,23,42,0.06)] text-xs sm:text-sm flex-shrink-0">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-md">
+                        <SelectItem value="all" className="rounded-md">All Statuses</SelectItem>
+                        {leadStatuses.map((status) => (
+                          <SelectItem key={status.id} value={status.id} className="rounded-md">
+                            <div className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: status.color }} />
+                              {status.name}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Select value={selectedTemperature} onValueChange={setSelectedTemperature}>
+                      <SelectTrigger className="hidden sm:flex w-[130px] h-10 rounded-md border-[rgba(15,23,42,0.06)]">
+                        <SelectValue placeholder="Temperature" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-md">
+                        <SelectItem value="all" className="rounded-md">All</SelectItem>
+                        <SelectItem value="hot" className="rounded-md">
                           <div className="flex items-center gap-2">
-                            <source.icon size={14} style={{ color: source.color }} />
-                            {source.name}
+                            <Flame size={14} className="text-red-500" /> Hot
                           </div>
                         </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                    <SelectTrigger className="w-[140px] h-10 rounded-md border-[rgba(15,23,42,0.06)]">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-md">
-                      <SelectItem value="all" className="rounded-md">All Statuses</SelectItem>
-                      {leadStatuses.map((status) => (
-                        <SelectItem key={status.id} value={status.id} className="rounded-md">
+                        <SelectItem value="warm" className="rounded-md">
                           <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: status.color }} />
-                            {status.name}
+                            <ThermometerSun size={14} className="text-yellow-500" /> Warm
                           </div>
                         </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                        <SelectItem value="cold" className="rounded-md">
+                          <div className="flex items-center gap-2">
+                            <Snowflake size={14} className="text-blue-500" /> Cold
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
 
-                  <Select value={selectedTemperature} onValueChange={setSelectedTemperature}>
-                    <SelectTrigger className="w-[130px] h-10 rounded-md border-[rgba(15,23,42,0.06)]">
-                      <SelectValue placeholder="Temperature" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-md">
-                      <SelectItem value="all" className="rounded-md">All</SelectItem>
-                      <SelectItem value="hot" className="rounded-md">
-                        <div className="flex items-center gap-2">
-                          <Flame size={14} className="text-red-500" /> Hot
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="warm" className="rounded-md">
-                        <div className="flex items-center gap-2">
-                          <ThermometerSun size={14} className="text-yellow-500" /> Warm
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="cold" className="rounded-md">
-                        <div className="flex items-center gap-2">
-                          <Snowflake size={14} className="text-blue-500" /> Cold
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="rounded-md gap-2">
-                        <Filter size={16} />
-                        Sort
-                        {sortOrder === "asc" ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48 rounded-md">
-                      <DropdownMenuItem
-                        onClick={() => {
-                          setSortBy("date");
-                          setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
-                        }}
-                        className="rounded-md"
-                      >
-                        <Calendar size={14} className="mr-2" />
-                        Date Added
-                        {sortBy === "date" && <Check size={14} className="ml-auto text-[#0891B2]" />}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => {
-                          setSortBy("score");
-                          setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
-                        }}
-                        className="rounded-md"
-                      >
-                        <Target size={14} className="mr-2" />
-                        Lead Score
-                        {sortBy === "score" && <Check size={14} className="ml-auto text-[#0891B2]" />}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => {
-                          setSortBy("value");
-                          setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
-                        }}
-                        className="rounded-md"
-                      >
-                        <DollarSign size={14} className="mr-2" />
-                        Value
-                        {sortBy === "value" && <Check size={14} className="ml-auto text-[#0891B2]" />}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => {
-                          setSortBy("name");
-                          setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
-                        }}
-                        className="rounded-md"
-                      >
-                        <User size={14} className="mr-2" />
-                        Name
-                        {sortBy === "name" && <Check size={14} className="ml-auto text-[#0891B2]" />}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="rounded-md gap-1 sm:gap-2 h-9 sm:h-10 text-xs sm:text-sm flex-shrink-0">
+                          <Filter size={14} />
+                          <span className="hidden sm:inline">Sort</span>
+                          {sortOrder === "asc" ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48 rounded-md">
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setSortBy("date");
+                            setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+                          }}
+                          className="rounded-md"
+                        >
+                          <Calendar size={14} className="mr-2" />
+                          Date Added
+                          {sortBy === "date" && <Check size={14} className="ml-auto text-[#0891B2]" />}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setSortBy("score");
+                            setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+                          }}
+                          className="rounded-md"
+                        >
+                          <Target size={14} className="mr-2" />
+                          Lead Score
+                          {sortBy === "score" && <Check size={14} className="ml-auto text-[#0891B2]" />}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setSortBy("value");
+                            setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+                          }}
+                          className="rounded-md"
+                        >
+                          <DollarSign size={14} className="mr-2" />
+                          Value
+                          {sortBy === "value" && <Check size={14} className="ml-auto text-[#0891B2]" />}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setSortBy("name");
+                            setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+                          }}
+                          className="rounded-md"
+                        >
+                          <User size={14} className="mr-2" />
+                          Name
+                          {sortBy === "name" && <Check size={14} className="ml-auto text-[#0891B2]" />}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
 
                 {/* Bulk Actions */}
@@ -2528,7 +2535,7 @@ const AllLeads = () => {
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-3 mt-4 p-3 bg-[#0891B2]/10 rounded-md"
+                    className="flex flex-wrap items-center gap-2 sm:gap-3 mt-3 sm:mt-4 p-2 sm:p-3 bg-[#0891B2]/10 rounded-md"
                   >
                     <span className="text-sm font-medium text-[#0F172A]">
                       {selectedLeads.size} selected
@@ -2632,7 +2639,7 @@ const AllLeads = () => {
                   </Table>
                 </div>
               ) : (
-                <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+                <div className="p-3 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
                   {filteredLeads.length === 0 ? (
                     <div className="col-span-3 text-center py-12">
                       <Target size={48} className="text-[#475569] mx-auto mb-3" />

@@ -948,7 +948,7 @@ const Pipeline = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-[#F8FAFC] overflow-x-hidden">
 
       <main className="flex-1 ml-0">
         {/* Header */}

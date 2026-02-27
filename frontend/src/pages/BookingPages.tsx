@@ -1130,8 +1130,7 @@ const BookingPagesPage = () => {
   const { toast } = useToast();
 
   // State
-  // const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Removed: global sidebar
-  const [pages, setPages] = useState<BookingPage[]>([]);
+    const [pages, setPages] = useState<BookingPage[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -1294,8 +1293,7 @@ const BookingPagesPage = () => {
     <div className="flex min-h-screen bg-[#F8FAFC]">
 <main
         className={cn(
-          "flex-1 transition-all duration-300",
-          sidebarCollapsed ? "ml-[80px]" : "ml-[280px]"
+          "flex-1 transition-all duration-300"
         )}
       >
         {/* ============================================ */}

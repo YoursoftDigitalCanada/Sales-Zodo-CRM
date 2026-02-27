@@ -1937,7 +1937,6 @@ export default function UsersPage() {
   const { toast } = useToast();
 
   // State
-  const [collapsed, setCollapsed] = useState(false);
   const [users, setUsers] = useState<User[]>(initialUsers);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("users");
@@ -2270,8 +2269,7 @@ export default function UsersPage() {
 
       <main
         className={cn(
-          "flex-1 transition-all duration-300",
-          collapsed ? "ml-0" : "ml-30"
+          "flex-1 transition-all duration-300"
         )}
       >
         {/* Header */}

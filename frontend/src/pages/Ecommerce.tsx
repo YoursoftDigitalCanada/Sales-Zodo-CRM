@@ -1893,7 +1893,6 @@ const EcommercePage = () => {
   const { toast } = useToast();
 
   // State
-  const [collapsed, setCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [searchTerm, setSearchTerm] = useState("");
@@ -2064,8 +2063,7 @@ const EcommercePage = () => {
 
       <main
         className={cn(
-          "flex-1 transition-all duration-300",
-          collapsed ? "ml-0" : "ml-30"
+          "flex-1 transition-all duration-300"
         )}
       >
         {/* Header */}

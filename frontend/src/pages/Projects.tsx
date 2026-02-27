@@ -1057,8 +1057,7 @@ const ProjectsPage = () => {
   const { toast } = useToast();
 
   // State
-  // const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Removed: global sidebar
-  const [projects, setProjects] = useState<Project[]>([]);
+    const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"table" | "grid" | "kanban">("table");
@@ -1403,8 +1402,7 @@ const ProjectsPage = () => {
     <div className="flex min-h-screen bg-[#F8FAFC]">
 <main
         className={cn(
-          "flex-1 transition-all duration-300",
-          sidebarCollapsed ? "ml-0" : "ml-30"
+          "flex-1 transition-all duration-300"
         )}
       >
         {/* ============================================ */}

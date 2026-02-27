@@ -1336,8 +1336,7 @@ const BookingsPage = () => {
   const { toast } = useToast();
 
   // State
-  // const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Removed: global sidebar
-  const [bookings, setBookings] = useState<Booking[]>([]);
+    const [bookings, setBookings] = useState<Booking[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -1737,8 +1736,7 @@ const BookingsPage = () => {
     <div className="flex min-h-screen bg-[#F8FAFC]">
 <main
         className={cn(
-          "flex-1 transition-all duration-300",
-          sidebarCollapsed ? "ml-0" : "ml-30"
+          "flex-1 transition-all duration-300"
         )}
       >
         {/* ============================================ */}

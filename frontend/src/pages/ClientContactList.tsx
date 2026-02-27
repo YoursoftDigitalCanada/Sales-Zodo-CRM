@@ -992,8 +992,7 @@ const ClientContactListPage = () => {
   const { toast } = useToast();
 
   // State
-  // const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Removed: global sidebar
-  const [contacts, setContacts] = useState<Contact[]>([]);
+    const [contacts, setContacts] = useState<Contact[]>([]);
   const [clients, setClients] = useState<{ id: number; clientName: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -1284,8 +1283,7 @@ const ClientContactListPage = () => {
 
       <main
         className={cn(
-          "flex-1 transition-all duration-300",
-          sidebarCollapsed ? "ml-0" : "ml-30"
+          "flex-1 transition-all duration-300"
         )}
       >
         {/* Header */}

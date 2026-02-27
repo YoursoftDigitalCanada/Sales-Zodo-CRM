@@ -1055,8 +1055,7 @@ const InvoicePage = () => {
   const { toast } = useToast();
 
   // State
-  // const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Removed: global sidebar
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+    const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
@@ -1432,8 +1431,7 @@ const InvoicePage = () => {
     <div className="flex min-h-screen bg-[#F8FAFC]">
 <main
         className={cn(
-          "flex-1 transition-all duration-300",
-          sidebarCollapsed ? "ml-0" : "ml-30"
+          "flex-1 transition-all duration-300"
         )}
       >
         {/* ============================================ */}

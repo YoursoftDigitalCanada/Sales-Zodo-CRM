@@ -754,8 +754,7 @@ const TaskDialog = ({
 
 const KanbanPage: React.FC = () => {
   // State
-  // const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Removed: global sidebar
-  const [columns, setColumns] = useState<KanbanColumn[]>(defaultColumns);
+    const [columns, setColumns] = useState<KanbanColumn[]>(defaultColumns);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterPriority, setFilterPriority] = useState<string>("all");
@@ -1009,8 +1008,7 @@ const KanbanPage: React.FC = () => {
       <div className="flex min-h-screen bg-[#F8FAFC]">
         <main
           className={cn(
-            "flex-1 transition-all duration-300 flex items-center justify-center",
-            sidebarCollapsed ? "ml-20" : "ml-72"
+            "flex-1 transition-all duration-300 flex items-center justify-center"
           )}
         >
           <motion.div
@@ -1033,8 +1031,7 @@ const KanbanPage: React.FC = () => {
 
       <main
         className={cn(
-          "flex-1 transition-all duration-300",
-          sidebarCollapsed ? "ml-0" : "ml-30"
+          "flex-1 transition-all duration-300"
         )}
       >
         {/* ============================================ */}

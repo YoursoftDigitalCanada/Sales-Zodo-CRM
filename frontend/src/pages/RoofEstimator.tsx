@@ -512,8 +512,7 @@ const RoofEstimator: React.FC = () => {
             ? denormalizePolygonPoints(
                 parsedNotes.polygonNormalized,
                 staticMapSize.width,
-                staticMapSize.height,
-            )
+                staticMapSize.height)
             : createFallbackPolygon(staticMapSize.width, staticMapSize.height);
 
         const createdAtDate = new Date(estimate.createdAt);

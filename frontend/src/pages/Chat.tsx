@@ -24,8 +24,7 @@ import {
 } from "@/features/chat";
 
 export default function ChatPage() {
-  // const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Removed: global sidebar
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+    const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [showInfoPanel, setShowInfoPanel] = useState(false);

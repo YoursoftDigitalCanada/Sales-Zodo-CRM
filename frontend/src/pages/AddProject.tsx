@@ -657,8 +657,7 @@ const AddProjectPage = () => {
   const { toast } = useToast();
 
   // Sidebar
-  // const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Removed: global sidebar
-  const [user, setUser] = useState<User | null>(null);
+    const [user, setUser] = useState<User | null>(null);
 
   // Form State
   const [name, setName] = useState("");
@@ -872,8 +871,7 @@ const AddProjectPage = () => {
     <div className="flex min-h-screen bg-[#F8FAFC]">
 <main
         className={cn(
-          "flex-1 transition-all duration-300",
-          sidebarCollapsed ? "ml-0" : "ml-30"
+          "flex-1 transition-all duration-300"
         )}
       >
         {/* ============================================ */}

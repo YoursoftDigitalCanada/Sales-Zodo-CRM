@@ -1198,7 +1198,6 @@ const LetterBoxPage = () => {
   const { toast } = useToast();
 
   // State
-  const [collapsed, setCollapsed] = useState(false);
   const [emails, setEmails] = useState<Email[]>(initialEmails);
   const [selectedFolder, setSelectedFolder] = useState("inbox");
   const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
@@ -1365,8 +1364,7 @@ const LetterBoxPage = () => {
 
       <main
         className={cn(
-          "flex-1 flex flex-col overflow-hidden transition-all duration-300",
-          collapsed ? "ml-0" : "ml-30"
+          "flex-1 flex flex-col overflow-hidden transition-all duration-300"
         )}
       >
         {/* Header */}

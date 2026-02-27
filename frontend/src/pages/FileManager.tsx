@@ -1400,7 +1400,6 @@ const FileManagerPage = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // State
-  const [collapsed, setCollapsed] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all");
@@ -1655,8 +1654,7 @@ const FileManagerPage = () => {
 
       <main
         className={cn(
-          "flex-1 transition-all duration-300",
-          collapsed ? "ml-0" : "ml-30"
+          "flex-1 transition-all duration-300"
         )}
         onDrop={handleDrop}
         onDragOver={handleDragOver}

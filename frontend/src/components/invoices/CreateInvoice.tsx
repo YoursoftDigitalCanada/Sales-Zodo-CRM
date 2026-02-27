@@ -5,7 +5,7 @@ import { useForm, FormProvider, useFieldArray, Controller } from "react-hook-for
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sidebar } from "@/components/Sidebar";
+// // import { Sidebar } from "@/components/Sidebar"; // Removed // Removed: global sidebar in App.tsx
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1036,7 +1036,6 @@ const CreateInvoicePage = () => {
   const { toast } = useToast();
 
   // State
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [user, setUser] = useState<AppUser | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -1316,13 +1315,10 @@ const CreateInvoicePage = () => {
   // ============================================
 
   return (
-    <div className="flex min-h-screen r from-slate-50 via-white to-slate-50">
-      <Sidebar collapsed={sidebarCollapsed} onCollapse={setSidebarCollapsed} />
-
-      <main
+    <div className="min-h-screen r from-slate-50 via-white to-slate-50">
+<main
         className={cn(
-          "flex-1 transition-all duration-300",
-          sidebarCollapsed ? "ml-0" : "ml-30"
+          "flex-1 transition-all duration-300"
         )}
       >
         {/* ============================================ */}

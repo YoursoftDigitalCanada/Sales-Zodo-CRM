@@ -245,7 +245,7 @@ const ChangelogBadge = ({ type }: { type: ChangelogEntry["type"] }) => {
 // ============================================
 
 export default function HelpCenterPage() {
-    // const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Removed: global sidebar
+    
     const [searchQuery, setSearchQuery] = useState("");
     const [activeKBCategory, setActiveKBCategory] = useState<typeof kbCategories[number]>("General");
     const [expandedFAQ, setExpandedFAQ] = useState<string | null>(null);
@@ -335,7 +335,6 @@ export default function HelpCenterPage() {
 
     return (
         <div className="flex h-screen bg-[#F8FAFC]">
-            {/* Sidebar removed: rendered globally in App.tsx */}
 
             <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
                 {/* Header */}

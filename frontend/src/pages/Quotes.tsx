@@ -1043,7 +1043,6 @@ const QuotesPage = () => {
 
   return (
     <div className="flex h-screen bg-[#F8FAFC]">
-      <Sidebar />
       <div className="flex-1 overflow-auto">
         <div className="p-6 max-w-[1600px] mx-auto">
           {/* Header */}

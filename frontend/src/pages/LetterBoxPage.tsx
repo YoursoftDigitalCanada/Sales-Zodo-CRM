@@ -1362,7 +1362,6 @@ const LetterBoxPage = () => {
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#F8FAFC]">
-      <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
 
       <main
         className={cn(

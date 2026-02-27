@@ -1401,9 +1401,7 @@ const ProjectsPage = () => {
 
   return (
     <div className="flex min-h-screen bg-[#F8FAFC]">
-      <Sidebar collapsed={sidebarCollapsed} onCollapse={setSidebarCollapsed} />
-
-      <main
+<main
         className={cn(
           "flex-1 transition-all duration-300",
           sidebarCollapsed ? "ml-0" : "ml-30"

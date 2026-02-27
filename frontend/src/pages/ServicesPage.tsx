@@ -821,7 +821,7 @@ const ServiceDetailDialog = ({
 
 export default function ServicesPage() {
   const { toast } = useToast();
-  // const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Removed: global sidebar
+  
 
   // Data
   const [services, setServices] = useState<ServiceItem[]>([]);
@@ -985,7 +985,6 @@ export default function ServicesPage() {
 
   return (
     <div className="flex min-h-screen bg-[#F8FAFC]">
-      {/* Sidebar removed: rendered globally in App.tsx */}
       <main className="flex-1 ml-0">
         <div className="max-w-[1600px] mx-auto p-6 lg:p-8 space-y-6">
 

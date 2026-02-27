@@ -433,7 +433,7 @@ const AddClientPage = () => {
   const isEditMode = Boolean(id);
 
   // State
-  // const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Removed: global sidebar
+  
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -552,10 +552,6 @@ const AddClientPage = () => {
   if (isFetching) {
     return (
       <div className="flex min-h-screen bg-[#F8FAFC]">
-        <Sidebar
-          collapsed={sidebarCollapsed}
-          setCollapsed={setSidebarCollapsed}
-        />
         <main
 
         >
@@ -576,10 +572,6 @@ const AddClientPage = () => {
 
   return (
     <div className="flex min-h-screen bg-[#F8FAFC]">
-      <Sidebar
-        collapsed={sidebarCollapsed}
-        setCollapsed={setSidebarCollapsed}
-      />
 
       <main
 

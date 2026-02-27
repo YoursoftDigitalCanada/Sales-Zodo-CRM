@@ -13,7 +13,7 @@ import {
 } from "./data";
 
 export default function RolesPage() {
-    // const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Removed: global sidebar
+    
     const [activeTab, setActiveTab] = useState<RolesTab>("roles");
     const { toast } = useToast();
 
@@ -129,7 +129,6 @@ export default function RolesPage() {
 
     return (
         <div className="flex h-screen bg-[#F8FAFC]">
-            {/* Sidebar removed: rendered globally in App.tsx */}
 
             <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
                 {/* Header */}

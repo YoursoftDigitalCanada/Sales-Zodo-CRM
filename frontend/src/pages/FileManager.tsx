@@ -1652,7 +1652,6 @@ const FileManagerPage = () => {
 
   return (
     <div className="flex min-h-screen bg-[#F8FAFC]">
-      <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
 
       <main
         className={cn(

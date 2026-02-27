@@ -394,7 +394,6 @@ const ClientDetailPage = () => {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
-      <Sidebar />
       <main className="min-h-screen transition-all duration-300" style={{ marginLeft: 'var(--sidebar-width, 16rem)' }}>
         <header className="sticky top-0 z-30 border-b bg-white px-6 h-16 flex items-center justify-between shadow-sm">
           <div className="flex items-center gap-4">

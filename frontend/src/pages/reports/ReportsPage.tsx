@@ -17,7 +17,7 @@ import {
 } from "./data";
 
 export default function ReportsPage() {
-    // const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Removed: global sidebar
+    
     const [activeTab, setActiveTab] = useState<ReportTab>("sales");
     const { toast } = useToast();
     const location = useLocation();
@@ -111,7 +111,6 @@ export default function ReportsPage() {
 
     return (
         <div className="flex h-screen bg-[#F8FAFC]">
-            {/* Sidebar removed: rendered globally in App.tsx */}
 
             <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
                 {/* Header */}

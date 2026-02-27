@@ -1119,10 +1119,6 @@ const ClientListPage = () => {
 
   return (
     <div className="flex min-h-screen bg-[#F8FAFC]">
-      <Sidebar
-        collapsed={sidebarCollapsed}
-        setCollapsed={setSidebarCollapsed}
-      />
 
       <main
         className={cn(

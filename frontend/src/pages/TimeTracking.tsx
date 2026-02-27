@@ -40,7 +40,7 @@ import {
 } from "@/components/time-tracking";
 
 export default function TimeTrackingPage() {
-  // const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Removed: global sidebar
+  
   const [timerState, setTimerState] = useState<TimerState>(defaultTimerState);
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>(mockTimeEntries);
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -169,7 +169,6 @@ export default function TimeTrackingPage() {
 
   return (
     <div className="flex h-screen bg-[#F8FAFC]">
-      {/* Sidebar removed: rendered globally in App.tsx */}
 
       <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
         {/* Header */}

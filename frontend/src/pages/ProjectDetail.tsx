@@ -148,7 +148,6 @@ const ProjectDetailPage = () => {
     if (isLoading) {
         return (
             <div className="flex h-screen bg-[#F8FAFC]">
-                <Sidebar />
                 <main className="flex-1 flex items-center justify-center">
                     <div className="flex flex-col items-center gap-3">
                         <Loader2 className="animate-spin text-[#0891B2]" size={36} />
@@ -163,7 +162,6 @@ const ProjectDetailPage = () => {
     if (!project) {
         return (
             <div className="flex h-screen bg-[#F8FAFC]">
-                <Sidebar />
                 <main className="flex-1 flex flex-col items-center justify-center text-center gap-4 p-8">
                     <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-2">
                         <Briefcase className="h-8 w-8 text-red-400" />
@@ -203,7 +201,6 @@ const ProjectDetailPage = () => {
 
     return (
         <div className="flex h-screen bg-[#F8FAFC]">
-            <Sidebar />
             <main className="flex-1 overflow-auto">
                 {/* ========== HEADER ========== */}
                 <div className="border-b border-[rgba(15,23,42,0.06)] bg-white/80 backdrop-blur-sm sticky top-0 z-10 px-6 py-4">

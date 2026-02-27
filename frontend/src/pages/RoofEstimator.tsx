@@ -653,7 +653,6 @@ const RoofEstimator: React.FC = () => {
 
     return (
         <div className="flex h-screen overflow-hidden bg-[#F8FAFC]">
-            <Sidebar />
             <main className="flex-1 overflow-y-auto">
                 {/* Header */}
                 <div className="sticky top-0 z-30 bg-white border-b border-[rgba(15,23,42,0.06)]">

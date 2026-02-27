@@ -1007,10 +1007,6 @@ const KanbanPage: React.FC = () => {
   if (loading) {
     return (
       <div className="flex min-h-screen bg-[#F8FAFC]">
-        <Sidebar
-          collapsed={sidebarCollapsed}
-          setCollapsed={setSidebarCollapsed}
-        />
         <main
           className={cn(
             "flex-1 transition-all duration-300 flex items-center justify-center",
@@ -1034,10 +1030,6 @@ const KanbanPage: React.FC = () => {
 
   return (
     <div className="flex min-h-screen bg-[#F8FAFC]">
-      <Sidebar
-        collapsed={sidebarCollapsed}
-        setCollapsed={setSidebarCollapsed}
-      />
 
       <main
         className={cn(

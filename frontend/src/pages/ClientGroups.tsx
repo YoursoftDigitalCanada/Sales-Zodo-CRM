@@ -1882,7 +1882,6 @@ const ClientGroupsPage = () => {
 
   return (
     <div className="flex h-screen bg-[#F8FAFC]">
-      <Sidebar />
 
       <main className="flex-1 overflow-auto">
         {/* Header */}

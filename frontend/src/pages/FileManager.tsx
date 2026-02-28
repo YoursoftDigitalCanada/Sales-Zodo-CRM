@@ -1537,7 +1537,7 @@ const FileManagerPage = () => {
     setIsDragging(true);
   }, []);
 
-    const handleDragLeave = useCallback((e: React.DragEvent) => {
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
   }, []);
@@ -1631,12 +1631,12 @@ const FileManagerPage = () => {
   const handleBulkDelete = () => {
     setFolders((prev) => prev.filter((f) => !selectedItems.includes(f.id)));
     setFiles((prev) => prev.filter((f) => !selectedItems.includes(f.id)));
-    
+
     toast({
       title: "Items Deleted",
       description: `${selectedItems.length} item(s) have been moved to trash.`,
     });
-    
+
     setSelectedItems([]);
   };
 
@@ -1686,7 +1686,7 @@ const FileManagerPage = () => {
 
         {/* Header */}
         <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-[rgba(15,23,42,0.06)]">
-          <div className="px-6 py-4">
+          <div className="px-4 py-3 sm:px-6 sm:py-4">
             <div className="flex items-center justify-between">
               {/* Title & Breadcrumb */}
               <div>
@@ -1699,27 +1699,28 @@ const FileManagerPage = () => {
               </div>
 
               {/* Header Actions */}
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <Button
                   variant="outline"
+                  size="sm"
                   className="rounded-md border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE] hover:text-[#0891B2]"
                 >
-                  <RefreshCw size={16} className="mr-2" />
-                  Sync
+                  <RefreshCw size={16} className="sm:mr-2" />
+                  <span className="hidden sm:inline">Sync</span>
                 </Button>
 
-                <div className="relative">
+                <div className="relative hidden sm:block">
                   <button className="p-2.5 rounded-md bg-white/5 hover:bg-slate-200 transition-colors relative">
                     <Bell size={20} className="text-[#475569]" />
                     <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
                   </button>
                 </div>
 
-                <div className="flex items-center gap-3 pl-3 border-l border-[rgba(15,23,42,0.06)]">
+                <div className="hidden sm:flex items-center gap-3 pl-3 border-l border-[rgba(15,23,42,0.06)]">
                   <div className="h-10 w-10 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] font-bold ">
                     SA
                   </div>
-                  <div className="hidden sm:block">
+                  <div className="hidden lg:block">
                     <p className="text-sm font-semibold text-[#0F172A]">SAdmin</p>
                     <p className="text-xs text-[#94A3B8]">Administrator</p>
                   </div>
@@ -1730,9 +1731,9 @@ const FileManagerPage = () => {
           </div>
         </header>
 
-        <div className="flex h-[calc(100vh-81px)]">
-          {/* Left Sidebar */}
-          <aside className="w-72 border-r border-[rgba(15,23,42,0.06)] bg-white p-5 flex flex-col">
+        <div className="flex h-[calc(100vh-65px)] sm:h-[calc(100vh-81px)]">
+          {/* Left Sidebar — hidden on mobile */}
+          <aside className="hidden md:flex w-72 border-r border-[rgba(15,23,42,0.06)] bg-white p-5 flex-col">
             {/* Upload Button */}
             <Button
               onClick={handleUploadClick}
@@ -1861,11 +1862,53 @@ const FileManagerPage = () => {
 
           {/* Main Content */}
           <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Mobile-only nav tabs + upload */}
+            <div className="flex md:hidden items-center gap-2 px-3 py-2 bg-white border-b border-[rgba(15,23,42,0.06)] overflow-x-auto">
+              <Button
+                onClick={handleUploadClick}
+                size="sm"
+                className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md flex-shrink-0"
+              >
+                <Upload size={14} className="mr-1" />
+                Upload
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCreateFolder(true)}
+                className="rounded-md border-dashed flex-shrink-0"
+              >
+                <FolderPlus size={14} className="mr-1" />
+                Folder
+              </Button>
+              <div className="h-5 w-px bg-slate-200 flex-shrink-0" />
+              {[
+                { id: "all", icon: HardDrive, label: "All" },
+                { id: "recent", icon: Clock, label: "Recent" },
+                { id: "starred", icon: Star, label: "Starred" },
+                { id: "shared", icon: Share2, label: "Shared" },
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id)}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap flex-shrink-0 transition-colors",
+                    activeTab === item.id
+                      ? "bg-[#0891B2]/10 text-[#0891B2]"
+                      : "text-[#475569] hover:bg-[#F8FAFC]"
+                  )}
+                >
+                  <item.icon size={14} />
+                  {item.label}
+                </button>
+              ))}
+            </div>
+
             {/* Toolbar */}
-            <div className="px-6 py-4 bg-white border-b border-[rgba(15,23,42,0.06)]">
-              <div className="flex items-center justify-between gap-4">
+            <div className="px-3 py-2 sm:px-6 sm:py-4 bg-white border-b border-[rgba(15,23,42,0.06)]">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
                 {/* Search */}
-                <div className="relative flex-1 max-w-md">
+                <div className="relative flex-1 sm:max-w-md">
                   <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#475569]" />
                   <Input
                     value={searchTerm}
@@ -1924,13 +1967,13 @@ const FileManagerPage = () => {
                 </AnimatePresence>
 
                 {/* View & Sort Controls */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-shrink-0">
                   {/* Filter */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="h-10 rounded-md border-[rgba(15,23,42,0.06)]">
-                        <Filter size={16} className="mr-2" />
-                        Filter
+                      <Button variant="outline" size="sm" className="h-9 sm:h-10 rounded-md border-[rgba(15,23,42,0.06)]">
+                        <Filter size={16} className="sm:mr-2" />
+                        <span className="hidden sm:inline">Filter</span>
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56 rounded-md">
@@ -1948,9 +1991,9 @@ const FileManagerPage = () => {
                   {/* Sort */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="h-10 rounded-md border-[rgba(15,23,42,0.06)]">
+                      <Button variant="outline" size="sm" className="h-9 sm:h-10 rounded-md border-[rgba(15,23,42,0.06)]">
                         {sortOrder === "asc" ? <SortAsc size={16} /> : <SortDesc size={16} />}
-                        <span className="ml-2 capitalize">{sortBy}</span>
+                        <span className="ml-2 capitalize hidden sm:inline">{sortBy}</span>
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48 rounded-md">
@@ -2010,9 +2053,9 @@ const FileManagerPage = () => {
             </div>
 
             {/* File Content Area */}
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 overflow-y-auto p-3 sm:p-6">
               {/* Stats Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-8">
                 <StatCard
                   title="Total Files"
                   value={stats.totalFiles}

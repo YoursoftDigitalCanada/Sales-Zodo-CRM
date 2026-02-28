@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Sidebar } from "@/components/Sidebar";
@@ -14,6 +14,11 @@ import {
 } from "@/features/dashboard";
 import { AiCopilotPanel } from "@/components/ai/AiCopilotPanel";
 import { useToast } from "@/hooks/use-toast";
+import {
+  getNotifications,
+  markAllAsRead as markAllNotificationsRead,
+  type NotificationEntity,
+} from "@/features/notifications";
 import {
   FolderKanban, DollarSign, Users, Bell, Search, ChevronDown,
   Sun, Moon, Plus, TrendingUp, ArrowUpRight, Sparkles, Target,
@@ -32,7 +37,7 @@ interface User { firstName: string; lastName: string; email?: string; role?: str
 interface DashboardStats { projectsCount: number; clientsCount: number; earnings: number; pendingTasks: number; }
 interface QuickAction { title: string; icon: React.ElementType; color: ThemeColor; path: string; description: string; }
 interface ActivityItem { id: string; type: string; message: string; time: string; icon: React.ElementType; color: ThemeColor; }
-interface Notification { id: number; title: string; message: string; time: string; icon: React.ElementType; color: ThemeColor; read: boolean; }
+interface BellNotification { id: string; title: string; message: string; time: string; icon: React.ElementType; color: ThemeColor; read: boolean; }
 
 // Mapped UI types derived from API data
 interface LeadItem {
@@ -78,11 +83,44 @@ const quickActions: QuickAction[] = [
   { title: "Schedule Meeting", icon: Calendar, color: "purple", path: "/bookings/new", description: "Book a meeting" },
 ];
 
-const initialNotifications: Notification[] = [
-  { id: 1, title: "New Message", message: "New message from client", time: "2 min ago", icon: MessageSquare, color: "teal", read: false },
-  { id: 2, title: "Payment Received", message: "Payment received - $2,500", time: "1 hour ago", icon: DollarSign, color: "gold", read: false },
-  { id: 3, title: "Deadline Reminder", message: "Project deadline tomorrow", time: "3 hours ago", icon: FolderKanban, color: "navy", read: false },
-];
+// Map API notification type → icon & color for the bell dropdown
+const bellTypeConfig: Record<string, { icon: React.ElementType; color: ThemeColor }> = {
+  info: { icon: Activity, color: "blue" },
+  success: { icon: CheckCircle2, color: "green" },
+  warning: { icon: AlertTriangle, color: "gold" },
+  error: { icon: AlertCircle, color: "navy" },
+  message: { icon: MessageSquare, color: "teal" },
+  task: { icon: CheckCircle2, color: "purple" },
+  deal: { icon: DollarSign, color: "green" },
+  calendar: { icon: Calendar, color: "teal" },
+  system: { icon: Zap, color: "navy" },
+  mention: { icon: Users, color: "teal" },
+};
+
+function formatRelativeTime(ts: string): string {
+  const now = Date.now();
+  const date = new Date(ts).getTime();
+  if (isNaN(date)) return "";
+  const diff = (now - date) / 1000;
+  if (diff < 60) return "Just now";
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  if (diff < 172800) return "Yesterday";
+  return new Date(ts).toLocaleDateString("en-CA", { month: "short", day: "numeric" });
+}
+
+function mapApiNotification(n: NotificationEntity): BellNotification {
+  const config = bellTypeConfig[n.type] || bellTypeConfig.info;
+  return {
+    id: n.id,
+    title: n.title || "Notification",
+    message: n.message || "",
+    time: formatRelativeTime(n.createdAt),
+    icon: config.icon,
+    color: config.color,
+    read: n.isRead,
+  };
+}
 
 // ── Data mappers ───────────────────────────────────────────────────────
 function mapLead(l: DashboardLead): LeadItem {
@@ -171,7 +209,7 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
+  const [notifications, setNotifications] = useState<BellNotification[]>([]);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [searchQuery, setSearchQuery] = useState("");
@@ -236,6 +274,17 @@ const Index = () => {
       } finally { setIsLoading(false); }
     };
     loadDashboard();
+
+    // Fetch real notifications for the bell dropdown
+    const loadNotifications = async () => {
+      try {
+        const data = await getNotifications({ limit: 10 });
+        setNotifications(data.map(mapApiNotification));
+      } catch (err) {
+        console.error("Failed to fetch notifications for bell:", err);
+      }
+    };
+    loadNotifications();
   }, []);
 
   useEffect(() => {
@@ -261,7 +310,10 @@ const Index = () => {
   // ============================================
   const getGreeting = () => { const h = currentTime.getHours(); return h < 12 ? "Good Morning" : h < 18 ? "Good Afternoon" : "Good Evening"; };
   const toggleDarkMode = () => { const n = !isDarkMode; setIsDarkMode(n); localStorage.setItem("theme", n ? "dark" : "light"); n ? document.documentElement.classList.add("dark") : document.documentElement.classList.remove("dark"); };
-  const handleMarkAllAsRead = () => setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  const handleMarkAllAsRead = async () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    try { await markAllNotificationsRead(); } catch { /* optimistic */ }
+  };
   const handleQuickAction = (path: string) => navigate(path);
   const handleLogout = () => { localStorage.removeItem("user"); localStorage.removeItem("token"); navigate("/login"); };
   const unreadNotificationsCount = notifications.filter((n) => !n.read).length;

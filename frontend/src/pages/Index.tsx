@@ -358,9 +358,9 @@ const Index = () => {
                 {isDarkMode ? <Sun size={15} /> : <Moon size={15} />}
               </button>
               <div ref={notificationRef} className="relative">
-                <button onClick={() => setShowNotifications(!showNotifications)} className="relative p-2 rounded-md bg-white border border-[rgba(15,23,42,0.06)] text-[#94A3B8] hover:text-[#475569] transition-colors">
+                <button onClick={() => setShowNotifications(!showNotifications)} className="relative overflow-visible p-2 rounded-md bg-white border border-[rgba(15,23,42,0.06)] text-[#94A3B8] hover:text-[#475569] transition-colors">
                   <Bell size={15} />
-                  {unreadNotificationsCount > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#EA580C] text-white text-[9px] font-bold rounded-full flex items-center justify-center border border-[#F8FAFC]">{unreadNotificationsCount}</span>}
+                  {unreadNotificationsCount > 0 && <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-[#EA580C] text-white text-[9px] font-bold rounded-full flex items-center justify-center border-2 border-white z-10">{unreadNotificationsCount}</span>}
                 </button>
                 <AnimatePresence>
                   {showNotifications && (

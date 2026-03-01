@@ -340,14 +340,14 @@ const Index = () => {
         {/* ============= HEADER ============= */}
         <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-[rgba(15,23,42,0.06)]">
           <div className="flex h-12 items-center justify-between px-3 md:px-5">
-            <div className="flex items-center gap-4 md:gap-6 flex-1 min-w-0">
-              <div className="relative flex-1 max-w-xs md:max-w-none md:flex-none md:w-64">
+            <div className="flex items-center gap-2 md:gap-6 flex-1 min-w-0">
+              <div className="relative flex-1 max-w-[140px] sm:max-w-xs md:max-w-none md:flex-none md:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#475569]" />
                 <input type="text" placeholder="Search anything..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onClick={() => setShowSearchModal(true)} className="w-full h-8 pl-9 pr-4 md:pr-14 rounded-md bg-white border border-[rgba(15,23,42,0.06)] text-xs text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-1 focus:ring-[#22D3EE]/30 transition-colors" />
                 <kbd className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-0.5 rounded bg-[#F1F5F9] text-[10px] text-[#475569] border border-[rgba(15,23,42,0.06)] font-mono hidden md:flex items-center gap-1"><Command size={10} />K</kbd>
               </div>
             </div>
-            <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 flex-shrink-0">
               <button onClick={() => setShowCopilot(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0891B2]/8 text-[#0891B2] text-xs font-medium rounded-md hover:bg-[#0891B2]/14 transition-colors border border-[#0891B2]/15">
                 <Sparkles size={14} /><span className="hidden sm:inline">Ask Experts</span>
               </button>
@@ -364,7 +364,7 @@ const Index = () => {
                 </button>
                 <AnimatePresence>
                   {showNotifications && (
-                    <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} transition={{ duration: 0.15 }} className="absolute right-0 mt-2 w-80 bg-white border border-[rgba(15,23,42,0.06)] card-shadow rounded-md overflow-hidden z-50">
+                    <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} transition={{ duration: 0.15 }} className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-80 max-w-80 bg-white border border-[rgba(15,23,42,0.06)] card-shadow rounded-md overflow-hidden z-50">
                       <div className="p-4 border-b border-[rgba(15,23,42,0.06)]"><div className="flex items-center justify-between"><h4 className="font-semibold text-[#0F172A]">Notifications</h4><button onClick={handleMarkAllAsRead} className="text-xs text-[#0891B2] font-medium cursor-pointer hover:underline">Mark all as read</button></div></div>
                       <div className="max-h-80 overflow-y-auto">
                         {notifications.map((notification) => {

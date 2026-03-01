@@ -338,7 +338,7 @@ const Index = () => {
     <div className={cn("min-h-screen w-full bg-[#F8FAFC]")}>
       <main>
         {/* ============= HEADER ============= */}
-        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-[rgba(15,23,42,0.06)]">
+        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-[rgba(15,23,42,0.06)] pt-[7px] md:pt-0">
           <div className="flex h-12 items-center justify-between px-3 md:px-5">
             <div className="flex items-center gap-2 md:gap-6 flex-1 min-w-0">
               <div className="relative flex-1 max-w-[140px] sm:max-w-xs md:max-w-none md:flex-none md:w-64">

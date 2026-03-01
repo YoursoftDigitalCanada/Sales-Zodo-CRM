@@ -175,6 +175,14 @@ export const SIDEBAR_MODULES: SidebarModule[] = [
         requiredPermissions: [PERMISSIONS.EXPENSES_VIEW],
         order: 1,
       },
+      {
+        id: 'contracts',
+        name: 'Contracts',
+        icon: 'file-signature',
+        path: '/finance/contracts',
+        requiredPermissions: [PERMISSIONS.CONTRACTS_VIEW],
+        order: 2,
+      },
     ],
   },
   {

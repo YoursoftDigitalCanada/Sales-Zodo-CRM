@@ -106,6 +106,12 @@ export const PERMISSIONS = {
   QUOTES_UPDATE: 'quotes.update',
   QUOTES_DELETE: 'quotes.delete',
 
+  // Contracts
+  CONTRACTS_VIEW: 'contracts.view',
+  CONTRACTS_CREATE: 'contracts.create',
+  CONTRACTS_UPDATE: 'contracts.update',
+  CONTRACTS_DELETE: 'contracts.delete',
+
   // Expenses
   EXPENSES_VIEW: 'expenses.view',
   EXPENSES_CREATE: 'expenses.create',
@@ -325,6 +331,12 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { code: PERMISSIONS.QUOTES_CREATE, name: 'Create Quotes', description: 'Create new quotes', module: 'quotes', action: 'create' },
   { code: PERMISSIONS.QUOTES_UPDATE, name: 'Update Quotes', description: 'Edit quotes', module: 'quotes', action: 'update' },
   { code: PERMISSIONS.QUOTES_DELETE, name: 'Delete Quotes', description: 'Remove quotes', module: 'quotes', action: 'delete' },
+
+  // Contracts
+  { code: PERMISSIONS.CONTRACTS_VIEW, name: 'View Contracts', description: 'View contracts', module: 'contracts', action: 'view' },
+  { code: PERMISSIONS.CONTRACTS_CREATE, name: 'Create Contracts', description: 'Create contracts', module: 'contracts', action: 'create' },
+  { code: PERMISSIONS.CONTRACTS_UPDATE, name: 'Update Contracts', description: 'Edit contracts', module: 'contracts', action: 'update' },
+  { code: PERMISSIONS.CONTRACTS_DELETE, name: 'Delete Contracts', description: 'Remove contracts', module: 'contracts', action: 'delete' },
 
   // Expenses
   { code: PERMISSIONS.EXPENSES_VIEW, name: 'View Expenses', description: 'View expenses', module: 'expenses', action: 'view' },

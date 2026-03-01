@@ -35,6 +35,7 @@ import quotesPublicRoutes from '../modules/quotes/quotes.public-routes';
 import expensesRoutes from '../modules/expenses/expenses.routes';
 import bookingsRoutes from '../modules/bookings/bookings.routes';
 import servicesRoutes from '../modules/services/services.routes';
+import contractsRoutes from '../modules/contracts/contracts.routes';
 
 // File management modules
 import filesRoutes from '../modules/files/files.routes';
@@ -128,6 +129,7 @@ export function registerRoutes(app: Application): void {
   protectedRouter.use('/expenses', expensesRoutes);
   protectedRouter.use('/bookings', bookingsRoutes);
   protectedRouter.use('/services', servicesRoutes);
+  protectedRouter.use('/contracts', contractsRoutes);
 
   // File Management
   protectedRouter.use('/files', filesRoutes);
@@ -225,6 +227,7 @@ export function registerRoutes(app: Application): void {
         // AI Modules
         roofEstimator: `${apiPrefix}/roof-estimator`,
         copilot: `${apiPrefix}/copilot`,
+        contracts: `${apiPrefix}/contracts`,
       },
     });
   });

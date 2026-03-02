@@ -93,6 +93,16 @@ export function registerRoutes(app: Application): void {
   apiRouter.use('/public', quotesPublicRoutes);
 
   // =========================================================================
+  // SUPER ADMIN ROUTES (separate auth — NOT behind CRM middleware)
+  // Must be registered BEFORE the CRM protected router.
+  // =========================================================================
+
+  apiRouter.use('/admin', adminRoutes);
+
+  // Seed super admin on startup (no-op if already exists)
+  adminAuthService.seedSuperAdmin().catch(() => { });
+
+  // =========================================================================
   // PROTECTED ROUTES
   // =========================================================================
   // Global middleware chain for ALL protected CRM modules:
@@ -172,14 +182,7 @@ export function registerRoutes(app: Application): void {
   // Mount protected router on the main API router
   apiRouter.use(protectedRouter);
 
-  // =========================================================================
-  // SUPER ADMIN ROUTES (separate auth — NOT behind CRM middleware)
-  // =========================================================================
 
-  apiRouter.use('/admin', adminRoutes);
-
-  // Seed super admin on startup (no-op if already exists)
-  adminAuthService.seedSuperAdmin().catch(() => { });
 
   // =========================================================================
   // REGISTER API ROUTER

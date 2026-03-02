@@ -13,6 +13,7 @@ import { ErrorCodes } from '../../common/errors/errorCodes';
 import { eventBus } from '../../common/events/event-bus';
 import { activityLogger } from '../../common/services/activity-logger.service';
 import { clientLifecycleService } from '../../common/services/client-lifecycle.service';
+import { prisma } from '../../config/database';
 
 export class ClientsService {
     /**
@@ -21,6 +22,27 @@ export class ClientsService {
     async create(tenantId: string, data: CreateClientDto, createdByUserId?: string): Promise<ClientResponseDto> {
         const client = await clientsRepository.create(tenantId, data);
         const dto = toClientResponseDto(client);
+
+        // Auto-create primary contact if contactName is provided
+        if (data.contactName && data.contactName.trim()) {
+            try {
+                await prisma.contact.create({
+                    data: {
+                        tenantId,
+                        companyId: client.id,
+                        contactName: data.contactName.trim(),
+                        email: (client as any).primaryEmail || '',
+                        jobTitle: data.position || null,
+                        officePhone: data.directPhone || null,
+                        isPrimaryContact: true,
+                        type: 'CLIENT',
+                    },
+                });
+            } catch (err) {
+                // Non-critical: log but don't fail client creation
+                console.error('[ClientsService] Auto-create contact failed:', err);
+            }
+        }
 
         // Domain event: client created
         eventBus.emit('client.created', {

@@ -366,12 +366,12 @@ const ManualEntryPanel: React.FC<ManualEntryPanelProps> = ({ clients, onSaved })
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <Label className="text-xs font-medium text-[#475569] mb-1.5 block">Assign to Client</Label>
-                            <Select value={clientId} onValueChange={setClientId}>
+                            <Select value={clientId || "none"} onValueChange={(v) => setClientId(v === "none" ? "" : v)}>
                                 <SelectTrigger className="h-10 text-sm">
                                     <SelectValue placeholder="Select client (optional)" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">None</SelectItem>
+                                    <SelectItem value="none">None</SelectItem>
                                     {clients.map(c => (
                                         <SelectItem key={c.id} value={c.id}>
                                             {c.clientName}{c.companyName ? ` (${c.companyName})` : ""}

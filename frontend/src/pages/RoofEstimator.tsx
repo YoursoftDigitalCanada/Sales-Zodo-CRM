@@ -32,6 +32,8 @@ import {
 } from "@/features/roof-estimator/utils/static-map";
 // import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import TakeoffPricingPanel from "@/features/roof-estimator/components/TakeoffPricingPanel";
+import ManualEntryPanel from "@/features/roof-estimator/components/ManualEntryPanel";
+import MaterialsLaborPanel from "@/features/roof-estimator/components/MaterialsLaborPanel";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -276,7 +278,7 @@ const RoofEstimator: React.FC = () => {
     const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
     // UI
-    const [activeTab, setActiveTab] = useState<"estimator" | "history" | "settings">("history");
+    const [activeTab, setActiveTab] = useState<"estimator" | "history" | "manual" | "materials" | "settings">("history");
     const [viewEstimate, setViewEstimate] = useState<RoofEstimate | null>(null);
     const [viewEstimatePdfUrl, setViewEstimatePdfUrl] = useState<string | null>(null);
     const [loadingViewEstimatePdf, setLoadingViewEstimatePdf] = useState(false);
@@ -711,20 +713,28 @@ const RoofEstimator: React.FC = () => {
 
                             {/* Tabs */}
                             <div className="flex bg-[#F8FAFC] rounded-md border border-[rgba(15,23,42,0.06)] p-0.5">
-                                {(["history", "settings"] as const).map((tab) => (
-                                    <button
-                                        key={tab}
-                                        onClick={() => setActiveTab(tab)}
-                                        className={cn(
-                                            "px-4 py-1.5 rounded-md text-xs font-medium transition-all",
-                                            activeTab === tab
-                                                ? "bg-white text-[#0891B2] shadow-sm border border-[rgba(15,23,42,0.06)]"
-                                                : "text-[#94A3B8] hover:text-[#475569]"
-                                        )}
-                                    >
-                                        {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                                    </button>
-                                ))}
+                                {(["history", "manual", "materials", "settings"] as const).map((tab) => {
+                                    const labels: Record<string, string> = {
+                                        history: "History",
+                                        manual: "Manual Entry",
+                                        materials: "Materials & Pricing",
+                                        settings: "Settings",
+                                    };
+                                    return (
+                                        <button
+                                            key={tab}
+                                            onClick={() => setActiveTab(tab)}
+                                            className={cn(
+                                                "px-3 py-1.5 rounded-md text-xs font-medium transition-all",
+                                                activeTab === tab
+                                                    ? "bg-white text-[#0891B2] shadow-sm border border-[rgba(15,23,42,0.06)]"
+                                                    : "text-[#94A3B8] hover:text-[#475569]"
+                                            )}
+                                        >
+                                            {labels[tab]}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>
@@ -1316,6 +1326,28 @@ const RoofEstimator: React.FC = () => {
                                         </Table>
                                     )}
                                 </div>
+                            </motion.div>
+                        )}
+
+                        {/* ============================================ */}
+                        {/* MANUAL ENTRY TAB */}
+                        {/* ============================================ */}
+                        {activeTab === "manual" && (
+                            <ManualEntryPanel
+                                clients={clients}
+                                onSaved={() => {
+                                    fetchEstimates();
+                                    fetchStatistics();
+                                }}
+                            />
+                        )}
+
+                        {/* ============================================ */}
+                        {/* MATERIALS & PRICING TAB */}
+                        {/* ============================================ */}
+                        {activeTab === "materials" && (
+                            <motion.div key="materials" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                                <MaterialsLaborPanel />
                             </motion.div>
                         )}
 

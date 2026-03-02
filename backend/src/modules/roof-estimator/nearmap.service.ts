@@ -126,6 +126,76 @@ export class NearmapService {
     }
 
     /**
+     * Check if Nearmap has AI coverage for a given location
+     * Uses coverage.json to verify data availability before calling features API
+     * Returns coverage details or null if no coverage
+     */
+    async checkCoverage(lat: number, lng: number): Promise<{
+        hasCoverage: boolean;
+        latestSurveyDate: string | null;
+        packs: string[];
+    }> {
+        if (!NEARMAP_API_KEY) {
+            throw new Error('NEARMAP_API_KEY is not configured');
+        }
+
+        try {
+            const point = `${lng},${lat}`;
+
+            const response = await axios.get(`${NEARMAP_BASE_URL}/ai/features/v4/coverage.json`, {
+                params: {
+                    point,
+                },
+                headers: {
+                    'Authorization': `Bearer ${NEARMAP_API_KEY}`,
+                    'Accept': 'application/json',
+                },
+                timeout: 15000,
+            });
+
+            const surveys = response.data?.surveys || response.data?.features || [];
+
+            if (!surveys.length) {
+                return { hasCoverage: false, latestSurveyDate: null, packs: [] };
+            }
+
+            // Get the latest survey
+            const latest = surveys[0];
+            const surveyDate = latest.captureDate || latest.properties?.captureDate || null;
+            const availablePacks = latest.resources?.map((r: any) => r.type || r.name)
+                || latest.packs
+                || [];
+
+            logger.info('[NearmapService] Coverage check result', {
+                lat, lng,
+                hasCoverage: true,
+                surveyDate,
+                packsCount: availablePacks.length,
+            });
+
+            return {
+                hasCoverage: true,
+                latestSurveyDate: surveyDate,
+                packs: availablePacks,
+            };
+        } catch (error: any) {
+            // 404 or similar means no coverage
+            if (error?.response?.status === 404 || error?.response?.status === 204) {
+                logger.info('[NearmapService] No AI coverage at location', { lat, lng });
+                return { hasCoverage: false, latestSurveyDate: null, packs: [] };
+            }
+
+            logger.warn('[NearmapService] Coverage check failed', {
+                error: error.message,
+                status: error?.response?.status,
+            });
+
+            // Don't block extraction on coverage check failure — proceed anyway
+            return { hasCoverage: true, latestSurveyDate: null, packs: [] };
+        }
+    }
+
+    /**
      * Call Nearmap AI Feature API to extract roof data
      * Docs: https://docs.nearmap.com/display/ND/AI+Feature+API
      */
@@ -185,10 +255,11 @@ export class NearmapService {
     /**
      * Full extraction pipeline:
      * 1. Check cache
-     * 2. Call Nearmap API
-     * 3. Parse response
-     * 4. Store in RoofData table
-     * 5. Return structured result
+     * 2. Check Nearmap coverage
+     * 3. Call Nearmap features API
+     * 4. Parse response
+     * 5. Store in RoofData table
+     * 6. Return structured result
      */
     async extract(params: {
         clientId: string;
@@ -208,21 +279,35 @@ export class NearmapService {
                 return {
                     cached: true,
                     data: cached,
+                    coverage: null,
                 };
             }
         }
 
-        // 2. Call Nearmap API
+        // 2. Check coverage before making the expensive features call
+        const coverage = await this.checkCoverage(latitude, longitude);
+
+        if (!coverage.hasCoverage) {
+            logger.warn('[NearmapService] No Nearmap AI coverage at location', {
+                clientId, latitude, longitude,
+            });
+            throw new Error(
+                `No Nearmap AI coverage available at this location (${latitude}, ${longitude}). ` +
+                'Nearmap may not have surveyed this area yet.'
+            );
+        }
+
+        // 3. Call Nearmap features API
         logger.info('[NearmapService] Fetching from Nearmap API', { clientId, latitude, longitude });
         const { features, rawResponse } = await this.fetchFromNearmap(latitude, longitude);
 
-        // 3. Parse response
+        // 4. Parse response
         const buildingOutline = extractBuildingOutline(features);
         const roofOutline = extractRoofOutline(features);
         const propertyInsights = extractPropertyInsights(features);
         const areaSqFt = calculateAreaSqFt(features);
 
-        // 4. Store in database
+        // 5. Store in database
         const roofData = await prisma.roofData.create({
             data: {
                 clientId,
@@ -244,8 +329,13 @@ export class NearmapService {
         return {
             cached: false,
             data: roofData,
+            coverage: {
+                latestSurveyDate: coverage.latestSurveyDate,
+                packs: coverage.packs,
+            },
         };
     }
 }
 
 export const nearmapService = new NearmapService();
+

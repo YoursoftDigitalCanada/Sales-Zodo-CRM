@@ -133,6 +133,32 @@ export class RoofEstimatorController {
         }
     }
 
+    async checkNearmapCoverage(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const { latitude, longitude } = req.query;
+
+            const lat = Number(latitude);
+            const lng = Number(longitude);
+
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                res.status(400).json({
+                    success: false,
+                    message: 'Valid latitude and longitude query params required',
+                });
+                return;
+            }
+
+            const coverage = await nearmapService.checkCoverage(lat, lng);
+
+            sendSuccess(res, coverage, coverage.hasCoverage
+                ? `Nearmap AI coverage available (survey: ${coverage.latestSurveyDate || 'unknown'})`
+                : 'No Nearmap AI coverage at this location'
+            );
+        } catch (error) {
+            next(error);
+        }
+    }
+
     // ── F3: Manual Dimension + Pitch Entry ─────────────────────────────────
 
     async manualEntry(req: Request, res: Response, next: NextFunction): Promise<void> {

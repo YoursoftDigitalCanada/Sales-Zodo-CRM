@@ -504,3 +504,17 @@ export async function getRoofDataByClient(clientId: string): Promise<RoofData[]>
     const res = await api.get(`/roof-estimator/roof-data/${clientId}`);
     return res.data?.data || [];
 }
+
+export interface NearmapCoverage {
+    hasCoverage: boolean;
+    latestSurveyDate: string | null;
+    packs: string[];
+}
+
+export async function checkNearmapCoverage(latitude: number, longitude: number): Promise<NearmapCoverage> {
+    const res = await api.get("/roof-estimator/nearmap-coverage", {
+        params: { latitude, longitude },
+    });
+    return res.data?.data;
+}
+

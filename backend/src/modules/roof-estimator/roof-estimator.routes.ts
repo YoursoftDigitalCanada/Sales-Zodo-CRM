@@ -78,6 +78,12 @@ router.get(
     roofEstimatorController.getRoofData.bind(roofEstimatorController)
 );
 
+router.get(
+    '/nearmap-coverage',
+    requirePermission(PERMISSIONS.ROOF_ESTIMATOR_VIEW),
+    roofEstimatorController.checkNearmapCoverage.bind(roofEstimatorController)
+);
+
 // ── F3: Manual entry ──────────────────────────────────────────────────────
 router.post(
     '/manual-entry',

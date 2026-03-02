@@ -209,12 +209,13 @@ const navigationItems: NavigationItem[] = [
     featureId: "invoices",
     isNew: true,
   },
-  {
-    title: "Expenses",
-    icon: Landmark,
-    path: "/expenses",
-    featureId: "invoices",
-  },
+  // DRAFT — re-enable next year
+  // {
+  //   title: "Expenses",
+  //   icon: Landmark,
+  //   path: "/expenses",
+  //   featureId: "invoices",
+  // },
   {
     title: "Payments",
     icon: CreditCard,
@@ -228,31 +229,32 @@ const navigationItems: NavigationItem[] = [
 
   // ===== BUSINESS =====
   { title: "Business", isHeader: true },
-  {
-    title: "Bookings",
-    icon: CalendarDays,
-    path: "/bookings",
-    featureId: "calendar",
-    badge: 2,
-    badgeColor: "blue",
-  },
-  {
-    title: "Services",
-    icon: Layers,
-    path: "/services",
-    featureId: "calendar",
-  },
-  {
-    title: "Ecommerce",
-    icon: ShoppingCart,
-    featureId: "api",
-    submenu: [
-      { title: "Dashboard", path: "/ecommerce", featureId: "api" },
-      { title: "Products", path: "/ecommerce/products", featureId: "api" },
-      { title: "Orders", path: "/ecommerce/orders", featureId: "api", badge: 8, badgeColor: "red" },
-      { title: "Categories", path: "/ecommerce/categories", featureId: "api" },
-    ]
-  },
+  // DRAFT — re-enable next year
+  // {
+  //   title: "Bookings",
+  //   icon: CalendarDays,
+  //   path: "/bookings",
+  //   featureId: "calendar",
+  //   badge: 2,
+  //   badgeColor: "blue",
+  // },
+  // {
+  //   title: "Services",
+  //   icon: Layers,
+  //   path: "/services",
+  //   featureId: "calendar",
+  // },
+  // {
+  //   title: "Ecommerce",
+  //   icon: ShoppingCart,
+  //   featureId: "api",
+  //   submenu: [
+  //     { title: "Dashboard", path: "/ecommerce", featureId: "api" },
+  //     { title: "Products", path: "/ecommerce/products", featureId: "api" },
+  //     { title: "Orders", path: "/ecommerce/orders", featureId: "api", badge: 8, badgeColor: "red" },
+  //     { title: "Categories", path: "/ecommerce/categories", featureId: "api" },
+  //   ]
+  // },
   {
     title: "Documents",
     icon: FileStack,

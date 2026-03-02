@@ -42,14 +42,15 @@ import LetterBoxPage from "./pages/LetterBoxPage";
 import FileManagerPage from "./pages/FileManager";
 import LoginPage from "./pages/Login";
 import SignupPage from "./pages/Signup";
-import BookingPagesPage from "@/pages/BookingPages";
-import BookingsPage from "@/pages/Bookings";
+// DRAFT — re-enable next year
+// import BookingPagesPage from "@/pages/BookingPages";
+// import BookingsPage from "@/pages/Bookings";
 import UsersPage from "@/pages/Users";
 import InvoicePage from "./pages/Invoice";
-import ExpensesPage from "./pages/Expenses";
+// import ExpensesPage from "./pages/Expenses";
 
-import EcommercePage from "./pages/Ecommerce";
-import ServicesPage from "./pages/ServicesPage";
+// import EcommercePage from "./pages/Ecommerce";
+// import ServicesPage from "./pages/ServicesPage";
 
 // ✅ Chat Page Import
 import ChatPage from "./pages/Chat";
@@ -299,14 +300,15 @@ const AppRoutes = () => {
             </FeatureGuard>
           }
         />
-        <Route
+        {/* DRAFT — re-enable next year */}
+        {/* <Route
           path="/expenses"
           element={
             <FeatureGuard featureId="invoices">
               <ExpensesPage />
             </FeatureGuard>
           }
-        />
+        /> */}
 
         {/* ========== QUOTES ROUTE ========== */}
         <Route
@@ -426,31 +428,32 @@ const AppRoutes = () => {
         </Route>
 
         {/* ========== BUSINESS ROUTES ========== */}
-        <Route path="/services" element={<ServicesPage />} />
-        <Route
+        {/* DRAFT — re-enable next year */}
+        {/* <Route path="/services" element={<ServicesPage />} /> */}
+        {/* <Route
           path="/bookings"
           element={
             <FeatureGuard featureId="calendar">
               <BookingsPage />
             </FeatureGuard>
           }
-        />
-        <Route
+        /> */}
+        {/* <Route
           path="/booking-pages"
           element={
             <FeatureGuard featureId="calendar">
               <BookingPagesPage />
             </FeatureGuard>
           }
-        />
-        <Route
+        /> */}
+        {/* <Route
           path="/ecommerce"
           element={
             <FeatureGuard featureId="api">
               <EcommercePage />
             </FeatureGuard>
           }
-        />
+        /> */}
 
         {/* ========== TEAM / EMPLOYEE ROUTES ========== */}
         {/* Legacy employee page */}

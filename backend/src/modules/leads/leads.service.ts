@@ -670,6 +670,18 @@ export class LeadsService {
       'firstName', 'lastName', 'email', 'phone', 'companyName',
       'jobTitle', 'website', 'location', 'status', 'temperature',
       'potentialValue', 'notes', 'assignedToId', 'leadSourceId',
+      // Stage 1
+      'propertyAddress', 'city', 'state', 'zipCode', 'propertyType',
+      'serviceType', 'isInsuranceClaim', 'urgencyLevel', 'preferredContactMethod',
+      'bestTimeToContact', 'issueDescription',
+      // Stage 2
+      'confirmedName', 'confirmedPhone', 'confirmedEmail', 'confirmedAddress',
+      'secondaryPhone', 'spouseCoOwnerName', 'isHomeowner', 'isDecisionMaker',
+      'ownershipType', 'roofAge', 'currentRoofMaterial', 'numberOfStories',
+      'previousRoofWork', 'insuranceCompanyName', 'hasClaimBeenFiled',
+      'claimNumber', 'adjusterName', 'budgetRange', 'workTimeline',
+      'financingNeeded', 'gettingOtherQuotes', 'topPriority', 'isHOA',
+      'leadScore', 'disqualifiedReason', 'nextStep', 'qualificationCallNotes',
     ];
     const changed: string[] = [];
 

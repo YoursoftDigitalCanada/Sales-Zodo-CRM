@@ -31,6 +31,82 @@ export interface CreateLeadDto {
   // Notes & Tags
   notes?: string;
   tagIds?: string[];
+
+  // ── Stage 1: Property Info ───────────────────────────────────────────
+  propertyAddress?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  propertyType?: string;
+
+  // ── Stage 1: Service Request ─────────────────────────────────────────
+  serviceType?: string;
+  isInsuranceClaim?: string;
+  urgencyLevel?: string;
+  preferredContactMethod?: string;
+  bestTimeToContact?: string;
+  issueDescription?: string;
+
+  // ── Stage 1: UTM / Auto-captured ─────────────────────────────────────
+  leadSourceUTM?: string;
+  leadCampaignUTM?: string;
+  leadMediumUTM?: string;
+  landingPageURL?: string;
+  ipAddress?: string;
+  deviceType?: string;
+  browserType?: string;
+
+  // ── Stage 2: Verification ────────────────────────────────────────────
+  confirmedName?: boolean;
+  confirmedPhone?: boolean;
+  confirmedEmail?: boolean;
+  confirmedAddress?: boolean;
+  secondaryPhone?: string;
+  spouseCoOwnerName?: string;
+
+  // ── Stage 2: Ownership ───────────────────────────────────────────────
+  isHomeowner?: string;
+  isDecisionMaker?: string;
+  ownershipType?: string;
+
+  // ── Stage 2: Roof Details ────────────────────────────────────────────
+  roofAge?: string;
+  currentRoofMaterial?: string;
+  numberOfStories?: string;
+  knownDamageType?: string[];
+  damageOccurrenceDate?: string;
+  previousRoofWork?: string;
+  previousRoofWorkDetails?: string;
+
+  // ── Stage 2: Insurance ───────────────────────────────────────────────
+  insuranceCompanyName?: string;
+  hasClaimBeenFiled?: string;
+  claimNumber?: string;
+  adjusterAssigned?: string;
+  adjusterName?: string;
+  adjusterPhone?: string;
+  adjusterEmail?: string;
+  adjusterMeetingDate?: string;
+
+  // ── Stage 2: Budget & Timeline ───────────────────────────────────────
+  budgetRange?: string;
+  workTimeline?: string;
+  financingNeeded?: string;
+  gettingOtherQuotes?: string;
+  numberOfOtherQuotes?: number;
+  topPriority?: string;
+
+  // ── Stage 2: HOA ─────────────────────────────────────────────────────
+  isHOA?: string;
+  hoaRestrictions?: string;
+
+  // ── Stage 2: Sales Assessment ────────────────────────────────────────
+  leadScore?: number;
+  disqualifiedReason?: string;
+  nextStep?: string;
+  followUpDateTime?: string;
+  inspectionAppointmentDate?: string;
+  qualificationCallNotes?: string;
 }
 
 export interface UpdateLeadDto {
@@ -60,6 +136,82 @@ export interface UpdateLeadDto {
   // Notes & Tags
   notes?: string;
   tagIds?: string[];
+
+  // ── Stage 1: Property Info ───────────────────────────────────────────
+  propertyAddress?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  propertyType?: string;
+
+  // ── Stage 1: Service Request ─────────────────────────────────────────
+  serviceType?: string;
+  isInsuranceClaim?: string;
+  urgencyLevel?: string;
+  preferredContactMethod?: string;
+  bestTimeToContact?: string;
+  issueDescription?: string;
+
+  // ── Stage 1: UTM / Auto-captured ─────────────────────────────────────
+  leadSourceUTM?: string;
+  leadCampaignUTM?: string;
+  leadMediumUTM?: string;
+  landingPageURL?: string;
+  ipAddress?: string;
+  deviceType?: string;
+  browserType?: string;
+
+  // ── Stage 2: Verification ────────────────────────────────────────────
+  confirmedName?: boolean;
+  confirmedPhone?: boolean;
+  confirmedEmail?: boolean;
+  confirmedAddress?: boolean;
+  secondaryPhone?: string;
+  spouseCoOwnerName?: string;
+
+  // ── Stage 2: Ownership ───────────────────────────────────────────────
+  isHomeowner?: string;
+  isDecisionMaker?: string;
+  ownershipType?: string;
+
+  // ── Stage 2: Roof Details ────────────────────────────────────────────
+  roofAge?: string;
+  currentRoofMaterial?: string;
+  numberOfStories?: string;
+  knownDamageType?: string[];
+  damageOccurrenceDate?: string;
+  previousRoofWork?: string;
+  previousRoofWorkDetails?: string;
+
+  // ── Stage 2: Insurance ───────────────────────────────────────────────
+  insuranceCompanyName?: string;
+  hasClaimBeenFiled?: string;
+  claimNumber?: string;
+  adjusterAssigned?: string;
+  adjusterName?: string;
+  adjusterPhone?: string;
+  adjusterEmail?: string;
+  adjusterMeetingDate?: string;
+
+  // ── Stage 2: Budget & Timeline ───────────────────────────────────────
+  budgetRange?: string;
+  workTimeline?: string;
+  financingNeeded?: string;
+  gettingOtherQuotes?: string;
+  numberOfOtherQuotes?: number;
+  topPriority?: string;
+
+  // ── Stage 2: HOA ─────────────────────────────────────────────────────
+  isHOA?: string;
+  hoaRestrictions?: string;
+
+  // ── Stage 2: Sales Assessment ────────────────────────────────────────
+  leadScore?: number;
+  disqualifiedReason?: string;
+  nextStep?: string;
+  followUpDateTime?: string;
+  inspectionAppointmentDate?: string;
+  qualificationCallNotes?: string;
 }
 
 export interface LeadQueryDto {
@@ -140,6 +292,82 @@ export interface LeadResponseDto {
   createdAt: Date;
   updatedAt: Date;
   convertedAt?: Date;
+
+  // ── Stage 1: Property Info ───────────────────────────────────────────
+  propertyAddress?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  propertyType?: string;
+
+  // ── Stage 1: Service Request ─────────────────────────────────────────
+  serviceType?: string;
+  isInsuranceClaim?: string;
+  urgencyLevel?: string;
+  preferredContactMethod?: string;
+  bestTimeToContact?: string;
+  issueDescription?: string;
+
+  // ── Stage 1: UTM / Auto-captured ─────────────────────────────────────
+  leadSourceUTM?: string;
+  leadCampaignUTM?: string;
+  leadMediumUTM?: string;
+  landingPageURL?: string;
+  ipAddress?: string;
+  deviceType?: string;
+  browserType?: string;
+
+  // ── Stage 2: Verification ────────────────────────────────────────────
+  confirmedName?: boolean;
+  confirmedPhone?: boolean;
+  confirmedEmail?: boolean;
+  confirmedAddress?: boolean;
+  secondaryPhone?: string;
+  spouseCoOwnerName?: string;
+
+  // ── Stage 2: Ownership ───────────────────────────────────────────────
+  isHomeowner?: string;
+  isDecisionMaker?: string;
+  ownershipType?: string;
+
+  // ── Stage 2: Roof Details ────────────────────────────────────────────
+  roofAge?: string;
+  currentRoofMaterial?: string;
+  numberOfStories?: string;
+  knownDamageType?: string[];
+  damageOccurrenceDate?: string;
+  previousRoofWork?: string;
+  previousRoofWorkDetails?: string;
+
+  // ── Stage 2: Insurance ───────────────────────────────────────────────
+  insuranceCompanyName?: string;
+  hasClaimBeenFiled?: string;
+  claimNumber?: string;
+  adjusterAssigned?: string;
+  adjusterName?: string;
+  adjusterPhone?: string;
+  adjusterEmail?: string;
+  adjusterMeetingDate?: Date;
+
+  // ── Stage 2: Budget & Timeline ───────────────────────────────────────
+  budgetRange?: string;
+  workTimeline?: string;
+  financingNeeded?: string;
+  gettingOtherQuotes?: string;
+  numberOfOtherQuotes?: number;
+  topPriority?: string;
+
+  // ── Stage 2: HOA ─────────────────────────────────────────────────────
+  isHOA?: string;
+  hoaRestrictions?: string;
+
+  // ── Stage 2: Sales Assessment ────────────────────────────────────────
+  leadScore?: number;
+  disqualifiedReason?: string;
+  nextStep?: string;
+  followUpDateTime?: Date;
+  inspectionAppointmentDate?: Date;
+  qualificationCallNotes?: string;
 }
 
 export interface LeadListResponseDto {
@@ -195,20 +423,20 @@ export function toLeadResponseDto(lead: any): LeadResponseDto {
     notes: lead.notes || undefined,
     leadSource: lead.leadSource
       ? {
-          id: lead.leadSource.id,
-          name: lead.leadSource.name,
-        }
+        id: lead.leadSource.id,
+        name: lead.leadSource.name,
+      }
       : undefined,
     assignedTo: lead.assignedTo
       ? {
-          id: lead.assignedTo.id,
-          userId: lead.assignedTo.userId,
-          user: {
-            firstName: lead.assignedTo.user.firstName,
-            lastName: lead.assignedTo.user.lastName,
-            email: lead.assignedTo.user.email,
-          },
-        }
+        id: lead.assignedTo.id,
+        userId: lead.assignedTo.userId,
+        user: {
+          firstName: lead.assignedTo.user.firstName,
+          lastName: lead.assignedTo.user.lastName,
+          email: lead.assignedTo.user.email,
+        },
+      }
       : undefined,
     tags: lead.tags?.map((lt: any) => ({
       id: lt.tag.id,
@@ -217,15 +445,91 @@ export function toLeadResponseDto(lead: any): LeadResponseDto {
     })) || [],
     createdBy: lead.createdBy
       ? {
-          id: lead.createdBy.id,
-          user: {
-            firstName: lead.createdBy.user.firstName,
-            lastName: lead.createdBy.user.lastName,
-          },
-        }
+        id: lead.createdBy.id,
+        user: {
+          firstName: lead.createdBy.user.firstName,
+          lastName: lead.createdBy.user.lastName,
+        },
+      }
       : undefined,
     createdAt: lead.createdAt,
     updatedAt: lead.updatedAt,
     convertedAt: lead.convertedAt || undefined,
+
+    // ── Stage 1: Property Info ─────────────────────────────────────────
+    propertyAddress: lead.propertyAddress || undefined,
+    city: lead.city || undefined,
+    state: lead.state || undefined,
+    zipCode: lead.zipCode || undefined,
+    propertyType: lead.propertyType || undefined,
+
+    // ── Stage 1: Service Request ───────────────────────────────────────
+    serviceType: lead.serviceType || undefined,
+    isInsuranceClaim: lead.isInsuranceClaim || undefined,
+    urgencyLevel: lead.urgencyLevel || undefined,
+    preferredContactMethod: lead.preferredContactMethod || undefined,
+    bestTimeToContact: lead.bestTimeToContact || undefined,
+    issueDescription: lead.issueDescription || undefined,
+
+    // ── Stage 1: UTM / Auto-captured ───────────────────────────────────
+    leadSourceUTM: lead.leadSourceUTM || undefined,
+    leadCampaignUTM: lead.leadCampaignUTM || undefined,
+    leadMediumUTM: lead.leadMediumUTM || undefined,
+    landingPageURL: lead.landingPageURL || undefined,
+    ipAddress: lead.ipAddress || undefined,
+    deviceType: lead.deviceType || undefined,
+    browserType: lead.browserType || undefined,
+
+    // ── Stage 2: Verification ──────────────────────────────────────────
+    confirmedName: lead.confirmedName ?? false,
+    confirmedPhone: lead.confirmedPhone ?? false,
+    confirmedEmail: lead.confirmedEmail ?? false,
+    confirmedAddress: lead.confirmedAddress ?? false,
+    secondaryPhone: lead.secondaryPhone || undefined,
+    spouseCoOwnerName: lead.spouseCoOwnerName || undefined,
+
+    // ── Stage 2: Ownership ─────────────────────────────────────────────
+    isHomeowner: lead.isHomeowner || undefined,
+    isDecisionMaker: lead.isDecisionMaker || undefined,
+    ownershipType: lead.ownershipType || undefined,
+
+    // ── Stage 2: Roof Details ──────────────────────────────────────────
+    roofAge: lead.roofAge || undefined,
+    currentRoofMaterial: lead.currentRoofMaterial || undefined,
+    numberOfStories: lead.numberOfStories || undefined,
+    knownDamageType: lead.knownDamageType || undefined,
+    damageOccurrenceDate: lead.damageOccurrenceDate || undefined,
+    previousRoofWork: lead.previousRoofWork || undefined,
+    previousRoofWorkDetails: lead.previousRoofWorkDetails || undefined,
+
+    // ── Stage 2: Insurance ─────────────────────────────────────────────
+    insuranceCompanyName: lead.insuranceCompanyName || undefined,
+    hasClaimBeenFiled: lead.hasClaimBeenFiled || undefined,
+    claimNumber: lead.claimNumber || undefined,
+    adjusterAssigned: lead.adjusterAssigned || undefined,
+    adjusterName: lead.adjusterName || undefined,
+    adjusterPhone: lead.adjusterPhone || undefined,
+    adjusterEmail: lead.adjusterEmail || undefined,
+    adjusterMeetingDate: lead.adjusterMeetingDate || undefined,
+
+    // ── Stage 2: Budget & Timeline ─────────────────────────────────────
+    budgetRange: lead.budgetRange || undefined,
+    workTimeline: lead.workTimeline || undefined,
+    financingNeeded: lead.financingNeeded || undefined,
+    gettingOtherQuotes: lead.gettingOtherQuotes || undefined,
+    numberOfOtherQuotes: lead.numberOfOtherQuotes ?? undefined,
+    topPriority: lead.topPriority || undefined,
+
+    // ── Stage 2: HOA ───────────────────────────────────────────────────
+    isHOA: lead.isHOA || undefined,
+    hoaRestrictions: lead.hoaRestrictions || undefined,
+
+    // ── Stage 2: Sales Assessment ──────────────────────────────────────
+    leadScore: lead.leadScore ?? undefined,
+    disqualifiedReason: lead.disqualifiedReason || undefined,
+    nextStep: lead.nextStep || undefined,
+    followUpDateTime: lead.followUpDateTime || undefined,
+    inspectionAppointmentDate: lead.inspectionAppointmentDate || undefined,
+    qualificationCallNotes: lead.qualificationCallNotes || undefined,
   };
 }

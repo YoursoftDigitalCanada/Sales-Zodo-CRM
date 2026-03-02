@@ -32,8 +32,9 @@ import calendarRoutes from '../modules/calendar/calendar.routes';
 import invoicesRoutes from '../modules/invoices/invoices.routes';
 import quotesRoutes from '../modules/quotes/quotes.routes';
 import quotesPublicRoutes from '../modules/quotes/quotes.public-routes';
-import expensesRoutes from '../modules/expenses/expenses.routes';
-import bookingsRoutes from '../modules/bookings/bookings.routes';
+// DRAFT — re-enable next year
+// import expensesRoutes from '../modules/expenses/expenses.routes';
+// import bookingsRoutes from '../modules/bookings/bookings.routes';
 import servicesRoutes from '../modules/services/services.routes';
 import contractsRoutes from '../modules/contracts/contracts.routes';
 
@@ -55,8 +56,8 @@ import applicationsRoutes from '../modules/applications/applications.routes';
 // Permissions module
 import permissionsRoutes from '../modules/permissions/permissions.routes';
 
-// E-commerce modules
-import ecommerceRoutes from '../modules/ecommerce/ecommerce.routes';
+// DRAFT — re-enable next year
+// import ecommerceRoutes from '../modules/ecommerce/ecommerce.routes';
 
 // AI modules
 import roofEstimatorRoutes from '../modules/roof-estimator/roof-estimator.routes';
@@ -126,8 +127,9 @@ export function registerRoutes(app: Application): void {
   // Finance
   protectedRouter.use('/invoices', invoicesRoutes);
   protectedRouter.use('/quotes', quotesRoutes);
-  protectedRouter.use('/expenses', expensesRoutes);
-  protectedRouter.use('/bookings', bookingsRoutes);
+  // DRAFT — re-enable next year
+  // protectedRouter.use('/expenses', expensesRoutes);
+  // protectedRouter.use('/bookings', bookingsRoutes);
   protectedRouter.use('/services', servicesRoutes);
   protectedRouter.use('/contracts', contractsRoutes);
 
@@ -153,8 +155,8 @@ export function registerRoutes(app: Application): void {
   // Permissions
   protectedRouter.use('/permissions', permissionsRoutes);
 
-  // E-commerce
-  protectedRouter.use('/ecommerce', ecommerceRoutes);
+  // DRAFT — re-enable next year
+  // protectedRouter.use('/ecommerce', ecommerceRoutes);
 
   // AI Modules
   protectedRouter.use('/roof-estimator', roofEstimatorRoutes);
@@ -204,8 +206,9 @@ export function registerRoutes(app: Application): void {
         calendar: `${apiPrefix}/calendar`,
         // Finance
         invoices: `${apiPrefix}/invoices`,
-        expenses: `${apiPrefix}/expenses`,
-        bookings: `${apiPrefix}/bookings`,
+        // DRAFT — re-enable next year
+        // expenses: `${apiPrefix}/expenses`,
+        // bookings: `${apiPrefix}/bookings`,
         services: `${apiPrefix}/services`,
         // Files
         files: `${apiPrefix}/files`,
@@ -222,8 +225,8 @@ export function registerRoutes(app: Application): void {
         applications: `${apiPrefix}/applications`,
         // Permissions
         permissions: `${apiPrefix}/permissions`,
-        // E-commerce
-        ecommerce: `${apiPrefix}/ecommerce`,
+        // DRAFT — re-enable next year
+        // ecommerce: `${apiPrefix}/ecommerce`,
         // AI Modules
         roofEstimator: `${apiPrefix}/roof-estimator`,
         copilot: `${apiPrefix}/copilot`,

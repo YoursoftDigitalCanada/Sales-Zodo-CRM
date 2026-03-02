@@ -170,6 +170,73 @@ interface Lead {
     twitter?: string;
     facebook?: string;
   };
+
+  // ── Stage 1: Property Info ───────────────────────────────────────────
+  propertyAddress?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  propertyType?: string;
+
+  // ── Stage 1: Service Request ─────────────────────────────────────────
+  serviceType?: string;
+  isInsuranceClaim?: string;
+  urgencyLevel?: string;
+  preferredContactMethod?: string;
+  bestTimeToContact?: string;
+  issueDescription?: string;
+
+  // ── Stage 2: Verification ────────────────────────────────────────────
+  confirmedName?: boolean;
+  confirmedPhone?: boolean;
+  confirmedEmail?: boolean;
+  confirmedAddress?: boolean;
+  secondaryPhone?: string;
+  spouseCoOwnerName?: string;
+
+  // ── Stage 2: Ownership ───────────────────────────────────────────────
+  isHomeowner?: string;
+  isDecisionMaker?: string;
+  ownershipType?: string;
+
+  // ── Stage 2: Roof Details ────────────────────────────────────────────
+  roofAge?: string;
+  currentRoofMaterial?: string;
+  numberOfStories?: string;
+  knownDamageType?: string[];
+  damageOccurrenceDate?: string;
+  previousRoofWork?: string;
+  previousRoofWorkDetails?: string;
+
+  // ── Stage 2: Insurance ───────────────────────────────────────────────
+  insuranceCompanyName?: string;
+  hasClaimBeenFiled?: string;
+  claimNumber?: string;
+  adjusterAssigned?: string;
+  adjusterName?: string;
+  adjusterPhone?: string;
+  adjusterEmail?: string;
+  adjusterMeetingDate?: string;
+
+  // ── Stage 2: Budget & Timeline ───────────────────────────────────────
+  budgetRange?: string;
+  workTimeline?: string;
+  financingNeeded?: string;
+  gettingOtherQuotes?: string;
+  numberOfOtherQuotes?: number;
+  topPriority?: string;
+
+  // ── Stage 2: HOA ─────────────────────────────────────────────────────
+  isHOA?: string;
+  hoaRestrictions?: string;
+
+  // ── Stage 2: Sales Assessment ────────────────────────────────────────
+  leadScore?: number;
+  disqualifiedReason?: string;
+  nextStep?: string;
+  followUpDateTime?: string;
+  inspectionAppointmentDate?: string;
+  qualificationCallNotes?: string;
 }
 
 interface LeadStats {
@@ -792,6 +859,64 @@ const LeadFormDialog = ({
     assignedTo: "",
     tags: "",
     notes: "",
+    // Stage 1: Property Info
+    propertyAddress: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    propertyType: "",
+    // Stage 1: Service Request
+    serviceType: "",
+    isInsuranceClaim: "",
+    urgencyLevel: "",
+    preferredContactMethod: "",
+    bestTimeToContact: "",
+    issueDescription: "",
+    // Stage 2: Verification
+    confirmedName: false,
+    confirmedPhone: false,
+    confirmedEmail: false,
+    confirmedAddress: false,
+    secondaryPhone: "",
+    spouseCoOwnerName: "",
+    // Stage 2: Ownership
+    isHomeowner: "",
+    isDecisionMaker: "",
+    ownershipType: "",
+    // Stage 2: Roof Details
+    roofAge: "",
+    currentRoofMaterial: "",
+    numberOfStories: "",
+    knownDamageType: [] as string[],
+    damageOccurrenceDate: "",
+    previousRoofWork: "",
+    previousRoofWorkDetails: "",
+    // Stage 2: Insurance
+    insuranceCompanyName: "",
+    hasClaimBeenFiled: "",
+    claimNumber: "",
+    adjusterAssigned: "",
+    adjusterName: "",
+    adjusterPhone: "",
+    adjusterEmail: "",
+    adjusterMeetingDate: "",
+    // Stage 2: Budget & Timeline
+    budgetRange: "",
+    workTimeline: "",
+    financingNeeded: "",
+    gettingOtherQuotes: "",
+    numberOfOtherQuotes: "",
+    topPriority: "",
+    // Stage 2: HOA
+    isHOA: "",
+    hoaRestrictions: "",
+    // Stage 2: Sales Assessment
+    leadScore: "",
+    disqualifiedReason: "",
+    nextStep: "",
+    followUpDateTime: "",
+    inspectionAppointmentDate: "",
+    qualificationCallNotes: "",
   });
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
@@ -831,31 +956,87 @@ const LeadFormDialog = ({
         assignedTo: lead.assignedToId || "",
         tags: lead.tags?.join(", ") || "",
         notes: lead.notes || "",
+        // Stage 1
+        propertyAddress: lead.propertyAddress || "",
+        city: lead.city || "",
+        state: lead.state || "",
+        zipCode: lead.zipCode || "",
+        propertyType: lead.propertyType || "",
+        serviceType: lead.serviceType || "",
+        isInsuranceClaim: lead.isInsuranceClaim || "",
+        urgencyLevel: lead.urgencyLevel || "",
+        preferredContactMethod: lead.preferredContactMethod || "",
+        bestTimeToContact: lead.bestTimeToContact || "",
+        issueDescription: lead.issueDescription || "",
+        // Stage 2
+        confirmedName: lead.confirmedName || false,
+        confirmedPhone: lead.confirmedPhone || false,
+        confirmedEmail: lead.confirmedEmail || false,
+        confirmedAddress: lead.confirmedAddress || false,
+        secondaryPhone: lead.secondaryPhone || "",
+        spouseCoOwnerName: lead.spouseCoOwnerName || "",
+        isHomeowner: lead.isHomeowner || "",
+        isDecisionMaker: lead.isDecisionMaker || "",
+        ownershipType: lead.ownershipType || "",
+        roofAge: lead.roofAge || "",
+        currentRoofMaterial: lead.currentRoofMaterial || "",
+        numberOfStories: lead.numberOfStories || "",
+        knownDamageType: lead.knownDamageType || [],
+        damageOccurrenceDate: lead.damageOccurrenceDate || "",
+        previousRoofWork: lead.previousRoofWork || "",
+        previousRoofWorkDetails: lead.previousRoofWorkDetails || "",
+        insuranceCompanyName: lead.insuranceCompanyName || "",
+        hasClaimBeenFiled: lead.hasClaimBeenFiled || "",
+        claimNumber: lead.claimNumber || "",
+        adjusterAssigned: lead.adjusterAssigned || "",
+        adjusterName: lead.adjusterName || "",
+        adjusterPhone: lead.adjusterPhone || "",
+        adjusterEmail: lead.adjusterEmail || "",
+        adjusterMeetingDate: lead.adjusterMeetingDate || "",
+        budgetRange: lead.budgetRange || "",
+        workTimeline: lead.workTimeline || "",
+        financingNeeded: lead.financingNeeded || "",
+        gettingOtherQuotes: lead.gettingOtherQuotes || "",
+        numberOfOtherQuotes: lead.numberOfOtherQuotes?.toString() || "",
+        topPriority: lead.topPriority || "",
+        isHOA: lead.isHOA || "",
+        hoaRestrictions: lead.hoaRestrictions || "",
+        leadScore: lead.leadScore?.toString() || "",
+        disqualifiedReason: lead.disqualifiedReason || "",
+        nextStep: lead.nextStep || "",
+        followUpDateTime: lead.followUpDateTime || "",
+        inspectionAppointmentDate: lead.inspectionAppointmentDate || "",
+        qualificationCallNotes: lead.qualificationCallNotes || "",
       });
     } else {
       setFormData({
-        firstName: "",
-        lastName: "",
-        email: "",
-        phone: "",
-        company: "",
-        jobTitle: "",
-        website: "",
-        location: "",
-        source: "website",
-        status: "new",
-        temperature: "warm",
-        value: "",
-        assignedTo: "",
-        tags: "",
-        notes: "",
+        firstName: "", lastName: "", email: "", phone: "",
+        company: "", jobTitle: "", website: "", location: "",
+        source: "website", status: "new", temperature: "warm",
+        value: "", assignedTo: "", tags: "", notes: "",
+        propertyAddress: "", city: "", state: "", zipCode: "", propertyType: "",
+        serviceType: "", isInsuranceClaim: "", urgencyLevel: "",
+        preferredContactMethod: "", bestTimeToContact: "", issueDescription: "",
+        confirmedName: false, confirmedPhone: false, confirmedEmail: false, confirmedAddress: false,
+        secondaryPhone: "", spouseCoOwnerName: "",
+        isHomeowner: "", isDecisionMaker: "", ownershipType: "",
+        roofAge: "", currentRoofMaterial: "", numberOfStories: "",
+        knownDamageType: [], damageOccurrenceDate: "", previousRoofWork: "", previousRoofWorkDetails: "",
+        insuranceCompanyName: "", hasClaimBeenFiled: "", claimNumber: "",
+        adjusterAssigned: "", adjusterName: "", adjusterPhone: "", adjusterEmail: "", adjusterMeetingDate: "",
+        budgetRange: "", workTimeline: "", financingNeeded: "",
+        gettingOtherQuotes: "", numberOfOtherQuotes: "", topPriority: "",
+        isHOA: "", hoaRestrictions: "",
+        leadScore: "", disqualifiedReason: "", nextStep: "",
+        followUpDateTime: "", inspectionAppointmentDate: "", qualificationCallNotes: "",
       });
     }
+    setActiveTab("basic");
   }, [lead, isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.firstName || !formData.lastName || !formData.email || !formData.company) {
+    if (!formData.firstName || !formData.lastName) {
       return;
     }
 
@@ -868,6 +1049,8 @@ const LeadFormDialog = ({
           .split(",")
           .map((t) => t.trim())
           .filter((t) => t.length > 0),
+        numberOfOtherQuotes: formData.numberOfOtherQuotes ? parseInt(formData.numberOfOtherQuotes) : undefined,
+        leadScore: formData.leadScore ? parseInt(formData.leadScore) : undefined,
       });
       onClose();
     } finally {
@@ -875,9 +1058,19 @@ const LeadFormDialog = ({
     }
   };
 
+  // Helper for toggling multi-select values (knownDamageType)
+  const toggleDamageType = (val: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      knownDamageType: prev.knownDamageType.includes(val)
+        ? prev.knownDamageType.filter((v) => v !== val)
+        : [...prev.knownDamageType, val],
+    }));
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[700px] p-0 rounded-md overflow-hidden max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[780px] p-0 rounded-md overflow-hidden max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-[rgba(15,23,42,0.06)] bg-[#F0FDFA] sticky top-0 bg-white z-10">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-[#0F172A]">
@@ -891,18 +1084,33 @@ const LeadFormDialog = ({
 
         <form onSubmit={handleSubmit} className="p-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="bg-white/5 rounded-md p-1 mb-6">
-              <TabsTrigger value="basic" className="rounded-md data-[state=active]:bg-white">
+            <TabsList className="bg-white/5 rounded-md p-1 mb-6 flex flex-wrap gap-1">
+              <TabsTrigger value="basic" className="rounded-md data-[state=active]:bg-white text-xs sm:text-sm">
                 Basic Info
               </TabsTrigger>
-              <TabsTrigger value="company" className="rounded-md data-[state=active]:bg-white">
-                Company
+              <TabsTrigger value="property" className="rounded-md data-[state=active]:bg-white text-xs sm:text-sm">
+                Property
               </TabsTrigger>
-              <TabsTrigger value="details" className="rounded-md data-[state=active]:bg-white">
+              <TabsTrigger value="service" className="rounded-md data-[state=active]:bg-white text-xs sm:text-sm">
+                Service
+              </TabsTrigger>
+              <TabsTrigger value="qualification" className="rounded-md data-[state=active]:bg-white text-xs sm:text-sm">
+                Qualification
+              </TabsTrigger>
+              {formData.isInsuranceClaim === "Yes" && (
+                <TabsTrigger value="insurance" className="rounded-md data-[state=active]:bg-white text-xs sm:text-sm">
+                  Insurance
+                </TabsTrigger>
+              )}
+              <TabsTrigger value="assessment" className="rounded-md data-[state=active]:bg-white text-xs sm:text-sm">
+                Assessment
+              </TabsTrigger>
+              <TabsTrigger value="details" className="rounded-md data-[state=active]:bg-white text-xs sm:text-sm">
                 Lead Details
               </TabsTrigger>
             </TabsList>
 
+            {/* ── TAB: Basic Info (existing) ─────────────────────────────── */}
             <TabsContent value="basic" className="space-y-4 mt-0">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -932,9 +1140,7 @@ const LeadFormDialog = ({
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-[#475569]">
-                  Email Address <span className="text-red-500">*</span>
-                </Label>
+                <Label className="text-sm font-medium text-[#475569]">Email Address</Label>
                 <div className="relative">
                   <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                   <Input
@@ -942,27 +1148,127 @@ const LeadFormDialog = ({
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     placeholder="john@company.com"
-                    required
                     className="h-11 pl-10 rounded-md"
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-[#475569]">Phone Number</Label>
-                <div className="relative">
-                  <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">
+                    Phone Number <span className="text-red-500">*</span>
+                  </Label>
+                  <div className="relative">
+                    <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
+                    <Input
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      placeholder="+1 (416) 555-0123"
+                      className="h-11 pl-10 rounded-md"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Secondary Phone</Label>
                   <Input
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="+1 (416) 555-0123"
-                    className="h-11 pl-10 rounded-md"
+                    value={formData.secondaryPhone}
+                    onChange={(e) => setFormData({ ...formData, secondaryPhone: e.target.value })}
+                    placeholder="Alt phone number"
+                    className="h-11 rounded-md"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-[#475569]">Location</Label>
+                <Label className="text-sm font-medium text-[#475569]">Spouse / Co-Owner Name</Label>
+                <Input
+                  value={formData.spouseCoOwnerName}
+                  onChange={(e) => setFormData({ ...formData, spouseCoOwnerName: e.target.value })}
+                  placeholder="Jane Doe"
+                  className="h-11 rounded-md"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-[#475569]">Company</Label>
+                <div className="relative">
+                  <Building2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
+                  <Input
+                    value={formData.company}
+                    onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                    placeholder="Acme Inc."
+                    className="h-11 pl-10 rounded-md"
+                  />
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* ── TAB: Property Info ──────────────────────────────────────── */}
+            <TabsContent value="property" className="space-y-4 mt-0">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-[#475569]">
+                  Property Address <span className="text-red-500">*</span>
+                </Label>
+                <div className="relative">
+                  <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
+                  <Input
+                    value={formData.propertyAddress}
+                    onChange={(e) => setFormData({ ...formData, propertyAddress: e.target.value })}
+                    placeholder="123 Main Street"
+                    className="h-11 pl-10 rounded-md"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">City</Label>
+                  <Input
+                    value={formData.city}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    placeholder="Toronto"
+                    className="h-11 rounded-md"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">State / Province</Label>
+                  <Input
+                    value={formData.state}
+                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                    placeholder="ON"
+                    className="h-11 rounded-md"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Zip Code</Label>
+                  <Input
+                    value={formData.zipCode}
+                    onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
+                    placeholder="M5V 2H1"
+                    className="h-11 rounded-md"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-[#475569]">Property Type</Label>
+                <Select
+                  value={formData.propertyType}
+                  onValueChange={(val) => setFormData({ ...formData, propertyType: val })}
+                >
+                  <SelectTrigger className="h-11 rounded-md">
+                    <SelectValue placeholder="Select property type" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md">
+                    <SelectItem value="Residential" className="rounded-md">Residential</SelectItem>
+                    <SelectItem value="Commercial" className="rounded-md">Commercial</SelectItem>
+                    <SelectItem value="Multi-Family" className="rounded-md">Multi-Family</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-[#475569]">Location (General)</Label>
                 <div className="relative">
                   <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                   <Input
@@ -975,74 +1281,563 @@ const LeadFormDialog = ({
               </div>
             </TabsContent>
 
-            <TabsContent value="company" className="space-y-4 mt-0">
+            {/* ── TAB: Service Details ────────────────────────────────────── */}
+            <TabsContent value="service" className="space-y-4 mt-0">
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#475569]">
-                  Company Name <span className="text-red-500">*</span>
+                  What Service Do You Need? <span className="text-red-500">*</span>
                 </Label>
-                <div className="relative">
-                  <Building2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
-                  <Input
-                    value={formData.company}
-                    onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                    placeholder="Acme Inc."
-                    required
-                    className="h-11 pl-10 rounded-md"
-                  />
-                </div>
+                <Select
+                  value={formData.serviceType}
+                  onValueChange={(val) => setFormData({ ...formData, serviceType: val })}
+                >
+                  <SelectTrigger className="h-11 rounded-md">
+                    <SelectValue placeholder="Select service type" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md">
+                    {["Roof Replacement", "Roof Repair", "Storm/Hail Damage", "Roof Inspection",
+                      "Leak Repair (Emergency)", "Gutters", "Siding", "Other"].map((s) => (
+                        <SelectItem key={s} value={s} className="rounded-md">{s}</SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-[#475569]">Job Title</Label>
-                <div className="relative">
-                  <Briefcase size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
-                  <Input
-                    value={formData.jobTitle}
-                    onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
-                    placeholder="VP of Sales"
-                    className="h-11 pl-10 rounded-md"
-                  />
-                </div>
+                <Label className="text-sm font-medium text-[#475569]">Is This an Insurance Claim?</Label>
+                <Select
+                  value={formData.isInsuranceClaim}
+                  onValueChange={(val) => setFormData({ ...formData, isInsuranceClaim: val })}
+                >
+                  <SelectTrigger className="h-11 rounded-md">
+                    <SelectValue placeholder="Select" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md">
+                    <SelectItem value="Yes" className="rounded-md">Yes</SelectItem>
+                    <SelectItem value="No" className="rounded-md">No</SelectItem>
+                    <SelectItem value="Not Sure" className="rounded-md">Not Sure</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-[#475569]">Website</Label>
-                <div className="relative">
-                  <Globe size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
-                  <Input
-                    value={formData.website}
-                    onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                    placeholder="https://company.com"
-                    className="h-11 pl-10 rounded-md"
-                  />
-                </div>
+                <Label className="text-sm font-medium text-[#475569]">How Urgent Is This?</Label>
+                <Select
+                  value={formData.urgencyLevel}
+                  onValueChange={(val) => setFormData({ ...formData, urgencyLevel: val })}
+                >
+                  <SelectTrigger className="h-11 rounded-md">
+                    <SelectValue placeholder="Select urgency" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md">
+                    {["Emergency (Leaking Now!)", "ASAP (Within a few days)", "Within a couple weeks",
+                      "Just getting quotes / planning ahead"].map((u) => (
+                        <SelectItem key={u} value={u} className="rounded-md">{u}</SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               </div>
-            </TabsContent>
 
-            <TabsContent value="details" className="space-y-4 mt-0">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-[#475569]">Lead Source</Label>
+                  <Label className="text-sm font-medium text-[#475569]">Preferred Contact Method</Label>
                   <Select
-                    value={formData.source}
-                    onValueChange={(val) => setFormData({ ...formData, source: val })}
+                    value={formData.preferredContactMethod}
+                    onValueChange={(val) => setFormData({ ...formData, preferredContactMethod: val })}
                   >
                     <SelectTrigger className="h-11 rounded-md">
-                      <SelectValue />
+                      <SelectValue placeholder="Select" />
                     </SelectTrigger>
                     <SelectContent className="rounded-md">
-                      {leadSources.map((source) => (
-                        <SelectItem key={source.id} value={source.id} className="rounded-md">
-                          <div className="flex items-center gap-2">
-                            <source.icon size={14} style={{ color: source.color }} />
-                            {source.name}
-                          </div>
-                        </SelectItem>
+                      <SelectItem value="Phone Call" className="rounded-md">Phone Call</SelectItem>
+                      <SelectItem value="Text" className="rounded-md">Text</SelectItem>
+                      <SelectItem value="Email" className="rounded-md">Email</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Best Time to Reach</Label>
+                  <Select
+                    value={formData.bestTimeToContact}
+                    onValueChange={(val) => setFormData({ ...formData, bestTimeToContact: val })}
+                  >
+                    <SelectTrigger className="h-11 rounded-md">
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-md">
+                      {["Morning (8am-12pm)", "Afternoon (12pm-5pm)", "Evening (5pm-8pm)", "Anytime"].map((t) => (
+                        <SelectItem key={t} value={t} className="rounded-md">{t}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
 
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-[#475569]">Describe the Issue</Label>
+                <Textarea
+                  value={formData.issueDescription}
+                  onChange={(e) => setFormData({ ...formData, issueDescription: e.target.value })}
+                  placeholder="Describe what you're seeing — leaks, missing shingles, storm damage, etc."
+                  rows={3}
+                  className="rounded-md resize-none"
+                />
+                <p className="text-xs text-[#94A3B8]">Max 500 characters</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-[#475569]">How Did You Hear About Us?</Label>
+                <Select
+                  value={formData.source}
+                  onValueChange={(val) => setFormData({ ...formData, source: val })}
+                >
+                  <SelectTrigger className="h-11 rounded-md">
+                    <SelectValue placeholder="Select" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md">
+                    {leadSources.map((source) => (
+                      <SelectItem key={source.id} value={source.id} className="rounded-md">
+                        <div className="flex items-center gap-2">
+                          <source.icon size={14} style={{ color: source.color }} />
+                          {source.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </TabsContent>
+
+            {/* ── TAB: Qualification ──────────────────────────────────────── */}
+            <TabsContent value="qualification" className="space-y-6 mt-0">
+              {/* Verification Checkboxes */}
+              <div>
+                <h4 className="text-sm font-semibold text-[#0F172A] mb-3">Verify Contact Information</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { key: "confirmedName" as const, label: "Name Confirmed" },
+                    { key: "confirmedPhone" as const, label: "Phone Confirmed" },
+                    { key: "confirmedEmail" as const, label: "Email Confirmed" },
+                    { key: "confirmedAddress" as const, label: "Address Confirmed" },
+                  ].map((item) => (
+                    <label key={item.key} className="flex items-center gap-2 p-2 rounded-md hover:bg-[#F8FAFC] cursor-pointer">
+                      <Checkbox
+                        checked={formData[item.key]}
+                        onCheckedChange={(checked) => setFormData({ ...formData, [item.key]: !!checked })}
+                        className="data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
+                      />
+                      <span className="text-sm text-[#475569]">{item.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Ownership */}
+              <div>
+                <h4 className="text-sm font-semibold text-[#0F172A] mb-3">Ownership Verification</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-[#475569]">Are You the Homeowner?</Label>
+                    <Select value={formData.isHomeowner} onValueChange={(val) => setFormData({ ...formData, isHomeowner: val })}>
+                      <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent className="rounded-md">
+                        <SelectItem value="Yes" className="rounded-md">Yes</SelectItem>
+                        <SelectItem value="No" className="rounded-md">No</SelectItem>
+                        <SelectItem value="Tenant" className="rounded-md">Tenant</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-[#475569]">Are You the Decision Maker?</Label>
+                    <Select value={formData.isDecisionMaker} onValueChange={(val) => setFormData({ ...formData, isDecisionMaker: val })}>
+                      <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent className="rounded-md">
+                        <SelectItem value="Yes" className="rounded-md">Yes</SelectItem>
+                        <SelectItem value="No" className="rounded-md">No</SelectItem>
+                        <SelectItem value="Need Spouse Approval" className="rounded-md">Need Spouse Approval</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Roof Details */}
+              <div>
+                <h4 className="text-sm font-semibold text-[#0F172A] mb-3">Roof Details</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-[#475569]">Approximate Roof Age</Label>
+                    <Select value={formData.roofAge} onValueChange={(val) => setFormData({ ...formData, roofAge: val })}>
+                      <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent className="rounded-md">
+                        {["0-5 years", "5-10 years", "10-15 years", "15-20 years", "20+ years", "Unknown"].map((a) => (
+                          <SelectItem key={a} value={a} className="rounded-md">{a}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-[#475569]">Current Roof Material</Label>
+                    <Select value={formData.currentRoofMaterial} onValueChange={(val) => setFormData({ ...formData, currentRoofMaterial: val })}>
+                      <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent className="rounded-md">
+                        {["Asphalt Shingle", "Metal", "Tile/Clay", "Flat/TPO/EPDM", "Wood Shake", "Slate", "Unknown"].map((m) => (
+                          <SelectItem key={m} value={m} className="rounded-md">{m}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-[#475569]">Number of Stories</Label>
+                    <Select value={formData.numberOfStories} onValueChange={(val) => setFormData({ ...formData, numberOfStories: val })}>
+                      <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent className="rounded-md">
+                        <SelectItem value="1" className="rounded-md">1 Story</SelectItem>
+                        <SelectItem value="2" className="rounded-md">2 Stories</SelectItem>
+                        <SelectItem value="3+" className="rounded-md">3+ Stories</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-[#475569]">Previous Roof Work?</Label>
+                    <Select value={formData.previousRoofWork} onValueChange={(val) => setFormData({ ...formData, previousRoofWork: val })}>
+                      <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent className="rounded-md">
+                        <SelectItem value="Yes" className="rounded-md">Yes</SelectItem>
+                        <SelectItem value="No" className="rounded-md">No</SelectItem>
+                        <SelectItem value="Unknown" className="rounded-md">Unknown</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {formData.previousRoofWork === "Yes" && (
+                  <div className="space-y-2 mt-4">
+                    <Label className="text-sm font-medium text-[#475569]">Previous Work Details</Label>
+                    <Input
+                      value={formData.previousRoofWorkDetails}
+                      onChange={(e) => setFormData({ ...formData, previousRoofWorkDetails: e.target.value })}
+                      placeholder="Describe previous work done..."
+                      className="h-11 rounded-md"
+                    />
+                  </div>
+                )}
+
+                <div className="space-y-2 mt-4">
+                  <Label className="text-sm font-medium text-[#475569]">Known Damage Types</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {["Leak", "Missing Shingles", "Storm Damage", "Hail Damage", "Wind Damage", "Age/Wear", "Sagging/Structural", "Unknown"].map((dtype) => (
+                      <label key={dtype} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs cursor-pointer border transition-colors ${formData.knownDamageType.includes(dtype)
+                        ? "bg-[#0891B2]/10 border-[#0891B2] text-[#0891B2]"
+                        : "bg-[#F8FAFC] border-[#E2E8F0] text-[#475569] hover:border-[#94A3B8]"
+                        }`}>
+                        <Checkbox
+                          checked={formData.knownDamageType.includes(dtype)}
+                          onCheckedChange={() => toggleDamageType(dtype)}
+                          className="h-3.5 w-3.5 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
+                        />
+                        {dtype}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2 mt-4">
+                  <Label className="text-sm font-medium text-[#475569]">When Did Damage Occur?</Label>
+                  <Input
+                    value={formData.damageOccurrenceDate}
+                    onChange={(e) => setFormData({ ...formData, damageOccurrenceDate: e.target.value })}
+                    placeholder="e.g., Last week, June 2024 storm"
+                    className="h-11 rounded-md"
+                  />
+                </div>
+              </div>
+
+              {/* Budget & Timeline */}
+              <div>
+                <h4 className="text-sm font-semibold text-[#0F172A] mb-3">Budget & Timeline</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-[#475569]">Budget Range</Label>
+                    <Select value={formData.budgetRange} onValueChange={(val) => setFormData({ ...formData, budgetRange: val })}>
+                      <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent className="rounded-md">
+                        {["Under $5,000", "$5,000 - $10,000", "$10,000 - $20,000", "$20,000+", "Insurance Covering", "Not Sure"].map((b) => (
+                          <SelectItem key={b} value={b} className="rounded-md">{b}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-[#475569]">Timeline for Work</Label>
+                    <Select value={formData.workTimeline} onValueChange={(val) => setFormData({ ...formData, workTimeline: val })}>
+                      <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent className="rounded-md">
+                        {["ASAP", "1-2 Weeks", "Within 1 Month", "2-3 Months", "Flexible / Just Exploring"].map((t) => (
+                          <SelectItem key={t} value={t} className="rounded-md">{t}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4 mt-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-[#475569]">Financing Needed?</Label>
+                    <Select value={formData.financingNeeded} onValueChange={(val) => setFormData({ ...formData, financingNeeded: val })}>
+                      <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent className="rounded-md">
+                        <SelectItem value="Yes" className="rounded-md">Yes</SelectItem>
+                        <SelectItem value="No" className="rounded-md">No</SelectItem>
+                        <SelectItem value="Maybe" className="rounded-md">Maybe</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-[#475569]">Getting Other Quotes?</Label>
+                    <Select value={formData.gettingOtherQuotes} onValueChange={(val) => setFormData({ ...formData, gettingOtherQuotes: val })}>
+                      <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent className="rounded-md">
+                        <SelectItem value="Yes" className="rounded-md">Yes</SelectItem>
+                        <SelectItem value="No" className="rounded-md">No</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-[#475569]">Top Priority</Label>
+                    <Select value={formData.topPriority} onValueChange={(val) => setFormData({ ...formData, topPriority: val })}>
+                      <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent className="rounded-md">
+                        {["Price", "Quality of Materials", "Speed/Timeline", "Warranty", "Company Reputation"].map((p) => (
+                          <SelectItem key={p} value={p} className="rounded-md">{p}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {formData.gettingOtherQuotes === "Yes" && (
+                  <div className="space-y-2 mt-4">
+                    <Label className="text-sm font-medium text-[#475569]">How Many Other Quotes?</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={10}
+                      value={formData.numberOfOtherQuotes}
+                      onChange={(e) => setFormData({ ...formData, numberOfOtherQuotes: e.target.value })}
+                      placeholder="1-10"
+                      className="h-11 rounded-md w-32"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* HOA */}
+              <div>
+                <h4 className="text-sm font-semibold text-[#0F172A] mb-3">HOA Information</h4>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">HOA Community?</Label>
+                  <Select value={formData.isHOA} onValueChange={(val) => setFormData({ ...formData, isHOA: val })}>
+                    <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectContent className="rounded-md">
+                      <SelectItem value="Yes" className="rounded-md">Yes</SelectItem>
+                      <SelectItem value="No" className="rounded-md">No</SelectItem>
+                      <SelectItem value="Not Sure" className="rounded-md">Not Sure</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {formData.isHOA === "Yes" && (
+                  <div className="space-y-2 mt-4">
+                    <Label className="text-sm font-medium text-[#475569]">HOA Restrictions Details</Label>
+                    <Textarea
+                      value={formData.hoaRestrictions}
+                      onChange={(e) => setFormData({ ...formData, hoaRestrictions: e.target.value })}
+                      placeholder="Color restrictions, material requirements, approval process..."
+                      rows={2}
+                      className="rounded-md resize-none"
+                    />
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+
+            {/* ── TAB: Insurance (conditional) ────────────────────────────── */}
+            {formData.isInsuranceClaim === "Yes" && (
+              <TabsContent value="insurance" className="space-y-4 mt-0">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">
+                    Insurance Company Name <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    value={formData.insuranceCompanyName}
+                    onChange={(e) => setFormData({ ...formData, insuranceCompanyName: e.target.value })}
+                    placeholder="e.g., State Farm, Allstate, USAA..."
+                    className="h-11 rounded-md"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Has Claim Been Filed?</Label>
+                  <Select value={formData.hasClaimBeenFiled} onValueChange={(val) => setFormData({ ...formData, hasClaimBeenFiled: val })}>
+                    <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectContent className="rounded-md">
+                      <SelectItem value="Yes" className="rounded-md">Yes</SelectItem>
+                      <SelectItem value="No" className="rounded-md">No</SelectItem>
+                      <SelectItem value="Planning To" className="rounded-md">Planning To</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Claim Number</Label>
+                  <Input
+                    value={formData.claimNumber}
+                    onChange={(e) => setFormData({ ...formData, claimNumber: e.target.value })}
+                    placeholder="Claim #"
+                    className="h-11 rounded-md"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Adjuster Assigned?</Label>
+                  <Select value={formData.adjusterAssigned} onValueChange={(val) => setFormData({ ...formData, adjusterAssigned: val })}>
+                    <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectContent className="rounded-md">
+                      <SelectItem value="Yes" className="rounded-md">Yes</SelectItem>
+                      <SelectItem value="No" className="rounded-md">No</SelectItem>
+                      <SelectItem value="Not Yet" className="rounded-md">Not Yet</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {formData.adjusterAssigned === "Yes" && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-[#475569]">Adjuster Name</Label>
+                        <Input
+                          value={formData.adjusterName}
+                          onChange={(e) => setFormData({ ...formData, adjusterName: e.target.value })}
+                          placeholder="Adjuster name"
+                          className="h-11 rounded-md"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-[#475569]">Adjuster Phone</Label>
+                        <Input
+                          value={formData.adjusterPhone}
+                          onChange={(e) => setFormData({ ...formData, adjusterPhone: e.target.value })}
+                          placeholder="Phone number"
+                          className="h-11 rounded-md"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-[#475569]">Adjuster Email</Label>
+                      <Input
+                        type="email"
+                        value={formData.adjusterEmail}
+                        onChange={(e) => setFormData({ ...formData, adjusterEmail: e.target.value })}
+                        placeholder="adjuster@insurance.com"
+                        className="h-11 rounded-md"
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Adjuster Meeting Date</Label>
+                  <Input
+                    type="date"
+                    value={formData.adjusterMeetingDate ? formData.adjusterMeetingDate.split("T")[0] : ""}
+                    onChange={(e) => setFormData({ ...formData, adjusterMeetingDate: e.target.value ? new Date(e.target.value).toISOString() : "" })}
+                    className="h-11 rounded-md"
+                  />
+                </div>
+              </TabsContent>
+            )}
+
+            {/* ── TAB: Sales Assessment ───────────────────────────────────── */}
+            <TabsContent value="assessment" className="space-y-4 mt-0">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Lead Score (1-10)</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={formData.leadScore}
+                    onChange={(e) => setFormData({ ...formData, leadScore: e.target.value })}
+                    placeholder="1-10"
+                    className="h-11 rounded-md"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Next Step</Label>
+                  <Select value={formData.nextStep} onValueChange={(val) => setFormData({ ...formData, nextStep: val })}>
+                    <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select next step" /></SelectTrigger>
+                    <SelectContent className="rounded-md">
+                      {["Schedule Inspection", "Send More Info", "Follow Up Later", "Needs Insurance Filed First", "Dead Lead"].map((s) => (
+                        <SelectItem key={s} value={s} className="rounded-md">{s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Follow-Up Date</Label>
+                  <Input
+                    type="datetime-local"
+                    value={formData.followUpDateTime ? formData.followUpDateTime.slice(0, 16) : ""}
+                    onChange={(e) => setFormData({ ...formData, followUpDateTime: e.target.value ? new Date(e.target.value).toISOString() : "" })}
+                    className="h-11 rounded-md"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Inspection Date</Label>
+                  <Input
+                    type="datetime-local"
+                    value={formData.inspectionAppointmentDate ? formData.inspectionAppointmentDate.slice(0, 16) : ""}
+                    onChange={(e) => setFormData({ ...formData, inspectionAppointmentDate: e.target.value ? new Date(e.target.value).toISOString() : "" })}
+                    className="h-11 rounded-md"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-[#475569]">Disqualified Reason</Label>
+                <Select value={formData.disqualifiedReason} onValueChange={(val) => setFormData({ ...formData, disqualifiedReason: val })}>
+                  <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Only if disqualified" /></SelectTrigger>
+                  <SelectContent className="rounded-md">
+                    {["Not Homeowner", "No Budget", "Tire Kicker", "Outside Service Area", "No Authority", "Unreachable", "Other"].map((r) => (
+                      <SelectItem key={r} value={r} className="rounded-md">{r}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-[#475569]">
+                  Qualification Notes <span className="text-red-500">*</span>
+                </Label>
+                <Textarea
+                  value={formData.qualificationCallNotes}
+                  onChange={(e) => setFormData({ ...formData, qualificationCallNotes: e.target.value })}
+                  placeholder="Notes from the call or visit..."
+                  rows={4}
+                  className="rounded-md resize-none"
+                />
+              </div>
+            </TabsContent>
+
+            {/* ── TAB: Lead Details (existing — status/temp/value/assignee) ── */}
+            <TabsContent value="details" className="space-y-4 mt-0">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-[#475569]">Status</Label>
                   <Select
@@ -1067,9 +1862,7 @@ const LeadFormDialog = ({
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-[#475569]">Temperature</Label>
                   <Select
@@ -1098,19 +1891,19 @@ const LeadFormDialog = ({
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
 
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-[#475569]">Potential Value</Label>
-                  <div className="relative">
-                    <DollarSign size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
-                    <Input
-                      type="number"
-                      value={formData.value}
-                      onChange={(e) => setFormData({ ...formData, value: e.target.value })}
-                      placeholder="50000"
-                      className="h-11 pl-10 rounded-md"
-                    />
-                  </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-[#475569]">Potential Value</Label>
+                <div className="relative">
+                  <DollarSign size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
+                  <Input
+                    type="number"
+                    value={formData.value}
+                    onChange={(e) => setFormData({ ...formData, value: e.target.value })}
+                    placeholder="50000"
+                    className="h-11 pl-10 rounded-md"
+                  />
                 </div>
               </div>
 
@@ -1153,6 +1946,33 @@ const LeadFormDialog = ({
                 <p className="text-xs text-[#475569]">Separate tags with commas</p>
               </div>
 
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Job Title</Label>
+                  <div className="relative">
+                    <Briefcase size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
+                    <Input
+                      value={formData.jobTitle}
+                      onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
+                      placeholder="VP of Sales"
+                      className="h-11 pl-10 rounded-md"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Website</Label>
+                  <div className="relative">
+                    <Globe size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
+                    <Input
+                      value={formData.website}
+                      onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                      placeholder="https://company.com"
+                      className="h-11 pl-10 rounded-md"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#475569]">Notes</Label>
                 <Textarea
@@ -1172,7 +1992,7 @@ const LeadFormDialog = ({
             </Button>
             <Button
               type="submit"
-              disabled={saving || !formData.firstName || !formData.lastName || !formData.email || !formData.company}
+              disabled={saving || !formData.firstName || !formData.lastName}
               className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
             >
               {saving ? (
@@ -1902,6 +2722,73 @@ const mapApiLead = (apiLead: any): Lead => ({
   nextFollowUp: apiLead.nextFollowUp,
   createdAt: apiLead.createdAt,
   updatedAt: apiLead.updatedAt,
+
+  // ── Stage 1: Property Info ─────────────────────────────────────────
+  propertyAddress: apiLead.propertyAddress || "",
+  city: apiLead.city || "",
+  state: apiLead.state || "",
+  zipCode: apiLead.zipCode || "",
+  propertyType: apiLead.propertyType || "",
+
+  // ── Stage 1: Service Request ───────────────────────────────────────
+  serviceType: apiLead.serviceType || "",
+  isInsuranceClaim: apiLead.isInsuranceClaim || "",
+  urgencyLevel: apiLead.urgencyLevel || "",
+  preferredContactMethod: apiLead.preferredContactMethod || "",
+  bestTimeToContact: apiLead.bestTimeToContact || "",
+  issueDescription: apiLead.issueDescription || "",
+
+  // ── Stage 2: Verification ─────────────────────────────────────────
+  confirmedName: apiLead.confirmedName || false,
+  confirmedPhone: apiLead.confirmedPhone || false,
+  confirmedEmail: apiLead.confirmedEmail || false,
+  confirmedAddress: apiLead.confirmedAddress || false,
+  secondaryPhone: apiLead.secondaryPhone || "",
+  spouseCoOwnerName: apiLead.spouseCoOwnerName || "",
+
+  // ── Stage 2: Ownership ────────────────────────────────────────────
+  isHomeowner: apiLead.isHomeowner || "",
+  isDecisionMaker: apiLead.isDecisionMaker || "",
+  ownershipType: apiLead.ownershipType || "",
+
+  // ── Stage 2: Roof Details ─────────────────────────────────────────
+  roofAge: apiLead.roofAge || "",
+  currentRoofMaterial: apiLead.currentRoofMaterial || "",
+  numberOfStories: apiLead.numberOfStories || "",
+  knownDamageType: apiLead.knownDamageType || [],
+  damageOccurrenceDate: apiLead.damageOccurrenceDate || "",
+  previousRoofWork: apiLead.previousRoofWork || "",
+  previousRoofWorkDetails: apiLead.previousRoofWorkDetails || "",
+
+  // ── Stage 2: Insurance ────────────────────────────────────────────
+  insuranceCompanyName: apiLead.insuranceCompanyName || "",
+  hasClaimBeenFiled: apiLead.hasClaimBeenFiled || "",
+  claimNumber: apiLead.claimNumber || "",
+  adjusterAssigned: apiLead.adjusterAssigned || "",
+  adjusterName: apiLead.adjusterName || "",
+  adjusterPhone: apiLead.adjusterPhone || "",
+  adjusterEmail: apiLead.adjusterEmail || "",
+  adjusterMeetingDate: apiLead.adjusterMeetingDate || "",
+
+  // ── Stage 2: Budget & Timeline ────────────────────────────────────
+  budgetRange: apiLead.budgetRange || "",
+  workTimeline: apiLead.workTimeline || "",
+  financingNeeded: apiLead.financingNeeded || "",
+  gettingOtherQuotes: apiLead.gettingOtherQuotes || "",
+  numberOfOtherQuotes: apiLead.numberOfOtherQuotes || undefined,
+  topPriority: apiLead.topPriority || "",
+
+  // ── Stage 2: HOA ──────────────────────────────────────────────────
+  isHOA: apiLead.isHOA || "",
+  hoaRestrictions: apiLead.hoaRestrictions || "",
+
+  // ── Stage 2: Sales Assessment ─────────────────────────────────────
+  leadScore: apiLead.leadScore || undefined,
+  disqualifiedReason: apiLead.disqualifiedReason || "",
+  nextStep: apiLead.nextStep || "",
+  followUpDateTime: apiLead.followUpDateTime || "",
+  inspectionAppointmentDate: apiLead.inspectionAppointmentDate || "",
+  qualificationCallNotes: apiLead.qualificationCallNotes || "",
 });
 
 const AllLeads = () => {
@@ -2018,6 +2905,71 @@ const AllLeads = () => {
   }, [leads, activeTab, searchQuery, selectedSource, selectedStatus, selectedTemperature, sortBy, sortOrder]);
 
   // Handlers
+  // Helper to build the new-fields portion of the API payload
+  const buildNewFieldsPayload = (data: Partial<Lead>) => {
+    const opt = (v: any) => (v && v !== "" ? v : undefined);
+    return {
+      // Stage 1: Property
+      propertyAddress: opt(data.propertyAddress),
+      city: opt(data.city),
+      state: opt(data.state),
+      zipCode: opt(data.zipCode),
+      propertyType: opt(data.propertyType),
+      // Stage 1: Service
+      serviceType: opt(data.serviceType),
+      isInsuranceClaim: opt(data.isInsuranceClaim),
+      urgencyLevel: opt(data.urgencyLevel),
+      preferredContactMethod: opt(data.preferredContactMethod),
+      bestTimeToContact: opt(data.bestTimeToContact),
+      issueDescription: opt(data.issueDescription),
+      // Stage 2: Verification
+      confirmedName: data.confirmedName || false,
+      confirmedPhone: data.confirmedPhone || false,
+      confirmedEmail: data.confirmedEmail || false,
+      confirmedAddress: data.confirmedAddress || false,
+      secondaryPhone: opt(data.secondaryPhone),
+      spouseCoOwnerName: opt(data.spouseCoOwnerName),
+      // Stage 2: Ownership
+      isHomeowner: opt(data.isHomeowner),
+      isDecisionMaker: opt(data.isDecisionMaker),
+      ownershipType: opt(data.ownershipType),
+      // Stage 2: Roof
+      roofAge: opt(data.roofAge),
+      currentRoofMaterial: opt(data.currentRoofMaterial),
+      numberOfStories: opt(data.numberOfStories),
+      knownDamageType: data.knownDamageType?.length ? data.knownDamageType : undefined,
+      damageOccurrenceDate: opt(data.damageOccurrenceDate),
+      previousRoofWork: opt(data.previousRoofWork),
+      previousRoofWorkDetails: opt(data.previousRoofWorkDetails),
+      // Stage 2: Insurance
+      insuranceCompanyName: opt(data.insuranceCompanyName),
+      hasClaimBeenFiled: opt(data.hasClaimBeenFiled),
+      claimNumber: opt(data.claimNumber),
+      adjusterAssigned: opt(data.adjusterAssigned),
+      adjusterName: opt(data.adjusterName),
+      adjusterPhone: opt(data.adjusterPhone),
+      adjusterEmail: opt(data.adjusterEmail),
+      adjusterMeetingDate: opt(data.adjusterMeetingDate),
+      // Stage 2: Budget
+      budgetRange: opt(data.budgetRange),
+      workTimeline: opt(data.workTimeline),
+      financingNeeded: opt(data.financingNeeded),
+      gettingOtherQuotes: opt(data.gettingOtherQuotes),
+      numberOfOtherQuotes: data.numberOfOtherQuotes || undefined,
+      topPriority: opt(data.topPriority),
+      // Stage 2: HOA
+      isHOA: opt(data.isHOA),
+      hoaRestrictions: opt(data.hoaRestrictions),
+      // Stage 2: Assessment
+      leadScore: data.leadScore || undefined,
+      disqualifiedReason: opt(data.disqualifiedReason),
+      nextStep: opt(data.nextStep),
+      followUpDateTime: opt(data.followUpDateTime),
+      inspectionAppointmentDate: opt(data.inspectionAppointmentDate),
+      qualificationCallNotes: opt(data.qualificationCallNotes),
+    };
+  };
+
   const handleAddLead = async (data: Partial<Lead>) => {
     try {
       const apiData: Record<string, any> = {
@@ -2033,6 +2985,7 @@ const AllLeads = () => {
         temperature: (data.temperature || "warm").toUpperCase(),
         potentialValue: data.value || 0,
         notes: data.notes || undefined,
+        ...buildNewFieldsPayload(data),
       };
       // Only send assignedToId if a valid employee is selected
       if (data.assignedTo && data.assignedTo !== "unassigned" && data.assignedTo !== "") {
@@ -2072,6 +3025,7 @@ const AllLeads = () => {
         temperature: data.temperature?.toUpperCase(),
         potentialValue: data.value || 0,
         notes: data.notes || undefined,
+        ...buildNewFieldsPayload(data),
       };
       // Only send assignedToId if a valid employee is selected
       if (data.assignedTo && data.assignedTo !== "unassigned" && data.assignedTo !== "") {

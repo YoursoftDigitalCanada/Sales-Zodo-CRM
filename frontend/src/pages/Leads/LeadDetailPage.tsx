@@ -24,7 +24,8 @@ import {
     Tag, Calendar, Clock, DollarSign, TrendingUp, Thermometer, User, Users,
     FileText, MessageSquare, CheckSquare, Activity, MoreHorizontal,
     UserPlus, ArrowRightLeft, Star, Pencil, Send, ExternalLink, Flame,
-    Snowflake, Zap, X, CheckCircle2
+    Snowflake, Zap, X, CheckCircle2, Home, Wrench, Shield, HardHat,
+    ClipboardList, Banknote, AlertTriangle
 } from "lucide-react";
 
 // ── Interfaces ──────────────────────────────────────────────────────────
@@ -64,6 +65,64 @@ interface LeadData {
         createdAt: string;
         createdBy?: { user: { firstName: string; lastName: string } };
     }>;
+    // Stage 1: Property
+    propertyAddress?: string | null;
+    city?: string | null;
+    state?: string | null;
+    zipCode?: string | null;
+    propertyType?: string | null;
+    // Stage 1: Service
+    serviceType?: string | null;
+    isInsuranceClaim?: string | null;
+    urgencyLevel?: string | null;
+    preferredContactMethod?: string | null;
+    bestTimeToContact?: string | null;
+    issueDescription?: string | null;
+    // Stage 2: Verification
+    confirmedName?: boolean | null;
+    confirmedPhone?: boolean | null;
+    confirmedEmail?: boolean | null;
+    confirmedAddress?: boolean | null;
+    secondaryPhone?: string | null;
+    spouseCoOwnerName?: string | null;
+    // Stage 2: Ownership
+    isHomeowner?: string | null;
+    isDecisionMaker?: string | null;
+    ownershipType?: string | null;
+    // Stage 2: Roof
+    roofAge?: string | null;
+    currentRoofMaterial?: string | null;
+    numberOfStories?: string | null;
+    knownDamageType?: string[] | null;
+    damageOccurrenceDate?: string | null;
+    previousRoofWork?: string | null;
+    previousRoofWorkDetails?: string | null;
+    // Stage 2: Insurance
+    insuranceCompanyName?: string | null;
+    hasClaimBeenFiled?: string | null;
+    claimNumber?: string | null;
+    adjusterAssigned?: string | null;
+    adjusterName?: string | null;
+    adjusterPhone?: string | null;
+    adjusterEmail?: string | null;
+    adjusterMeetingDate?: string | null;
+    // Stage 2: Budget
+    budgetRange?: string | null;
+    workTimeline?: string | null;
+    financingNeeded?: string | null;
+    gettingOtherQuotes?: string | null;
+    numberOfOtherQuotes?: number | null;
+    topPriority?: string | null;
+    // Stage 2: HOA
+    isHOA?: string | null;
+    hoaRestrictions?: string | null;
+    // Stage 2: Assessment
+    leadScore?: number | null;
+    disqualifiedReason?: string | null;
+    nextStep?: string | null;
+    followUpDateTime?: string | null;
+    inspectionAppointmentDate?: string | null;
+    qualificationCallNotes?: string | null;
 }
 
 interface NoteEntry {
@@ -667,6 +726,189 @@ const LeadDetailPage = () => {
                                                     </div>
                                                 </CardContent>
                                             </Card>
+
+                                            {/* Property Information */}
+                                            {(lead.propertyAddress || lead.city || lead.propertyType) && (
+                                                <Card className="shadow-sm border-none">
+                                                    <CardHeader className="pb-3 border-b">
+                                                        <CardTitle className="text-sm font-semibold text-[#0F172A] flex items-center gap-2">
+                                                            <Home className="h-4 w-4 text-[#0891B2]" /> Property Information
+                                                        </CardTitle>
+                                                    </CardHeader>
+                                                    <CardContent className="pt-4">
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                            <InfoRow label="Property Address" value={lead.propertyAddress || "—"} />
+                                                            <InfoRow label="City" value={lead.city || "—"} />
+                                                            <InfoRow label="State / Province" value={lead.state || "—"} />
+                                                            <InfoRow label="Zip Code" value={lead.zipCode || "—"} />
+                                                            <InfoRow label="Property Type" value={lead.propertyType || "—"} />
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+                                            )}
+
+                                            {/* Service Request */}
+                                            {(lead.serviceType || lead.urgencyLevel || lead.issueDescription) && (
+                                                <Card className="shadow-sm border-none">
+                                                    <CardHeader className="pb-3 border-b">
+                                                        <CardTitle className="text-sm font-semibold text-[#0F172A] flex items-center gap-2">
+                                                            <Wrench className="h-4 w-4 text-[#0891B2]" /> Service Request
+                                                        </CardTitle>
+                                                    </CardHeader>
+                                                    <CardContent className="pt-4">
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                            <InfoRow label="Service Type" value={lead.serviceType || "—"} />
+                                                            <InfoRow label="Insurance Claim?" value={lead.isInsuranceClaim || "—"} />
+                                                            <InfoRow label="Urgency" value={lead.urgencyLevel || "—"} />
+                                                            <InfoRow label="Preferred Contact" value={lead.preferredContactMethod || "—"} />
+                                                            <InfoRow label="Best Time to Contact" value={lead.bestTimeToContact || "—"} />
+                                                        </div>
+                                                        {lead.issueDescription && (
+                                                            <div className="mt-4">
+                                                                <span className="text-xs text-[#475569]">Issue Description</span>
+                                                                <p className="text-sm text-[#0F172A] mt-1 p-3 bg-[#F8FAFC] rounded-md">{lead.issueDescription}</p>
+                                                            </div>
+                                                        )}
+                                                    </CardContent>
+                                                </Card>
+                                            )}
+
+                                            {/* Qualification Details */}
+                                            {(lead.isHomeowner || lead.roofAge || lead.budgetRange || lead.isHOA) && (
+                                                <Card className="shadow-sm border-none">
+                                                    <CardHeader className="pb-3 border-b">
+                                                        <CardTitle className="text-sm font-semibold text-[#0F172A] flex items-center gap-2">
+                                                            <ClipboardList className="h-4 w-4 text-[#0891B2]" /> Qualification Details
+                                                        </CardTitle>
+                                                    </CardHeader>
+                                                    <CardContent className="pt-4 space-y-5">
+                                                        {/* Verification */}
+                                                        <div>
+                                                            <p className="text-xs font-semibold text-[#475569] mb-2 uppercase tracking-wider">Verification</p>
+                                                            <div className="flex flex-wrap gap-3">
+                                                                {[
+                                                                    { key: lead.confirmedName, label: "Name" },
+                                                                    { key: lead.confirmedPhone, label: "Phone" },
+                                                                    { key: lead.confirmedEmail, label: "Email" },
+                                                                    { key: lead.confirmedAddress, label: "Address" },
+                                                                ].map((item) => (
+                                                                    <span key={item.label} className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium ${item.key ? "bg-green-50 text-green-700 border border-green-200" : "bg-gray-50 text-gray-400 border border-gray-200"
+                                                                        }`}>
+                                                                        {item.key ? <CheckCircle2 className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                                                                        {item.label}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Ownership + Roof */}
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                            <InfoRow label="Homeowner?" value={lead.isHomeowner || "—"} />
+                                                            <InfoRow label="Decision Maker?" value={lead.isDecisionMaker || "—"} />
+                                                            <InfoRow label="Spouse / Co-Owner" value={lead.spouseCoOwnerName || "—"} />
+                                                            <InfoRow label="Secondary Phone" value={lead.secondaryPhone || "—"} />
+                                                            <InfoRow label="Roof Age" value={lead.roofAge || "—"} />
+                                                            <InfoRow label="Roof Material" value={lead.currentRoofMaterial || "—"} />
+                                                            <InfoRow label="Stories" value={lead.numberOfStories || "—"} />
+                                                            <InfoRow label="Previous Roof Work" value={lead.previousRoofWork || "—"} />
+                                                        </div>
+
+                                                        {lead.knownDamageType && lead.knownDamageType.length > 0 && (
+                                                            <div>
+                                                                <span className="text-xs text-[#475569]">Damage Types</span>
+                                                                <div className="flex flex-wrap gap-1.5 mt-1">
+                                                                    {lead.knownDamageType.map((d: string) => (
+                                                                        <span key={d} className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-red-50 text-red-700 border border-red-200">
+                                                                            <AlertTriangle className="h-3 w-3 mr-1" />{d}
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {lead.damageOccurrenceDate && (
+                                                            <InfoRow label="Damage Occurred" value={lead.damageOccurrenceDate} />
+                                                        )}
+
+                                                        {/* Budget & Timeline */}
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                            <InfoRow label="Budget Range" value={lead.budgetRange || "—"} />
+                                                            <InfoRow label="Timeline" value={lead.workTimeline || "—"} />
+                                                            <InfoRow label="Financing Needed?" value={lead.financingNeeded || "—"} />
+                                                            <InfoRow label="Getting Other Quotes?" value={lead.gettingOtherQuotes || "—"} />
+                                                            {lead.numberOfOtherQuotes != null && (
+                                                                <InfoRow label="# Other Quotes" value={String(lead.numberOfOtherQuotes)} />
+                                                            )}
+                                                            <InfoRow label="Top Priority" value={lead.topPriority || "—"} />
+                                                        </div>
+
+                                                        {/* HOA */}
+                                                        {lead.isHOA && lead.isHOA !== "" && (
+                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                                <InfoRow label="HOA Community?" value={lead.isHOA} />
+                                                                {lead.hoaRestrictions && (
+                                                                    <InfoRow label="HOA Restrictions" value={lead.hoaRestrictions} />
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </CardContent>
+                                                </Card>
+                                            )}
+
+                                            {/* Insurance Details */}
+                                            {lead.isInsuranceClaim === "Yes" && (
+                                                <Card className="shadow-sm border-none">
+                                                    <CardHeader className="pb-3 border-b">
+                                                        <CardTitle className="text-sm font-semibold text-[#0F172A] flex items-center gap-2">
+                                                            <Shield className="h-4 w-4 text-[#0891B2]" /> Insurance Details
+                                                        </CardTitle>
+                                                    </CardHeader>
+                                                    <CardContent className="pt-4">
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                            <InfoRow label="Insurance Company" value={lead.insuranceCompanyName || "—"} />
+                                                            <InfoRow label="Claim Filed?" value={lead.hasClaimBeenFiled || "—"} />
+                                                            <InfoRow label="Claim Number" value={lead.claimNumber || "—"} />
+                                                            <InfoRow label="Adjuster Assigned?" value={lead.adjusterAssigned || "—"} />
+                                                            {lead.adjusterAssigned === "Yes" && (
+                                                                <>
+                                                                    <InfoRow label="Adjuster Name" value={lead.adjusterName || "—"} />
+                                                                    <InfoRow label="Adjuster Phone" value={lead.adjusterPhone || "—"} />
+                                                                    <InfoRow label="Adjuster Email" value={lead.adjusterEmail || "—"} />
+                                                                </>
+                                                            )}
+                                                            <InfoRow label="Adjuster Meeting" value={lead.adjusterMeetingDate ? formatDate(lead.adjusterMeetingDate) : "—"} />
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+                                            )}
+
+                                            {/* Sales Assessment */}
+                                            {(lead.leadScore || lead.nextStep || lead.qualificationCallNotes) && (
+                                                <Card className="shadow-sm border-none">
+                                                    <CardHeader className="pb-3 border-b">
+                                                        <CardTitle className="text-sm font-semibold text-[#0F172A] flex items-center gap-2">
+                                                            <HardHat className="h-4 w-4 text-[#0891B2]" /> Sales Assessment
+                                                        </CardTitle>
+                                                    </CardHeader>
+                                                    <CardContent className="pt-4">
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                            {lead.leadScore != null && <InfoRow label="Lead Score" value={`${lead.leadScore}/10`} />}
+                                                            <InfoRow label="Next Step" value={lead.nextStep || "—"} />
+                                                            <InfoRow label="Follow-Up Date" value={lead.followUpDateTime ? formatDate(lead.followUpDateTime) : "—"} />
+                                                            <InfoRow label="Inspection Date" value={lead.inspectionAppointmentDate ? formatDate(lead.inspectionAppointmentDate) : "—"} />
+                                                            {lead.disqualifiedReason && (
+                                                                <InfoRow label="Disqualified Reason" value={lead.disqualifiedReason} />
+                                                            )}
+                                                        </div>
+                                                        {lead.qualificationCallNotes && (
+                                                            <div className="mt-4">
+                                                                <span className="text-xs text-[#475569]">Qualification Notes</span>
+                                                                <p className="text-sm text-[#0F172A] mt-1 p-3 bg-[#F8FAFC] rounded-md whitespace-pre-wrap">{lead.qualificationCallNotes}</p>
+                                                            </div>
+                                                        )}
+                                                    </CardContent>
+                                                </Card>
+                                            )}
                                         </TabsContent>
 
                                         {/* Notes Tab */}

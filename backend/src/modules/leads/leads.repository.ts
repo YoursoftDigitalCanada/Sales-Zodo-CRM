@@ -127,6 +127,9 @@ export class LeadsRepository {
           { email: { contains: search, mode: 'insensitive' } },
           { companyName: { contains: search, mode: 'insensitive' } },
           { phone: { contains: search, mode: 'insensitive' } },
+          { propertyAddress: { contains: search, mode: 'insensitive' } },
+          { city: { contains: search, mode: 'insensitive' } },
+          { zipCode: { contains: search, mode: 'insensitive' } },
         ],
       }),
     };

@@ -560,6 +560,82 @@ model Lead {
   convertedAt       DateTime?
   convertedToClientId String?
   
+  // ── Stage 1: Property Info ─────────────────────────────────────────────
+  propertyAddress       String?
+  city                  String?
+  state                 String?
+  zipCode               String?
+  propertyType          String?             // Residential, Commercial, Multi-Family
+
+  // ── Stage 1: Service Request ───────────────────────────────────────────
+  serviceType           String?             // Roof Replacement, Repair, Storm/Hail, etc.
+  isInsuranceClaim      String?             // Yes, No, Not Sure
+  urgencyLevel          String?             // Emergency, ASAP, Within weeks, Planning
+  preferredContactMethod String?            // Phone Call, Text, Email
+  bestTimeToContact     String?             // Morning, Afternoon, Evening, Anytime
+  issueDescription      String?   @db.Text
+
+  // ── Stage 1: UTM / Auto-captured ───────────────────────────────────────
+  leadSourceUTM         String?
+  leadCampaignUTM       String?
+  leadMediumUTM         String?
+  landingPageURL        String?
+  ipAddress             String?
+  deviceType            String?
+  browserType           String?
+
+  // ── Stage 2: Verification ──────────────────────────────────────────────
+  confirmedName         Boolean   @default(false)
+  confirmedPhone        Boolean   @default(false)
+  confirmedEmail        Boolean   @default(false)
+  confirmedAddress      Boolean   @default(false)
+  secondaryPhone        String?
+  spouseCoOwnerName     String?
+
+  // ── Stage 2: Ownership Qualification ───────────────────────────────────
+  isHomeowner           String?             // Yes, No, Tenant
+  isDecisionMaker       String?             // Yes, No, Need Spouse Approval
+  ownershipType         String?             // Owner-Occupied, Rental, Investment
+
+  // ── Stage 2: Roof Details ──────────────────────────────────────────────
+  roofAge               String?             // 0-5, 5-10, 10-15, 15-20, 20+, Unknown
+  currentRoofMaterial   String?             // Asphalt, Metal, Tile, Flat, Wood, Slate, Unknown
+  numberOfStories       String?             // 1, 2, 3+
+  knownDamageType       Json?               // array: Leak, Missing Shingles, Storm, etc.
+  damageOccurrenceDate  String?
+  previousRoofWork      String?             // Yes, No, Unknown
+  previousRoofWorkDetails String?
+
+  // ── Stage 2: Insurance Info (conditional) ──────────────────────────────
+  insuranceCompanyName  String?
+  hasClaimBeenFiled     String?             // Yes, No, Planning To
+  claimNumber           String?
+  adjusterAssigned      String?             // Yes, No, Not Yet
+  adjusterName          String?
+  adjusterPhone         String?
+  adjusterEmail         String?
+  adjusterMeetingDate   DateTime?
+
+  // ── Stage 2: Budget & Timeline ─────────────────────────────────────────
+  budgetRange           String?             // Under $5k, $5-10k, $10-20k, $20k+, Insurance, Not Sure
+  workTimeline          String?             // ASAP, 1-2 Weeks, Within 1 Month, etc.
+  financingNeeded       String?             // Yes, No, Maybe
+  gettingOtherQuotes    String?             // Yes, No
+  numberOfOtherQuotes   Int?
+  topPriority           String?             // Price, Quality, Speed, Warranty, Reputation
+
+  // ── Stage 2: HOA ───────────────────────────────────────────────────────
+  isHOA                 String?             // Yes, No, Not Sure
+  hoaRestrictions       String?   @db.Text
+
+  // ── Stage 2: Sales Assessment ──────────────────────────────────────────
+  leadScore             Int?                // 1-10
+  disqualifiedReason    String?
+  nextStep              String?             // Schedule Inspection, Send Info, Follow Up, Dead Lead
+  followUpDateTime      DateTime?
+  inspectionAppointmentDate DateTime?
+  qualificationCallNotes String?  @db.Text
+
   // Tenant relation
   tenantId          String
   tenant            Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -587,6 +663,9 @@ model Lead {
   @@index([assignedToId])
   @@index([leadSourceId])
   @@index([createdAt])
+  @@index([serviceType])
+  @@index([isInsuranceClaim])
+  @@index([zipCode])
 }
 
 model LeadTag {

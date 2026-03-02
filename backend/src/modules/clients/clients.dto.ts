@@ -46,6 +46,32 @@ export interface CreateClientDto {
     leadSource?: string | null;
     clientCategory?: string | null;
     tags?: string[];
+
+    // 8️⃣ Property Information
+    propertyType?: string | null;
+    numberOfStories?: string | null;
+
+    // 9️⃣ Service Details
+    serviceType?: string | null;
+    preferredContactMethod?: string | null;
+    bestTimeToContact?: string | null;
+
+    // 🔟 Roof Details
+    currentRoofMaterial?: string | null;
+    roofAge?: string | null;
+
+    // 1️⃣1️⃣ Insurance Info
+    insuranceCompanyName?: string | null;
+    isInsuranceClaim?: string | null;
+
+    // 1️⃣2️⃣ Ownership & HOA
+    isHomeowner?: string | null;
+    isHOA?: string | null;
+    hoaRestrictions?: string | null;
+
+    // 1️⃣3️⃣ Secondary Contact
+    secondaryPhone?: string | null;
+    spouseCoOwnerName?: string | null;
 }
 
 export interface UpdateClientDto extends Partial<CreateClientDto> { }
@@ -106,6 +132,32 @@ export interface ClientResponseDto {
     clientCategory: string | null;
     tags: string[];
 
+    // Property Information
+    propertyType: string | null;
+    numberOfStories: string | null;
+
+    // Service Details
+    serviceType: string | null;
+    preferredContactMethod: string | null;
+    bestTimeToContact: string | null;
+
+    // Roof Details
+    currentRoofMaterial: string | null;
+    roofAge: string | null;
+
+    // Insurance Info
+    insuranceCompanyName: string | null;
+    isInsuranceClaim: string | null;
+
+    // Ownership & HOA
+    isHomeowner: string | null;
+    isHOA: string | null;
+    hoaRestrictions: string | null;
+
+    // Secondary Contact
+    secondaryPhone: string | null;
+    spouseCoOwnerName: string | null;
+
     // Metadata
     contactsCount: number;
     projectsCount: number;
@@ -162,6 +214,32 @@ export function toClientResponseDto(c: ClientWithRelations): ClientResponseDto {
         leadSource: c.leadSource,
         clientCategory: c.clientCategory,
         tags: (c.tags as string[]) || [],
+
+        // Property Information
+        propertyType: c.propertyType ?? null,
+        numberOfStories: c.numberOfStories ?? null,
+
+        // Service Details
+        serviceType: c.serviceType ?? null,
+        preferredContactMethod: c.preferredContactMethod ?? null,
+        bestTimeToContact: c.bestTimeToContact ?? null,
+
+        // Roof Details
+        currentRoofMaterial: c.currentRoofMaterial ?? null,
+        roofAge: c.roofAge ?? null,
+
+        // Insurance Info
+        insuranceCompanyName: c.insuranceCompanyName ?? null,
+        isInsuranceClaim: c.isInsuranceClaim ?? null,
+
+        // Ownership & HOA
+        isHomeowner: c.isHomeowner ?? null,
+        isHOA: c.isHOA ?? null,
+        hoaRestrictions: c.hoaRestrictions ?? null,
+
+        // Secondary Contact
+        secondaryPhone: c.secondaryPhone ?? null,
+        spouseCoOwnerName: c.spouseCoOwnerName ?? null,
 
         // Metadata
         contactsCount: c._count?.contacts || 0,

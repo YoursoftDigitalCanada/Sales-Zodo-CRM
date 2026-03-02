@@ -47,6 +47,32 @@ export const createClientSchema = z.object({
         leadSource: z.string().max(100).optional().nullable(),
         clientCategory: z.string().max(100).optional().nullable(),
         tags: z.array(z.string()).default([]),
+
+        // 8️⃣ Property Information
+        propertyType: z.string().max(100).optional().nullable(),
+        numberOfStories: z.string().max(10).optional().nullable(),
+
+        // 9️⃣ Service Details
+        serviceType: z.string().max(200).optional().nullable(),
+        preferredContactMethod: z.string().max(50).optional().nullable(),
+        bestTimeToContact: z.string().max(50).optional().nullable(),
+
+        // 🔟 Roof Details
+        currentRoofMaterial: z.string().max(100).optional().nullable(),
+        roofAge: z.string().max(50).optional().nullable(),
+
+        // 1️⃣1️⃣ Insurance Info
+        insuranceCompanyName: z.string().max(200).optional().nullable(),
+        isInsuranceClaim: z.string().max(20).optional().nullable(),
+
+        // 1️⃣2️⃣ Ownership & HOA
+        isHomeowner: z.string().max(20).optional().nullable(),
+        isHOA: z.string().max(20).optional().nullable(),
+        hoaRestrictions: z.string().max(2000).optional().nullable(),
+
+        // 1️⃣3️⃣ Secondary Contact
+        secondaryPhone: z.string().max(30).optional().nullable(),
+        spouseCoOwnerName: z.string().max(200).optional().nullable(),
     }),
 });
 
@@ -93,6 +119,32 @@ export const updateClientSchema = z.object({
         leadSource: z.string().max(100).optional().nullable(),
         clientCategory: z.string().max(100).optional().nullable(),
         tags: z.array(z.string()).optional(),
+
+        // 8️⃣ Property Information
+        propertyType: z.string().max(100).optional().nullable(),
+        numberOfStories: z.string().max(10).optional().nullable(),
+
+        // 9️⃣ Service Details
+        serviceType: z.string().max(200).optional().nullable(),
+        preferredContactMethod: z.string().max(50).optional().nullable(),
+        bestTimeToContact: z.string().max(50).optional().nullable(),
+
+        // 🔟 Roof Details
+        currentRoofMaterial: z.string().max(100).optional().nullable(),
+        roofAge: z.string().max(50).optional().nullable(),
+
+        // 1️⃣1️⃣ Insurance Info
+        insuranceCompanyName: z.string().max(200).optional().nullable(),
+        isInsuranceClaim: z.string().max(20).optional().nullable(),
+
+        // 1️⃣2️⃣ Ownership & HOA
+        isHomeowner: z.string().max(20).optional().nullable(),
+        isHOA: z.string().max(20).optional().nullable(),
+        hoaRestrictions: z.string().max(2000).optional().nullable(),
+
+        // 1️⃣3️⃣ Secondary Contact
+        secondaryPhone: z.string().max(30).optional().nullable(),
+        spouseCoOwnerName: z.string().max(200).optional().nullable(),
     }),
 });
 

@@ -891,6 +891,32 @@ model Client {
   leadSource              String?
   clientCategory          String?
   tags                    Json          @default("[]")
+
+  // 8️⃣ Property Information
+  propertyType            String?             // Residential, Commercial, Multi-Family
+  numberOfStories         String?             // 1, 2, 3+
+
+  // 9️⃣ Service Details
+  serviceType             String?             // Roof Replacement, Repair, Storm/Hail, etc.
+  preferredContactMethod  String?             // Phone Call, Text, Email
+  bestTimeToContact       String?             // Morning, Afternoon, Evening, Anytime
+
+  // 🔟 Roof Details
+  currentRoofMaterial     String?             // Asphalt, Metal, Tile, Flat, Wood, Slate, Unknown
+  roofAge                 String?             // 0-5, 5-10, 10-15, 15-20, 20+, Unknown
+
+  // 1️⃣1️⃣ Insurance Info
+  insuranceCompanyName    String?
+  isInsuranceClaim        String?             // Yes, No, Not Sure
+
+  // 1️⃣2️⃣ Ownership & HOA
+  isHomeowner             String?             // Yes, No, Tenant
+  isHOA                   String?             // Yes, No, Not Sure
+  hoaRestrictions         String?   @db.Text
+
+  // 1️⃣3️⃣ Secondary Contact
+  secondaryPhone          String?
+  spouseCoOwnerName       String?
   
   // Tracking
   totalRevenue            Decimal       @default(0) @db.Decimal(15, 2)

@@ -563,6 +563,21 @@ export class LeadsService {
           postalCode: lead.zipCode || null,
           // Lead source
           leadSource: lead.leadSource?.name || lead.leadSourceUTM || null,
+          // Roofing-specific fields from lead
+          propertyType: lead.propertyType || null,
+          numberOfStories: lead.numberOfStories || null,
+          serviceType: lead.serviceType || null,
+          preferredContactMethod: lead.preferredContactMethod || null,
+          bestTimeToContact: lead.bestTimeToContact || null,
+          currentRoofMaterial: lead.currentRoofMaterial || null,
+          roofAge: lead.roofAge || null,
+          insuranceCompanyName: lead.insuranceCompanyName || null,
+          isInsuranceClaim: lead.isInsuranceClaim || null,
+          isHomeowner: lead.isHomeowner || null,
+          isHOA: lead.isHOA || null,
+          hoaRestrictions: lead.hoaRestrictions || null,
+          secondaryPhone: lead.secondaryPhone || null,
+          spouseCoOwnerName: lead.spouseCoOwnerName || null,
         },
       });
 

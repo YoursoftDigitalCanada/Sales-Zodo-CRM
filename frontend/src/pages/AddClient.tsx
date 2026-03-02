@@ -40,6 +40,9 @@ import {
   Sparkles,
   CheckCircle2,
   AlertCircle,
+  Home,
+  Wrench,
+  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getClientById, createClient, updateClient } from "@/services/clientService";
@@ -117,6 +120,21 @@ interface FormData {
   clientCategory: string;
   tags: string;
   notes: string;
+  // Roofing-specific
+  propertyType: string;
+  numberOfStories: string;
+  serviceType: string;
+  preferredContactMethod: string;
+  bestTimeToContact: string;
+  currentRoofMaterial: string;
+  roofAge: string;
+  insuranceCompanyName: string;
+  isInsuranceClaim: string;
+  isHomeowner: string;
+  isHOA: string;
+  hoaRestrictions: string;
+  secondaryPhone: string;
+  spouseCoOwnerName: string;
 }
 
 // ============================================
@@ -153,6 +171,21 @@ const initialFormState: FormData = {
   clientCategory: "Regular",
   tags: "",
   notes: "",
+  // Roofing-specific
+  propertyType: "",
+  numberOfStories: "",
+  serviceType: "",
+  preferredContactMethod: "",
+  bestTimeToContact: "",
+  currentRoofMaterial: "",
+  roofAge: "",
+  insuranceCompanyName: "",
+  isInsuranceClaim: "",
+  isHomeowner: "",
+  isHOA: "",
+  hoaRestrictions: "",
+  secondaryPhone: "",
+  spouseCoOwnerName: "",
 };
 
 const UUID_REGEX =
@@ -228,6 +261,21 @@ const mapApiClientToFormData = (data: any): FormData => {
     clientCategory: data.clientCategory || "Regular",
     tags: normalizeTags(data.tags),
     notes: data.internalNotes || data.notes || "",
+    // Roofing-specific
+    propertyType: data.propertyType || "",
+    numberOfStories: data.numberOfStories || "",
+    serviceType: data.serviceType || "",
+    preferredContactMethod: data.preferredContactMethod || "",
+    bestTimeToContact: data.bestTimeToContact || "",
+    currentRoofMaterial: data.currentRoofMaterial || "",
+    roofAge: data.roofAge || "",
+    insuranceCompanyName: data.insuranceCompanyName || "",
+    isInsuranceClaim: data.isInsuranceClaim || "",
+    isHomeowner: data.isHomeowner || "",
+    isHOA: data.isHOA || "",
+    hoaRestrictions: data.hoaRestrictions || "",
+    secondaryPhone: data.secondaryPhone || "",
+    spouseCoOwnerName: data.spouseCoOwnerName || "",
   };
 };
 
@@ -277,6 +325,21 @@ const mapFormDataToApiPayload = (data: FormData) => {
     leadSource: data.leadSource || null,
     clientCategory: data.clientCategory || null,
     tags: splitTags(data.tags),
+    // Roofing-specific
+    propertyType: data.propertyType || null,
+    numberOfStories: data.numberOfStories || null,
+    serviceType: data.serviceType || null,
+    preferredContactMethod: data.preferredContactMethod || null,
+    bestTimeToContact: data.bestTimeToContact || null,
+    currentRoofMaterial: data.currentRoofMaterial || null,
+    roofAge: data.roofAge || null,
+    insuranceCompanyName: data.insuranceCompanyName || null,
+    isInsuranceClaim: data.isInsuranceClaim || null,
+    isHomeowner: data.isHomeowner || null,
+    isHOA: data.isHOA || null,
+    hoaRestrictions: data.hoaRestrictions || null,
+    secondaryPhone: data.secondaryPhone || null,
+    spouseCoOwnerName: data.spouseCoOwnerName || null,
   };
 };
 
@@ -433,7 +496,7 @@ const AddClientPage = () => {
   const isEditMode = Boolean(id);
 
   // State
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -1124,6 +1187,209 @@ const AddClientPage = () => {
                         { value: "EUR", label: "EUR (€)" },
                       ]}
                     />
+                  </div>
+                </StyledCard>
+
+                {/* Property & Service Details */}
+                <StyledCard delay={0.35}>
+                  <StyledCardHeader
+                    icon={Home}
+                    title="Property & Service Details"
+                    subtitle="Property type and service request"
+                    color="teal"
+                  />
+                  <div className="p-6 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <StyledSelect
+                        label="Property Type"
+                        value={formData.propertyType}
+                        onValueChange={(val) => handleSelectChange("propertyType", val)}
+                        placeholder="Select Type"
+                        options={[
+                          { value: "Residential", label: "Residential" },
+                          { value: "Commercial", label: "Commercial" },
+                          { value: "Multi-Family", label: "Multi-Family" },
+                        ]}
+                      />
+                      <StyledSelect
+                        label="Number of Stories"
+                        value={formData.numberOfStories}
+                        onValueChange={(val) => handleSelectChange("numberOfStories", val)}
+                        placeholder="Select"
+                        options={[
+                          { value: "1", label: "1 Story" },
+                          { value: "2", label: "2 Stories" },
+                          { value: "3+", label: "3+ Stories" },
+                        ]}
+                      />
+                    </div>
+                    <StyledSelect
+                      label="Service Type"
+                      value={formData.serviceType}
+                      onValueChange={(val) => handleSelectChange("serviceType", val)}
+                      placeholder="Select Service"
+                      options={[
+                        { value: "Roof Replacement", label: "Roof Replacement" },
+                        { value: "Roof Repair", label: "Roof Repair" },
+                        { value: "Storm/Hail Damage", label: "Storm/Hail Damage" },
+                        { value: "Inspection", label: "Inspection" },
+                        { value: "Maintenance", label: "Maintenance" },
+                        { value: "Gutter Work", label: "Gutter Work" },
+                        { value: "Siding", label: "Siding" },
+                        { value: "Other", label: "Other" },
+                      ]}
+                    />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <StyledSelect
+                        label="Preferred Contact Method"
+                        value={formData.preferredContactMethod}
+                        onValueChange={(val) => handleSelectChange("preferredContactMethod", val)}
+                        placeholder="Select"
+                        options={[
+                          { value: "Phone Call", label: "Phone Call" },
+                          { value: "Text", label: "Text" },
+                          { value: "Email", label: "Email" },
+                        ]}
+                      />
+                      <StyledSelect
+                        label="Best Time to Contact"
+                        value={formData.bestTimeToContact}
+                        onValueChange={(val) => handleSelectChange("bestTimeToContact", val)}
+                        placeholder="Select"
+                        options={[
+                          { value: "Morning", label: "Morning" },
+                          { value: "Afternoon", label: "Afternoon" },
+                          { value: "Evening", label: "Evening" },
+                          { value: "Anytime", label: "Anytime" },
+                        ]}
+                      />
+                    </div>
+                  </div>
+                </StyledCard>
+
+                {/* Roof & Insurance Details */}
+                <StyledCard delay={0.4}>
+                  <StyledCardHeader
+                    icon={Wrench}
+                    title="Roof & Insurance Details"
+                    subtitle="Roof info and insurance claim"
+                    color="navy"
+                  />
+                  <div className="p-6 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <StyledSelect
+                        label="Current Roof Material"
+                        value={formData.currentRoofMaterial}
+                        onValueChange={(val) => handleSelectChange("currentRoofMaterial", val)}
+                        placeholder="Select Material"
+                        options={[
+                          { value: "Asphalt Shingles", label: "Asphalt Shingles" },
+                          { value: "Metal", label: "Metal" },
+                          { value: "Tile", label: "Tile" },
+                          { value: "Flat/TPO", label: "Flat/TPO" },
+                          { value: "Wood Shake", label: "Wood Shake" },
+                          { value: "Slate", label: "Slate" },
+                          { value: "Unknown", label: "Unknown" },
+                        ]}
+                      />
+                      <StyledSelect
+                        label="Roof Age"
+                        value={formData.roofAge}
+                        onValueChange={(val) => handleSelectChange("roofAge", val)}
+                        placeholder="Select Age"
+                        options={[
+                          { value: "0-5 years", label: "0-5 years" },
+                          { value: "5-10 years", label: "5-10 years" },
+                          { value: "10-15 years", label: "10-15 years" },
+                          { value: "15-20 years", label: "15-20 years" },
+                          { value: "20+ years", label: "20+ years" },
+                          { value: "Unknown", label: "Unknown" },
+                        ]}
+                      />
+                    </div>
+                    <StyledInput
+                      label="Insurance Company Name"
+                      id="insuranceCompanyName"
+                      placeholder="e.g. State Farm, Allstate"
+                      value={formData.insuranceCompanyName}
+                      onChange={handleInputChange}
+                      icon={Shield}
+                    />
+                    <StyledSelect
+                      label="Insurance Claim?"
+                      value={formData.isInsuranceClaim}
+                      onValueChange={(val) => handleSelectChange("isInsuranceClaim", val)}
+                      placeholder="Select"
+                      options={[
+                        { value: "Yes", label: "Yes" },
+                        { value: "No", label: "No" },
+                        { value: "Not Sure", label: "Not Sure" },
+                      ]}
+                    />
+                  </div>
+                </StyledCard>
+
+                {/* Ownership & Secondary Contact */}
+                <StyledCard delay={0.45}>
+                  <StyledCardHeader
+                    icon={User}
+                    title="Ownership & Secondary Contact"
+                    subtitle="Homeowner details and co-owner"
+                    color="gold"
+                  />
+                  <div className="p-6 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <StyledSelect
+                        label="Homeowner?"
+                        value={formData.isHomeowner}
+                        onValueChange={(val) => handleSelectChange("isHomeowner", val)}
+                        placeholder="Select"
+                        options={[
+                          { value: "Yes", label: "Yes" },
+                          { value: "No", label: "No" },
+                          { value: "Tenant", label: "Tenant" },
+                        ]}
+                      />
+                      <StyledSelect
+                        label="HOA?"
+                        value={formData.isHOA}
+                        onValueChange={(val) => handleSelectChange("isHOA", val)}
+                        placeholder="Select"
+                        options={[
+                          { value: "Yes", label: "Yes" },
+                          { value: "No", label: "No" },
+                          { value: "Not Sure", label: "Not Sure" },
+                        ]}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-[#475569]">HOA Restrictions</Label>
+                      <Textarea
+                        id="hoaRestrictions"
+                        placeholder="Any HOA restrictions or requirements..."
+                        value={formData.hoaRestrictions}
+                        onChange={handleInputChange}
+                        className="min-h-[60px] rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <StyledInput
+                        label="Spouse / Co-Owner Name"
+                        id="spouseCoOwnerName"
+                        placeholder="e.g. John Smith"
+                        value={formData.spouseCoOwnerName}
+                        onChange={handleInputChange}
+                        icon={User}
+                      />
+                      <StyledInput
+                        label="Secondary Phone"
+                        id="secondaryPhone"
+                        placeholder="+1 (555) 123-4567"
+                        value={formData.secondaryPhone}
+                        onChange={handleInputChange}
+                        icon={Phone}
+                      />
+                    </div>
                   </div>
                 </StyledCard>
 

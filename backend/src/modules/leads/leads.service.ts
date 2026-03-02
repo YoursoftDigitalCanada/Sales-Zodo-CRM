@@ -556,6 +556,13 @@ export class LeadsService {
           status: 'ACTIVE',
           assignedOwnerId: lead.assignedToId,
           internalNotes: lead.notes,
+          // Address mapping from lead property info
+          streetAddress: lead.propertyAddress || null,
+          city: lead.city || null,
+          province: lead.state || null,
+          postalCode: lead.zipCode || null,
+          // Lead source
+          leadSource: lead.leadSource?.name || lead.leadSourceUTM || null,
         },
       });
 

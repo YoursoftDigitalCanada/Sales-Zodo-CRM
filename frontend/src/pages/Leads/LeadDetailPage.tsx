@@ -17,13 +17,13 @@ import {
     Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { getLeadById, convertLead } from "@/features/leads";
+import { getLeadById, convertLead, getInspectionsByLeadId, createInspection, updateInspection, deleteInspection } from "@/features/leads";
 import { ActivityTimeline } from "@/components/ActivityTimeline";
 import {
     ArrowLeft, Loader2, Mail, Phone, MapPin, Building2, Globe, Briefcase,
     Tag, Calendar, Clock, DollarSign, TrendingUp, Thermometer, User, Users,
     FileText, MessageSquare, CheckSquare, Activity, MoreHorizontal,
-    UserPlus, ArrowRightLeft, Star, Pencil, Send, ExternalLink, Flame,
+    UserPlus, ArrowRightLeft, Star, Pencil, Send, ExternalLink, Flame, Search, Plus, Trash2, Eye,
     Snowflake, Zap, X, CheckCircle2, Home, Wrench, Shield, HardHat,
     ClipboardList, Banknote, AlertTriangle
 } from "lucide-react";
@@ -369,6 +369,12 @@ const LeadDetailPage = () => {
     const [notes, setNotes] = useState<NoteEntry[]>([]);
     const [newNote, setNewNote] = useState("");
 
+    // Inspections state
+    const [inspections, setInspections] = useState<any[]>([]);
+    const [inspectionsLoading, setInspectionsLoading] = useState(false);
+    const [showInspectionDialog, setShowInspectionDialog] = useState(false);
+    const [editingInspection, setEditingInspection] = useState<any | null>(null);
+
     const fetchLead = useCallback(async () => {
         try {
             setIsLoading(true);
@@ -388,6 +394,50 @@ const LeadDetailPage = () => {
     }, [id, toast]);
 
     useEffect(() => { fetchLead(); }, [fetchLead]);
+
+    // ── Inspections CRUD ─────────────────────────────────────────────────
+    const fetchInspections = useCallback(async () => {
+        if (!id) return;
+        try {
+            setInspectionsLoading(true);
+            const data = await getInspectionsByLeadId(id);
+            setInspections(data);
+        } catch {
+            console.error("Failed to fetch inspections");
+        } finally {
+            setInspectionsLoading(false);
+        }
+    }, [id]);
+
+    useEffect(() => { fetchInspections(); }, [fetchInspections]);
+
+    const handleSaveInspection = async (data: Record<string, unknown>) => {
+        try {
+            if (editingInspection) {
+                await updateInspection(id!, editingInspection.id, data);
+                toast({ title: "Inspection updated" });
+            } else {
+                await createInspection(id!, data);
+                toast({ title: "Inspection created" });
+            }
+            setShowInspectionDialog(false);
+            setEditingInspection(null);
+            fetchInspections();
+        } catch {
+            toast({ title: "Error", description: "Failed to save inspection.", variant: "destructive" });
+        }
+    };
+
+    const handleDeleteInspection = async (inspectionId: string) => {
+        if (!confirm("Delete this inspection?")) return;
+        try {
+            await deleteInspection(id!, inspectionId);
+            toast({ title: "Inspection deleted" });
+            fetchInspections();
+        } catch {
+            toast({ title: "Error", description: "Failed to delete inspection.", variant: "destructive" });
+        }
+    };
 
     const handleAddNote = () => {
         if (!newNote.trim()) return;
@@ -424,6 +474,7 @@ const LeadDetailPage = () => {
 
     const tabs = [
         { id: "overview", label: "Overview", icon: Activity },
+        { id: "inspections", label: "Inspections", icon: ClipboardList },
         { id: "notes", label: "Notes", icon: FileText },
         { id: "timeline", label: "Timeline", icon: Clock },
     ];
@@ -939,6 +990,95 @@ const LeadDetailPage = () => {
                                             </div>
                                         </TabsContent>
 
+                                        {/* Inspections Tab */}
+                                        <TabsContent value="inspections" className="m-0 space-y-4">
+                                            <div className="flex items-center justify-between">
+                                                <h3 className="text-base font-semibold text-[#0F172A]">Inspections</h3>
+                                                <Button
+                                                    size="sm"
+                                                    className="bg-[#0891B2] hover:bg-[#0891B2]/80 text-white gap-2"
+                                                    onClick={() => { setEditingInspection(null); setShowInspectionDialog(true); }}
+                                                >
+                                                    <Plus className="h-4 w-4" /> New Inspection
+                                                </Button>
+                                            </div>
+                                            {inspectionsLoading ? (
+                                                <div className="flex items-center justify-center py-10">
+                                                    <Loader2 className="animate-spin text-[#0891B2]" size={24} />
+                                                </div>
+                                            ) : inspections.length === 0 ? (
+                                                <div className="text-center py-16">
+                                                    <ClipboardList className="h-12 w-12 text-[#CBD5E1] mx-auto mb-3" />
+                                                    <p className="text-[#94A3B8] text-sm">No inspections yet.</p>
+                                                    <p className="text-[#94A3B8] text-xs mt-1">Click "New Inspection" to add one.</p>
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-3">
+                                                    {inspections.map((insp: any) => (
+                                                        <Card key={insp.id} className="border shadow-sm hover:shadow-md transition-shadow">
+                                                            <CardContent className="p-4">
+                                                                <div className="flex items-start justify-between">
+                                                                    <div className="flex-1">
+                                                                        <div className="flex items-center gap-2 mb-2">
+                                                                            <Badge variant="outline" className="text-xs">
+                                                                                {insp.inspectionType || "General"}
+                                                                            </Badge>
+                                                                            {insp.estimateStatus && (
+                                                                                <Badge className={`text-xs ${insp.estimateStatus === 'Accepted' ? 'bg-green-100 text-green-700' :
+                                                                                        insp.estimateStatus === 'Sent' ? 'bg-blue-100 text-blue-700' :
+                                                                                            insp.estimateStatus === 'Rejected' ? 'bg-red-100 text-red-700' :
+                                                                                                'bg-gray-100 text-gray-700'
+                                                                                    }`}>
+                                                                                    {insp.estimateStatus}
+                                                                                </Badge>
+                                                                            )}
+                                                                            {insp.overallCondition && (
+                                                                                <Badge variant="outline" className="text-xs">
+                                                                                    {insp.overallCondition}
+                                                                                </Badge>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                                                                            <div>
+                                                                                <span className="text-xs text-[#475569]">Date</span>
+                                                                                <p className="font-medium">{insp.inspectionDate ? formatDate(insp.inspectionDate) : '—'}</p>
+                                                                            </div>
+                                                                            <div>
+                                                                                <span className="text-xs text-[#475569]">Inspector</span>
+                                                                                <p className="font-medium">{insp.inspectorName || '—'}</p>
+                                                                            </div>
+                                                                            <div>
+                                                                                <span className="text-xs text-[#475569]">Total Estimate</span>
+                                                                                <p className="font-medium">{insp.totalEstimate ? `$${Number(insp.totalEstimate).toLocaleString()}` : '—'}</p>
+                                                                            </div>
+                                                                            <div>
+                                                                                <span className="text-xs text-[#475569]">Roof Style</span>
+                                                                                <p className="font-medium">{insp.roofStyle || '—'}</p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-1 ml-3">
+                                                                        <Button
+                                                                            variant="ghost" size="icon" className="h-8 w-8"
+                                                                            onClick={() => { setEditingInspection(insp); setShowInspectionDialog(true); }}
+                                                                        >
+                                                                            <Pencil className="h-4 w-4 text-[#475569]" />
+                                                                        </Button>
+                                                                        <Button
+                                                                            variant="ghost" size="icon" className="h-8 w-8"
+                                                                            onClick={() => handleDeleteInspection(insp.id)}
+                                                                        >
+                                                                            <Trash2 className="h-4 w-4 text-red-500" />
+                                                                        </Button>
+                                                                    </div>
+                                                                </div>
+                                                            </CardContent>
+                                                        </Card>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </TabsContent>
+
                                         {/* Timeline Tab */}
                                         <TabsContent value="timeline" className="m-0 px-2">
                                             <ActivityTimeline entityType="Lead" entityId={id!} />
@@ -961,6 +1101,16 @@ const LeadDetailPage = () => {
                     onSuccess={handleConvertSuccess}
                 />
             )}
+
+            {/* Inspection Form Dialog */}
+            {showInspectionDialog && (
+                <InspectionFormDialog
+                    open={showInspectionDialog}
+                    onClose={() => { setShowInspectionDialog(false); setEditingInspection(null); }}
+                    onSave={handleSaveInspection}
+                    inspection={editingInspection}
+                />
+            )}
         </div>
     );
 };
@@ -975,3 +1125,232 @@ const InfoRow = ({ label, value }: { label: string; value: string }) => (
 );
 
 export default LeadDetailPage;
+
+// ── Inspection Form Dialog ──────────────────────────────────────────────
+
+interface InspectionFormDialogProps {
+    open: boolean;
+    onClose: () => void;
+    onSave: (data: Record<string, unknown>) => void;
+    inspection?: any;
+}
+
+const INSP_TABS = [
+    { id: 'general', label: 'General' },
+    { id: 'roof', label: 'Roof Assessment' },
+    { id: 'damage', label: 'Damage' },
+    { id: 'materials', label: 'Materials' },
+    { id: 'estimate', label: 'Estimate' },
+    { id: 'scheduling', label: 'Scheduling' },
+];
+
+const InspectionFormDialog = ({ open, onClose, onSave, inspection }: InspectionFormDialogProps) => {
+    const [activeTab, setActiveTab] = useState('general');
+    const [saving, setSaving] = useState(false);
+    const [form, setForm] = useState<Record<string, any>>(() => inspection || {});
+
+    const set = (field: string, value: any) => setForm(prev => ({ ...prev, [field]: value }));
+
+    const handleSubmit = async () => {
+        setSaving(true);
+        // Clean empty strings to undefined
+        const payload: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(form)) {
+            if (v === '' || v === undefined || v === null) continue;
+            if (k === 'id' || k === 'leadId' || k === 'tenantId' || k === 'createdAt' || k === 'updatedAt' || k === 'createdById') continue;
+            payload[k] = v;
+        }
+        await onSave(payload);
+        setSaving(false);
+    };
+
+    const F = ({ label, field, type = 'text' }: { label: string; field: string; type?: string }) => (
+        <div className="space-y-1">
+            <Label className="text-xs text-[#475569]">{label}</Label>
+            {type === 'textarea' ? (
+                <Textarea
+                    value={form[field] || ''}
+                    onChange={e => set(field, e.target.value)}
+                    className="resize-none min-h-[60px] text-sm"
+                />
+            ) : type === 'select' ? null : (
+                <Input
+                    type={type}
+                    value={form[field] ?? ''}
+                    onChange={e => set(field, type === 'number' ? (e.target.value ? Number(e.target.value) : undefined) : e.target.value)}
+                    className="text-sm"
+                />
+            )}
+        </div>
+    );
+
+    const Sel = ({ label, field, options }: { label: string; field: string; options: string[] }) => (
+        <div className="space-y-1">
+            <Label className="text-xs text-[#475569]">{label}</Label>
+            <select
+                value={form[field] || ''}
+                onChange={e => set(field, e.target.value || undefined)}
+                className="flex h-9 w-full rounded-md border bg-background px-3 py-1 text-sm shadow-sm"
+            >
+                <option value="">Select...</option>
+                {options.map(o => <option key={o} value={o}>{o}</option>)}
+            </select>
+        </div>
+    );
+
+    const Bool = ({ label, field }: { label: string; field: string }) => (
+        <div className="flex items-center justify-between py-1">
+            <Label className="text-xs text-[#475569]">{label}</Label>
+            <Switch checked={!!form[field]} onCheckedChange={v => set(field, v)} />
+        </div>
+    );
+
+    return (
+        <Dialog open={open} onOpenChange={v => !v && onClose()}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                    <DialogTitle>{inspection ? 'Edit Inspection' : 'New Inspection'}</DialogTitle>
+                    <DialogDescription>Fill in the inspection details across the tabs below.</DialogDescription>
+                </DialogHeader>
+
+                <div className="flex gap-2 flex-wrap border-b pb-2 mb-4">
+                    {INSP_TABS.map(tab => (
+                        <Button
+                            key={tab.id}
+                            variant={activeTab === tab.id ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setActiveTab(tab.id)}
+                            className={activeTab === tab.id ? 'bg-[#0891B2] text-white' : ''}
+                        >
+                            {tab.label}
+                        </Button>
+                    ))}
+                </div>
+
+                {activeTab === 'general' && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <F label="Inspection Date" field="inspectionDate" type="date" />
+                        <F label="Inspector Name" field="inspectorName" />
+                        <Sel label="Inspection Type" field="inspectionType" options={['Initial', 'Re-inspect', 'Insurance', 'Final']} />
+                        <F label="Weather Conditions" field="weatherConditions" />
+                        <Sel label="Access Method" field="accessMethod" options={['Ladder', 'Drone', 'Walk-on', 'Binoculars']} />
+                        <Sel label="Overall Condition" field="overallCondition" options={['Poor', 'Fair', 'Good', 'Excellent']} />
+                        <div className="col-span-full">
+                            <F label="Inspector Notes" field="inspectorNotes" type="textarea" />
+                        </div>
+                        <div className="col-span-full">
+                            <F label="Customer Feedback" field="customerFeedback" type="textarea" />
+                        </div>
+                        <div className="col-span-full">
+                            <F label="Internal Notes" field="internalNotes" type="textarea" />
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'roof' && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <Sel label="Roof Style" field="roofStyle" options={['Gable', 'Hip', 'Flat', 'Mansard', 'Gambrel', 'Shed']} />
+                        <Sel label="Roof Pitch" field="roofPitch" options={['Low (2-4)', 'Medium (5-7)', 'Steep (8-12)']} />
+                        <F label="Total Squares" field="totalSquares" type="number" />
+                        <F label="Ridge Length (ft)" field="ridgeLength" type="number" />
+                        <F label="Valley Length (ft)" field="valleyLength" type="number" />
+                        <F label="Eave Length (ft)" field="eaveLength" type="number" />
+                        <F label="Rake Length (ft)" field="rakeLength" type="number" />
+                        <F label="Number of Layers" field="numberOfLayers" type="number" />
+                        <Sel label="Decking Type" field="deckingType" options={['Plywood', 'OSB', '1x6', 'Skip']} />
+                        <Sel label="Decking Condition" field="deckingCondition" options={['Good', 'Needs Repair', 'Needs Replace']} />
+                        <Sel label="Underlayment Type" field="underlaymentType" options={['Felt', 'Synthetic', 'Ice & Water']} />
+                        <Sel label="Ventilation Type" field="ventilationType" options={['Ridge', 'Box', 'Turbine', 'Power', 'Soffit']} />
+                        <F label="Ventilation Count" field="ventilationCount" type="number" />
+                        <Sel label="Flashing Condition" field="flashingCondition" options={['Good', 'Repair', 'Replace']} />
+                        <Sel label="Gutter Condition" field="gutterCondition" options={['Good', 'Repair', 'Replace', 'None']} />
+                        <F label="Skylight Count" field="skylightCount" type="number" />
+                        <F label="Skylight Condition" field="skylightCondition" />
+                        <Bool label="Chimney Present" field="chimneyPresent" />
+                        <F label="Chimney Condition" field="chimneyCondition" />
+                        <Sel label="Soffit/Fascia Condition" field="soffitFasciaCondition" options={['Good', 'Repair', 'Replace']} />
+                        <Bool label="Drip Edge Present" field="dripEdgePresent" />
+                        <F label="Drip Edge Condition" field="dripEdgeCondition" />
+                        <Bool label="Ice/Water Shield Present" field="iceWaterShieldPresent" />
+                    </div>
+                )}
+
+                {activeTab === 'damage' && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <Bool label="Storm Damage Found" field="stormDamageFound" />
+                        <Sel label="Hail Size Found" field="hailSizeFound" options={['Pea', 'Marble', 'Quarter', 'Golf Ball', 'Baseball']} />
+                        <div className="col-span-full"><F label="Wind Damage Details" field="windDamageDetails" type="textarea" /></div>
+                        <div className="col-span-full"><F label="Hail Damage Details" field="hailDamageDetails" type="textarea" /></div>
+                        <div className="col-span-full"><F label="Test Square Results" field="testSquareResults" type="textarea" /></div>
+                        <Bool label="Interior Damage Found" field="interiorDamageFound" />
+                        <F label="Photos Taken Count" field="photosTakenCount" type="number" />
+                        <div className="col-span-full"><F label="Interior Damage Details" field="interiorDamageDetails" type="textarea" /></div>
+                        <Sel label="Overall Damage Rating" field="overallDamageRating" options={['None', 'Minor', 'Moderate', 'Severe', 'Total Loss']} />
+                    </div>
+                )}
+
+                {activeTab === 'materials' && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <Sel label="Proposed Material" field="proposedMaterial" options={['Asphalt', 'Metal', 'Tile', 'Flat', 'Wood', 'Slate']} />
+                        <F label="Shingle Brand" field="shingleBrand" />
+                        <F label="Shingle Line" field="shingleLine" />
+                        <F label="Shingle Color" field="shingleColor" />
+                        <F label="Underlayment Choice" field="underlaymentChoice" />
+                        <F label="Ridge Cap Type" field="ridgeCapType" />
+                        <F label="Ventilation Plan" field="ventilationPlan" />
+                        <F label="Drip Edge Color" field="dripEdgeColor" />
+                        <Sel label="Warranty Type" field="warrantyType" options={['Manufacturer', 'Workmanship', 'Extended']} />
+                        <F label="Warranty Years" field="warrantyYears" type="number" />
+                    </div>
+                )}
+
+                {activeTab === 'estimate' && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <F label="Material Cost ($)" field="materialCost" type="number" />
+                        <F label="Labor Cost ($)" field="laborCost" type="number" />
+                        <F label="Tear-Off Cost ($)" field="tearOffCost" type="number" />
+                        <F label="Permit Cost ($)" field="permitCost" type="number" />
+                        <F label="Dumpster Cost ($)" field="dumpsterCost" type="number" />
+                        <F label="Misc Cost ($)" field="miscCost" type="number" />
+                        <F label="Subtotal ($)" field="subtotal" type="number" />
+                        <F label="Overhead %" field="overheadPercent" type="number" />
+                        <F label="Profit %" field="profitPercent" type="number" />
+                        <F label="Total Estimate ($)" field="totalEstimate" type="number" />
+                        <F label="Customer Price ($)" field="customerPrice" type="number" />
+                        <F label="Deposit Required ($)" field="depositRequired" type="number" />
+                        <Bool label="Deposit Collected" field="depositCollected" />
+                        <Sel label="Payment Method" field="paymentMethod" options={['Cash', 'Check', 'Card', 'Financing', 'Insurance']} />
+                        <Sel label="Estimate Status" field="estimateStatus" options={['Draft', 'Sent', 'Accepted', 'Rejected', 'Revised']} />
+                    </div>
+                )}
+
+                {activeTab === 'scheduling' && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <F label="Tentative Start Date" field="tentativeStartDate" type="date" />
+                        <Sel label="Estimated Duration" field="estimatedDuration" options={['1 Day', '2-3 Days', '1 Week', '2 Weeks', '3+ Weeks']} />
+                        <F label="Crew Size" field="crewSize" type="number" />
+                        <F label="Crew Lead Name" field="crewLeadName" />
+                        <Bool label="Materials Ordered" field="materialsOrdered" />
+                        <F label="Materials Delivery Date" field="materialsDeliveryDate" type="date" />
+                        <Bool label="Permit Pulled" field="permitPulled" />
+                        <F label="Permit Number" field="permitNumber" />
+                        <Bool label="Dumpster Ordered" field="dumpsterOrdered" />
+                        <F label="Dumpster Delivery Date" field="dumpsterDeliveryDate" type="date" />
+                    </div>
+                )}
+
+                <DialogFooter className="mt-4 gap-2">
+                    <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
+                    <Button
+                        onClick={handleSubmit}
+                        disabled={saving}
+                        className="bg-[#0891B2] hover:bg-[#0891B2]/80 text-white gap-2"
+                    >
+                        {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+                        {inspection ? 'Update' : 'Create'} Inspection
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+};

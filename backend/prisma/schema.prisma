@@ -325,6 +325,7 @@ model Tenant {
   payments              InvoicePayment[]
   quotes                Quote[]
   contracts             Contract[]
+  leadInspections       LeadInspection[]
 
   @@index([status])
   @@index([slug])
@@ -656,6 +657,7 @@ model Lead {
   projects          Project[]
   files             File[]
   emails            Email[]
+  inspections       LeadInspection[]
 
   @@index([tenantId])
   @@index([status])
@@ -666,6 +668,114 @@ model Lead {
   @@index([serviceType])
   @@index([isInsuranceClaim])
   @@index([zipCode])
+}
+
+model LeadInspection {
+  id                    String   @id @default(uuid())
+  leadId                String
+  lead                  Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  tenantId              String
+  tenant                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // ── General ─────────────────────────────────────────────────
+  inspectionDate        DateTime?
+  inspectorName         String?
+  inspectionType        String?          // Initial, Re-inspect, Insurance, Final
+  weatherConditions     String?
+  accessMethod          String?          // Ladder, Drone, Walk-on, Binoculars
+  overallCondition      String?          // Poor, Fair, Good, Excellent
+
+  // ── Roof Assessment (~25) ───────────────────────────────────
+  roofStyle             String?          // Gable, Hip, Flat, Mansard, Gambrel, Shed
+  roofPitch             String?          // Low(2-4), Medium(5-7), Steep(8-12)
+  totalSquares          Decimal?  @db.Decimal(10,2)
+  ridgeLength           Decimal?  @db.Decimal(10,2)
+  valleyLength          Decimal?  @db.Decimal(10,2)
+  eaveLength            Decimal?  @db.Decimal(10,2)
+  rakeLength            Decimal?  @db.Decimal(10,2)
+  numberOfLayers        Int?
+  deckingType           String?          // Plywood, OSB, 1x6, Skip
+  deckingCondition      String?          // Good, Needs Repair, Needs Replace
+  underlaymentType      String?          // Felt, Synthetic, Ice&Water
+  ventilationType       String?          // Ridge, Box, Turbine, Power, Soffit
+  ventilationCount      Int?
+  flashingCondition     String?          // Good, Repair, Replace
+  gutterCondition       String?          // Good, Repair, Replace, None
+  skylightCount         Int?
+  skylightCondition     String?
+  chimneyPresent        Boolean?  @default(false)
+  chimneyCondition      String?
+  soffitFasciaCondition String?          // Good, Repair, Replace
+  dripEdgePresent       Boolean?  @default(false)
+  dripEdgeCondition     String?
+  iceWaterShieldPresent Boolean?  @default(false)
+
+  // ── Damage Assessment (~10) ─────────────────────────────────
+  stormDamageFound      Boolean?  @default(false)
+  windDamageDetails     String?   @db.Text
+  hailDamageDetails     String?   @db.Text
+  hailSizeFound         String?          // Pea, Marble, Quarter, Golf Ball, Baseball
+  testSquareResults     String?   @db.Text
+  interiorDamageFound   Boolean?  @default(false)
+  interiorDamageDetails String?   @db.Text
+  photosTakenCount      Int?
+  overallDamageRating   String?          // None, Minor, Moderate, Severe, Total Loss
+
+  // ── Material Selections (~10) ───────────────────────────────
+  proposedMaterial      String?          // Asphalt, Metal, Tile, Flat, etc.
+  shingleBrand          String?
+  shingleLine           String?
+  shingleColor          String?
+  underlaymentChoice    String?
+  ridgeCapType          String?
+  ventilationPlan       String?
+  dripEdgeColor         String?
+  warrantyType          String?          // Manufacturer, Workmanship, Extended
+  warrantyYears         Int?
+
+  // ── Estimate & Pricing (~16) ────────────────────────────────
+  materialCost          Decimal?  @db.Decimal(15,2)
+  laborCost             Decimal?  @db.Decimal(15,2)
+  tearOffCost           Decimal?  @db.Decimal(15,2)
+  permitCost            Decimal?  @db.Decimal(15,2)
+  dumpsterCost          Decimal?  @db.Decimal(15,2)
+  miscCost              Decimal?  @db.Decimal(15,2)
+  subtotal              Decimal?  @db.Decimal(15,2)
+  overheadPercent       Decimal?  @db.Decimal(5,2)
+  profitPercent         Decimal?  @db.Decimal(5,2)
+  totalEstimate         Decimal?  @db.Decimal(15,2)
+  customerPrice         Decimal?  @db.Decimal(15,2)
+  depositRequired       Decimal?  @db.Decimal(15,2)
+  depositCollected      Boolean?  @default(false)
+  paymentMethod         String?          // Cash, Check, Card, Financing, Insurance
+  estimateStatus        String?          // Draft, Sent, Accepted, Rejected, Revised
+
+  // ── Scheduling & Logistics (~10) ────────────────────────────
+  tentativeStartDate    DateTime?
+  estimatedDuration     String?          // 1 Day, 2-3 Days, 1 Week, etc.
+  crewSize              Int?
+  crewLeadName          String?
+  materialsOrdered      Boolean?  @default(false)
+  materialsDeliveryDate DateTime?
+  permitPulled          Boolean?  @default(false)
+  permitNumber          String?
+  dumpsterOrdered       Boolean?  @default(false)
+  dumpsterDeliveryDate  DateTime?
+
+  // ── Notes ───────────────────────────────────────────────────
+  inspectorNotes        String?   @db.Text
+  customerFeedback      String?   @db.Text
+  internalNotes         String?   @db.Text
+
+  // ── Timestamps ──────────────────────────────────────────────
+  createdById           String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([leadId])
+  @@index([tenantId])
+  @@index([inspectionDate])
+  @@index([estimateStatus])
 }
 
 model LeadTag {

@@ -1,0 +1,122 @@
+import { z } from 'zod';
+
+// Shared fields for both create and update
+const inspectionFields = {
+    // General
+    inspectionDate: z.string().optional(),
+    inspectorName: z.string().max(200).optional(),
+    inspectionType: z.string().max(50).optional(),
+    weatherConditions: z.string().max(100).optional(),
+    accessMethod: z.string().max(50).optional(),
+    overallCondition: z.string().max(50).optional(),
+
+    // Roof Assessment
+    roofStyle: z.string().max(50).optional(),
+    roofPitch: z.string().max(50).optional(),
+    totalSquares: z.number().min(0).optional(),
+    ridgeLength: z.number().min(0).optional(),
+    valleyLength: z.number().min(0).optional(),
+    eaveLength: z.number().min(0).optional(),
+    rakeLength: z.number().min(0).optional(),
+    numberOfLayers: z.number().int().min(0).optional(),
+    deckingType: z.string().max(50).optional(),
+    deckingCondition: z.string().max(50).optional(),
+    underlaymentType: z.string().max(50).optional(),
+    ventilationType: z.string().max(100).optional(),
+    ventilationCount: z.number().int().min(0).optional(),
+    flashingCondition: z.string().max(50).optional(),
+    gutterCondition: z.string().max(50).optional(),
+    skylightCount: z.number().int().min(0).optional(),
+    skylightCondition: z.string().max(100).optional(),
+    chimneyPresent: z.boolean().optional(),
+    chimneyCondition: z.string().max(100).optional(),
+    soffitFasciaCondition: z.string().max(50).optional(),
+    dripEdgePresent: z.boolean().optional(),
+    dripEdgeCondition: z.string().max(50).optional(),
+    iceWaterShieldPresent: z.boolean().optional(),
+
+    // Damage Assessment
+    stormDamageFound: z.boolean().optional(),
+    windDamageDetails: z.string().max(2000).optional(),
+    hailDamageDetails: z.string().max(2000).optional(),
+    hailSizeFound: z.string().max(50).optional(),
+    testSquareResults: z.string().max(2000).optional(),
+    interiorDamageFound: z.boolean().optional(),
+    interiorDamageDetails: z.string().max(2000).optional(),
+    photosTakenCount: z.number().int().min(0).optional(),
+    overallDamageRating: z.string().max(50).optional(),
+
+    // Material Selections
+    proposedMaterial: z.string().max(100).optional(),
+    shingleBrand: z.string().max(100).optional(),
+    shingleLine: z.string().max(100).optional(),
+    shingleColor: z.string().max(100).optional(),
+    underlaymentChoice: z.string().max(100).optional(),
+    ridgeCapType: z.string().max(100).optional(),
+    ventilationPlan: z.string().max(200).optional(),
+    dripEdgeColor: z.string().max(50).optional(),
+    warrantyType: z.string().max(50).optional(),
+    warrantyYears: z.number().int().min(0).optional(),
+
+    // Estimate & Pricing
+    materialCost: z.number().min(0).optional(),
+    laborCost: z.number().min(0).optional(),
+    tearOffCost: z.number().min(0).optional(),
+    permitCost: z.number().min(0).optional(),
+    dumpsterCost: z.number().min(0).optional(),
+    miscCost: z.number().min(0).optional(),
+    subtotal: z.number().min(0).optional(),
+    overheadPercent: z.number().min(0).max(100).optional(),
+    profitPercent: z.number().min(0).max(100).optional(),
+    totalEstimate: z.number().min(0).optional(),
+    customerPrice: z.number().min(0).optional(),
+    depositRequired: z.number().min(0).optional(),
+    depositCollected: z.boolean().optional(),
+    paymentMethod: z.string().max(50).optional(),
+    estimateStatus: z.string().max(50).optional(),
+
+    // Scheduling & Logistics
+    tentativeStartDate: z.string().optional(),
+    estimatedDuration: z.string().max(50).optional(),
+    crewSize: z.number().int().min(0).optional(),
+    crewLeadName: z.string().max(200).optional(),
+    materialsOrdered: z.boolean().optional(),
+    materialsDeliveryDate: z.string().optional(),
+    permitPulled: z.boolean().optional(),
+    permitNumber: z.string().max(100).optional(),
+    dumpsterOrdered: z.boolean().optional(),
+    dumpsterDeliveryDate: z.string().optional(),
+
+    // Notes
+    inspectorNotes: z.string().max(5000).optional(),
+    customerFeedback: z.string().max(5000).optional(),
+    internalNotes: z.string().max(5000).optional(),
+};
+
+export const createInspectionSchema = z.object({
+    body: z.object(inspectionFields),
+    params: z.object({
+        leadId: z.string().uuid(),
+    }),
+});
+
+export const updateInspectionSchema = z.object({
+    body: z.object(inspectionFields),
+    params: z.object({
+        leadId: z.string().uuid(),
+        inspectionId: z.string().uuid(),
+    }),
+});
+
+export const inspectionIdSchema = z.object({
+    params: z.object({
+        leadId: z.string().uuid(),
+        inspectionId: z.string().uuid(),
+    }),
+});
+
+export const inspectionListSchema = z.object({
+    params: z.object({
+        leadId: z.string().uuid(),
+    }),
+});

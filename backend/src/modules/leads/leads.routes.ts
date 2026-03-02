@@ -1,10 +1,10 @@
 import { Router } from 'express';
 import { leadsController } from './leads.controller';
-import { 
-  authenticate, 
+import {
+  authenticate,
   loadEmployee,
 } from '../../common/middleware/auth.middleware';
-import { 
+import {
   requirePermission,
   requireAnyPermission,
 } from '../../common/middleware/permission.middleware';
@@ -20,6 +20,13 @@ import {
   bulkStatusSchema,
   pipelineQuerySchema,
 } from './leads.validators';
+import { inspectionsController } from './inspections.controller';
+import {
+  createInspectionSchema,
+  updateInspectionSchema,
+  inspectionIdSchema,
+  inspectionListSchema,
+} from './inspections.validators';
 
 const router = Router();
 
@@ -317,6 +324,65 @@ router.delete(
   requirePermission(PERMISSIONS.LEADS_DELETE),
   validate(leadIdSchema),
   leadsController.delete.bind(leadsController)
+);
+
+// ============================================
+// INSPECTION SUB-RESOURCE ROUTES
+// ============================================
+
+/**
+ * GET /leads/:leadId/inspections
+ * Get all inspections for a lead
+ */
+router.get(
+  '/:leadId/inspections',
+  requirePermission(PERMISSIONS.LEADS_VIEW),
+  validate(inspectionListSchema),
+  inspectionsController.getByLeadId.bind(inspectionsController)
+);
+
+/**
+ * POST /leads/:leadId/inspections
+ * Create a new inspection
+ */
+router.post(
+  '/:leadId/inspections',
+  requirePermission(PERMISSIONS.LEADS_UPDATE),
+  validate(createInspectionSchema),
+  inspectionsController.create.bind(inspectionsController)
+);
+
+/**
+ * GET /leads/:leadId/inspections/:inspectionId
+ * Get a specific inspection
+ */
+router.get(
+  '/:leadId/inspections/:inspectionId',
+  requirePermission(PERMISSIONS.LEADS_VIEW),
+  validate(inspectionIdSchema),
+  inspectionsController.getById.bind(inspectionsController)
+);
+
+/**
+ * PUT /leads/:leadId/inspections/:inspectionId
+ * Update an inspection
+ */
+router.put(
+  '/:leadId/inspections/:inspectionId',
+  requirePermission(PERMISSIONS.LEADS_UPDATE),
+  validate(updateInspectionSchema),
+  inspectionsController.update.bind(inspectionsController)
+);
+
+/**
+ * DELETE /leads/:leadId/inspections/:inspectionId
+ * Delete an inspection
+ */
+router.delete(
+  '/:leadId/inspections/:inspectionId',
+  requirePermission(PERMISSIONS.LEADS_DELETE),
+  validate(inspectionIdSchema),
+  inspectionsController.delete.bind(inspectionsController)
 );
 
 export default router;

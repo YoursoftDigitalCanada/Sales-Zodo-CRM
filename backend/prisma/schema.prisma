@@ -328,6 +328,7 @@ model Tenant {
   contracts             Contract[]
   leadInspections       LeadInspection[]
   leadInsuranceClaims   LeadInsuranceClaim[]
+  subscription          Subscription?
 
   @@index([status])
   @@index([slug])
@@ -2788,4 +2789,62 @@ model RoofData {
 
   @@index([clientId])
   @@index([tenantId])
+}
+
+// ============================================================================
+// SUPER ADMIN MODULE
+// ============================================================================
+
+model SuperAdmin {
+  id                String   @id @default(uuid())
+  email             String   @unique
+  passwordHash      String
+  firstName         String
+  lastName          String
+  role              String   @default("SUPER_ADMIN")
+  isActive          Boolean  @default(true)
+  twoFactorEnabled  Boolean  @default(false)
+  twoFactorSecret   String?
+  lastLoginAt       DateTime?
+  lastLoginIp       String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([email])
+}
+
+model Subscription {
+  id              String    @id @default(uuid())
+  tenantId        String    @unique
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  planType        String    @default("TRIAL")
+  billingCycle    String    @default("MONTHLY")
+  status          String    @default("TRIAL")
+  startDate       DateTime  @default(now())
+  nextBillingDate DateTime?
+  cancelledAt     DateTime?
+  monthlyRate     Decimal   @default(0) @db.Decimal(10,2)
+  totalPaid       Decimal   @default(0) @db.Decimal(10,2)
+  failedPayments  Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([planType])
+}
+
+model AdminAuditLog {
+  id          String   @id @default(uuid())
+  adminId     String
+  action      String
+  targetType  String?
+  targetId    String?
+  metadata    Json?
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  @@index([adminId])
+  @@index([action])
+  @@index([createdAt])
 }

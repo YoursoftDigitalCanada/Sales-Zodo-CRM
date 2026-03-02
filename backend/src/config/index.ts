@@ -65,6 +65,10 @@ const envSchema = z.object({
   GOOGLE_MAPS_JS_API_KEY: z.string().optional(),
   AI_SERVICE_URL: z.string().default('http://127.0.0.1:8001'),
   NEARMAP_API_KEY: z.string().optional(),
+
+  // Super Admin
+  ADMIN_JWT_SECRET: z.string().min(32).optional(),
+  ADMIN_JWT_EXPIRY: z.string().default('4h'),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -142,6 +146,10 @@ export const config = {
     },
     aiServiceUrl: parsed.data.AI_SERVICE_URL,
     nearmapApiKey: parsed.data.NEARMAP_API_KEY,
+  },
+  admin: {
+    jwtSecret: parsed.data.ADMIN_JWT_SECRET || parsed.data.JWT_ACCESS_SECRET,
+    jwtExpiry: parsed.data.ADMIN_JWT_EXPIRY,
   },
 } as const;
 

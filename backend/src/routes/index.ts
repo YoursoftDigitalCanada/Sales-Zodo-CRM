@@ -66,6 +66,10 @@ import copilotRoutes from '../modules/copilot/copilot.routes';
 // Timeline module
 import timelineRoutes from '../modules/timeline/timeline.routes';
 
+// Super Admin module
+import adminRoutes from '../modules/super-admin/admin.routes';
+import { adminAuthService } from '../modules/super-admin/admin-auth.service';
+
 /**
  * Register all API routes
  *
@@ -167,6 +171,15 @@ export function registerRoutes(app: Application): void {
 
   // Mount protected router on the main API router
   apiRouter.use(protectedRouter);
+
+  // =========================================================================
+  // SUPER ADMIN ROUTES (separate auth — NOT behind CRM middleware)
+  // =========================================================================
+
+  apiRouter.use('/admin', adminRoutes);
+
+  // Seed super admin on startup (no-op if already exists)
+  adminAuthService.seedSuperAdmin().catch(() => { });
 
   // =========================================================================
   // REGISTER API ROUTER

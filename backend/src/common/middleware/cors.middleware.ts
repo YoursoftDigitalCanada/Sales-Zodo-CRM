@@ -34,6 +34,12 @@ const getAllowedOrigins = (): string[] => {
     );
   }
 
+  // Production admin panel
+  origins.push(
+    'https://admin.zodo.ca',
+    'https://crm.zodo.ca',
+  );
+
   // Parse additional origins from environment variable if provided
   const additionalOrigins = process.env.ADDITIONAL_CORS_ORIGINS;
   if (additionalOrigins) {

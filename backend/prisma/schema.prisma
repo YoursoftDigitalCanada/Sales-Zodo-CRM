@@ -576,6 +576,10 @@ model Lead {
   tags              LeadTag[]
   calendarEvents    CalendarEvent[]
   activities        LeadActivity[]
+  quotes            Quote[]
+  projects          Project[]
+  files             File[]
+  emails            Email[]
 
   @@index([tenantId])
   @@index([status])
@@ -939,6 +943,14 @@ model Project {
   clientId        String?
   client          Client?         @relation(fields: [clientId], references: [id], onDelete: SetNull)
   
+  // Quote that generated this project (when accepted)
+  quoteId         String?
+  quote           Quote?          @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  
+  // Lead that originated this project
+  leadId          String?
+  lead            Lead?           @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  
   // Tenant relation
   tenantId        String
   tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -952,11 +964,16 @@ model Project {
   tasks           Task[]
   members         ProjectMember[]
   files           File[]
+  invoices        Invoice[]
+  emails          Email[]
+  contracts       Contract[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
   @@index([status])
   @@index([clientId])
+  @@index([quoteId])
+  @@index([leadId])
 }
 
 model ProjectMember {
@@ -1132,7 +1149,7 @@ model File {
   folderId        String?
   folder          Folder?     @relation(fields: [folderId], references: [id], onDelete: SetNull)
   
-  // Related entities (optional - file can belong to multiple contexts)
+  // Related entities (optional — file can belong to multiple contexts)
   applicationId   String?
   application     Application? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
   
@@ -1141,6 +1158,12 @@ model File {
   
   clientId        String?
   client          Client?     @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  
+  leadId          String?
+  lead            Lead?       @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  
+  quoteId         String?
+  quote           Quote?      @relation(fields: [quoteId], references: [id], onDelete: SetNull)
   
   // Sharing
   isShared        Boolean     @default(false)
@@ -1167,6 +1190,8 @@ model File {
   @@index([applicationId])
   @@index([projectId])
   @@index([clientId])
+  @@index([leadId])
+  @@index([quoteId])
 }
 
 model FileTag {
@@ -1221,6 +1246,14 @@ model Invoice {
   notes             String?         @db.Text
   terms             String?         @db.Text
   
+  // Linked quote (which quote generated this invoice)
+  quoteId           String?
+  quote             Quote?          @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  
+  // Linked project/job
+  projectId         String?
+  project           Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  
   // Created by
   createdById       String?
   createdBy         Employee?       @relation("CreatedByEmployee", fields: [createdById], references: [id], onDelete: SetNull)
@@ -1250,6 +1283,8 @@ model Invoice {
   @@index([status])
   @@index([clientId])
   @@index([dueDate])
+  @@index([quoteId])
+  @@index([projectId])
 }
 
 model InvoiceItem {
@@ -1754,6 +1789,15 @@ model Email {
   contactId       String?
   contact         Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
   
+  leadId          String?
+  lead            Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  
+  quoteId         String?
+  quote           Quote?        @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  
+  projectId       String?
+  project         Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  
   // Timestamps
   sentAt          DateTime?
   receivedAt      DateTime?
@@ -1780,6 +1824,9 @@ model Email {
   @@index([deletedAt])
   @@index([clientId])
   @@index([contactId])
+  @@index([leadId])
+  @@index([quoteId])
+  @@index([projectId])
 }
 
 model EmailLabelAssignment {
@@ -2309,6 +2356,7 @@ model Quote {
   
   // Lead (optional — for pre-client quotes)
   leadId            String?
+  lead              Lead?           @relation(fields: [leadId], references: [id], onDelete: SetNull)
   
   // Dates
   issueDate         DateTime        @default(now())
@@ -2354,6 +2402,11 @@ model Quote {
   
   // Relations
   items             QuoteItem[]
+  projects          Project[]
+  contracts         Contract[]
+  invoices          Invoice[]
+  files             File[]
+  emails            Email[]
 
   @@unique([tenantId, quoteNumber])
   @@index([tenantId])
@@ -2409,8 +2462,12 @@ model Contract {
   // Linked entities
   clientId          String
   client            Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  quoteId           String?         // Optional link to accepted quote
-  projectId         String?         // Optional link to project
+  
+  quoteId           String?
+  quote             Quote?          @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  
+  projectId         String?
+  project           Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
   
   // Financial
   value             Decimal         @db.Decimal(15, 2)
@@ -2441,6 +2498,8 @@ model Contract {
   @@index([tenantId])
   @@index([status])
   @@index([clientId])
+  @@index([quoteId])
+  @@index([projectId])
   @@index([startDate])
   @@index([endDate])
 }

@@ -326,6 +326,7 @@ model Tenant {
   quotes                Quote[]
   contracts             Contract[]
   leadInspections       LeadInspection[]
+  leadInsuranceClaims   LeadInsuranceClaim[]
 
   @@index([status])
   @@index([slug])
@@ -658,6 +659,7 @@ model Lead {
   files             File[]
   emails            Email[]
   inspections       LeadInspection[]
+  insuranceClaims   LeadInsuranceClaim[]
 
   @@index([tenantId])
   @@index([status])
@@ -776,6 +778,36 @@ model LeadInspection {
   @@index([tenantId])
   @@index([inspectionDate])
   @@index([estimateStatus])
+}
+
+model LeadInsuranceClaim {
+  id                        String   @id @default(uuid())
+  leadId                    String
+  lead                      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  tenantId                  String
+  tenant                    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  claimNumber               String?
+  insuranceEstimateACV      Decimal?  @db.Decimal(15,2)
+  recoverableDepreciation   Decimal?  @db.Decimal(15,2)
+  fullRCVAmount             Decimal?  @db.Decimal(15,2)
+  deductibleAmount          Decimal?  @db.Decimal(15,2)
+  supplementNeeded          Boolean?  @default(false)
+  supplementAmount          Decimal?  @db.Decimal(15,2)
+  supplementStatus          String?          // Pending, Submitted, Approved, Denied
+  mortgageCompanyName       String?
+  mortgageCompanyAddress    String?
+  mortgageLoanNumber        String?
+  claimStatus               String?          // Open, In Review, Approved, Denied, Supplement
+  claimNotes                String?   @db.Text
+
+  createdById               String?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+
+  @@index([leadId])
+  @@index([tenantId])
+  @@index([claimStatus])
 }
 
 model LeadTag {

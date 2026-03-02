@@ -27,6 +27,13 @@ import {
   inspectionIdSchema,
   inspectionListSchema,
 } from './inspections.validators';
+import { insuranceClaimsController } from './insurance-claims.controller';
+import {
+  createInsuranceClaimSchema,
+  updateInsuranceClaimSchema,
+  insuranceClaimIdSchema,
+  insuranceClaimListSchema,
+} from './insurance-claims.validators';
 
 const router = Router();
 
@@ -383,6 +390,45 @@ router.delete(
   requirePermission(PERMISSIONS.LEADS_DELETE),
   validate(inspectionIdSchema),
   inspectionsController.delete.bind(inspectionsController)
+);
+
+// ============================================
+// INSURANCE CLAIM SUB-RESOURCE ROUTES
+// ============================================
+
+router.get(
+  '/:leadId/insurance-claims',
+  requirePermission(PERMISSIONS.LEADS_VIEW),
+  validate(insuranceClaimListSchema),
+  insuranceClaimsController.getByLeadId.bind(insuranceClaimsController)
+);
+
+router.post(
+  '/:leadId/insurance-claims',
+  requirePermission(PERMISSIONS.LEADS_UPDATE),
+  validate(createInsuranceClaimSchema),
+  insuranceClaimsController.create.bind(insuranceClaimsController)
+);
+
+router.get(
+  '/:leadId/insurance-claims/:claimId',
+  requirePermission(PERMISSIONS.LEADS_VIEW),
+  validate(insuranceClaimIdSchema),
+  insuranceClaimsController.getById.bind(insuranceClaimsController)
+);
+
+router.put(
+  '/:leadId/insurance-claims/:claimId',
+  requirePermission(PERMISSIONS.LEADS_UPDATE),
+  validate(updateInsuranceClaimSchema),
+  insuranceClaimsController.update.bind(insuranceClaimsController)
+);
+
+router.delete(
+  '/:leadId/insurance-claims/:claimId',
+  requirePermission(PERMISSIONS.LEADS_DELETE),
+  validate(insuranceClaimIdSchema),
+  insuranceClaimsController.delete.bind(insuranceClaimsController)
 );
 
 export default router;

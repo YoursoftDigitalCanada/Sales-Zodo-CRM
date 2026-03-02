@@ -10,3 +10,8 @@ export { inspectionsService, InspectionsService } from './inspections.service';
 export { inspectionsRepository, InspectionsRepository } from './inspections.repository';
 export * from './inspections.dto';
 export * from './inspections.validators';
+export { insuranceClaimsController, InsuranceClaimsController } from './insurance-claims.controller';
+export { insuranceClaimsService, InsuranceClaimsService } from './insurance-claims.service';
+export { insuranceClaimsRepository, InsuranceClaimsRepository } from './insurance-claims.repository';
+export * from './insurance-claims.dto';
+export * from './insurance-claims.validators';

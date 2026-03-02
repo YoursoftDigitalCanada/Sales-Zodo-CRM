@@ -17,7 +17,7 @@ import {
     Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { getLeadById, convertLead, getInspectionsByLeadId, createInspection, updateInspection, deleteInspection } from "@/features/leads";
+import { getLeadById, convertLead, getInspectionsByLeadId, createInspection, updateInspection, deleteInspection, getInsuranceClaimsByLeadId, createInsuranceClaim, updateInsuranceClaim, deleteInsuranceClaim } from "@/features/leads";
 import { ActivityTimeline } from "@/components/ActivityTimeline";
 import {
     ArrowLeft, Loader2, Mail, Phone, MapPin, Building2, Globe, Briefcase,
@@ -375,6 +375,12 @@ const LeadDetailPage = () => {
     const [showInspectionDialog, setShowInspectionDialog] = useState(false);
     const [editingInspection, setEditingInspection] = useState<any | null>(null);
 
+    // Insurance Claims state
+    const [insuranceClaims, setInsuranceClaims] = useState<any[]>([]);
+    const [claimsLoading, setClaimsLoading] = useState(false);
+    const [showClaimDialog, setShowClaimDialog] = useState(false);
+    const [editingClaim, setEditingClaim] = useState<any | null>(null);
+
     const fetchLead = useCallback(async () => {
         try {
             setIsLoading(true);
@@ -439,6 +445,50 @@ const LeadDetailPage = () => {
         }
     };
 
+    // ── Insurance Claims CRUD ────────────────────────────────────────────
+    const fetchClaims = useCallback(async () => {
+        if (!id) return;
+        try {
+            setClaimsLoading(true);
+            const data = await getInsuranceClaimsByLeadId(id);
+            setInsuranceClaims(data);
+        } catch {
+            console.error("Failed to fetch insurance claims");
+        } finally {
+            setClaimsLoading(false);
+        }
+    }, [id]);
+
+    useEffect(() => { fetchClaims(); }, [fetchClaims]);
+
+    const handleSaveClaim = async (data: Record<string, unknown>) => {
+        try {
+            if (editingClaim) {
+                await updateInsuranceClaim(id!, editingClaim.id, data);
+                toast({ title: "Insurance claim updated" });
+            } else {
+                await createInsuranceClaim(id!, data);
+                toast({ title: "Insurance claim created" });
+            }
+            setShowClaimDialog(false);
+            setEditingClaim(null);
+            fetchClaims();
+        } catch {
+            toast({ title: "Error", description: "Failed to save insurance claim.", variant: "destructive" });
+        }
+    };
+
+    const handleDeleteClaim = async (claimId: string) => {
+        if (!confirm("Delete this insurance claim?")) return;
+        try {
+            await deleteInsuranceClaim(id!, claimId);
+            toast({ title: "Insurance claim deleted" });
+            fetchClaims();
+        } catch {
+            toast({ title: "Error", description: "Failed to delete insurance claim.", variant: "destructive" });
+        }
+    };
+
     const handleAddNote = () => {
         if (!newNote.trim()) return;
         setNotes(prev => [{ id: Date.now(), content: newNote, date: "Just now", author: "You" }, ...prev]);
@@ -475,6 +525,7 @@ const LeadDetailPage = () => {
     const tabs = [
         { id: "overview", label: "Overview", icon: Activity },
         { id: "inspections", label: "Inspections", icon: ClipboardList },
+        { id: "insurance", label: "Insurance Claims", icon: Shield },
         { id: "notes", label: "Notes", icon: FileText },
         { id: "timeline", label: "Timeline", icon: Clock },
     ];
@@ -962,6 +1013,89 @@ const LeadDetailPage = () => {
                                             )}
                                         </TabsContent>
 
+                                        {/* Insurance Claims Tab */}
+                                        <TabsContent value="insurance" className="m-0 space-y-4">
+                                            <div className="flex items-center justify-between">
+                                                <h3 className="text-base font-semibold text-[#0F172A]">Insurance Claims</h3>
+                                                <Button
+                                                    size="sm"
+                                                    className="bg-[#0891B2] hover:bg-[#0891B2]/80 text-white gap-2"
+                                                    onClick={() => { setEditingClaim(null); setShowClaimDialog(true); }}
+                                                >
+                                                    <Plus className="h-4 w-4" /> New Claim
+                                                </Button>
+                                            </div>
+                                            {claimsLoading ? (
+                                                <div className="flex items-center justify-center py-10">
+                                                    <Loader2 className="animate-spin text-[#0891B2]" size={24} />
+                                                </div>
+                                            ) : insuranceClaims.length === 0 ? (
+                                                <div className="text-center py-16">
+                                                    <Shield className="h-12 w-12 text-[#CBD5E1] mx-auto mb-3" />
+                                                    <p className="text-[#94A3B8] text-sm">No insurance claims yet.</p>
+                                                    <p className="text-[#94A3B8] text-xs mt-1">Click "New Claim" to add one.</p>
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-3">
+                                                    {insuranceClaims.map((claim: any) => (
+                                                        <Card key={claim.id} className="border shadow-sm hover:shadow-md transition-shadow">
+                                                            <CardContent className="p-4">
+                                                                <div className="flex items-start justify-between">
+                                                                    <div className="flex-1">
+                                                                        <div className="flex items-center gap-2 mb-2">
+                                                                            {claim.claimStatus && (
+                                                                                <Badge className={`text-xs ${claim.claimStatus === 'Approved' ? 'bg-green-100 text-green-700' :
+                                                                                    claim.claimStatus === 'Open' ? 'bg-blue-100 text-blue-700' :
+                                                                                        claim.claimStatus === 'Denied' ? 'bg-red-100 text-red-700' :
+                                                                                            claim.claimStatus === 'In Review' ? 'bg-yellow-100 text-yellow-700' :
+                                                                                                'bg-gray-100 text-gray-700'
+                                                                                    }`}>
+                                                                                    {claim.claimStatus}
+                                                                                </Badge>
+                                                                            )}
+                                                                            {claim.supplementNeeded && (
+                                                                                <Badge variant="outline" className="text-xs text-orange-600">
+                                                                                    Supplement Needed
+                                                                                </Badge>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                                                                            <div>
+                                                                                <span className="text-xs text-[#475569]">Claim #</span>
+                                                                                <p className="font-medium">{claim.claimNumber || '—'}</p>
+                                                                            </div>
+                                                                            <div>
+                                                                                <span className="text-xs text-[#475569]">ACV Estimate</span>
+                                                                                <p className="font-medium">{claim.insuranceEstimateACV ? `$${Number(claim.insuranceEstimateACV).toLocaleString()}` : '—'}</p>
+                                                                            </div>
+                                                                            <div>
+                                                                                <span className="text-xs text-[#475569]">Full RCV</span>
+                                                                                <p className="font-medium">{claim.fullRCVAmount ? `$${Number(claim.fullRCVAmount).toLocaleString()}` : '—'}</p>
+                                                                            </div>
+                                                                            <div>
+                                                                                <span className="text-xs text-[#475569]">Deductible</span>
+                                                                                <p className="font-medium">{claim.deductibleAmount ? `$${Number(claim.deductibleAmount).toLocaleString()}` : '—'}</p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-1 ml-3">
+                                                                        <Button variant="ghost" size="icon" className="h-8 w-8"
+                                                                            onClick={() => { setEditingClaim(claim); setShowClaimDialog(true); }}>
+                                                                            <Pencil className="h-4 w-4 text-[#475569]" />
+                                                                        </Button>
+                                                                        <Button variant="ghost" size="icon" className="h-8 w-8"
+                                                                            onClick={() => handleDeleteClaim(claim.id)}>
+                                                                            <Trash2 className="h-4 w-4 text-red-500" />
+                                                                        </Button>
+                                                                    </div>
+                                                                </div>
+                                                            </CardContent>
+                                                        </Card>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </TabsContent>
+
                                         {/* Notes Tab */}
                                         <TabsContent value="notes" className="m-0 space-y-6">
                                             <div className="bg-white p-4 rounded-lg border shadow-sm">
@@ -1025,9 +1159,9 @@ const LeadDetailPage = () => {
                                                                             </Badge>
                                                                             {insp.estimateStatus && (
                                                                                 <Badge className={`text-xs ${insp.estimateStatus === 'Accepted' ? 'bg-green-100 text-green-700' :
-                                                                                        insp.estimateStatus === 'Sent' ? 'bg-blue-100 text-blue-700' :
-                                                                                            insp.estimateStatus === 'Rejected' ? 'bg-red-100 text-red-700' :
-                                                                                                'bg-gray-100 text-gray-700'
+                                                                                    insp.estimateStatus === 'Sent' ? 'bg-blue-100 text-blue-700' :
+                                                                                        insp.estimateStatus === 'Rejected' ? 'bg-red-100 text-red-700' :
+                                                                                            'bg-gray-100 text-gray-700'
                                                                                     }`}>
                                                                                     {insp.estimateStatus}
                                                                                 </Badge>
@@ -1109,6 +1243,16 @@ const LeadDetailPage = () => {
                     onClose={() => { setShowInspectionDialog(false); setEditingInspection(null); }}
                     onSave={handleSaveInspection}
                     inspection={editingInspection}
+                />
+            )}
+
+            {/* Insurance Claim Form Dialog */}
+            {showClaimDialog && (
+                <InsuranceClaimFormDialog
+                    open={showClaimDialog}
+                    onClose={() => { setShowClaimDialog(false); setEditingClaim(null); }}
+                    onSave={handleSaveClaim}
+                    claim={editingClaim}
                 />
             )}
         </div>
@@ -1348,6 +1492,116 @@ const InspectionFormDialog = ({ open, onClose, onSave, inspection }: InspectionF
                     >
                         {saving && <Loader2 className="h-4 w-4 animate-spin" />}
                         {inspection ? 'Update' : 'Create'} Inspection
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+};
+
+// ── Insurance Claim Form Dialog ──────────────────────────────────────────
+
+interface InsuranceClaimFormDialogProps {
+    open: boolean;
+    onClose: () => void;
+    onSave: (data: Record<string, unknown>) => void;
+    claim?: any;
+}
+
+const InsuranceClaimFormDialog = ({ open, onClose, onSave, claim }: InsuranceClaimFormDialogProps) => {
+    const [saving, setSaving] = useState(false);
+    const [form, setForm] = useState<Record<string, any>>(() => claim || {});
+
+    const set = (field: string, value: any) => setForm(prev => ({ ...prev, [field]: value }));
+
+    const handleSubmit = async () => {
+        setSaving(true);
+        const payload: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(form)) {
+            if (v === '' || v === undefined || v === null) continue;
+            if (k === 'id' || k === 'leadId' || k === 'tenantId' || k === 'createdAt' || k === 'updatedAt' || k === 'createdById') continue;
+            payload[k] = v;
+        }
+        await onSave(payload);
+        setSaving(false);
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={v => !v && onClose()}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                    <DialogTitle>{claim ? 'Edit Insurance Claim' : 'New Insurance Claim'}</DialogTitle>
+                    <DialogDescription>Enter the insurance claim details.</DialogDescription>
+                </DialogHeader>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                        <Label className="text-xs text-[#475569]">Claim Number</Label>
+                        <Input value={form.claimNumber || ''} onChange={e => set('claimNumber', e.target.value)} className="text-sm" />
+                    </div>
+                    <div className="space-y-1">
+                        <Label className="text-xs text-[#475569]">Claim Status</Label>
+                        <select value={form.claimStatus || ''} onChange={e => set('claimStatus', e.target.value || undefined)}
+                            className="flex h-9 w-full rounded-md border bg-background px-3 py-1 text-sm shadow-sm">
+                            <option value="">Select...</option>
+                            {['Open', 'In Review', 'Approved', 'Denied', 'Supplement'].map(o => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                    </div>
+                    <div className="space-y-1">
+                        <Label className="text-xs text-[#475569]">Insurance Estimate (ACV) $</Label>
+                        <Input type="number" value={form.insuranceEstimateACV ?? ''} onChange={e => set('insuranceEstimateACV', e.target.value ? Number(e.target.value) : undefined)} className="text-sm" />
+                    </div>
+                    <div className="space-y-1">
+                        <Label className="text-xs text-[#475569]">Recoverable Depreciation $</Label>
+                        <Input type="number" value={form.recoverableDepreciation ?? ''} onChange={e => set('recoverableDepreciation', e.target.value ? Number(e.target.value) : undefined)} className="text-sm" />
+                    </div>
+                    <div className="space-y-1">
+                        <Label className="text-xs text-[#475569]">Full RCV Amount $</Label>
+                        <Input type="number" value={form.fullRCVAmount ?? ''} onChange={e => set('fullRCVAmount', e.target.value ? Number(e.target.value) : undefined)} className="text-sm" />
+                    </div>
+                    <div className="space-y-1">
+                        <Label className="text-xs text-[#475569]">Deductible Amount $</Label>
+                        <Input type="number" value={form.deductibleAmount ?? ''} onChange={e => set('deductibleAmount', e.target.value ? Number(e.target.value) : undefined)} className="text-sm" />
+                    </div>
+                    <div className="flex items-center justify-between py-1">
+                        <Label className="text-xs text-[#475569]">Supplement Needed</Label>
+                        <Switch checked={!!form.supplementNeeded} onCheckedChange={v => set('supplementNeeded', v)} />
+                    </div>
+                    <div className="space-y-1">
+                        <Label className="text-xs text-[#475569]">Supplement Amount $</Label>
+                        <Input type="number" value={form.supplementAmount ?? ''} onChange={e => set('supplementAmount', e.target.value ? Number(e.target.value) : undefined)} className="text-sm" />
+                    </div>
+                    <div className="space-y-1">
+                        <Label className="text-xs text-[#475569]">Supplement Status</Label>
+                        <select value={form.supplementStatus || ''} onChange={e => set('supplementStatus', e.target.value || undefined)}
+                            className="flex h-9 w-full rounded-md border bg-background px-3 py-1 text-sm shadow-sm">
+                            <option value="">Select...</option>
+                            {['Pending', 'Submitted', 'Approved', 'Denied'].map(o => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                    </div>
+                    <div className="space-y-1">
+                        <Label className="text-xs text-[#475569]">Mortgage Company</Label>
+                        <Input value={form.mortgageCompanyName || ''} onChange={e => set('mortgageCompanyName', e.target.value)} className="text-sm" />
+                    </div>
+                    <div className="space-y-1 col-span-full">
+                        <Label className="text-xs text-[#475569]">Mortgage Company Address</Label>
+                        <Input value={form.mortgageCompanyAddress || ''} onChange={e => set('mortgageCompanyAddress', e.target.value)} className="text-sm" />
+                    </div>
+                    <div className="space-y-1">
+                        <Label className="text-xs text-[#475569]">Mortgage Loan Number</Label>
+                        <Input value={form.mortgageLoanNumber || ''} onChange={e => set('mortgageLoanNumber', e.target.value)} className="text-sm" />
+                    </div>
+                    <div className="space-y-1 col-span-full">
+                        <Label className="text-xs text-[#475569]">Claim Notes</Label>
+                        <Textarea value={form.claimNotes || ''} onChange={e => set('claimNotes', e.target.value)} className="resize-none min-h-[60px] text-sm" />
+                    </div>
+                </div>
+
+                <DialogFooter className="mt-4 gap-2">
+                    <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
+                    <Button onClick={handleSubmit} disabled={saving} className="bg-[#0891B2] hover:bg-[#0891B2]/80 text-white gap-2">
+                        {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+                        {claim ? 'Update' : 'Create'} Claim
                     </Button>
                 </DialogFooter>
             </DialogContent>

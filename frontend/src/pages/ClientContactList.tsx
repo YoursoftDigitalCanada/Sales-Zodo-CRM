@@ -2,7 +2,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-// import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -42,6 +41,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { Label } from "@/components/ui/label";
 import { getClients as getClientEntities } from "@/features/clients";
+import api from "@/lib/axios";
 import {
   Bell,
   Plus,
@@ -992,7 +992,7 @@ const ClientContactListPage = () => {
   const { toast } = useToast();
 
   // State
-    const [contacts, setContacts] = useState<Contact[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
   const [clients, setClients] = useState<{ id: number; clientName: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -1039,23 +1039,24 @@ const ClientContactListPage = () => {
   const fetchContacts = async () => {
     setIsLoading(true);
     try {
-      const data = await getClientEntities();
-      const mapped = (data || []).map((c: any, index: number) => ({
-        id: c.id ?? c.Id ?? index,
-        type: c.type ?? c.Type ?? "Client",
-        clientName: c.clientName ?? c.ClientName ?? c.name ?? c.Name ?? "",
-        clientId: c.clientId ?? c.ClientId,
-        contactPerson: c.primaryContactName ?? c.contactPerson ?? c.ContactPerson ?? "",
-        designation: c.primaryContactDesignation ?? c.designation ?? c.Designation ?? "",
-        department: c.department ?? "",
-        contactEmail: c.primaryEmail ?? c.contactEmail ?? c.ContactEmail ?? c.email ?? "",
-        contactNo: c.primaryContactPhone ?? c.contactNo ?? c.ContactNo ?? c.phone ?? "",
-        mobile: c.mobile ?? "",
-        isPrimary: c.isPrimary ?? true,
-        isFavorite: Math.random() > 0.7,
-        lastContacted: c.lastInteractionDate ?? c.lastContacted,
-        linkedin: c.linkedin ?? "",
-        notes: c.notes ?? "",
+      const res = await api.get("/contacts", { params: { limit: 200, sortBy: "contactName", sortOrder: "asc" } });
+      const apiContacts = res.data?.data?.data || res.data?.data || [];
+      const mapped = (apiContacts || []).map((c: any) => ({
+        id: c.id,
+        type: c.type || "Client",
+        clientName: c.company?.clientName || "",
+        clientId: c.companyId,
+        contactPerson: c.contactName || "",
+        designation: c.jobTitle || "",
+        department: c.department || "",
+        contactEmail: c.email || "",
+        contactNo: c.officePhone || "",
+        mobile: c.mobilePhone || "",
+        isPrimary: c.isPrimaryContact || false,
+        isFavorite: false,
+        lastContacted: c.updatedAt,
+        linkedin: c.linkedInUrl || "",
+        notes: "",
       }));
       setContacts(mapped);
     } catch (error) {
@@ -1086,32 +1087,30 @@ const ClientContactListPage = () => {
 
   const handleAddContact = async (data: Partial<Contact>) => {
     try {
-      // API call here
-      const newContact: Contact = {
-        id: Date.now(),
-        type: data.type || "Client",
-        clientName: clients.find((c) => c.id === data.clientId)?.clientName || "",
-        clientId: data.clientId,
-        contactPerson: data.contactPerson || "",
-        designation: data.designation || "",
-        department: data.department,
-        contactEmail: data.contactEmail || "",
-        contactNo: data.contactNo || "",
-        mobile: data.mobile,
-        isPrimary: data.isPrimary,
-        isFavorite: false,
-        linkedin: data.linkedin,
-        notes: data.notes,
+      const payload = {
+        contactName: data.contactPerson || "",
+        companyId: data.clientId ? String(data.clientId) : undefined,
+        type: (data.type?.toUpperCase() === "CLIENT" ? "CLIENT" : data.type?.toUpperCase() === "LEAD" ? "LEAD" : "CLIENT") as string,
+        jobTitle: data.designation || undefined,
+        department: data.department || undefined,
+        email: data.contactEmail || "",
+        officePhone: data.contactNo || undefined,
+        mobilePhone: data.mobile || undefined,
+        linkedInUrl: data.linkedin || undefined,
+        isPrimaryContact: data.isPrimary || false,
       };
-      setContacts((prev) => [newContact, ...prev]);
+      await api.post("/contacts", payload);
       toast({
         title: "Success",
         description: "Contact added successfully",
       });
-    } catch (error) {
+      // Refresh from API to get server-generated data
+      fetchContacts();
+    } catch (error: any) {
+      console.error("Add contact error:", error);
       toast({
         title: "Error",
-        description: "Failed to add contact",
+        description: error?.response?.data?.message || "Failed to add contact",
         variant: "destructive",
       });
     }
@@ -1120,27 +1119,29 @@ const ClientContactListPage = () => {
   const handleUpdateContact = async (data: Partial<Contact>) => {
     if (!editingContact) return;
     try {
-      setContacts((prev) =>
-        prev.map((c) =>
-          c.id === editingContact.id
-            ? {
-                ...c,
-                ...data,
-                clientName: data.clientId
-                  ? clients.find((cl) => cl.id === data.clientId)?.clientName || c.clientName
-                  : c.clientName,
-              }
-            : c
-        )
-      );
+      const payload: Record<string, any> = {};
+      if (data.contactPerson !== undefined) payload.contactName = data.contactPerson;
+      if (data.clientId !== undefined) payload.companyId = String(data.clientId);
+      if (data.type !== undefined) payload.type = data.type.toUpperCase();
+      if (data.designation !== undefined) payload.jobTitle = data.designation;
+      if (data.department !== undefined) payload.department = data.department;
+      if (data.contactEmail !== undefined) payload.email = data.contactEmail;
+      if (data.contactNo !== undefined) payload.officePhone = data.contactNo;
+      if (data.mobile !== undefined) payload.mobilePhone = data.mobile;
+      if (data.linkedin !== undefined) payload.linkedInUrl = data.linkedin;
+      if (data.isPrimary !== undefined) payload.isPrimaryContact = data.isPrimary;
+
+      await api.put(`/contacts/${editingContact.id}`, payload);
       toast({
         title: "Success",
         description: "Contact updated successfully",
       });
-    } catch (error) {
+      fetchContacts();
+    } catch (error: any) {
+      console.error("Update contact error:", error);
       toast({
         title: "Error",
-        description: "Failed to update contact",
+        description: error?.response?.data?.message || "Failed to update contact",
         variant: "destructive",
       });
     }
@@ -1150,15 +1151,17 @@ const ClientContactListPage = () => {
     if (!contactToDelete) return;
     setIsDeleting(true);
     try {
+      await api.delete(`/contacts/${contactToDelete.id}`);
       setContacts((prev) => prev.filter((c) => c.id !== contactToDelete.id));
       toast({
         title: "Deleted",
         description: `${contactToDelete.contactPerson} has been deleted.`,
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Delete contact error:", error);
       toast({
         title: "Error",
-        description: "Failed to delete contact",
+        description: error?.response?.data?.message || "Failed to delete contact",
         variant: "destructive",
       });
     } finally {
@@ -1529,7 +1532,7 @@ const ClientContactListPage = () => {
                       <Columns size={14} className="mr-2" />
                       Columns
                     </Button>
-                                      </DropdownMenuTrigger>
+                  </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-48 rounded-md">
                     <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
                     {columns.map((col) => (
@@ -1622,9 +1625,9 @@ const ClientContactListPage = () => {
                   onClick={() =>
                     searchTerm || filterType !== "all"
                       ? (() => {
-                          setSearchTerm("");
-                          setFilterType("all");
-                        })()
+                        setSearchTerm("");
+                        setFilterType("all");
+                      })()
                       : openAddDialog()
                   }
                   className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"

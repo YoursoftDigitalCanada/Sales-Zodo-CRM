@@ -319,6 +319,7 @@ model Tenant {
   tags                  Tag[]
   roofEstimates         RoofEstimate[]
   roofEstimateSettings  RoofEstimateSettings?
+  roofData              RoofData[]
   roofMaterials         RoofMaterial[]
   roofTakeoffs          RoofTakeoff[]
   roofLaborRates        RoofLaborRate[]
@@ -942,6 +943,7 @@ model Client {
   emails                  Email[]
   payments                InvoicePayment[]
   roofEstimates           RoofEstimate[]
+  roofData                RoofData[]
   calendarEvents          CalendarEvent[]
   contracts               Contract[]
 
@@ -2749,4 +2751,41 @@ model Contract {
   @@index([projectId])
   @@index([startDate])
   @@index([endDate])
+}
+
+// ============================================================================
+// NEARMAP ROOF DATA
+// ============================================================================
+
+model RoofData {
+  id               String   @id @default(uuid())
+
+  // Source & Location
+  source           String   @default("nearmap")
+  address          String?
+  latitude         Float?
+  longitude        Float?
+
+  // AI Extraction Results
+  buildingOutline  Json?              // GeoJSON polygon of building footprint
+  roofOutline      Json?              // GeoJSON polygon of roof outline
+  propertyInsights Json?              // Structured AI insights (area, material, condition)
+  areaSqFt         Float?             // Total roof area in sq ft
+
+  // Raw API Response (audit/debugging)
+  rawApiResponse   Json?
+
+  // Relations
+  clientId         String
+  client           Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  tenantId         String
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Timestamps
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([clientId])
+  @@index([tenantId])
 }

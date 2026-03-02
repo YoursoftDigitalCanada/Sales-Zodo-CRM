@@ -327,7 +327,7 @@ export class RoofEstimatorService {
         );
     }
 
-    private async geocodeAddressWithFallback(
+    async geocodeAddressWithFallback(
         address: string,
         reason: string,
         originalMessage?: string,

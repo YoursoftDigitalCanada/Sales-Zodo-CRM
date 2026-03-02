@@ -31,6 +31,9 @@ import {
     laborRateIdSchema,
     takeoffsByEstimateSchema,
     takeoffIdSchema,
+    // Nearmap schemas
+    nearmapExtractSchema,
+    roofDataByClientSchema,
 } from './roof-estimator.validators';
 
 const router = Router();
@@ -58,6 +61,21 @@ router.post(
     requirePermission(PERMISSIONS.ROOF_ESTIMATOR_CREATE),
     validate(detectRoofSchema),
     roofEstimatorController.detectRoof.bind(roofEstimatorController)
+);
+
+// ── Nearmap AI Extraction ─────────────────────────────────────────────────
+router.post(
+    '/nearmap-extract',
+    requirePermission(PERMISSIONS.ROOF_ESTIMATOR_CREATE),
+    validate(nearmapExtractSchema),
+    roofEstimatorController.nearmapExtract.bind(roofEstimatorController)
+);
+
+router.get(
+    '/roof-data/:clientId',
+    requirePermission(PERMISSIONS.ROOF_ESTIMATOR_VIEW),
+    validate(roofDataByClientSchema),
+    roofEstimatorController.getRoofData.bind(roofEstimatorController)
 );
 
 // ── F3: Manual entry ──────────────────────────────────────────────────────

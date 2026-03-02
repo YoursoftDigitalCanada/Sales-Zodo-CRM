@@ -3,6 +3,7 @@ import { roofEstimatorService } from './roof-estimator.service';
 import { roofEstimatorManager } from './roof-estimator.manager';
 import { materialTakeoffService } from './material-takeoff.service';
 import { roofEstimatorRepository } from './roof-estimator.repository';
+import { nearmapService } from './nearmap.service';
 import {
     sendSuccess,
     sendCreated,
@@ -22,6 +23,9 @@ import {
     laborHoursEstimate,
     calculateTearOffCost,
 } from './roof-calculator.utils';
+import { prisma } from '../../config/database';
+import { NotFoundError } from '../../common/errors/HttpErrors';
+import { ErrorCodes } from '../../common/errors/errorCodes';
 
 export class RoofEstimatorController {
     // ── Address & Satellite (existing) ─────────────────────────────────────
@@ -57,6 +61,73 @@ export class RoofEstimatorController {
             const { satelliteImageUrl, latitude, longitude } = req.body;
             const result = await roofEstimatorManager.detectRoof(tenantId, satelliteImageUrl, latitude, longitude);
             sendSuccess(res, result, 'Roof detection completed');
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // ── Nearmap AI Extraction ─────────────────────────────────────────────
+
+    async nearmapExtract(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const tenantId = req.context.tenantId;
+            const { clientId, address, latitude, longitude, forceRefresh } = req.body;
+
+            // Validate client exists
+            const client = await prisma.client.findFirst({
+                where: { id: clientId, tenantId },
+            });
+            if (!client) {
+                throw new NotFoundError('Client not found', ErrorCodes.RESOURCE_NOT_FOUND);
+            }
+
+            // Geocode address if lat/lng not provided
+            let lat = latitude;
+            let lng = longitude;
+
+            if (!lat || !lng) {
+                if (!address) {
+                    res.status(400).json({
+                        success: false,
+                        message: 'Either address or latitude/longitude is required',
+                    });
+                    return;
+                }
+                const geo = await roofEstimatorService.geocodeAddressWithFallback(address, 'nearmap-extract');
+                lat = geo.lat;
+                lng = geo.lng;
+            }
+
+            // Call Nearmap service (with caching)
+            const result = await nearmapService.extract({
+                clientId,
+                tenantId,
+                address: address || client.streetAddress || undefined,
+                latitude: lat,
+                longitude: lng,
+                forceRefresh: forceRefresh || false,
+            });
+
+            sendSuccess(res, {
+                cached: result.cached,
+                roofData: result.data,
+            }, result.cached ? 'Cached roof data returned' : 'Nearmap extraction completed');
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async getRoofData(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const tenantId = req.context.tenantId;
+            const { clientId } = req.params;
+
+            const roofData = await prisma.roofData.findMany({
+                where: { clientId, tenantId },
+                orderBy: { createdAt: 'desc' },
+            });
+
+            sendSuccess(res, roofData, `Found ${roofData.length} roof data records`);
         } catch (error) {
             next(error);
         }

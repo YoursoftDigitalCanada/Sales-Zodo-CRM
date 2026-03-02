@@ -266,3 +266,24 @@ export const takeoffIdSchema = z.object({
         id: z.string().uuid(),
     }),
 });
+
+// ── Nearmap AI Extraction ─────────────────────────────────────────────────
+
+export const nearmapExtractSchema = z.object({
+    body: z.object({
+        clientId: z.string().uuid('Valid client ID required'),
+        address: z.string().min(5).optional(),
+        latitude: z.number().min(-90).max(90).optional(),
+        longitude: z.number().min(-180).max(180).optional(),
+        forceRefresh: z.boolean().optional(),
+    }).refine(
+        (data) => (data.latitude && data.longitude) || data.address,
+        { message: 'Either address or latitude/longitude is required' }
+    ),
+});
+
+export const roofDataByClientSchema = z.object({
+    params: z.object({
+        clientId: z.string().uuid(),
+    }),
+});

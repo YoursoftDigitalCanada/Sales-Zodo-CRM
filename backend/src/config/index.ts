@@ -64,6 +64,7 @@ const envSchema = z.object({
   GOOGLE_PLACES_API_KEY: z.string().optional(),
   GOOGLE_MAPS_JS_API_KEY: z.string().optional(),
   AI_SERVICE_URL: z.string().default('http://127.0.0.1:8001'),
+  NEARMAP_API_KEY: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -140,6 +141,7 @@ export const config = {
         || parsed.data.GOOGLE_MAPS_JS_API_KEY,
     },
     aiServiceUrl: parsed.data.AI_SERVICE_URL,
+    nearmapApiKey: parsed.data.NEARMAP_API_KEY,
   },
 } as const;
 

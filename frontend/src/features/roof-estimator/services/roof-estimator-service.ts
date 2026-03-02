@@ -464,3 +464,43 @@ export async function calculateTotal(payload: {
     const res = await api.post("/roof-estimator/calculate-total", payload);
     return res.data?.data;
 }
+
+// ── Nearmap AI Extraction ────────────────────────────────────────────────
+
+export interface RoofData {
+    id: string;
+    clientId: string;
+    tenantId: string;
+    source: string;
+    address: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    buildingOutline: any;
+    roofOutline: any;
+    propertyInsights: any;
+    areaSqFt: number | null;
+    rawApiResponse: any;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface NearmapExtractResult {
+    cached: boolean;
+    roofData: RoofData;
+}
+
+export async function fetchNearmapData(payload: {
+    clientId: string;
+    address?: string;
+    latitude?: number;
+    longitude?: number;
+    forceRefresh?: boolean;
+}): Promise<NearmapExtractResult> {
+    const res = await api.post("/roof-estimator/nearmap-extract", payload);
+    return res.data?.data;
+}
+
+export async function getRoofDataByClient(clientId: string): Promise<RoofData[]> {
+    const res = await api.get(`/roof-estimator/roof-data/${clientId}`);
+    return res.data?.data || [];
+}

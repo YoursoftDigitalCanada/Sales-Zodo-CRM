@@ -31,6 +31,7 @@ import {
     parseStaticMapZoom,
 } from "@/features/roof-estimator/utils/static-map";
 // import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
+import TakeoffPricingPanel from "@/features/roof-estimator/components/TakeoffPricingPanel";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -125,6 +126,24 @@ interface RoofEstimate {
     clientId: string | null;
     createdAt: string;
     client?: { id: string; clientName: string; companyName: string | null } | null;
+    // New fields
+    pitch: string | null;
+    pitchDegrees: number | null;
+    stories: number | null;
+    roofType: string | null;
+    layers: number | null;
+    ridgeLengthFt: number | null;
+    hipLengthFt: number | null;
+    valleyLengthFt: number | null;
+    eaveLengthFt: number | null;
+    rakeLengthFt: number | null;
+    trueSurfaceAreaSqft: number | null;
+    measurementSource: string | null;
+    tearOffRequired: boolean;
+    damageReport: any;
+    photoUrls: string[] | null;
+    publicToken: string | null;
+    takeoffs?: any[];
 }
 
 interface EstimateSettings {
@@ -1324,18 +1343,19 @@ const RoofEstimator: React.FC = () => {
 
                 {/* View Estimate Dialog */}
                 <Dialog open={!!viewEstimate} onOpenChange={(open) => !open && closeEstimateDetails()}>
-                    <DialogContent className="max-w-5xl">
+                    <DialogContent className="max-w-[90vw] max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
                             <DialogTitle className="text-lg text-[#0F172A]">Estimate Details</DialogTitle>
                         </DialogHeader>
                         {viewEstimate && (
                             <div className="space-y-4">
-                                <div className="grid grid-cols-1 gap-4 xl:grid-cols-[340px_1fr]">
+                                <div className="grid grid-cols-1 gap-4 xl:grid-cols-[280px_380px_1fr]">
+                                    {/* Column 1: Satellite + Info */}
                                     <div className="space-y-4">
                                         {viewEstimate.satelliteImageUrl && (
                                             <img src={viewEstimate.satelliteImageUrl} alt="" className="w-full rounded-md border border-[rgba(15,23,42,0.08)]" />
                                         )}
-                                        <div className="grid grid-cols-2 gap-3 text-sm">
+                                        <div className="grid grid-cols-2 gap-2 text-sm">
                                             {[
                                                 { label: "Address", value: viewEstimate.address },
                                                 { label: "Total Estimate", value: formatCurrency(viewEstimate.totalEstimate), bold: true },
@@ -1343,21 +1363,30 @@ const RoofEstimator: React.FC = () => {
                                                 { label: "Confidence", value: `${viewEstimate.confidence}%` },
                                                 { label: "Price/sqft", value: `$${viewEstimate.pricePerSqft}` },
                                                 { label: "Adjustment", value: `${viewEstimate.manualAdjustment}%` },
+                                                ...(viewEstimate.pitch ? [{ label: "Pitch", value: viewEstimate.pitch }] : []),
+                                                ...(viewEstimate.roofType ? [{ label: "Roof Type", value: viewEstimate.roofType }] : []),
+                                                ...(viewEstimate.trueSurfaceAreaSqft ? [{ label: "True Surface", value: `${viewEstimate.trueSurfaceAreaSqft.toLocaleString()} sqft`, bold: true }] : []),
                                             ].map((item) => (
-                                                <div key={item.label} className="bg-[#F8FAFC] rounded-md p-3">
+                                                <div key={item.label} className="bg-[#F8FAFC] rounded-md p-2.5">
                                                     <div className="text-[10px] text-[#94A3B8]">{item.label}</div>
-                                                    <div className={cn("text-[#0F172A] mt-0.5", item.bold && "font-bold")}>{item.value}</div>
+                                                    <div className={cn("text-[#0F172A] mt-0.5 text-xs", (item as any).bold && "font-bold")}>{item.value}</div>
                                                 </div>
                                             ))}
                                         </div>
                                         {viewEstimatePlainNotes && (
                                             <div className="bg-[#F8FAFC] rounded-md p-3 text-sm">
                                                 <div className="text-[10px] text-[#94A3B8] mb-1">Notes</div>
-                                                <div className="text-[#475569] whitespace-pre-wrap">{viewEstimatePlainNotes}</div>
+                                                <div className="text-[#475569] whitespace-pre-wrap text-xs">{viewEstimatePlainNotes}</div>
                                             </div>
                                         )}
                                     </div>
 
+                                    {/* Column 2: Takeoff & Pricing Panel */}
+                                    <div className="bg-white rounded-md border border-[rgba(15,23,42,0.08)] p-4 overflow-y-auto max-h-[70vh]">
+                                        <TakeoffPricingPanel estimate={viewEstimate as any} onUpdate={fetchEstimates} />
+                                    </div>
+
+                                    {/* Column 3: PDF Preview */}
                                     <div className="rounded-md border border-[rgba(15,23,42,0.08)] bg-white overflow-hidden">
                                         <div className="px-3 py-2 border-b border-[rgba(15,23,42,0.08)] flex items-center justify-between">
                                             <span className="text-xs font-semibold text-[#0F172A]">Proposal PDF</span>

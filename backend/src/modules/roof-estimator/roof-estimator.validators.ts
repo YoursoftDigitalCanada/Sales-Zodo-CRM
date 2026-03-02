@@ -1,5 +1,16 @@
 import { z } from 'zod';
 
+// ── Pitch pattern (e.g. "6/12", "10/12") ──────────────────────────────────
+const pitchSchema = z.string().regex(/^\d{1,2}(\.\d+)?\/12$/, 'Pitch must be in X/12 format').optional();
+const roofTypeSchema = z.enum(['gable', 'hip', 'flat', 'mansard', 'gambrel', 'shed']).optional();
+const materialTypeSchema = z.enum(['asphalt', 'metal', 'tile', 'tpo', 'cedar']);
+const materialCategorySchema = z.enum([
+    'shingles', 'underlayment', 'starter', 'cap', 'drip_edge',
+    'flashing', 'ice_shield', 'vent', 'nails', 'boot', 'snow_guard',
+]);
+
+// ── Existing Schemas (unchanged) ──────────────────────────────────────────
+
 export const satelliteRequestSchema = z.object({
     body: z.object({
         address: z.string().min(5, 'Address is required and must be at least 5 characters'),
@@ -31,6 +42,19 @@ export const createEstimateSchema = z.object({
         snowMode: z.boolean().optional(),
         notes: z.string().max(2000).optional(),
         clientId: z.string().uuid().optional(),
+        // New fields
+        pitch: pitchSchema,
+        roofType: roofTypeSchema,
+        stories: z.number().int().min(1).max(5).optional(),
+        layers: z.number().int().min(1).max(5).optional(),
+        ridgeLengthFt: z.number().min(0).optional(),
+        hipLengthFt: z.number().min(0).optional(),
+        valleyLengthFt: z.number().min(0).optional(),
+        eaveLengthFt: z.number().min(0).optional(),
+        rakeLengthFt: z.number().min(0).optional(),
+        measurementSource: z.enum(['ai_satellite', 'ai_photo', 'eagleview', 'manual']).optional(),
+        tearOffRequired: z.boolean().optional(),
+        photoUrls: z.array(z.string().url()).max(10).optional(),
     }),
 });
 
@@ -42,6 +66,17 @@ export const updateEstimateSchema = z.object({
         snowMode: z.boolean().optional(),
         notes: z.string().max(2000).optional(),
         clientId: z.string().uuid().optional().nullable(),
+        // New fields
+        pitch: pitchSchema,
+        roofType: roofTypeSchema,
+        stories: z.number().int().min(1).max(5).optional(),
+        layers: z.number().int().min(1).max(5).optional(),
+        ridgeLengthFt: z.number().min(0).optional(),
+        hipLengthFt: z.number().min(0).optional(),
+        valleyLengthFt: z.number().min(0).optional(),
+        eaveLengthFt: z.number().min(0).optional(),
+        rakeLengthFt: z.number().min(0).optional(),
+        tearOffRequired: z.boolean().optional(),
     }),
 });
 
@@ -85,5 +120,149 @@ export const generateEstimateSchema = z.object({
         stories: z.number().min(1).max(5).optional().default(1),
         pitch: z.string().optional(),
         currentCondition: z.string().optional(),
+    }),
+});
+
+// ── New Schemas ───────────────────────────────────────────────────────────
+
+export const manualEntrySchema = z.object({
+    body: z.object({
+        address: z.string().min(5),
+        latitude: z.number().min(-90).max(90),
+        longitude: z.number().min(-180).max(180),
+        roofAreaSqft: z.number().positive(),
+        pitch: pitchSchema,
+        roofType: roofTypeSchema,
+        stories: z.number().int().min(1).max(5).optional(),
+        layers: z.number().int().min(1).max(5).optional(),
+        ridgeLengthFt: z.number().min(0).optional(),
+        hipLengthFt: z.number().min(0).optional(),
+        valleyLengthFt: z.number().min(0).optional(),
+        eaveLengthFt: z.number().min(0).optional(),
+        rakeLengthFt: z.number().min(0).optional(),
+        clientId: z.string().uuid().optional(),
+        notes: z.string().max(2000).optional(),
+    }),
+});
+
+export const calculateAreaSchema = z.object({
+    body: z.object({
+        roofAreaSqft: z.number().positive(),
+        pitch: z.string().regex(/^\d{1,2}(\.\d+)?\/12$/),
+    }),
+});
+
+export const calculateLaborSchema = z.object({
+    body: z.object({
+        areaSqft: z.number().positive(),
+        pitch: z.string().optional(),
+        stories: z.number().int().min(1).max(5).optional(),
+        tearOff: z.boolean().optional(),
+        layers: z.number().int().min(1).max(5).optional(),
+        materialType: materialTypeSchema.optional(),
+    }),
+});
+
+export const calculateTotalSchema = z.object({
+    body: z.object({
+        materialCost: z.number().min(0),
+        laborCost: z.number().min(0),
+        accessoryCost: z.number().min(0).optional(),
+        tearOffCost: z.number().min(0).optional(),
+        markupPercent: z.number().min(0).max(100),
+    }),
+});
+
+export const generateTakeoffSchema = z.object({
+    body: z.object({
+        estimateId: z.string().uuid(),
+        materialType: materialTypeSchema,
+        scenarioName: z.string().max(100).optional(),
+        wasteFactor: z.number().min(0).max(50).optional(),
+        markupPercent: z.number().min(0).max(100).optional(),
+        customLaborRate: z.number().min(0).optional(),
+    }),
+});
+
+export const generateScenariosSchema = z.object({
+    body: z.object({
+        estimateId: z.string().uuid(),
+        materialTypes: z.array(materialTypeSchema).min(1).max(5),
+        wasteFactor: z.number().min(0).max(50).optional(),
+        markupPercent: z.number().min(0).max(100).optional(),
+    }),
+});
+
+// ── Material CRUD ─────────────────────────────────────────────────────────
+
+export const createMaterialSchema = z.object({
+    body: z.object({
+        name: z.string().min(1).max(200),
+        category: materialCategorySchema,
+        unit: z.string().min(1).max(50),
+        coveragePerUnit: z.number().positive(),
+        defaultPrice: z.number().min(0),
+        supplier: z.string().max(200).optional(),
+        sku: z.string().max(50).optional(),
+    }),
+});
+
+export const updateMaterialSchema = z.object({
+    body: z.object({
+        name: z.string().min(1).max(200).optional(),
+        category: materialCategorySchema.optional(),
+        unit: z.string().min(1).max(50).optional(),
+        coveragePerUnit: z.number().positive().optional(),
+        defaultPrice: z.number().min(0).optional(),
+        supplier: z.string().max(200).optional(),
+        sku: z.string().max(50).optional(),
+        isActive: z.boolean().optional(),
+    }),
+});
+
+export const materialIdSchema = z.object({
+    params: z.object({
+        id: z.string().uuid(),
+    }),
+});
+
+// ── Labor Rate CRUD ───────────────────────────────────────────────────────
+
+export const createLaborRateSchema = z.object({
+    body: z.object({
+        description: z.string().min(1).max(200),
+        rateType: z.enum(['per_sqft', 'per_hour', 'flat']),
+        rate: z.number().min(0),
+        condition: z.string().max(200).optional(),
+    }),
+});
+
+export const updateLaborRateSchema = z.object({
+    body: z.object({
+        description: z.string().min(1).max(200).optional(),
+        rateType: z.enum(['per_sqft', 'per_hour', 'flat']).optional(),
+        rate: z.number().min(0).optional(),
+        condition: z.string().max(200).optional(),
+        isActive: z.boolean().optional(),
+    }),
+});
+
+export const laborRateIdSchema = z.object({
+    params: z.object({
+        id: z.string().uuid(),
+    }),
+});
+
+// ── Takeoff Query ─────────────────────────────────────────────────────────
+
+export const takeoffsByEstimateSchema = z.object({
+    params: z.object({
+        estimateId: z.string().uuid(),
+    }),
+});
+
+export const takeoffIdSchema = z.object({
+    params: z.object({
+        id: z.string().uuid(),
     }),
 });

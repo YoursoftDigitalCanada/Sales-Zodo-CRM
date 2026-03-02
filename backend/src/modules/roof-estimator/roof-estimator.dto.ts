@@ -1,5 +1,7 @@
 // DTO types for Roof Estimator module
 
+// ── Satellite & Detection ─────────────────────────────────────────────────
+
 export interface SatelliteRequestDto {
     address: string;
     placeId?: string;
@@ -10,6 +12,28 @@ export interface DetectRoofDto {
     latitude: number;
     longitude: number;
 }
+
+// ── Manual Entry ──────────────────────────────────────────────────────────
+
+export interface ManualEntryDto {
+    address: string;
+    latitude: number;
+    longitude: number;
+    roofAreaSqft: number;
+    pitch?: string;
+    roofType?: string;
+    stories?: number;
+    layers?: number;
+    ridgeLengthFt?: number;
+    hipLengthFt?: number;
+    valleyLengthFt?: number;
+    eaveLengthFt?: number;
+    rakeLengthFt?: number;
+    clientId?: string;
+    notes?: string;
+}
+
+// ── Estimate CRUD ─────────────────────────────────────────────────────────
 
 export interface CreateEstimateDto {
     address: string;
@@ -26,6 +50,19 @@ export interface CreateEstimateDto {
     snowMode?: boolean;
     notes?: string;
     clientId?: string;
+    // New fields
+    pitch?: string;
+    roofType?: string;
+    stories?: number;
+    layers?: number;
+    ridgeLengthFt?: number;
+    hipLengthFt?: number;
+    valleyLengthFt?: number;
+    eaveLengthFt?: number;
+    rakeLengthFt?: number;
+    measurementSource?: string;
+    tearOffRequired?: boolean;
+    photoUrls?: string[];
 }
 
 export interface UpdateEstimateDto {
@@ -35,6 +72,17 @@ export interface UpdateEstimateDto {
     snowMode?: boolean;
     notes?: string;
     clientId?: string;
+    // New fields
+    pitch?: string;
+    roofType?: string;
+    stories?: number;
+    layers?: number;
+    ridgeLengthFt?: number;
+    hipLengthFt?: number;
+    valleyLengthFt?: number;
+    eaveLengthFt?: number;
+    rakeLengthFt?: number;
+    tearOffRequired?: boolean;
 }
 
 export interface EstimateQueryDto {
@@ -46,6 +94,8 @@ export interface EstimateQueryDto {
     sortOrder?: 'asc' | 'desc';
 }
 
+// ── Settings ──────────────────────────────────────────────────────────────
+
 export interface UpdateSettingsDto {
     defaultPricePerSqft?: number;
     currency?: string;
@@ -56,4 +106,86 @@ export interface UpdateSettingsDto {
     companyEmail?: string;
     companyAddress?: string;
     pdfFooterText?: string;
+}
+
+// ── Material Takeoff ──────────────────────────────────────────────────────
+
+export interface GenerateTakeoffDto {
+    estimateId: string;
+    materialType: string;
+    scenarioName?: string;
+    wasteFactor?: number;
+    markupPercent?: number;
+    customLaborRate?: number;
+}
+
+export interface GenerateScenariosDto {
+    estimateId: string;
+    materialTypes: string[];
+    wasteFactor?: number;
+    markupPercent?: number;
+}
+
+// ── Supplier Pricing (Materials CRUD) ─────────────────────────────────────
+
+export interface CreateMaterialDto {
+    name: string;
+    category: string;
+    unit: string;
+    coveragePerUnit: number;
+    defaultPrice: number;
+    supplier?: string;
+    sku?: string;
+}
+
+export interface UpdateMaterialDto {
+    name?: string;
+    category?: string;
+    unit?: string;
+    coveragePerUnit?: number;
+    defaultPrice?: number;
+    supplier?: string;
+    sku?: string;
+    isActive?: boolean;
+}
+
+// ── Labor Rates CRUD ──────────────────────────────────────────────────────
+
+export interface CreateLaborRateDto {
+    description: string;
+    rateType: string;
+    rate: number;
+    condition?: string;
+}
+
+export interface UpdateLaborRateDto {
+    description?: string;
+    rateType?: string;
+    rate?: number;
+    condition?: string;
+    isActive?: boolean;
+}
+
+// ── Cost Calculation ──────────────────────────────────────────────────────
+
+export interface CalculateTotalDto {
+    materialCost: number;
+    laborCost: number;
+    accessoryCost?: number;
+    tearOffCost?: number;
+    markupPercent: number;
+}
+
+export interface CalculateAreaDto {
+    roofAreaSqft: number;
+    pitch: string;
+}
+
+export interface CalculateLaborDto {
+    areaSqft: number;
+    pitch?: string;
+    stories?: number;
+    tearOff?: boolean;
+    layers?: number;
+    materialType?: string;
 }

@@ -319,6 +319,9 @@ model Tenant {
   tags                  Tag[]
   roofEstimates         RoofEstimate[]
   roofEstimateSettings  RoofEstimateSettings?
+  roofMaterials         RoofMaterial[]
+  roofTakeoffs          RoofTakeoff[]
+  roofLaborRates        RoofLaborRate[]
   payments              InvoicePayment[]
   quotes                Quote[]
   contracts             Contract[]
@@ -2077,45 +2080,72 @@ model UserPreferences {
 // ============================================================================
 
 model RoofEstimate {
-  id                String    @id @default(uuid())
+  id                  String    @id @default(uuid())
 
   // Address & Geo
-  address           String
-  latitude          Float
-  longitude         Float
-  satelliteImageUrl String?
+  address             String
+  latitude            Float
+  longitude           Float
+  satelliteImageUrl   String?
 
   // AI Results
-  roofAreaSqft      Float
-  confidence        Float     @default(0)
-  processingTimeSec Float     @default(0)
-  aiModel           String    @default("yolov8n-seg-cpu")
+  roofAreaSqft        Float
+  confidence          Float     @default(0)
+  processingTimeSec   Float     @default(0)
+  aiModel             String    @default("yolov8n-seg-cpu")
+
+  // Roof Characteristics
+  pitch               String?             // e.g. "6/12", "8/12"
+  pitchDegrees        Float?              // calculated degrees from pitch ratio
+  stories             Int?      @default(1)
+  roofType            String?             // gable, hip, flat, mansard, gambrel, shed
+  layers              Int?      @default(1)
+
+  // Roof Measurements (linear ft)
+  ridgeLengthFt       Float?
+  hipLengthFt         Float?
+  valleyLengthFt      Float?
+  eaveLengthFt        Float?
+  rakeLengthFt        Float?
+  trueSurfaceAreaSqft Float?              // pitch-adjusted area
+
+  // Measurement Source
+  measurementSource   String?             // 'ai_satellite', 'ai_photo', 'eagleview', 'manual'
 
   // Pricing
-  pricePerSqft      Float     @default(0)
-  manualAdjustment  Float     @default(0) // percentage adjustment
-  totalEstimate     Float     @default(0)
+  pricePerSqft        Float     @default(0)
+  manualAdjustment    Float     @default(0) // percentage adjustment
+  totalEstimate       Float     @default(0)
 
   // Flags
-  snowMode          Boolean   @default(false)
-  notes             String?   @db.Text
-  pdfUrl            String?
+  snowMode            Boolean   @default(false)
+  tearOffRequired     Boolean   @default(false)
+  notes               String?   @db.Text
+  pdfUrl              String?
+
+  // AI Damage Detection
+  damageReport        Json?               // { areas: [{type, severity, bbox, confidence}] }
+  photoUrls           Json?               // array of uploaded photo URLs
+
+  // Public access (for e-sign / client view)
+  publicToken         String?   @unique
 
   // Relations
-  tenantId          String
-  tenant            Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenantId            String
+  tenant              Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  clientId          String?
-  client            Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  clientId            String?
+  client              Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
 
-  createdBy         String
+  createdBy           String
 
   // Timestamps
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   // Back-relations
-  quotes            Quote[]
+  quotes              Quote[]
+  takeoffs            RoofTakeoff[]
 
   @@index([tenantId])
   @@index([clientId])
@@ -2140,6 +2170,116 @@ model RoofEstimateSettings {
 
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+}
+
+// ── Supplier Pricing Database ─────────────────────────────────────────────
+
+model RoofMaterial {
+  id              String    @id @default(uuid())
+  name            String                    // "OC Duration Shingles"
+  category        String                    // shingles, underlayment, starter, cap, drip_edge, flashing, ice_shield, vent, nails
+  unit            String                    // "bundle", "roll", "linear_ft", "each", "box"
+  coveragePerUnit Float                     // e.g. 33.3 sqft per bundle
+  defaultPrice    Float                     // unit price
+  supplier        String?
+  sku             String?
+  isActive        Boolean   @default(true)
+
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  takeoffItems    RoofTakeoffItem[]
+
+  @@unique([tenantId, name, category])
+  @@index([tenantId])
+  @@index([category])
+}
+
+// ── Material Takeoff per Estimate ─────────────────────────────────────────
+
+model RoofTakeoff {
+  id                String    @id @default(uuid())
+
+  estimateId        String
+  estimate          RoofEstimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+
+  scenarioName      String    @default("default")   // e.g. "Asphalt Standard", "Metal Premium"
+  materialType      String                           // "asphalt", "metal", "tile", "tpo", "cedar"
+
+  // Waste & Area
+  wasteFactor       Float     @default(10)           // percentage
+  adjustedAreaSqft  Float?                           // after waste
+
+  // Cost Breakdown
+  laborRatePerSqft  Float?
+  laborHours        Float?
+  laborCost         Float?    @default(0)
+  materialCost      Float?    @default(0)
+  accessoryCost     Float?    @default(0)
+  tearOffCost       Float?    @default(0)
+  subtotal          Float?    @default(0)
+
+  // Markup & Profit
+  markupPercent     Float?    @default(20)
+  profit            Float?    @default(0)
+  totalPrice        Float?    @default(0)
+
+  tenantId          String
+  tenant            Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  items             RoofTakeoffItem[]
+
+  @@index([estimateId])
+  @@index([tenantId])
+}
+
+model RoofTakeoffItem {
+  id              String    @id @default(uuid())
+
+  takeoffId       String
+  takeoff         RoofTakeoff @relation(fields: [takeoffId], references: [id], onDelete: Cascade)
+
+  materialId      String?
+  material        RoofMaterial? @relation(fields: [materialId], references: [id], onDelete: SetNull)
+
+  description     String
+  category        String                // shingles, underlayment, starter, cap, drip_edge, ice_shield, flashing, vent, nails, boot, snow_guard
+  quantity        Float
+  unit            String
+  unitPrice       Float
+  wasteFactor     Float     @default(10)
+  wasteQuantity   Float                 // quantity added for waste
+  totalQuantity   Float                 // quantity + wasteQuantity
+  totalPrice      Float
+  sortOrder       Int       @default(0)
+
+  @@index([takeoffId])
+  @@index([materialId])
+}
+
+// ── Labor Rates ───────────────────────────────────────────────────────────
+
+model RoofLaborRate {
+  id              String    @id @default(uuid())
+  description     String                    // "Standard Install", "Steep Pitch Surcharge", "2nd Story Surcharge"
+  rateType        String                    // "per_sqft", "per_hour", "flat"
+  rate            Float
+  condition       String?                   // e.g. "pitch > 8/12", "stories >= 2", "tear_off"
+  isActive        Boolean   @default(true)
+
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([tenantId])
 }
 
 // ============================================================================

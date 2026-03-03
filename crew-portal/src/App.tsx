@@ -14,7 +14,9 @@ import StatsPage from './pages/Stats';
 import EquipmentPage from './pages/Equipment';
 import LeavePage from './pages/Leave';
 import DocumentsPage from './pages/Documents';
-import { LayoutDashboard, Briefcase, Clock, Menu, X, Bell, Shield, BarChart3, Wrench, Calendar, FileText, ClipboardCheck, User } from 'lucide-react';
+import TasksPage from './pages/Tasks';
+import PayrollPage from './pages/Payroll';
+import { LayoutDashboard, Briefcase, Clock, ListChecks, Menu, X, Bell, Shield, BarChart3, Wrench, Calendar, FileText, ClipboardCheck, User, DollarSign } from 'lucide-react';
 import './index.css';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -30,6 +32,7 @@ function MoreMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
     { icon: <Shield size={18} />, label: 'Safety', path: '/safety' },
     { icon: <BarChart3 size={18} />, label: 'My Stats', path: '/stats' },
     { icon: <Wrench size={18} />, label: 'Equipment', path: '/equipment' },
+    { icon: <DollarSign size={18} />, label: 'Payroll', path: '/payroll' },
     { icon: <Calendar size={18} />, label: 'Leave', path: '/leave' },
     { icon: <FileText size={18} />, label: 'Documents', path: '/documents' },
     { icon: <User size={18} />, label: 'Profile', path: '/profile' },
@@ -39,13 +42,13 @@ function MoreMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
       <div className="more-overlay" onClick={onClose} />
       <div className="more-menu">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>More</h3>
+          <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: '#0F172A' }}>More</h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer' }}><X size={20} /></button>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
           {items.map(item => (
             <button key={item.path} onClick={() => { navigate(item.path); onClose(); }}
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: 14, background: '#1E293B', border: '1px solid #334155', borderRadius: 12, cursor: 'pointer', color: '#CBD5E1', fontFamily: 'var(--font)', fontSize: 11, fontWeight: 500, transition: 'all 0.15s' }}>
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: 14, background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 12, cursor: 'pointer', color: '#475569', fontFamily: 'var(--font)', fontSize: 11, fontWeight: 500, transition: 'all 0.15s' }}>
               {item.icon}
               {item.label}
             </button>
@@ -72,6 +75,9 @@ function AppLayout({ children }: { children: React.ReactNode }) {
         <NavLink to="/time" className={({ isActive }) => isActive ? 'active' : ''}>
           <Clock /><span>Time</span>
         </NavLink>
+        <NavLink to="/tasks" className={({ isActive }) => isActive ? 'active' : ''}>
+          <ListChecks /><span>Tasks</span>
+        </NavLink>
         <button onClick={() => setMoreOpen(true)} className={moreOpen ? 'active' : ''} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)' }}>
           <Menu /><span>More</span>
         </button>
@@ -89,6 +95,8 @@ export default function App() {
         <Route path="/jobs" element={<ProtectedRoute><AppLayout><MyJobsPage /></AppLayout></ProtectedRoute>} />
         <Route path="/jobs/:id" element={<ProtectedRoute><AppLayout><JobDetailPage /></AppLayout></ProtectedRoute>} />
         <Route path="/time" element={<ProtectedRoute><AppLayout><TimeSheetPage /></AppLayout></ProtectedRoute>} />
+        <Route path="/tasks" element={<ProtectedRoute><AppLayout><TasksPage /></AppLayout></ProtectedRoute>} />
+        <Route path="/payroll" element={<ProtectedRoute><AppLayout><PayrollPage /></AppLayout></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><AppLayout><ProfilePage /></AppLayout></ProtectedRoute>} />
         <Route path="/notifications" element={<ProtectedRoute><AppLayout><NotificationsPage /></AppLayout></ProtectedRoute>} />
         <Route path="/checklists" element={<ProtectedRoute><AppLayout><ChecklistsPage /></AppLayout></ProtectedRoute>} />

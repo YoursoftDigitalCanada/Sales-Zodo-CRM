@@ -34,10 +34,11 @@ const getAllowedOrigins = (): string[] => {
     );
   }
 
-  // Production admin panel
+  // Production portals
   origins.push(
     'https://admin.zodo.ca',
     'https://crm.zodo.ca',
+    'https://crew.zodo.ca',
   );
 
   // Parse additional origins from environment variable if provided

@@ -12,6 +12,17 @@ export class InspectionsService {
     }
 
     /**
+     * Get all inspections across all leads for a tenant
+     */
+    async getAll(tenantId: string) {
+        const inspections = await inspectionsRepository.findAll(tenantId);
+        return inspections.map((i: any) => ({
+            ...toLeadInspectionResponseDto(i),
+            lead: i.lead || null,
+        }));
+    }
+
+    /**
      * Get all inspections for a lead
      */
     async getByLeadId(leadId: string, tenantId: string) {

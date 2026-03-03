@@ -1,9 +1,60 @@
 import api from "@/lib/axios";
 import { extractApiArray } from "@/types/api";
 
+export interface InspectionLead {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    propertyAddress: string | null;
+    city: string | null;
+    state: string | null;
+    zipCode: string | null;
+    companyName: string | null;
+    isInsuranceClaim: string | null;
+    insuranceCompanyName: string | null;
+    claimNumber: string | null;
+}
+
 export interface InspectionEntity {
     id: string;
+    leadId: string;
+    tenantId: string;
+    inspectionDate: string | null;
+    inspectorName: string | null;
+    inspectionType: string | null;
+    weatherConditions: string | null;
+    accessMethod: string | null;
+    overallCondition: string | null;
+    overallDamageRating: string | null;
+    estimateStatus: string | null;
+    totalSquares: number | null;
+    roofPitch: string | null;
+    ridgeLength: number | null;
+    valleyLength: number | null;
+    eaveLength: number | null;
+    rakeLength: number | null;
+    flashingCondition: string | null;
+    gutterCondition: string | null;
+    deckingCondition: string | null;
+    ventilationType: string | null;
+    ventilationCount: number | null;
+    stormDamageFound: boolean | null;
+    windDamageDetails: string | null;
+    hailDamageDetails: string | null;
+    hailSizeFound: string | null;
+    inspectorNotes: string | null;
+    totalEstimate: number | null;
+    createdAt: string;
+    updatedAt: string;
+    lead?: InspectionLead;
     [key: string]: unknown;
+}
+
+export async function getAllInspections(): Promise<InspectionEntity[]> {
+    const response = await api.get("/leads/inspections/all");
+    return extractApiArray<InspectionEntity>(response.data);
 }
 
 export async function getInspectionsByLeadId(leadId: string): Promise<InspectionEntity[]> {
@@ -29,3 +80,4 @@ export async function updateInspection(leadId: string, inspectionId: string, dat
 export async function deleteInspection(leadId: string, inspectionId: string): Promise<void> {
     await api.delete(`/leads/${leadId}/inspections/${inspectionId}`);
 }
+

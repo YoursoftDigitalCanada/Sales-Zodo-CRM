@@ -17,6 +17,35 @@ export class InspectionsRepository {
     }
 
     /**
+     * Get all inspections across all leads for a tenant
+     */
+    async findAll(tenantId: string) {
+        return prisma.leadInspection.findMany({
+            where: { tenantId },
+            include: {
+                lead: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                        phone: true,
+                        propertyAddress: true,
+                        city: true,
+                        state: true,
+                        zipCode: true,
+                        companyName: true,
+                        isInsuranceClaim: true,
+                        insuranceCompanyName: true,
+                        claimNumber: true,
+                    },
+                },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+    }
+
+    /**
      * Get all inspections for a lead
      */
     async findByLeadId(leadId: string, tenantId: string) {

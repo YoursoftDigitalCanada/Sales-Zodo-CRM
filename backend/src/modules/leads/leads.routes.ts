@@ -338,6 +338,16 @@ router.delete(
 // ============================================
 
 /**
+ * GET /leads/inspections/all
+ * Get all inspections across all leads (must be before /:leadId routes)
+ */
+router.get(
+  '/inspections/all',
+  requirePermission(PERMISSIONS.LEADS_VIEW),
+  inspectionsController.getAll.bind(inspectionsController)
+);
+
+/**
  * GET /leads/:leadId/inspections
  * Get all inspections for a lead
  */

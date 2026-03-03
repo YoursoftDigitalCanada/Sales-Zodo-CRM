@@ -68,6 +68,10 @@ import LeaveRequestsPage from "./pages/employees/LeaveRequests";
 import RoofEstimator from "./pages/RoofEstimator";
 import RoofEstimatorPolygonEditor from "./pages/RoofEstimatorPolygonEditor";
 
+// Inspections
+import InspectionList from "./pages/Inspections/InspectionList";
+import InspectionDetail from "./pages/Inspections/InspectionDetail";
+
 // Help Center
 import HelpCenterPage from "./pages/HelpCenter";
 
@@ -169,6 +173,24 @@ const AppRoutes = () => {
           element={
             <FeatureGuard featureId="leads">
               <LeadDetailPage />
+            </FeatureGuard>
+          }
+        />
+
+        {/* ========== INSPECTION ROUTES ========== */}
+        <Route
+          path="/inspections"
+          element={
+            <FeatureGuard featureId="leads">
+              <InspectionList />
+            </FeatureGuard>
+          }
+        />
+        <Route
+          path="/inspections/:id"
+          element={
+            <FeatureGuard featureId="leads">
+              <InspectionDetail />
             </FeatureGuard>
           }
         />

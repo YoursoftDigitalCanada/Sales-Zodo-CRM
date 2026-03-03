@@ -28,6 +28,19 @@ export class InspectionsController {
     }
 
     /**
+     * GET /leads/inspections/all
+     */
+    async getAll(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const tenantId = req.context.tenantId;
+            const inspections = await inspectionsService.getAll(tenantId);
+            sendSuccess(res, inspections);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    /**
      * GET /leads/:leadId/inspections
      */
     async getByLeadId(req: Request, res: Response, next: NextFunction): Promise<void> {

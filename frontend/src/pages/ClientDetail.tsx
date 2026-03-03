@@ -348,7 +348,7 @@ const ClientDetailPage = () => {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
-      <main className="min-h-screen transition-all duration-300" style={{ marginLeft: 'var(--sidebar-width, 16rem)' }}>
+      <main className="min-h-screen transition-all duration-300">
         {/* Header */}
         <header className="sticky top-0 z-30 border-b bg-white px-6 h-16 flex items-center justify-between shadow-sm">
           <div className="flex items-center gap-4">
@@ -367,11 +367,11 @@ const ClientDetailPage = () => {
           </div>
         </header>
 
-        <div className="p-4 md:p-6">
-          <div className="grid grid-cols-12 gap-4 md:gap-6">
+        <div className="p-4 md:p-6 max-w-[1600px] mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
 
             {/* ═══════════ LEFT PANEL — 6 SECTIONS ═══════════ */}
-            <div className="col-span-12 lg:col-span-4 xl:col-span-3 space-y-3">
+            <div className="lg:col-span-4 space-y-3">
 
               {/* Profile Card */}
               <Card className="overflow-hidden border-none shadow-md">
@@ -472,7 +472,7 @@ const ClientDetailPage = () => {
             </div>
 
             {/* ═══════════ RIGHT PANEL — TABS ═══════════ */}
-            <div className="col-span-12 lg:col-span-8 xl:col-span-9">
+            <div className="lg:col-span-8">
               <Card className="h-full border-none shadow-md bg-white">
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
                   <CardHeader className="pb-0 border-b px-0">

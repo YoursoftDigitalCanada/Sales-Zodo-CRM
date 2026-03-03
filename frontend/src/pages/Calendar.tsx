@@ -112,6 +112,7 @@ import {
   LayoutGrid,
   List,
   Columns,
+  PanelRight,
   type LucideIcon,
 } from "lucide-react";
 
@@ -329,7 +330,7 @@ const MiniCalendar = ({
   };
 
   return (
-    <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4">
+    <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4" style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.04), 0 4px 12px rgba(15,23,42,0.04)' }}>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold text-[#0F172A]">
@@ -339,7 +340,7 @@ const MiniCalendar = ({
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 rounded-md"
+            className="h-7 w-7 rounded-full hover:bg-gray-100 transition-colors duration-150"
             onClick={() => setViewDate(new Date(year, month - 1, 1))}
           >
             <ChevronLeft size={16} />
@@ -347,7 +348,7 @@ const MiniCalendar = ({
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 rounded-md"
+            className="h-7 w-7 rounded-full hover:bg-gray-100 transition-colors duration-150"
             onClick={() => setViewDate(new Date(year, month + 1, 1))}
           >
             <ChevronRight size={16} />
@@ -360,7 +361,7 @@ const MiniCalendar = ({
         {dayNames.map((day) => (
           <div
             key={day}
-            className="text-center text-xs font-medium text-[#475569] py-1"
+            className="text-center text-xs font-semibold text-[#475569] py-1"
           >
             {day}
           </div>
@@ -379,16 +380,20 @@ const MiniCalendar = ({
               key={index}
               onClick={() => onDateSelect(date)}
               className={cn(
-                "relative h-8 w-8 rounded-md text-sm font-medium transition-all",
-                !isCurrentMonth && "text-[#475569]",
-                isCurrentMonth && !isSelected && "text-[#475569] hover:bg-white/10",
-                isTodayDate && !isSelected && "bg-[#0891B2]/10 text-[#0891B2]",
-                isSelected && "bg-[#0891B2] text-white "
+                "relative h-8 w-8 rounded-full text-sm font-medium transition-all duration-150",
+                !isCurrentMonth && "text-[#CBD5E1]",
+                isCurrentMonth && !isSelected && !isTodayDate && "text-[#475569] hover:bg-gray-100",
+                isTodayDate && !isSelected && "bg-[#0891B2] text-white font-bold",
+                isSelected && !isTodayDate && "bg-[#0891B2]/15 text-[#0891B2] font-bold",
+                isSelected && isTodayDate && "bg-[#0891B2] text-white font-bold ring-2 ring-[#0891B2]/30 ring-offset-1"
               )}
             >
               {day}
-              {hasEvent && !isSelected && (
-                <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#0891B2]" />
+              {hasEvent && !isSelected && !isTodayDate && (
+                <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#0891B2]" />
+              )}
+              {hasEvent && isTodayDate && !isSelected && (
+                <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-white" />
               )}
             </button>
           );
@@ -399,7 +404,7 @@ const MiniCalendar = ({
       <div className="mt-4 pt-4 border-t border-[rgba(15,23,42,0.06)]">
         <Button
           variant="ghost"
-          className="w-full justify-start text-sm text-[#475569] hover:text-[#0891B2] rounded-md"
+          className="w-full justify-start text-sm text-[#475569] hover:text-[#0891B2] rounded-md transition-colors duration-150"
           onClick={() => onDateSelect(new Date())}
         >
           <CalendarIcon size={14} className="mr-2" />
@@ -427,13 +432,23 @@ const UpcomingEvents = ({
     .slice(0, 5);
 
   return (
-    <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4">
+    <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4" style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.04), 0 4px 12px rgba(15,23,42,0.04)' }}>
       <h3 className="font-semibold text-[#0F172A] mb-4">Upcoming Events</h3>
 
       {upcomingEvents.length === 0 ? (
-        <div className="text-center py-8">
-          <CalendarIcon size={32} className="text-[#475569] mx-auto mb-2" />
-          <p className="text-sm text-[#94A3B8]">No upcoming events</p>
+        <div className="text-center py-8 px-4 bg-gradient-to-b from-[#F0FDFA] to-white rounded-xl">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[#0891B2]/10 flex items-center justify-center">
+            <CalendarIcon size={32} className="text-[#0891B2]" />
+          </div>
+          <p className="text-sm font-semibold text-[#0F172A] mb-1">No upcoming events</p>
+          <p className="text-xs text-[#94A3B8] mb-4">Your schedule is clear!</p>
+          <button
+            onClick={() => onEventClick({} as CalendarEvent)}
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0891B2] hover:bg-[#0891B2]/90 text-white text-sm font-medium rounded-lg transition-colors duration-150"
+          >
+            <Plus size={14} />
+            Schedule Event
+          </button>
         </div>
       ) : (
         <div className="space-y-3">
@@ -496,7 +511,7 @@ const CategoryFilter = ({
   onToggleCategory: (categoryId: string) => void;
 }) => {
   return (
-    <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4">
+    <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4" style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.04), 0 4px 12px rgba(15,23,42,0.04)' }}>
       <h3 className="font-semibold text-[#0F172A] mb-4">Categories</h3>
       <div className="space-y-2">
         {eventCategories.map((category) => {
@@ -508,7 +523,7 @@ const CategoryFilter = ({
               key={category.id}
               onClick={() => onToggleCategory(category.id)}
               className={cn(
-                "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-all",
+                "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-all duration-150",
                 isSelected
                   ? "bg-white/5"
                   : "hover:bg-[#F8FAFC] opacity-60 hover:opacity-100"
@@ -616,12 +631,14 @@ const MonthView = ({
   events,
   onDateClick,
   onEventClick,
+  onAddEvent,
   selectedCategories,
 }: {
   currentDate: Date;
   events: CalendarEvent[];
   onDateClick: (date: Date) => void;
   onEventClick: (event: CalendarEvent) => void;
+  onAddEvent?: (date: Date) => void;
   selectedCategories: Set<string>;
 }) => {
   const year = currentDate.getFullYear();
@@ -675,10 +692,13 @@ const MonthView = ({
     <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden">
       {/* Day Headers */}
       <div className="grid grid-cols-7 border-b border-[rgba(15,23,42,0.06)]">
-        {dayNames.map((day) => (
+        {dayNames.map((day, idx) => (
           <div
             key={day}
-            className="px-4 py-3 text-sm font-semibold text-[#475569] text-center bg-[#F8FAFC]"
+            className={cn(
+              "px-4 py-3 text-sm font-semibold text-[#475569] text-center bg-[#F8FAFC]",
+              (idx === 0 || idx === 6) && "bg-gray-100/80"
+            )}
           >
             {day}
           </div>
@@ -691,15 +711,18 @@ const MonthView = ({
           const dayEvents = getEventsForDate(date);
           const isTodayDate = isToday(date);
           const isPast = isPastDate(date) && !isTodayDate;
+          const isWeekend = date.getDay() === 0 || date.getDay() === 6;
 
           return (
             <div
               key={index}
               onClick={() => onDateClick(date)}
               className={cn(
-                "min-h-[120px] p-2 border-b border-r border-[rgba(15,23,42,0.06)] cursor-pointer transition-colors",
+                "group min-h-[120px] p-2 border-b border-r border-[rgba(15,23,42,0.06)] cursor-pointer transition-all duration-150",
                 !isCurrentMonth && "bg-[#F8FAFC]/50",
-                isCurrentMonth && "hover:bg-[#F8FAFC]",
+                isCurrentMonth && "hover:bg-gray-50",
+                isWeekend && isCurrentMonth && "bg-gray-50/50",
+                isTodayDate && "border-l-2 border-l-[#0891B2]/40 bg-[#0891B2]/[0.03]",
                 isPast && "opacity-60"
               )}
             >
@@ -707,19 +730,30 @@ const MonthView = ({
               <div className="flex items-center justify-between mb-1">
                 <span
                   className={cn(
-                    "w-7 h-7 flex items-center justify-center rounded-full text-sm font-medium",
-                    !isCurrentMonth && "text-[#475569]",
-                    isCurrentMonth && "text-slate-200",
+                    "w-7 h-7 flex items-center justify-center rounded-full text-sm font-medium transition-colors duration-150",
+                    !isCurrentMonth && "text-[#CBD5E1]",
+                    isCurrentMonth && "text-[#0F172A]",
                     isTodayDate && "bg-[#0891B2] text-white"
                   )}
                 >
                   {day}
                 </span>
-                {dayEvents.length > 2 && (
-                  <span className="text-xs text-[#475569]">
-                    +{dayEvents.length - 2} more
-                  </span>
-                )}
+                <div className="flex items-center gap-1">
+                  {dayEvents.length > 2 && (
+                    <span className="text-xs text-[#475569]">
+                      +{dayEvents.length - 2} more
+                    </span>
+                  )}
+                  {isCurrentMonth && onAddEvent && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onAddEvent(date); }}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 w-6 h-6 rounded-md bg-[#0891B2]/10 hover:bg-[#0891B2]/20 flex items-center justify-center text-[#0891B2]"
+                      aria-label={`Add event on ${date.toDateString()}`}
+                    >
+                      <Plus size={12} />
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Events */}
@@ -1893,6 +1927,70 @@ const EventDetailsDialog = ({
 };
 
 // ============================================
+// CALENDAR SKELETON LOADER
+// ============================================
+
+const CalendarSkeleton = () => (
+  <div className="animate-pulse space-y-5">
+    {/* AI Bar Skeleton */}
+    <div className="bg-white rounded-lg border border-[rgba(15,23,42,0.06)] p-5">
+      <div className="h-4 w-40 bg-gray-200 rounded mb-4" />
+      <div className="grid grid-cols-6 gap-4">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="space-y-2">
+            <div className="h-3 w-16 bg-gray-100 rounded" />
+            <div className="h-6 w-10 bg-gray-200 rounded" />
+          </div>
+        ))}
+      </div>
+    </div>
+    {/* Grid Skeleton */}
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="lg:col-span-3 bg-white rounded-lg border border-[rgba(15,23,42,0.06)] overflow-hidden">
+        {/* Day headers */}
+        <div className="grid grid-cols-7 border-b border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]">
+          {Array.from({ length: 7 }).map((_, i) => (
+            <div key={i} className="px-4 py-3 flex justify-center"><div className="h-4 w-16 bg-gray-200 rounded" /></div>
+          ))}
+        </div>
+        {/* Calendar cells */}
+        <div className="grid grid-cols-7">
+          {Array.from({ length: 35 }).map((_, i) => (
+            <div key={i} className="min-h-[100px] p-3 border-b border-r border-[rgba(15,23,42,0.06)]">
+              <div className="h-5 w-5 bg-gray-200 rounded-full mb-2" />
+              {i % 4 === 0 && <div className="h-3 w-full bg-gray-100 rounded mb-1" />}
+              {i % 7 === 2 && <div className="h-3 w-3/4 bg-gray-100 rounded" />}
+            </div>
+          ))}
+        </div>
+      </div>
+      {/* Sidebar skeleton */}
+      <div className="space-y-5">
+        <div className="bg-white rounded-lg border border-[rgba(15,23,42,0.06)] p-4">
+          <div className="h-4 w-20 bg-gray-200 rounded mb-3" />
+          <div className="grid grid-cols-2 gap-2.5">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="p-3 bg-gray-50 rounded-lg">
+                <div className="h-6 w-8 bg-gray-200 rounded mx-auto mb-1" />
+                <div className="h-3 w-12 bg-gray-100 rounded mx-auto" />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="bg-white rounded-lg border border-[rgba(15,23,42,0.06)] p-4">
+          <div className="h-4 w-32 bg-gray-200 rounded mb-3" />
+          <div className="grid grid-cols-7 gap-1">
+            {Array.from({ length: 35 }).map((_, i) => (
+              <div key={i} className="h-8 w-8 bg-gray-50 rounded-full" />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// ============================================
 // MAIN CALENDAR PAGE COMPONENT
 // ============================================
 const CalendarPage = () => {
@@ -1904,6 +2002,7 @@ const CalendarPage = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<"month" | "week" | "day" | "agenda">("month");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(
     new Set(eventCategories.map((c) => c.id))
   );
@@ -2173,17 +2272,45 @@ const CalendarPage = () => {
                 <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">{getPeriodTitle()}</h1>
               </div>
               <div className="flex items-center gap-3">
-                <div className="flex items-center bg-white/5 rounded-md p-1">
-                  <Button variant={viewMode === "month" ? "secondary" : "ghost"} size="sm" className="rounded-md" onClick={() => setViewMode("month")}><LayoutGrid size={16} className="mr-1" />Month</Button>
-                  <Button variant={viewMode === "week" ? "secondary" : "ghost"} size="sm" className="rounded-md" onClick={() => setViewMode("week")}><Columns size={16} className="mr-1" />Week</Button>
-                  <Button variant={viewMode === "day" ? "secondary" : "ghost"} size="sm" className="rounded-md" onClick={() => setViewMode("day")}><CalendarIcon size={16} className="mr-1" />Day</Button>
-                  <Button variant={viewMode === "agenda" ? "secondary" : "ghost"} size="sm" className="rounded-md" onClick={() => setViewMode("agenda")}><List size={16} className="mr-1" />Agenda</Button>
+                {/* Pill-style Tab Switcher */}
+                <div className="flex items-center bg-gray-100 rounded-full p-1">
+                  {(["month", "week", "day", "agenda"] as const).map((mode) => {
+                    const icons = { month: LayoutGrid, week: Columns, day: CalendarIcon, agenda: List };
+                    const Icon = icons[mode];
+                    return (
+                      <button
+                        key={mode}
+                        onClick={() => setViewMode(mode)}
+                        className={cn(
+                          "flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium rounded-full transition-all duration-200",
+                          viewMode === mode
+                            ? "bg-[#0891B2] text-white shadow-sm"
+                            : "text-gray-500 hover:text-gray-700"
+                        )}
+                      >
+                        <Icon size={14} />
+                        <span className="capitalize">{mode}</span>
+                      </button>
+                    );
+                  })}
                 </div>
+                {/* Search - expands on focus */}
                 <div className="relative">
-                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
-                  <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search events..." className="pl-9 h-10 w-48 rounded-md border-[rgba(15,23,42,0.06)]" />
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569] z-10" />
+                  <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search events..." className="pl-9 h-10 w-48 focus:w-64 transition-all duration-300 rounded-md border-[rgba(15,23,42,0.06)]" />
                 </div>
-                <Button onClick={() => { setCurrentEvent(null); setIsFormOpen(true); }} className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md gap-2"><Plus size={18} />Add Event</Button>
+                {/* Add Event Dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md gap-2"><Plus size={18} />Add Event<ChevronRight size={14} className="rotate-90 ml-0.5" /></Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="rounded-lg w-48">
+                    <DropdownMenuItem onClick={() => { setCurrentEvent(null); setIsFormOpen(true); }} className="gap-2 cursor-pointer"><CalendarIcon size={15} className="text-[#3B82F6]" />Add Event</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setCurrentEvent(null); setIsFormOpen(true); }} className="gap-2 cursor-pointer"><CheckCircle2 size={15} className="text-[#10B981]" />Add Task</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setCurrentEvent(null); setIsFormOpen(true); }} className="gap-2 cursor-pointer"><Users size={15} className="text-[#8B5CF6]" />Add Meeting</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setCurrentEvent(null); setIsFormOpen(true); }} className="gap-2 cursor-pointer"><Bell size={15} className="text-[#F59E0B]" />Add Reminder</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           </div>
@@ -2202,32 +2329,33 @@ const CalendarPage = () => {
               <span className="text-[10px] text-[#94A3B8]">Updated just now</span>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 divide-x divide-[rgba(15,23,42,0.06)]">
-              <div className="px-4 py-3">
+              <div className="px-4 py-3 border-l-[3px] border-l-[#3B82F6] cursor-pointer hover:bg-[#F8FAFC] transition-all duration-150 rounded-r-md">
                 <div className="flex items-center gap-1 mb-1"><CalendarDays size={11} className="text-[#94A3B8]" /><span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-medium">Today</span></div>
                 <span className="text-lg font-bold text-[#0F172A]" style={{ fontVariantNumeric: 'tabular-nums' }}>{todayCount}</span>
                 <span className="text-[10px] text-[#94A3B8] ml-1">events</span>
               </div>
-              <div className="px-4 py-3">
+              <div className="px-4 py-3 border-l-[3px] border-l-[#8B5CF6] cursor-pointer hover:bg-[#F8FAFC] transition-all duration-150 rounded-r-md">
                 <div className="flex items-center gap-1 mb-1"><Users size={11} className="text-[#94A3B8]" /><span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-medium">Meetings</span></div>
                 <span className="text-lg font-bold text-[#8B5CF6]" style={{ fontVariantNumeric: 'tabular-nums' }}>{meetingCount}</span>
                 <span className="text-[10px] text-[#94A3B8] ml-1">({totalMeetingHours.toFixed(1)}h)</span>
               </div>
-              <div className="px-4 py-3">
+              <div className="px-4 py-3 border-l-[3px] border-l-[#16A34A] cursor-pointer hover:bg-[#F8FAFC] transition-all duration-150 rounded-r-md">
                 <div className="flex items-center gap-1 mb-1"><Target size={11} className="text-[#94A3B8]" /><span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-medium">Focus Time</span></div>
                 <span className={cn("text-lg font-bold", focusHours >= 3 ? "text-[#16A34A]" : focusHours >= 1 ? "text-[#D97706]" : "text-[#DC2626]")} style={{ fontVariantNumeric: 'tabular-nums' }}>{focusHours.toFixed(1)}h</span>
                 <span className="text-[10px] text-[#94A3B8] ml-1">available</span>
+                <div className="mt-1.5 w-full h-1.5 bg-gray-100 rounded-full overflow-hidden"><div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, (focusHours / 8) * 100)}%`, backgroundColor: focusHours >= 3 ? '#16A34A' : focusHours >= 1 ? '#D97706' : '#DC2626' }} /></div>
               </div>
-              <div className="px-4 py-3">
+              <div className="px-4 py-3 border-l-[3px] border-l-[#F97316] cursor-pointer hover:bg-[#F8FAFC] transition-all duration-150 rounded-r-md">
                 <div className="flex items-center gap-1 mb-1"><CalendarRange size={11} className="text-[#94A3B8]" /><span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-medium">This Week</span></div>
                 <span className="text-lg font-bold text-[#0F172A]" style={{ fontVariantNumeric: 'tabular-nums' }}>{thisWeekCount}</span>
                 <span className="text-[10px] text-[#94A3B8] ml-1">events</span>
               </div>
-              <div className="px-4 py-3">
+              <div className="px-4 py-3 border-l-[3px] border-l-[#DC2626] cursor-pointer hover:bg-[#F8FAFC] transition-all duration-150 rounded-r-md">
                 <div className="flex items-center gap-1 mb-1"><AlertCircle size={11} className="text-[#94A3B8]" /><span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-medium">High Priority</span></div>
                 <span className={cn("text-lg font-bold", highPriorityCount > 0 ? "text-[#DC2626]" : "text-[#16A34A]")} style={{ fontVariantNumeric: 'tabular-nums' }}>{highPriorityCount}</span>
                 <span className="text-[10px] text-[#94A3B8] ml-1">upcoming</span>
               </div>
-              <div className="px-4 py-3">
+              <div className="px-4 py-3 border-l-[3px] border-l-[#0891B2] cursor-pointer hover:bg-[#F8FAFC] transition-all duration-150 rounded-r-md">
                 <div className="flex items-center gap-1 mb-1"><Clock size={11} className="text-[#94A3B8]" /><span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-medium">Next Free</span></div>
                 <span className="text-sm font-bold text-[#0891B2]">{getNextFreeSlot()}</span>
               </div>
@@ -2249,98 +2377,146 @@ const CalendarPage = () => {
           )}
 
           {/* ===== MAIN GRID ===== */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-            {/* Main Calendar View */}
-            <div className="col-span-full lg:col-span-3">
-              <AnimatePresence mode="wait">
-                {viewMode === "month" && (
-                  <motion.div key="month" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-                    <MonthView currentDate={currentDate} events={filteredEvents} onDateClick={handleDateClick} onEventClick={handleEventClick} selectedCategories={selectedCategories} />
-                  </motion.div>
-                )}
-                {viewMode === "week" && (
-                  <motion.div key="week" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-                    <WeekView currentDate={currentDate} events={filteredEvents} onEventClick={handleEventClick} selectedCategories={selectedCategories} />
-                  </motion.div>
-                )}
-                {viewMode === "day" && (
-                  <motion.div key="day" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-                    <DayView currentDate={currentDate} events={filteredEvents} onEventClick={handleEventClick} selectedCategories={selectedCategories} />
-                  </motion.div>
-                )}
-                {viewMode === "agenda" && (
-                  <motion.div key="agenda" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-                    <AgendaView events={filteredEvents} onEventClick={handleEventClick} selectedCategories={selectedCategories} />
-                  </motion.div>
+          {isLoading ? (
+            <CalendarSkeleton />
+          ) : (
+            <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 lg:gap-6">
+              {/* Main Calendar View */}
+              <div className="col-span-full xl:col-span-3 overflow-x-auto">
+                <AnimatePresence mode="wait">
+                  {viewMode === "month" && (
+                    <motion.div key="month" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+                      <MonthView currentDate={currentDate} events={filteredEvents} onDateClick={handleDateClick} onEventClick={handleEventClick} onAddEvent={(date) => { setSelectedDate(date); setCurrentEvent(null); setIsFormOpen(true); }} selectedCategories={selectedCategories} />
+                    </motion.div>
+                  )}
+                  {viewMode === "week" && (
+                    <motion.div key="week" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+                      <WeekView currentDate={currentDate} events={filteredEvents} onEventClick={handleEventClick} selectedCategories={selectedCategories} />
+                    </motion.div>
+                  )}
+                  {viewMode === "day" && (
+                    <motion.div key="day" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+                      <DayView currentDate={currentDate} events={filteredEvents} onEventClick={handleEventClick} selectedCategories={selectedCategories} />
+                    </motion.div>
+                  )}
+                  {viewMode === "agenda" && (
+                    <motion.div key="agenda" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+                      <AgendaView events={filteredEvents} onEventClick={handleEventClick} selectedCategories={selectedCategories} />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Sidebar Toggle Button (visible below xl) */}
+              <div className="xl:hidden fixed bottom-6 right-6 z-40">
+                <button
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="w-12 h-12 rounded-full bg-[#0891B2] text-white shadow-lg hover:bg-[#0891B2]/90 flex items-center justify-center transition-all duration-200 hover:scale-105"
+                  aria-label="Toggle sidebar"
+                >
+                  <PanelRight size={20} />
+                </button>
+              </div>
+
+              {/* Sidebar Overlay (below xl) */}
+              <AnimatePresence>
+                {sidebarOpen && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="xl:hidden fixed inset-0 bg-black/30 z-40"
+                    onClick={() => setSidebarOpen(false)}
+                  />
                 )}
               </AnimatePresence>
-            </div>
 
-            {/* Right Sidebar */}
-            <div className="col-span-full lg:col-span-1 space-y-5">
+              {/* Right Sidebar */}
+              <div className={cn(
+                "col-span-full xl:col-span-1 space-y-5",
+                "max-xl:fixed max-xl:right-0 max-xl:top-0 max-xl:bottom-0 max-xl:w-80 max-xl:z-50 max-xl:bg-[#F8FAFC] max-xl:p-5 max-xl:overflow-y-auto max-xl:shadow-2xl",
+                "max-xl:transition-transform max-xl:duration-300 max-xl:ease-in-out",
+                sidebarOpen ? "max-xl:translate-x-0" : "max-xl:translate-x-full"
+              )}>
 
-              {/* Quick Stats - Enhanced */}
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-lg border border-[rgba(15,23,42,0.06)] p-4" style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.04), 0 4px 12px rgba(15,23,42,0.04)' }}>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold text-sm text-[#0F172A]">Overview</h3>
-                  <button onClick={fetchCalendarEvents} className="p-1 rounded hover:bg-[#F1F5F9] text-[#94A3B8] hover:text-[#475569] transition-colors"><RefreshCw size={13} /></button>
+                {/* Close button (mobile sidebar) */}
+                <div className="xl:hidden flex items-center justify-between mb-2">
+                  <h3 className="font-semibold text-[#0F172A]">Sidebar</h3>
+                  <button onClick={() => setSidebarOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-200 transition-colors"><X size={18} /></button>
                 </div>
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div className="p-3 bg-[#0891B2]/8 rounded-lg text-center">
-                    <p className="text-xl font-bold text-[#0891B2]" style={{ fontVariantNumeric: 'tabular-nums' }}>{todayCount}</p>
-                    <p className="text-[10px] text-[#94A3B8] font-medium">Today</p>
-                  </div>
-                  <div className="p-3 bg-[#8B5CF6]/8 rounded-lg text-center">
-                    <p className="text-xl font-bold text-[#8B5CF6]" style={{ fontVariantNumeric: 'tabular-nums' }}>{thisWeekCount}</p>
-                    <p className="text-[10px] text-[#94A3B8] font-medium">This Week</p>
-                  </div>
-                  <div className="p-3 bg-[#D97706]/8 rounded-lg text-center">
-                    <p className="text-xl font-bold text-[#D97706]" style={{ fontVariantNumeric: 'tabular-nums' }}>{upcomingCount}</p>
-                    <p className="text-[10px] text-[#94A3B8] font-medium">Upcoming</p>
-                  </div>
-                  <div className="p-3 bg-[#DC2626]/8 rounded-lg text-center">
-                    <p className="text-xl font-bold text-[#DC2626]" style={{ fontVariantNumeric: 'tabular-nums' }}>{highPriorityCount}</p>
-                    <p className="text-[10px] text-[#94A3B8] font-medium">High Priority</p>
-                  </div>
-                </div>
-              </motion.div>
 
-              {/* AI Scheduling Suggestions */}
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-white rounded-lg border border-[rgba(15,23,42,0.06)] overflow-hidden" style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.04), 0 4px 12px rgba(15,23,42,0.04)' }}>
-                <div className="px-4 py-3 border-b border-[rgba(15,23,42,0.06)]">
-                  <div className="flex items-center gap-2"><Sparkles size={13} className="text-[#0891B2]" /><span className="text-xs font-semibold text-[#0F172A]">AI Suggestions</span><span className="ai-tag">AI</span></div>
-                </div>
-                <div className="divide-y divide-[rgba(15,23,42,0.04)]">
-                  {aiSuggestions.map((suggestion, i) => (
-                    <div key={i} className="px-4 py-2.5 flex items-start gap-2.5 hover:bg-[#F8FAFC] transition-colors">
-                      <suggestion.icon size={13} className="text-[#0891B2] mt-0.5 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[11px] text-[#475569] leading-relaxed">{suggestion.text}</p>
-                        {suggestion.action && (
-                          <button onClick={() => { setCurrentEvent(null); setIsFormOpen(true); toast({ title: "Action", description: suggestion.text }); }} className="text-[10px] font-medium text-[#0891B2] hover:underline mt-0.5">{suggestion.action} →</button>
-                        )}
-                      </div>
+                {/* Quick Stats - Enhanced */}
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-lg border border-[rgba(15,23,42,0.06)] p-4" style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.04), 0 4px 12px rgba(15,23,42,0.04)' }}>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold text-sm text-[#0F172A]">Overview</h3>
+                    <button onClick={fetchCalendarEvents} className="p-1 rounded hover:bg-[#F1F5F9] text-[#94A3B8] hover:text-[#475569] transition-colors"><RefreshCw size={13} /></button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div className="p-3 bg-[#3B82F6]/8 rounded-lg text-center border-l-4 border-l-[#3B82F6] hover:shadow-md hover:scale-[1.02] transition-all duration-150 cursor-pointer">
+                      <p className="text-xl font-bold text-[#3B82F6] cursor-pointer hover:underline" style={{ fontVariantNumeric: 'tabular-nums' }}>{todayCount}</p>
+                      <p className="text-[10px] text-[#94A3B8] font-medium">Today</p>
                     </div>
-                  ))}
-                </div>
-              </motion.div>
+                    <div className="p-3 bg-[#0891B2]/8 rounded-lg text-center border-l-4 border-l-[#0891B2] hover:shadow-md hover:scale-[1.02] transition-all duration-150 cursor-pointer">
+                      <p className="text-xl font-bold text-[#0891B2] cursor-pointer hover:underline" style={{ fontVariantNumeric: 'tabular-nums' }}>{thisWeekCount}</p>
+                      <p className="text-[10px] text-[#94A3B8] font-medium">This Week</p>
+                    </div>
+                    <div className="p-3 bg-[#D97706]/8 rounded-lg text-center border-l-4 border-l-[#F97316] hover:shadow-md hover:scale-[1.02] transition-all duration-150 cursor-pointer">
+                      <p className="text-xl font-bold text-[#D97706] cursor-pointer hover:underline" style={{ fontVariantNumeric: 'tabular-nums' }}>{upcomingCount}</p>
+                      <p className="text-[10px] text-[#94A3B8] font-medium">Upcoming</p>
+                    </div>
+                    <div className="p-3 bg-[#DC2626]/8 rounded-lg text-center border-l-4 border-l-[#DC2626] hover:shadow-md hover:scale-[1.02] transition-all duration-150 cursor-pointer">
+                      <p className="text-xl font-bold text-[#DC2626] cursor-pointer hover:underline" style={{ fontVariantNumeric: 'tabular-nums' }}>{highPriorityCount}</p>
+                      <p className="text-[10px] text-[#94A3B8] font-medium">High Priority</p>
+                    </div>
+                  </div>
+                </motion.div>
 
-              {/* Mini Calendar */}
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-                <MiniCalendar selectedDate={selectedDate} onDateSelect={(date) => { setSelectedDate(date); setCurrentDate(date); }} events={events} />
-              </motion.div>
+                {/* AI Scheduling Suggestions */}
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-white rounded-lg border border-[rgba(15,23,42,0.06)] overflow-hidden" style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.04), 0 4px 12px rgba(15,23,42,0.04)' }}>
+                  <div className="px-4 py-3 border-b border-[rgba(15,23,42,0.06)]">
+                    <div className="flex items-center gap-2"><Sparkles size={13} className="text-[#0891B2]" /><span className="text-xs font-semibold text-[#0F172A]">AI Suggestions</span><span className="ai-tag">AI</span></div>
+                  </div>
+                  <div className="divide-y divide-[rgba(15,23,42,0.04)]">
+                    {aiSuggestions.slice(0, 3).map((suggestion, i) => (
+                      <div key={i} className="px-4 py-2.5 flex items-start gap-2.5 hover:bg-[#F8FAFC] transition-all duration-150 border-l-[3px] border-l-[#0891B2]">
+                        <suggestion.icon size={13} className="text-[#0891B2] mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] text-[#475569] leading-relaxed">{suggestion.text}</p>
+                          {suggestion.action && (
+                            <div className="flex items-center gap-2 mt-1.5">
+                              <button onClick={() => { setCurrentEvent(null); setIsFormOpen(true); toast({ title: "Accepted", description: suggestion.text }); }} className="text-[10px] font-medium text-white bg-[#0891B2] hover:bg-[#0891B2]/90 px-2.5 py-1 rounded-md transition-colors duration-150">Accept</button>
+                              <button onClick={() => { toast({ title: "Reschedule", description: "Opening reschedule options..." }); }} className="text-[10px] font-medium text-[#475569] hover:text-[#0F172A] bg-gray-100 hover:bg-gray-200 px-2.5 py-1 rounded-md transition-colors duration-150">Reschedule</button>
+                            </div>
+                          )}
+                        </div>
+                        <button className="text-[#94A3B8] hover:text-[#475569] transition-colors duration-150 mt-0.5 flex-shrink-0" aria-label="Dismiss suggestion"><X size={12} /></button>
+                      </div>
+                    ))}
+                  </div>
+                  {aiSuggestions.length > 3 && (
+                    <div className="px-4 py-2.5 border-t border-[rgba(15,23,42,0.06)]">
+                      <button className="text-[11px] font-medium text-[#0891B2] hover:underline">See {aiSuggestions.length - 3} more suggestions →</button>
+                    </div>
+                  )}
+                </motion.div>
 
-              {/* Upcoming Events */}
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-                <UpcomingEvents events={filteredEvents} onEventClick={handleEventClick} />
-              </motion.div>
+                {/* Mini Calendar */}
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+                  <MiniCalendar selectedDate={selectedDate} onDateSelect={(date) => { setSelectedDate(date); setCurrentDate(date); }} events={events} />
+                </motion.div>
 
-              {/* Category Filter */}
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-                <CategoryFilter selectedCategories={selectedCategories} onToggleCategory={toggleCategory} />
-              </motion.div>
+                {/* Upcoming Events */}
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+                  <UpcomingEvents events={filteredEvents} onEventClick={handleEventClick} />
+                </motion.div>
+
+                {/* Category Filter */}
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+                  <CategoryFilter selectedCategories={selectedCategories} onToggleCategory={toggleCategory} />
+                </motion.div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </main>
 
@@ -2359,7 +2535,7 @@ const CalendarPage = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </div >
   );
 };
 

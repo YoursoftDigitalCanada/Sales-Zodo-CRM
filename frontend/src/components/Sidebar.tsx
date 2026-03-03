@@ -274,6 +274,20 @@ const navigationItems: NavigationItem[] = [
     badge: "AI",
     badgeColor: "teal",
   },
+  {
+    title: "Inspections",
+    icon: CheckSquare,
+    path: "/inspections",
+    featureId: "leads",
+    isNew: true,
+  },
+  {
+    title: "Insurance Claims",
+    icon: Shield,
+    path: "/insurance-claims",
+    featureId: "leads",
+    isNew: true,
+  },
 
   // ===== COMMUNICATION =====
   { title: "Communication", isHeader: true },

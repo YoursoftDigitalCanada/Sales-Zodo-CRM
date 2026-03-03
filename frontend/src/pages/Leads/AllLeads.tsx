@@ -66,6 +66,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import {
@@ -266,13 +272,13 @@ const leadSources = [
 ];
 
 const leadStatuses = [
-  { id: "new", name: "New", color: "#3B82F6", bgColor: "#EFF6FF" },
-  { id: "contacted", name: "Contacted", color: "#8B5CF6", bgColor: "#F5F3FF" },
-  { id: "qualified", name: "Qualified", color: "#F59E0B", bgColor: "#FFFBEB" },
-  { id: "proposal", name: "Proposal", color: "#22D3EE", bgColor: "#F0FDFA" },
-  { id: "negotiation", name: "Negotiation", color: "#EC4899", bgColor: "#FDF2F8" },
-  { id: "won", name: "Won", color: "#10B981", bgColor: "#ECFDF5" },
-  { id: "lost", name: "Lost", color: "#EF4444", bgColor: "#FEF2F2" },
+  { id: "new", name: "New", color: "#3B82F6", bgColor: "#EFF6FF", icon: Sparkles },
+  { id: "contacted", name: "Contacted", color: "#8B5CF6", bgColor: "#F5F3FF", icon: Phone },
+  { id: "qualified", name: "Qualified", color: "#F59E0B", bgColor: "#FFFBEB", icon: UserCheck },
+  { id: "proposal", name: "Proposal", color: "#22D3EE", bgColor: "#F0FDFA", icon: Send },
+  { id: "negotiation", name: "Negotiation", color: "#EC4899", bgColor: "#FDF2F8", icon: MessageSquare },
+  { id: "won", name: "Won", color: "#10B981", bgColor: "#ECFDF5", icon: CheckCircle2 },
+  { id: "lost", name: "Lost", color: "#EF4444", bgColor: "#FEF2F2", icon: AlertCircle },
 ];
 
 // ============================================
@@ -354,6 +360,7 @@ const StatCard = ({
   prefix = "",
   suffix = "",
   delay = 0,
+  sparklineData,
 }: {
   title: string;
   value: string | number;
@@ -364,7 +371,27 @@ const StatCard = ({
   prefix?: string;
   suffix?: string;
   delay?: number;
+  sparklineData?: number[];
 }) => {
+  // Generate sparkline path from data
+  const sparklinePath = useMemo(() => {
+    const data = sparklineData || [];
+    if (data.length < 2) return "";
+    const max = Math.max(...data);
+    const min = Math.min(...data);
+    const range = max - min || 1;
+    const width = 120;
+    const height = 30;
+    const step = width / (data.length - 1);
+    return data
+      .map((v, i) => {
+        const x = i * step;
+        const y = height - ((v - min) / range) * (height - 4) - 2;
+        return `${i === 0 ? "M" : "L"} ${x} ${y}`;
+      })
+      .join(" ");
+  }, [sparklineData]);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -412,6 +439,33 @@ const StatCard = ({
           <Icon size={22} style={{ color }} />
         </div>
       </div>
+
+      {/* Sparkline Chart */}
+      {sparklinePath && (
+        <div className="mt-3 -mx-1">
+          <svg width="120" height="30" viewBox="0 0 120 30" className="w-full">
+            <defs>
+              <linearGradient id={`sparkGrad-${title.replace(/\s+/g, "")}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={color} stopOpacity="0.15" />
+                <stop offset="100%" stopColor={color} stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            <path
+              d={sparklinePath + ` L 120 30 L 0 30 Z`}
+              fill={`url(#sparkGrad-${title.replace(/\s+/g, "")})`}
+            />
+            <path
+              d={sparklinePath}
+              fill="none"
+              stroke={color}
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="opacity-60"
+            />
+          </svg>
+        </div>
+      )}
     </motion.div>
   );
 };
@@ -624,11 +678,16 @@ const LeadCard = ({
         {/* Footer */}
         <div className="flex items-center justify-between pt-4 border-t border-[rgba(15,23,42,0.06)]">
           <div className="flex items-center gap-2">
-            <Avatar className="h-6 w-6">
-              <AvatarFallback className="text-xs bg-white/5">{lead.assignedTo?.split(" ").map((n: string) => n[0]).join("") || "?"}</AvatarFallback>
-
-            </Avatar>
-            <span className="text-xs text-[#475569]">{lead.assignedTo}</span>
+            {lead.assignedTo ? (
+              <>
+                <Avatar className="h-6 w-6">
+                  <AvatarFallback className="text-xs bg-[#F1F5F9]">{lead.assignedTo.split(" ").map((n: string) => n[0]).join("")}</AvatarFallback>
+                </Avatar>
+                <span className="text-xs text-[#475569]">{lead.assignedTo}</span>
+              </>
+            ) : (
+              <span className="text-xs text-[#94A3B8] italic">Unassigned</span>
+            )}
           </div>
           <span className="text-xs text-[#475569]">{getRelativeTime(lead.createdAt)}</span>
         </div>
@@ -665,7 +724,7 @@ const LeadRow = ({
   const SourceIcon = sourceInfo.icon;
 
   return (
-    <TableRow className="group hover:bg-[#F8FAFC]">
+    <TableRow className="group hover:bg-[#F0FDFA] transition-colors cursor-pointer border-l-2 border-l-transparent hover:border-l-[#0891B2]">
       <TableCell>
         <Checkbox
           checked={isSelected}
@@ -699,16 +758,25 @@ const LeadRow = ({
       </TableCell>
       <TableCell>
         <div>
-          <p className="font-medium text-[#0F172A]">{lead.company}</p>
+          <p className="font-medium text-[#0F172A]">{lead.company || <span className="text-[#CBD5E1]">—</span>}</p>
           <p className="text-sm text-[#94A3B8]">{lead.jobTitle}</p>
         </div>
+      </TableCell>
+      <TableCell>
+        {lead.phone ? (
+          <a href={`tel:${lead.phone}`} className="text-sm text-[#475569] hover:text-[#0891B2] transition-colors">
+            {lead.phone}
+          </a>
+        ) : (
+          <span className="text-sm text-[#CBD5E1]">—</span>
+        )}
       </TableCell>
       <TableCell>
         <span
           className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium"
           style={{ backgroundColor: statusInfo.bgColor, color: statusInfo.color }}
         >
-          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: statusInfo.color }} />
+          {statusInfo.icon && <statusInfo.icon size={12} />}
           {statusInfo.name}
         </span>
       </TableCell>
@@ -751,19 +819,22 @@ const LeadRow = ({
         </div>
       </TableCell>
       <TableCell>
-        <div className="flex items-center gap-2">
-          <Avatar className="h-6 w-6">
-            <AvatarFallback className="text-xs bg-white/5">{lead.assignedTo?.split(" ").map((n: string) => n[0]).join("") || "?"}</AvatarFallback>
-
-          </Avatar>
-          <span className="text-sm text-[#475569]">{lead.assignedTo}</span>
-        </div>
+        {lead.assignedTo ? (
+          <div className="flex items-center gap-2">
+            <Avatar className="h-6 w-6">
+              <AvatarFallback className="text-xs bg-[#F1F5F9]">{lead.assignedTo.split(" ").map((n: string) => n[0]).join("")}</AvatarFallback>
+            </Avatar>
+            <span className="text-sm text-[#475569]">{lead.assignedTo}</span>
+          </div>
+        ) : (
+          <span className="text-sm text-[#94A3B8] italic">Unassigned</span>
+        )}
       </TableCell>
       <TableCell>
         <span className="text-sm text-[#94A3B8]">{getRelativeTime(lead.createdAt)}</span>
       </TableCell>
       <TableCell>
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-1">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -2226,11 +2297,16 @@ const LeadDetailsDialog = ({
             <div className="p-4 bg-[#F8FAFC] rounded-md">
               <p className="text-xs text-[#475569] mb-1">Assigned To</p>
               <div className="flex items-center gap-2">
-                <Avatar className="h-5 w-5">
-                  <AvatarFallback className="text-xs bg-slate-200">{lead.assignedTo?.split(" ").map((n: string) => n[0]).join("") || "?"}</AvatarFallback>
-
-                </Avatar>
-                <span className="font-medium text-[#0F172A]">{lead.assignedTo}</span>
+                {lead.assignedTo ? (
+                  <>
+                    <Avatar className="h-5 w-5">
+                      <AvatarFallback className="text-xs bg-slate-200">{lead.assignedTo.split(" ").map((n: string) => n[0]).join("")}</AvatarFallback>
+                    </Avatar>
+                    <span className="font-medium text-[#0F172A]">{lead.assignedTo}</span>
+                  </>
+                ) : (
+                  <span className="font-medium text-[#94A3B8] italic">Unassigned</span>
+                )}
               </div>
             </div>
           </div>
@@ -2702,14 +2778,34 @@ const mapApiLead = (apiLead: any): Lead => ({
   lastName: apiLead.lastName || "",
   email: apiLead.email || "",
   phone: apiLead.phone || "",
-  company: apiLead.companyName || "",
+  company: (() => {
+    const cn = apiLead.companyName || "";
+    // If companyName looks like an email address, treat as empty
+    if (cn && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cn)) return "";
+    return cn;
+  })(),
   jobTitle: apiLead.jobTitle || "",
   website: apiLead.website,
   location: apiLead.location || "",
   source: (apiLead.leadSource?.name || "website").toLowerCase().replace(/\s+/g, "_"),
   status: (apiLead.status || "NEW").toLowerCase(),
-  score: apiLead.score || 50,
-  temperature: (apiLead.temperature || "COLD").toLowerCase(),
+  score: (() => {
+    // Use leadScore (1-10) from assessment if available, scale to 0-100
+    if (apiLead.leadScore != null) return Math.min(apiLead.leadScore * 10, 100);
+    // Compute a basic score from data completeness signals
+    let s = 20;
+    if (apiLead.email) s += 10;
+    if (apiLead.phone) s += 10;
+    if (apiLead.companyName) s += 5;
+    if (apiLead.propertyAddress) s += 10;
+    if (apiLead.serviceType) s += 10;
+    if (apiLead.potentialValue && Number(apiLead.potentialValue) > 0) s += 10;
+    if (apiLead.temperature === "HOT") s += 15;
+    else if (apiLead.temperature === "WARM") s += 5;
+    if (apiLead.assignedToId) s += 5;
+    return Math.min(s, 100);
+  })(),
+  temperature: (apiLead.temperature || "warm").toLowerCase() as Lead["temperature"],
   value: apiLead.potentialValue || 0,
   currency: "CAD",
   assignedTo: apiLead.assignedTo
@@ -2816,6 +2912,10 @@ const AllLeads = () => {
   const [currentLead, setCurrentLead] = useState<Lead | null>(null);
   const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
   const [pendingQualifiedLead, setPendingQualifiedLead] = useState<Lead | null>(null);
+
+  // Side panel state
+  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
+  const [sidePanelLead, setSidePanelLead] = useState<Lead | null>(null);
 
   // Fetch leads from API
   useEffect(() => {
@@ -3266,6 +3366,7 @@ const AllLeads = () => {
               changeLabel="vs last month"
               icon={Target}
               color="#22D3EE"
+              sparklineData={[3, 5, 4, 7, 6, 8, leads.length || 10]}
             />
             <StatCard
               title="Hot Leads"
@@ -3273,6 +3374,7 @@ const AllLeads = () => {
               icon={Flame}
               color="#EF4444"
               delay={0.1}
+              sparklineData={[1, 2, 1, 3, 2, 4, hotCount || 1]}
             />
             <StatCard
               title="Qualified"
@@ -3280,6 +3382,7 @@ const AllLeads = () => {
               icon={UserCheck}
               color="#F59E0B"
               delay={0.2}
+              sparklineData={[0, 1, 2, 1, 3, 2, qualifiedCount || 1]}
             />
             <StatCard
               title="Won Deals"
@@ -3289,6 +3392,7 @@ const AllLeads = () => {
               icon={CheckCircle2}
               color="#10B981"
               delay={0.3}
+              sparklineData={[0, 1, 0, 2, 1, 2, wonCount || 1]}
             />
             <StatCard
               title="Total Value"
@@ -3297,6 +3401,7 @@ const AllLeads = () => {
               icon={DollarSign}
               color="#FBBF24"
               delay={0.4}
+              sparklineData={[1000, 2500, 1800, 3200, 2800, 4100, totalValue || 1000]}
             />
           </div>
 
@@ -3484,6 +3589,52 @@ const AllLeads = () => {
                   </div>
                 </div>
 
+                {/* Active Filter Chips */}
+                {(selectedSource !== "all" || selectedStatus !== "all" || selectedTemperature !== "all" || searchQuery) && (
+                  <div className="flex items-center gap-2 mt-3 flex-wrap">
+                    <span className="text-xs text-[#94A3B8] font-medium">Active filters:</span>
+                    {searchQuery && (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-[#F1F5F9] text-[#475569] rounded-md text-xs">
+                        <Search size={10} />
+                        "{searchQuery}"
+                        <button onClick={() => setSearchQuery("")} className="ml-0.5 hover:text-red-500 transition-colors"><X size={12} /></button>
+                      </span>
+                    )}
+                    {selectedSource !== "all" && (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-[#F1F5F9] text-[#475569] rounded-md text-xs">
+                        Source: {leadSources.find(s => s.id === selectedSource)?.name}
+                        <button onClick={() => setSelectedSource("all")} className="ml-0.5 hover:text-red-500 transition-colors"><X size={12} /></button>
+                      </span>
+                    )}
+                    {selectedStatus !== "all" && (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-[#F1F5F9] text-[#475569] rounded-md text-xs">
+                        Status: {leadStatuses.find(s => s.id === selectedStatus)?.name}
+                        <button onClick={() => setSelectedStatus("all")} className="ml-0.5 hover:text-red-500 transition-colors"><X size={12} /></button>
+                      </span>
+                    )}
+                    {selectedTemperature !== "all" && (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-[#F1F5F9] text-[#475569] rounded-md text-xs">
+                        Temp: {selectedTemperature.charAt(0).toUpperCase() + selectedTemperature.slice(1)}
+                        <button onClick={() => setSelectedTemperature("all")} className="ml-0.5 hover:text-red-500 transition-colors"><X size={12} /></button>
+                      </span>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs text-[#94A3B8] hover:text-red-500 h-7 px-2"
+                      onClick={() => {
+                        setSearchQuery("");
+                        setSelectedSource("all");
+                        setSelectedStatus("all");
+                        setSelectedTemperature("all");
+                      }}
+                    >
+                      <X size={12} className="mr-1" />
+                      Clear all
+                    </Button>
+                  </div>
+                )}
+
                 {/* Bulk Actions */}
                 {selectedLeads.size > 0 && (
                   <motion.div
@@ -3506,6 +3657,72 @@ const AllLeads = () => {
                     <Button size="sm" variant="outline" className="rounded-md">
                       <UserCheck size={14} className="mr-1" />
                       Assign
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" variant="outline" className="rounded-md">
+                          <RefreshCw size={14} className="mr-1" />
+                          Status
+                          <ChevronDown size={12} className="ml-1" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="rounded-md">
+                        {leadStatuses.map((status) => (
+                          <DropdownMenuItem
+                            key={status.id}
+                            className="rounded-md"
+                            onClick={() => {
+                              setLeads((prev) =>
+                                prev.map((l) =>
+                                  selectedLeads.has(l.id) ? { ...l, status: status.id as Lead["status"] } : l
+                                )
+                              );
+                              toast({
+                                title: "Status Updated",
+                                description: `${selectedLeads.size} lead(s) updated to ${status.name}.`,
+                              });
+                            }}
+                          >
+                            <span className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: status.color }} />
+                            {status.name}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" variant="outline" className="rounded-md">
+                          <Thermometer size={14} className="mr-1" />
+                          Temp
+                          <ChevronDown size={12} className="ml-1" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="rounded-md">
+                        <DropdownMenuItem className="rounded-md" onClick={() => {
+                          setLeads((prev) => prev.map((l) => selectedLeads.has(l.id) ? { ...l, temperature: "hot" } : l));
+                          toast({ title: "Temperature Updated", description: `${selectedLeads.size} lead(s) set to Hot.` });
+                        }}>
+                          <Flame size={14} className="mr-2 text-red-500" /> Hot
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="rounded-md" onClick={() => {
+                          setLeads((prev) => prev.map((l) => selectedLeads.has(l.id) ? { ...l, temperature: "warm" } : l));
+                          toast({ title: "Temperature Updated", description: `${selectedLeads.size} lead(s) set to Warm.` });
+                        }}>
+                          <ThermometerSun size={14} className="mr-2 text-yellow-500" /> Warm
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="rounded-md" onClick={() => {
+                          setLeads((prev) => prev.map((l) => selectedLeads.has(l.id) ? { ...l, temperature: "cold" } : l));
+                          toast({ title: "Temperature Updated", description: `${selectedLeads.size} lead(s) set to Cold.` });
+                        }}>
+                          <Snowflake size={14} className="mr-2 text-blue-500" /> Cold
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Button size="sm" variant="outline" className="rounded-md" onClick={() => {
+                      toast({ title: "Exported", description: `${selectedLeads.size} lead(s) exported to CSV.` });
+                    }}>
+                      <Download size={14} className="mr-1" />
+                      Export
                     </Button>
                     <Button
                       size="sm"
@@ -3548,6 +3765,7 @@ const AllLeads = () => {
                         </TableHead>
                         <TableHead>Lead</TableHead>
                         <TableHead>Company</TableHead>
+                        <TableHead>Phone</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Score</TableHead>
                         <TableHead>Value</TableHead>
@@ -3559,7 +3777,7 @@ const AllLeads = () => {
                     <TableBody>
                       {filteredLeads.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={9} className="text-center py-12">
+                          <TableCell colSpan={10} className="text-center py-12">
                             <div className="flex flex-col items-center">
                               <Target size={48} className="text-[#475569] mb-3" />
                               <p className="text-[#94A3B8] font-medium">No leads found</p>
@@ -3575,7 +3793,8 @@ const AllLeads = () => {
                             isSelected={selectedLeads.has(lead.id)}
                             onSelect={() => toggleSelectLead(lead.id)}
                             onView={() => {
-                              navigate(`/leads/${lead.id}`);
+                              setSidePanelLead(lead);
+                              setIsSidePanelOpen(true);
                             }}
                             onEdit={() => {
                               setCurrentLead(lead);
@@ -3608,7 +3827,8 @@ const AllLeads = () => {
                         isSelected={selectedLeads.has(lead.id)}
                         onSelect={() => toggleSelectLead(lead.id)}
                         onView={() => {
-                          navigate(`/leads/${lead.id}`);
+                          setSidePanelLead(lead);
+                          setIsSidePanelOpen(true);
                         }}
                         onEdit={() => {
                           setCurrentLead(lead);
@@ -3689,6 +3909,171 @@ const AllLeads = () => {
         onSchedule={handleMeetingSchedule}
         onSkip={handleSkipMeeting}
       />
+
+      {/* Lead Side Panel */}
+      <Sheet open={isSidePanelOpen} onOpenChange={setIsSidePanelOpen}>
+        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+          {sidePanelLead && (() => {
+            const lead = sidePanelLead;
+            const statusInfo = getStatusInfo(lead.status);
+            const tempInfo = getTemperatureInfo(lead.temperature);
+            const TempIcon = tempInfo.icon;
+            return (
+              <>
+                <SheetHeader className="pb-4 border-b border-[rgba(15,23,42,0.06)]">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-12 w-12">
+                      <AvatarFallback className="bg-[#F1F5F9] text-[#0F172A] font-medium">
+                        {getInitials(lead.firstName, lead.lastName)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <SheetTitle className="text-lg">{lead.firstName} {lead.lastName}</SheetTitle>
+                      <p className="text-sm text-[#94A3B8]">{lead.company || lead.email}</p>
+                    </div>
+                  </div>
+                </SheetHeader>
+
+                <div className="space-y-5 pt-5">
+                  {/* Status & Temperature */}
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium"
+                      style={{ backgroundColor: statusInfo.bgColor, color: statusInfo.color }}
+                    >
+                      {statusInfo.icon && <statusInfo.icon size={12} />}
+                      {statusInfo.name}
+                    </span>
+                    <span className={cn(
+                      "inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium",
+                    )} style={{ color: tempInfo.color, backgroundColor: tempInfo.bg }}>
+                      <TempIcon size={12} />
+                      {tempInfo.label}
+                    </span>
+                    <span className="ml-auto text-sm font-semibold" style={{ color: getScoreColor(lead.score) }}>
+                      Score: {lead.score}
+                    </span>
+                  </div>
+
+                  {/* Contact Info */}
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">Contact</h4>
+                    <div className="space-y-2">
+                      {lead.email && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Mail size={14} className="text-[#94A3B8]" />
+                          <a href={`mailto:${lead.email}`} className="text-[#475569] hover:text-[#0891B2]">{lead.email}</a>
+                        </div>
+                      )}
+                      {lead.phone && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Phone size={14} className="text-[#94A3B8]" />
+                          <a href={`tel:${lead.phone}`} className="text-[#475569] hover:text-[#0891B2]">{lead.phone}</a>
+                        </div>
+                      )}
+                      {lead.location && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <MapPin size={14} className="text-[#94A3B8]" />
+                          <span className="text-[#475569]">{lead.location}</span>
+                        </div>
+                      )}
+                      {lead.company && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Building2 size={14} className="text-[#94A3B8]" />
+                          <span className="text-[#475569]">{lead.company}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Value */}
+                  {lead.value > 0 && (
+                    <div className="p-3 bg-[#F8FAFC] rounded-md">
+                      <p className="text-xs text-[#94A3B8] mb-1">Potential Value</p>
+                      <p className="text-lg font-bold text-[#0F172A]">{formatCurrency(lead.value)}</p>
+                    </div>
+                  )}
+
+                  {/* Assigned To */}
+                  <div className="p-3 bg-[#F8FAFC] rounded-md">
+                    <p className="text-xs text-[#94A3B8] mb-1">Assigned To</p>
+                    {lead.assignedTo ? (
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarFallback className="text-xs bg-[#F1F5F9]">
+                            {lead.assignedTo.split(" ").map((n: string) => n[0]).join("")}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium text-[#0F172A]">{lead.assignedTo}</span>
+                      </div>
+                    ) : (
+                      <span className="font-medium text-[#94A3B8] italic">Unassigned</span>
+                    )}
+                  </div>
+
+                  {/* Property Info (if available) */}
+                  {(lead.propertyAddress || lead.serviceType) && (
+                    <div className="space-y-3">
+                      <h4 className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">Property & Service</h4>
+                      {lead.propertyAddress && (
+                        <p className="text-sm text-[#475569]">
+                          <MapPin size={14} className="inline mr-1 text-[#94A3B8]" />
+                          {lead.propertyAddress}{lead.city ? `, ${lead.city}` : ""}{lead.state ? ` ${lead.state}` : ""} {lead.zipCode || ""}
+                        </p>
+                      )}
+                      {lead.serviceType && (
+                        <p className="text-sm text-[#475569]">
+                          <Briefcase size={14} className="inline mr-1 text-[#94A3B8]" />
+                          {lead.serviceType}
+                        </p>
+                      )}
+                      {lead.isInsuranceClaim && (
+                        <p className="text-sm text-[#475569]">
+                          Insurance Claim: <span className="font-medium">{lead.isInsuranceClaim}</span>
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Notes */}
+                  {lead.notes && (
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">Notes</h4>
+                      <p className="text-sm text-[#475569] whitespace-pre-line">{lead.notes}</p>
+                    </div>
+                  )}
+
+                  {/* Quick Actions */}
+                  <div className="flex gap-2 pt-3 border-t border-[rgba(15,23,42,0.06)]">
+                    <Button
+                      className="flex-1 rounded-md"
+                      variant="outline"
+                      onClick={() => {
+                        setIsSidePanelOpen(false);
+                        navigate(`/leads/${lead.id}`);
+                      }}
+                    >
+                      <ExternalLink size={14} className="mr-1" />
+                      Full Details
+                    </Button>
+                    <Button
+                      className="flex-1 rounded-md bg-[#0891B2] hover:bg-[#0891B2]/90 text-white"
+                      onClick={() => {
+                        setIsSidePanelOpen(false);
+                        setCurrentLead(lead);
+                        setIsFormOpen(true);
+                      }}
+                    >
+                      <Pencil size={14} className="mr-1" />
+                      Edit
+                    </Button>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };

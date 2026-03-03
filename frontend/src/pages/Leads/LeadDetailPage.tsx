@@ -504,8 +504,8 @@ const LeadDetailPage = () => {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
-                <Loader2 className="animate-spin text-[#0891B2]" size={40} />
+            <div className="min-h-screen bg-[#F9FAFB] flex items-center justify-center">
+                <Loader2 className="animate-spin text-[#14B8A6]" size={40} />
             </div>
         );
     }
@@ -521,743 +521,284 @@ const LeadDetailPage = () => {
     const ownerName = lead.assignedTo
         ? `${lead.assignedTo.user.firstName} ${lead.assignedTo.user.lastName}`
         : "Unassigned";
-
-    const tabs = [
-        { id: "overview", label: "Overview", icon: Activity },
-        { id: "inspections", label: "Inspections", icon: ClipboardList },
-        { id: "insurance", label: "Insurance Claims", icon: Shield },
-        { id: "notes", label: "Notes", icon: FileText },
-        { id: "timeline", label: "Timeline", icon: Clock },
-    ];
+    const leadAge = Math.floor((Date.now() - new Date(lead.createdAt).getTime()) / 86400000);
+    const propertyAddr = [lead.propertyAddress, lead.city, lead.state, lead.zipCode].filter(Boolean).join(", ");
 
     // ── Render ────────────────────────────────────────────────────────────
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC]">
-            <main className="min-h-screen transition-all duration-300" style={{ marginLeft: "var(--sidebar-width, 16rem)" }}>
+        <div className="min-h-screen bg-[#F9FAFB]">
+            <style>{`
+                @keyframes fadeSlideUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+            `}</style>
 
-                {/* Header */}
-                <header className="sticky top-0 z-30 border-b bg-white px-6 h-16 flex items-center justify-between shadow-sm">
-                    <div className="flex items-center gap-4">
-                        <Button variant="ghost" size="icon" onClick={() => navigate("/leads")} className="hover:bg-[#F8FAFC]">
-                            <ArrowLeft className="h-5 w-5" />
-                        </Button>
-                        <Breadcrumb>
-                            <BreadcrumbList>
-                                <BreadcrumbItem><BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink></BreadcrumbItem>
-                                <BreadcrumbSeparator />
-                                <BreadcrumbItem><BreadcrumbLink href="/leads">Leads</BreadcrumbLink></BreadcrumbItem>
-                                <BreadcrumbSeparator />
-                                <BreadcrumbItem><BreadcrumbPage className="font-semibold text-[#0891B2]">{fullName}</BreadcrumbPage></BreadcrumbItem>
-                            </BreadcrumbList>
-                        </Breadcrumb>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        {isConverted && (
-                            <Link to={`/client-list/${lead.convertedToClientId}`}>
-                                <Button variant="outline" className="gap-2 text-green-600 border-green-200 hover:bg-green-50">
-                                    <ExternalLink className="h-4 w-4" /> View Client
-                                </Button>
-                            </Link>
-                        )}
-                        {canConvert && (
-                            <Button
-                                onClick={() => setShowConvertDialog(true)}
-                                className="bg-green-600 hover:bg-green-700 text-white gap-2 shadow-sm"
-                            >
-                                <ArrowRightLeft className="h-4 w-4" /> Convert to Client
-                            </Button>
-                        )}
-                    </div>
-                </header>
-
-                <div className="p-4 md:p-6">
-                    <div className="grid grid-cols-12 gap-4 md:gap-6">
-
-                        {/* ── Left Sidebar ────────────────────────────────────── */}
-                        <div className="col-span-12 lg:col-span-4 xl:col-span-3 space-y-4 md:space-y-5">
-
-                            {/* Profile Card */}
-                            <Card className="overflow-hidden border-none shadow-md">
-                                <div className="h-20 bg-gradient-to-br from-[#0891B2] to-[#06B6D4]" />
-                                <CardContent className="pt-0 -mt-10">
-                                    <div className="flex flex-col items-center text-center">
-                                        <Avatar className="h-20 w-20 border-4 border-white shadow-md bg-white">
-                                            <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${fullName}`} />
-                                            <AvatarFallback className="bg-[#0891B2]/10 text-[#0891B2] text-xl font-bold">
-                                                {getInitials(lead.firstName, lead.lastName)}
-                                            </AvatarFallback>
-                                        </Avatar>
-                                        <h2 className="text-lg font-bold text-[#0F172A] mt-2">{fullName}</h2>
-                                        {lead.jobTitle && <p className="text-sm text-[#475569]">{lead.jobTitle}</p>}
-                                        {lead.companyName && (
-                                            <p className="text-sm text-[#475569] flex items-center gap-1 mt-0.5">
-                                                <Building2 className="h-3.5 w-3.5" /> {lead.companyName}
-                                            </p>
-                                        )}
-
-                                        {/* Status + Temp */}
-                                        <div className="flex items-center gap-2 mt-3">
-                                            <Badge variant="outline" className={`${statusCfg.bg} ${statusCfg.color} font-medium`}>
-                                                {statusCfg.label}
-                                            </Badge>
-                                            <Badge variant="outline" className={`${tempCfg.bg} ${tempCfg.color} font-medium gap-1`}>
-                                                <TempIcon className="h-3 w-3" /> {tempCfg.label}
-                                            </Badge>
-                                        </div>
-
-                                        {/* Converted badge */}
-                                        {isConverted && (
-                                            <Link to={`/client-list/${lead.convertedToClientId}`}
-                                                className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-50 text-green-700 text-xs font-medium hover:bg-green-100 transition-colors">
-                                                <CheckCircle2 className="h-3.5 w-3.5" /> Converted to Client
-                                            </Link>
-                                        )}
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            {/* Pipeline Progress */}
-                            {!isConverted && lead.status !== "LOST" && (
-                                <Card className="shadow-sm">
-                                    <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold text-[#0F172A]">Pipeline Stage</CardTitle></CardHeader>
-                                    <CardContent><PipelineProgress currentStatus={lead.status} /></CardContent>
-                                </Card>
-                            )}
-
-                            {/* Contact Details */}
-                            <Card className="shadow-sm">
-                                <CardHeader className="pb-3 border-b"><CardTitle className="text-sm font-semibold text-[#0F172A]">Contact Details</CardTitle></CardHeader>
-                                <CardContent className="space-y-3.5 pt-4">
-                                    {lead.email && (
-                                        <div className="flex items-start gap-3 group">
-                                            <div className="p-2 bg-[#F8FAFC] rounded-md group-hover:bg-[#0891B2]/10 transition-colors"><Mail className="h-4 w-4 text-[#475569] group-hover:text-[#0891B2]" /></div>
-                                            <div className="min-w-0 flex-1"><p className="text-xs text-[#475569]">Email</p><p className="text-sm font-medium text-[#0F172A] truncate">{lead.email}</p></div>
-                                        </div>
-                                    )}
-                                    {lead.phone && (
-                                        <div className="flex items-start gap-3 group">
-                                            <div className="p-2 bg-[#F8FAFC] rounded-md group-hover:bg-[#0891B2]/10 transition-colors"><Phone className="h-4 w-4 text-[#475569] group-hover:text-[#0891B2]" /></div>
-                                            <div><p className="text-xs text-[#475569]">Phone</p><p className="text-sm font-medium text-[#0F172A]">{lead.phone}</p></div>
-                                        </div>
-                                    )}
-                                    {lead.location && (
-                                        <div className="flex items-start gap-3 group">
-                                            <div className="p-2 bg-[#F8FAFC] rounded-md group-hover:bg-[#0891B2]/10 transition-colors"><MapPin className="h-4 w-4 text-[#475569] group-hover:text-[#0891B2]" /></div>
-                                            <div><p className="text-xs text-[#475569]">Location</p><p className="text-sm font-medium text-[#0F172A]">{lead.location}</p></div>
-                                        </div>
-                                    )}
-                                    {lead.website && (
-                                        <div className="flex items-start gap-3 group">
-                                            <div className="p-2 bg-[#F8FAFC] rounded-md group-hover:bg-[#0891B2]/10 transition-colors"><Globe className="h-4 w-4 text-[#475569] group-hover:text-[#0891B2]" /></div>
-                                            <div className="min-w-0 flex-1"><p className="text-xs text-[#475569]">Website</p><a href={lead.website} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-[#0891B2] hover:underline truncate block">{lead.website}</a></div>
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-
-                            {/* Tags */}
-                            {lead.tags && lead.tags.length > 0 && (
-                                <Card className="shadow-sm">
-                                    <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-[#0F172A]">Tags</CardTitle></CardHeader>
-                                    <CardContent>
-                                        <div className="flex flex-wrap gap-2">
-                                            {lead.tags.map((t, i) => (
-                                                <span key={i} className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-[#0891B2]/5 text-[#0891B2] border border-[#0891B2]/10">
-                                                    <Tag size={10} className="mr-1.5 opacity-60" /> {t.tag.name}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            )}
-
-                            {/* Quick Stats */}
-                            <Card className="shadow-sm">
-                                <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-[#0F172A]">Quick Info</CardTitle></CardHeader>
-                                <CardContent className="space-y-3">
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="text-[#475569] flex items-center gap-1.5"><DollarSign className="h-3.5 w-3.5" /> Potential Value</span>
-                                        <span className="font-semibold text-[#0F172A]">{formatCurrency(lead.potentialValue)}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="text-[#475569] flex items-center gap-1.5"><User className="h-3.5 w-3.5" /> Owner</span>
-                                        <span className="font-medium text-[#0F172A]">{ownerName}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="text-[#475569] flex items-center gap-1.5"><TrendingUp className="h-3.5 w-3.5" /> Source</span>
-                                        <span className="font-medium text-[#0F172A]">{lead.leadSource?.name || "Direct"}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="text-[#475569] flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" /> Created</span>
-                                        <span className="font-medium text-[#0F172A]">{formatDate(lead.createdAt)}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="text-[#475569] flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> Updated</span>
-                                        <span className="font-medium text-[#0F172A]">{timeAgo(lead.updatedAt)}</span>
-                                    </div>
-                                </CardContent>
-                            </Card>
+            {/* ═══════════ STICKY HEADER ═══════════ */}
+            <header className="sticky top-0 z-30 bg-white border-b border-[#E5E7EB] shadow-[0_2px_4px_rgba(0,0,0,0.05)]">
+                <div className="px-6 pt-3 pb-1">
+                    <Breadcrumb><BreadcrumbList>
+                        <BreadcrumbItem><BreadcrumbLink href="/dashboard" className="text-xs">Dashboard</BreadcrumbLink></BreadcrumbItem>
+                        <BreadcrumbSeparator />
+                        <BreadcrumbItem><BreadcrumbLink href="/leads" className="text-xs">Leads</BreadcrumbLink></BreadcrumbItem>
+                        <BreadcrumbSeparator />
+                        <BreadcrumbItem><BreadcrumbPage className="text-xs font-semibold text-[#14B8A6]">{fullName}</BreadcrumbPage></BreadcrumbItem>
+                    </BreadcrumbList></Breadcrumb>
+                </div>
+                <div className="px-6 pb-3 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <button onClick={() => navigate('/leads')} className="p-1.5 rounded-lg hover:bg-[#F9FAFB] text-[#6B7280] transition-colors flex-shrink-0"><ArrowLeft size={18} /></button>
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#14B8A6] to-[#0D9488] flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-sm">
+                            {getInitials(lead.firstName, lead.lastName)}
                         </div>
-
-                        {/* ── Right Panel — Tabs ──────────────────────────────── */}
-                        <div className="col-span-12 lg:col-span-8 xl:col-span-9">
-                            <Card className="h-full border-none shadow-md bg-white">
-                                <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-                                    <CardHeader className="pb-0 border-b px-0">
-                                        <div className="px-6 overflow-x-auto scrollbar-hide">
-                                            <TabsList className="bg-transparent h-auto p-0 gap-6 inline-flex w-max min-w-full justify-start">
-                                                {tabs.map(tab => (
-                                                    <TabsTrigger
-                                                        key={tab.id}
-                                                        value={tab.id}
-                                                        className="px-0 py-4 rounded-none border-b-2 bg-transparent text-sm font-medium text-[#475569]
-                              data-[state=active]:border-[#0891B2] data-[state=active]:text-[#0891B2]
-                              hover:text-[#0F172A] transition-colors gap-2"
-                                                    >
-                                                        <tab.icon className="h-4 w-4" />{tab.label}
-                                                    </TabsTrigger>
-                                                ))}
-                                            </TabsList>
-                                        </div>
-                                    </CardHeader>
-
-                                    <CardContent className="p-6 flex-1 bg-[#F8FAFC]/30">
-
-                                        {/* Overview Tab */}
-                                        <TabsContent value="overview" className="m-0 space-y-6">
-
-                                            {/* Convert CTA Banner (for convertible leads) */}
-                                            {canConvert && (
-                                                <div className="rounded-xl border border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 p-5 flex items-center justify-between">
-                                                    <div>
-                                                        <h3 className="font-semibold text-green-800 text-base">Ready to convert?</h3>
-                                                        <p className="text-sm text-green-600 mt-0.5">
-                                                            Turn this lead into a client and unlock projects, invoicing, and more.
-                                                        </p>
-                                                    </div>
-                                                    <Button
-                                                        onClick={() => setShowConvertDialog(true)}
-                                                        className="bg-green-600 hover:bg-green-700 text-white gap-2 shadow-sm"
-                                                    >
-                                                        <ArrowRightLeft className="h-4 w-4" /> Convert to Client
-                                                    </Button>
-                                                </div>
-                                            )}
-
-                                            {/* Converted Banner */}
-                                            {isConverted && (
-                                                <div className="rounded-xl border border-green-200 bg-green-50 p-5 flex items-center justify-between">
-                                                    <div className="flex items-center gap-3">
-                                                        <CheckCircle2 className="h-6 w-6 text-green-600" />
-                                                        <div>
-                                                            <h3 className="font-semibold text-green-800">Lead Converted</h3>
-                                                            <p className="text-sm text-green-600">Converted on {formatDate(lead.convertedAt)}</p>
-                                                        </div>
-                                                    </div>
-                                                    <Link to={`/client-list/${lead.convertedToClientId}`}>
-                                                        <Button variant="outline" className="gap-2 border-green-300 text-green-700 hover:bg-green-100">
-                                                            <ExternalLink className="h-4 w-4" /> View Client Record
-                                                        </Button>
-                                                    </Link>
-                                                </div>
-                                            )}
-
-                                            {/* Key Metrics Cards */}
-                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                                <Card className="shadow-sm border-none">
-                                                    <CardContent className="p-4">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-10 h-10 rounded-lg bg-[#0891B2]/10 flex items-center justify-center">
-                                                                <DollarSign className="h-5 w-5 text-[#0891B2]" />
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-xs text-[#475569]">Deal Value</p>
-                                                                <p className="text-lg font-bold text-[#0F172A]">{formatCurrency(lead.potentialValue)}</p>
-                                                            </div>
-                                                        </div>
-                                                    </CardContent>
-                                                </Card>
-                                                <Card className="shadow-sm border-none">
-                                                    <CardContent className="p-4">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className={`w-10 h-10 rounded-lg ${tempCfg.bg} flex items-center justify-center`}>
-                                                                <TempIcon className={`h-5 w-5 ${tempCfg.color}`} />
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-xs text-[#475569]">Temperature</p>
-                                                                <p className="text-lg font-bold text-[#0F172A]">{tempCfg.label}</p>
-                                                            </div>
-                                                        </div>
-                                                    </CardContent>
-                                                </Card>
-                                                <Card className="shadow-sm border-none">
-                                                    <CardContent className="p-4">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-10 h-10 rounded-lg bg-violet-50 flex items-center justify-center">
-                                                                <TrendingUp className="h-5 w-5 text-violet-600" />
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-xs text-[#475569]">Source</p>
-                                                                <p className="text-lg font-bold text-[#0F172A]">{lead.leadSource?.name || "Direct"}</p>
-                                                            </div>
-                                                        </div>
-                                                    </CardContent>
-                                                </Card>
-                                            </div>
-
-                                            {/* Lead Details Grid */}
-                                            <Card className="shadow-sm border-none">
-                                                <CardHeader className="pb-3 border-b">
-                                                    <CardTitle className="text-sm font-semibold text-[#0F172A]">Lead Details</CardTitle>
-                                                </CardHeader>
-                                                <CardContent className="pt-4">
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                        <InfoRow label="Full Name" value={fullName} />
-                                                        <InfoRow label="Email" value={lead.email || "—"} />
-                                                        <InfoRow label="Phone" value={lead.phone || "—"} />
-                                                        <InfoRow label="Company" value={lead.companyName || "—"} />
-                                                        <InfoRow label="Job Title" value={lead.jobTitle || "—"} />
-                                                        <InfoRow label="Location" value={lead.location || "—"} />
-                                                        <InfoRow label="Website" value={lead.website || "—"} />
-                                                        <InfoRow label="Assigned To" value={ownerName} />
-                                                        <InfoRow label="Created By" value={
-                                                            lead.createdBy ? `${lead.createdBy.user.firstName} ${lead.createdBy.user.lastName}` : "—"
-                                                        } />
-                                                        <InfoRow label="Pipeline Stage" value={statusCfg.label} />
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
-
-                                            {/* Property Information */}
-                                            {(lead.propertyAddress || lead.city || lead.propertyType) && (
-                                                <Card className="shadow-sm border-none">
-                                                    <CardHeader className="pb-3 border-b">
-                                                        <CardTitle className="text-sm font-semibold text-[#0F172A] flex items-center gap-2">
-                                                            <Home className="h-4 w-4 text-[#0891B2]" /> Property Information
-                                                        </CardTitle>
-                                                    </CardHeader>
-                                                    <CardContent className="pt-4">
-                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                            <InfoRow label="Property Address" value={lead.propertyAddress || "—"} />
-                                                            <InfoRow label="City" value={lead.city || "—"} />
-                                                            <InfoRow label="State / Province" value={lead.state || "—"} />
-                                                            <InfoRow label="Zip Code" value={lead.zipCode || "—"} />
-                                                            <InfoRow label="Property Type" value={lead.propertyType || "—"} />
-                                                        </div>
-                                                    </CardContent>
-                                                </Card>
-                                            )}
-
-                                            {/* Service Request */}
-                                            {(lead.serviceType || lead.urgencyLevel || lead.issueDescription) && (
-                                                <Card className="shadow-sm border-none">
-                                                    <CardHeader className="pb-3 border-b">
-                                                        <CardTitle className="text-sm font-semibold text-[#0F172A] flex items-center gap-2">
-                                                            <Wrench className="h-4 w-4 text-[#0891B2]" /> Service Request
-                                                        </CardTitle>
-                                                    </CardHeader>
-                                                    <CardContent className="pt-4">
-                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                            <InfoRow label="Service Type" value={lead.serviceType || "—"} />
-                                                            <InfoRow label="Insurance Claim?" value={lead.isInsuranceClaim || "—"} />
-                                                            <InfoRow label="Urgency" value={lead.urgencyLevel || "—"} />
-                                                            <InfoRow label="Preferred Contact" value={lead.preferredContactMethod || "—"} />
-                                                            <InfoRow label="Best Time to Contact" value={lead.bestTimeToContact || "—"} />
-                                                        </div>
-                                                        {lead.issueDescription && (
-                                                            <div className="mt-4">
-                                                                <span className="text-xs text-[#475569]">Issue Description</span>
-                                                                <p className="text-sm text-[#0F172A] mt-1 p-3 bg-[#F8FAFC] rounded-md">{lead.issueDescription}</p>
-                                                            </div>
-                                                        )}
-                                                    </CardContent>
-                                                </Card>
-                                            )}
-
-                                            {/* Qualification Details */}
-                                            {(lead.isHomeowner || lead.roofAge || lead.budgetRange || lead.isHOA) && (
-                                                <Card className="shadow-sm border-none">
-                                                    <CardHeader className="pb-3 border-b">
-                                                        <CardTitle className="text-sm font-semibold text-[#0F172A] flex items-center gap-2">
-                                                            <ClipboardList className="h-4 w-4 text-[#0891B2]" /> Qualification Details
-                                                        </CardTitle>
-                                                    </CardHeader>
-                                                    <CardContent className="pt-4 space-y-5">
-                                                        {/* Verification */}
-                                                        <div>
-                                                            <p className="text-xs font-semibold text-[#475569] mb-2 uppercase tracking-wider">Verification</p>
-                                                            <div className="flex flex-wrap gap-3">
-                                                                {[
-                                                                    { key: lead.confirmedName, label: "Name" },
-                                                                    { key: lead.confirmedPhone, label: "Phone" },
-                                                                    { key: lead.confirmedEmail, label: "Email" },
-                                                                    { key: lead.confirmedAddress, label: "Address" },
-                                                                ].map((item) => (
-                                                                    <span key={item.label} className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium ${item.key ? "bg-green-50 text-green-700 border border-green-200" : "bg-gray-50 text-gray-400 border border-gray-200"
-                                                                        }`}>
-                                                                        {item.key ? <CheckCircle2 className="h-3 w-3" /> : <X className="h-3 w-3" />}
-                                                                        {item.label}
-                                                                    </span>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Ownership + Roof */}
-                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                            <InfoRow label="Homeowner?" value={lead.isHomeowner || "—"} />
-                                                            <InfoRow label="Decision Maker?" value={lead.isDecisionMaker || "—"} />
-                                                            <InfoRow label="Spouse / Co-Owner" value={lead.spouseCoOwnerName || "—"} />
-                                                            <InfoRow label="Secondary Phone" value={lead.secondaryPhone || "—"} />
-                                                            <InfoRow label="Roof Age" value={lead.roofAge || "—"} />
-                                                            <InfoRow label="Roof Material" value={lead.currentRoofMaterial || "—"} />
-                                                            <InfoRow label="Stories" value={lead.numberOfStories || "—"} />
-                                                            <InfoRow label="Previous Roof Work" value={lead.previousRoofWork || "—"} />
-                                                        </div>
-
-                                                        {lead.knownDamageType && lead.knownDamageType.length > 0 && (
-                                                            <div>
-                                                                <span className="text-xs text-[#475569]">Damage Types</span>
-                                                                <div className="flex flex-wrap gap-1.5 mt-1">
-                                                                    {lead.knownDamageType.map((d: string) => (
-                                                                        <span key={d} className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-red-50 text-red-700 border border-red-200">
-                                                                            <AlertTriangle className="h-3 w-3 mr-1" />{d}
-                                                                        </span>
-                                                                    ))}
-                                                                </div>
-                                                            </div>
-                                                        )}
-
-                                                        {lead.damageOccurrenceDate && (
-                                                            <InfoRow label="Damage Occurred" value={lead.damageOccurrenceDate} />
-                                                        )}
-
-                                                        {/* Budget & Timeline */}
-                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                            <InfoRow label="Budget Range" value={lead.budgetRange || "—"} />
-                                                            <InfoRow label="Timeline" value={lead.workTimeline || "—"} />
-                                                            <InfoRow label="Financing Needed?" value={lead.financingNeeded || "—"} />
-                                                            <InfoRow label="Getting Other Quotes?" value={lead.gettingOtherQuotes || "—"} />
-                                                            {lead.numberOfOtherQuotes != null && (
-                                                                <InfoRow label="# Other Quotes" value={String(lead.numberOfOtherQuotes)} />
-                                                            )}
-                                                            <InfoRow label="Top Priority" value={lead.topPriority || "—"} />
-                                                        </div>
-
-                                                        {/* HOA */}
-                                                        {lead.isHOA && lead.isHOA !== "" && (
-                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                                <InfoRow label="HOA Community?" value={lead.isHOA} />
-                                                                {lead.hoaRestrictions && (
-                                                                    <InfoRow label="HOA Restrictions" value={lead.hoaRestrictions} />
-                                                                )}
-                                                            </div>
-                                                        )}
-                                                    </CardContent>
-                                                </Card>
-                                            )}
-
-                                            {/* Insurance Details */}
-                                            {lead.isInsuranceClaim === "Yes" && (
-                                                <Card className="shadow-sm border-none">
-                                                    <CardHeader className="pb-3 border-b">
-                                                        <CardTitle className="text-sm font-semibold text-[#0F172A] flex items-center gap-2">
-                                                            <Shield className="h-4 w-4 text-[#0891B2]" /> Insurance Details
-                                                        </CardTitle>
-                                                    </CardHeader>
-                                                    <CardContent className="pt-4">
-                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                            <InfoRow label="Insurance Company" value={lead.insuranceCompanyName || "—"} />
-                                                            <InfoRow label="Claim Filed?" value={lead.hasClaimBeenFiled || "—"} />
-                                                            <InfoRow label="Claim Number" value={lead.claimNumber || "—"} />
-                                                            <InfoRow label="Adjuster Assigned?" value={lead.adjusterAssigned || "—"} />
-                                                            {lead.adjusterAssigned === "Yes" && (
-                                                                <>
-                                                                    <InfoRow label="Adjuster Name" value={lead.adjusterName || "—"} />
-                                                                    <InfoRow label="Adjuster Phone" value={lead.adjusterPhone || "—"} />
-                                                                    <InfoRow label="Adjuster Email" value={lead.adjusterEmail || "—"} />
-                                                                </>
-                                                            )}
-                                                            <InfoRow label="Adjuster Meeting" value={lead.adjusterMeetingDate ? formatDate(lead.adjusterMeetingDate) : "—"} />
-                                                        </div>
-                                                    </CardContent>
-                                                </Card>
-                                            )}
-
-                                            {/* Sales Assessment */}
-                                            {(lead.leadScore || lead.nextStep || lead.qualificationCallNotes) && (
-                                                <Card className="shadow-sm border-none">
-                                                    <CardHeader className="pb-3 border-b">
-                                                        <CardTitle className="text-sm font-semibold text-[#0F172A] flex items-center gap-2">
-                                                            <HardHat className="h-4 w-4 text-[#0891B2]" /> Sales Assessment
-                                                        </CardTitle>
-                                                    </CardHeader>
-                                                    <CardContent className="pt-4">
-                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                            {lead.leadScore != null && <InfoRow label="Lead Score" value={`${lead.leadScore}/10`} />}
-                                                            <InfoRow label="Next Step" value={lead.nextStep || "—"} />
-                                                            <InfoRow label="Follow-Up Date" value={lead.followUpDateTime ? formatDate(lead.followUpDateTime) : "—"} />
-                                                            <InfoRow label="Inspection Date" value={lead.inspectionAppointmentDate ? formatDate(lead.inspectionAppointmentDate) : "—"} />
-                                                            {lead.disqualifiedReason && (
-                                                                <InfoRow label="Disqualified Reason" value={lead.disqualifiedReason} />
-                                                            )}
-                                                        </div>
-                                                        {lead.qualificationCallNotes && (
-                                                            <div className="mt-4">
-                                                                <span className="text-xs text-[#475569]">Qualification Notes</span>
-                                                                <p className="text-sm text-[#0F172A] mt-1 p-3 bg-[#F8FAFC] rounded-md whitespace-pre-wrap">{lead.qualificationCallNotes}</p>
-                                                            </div>
-                                                        )}
-                                                    </CardContent>
-                                                </Card>
-                                            )}
-                                        </TabsContent>
-
-                                        {/* Insurance Claims Tab */}
-                                        <TabsContent value="insurance" className="m-0 space-y-4">
-                                            <div className="flex items-center justify-between">
-                                                <h3 className="text-base font-semibold text-[#0F172A]">Insurance Claims</h3>
-                                                <Button
-                                                    size="sm"
-                                                    className="bg-[#0891B2] hover:bg-[#0891B2]/80 text-white gap-2"
-                                                    onClick={() => { setEditingClaim(null); setShowClaimDialog(true); }}
-                                                >
-                                                    <Plus className="h-4 w-4" /> New Claim
-                                                </Button>
-                                            </div>
-                                            {claimsLoading ? (
-                                                <div className="flex items-center justify-center py-10">
-                                                    <Loader2 className="animate-spin text-[#0891B2]" size={24} />
-                                                </div>
-                                            ) : insuranceClaims.length === 0 ? (
-                                                <div className="text-center py-16">
-                                                    <Shield className="h-12 w-12 text-[#CBD5E1] mx-auto mb-3" />
-                                                    <p className="text-[#94A3B8] text-sm">No insurance claims yet.</p>
-                                                    <p className="text-[#94A3B8] text-xs mt-1">Click "New Claim" to add one.</p>
-                                                </div>
-                                            ) : (
-                                                <div className="space-y-3">
-                                                    {insuranceClaims.map((claim: any) => (
-                                                        <Card key={claim.id} className="border shadow-sm hover:shadow-md transition-shadow">
-                                                            <CardContent className="p-4">
-                                                                <div className="flex items-start justify-between">
-                                                                    <div className="flex-1">
-                                                                        <div className="flex items-center gap-2 mb-2">
-                                                                            {claim.claimStatus && (
-                                                                                <Badge className={`text-xs ${claim.claimStatus === 'Approved' ? 'bg-green-100 text-green-700' :
-                                                                                    claim.claimStatus === 'Open' ? 'bg-blue-100 text-blue-700' :
-                                                                                        claim.claimStatus === 'Denied' ? 'bg-red-100 text-red-700' :
-                                                                                            claim.claimStatus === 'In Review' ? 'bg-yellow-100 text-yellow-700' :
-                                                                                                'bg-gray-100 text-gray-700'
-                                                                                    }`}>
-                                                                                    {claim.claimStatus}
-                                                                                </Badge>
-                                                                            )}
-                                                                            {claim.supplementNeeded && (
-                                                                                <Badge variant="outline" className="text-xs text-orange-600">
-                                                                                    Supplement Needed
-                                                                                </Badge>
-                                                                            )}
-                                                                        </div>
-                                                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-                                                                            <div>
-                                                                                <span className="text-xs text-[#475569]">Claim #</span>
-                                                                                <p className="font-medium">{claim.claimNumber || '—'}</p>
-                                                                            </div>
-                                                                            <div>
-                                                                                <span className="text-xs text-[#475569]">ACV Estimate</span>
-                                                                                <p className="font-medium">{claim.insuranceEstimateACV ? `$${Number(claim.insuranceEstimateACV).toLocaleString()}` : '—'}</p>
-                                                                            </div>
-                                                                            <div>
-                                                                                <span className="text-xs text-[#475569]">Full RCV</span>
-                                                                                <p className="font-medium">{claim.fullRCVAmount ? `$${Number(claim.fullRCVAmount).toLocaleString()}` : '—'}</p>
-                                                                            </div>
-                                                                            <div>
-                                                                                <span className="text-xs text-[#475569]">Deductible</span>
-                                                                                <p className="font-medium">{claim.deductibleAmount ? `$${Number(claim.deductibleAmount).toLocaleString()}` : '—'}</p>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div className="flex gap-1 ml-3">
-                                                                        <Button variant="ghost" size="icon" className="h-8 w-8"
-                                                                            onClick={() => { setEditingClaim(claim); setShowClaimDialog(true); }}>
-                                                                            <Pencil className="h-4 w-4 text-[#475569]" />
-                                                                        </Button>
-                                                                        <Button variant="ghost" size="icon" className="h-8 w-8"
-                                                                            onClick={() => handleDeleteClaim(claim.id)}>
-                                                                            <Trash2 className="h-4 w-4 text-red-500" />
-                                                                        </Button>
-                                                                    </div>
-                                                                </div>
-                                                            </CardContent>
-                                                        </Card>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </TabsContent>
-
-                                        {/* Notes Tab */}
-                                        <TabsContent value="notes" className="m-0 space-y-6">
-                                            <div className="bg-white p-4 rounded-lg border shadow-sm">
-                                                <label className="text-sm font-medium text-[#0F172A] mb-2 block">Add a new note</label>
-                                                <Textarea
-                                                    placeholder="Type your note here..."
-                                                    className="resize-none min-h-[80px]"
-                                                    value={newNote}
-                                                    onChange={(e) => setNewNote(e.target.value)}
-                                                />
-                                                <div className="flex justify-end mt-3">
-                                                    <Button size="sm" className="bg-[#0891B2] hover:bg-[#0891B2]/80 text-white" onClick={handleAddNote}>
-                                                        Save Note
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                            <div className="space-y-3">
-                                                {notes.length === 0 ? (
-                                                    <div className="text-center py-10 text-[#94A3B8]">No notes yet.</div>
-                                                ) : notes.map(note => (
-                                                    <div key={note.id} className="bg-yellow-50/50 p-4 rounded-lg border border-yellow-100">
-                                                        <p className="text-[#0F172A] text-sm">{note.content}</p>
-                                                        <div className="mt-2 text-xs text-[#94A3B8]">{note.author} · {note.date}</div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </TabsContent>
-
-                                        {/* Inspections Tab */}
-                                        <TabsContent value="inspections" className="m-0 space-y-4">
-                                            <div className="flex items-center justify-between">
-                                                <h3 className="text-base font-semibold text-[#0F172A]">Inspections</h3>
-                                                <Button
-                                                    size="sm"
-                                                    className="bg-[#0891B2] hover:bg-[#0891B2]/80 text-white gap-2"
-                                                    onClick={() => { setEditingInspection(null); setShowInspectionDialog(true); }}
-                                                >
-                                                    <Plus className="h-4 w-4" /> New Inspection
-                                                </Button>
-                                            </div>
-                                            {inspectionsLoading ? (
-                                                <div className="flex items-center justify-center py-10">
-                                                    <Loader2 className="animate-spin text-[#0891B2]" size={24} />
-                                                </div>
-                                            ) : inspections.length === 0 ? (
-                                                <div className="text-center py-16">
-                                                    <ClipboardList className="h-12 w-12 text-[#CBD5E1] mx-auto mb-3" />
-                                                    <p className="text-[#94A3B8] text-sm">No inspections yet.</p>
-                                                    <p className="text-[#94A3B8] text-xs mt-1">Click "New Inspection" to add one.</p>
-                                                </div>
-                                            ) : (
-                                                <div className="space-y-3">
-                                                    {inspections.map((insp: any) => (
-                                                        <Card key={insp.id} className="border shadow-sm hover:shadow-md transition-shadow">
-                                                            <CardContent className="p-4">
-                                                                <div className="flex items-start justify-between">
-                                                                    <div className="flex-1">
-                                                                        <div className="flex items-center gap-2 mb-2">
-                                                                            <Badge variant="outline" className="text-xs">
-                                                                                {insp.inspectionType || "General"}
-                                                                            </Badge>
-                                                                            {insp.estimateStatus && (
-                                                                                <Badge className={`text-xs ${insp.estimateStatus === 'Accepted' ? 'bg-green-100 text-green-700' :
-                                                                                    insp.estimateStatus === 'Sent' ? 'bg-blue-100 text-blue-700' :
-                                                                                        insp.estimateStatus === 'Rejected' ? 'bg-red-100 text-red-700' :
-                                                                                            'bg-gray-100 text-gray-700'
-                                                                                    }`}>
-                                                                                    {insp.estimateStatus}
-                                                                                </Badge>
-                                                                            )}
-                                                                            {insp.overallCondition && (
-                                                                                <Badge variant="outline" className="text-xs">
-                                                                                    {insp.overallCondition}
-                                                                                </Badge>
-                                                                            )}
-                                                                        </div>
-                                                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-                                                                            <div>
-                                                                                <span className="text-xs text-[#475569]">Date</span>
-                                                                                <p className="font-medium">{insp.inspectionDate ? formatDate(insp.inspectionDate) : '—'}</p>
-                                                                            </div>
-                                                                            <div>
-                                                                                <span className="text-xs text-[#475569]">Inspector</span>
-                                                                                <p className="font-medium">{insp.inspectorName || '—'}</p>
-                                                                            </div>
-                                                                            <div>
-                                                                                <span className="text-xs text-[#475569]">Total Estimate</span>
-                                                                                <p className="font-medium">{insp.totalEstimate ? `$${Number(insp.totalEstimate).toLocaleString()}` : '—'}</p>
-                                                                            </div>
-                                                                            <div>
-                                                                                <span className="text-xs text-[#475569]">Roof Style</span>
-                                                                                <p className="font-medium">{insp.roofStyle || '—'}</p>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div className="flex gap-1 ml-3">
-                                                                        <Button
-                                                                            variant="ghost" size="icon" className="h-8 w-8"
-                                                                            onClick={() => { setEditingInspection(insp); setShowInspectionDialog(true); }}
-                                                                        >
-                                                                            <Pencil className="h-4 w-4 text-[#475569]" />
-                                                                        </Button>
-                                                                        <Button
-                                                                            variant="ghost" size="icon" className="h-8 w-8"
-                                                                            onClick={() => handleDeleteInspection(insp.id)}
-                                                                        >
-                                                                            <Trash2 className="h-4 w-4 text-red-500" />
-                                                                        </Button>
-                                                                    </div>
-                                                                </div>
-                                                            </CardContent>
-                                                        </Card>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </TabsContent>
-
-                                        {/* Timeline Tab */}
-                                        <TabsContent value="timeline" className="m-0 px-2">
-                                            <ActivityTimeline entityType="Lead" entityId={id!} />
-                                        </TabsContent>
-
-                                    </CardContent>
-                                </Tabs>
-                            </Card>
+                        <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <h1 className="text-lg font-bold text-[#111827] truncate">{fullName}</h1>
+                                <Badge variant="outline" className={`${statusCfg.bg} ${statusCfg.color} font-medium text-[10px]`}>{statusCfg.label}</Badge>
+                                <Badge variant="outline" className={`${tempCfg.bg} ${tempCfg.color} font-medium text-[10px] gap-0.5`}><TempIcon className="h-3 w-3" />{tempCfg.label}</Badge>
+                                {isConverted && <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#DCFCE7] text-[#166534]">✓ Converted</span>}
+                            </div>
+                            <p className="text-[11px] text-[#9CA3AF] mt-0.5">
+                                {lead.companyName && <><Building2 className="inline h-3 w-3 mr-0.5" />{lead.companyName} · </>}
+                                {ownerName !== "Unassigned" && <>Assigned to <span className="font-medium text-[#6B7280]">{ownerName}</span> · </>}
+                                Created {formatDate(lead.createdAt)}
+                            </p>
                         </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                        {lead.phone && <a href={`tel:${lead.phone}`} className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#E5E7EB] text-xs font-medium text-[#374151] hover:bg-[#F9FAFB] transition-all"><Phone size={14} className="text-[#14B8A6]" />Call</a>}
+                        {lead.email && <a href={`mailto:${lead.email}`} className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#E5E7EB] text-xs font-medium text-[#374151] hover:bg-[#F9FAFB] transition-all"><Mail size={14} className="text-[#14B8A6]" />Email</a>}
+                        {isConverted && <Link to={`/client-list/${lead.convertedToClientId}`}><Button variant="outline" size="sm" className="gap-1.5 text-green-600 border-green-200 hover:bg-green-50 text-xs"><ExternalLink size={14} />View Client</Button></Link>}
+                        {canConvert && <Button size="sm" onClick={() => setShowConvertDialog(true)} className="bg-green-600 hover:bg-green-700 text-white gap-1.5 text-xs shadow-sm"><ArrowRightLeft size={14} />Convert</Button>}
                     </div>
                 </div>
-            </main>
+                {/* Pipeline Progress Bar */}
+                {!isConverted && lead.status !== "LOST" && (
+                    <div className="px-6 pb-3"><PipelineProgress currentStatus={lead.status} /></div>
+                )}
+            </header>
+
+            {/* ═══════════ MAIN CONTENT ═══════════ */}
+            <div className="p-4 md:p-6 max-w-[1400px] mx-auto space-y-5">
+
+                {/* Convert/Converted Banner */}
+                {canConvert && (
+                    <div className="rounded-xl border border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 p-4 flex items-center justify-between" style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
+                        <div><h3 className="font-semibold text-green-800 text-sm">Ready to convert?</h3><p className="text-xs text-green-600 mt-0.5">Turn this lead into a client to unlock projects, invoicing, and more.</p></div>
+                        <Button size="sm" onClick={() => setShowConvertDialog(true)} className="bg-green-600 hover:bg-green-700 text-white gap-1.5 text-xs"><ArrowRightLeft size={14} />Convert to Client</Button>
+                    </div>
+                )}
+                {isConverted && (
+                    <div className="rounded-xl border border-green-200 bg-green-50 p-4 flex items-center justify-between" style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
+                        <div className="flex items-center gap-2"><CheckCircle2 className="h-5 w-5 text-green-600" /><div><h3 className="font-semibold text-green-800 text-sm">Lead Converted</h3><p className="text-xs text-green-600">Converted on {formatDate(lead.convertedAt)}</p></div></div>
+                        <Link to={`/client-list/${lead.convertedToClientId}`}><Button variant="outline" size="sm" className="gap-1.5 border-green-300 text-green-700 hover:bg-green-100 text-xs"><ExternalLink size={14} />View Client</Button></Link>
+                    </div>
+                )}
+
+                {/* ═══════════ KPI STATS ROW ═══════════ */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4" style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
+                    {[
+                        { icon: <DollarSign size={18} />, bg: "bg-[#CCFBF1]", color: "text-[#0D9488]", label: "Deal Value", value: formatCurrency(lead.potentialValue) },
+                        { icon: <TempIcon size={18} />, bg: tempCfg.bg, color: tempCfg.color, label: "Temperature", value: tempCfg.label },
+                        { icon: <TrendingUp size={18} />, bg: "bg-[#EDE9FE]", color: "text-[#7C3AED]", label: "Lead Source", value: lead.leadSource?.name || "Direct" },
+                        { icon: <Clock size={18} />, bg: "bg-[#EFF6FF]", color: "text-[#2563EB]", label: "Lead Age", value: `${leadAge} day${leadAge !== 1 ? 's' : ''}` },
+                    ].map((s, i) => (
+                        <div key={i} className="bg-white rounded-xl border border-[#E5E7EB] p-4 shadow-[0_1px_3px_rgba(0,0,0,0.08)] transition-all duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5" style={{ animation: `fadeSlideUp 0.4s ease ${100 + i * 80}ms both` }}>
+                            <div className="flex items-center gap-3">
+                                <div className={`w-10 h-10 rounded-lg ${s.bg} flex items-center justify-center ${s.color}`}>{s.icon}</div>
+                                <div><div className="text-xl font-bold text-[#111827]">{s.value}</div><div className="text-[11px] text-[#6B7280] font-medium">{s.label}</div></div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* ═══════════ CARD GRID ═══════════ */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+                    {/* CARD 1: Contact & Lead Info */}
+                    <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 200ms both' }}>
+                        <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#F1F5F9]">
+                            <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#CCFBF1] flex items-center justify-center"><User size={14} className="text-[#0D9488]" /></div><h3 className="text-sm font-semibold text-[#111827]">Contact Information</h3></div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                            {[
+                                { l: "Full Name", v: fullName }, { l: "Email", v: lead.email, href: lead.email ? `mailto:${lead.email}` : undefined },
+                                { l: "Phone", v: lead.phone, href: lead.phone ? `tel:${lead.phone}` : undefined }, { l: "Secondary Phone", v: lead.secondaryPhone },
+                                { l: "Company", v: lead.companyName }, { l: "Job Title", v: lead.jobTitle },
+                                { l: "Location", v: lead.location }, { l: "Website", v: lead.website, href: lead.website || undefined },
+                                { l: "Preferred Contact", v: lead.preferredContactMethod }, { l: "Best Time", v: lead.bestTimeToContact },
+                                { l: "Spouse/Co-Owner", v: lead.spouseCoOwnerName }, { l: "Assigned To", v: ownerName },
+                            ].filter(r => r.v).map((r, i) => (
+                                <div key={i} className="py-1"><p className="text-[10px] text-[#9CA3AF] uppercase tracking-wider font-medium">{r.l}</p>
+                                    {r.href ? <a href={r.href} className="text-[#14B8A6] hover:underline font-medium text-sm" target={r.href.startsWith('http') ? '_blank' : undefined} rel={r.href.startsWith('http') ? 'noreferrer' : undefined}>{r.v}</a> : <p className="font-medium text-[#111827]">{r.v}</p>}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* CARD 2: Property & Service */}
+                    <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 280ms both' }}>
+                        <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#F1F5F9]">
+                            <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#FEF3C7] flex items-center justify-center"><Home size={14} className="text-[#D97706]" /></div><h3 className="text-sm font-semibold text-[#111827]">Property & Service</h3></div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                            {[
+                                { l: "Property Address", v: propertyAddr }, { l: "Property Type", v: lead.propertyType },
+                                { l: "Service Type", v: lead.serviceType }, { l: "Insurance Claim?", v: lead.isInsuranceClaim },
+                                { l: "Urgency", v: lead.urgencyLevel }, { l: "Homeowner?", v: lead.isHomeowner },
+                                { l: "Roof Age", v: lead.roofAge }, { l: "Roof Material", v: lead.currentRoofMaterial },
+                                { l: "Stories", v: lead.numberOfStories }, { l: "Previous Work", v: lead.previousRoofWork },
+                            ].filter(r => r.v).map((r, i) => (
+                                <div key={i} className="py-1"><p className="text-[10px] text-[#9CA3AF] uppercase tracking-wider font-medium">{r.l}</p><p className="font-medium text-[#111827]">{r.v}</p></div>
+                            ))}
+                        </div>
+                        {lead.issueDescription && <div className="mt-3 pt-3 border-t border-[#F1F5F9]"><p className="text-[10px] text-[#9CA3AF] uppercase tracking-wider font-medium mb-1">Issue Description</p><p className="text-sm text-[#111827] bg-[#F9FAFB] p-3 rounded-lg">{lead.issueDescription}</p></div>}
+                        {lead.knownDamageType && lead.knownDamageType.length > 0 && <div className="mt-3 flex flex-wrap gap-1.5">{lead.knownDamageType.map(d => <span key={d} className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#FEE2E2] text-[#DC2626] flex items-center gap-0.5"><AlertTriangle size={10} />{d}</span>)}</div>}
+                    </div>
+
+                    {/* CARD 3: Qualification & Budget */}
+                    <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 360ms both' }}>
+                        <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#F1F5F9]">
+                            <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#DBEAFE] flex items-center justify-center"><ClipboardList size={14} className="text-[#2563EB]" /></div><h3 className="text-sm font-semibold text-[#111827]">Qualification & Budget</h3></div>
+                        </div>
+                        {/* Verification badges */}
+                        <div className="flex flex-wrap gap-2 mb-3">
+                            {[{ k: lead.confirmedName, l: "Name" }, { k: lead.confirmedPhone, l: "Phone" }, { k: lead.confirmedEmail, l: "Email" }, { k: lead.confirmedAddress, l: "Address" }].map(item => (
+                                <span key={item.l} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${item.k ? "bg-[#DCFCE7] text-[#166534]" : "bg-[#F3F4F6] text-[#9CA3AF]"}`}>
+                                    {item.k ? <CheckCircle2 size={10} /> : <X size={10} />}{item.l}
+                                </span>
+                            ))}
+                        </div>
+                        <div className="space-y-0">
+                            {[
+                                { l: "Budget Range", v: lead.budgetRange }, { l: "Timeline", v: lead.workTimeline },
+                                { l: "Decision Maker?", v: lead.isDecisionMaker }, { l: "Financing Needed?", v: lead.financingNeeded },
+                                { l: "Getting Other Quotes?", v: lead.gettingOtherQuotes }, { l: "# Other Quotes", v: lead.numberOfOtherQuotes != null ? String(lead.numberOfOtherQuotes) : undefined },
+                                { l: "Top Priority", v: lead.topPriority }, { l: "HOA?", v: lead.isHOA },
+                                { l: "HOA Restrictions", v: lead.hoaRestrictions },
+                            ].filter(r => r.v).map((r, i, arr) => (
+                                <div key={i} className={`flex items-center justify-between py-2.5 ${i < arr.length - 1 ? 'border-b border-dashed border-[#F1F5F9]' : ''}`}>
+                                    <span className="text-xs text-[#6B7280]">{r.l}</span><span className="text-sm font-medium text-[#374151]">{r.v}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* CARD 4: Insurance & Assessment */}
+                    <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 440ms both' }}>
+                        <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#F1F5F9]">
+                            <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#FCE7F3] flex items-center justify-center"><Shield size={14} className="text-[#DB2777]" /></div><h3 className="text-sm font-semibold text-[#111827]">Insurance & Assessment</h3></div>
+                            <button onClick={() => { setEditingClaim(null); setShowClaimDialog(true); }} className="text-xs font-medium text-[#14B8A6] hover:text-[#0D9488]">+ New Claim</button>
+                        </div>
+                        <div className="space-y-0">
+                            {[
+                                { l: "Insurance Company", v: lead.insuranceCompanyName }, { l: "Claim Filed?", v: lead.hasClaimBeenFiled },
+                                { l: "Claim Number", v: lead.claimNumber }, { l: "Adjuster Assigned?", v: lead.adjusterAssigned },
+                                { l: "Adjuster Name", v: lead.adjusterName }, { l: "Adjuster Phone", v: lead.adjusterPhone },
+                                { l: "Adjuster Meeting", v: lead.adjusterMeetingDate ? formatDate(lead.adjusterMeetingDate) : undefined },
+                                { l: "Lead Score", v: lead.leadScore != null ? `${lead.leadScore}/10` : undefined },
+                                { l: "Next Step", v: lead.nextStep }, { l: "Follow-Up", v: lead.followUpDateTime ? formatDate(lead.followUpDateTime) : undefined },
+                                { l: "Inspection Date", v: lead.inspectionAppointmentDate ? formatDate(lead.inspectionAppointmentDate) : undefined },
+                            ].filter(r => r.v).map((r, i, arr) => (
+                                <div key={i} className={`flex items-center justify-between py-2.5 ${i < arr.length - 1 ? 'border-b border-dashed border-[#F1F5F9]' : ''}`}>
+                                    <span className="text-xs text-[#6B7280]">{r.l}</span><span className="text-sm font-medium text-[#374151]">{r.v}</span>
+                                </div>
+                            ))}
+                        </div>
+                        {lead.disqualifiedReason && <div className="mt-3 p-2 rounded-lg bg-[#FEE2E2] text-xs text-[#DC2626] font-medium">⚠️ Disqualified: {lead.disqualifiedReason}</div>}
+                        {lead.qualificationCallNotes && <div className="mt-3 pt-3 border-t border-[#F1F5F9]"><p className="text-[10px] text-[#9CA3AF] uppercase tracking-wider font-medium mb-1">Qualification Notes</p><p className="text-sm text-[#111827] bg-[#F9FAFB] p-3 rounded-lg whitespace-pre-wrap">{lead.qualificationCallNotes}</p></div>}
+                    </div>
+
+                    {/* CARD 5: Inspections */}
+                    <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 520ms both' }}>
+                        <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#F1F5F9]">
+                            <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#FFF7ED] flex items-center justify-center"><ClipboardList size={14} className="text-[#EA580C]" /></div><h3 className="text-sm font-semibold text-[#111827]">Inspections</h3><span className="text-xs bg-[#F1F5F9] text-[#6B7280] px-2 py-0.5 rounded-full font-medium">{inspections.length}</span></div>
+                            <button onClick={() => { setEditingInspection(null); setShowInspectionDialog(true); }} className="text-xs font-medium text-[#14B8A6] hover:text-[#0D9488]">+ New</button>
+                        </div>
+                        {inspectionsLoading ? <div className="flex justify-center py-8"><Loader2 className="animate-spin text-[#14B8A6]" size={20} /></div> :
+                            inspections.length === 0 ? <div className="text-center py-8"><ClipboardList size={24} className="text-[#D1D5DB] mx-auto mb-2" /><p className="text-xs text-[#9CA3AF]">No inspections yet</p></div> :
+                                <div className="space-y-2">{inspections.slice(0, 4).map((insp: any) => (
+                                    <div key={insp.id} className="flex items-center justify-between py-2 px-2 rounded-lg hover:bg-[#F9FAFB] transition-colors">
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex items-center gap-2"><Badge variant="outline" className="text-[10px]">{insp.inspectionType || "General"}</Badge>{insp.overallCondition && <Badge variant="outline" className="text-[10px]">{insp.overallCondition}</Badge>}</div>
+                                            <div className="flex items-center gap-3 mt-1 text-xs text-[#6B7280]"><span>{insp.inspectionDate ? formatDate(insp.inspectionDate) : '—'}</span>{insp.inspectorName && <span>by {insp.inspectorName}</span>}{insp.totalEstimate && <span className="font-medium text-[#111827]">${Number(insp.totalEstimate).toLocaleString()}</span>}</div>
+                                        </div>
+                                        <div className="flex gap-1"><button onClick={() => { setEditingInspection(insp); setShowInspectionDialog(true); }} className="p-1 rounded hover:bg-[#E5E7EB]"><Pencil size={12} className="text-[#6B7280]" /></button><button onClick={() => handleDeleteInspection(insp.id)} className="p-1 rounded hover:bg-[#FEE2E2]"><Trash2 size={12} className="text-[#EF4444]" /></button></div>
+                                    </div>
+                                ))}</div>}
+                    </div>
+
+                    {/* CARD 6: Insurance Claims */}
+                    <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 600ms both' }}>
+                        <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#F1F5F9]">
+                            <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#EDE9FE] flex items-center justify-center"><Shield size={14} className="text-[#7C3AED]" /></div><h3 className="text-sm font-semibold text-[#111827]">Insurance Claims</h3><span className="text-xs bg-[#F1F5F9] text-[#6B7280] px-2 py-0.5 rounded-full font-medium">{insuranceClaims.length}</span></div>
+                            <button onClick={() => { setEditingClaim(null); setShowClaimDialog(true); }} className="text-xs font-medium text-[#14B8A6] hover:text-[#0D9488]">+ New</button>
+                        </div>
+                        {claimsLoading ? <div className="flex justify-center py-8"><Loader2 className="animate-spin text-[#14B8A6]" size={20} /></div> :
+                            insuranceClaims.length === 0 ? <div className="text-center py-8"><Shield size={24} className="text-[#D1D5DB] mx-auto mb-2" /><p className="text-xs text-[#9CA3AF]">No insurance claims yet</p></div> :
+                                <div className="space-y-2">{insuranceClaims.map((claim: any) => (
+                                    <div key={claim.id} className="flex items-center justify-between py-2 px-2 rounded-lg hover:bg-[#F9FAFB] transition-colors">
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex items-center gap-2">{claim.claimStatus && <Badge className={`text-[10px] ${claim.claimStatus === 'Approved' ? 'bg-green-100 text-green-700' : claim.claimStatus === 'Denied' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>{claim.claimStatus}</Badge>}{claim.supplementNeeded && <Badge variant="outline" className="text-[10px] text-orange-600">Supplement</Badge>}</div>
+                                            <div className="flex items-center gap-3 mt-1 text-xs text-[#6B7280]"><span>#{claim.claimNumber || '—'}</span>{claim.insuranceEstimateACV && <span>ACV: ${Number(claim.insuranceEstimateACV).toLocaleString()}</span>}{claim.deductibleAmount && <span>Ded: ${Number(claim.deductibleAmount).toLocaleString()}</span>}</div>
+                                        </div>
+                                        <div className="flex gap-1"><button onClick={() => { setEditingClaim(claim); setShowClaimDialog(true); }} className="p-1 rounded hover:bg-[#E5E7EB]"><Pencil size={12} className="text-[#6B7280]" /></button><button onClick={() => handleDeleteClaim(claim.id)} className="p-1 rounded hover:bg-[#FEE2E2]"><Trash2 size={12} className="text-[#EF4444]" /></button></div>
+                                    </div>
+                                ))}</div>}
+                    </div>
+
+                    {/* CARD 7: Notes */}
+                    <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 680ms both' }}>
+                        <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#F1F5F9]">
+                            <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#FEF9C3] flex items-center justify-center"><FileText size={14} className="text-[#CA8A04]" /></div><h3 className="text-sm font-semibold text-[#111827]">Notes</h3></div>
+                        </div>
+                        <div className="bg-[#F9FAFB] p-3 rounded-lg mb-3 border border-[#E5E7EB]">
+                            <Textarea placeholder="Type your note here..." className="resize-none min-h-[60px] bg-white text-sm" value={newNote} onChange={(e) => setNewNote(e.target.value)} />
+                            <div className="flex justify-end mt-2"><Button size="sm" className="bg-[#14B8A6] text-white hover:bg-[#0D9488] text-xs" onClick={handleAddNote} disabled={!newNote.trim()}>Save Note</Button></div>
+                        </div>
+                        {notes.length === 0 ? <p className="text-center text-xs text-[#9CA3AF] py-4">No notes yet</p> :
+                            <div className="space-y-2 max-h-[200px] overflow-y-auto">{notes.map(note => (
+                                <div key={note.id} className="bg-[#FFFBEB] p-3 rounded-lg border border-[#FDE68A]/50"><p className="text-sm text-[#111827]">{note.content}</p><p className="text-[10px] text-[#9CA3AF] mt-1">{note.author} · {note.date}</p></div>
+                            ))}</div>}
+                    </div>
+
+                    {/* CARD 8: Activity Timeline */}
+                    <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 760ms both' }}>
+                        <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#F1F5F9]">
+                            <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#EFF6FF] flex items-center justify-center"><Clock size={14} className="text-[#2563EB]" /></div><h3 className="text-sm font-semibold text-[#111827]">Recent Activity</h3></div>
+                        </div>
+                        <div className="max-h-[280px] overflow-y-auto -mx-1 px-1"><ActivityTimeline entityType="Lead" entityId={id!} /></div>
+                    </div>
+
+                    {/* Tags card (full width) */}
+                    {lead.tags && lead.tags.length > 0 && (
+                        <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] lg:col-span-2" style={{ animation: 'fadeSlideUp 0.4s ease 840ms both' }}>
+                            <div className="flex items-center gap-2 mb-3"><div className="w-7 h-7 rounded-lg bg-[#CCFBF1] flex items-center justify-center"><Tag size={14} className="text-[#0D9488]" /></div><h3 className="text-sm font-semibold text-[#111827]">Tags</h3></div>
+                            <div className="flex flex-wrap gap-2">{lead.tags.map((t, i) => <span key={i} className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-[#14B8A6]/10 text-[#0D9488]"><Tag size={10} className="mr-1" />{t.tag.name}</span>)}</div>
+                        </div>
+                    )}
+                </div>
+            </div>
 
             {/* Convert Dialog */}
             {showConvertDialog && lead && (
-                <ConvertLeadDialog
-                    open={showConvertDialog}
-                    onClose={() => setShowConvertDialog(false)}
-                    lead={lead}
-                    onSuccess={handleConvertSuccess}
-                />
+                <ConvertLeadDialog open={showConvertDialog} onClose={() => setShowConvertDialog(false)} lead={lead} onSuccess={handleConvertSuccess} />
             )}
 
             {/* Inspection Form Dialog */}
             {showInspectionDialog && (
-                <InspectionFormDialog
-                    open={showInspectionDialog}
-                    onClose={() => { setShowInspectionDialog(false); setEditingInspection(null); }}
-                    onSave={handleSaveInspection}
-                    inspection={editingInspection}
-                />
+                <InspectionFormDialog open={showInspectionDialog} onClose={() => { setShowInspectionDialog(false); setEditingInspection(null); }} onSave={handleSaveInspection} inspection={editingInspection} />
             )}
 
             {/* Insurance Claim Form Dialog */}
             {showClaimDialog && (
-                <InsuranceClaimFormDialog
-                    open={showClaimDialog}
-                    onClose={() => { setShowClaimDialog(false); setEditingClaim(null); }}
-                    onSave={handleSaveClaim}
-                    claim={editingClaim}
-                />
+                <InsuranceClaimFormDialog open={showClaimDialog} onClose={() => { setShowClaimDialog(false); setEditingClaim(null); }} onSave={handleSaveClaim} claim={editingClaim} />
             )}
         </div>
     );
 };
+
+
+
+
 
 // ── Small Components ────────────────────────────────────────────────────
 

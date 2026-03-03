@@ -919,7 +919,23 @@ model Client {
   // 1️⃣3️⃣ Secondary Contact
   secondaryPhone          String?
   spouseCoOwnerName       String?
-  
+
+  // 1️⃣4️⃣ Extended Roof Details
+  roofSize                String?             // Sq ft from measurement tools
+  roofPitch               String?             // e.g., 6/12 pitch, 2 layers
+
+  // 1️⃣5️⃣ Lead Tracking
+  budgetRange             String?             // $5k-10k, $10k-20k, etc.
+  urgencyLevel            String?             // High, Medium, Low
+
+  // 1️⃣6️⃣ Project / Warranty
+  warrantyExpiration      DateTime?           // Manufacturer + labor warranty
+
+  // 1️⃣7️⃣ Communication Preferences
+  doNotContact            Boolean   @default(false)
+  nextFollowUp            DateTime?
+  language                String?             // e.g., English, Spanish, French
+
   // Tracking
   totalRevenue            Decimal       @default(0) @db.Decimal(15, 2)
   

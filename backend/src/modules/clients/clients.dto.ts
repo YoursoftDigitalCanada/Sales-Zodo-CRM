@@ -72,6 +72,22 @@ export interface CreateClientDto {
     // 1️⃣3️⃣ Secondary Contact
     secondaryPhone?: string | null;
     spouseCoOwnerName?: string | null;
+
+    // 1️⃣4️⃣ Extended Roof Details
+    roofSize?: string | null;
+    roofPitch?: string | null;
+
+    // 1️⃣5️⃣ Lead Tracking
+    budgetRange?: string | null;
+    urgencyLevel?: string | null;
+
+    // 1️⃣6️⃣ Warranty
+    warrantyExpiration?: Date | string | null;
+
+    // 1️⃣7️⃣ Communication Preferences
+    doNotContact?: boolean;
+    nextFollowUp?: Date | string | null;
+    language?: string | null;
 }
 
 export interface UpdateClientDto extends Partial<CreateClientDto> { }
@@ -158,16 +174,29 @@ export interface ClientResponseDto {
     secondaryPhone: string | null;
     spouseCoOwnerName: string | null;
 
+    // Extended
+    roofSize: string | null;
+    roofPitch: string | null;
+    budgetRange: string | null;
+    urgencyLevel: string | null;
+    warrantyExpiration: Date | null;
+    doNotContact: boolean;
+    nextFollowUp: Date | null;
+    language: string | null;
+
     // Metadata
     contactsCount: number;
     projectsCount: number;
+    invoicesCount: number;
+    quotesCount: number;
+    filesCount: number;
     createdAt: Date;
     updatedAt: Date;
 }
 
 type ClientWithRelations = Client & {
     assignedOwner?: { id: string; user: { firstName: string; lastName: string } } | null;
-    _count?: { contacts: number; projects: number };
+    _count?: { contacts: number; projects: number; invoices: number; quotes: number; files: number };
 };
 
 export function toClientResponseDto(c: ClientWithRelations): ClientResponseDto {
@@ -241,9 +270,22 @@ export function toClientResponseDto(c: ClientWithRelations): ClientResponseDto {
         secondaryPhone: c.secondaryPhone ?? null,
         spouseCoOwnerName: c.spouseCoOwnerName ?? null,
 
+        // Extended fields
+        roofSize: c.roofSize ?? null,
+        roofPitch: c.roofPitch ?? null,
+        budgetRange: c.budgetRange ?? null,
+        urgencyLevel: c.urgencyLevel ?? null,
+        warrantyExpiration: c.warrantyExpiration ?? null,
+        doNotContact: c.doNotContact ?? false,
+        nextFollowUp: c.nextFollowUp ?? null,
+        language: c.language ?? null,
+
         // Metadata
         contactsCount: c._count?.contacts || 0,
         projectsCount: c._count?.projects || 0,
+        invoicesCount: c._count?.invoices || 0,
+        quotesCount: c._count?.quotes || 0,
+        filesCount: c._count?.files || 0,
         createdAt: c.createdAt,
         updatedAt: c.updatedAt,
     };

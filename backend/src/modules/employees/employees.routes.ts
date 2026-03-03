@@ -17,7 +17,7 @@ router.post('/', requirePermission(PERMISSIONS.EMPLOYEES_CREATE), validate(creat
 // Create crew portal access (User + Employee in same tenant)
 router.post('/create-portal-access', requirePermission(PERMISSIONS.EMPLOYEES_CREATE), async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const tenantId = (req as any).tenantId;
+        const tenantId = (req as any).context?.tenantId;
         const { email, password, firstName, lastName, position, department } = req.body;
 
         if (!email || !password || !firstName || !lastName) {

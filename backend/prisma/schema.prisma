@@ -117,6 +117,53 @@ enum TimeEntryStatus {
   REJECTED
 }
 
+enum CrewNotificationType {
+  JOB_ASSIGNED
+  SCHEDULE_CHANGE
+  APPROVAL
+  ALERT
+  MESSAGE
+  WEATHER
+}
+
+enum PhotoCategory {
+  BEFORE
+  DURING
+  AFTER
+  DAMAGE
+  SAFETY
+  MATERIAL
+}
+
+enum IncidentType {
+  INJURY
+  NEAR_MISS
+  PROPERTY_DAMAGE
+  HAZARD
+}
+
+enum LeaveType {
+  VACATION
+  SICK
+  PERSONAL
+  UNPAID
+}
+
+enum DocType {
+  CERT
+  LICENSE
+  TRAINING
+  POLICY
+  PAYSLIP
+}
+
+enum EquipmentStatus {
+  AVAILABLE
+  IN_USE
+  MAINTENANCE
+  RETIRED
+}
+
 enum InvoiceStatus {
   DRAFT
   SENT
@@ -338,6 +385,17 @@ model Tenant {
   subscription          Subscription?
   timeEntries           TimeEntry[]
   jobNotes              JobNote[]
+  crewNotifications     CrewNotification[]
+  checklistTemplates    ChecklistTemplate[]
+  checklistSubmissions  ChecklistSubmission[]
+  jobPhotos             JobPhoto[]
+  jobMessages           JobMessage[]
+  equipment             Equipment[]
+  materialRequests      MaterialRequest[]
+  incidentReports       IncidentReport[]
+  leaveRequests         LeaveRequest[]
+  employeeDocuments     EmployeeDocument[]
+  jobCompletions        JobCompletion[]
 
   @@index([status])
   @@index([slug])
@@ -440,6 +498,19 @@ model Employee {
   createdContracts      Contract[]      @relation("ContractCreatedBy")
   timeEntries           TimeEntry[]
   jobNotes              JobNote[]
+  crewNotifications     CrewNotification[]
+  checklistSubmissions  ChecklistSubmission[]
+  locationPings         LocationPing[]
+  jobPhotos             JobPhoto[]
+  sentMessages          JobMessage[]
+  assignedEquipment     Equipment[]
+  materialRequests      MaterialRequest[]
+  incidentReports       IncidentReport[]
+  leaveRequests         LeaveRequest[]       @relation("LeaveRequests")
+  reviewedLeaves        LeaveRequest[]       @relation("LeaveReviewedBy")
+  availability          Availability[]
+  employeeDocuments     EmployeeDocument[]
+  jobCompletions        JobCompletion[]
 
   @@unique([tenantId, userId])
   @@unique([tenantId, employeeNumber])
@@ -1247,6 +1318,12 @@ model Project {
   contracts       Contract[]
   timeEntries     TimeEntry[]
   jobNotes        JobNote[]
+  checklistSubmissions ChecklistSubmission[]
+  jobPhotos       JobPhoto[]
+  jobMessages     JobMessage[]
+  materialRequests MaterialRequest[]
+  incidentReports IncidentReport[]
+  jobCompletion   JobCompletion?
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -1324,6 +1401,8 @@ model TimeEntry {
   @@index([projectId])
   @@index([status])
   @@index([startTime])
+
+  locationPings   LocationPing[]
 }
 
 model JobNote {
@@ -1348,6 +1427,311 @@ model JobNote {
   @@index([tenantId])
   @@index([projectId])
   @@index([employeeId])
+}
+
+// ============================================================================
+// CREW PORTAL — EXTENDED FEATURES
+// ============================================================================
+
+model CrewNotification {
+  id          String           @id @default(uuid())
+  title       String
+  body        String           @db.Text
+  type        CrewNotificationType @default(ALERT)
+  read        Boolean          @default(false)
+
+  employeeId  String
+  employee    Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  tenantId    String
+  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime         @default(now())
+
+  @@index([employeeId])
+  @@index([tenantId])
+  @@index([read])
+}
+
+model ChecklistTemplate {
+  id          String           @id @default(uuid())
+  name        String
+  category    String           @default("GENERAL") // SAFETY, QUALITY, EQUIPMENT, SITE
+  description String?
+  isActive    Boolean          @default(true)
+
+  tenantId    String
+  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  items       ChecklistItem[]
+  submissions ChecklistSubmission[]
+
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([tenantId])
+}
+
+model ChecklistItem {
+  id          String           @id @default(uuid())
+  question    String
+  inputType   String           @default("YES_NO") // YES_NO, TEXT, PHOTO, NUMBER
+  required    Boolean          @default(true)
+  order       Int              @default(0)
+
+  templateId  String
+  template    ChecklistTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+}
+
+model ChecklistSubmission {
+  id          String           @id @default(uuid())
+  responses   Json             @default("{}")
+  photos      Json             @default("[]")
+  completedAt DateTime         @default(now())
+
+  templateId  String
+  template    ChecklistTemplate @relation(fields: [templateId], references: [id])
+
+  employeeId  String
+  employee    Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  projectId   String
+  project     Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  tenantId    String
+  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([projectId])
+  @@index([employeeId])
+}
+
+model LocationPing {
+  id          String   @id @default(uuid())
+  lat         Float
+  lng         Float
+  accuracy    Float?   @default(0)
+  timestamp   DateTime @default(now())
+
+  timeEntryId String
+  timeEntry   TimeEntry @relation(fields: [timeEntryId], references: [id], onDelete: Cascade)
+
+  employeeId  String
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([timeEntryId])
+  @@index([employeeId])
+  @@index([timestamp])
+}
+
+model JobPhoto {
+  id          String        @id @default(uuid())
+  url         String
+  thumbnail   String?
+  caption     String?
+  category    PhotoCategory @default(DURING)
+  phase       String?
+  gpsLat      Float?
+  gpsLng      Float?
+  takenAt     DateTime      @default(now())
+  uploadedAt  DateTime      @default(now())
+
+  projectId   String
+  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  employeeId  String
+  employee    Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  tenantId    String
+  tenant      Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([employeeId])
+  @@index([tenantId])
+  @@index([category])
+}
+
+model JobMessage {
+  id          String   @id @default(uuid())
+  content     String   @db.Text
+  attachments Json     @default("[]")
+  messageType String   @default("TEXT") // TEXT, PHOTO, VOICE, SYSTEM
+  readBy      Json     @default("[]")
+
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  senderId    String
+  sender      Employee @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+
+  @@index([projectId])
+  @@index([senderId])
+  @@index([tenantId])
+}
+
+model Equipment {
+  id           String          @id @default(uuid())
+  name         String
+  serialNumber String?
+  category     String          @default("GENERAL")
+  status       EquipmentStatus @default(AVAILABLE)
+  notes        String?         @db.Text
+
+  assignedToId String?
+  assignedTo   Employee?       @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  tenantId     String
+  tenant       Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@index([tenantId])
+  @@index([assignedToId])
+  @@index([status])
+}
+
+model MaterialRequest {
+  id          String   @id @default(uuid())
+  items       Json     @default("[]") // [{ name, quantity, unit }]
+  status      String   @default("PENDING") // PENDING, APPROVED, DELIVERED
+  urgency     String   @default("MEDIUM") // LOW, MEDIUM, HIGH
+  notes       String?  @db.Text
+
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  requestedById String
+  requestedBy  Employee @relation(fields: [requestedById], references: [id], onDelete: Cascade)
+
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([projectId])
+  @@index([requestedById])
+}
+
+model IncidentReport {
+  id          String       @id @default(uuid())
+  type        IncidentType @default(HAZARD)
+  severity    String       @default("MEDIUM") // LOW, MEDIUM, HIGH, CRITICAL
+  description String       @db.Text
+  photos      Json         @default("[]")
+  witnesses   Json         @default("[]")
+  actionTaken String?      @db.Text
+  location    String?
+  gpsLat      Float?
+  gpsLng      Float?
+  reportedAt  DateTime     @default(now())
+
+  projectId   String
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  reportedById String
+  reportedBy  Employee     @relation(fields: [reportedById], references: [id], onDelete: Cascade)
+
+  tenantId    String
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([projectId])
+  @@index([reportedById])
+  @@index([severity])
+}
+
+model LeaveRequest {
+  id          String    @id @default(uuid())
+  type        LeaveType @default(PERSONAL)
+  startDate   DateTime
+  endDate     DateTime
+  reason      String?   @db.Text
+  status      String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  reviewNote  String?
+
+  reviewedById String?
+  reviewedBy  Employee? @relation("LeaveReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  employeeId  String
+  employee    Employee  @relation("LeaveRequests", fields: [employeeId], references: [id], onDelete: Cascade)
+
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([employeeId])
+  @@index([tenantId])
+  @@index([status])
+}
+
+model Availability {
+  id          String  @id @default(uuid())
+  dayOfWeek   Int     // 0=Sunday, 6=Saturday
+  startTime   String  @default("08:00")
+  endTime     String  @default("17:00")
+  available   Boolean @default(true)
+
+  employeeId  String
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, dayOfWeek])
+  @@index([employeeId])
+}
+
+model EmployeeDocument {
+  id          String   @id @default(uuid())
+  name        String
+  type        DocType  @default(CERT)
+  fileUrl     String
+  expiryDate  DateTime?
+  status      String   @default("VALID") // VALID, EXPIRING_SOON, EXPIRED
+
+  employeeId  String
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([employeeId])
+  @@index([tenantId])
+  @@index([type])
+}
+
+model JobCompletion {
+  id               String   @id @default(uuid())
+  completionPhotos Json     @default("[]")
+  clientSignature  String?  @db.Text
+  clientRating     Int?
+  clientFeedback   String?  @db.Text
+  completionNotes  String?  @db.Text
+  completedAt      DateTime @default(now())
+
+  projectId        String   @unique
+  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  completedById    String
+  completedBy      Employee @relation(fields: [completedById], references: [id], onDelete: Cascade)
+
+  tenantId         String
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([completedById])
 }
 
 // ============================================================================

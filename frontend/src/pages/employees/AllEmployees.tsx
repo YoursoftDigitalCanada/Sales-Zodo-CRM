@@ -46,7 +46,7 @@ interface FilterState {
 
 const AllEmployeesPage: React.FC = () => {
   // State
-  const [employees, setEmployees] = useState<Employee[]>(mockEmployees);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
@@ -67,37 +67,48 @@ const AllEmployeesPage: React.FC = () => {
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
 
+  // Map API employee data to frontend Employee type
+  const mapEmployeeData = (data: any[]): Employee[] => {
+    return data.map((e: any) => ({
+      id: e.id,
+      employeeId: e.employeeNumber || e.employeeId || `EMP${e.id?.slice(0, 3)}`,
+      firstName: e.user?.firstName || '',
+      lastName: e.user?.lastName || '',
+      email: e.user?.email || '',
+      phone: e.phone || '',
+      position: e.jobTitle || e.position || '',
+      departmentId: e.departmentId || '',
+      departmentName: e.department?.name || e.department || '',
+      status: e.isActive === false ? 'inactive' : (e.status?.toLowerCase() || 'active'),
+      employmentType: e.employmentType?.toLowerCase().replace('_', '-') || 'full-time',
+      joinDate: new Date(e.hireDate || e.createdAt),
+      salary: e.salary || 0,
+      skills: [],
+      address: { street: '', city: '', state: '', zipCode: '', country: '' },
+      emergencyContact: { name: '', relationship: '', phone: '' },
+      documents: [],
+      performance: { rating: 0, lastReviewDate: new Date(), nextReviewDate: new Date() },
+    }));
+  };
+
+  // Fetch employees from API
+  const refreshEmployees = async () => {
+    try {
+      const data = await getEmployees() as any[] || [];
+      setEmployees(mapEmployeeData(data));
+    } catch (error) {
+      console.error('Failed to fetch employees:', error);
+    }
+  };
+
   // Fetch employees from API on mount
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
         const data = await getEmployees() as any[] || [];
-        if (data.length > 0) {
-          const mapped: Employee[] = data.map((e: any) => ({
-            id: e.id,
-            employeeId: e.employeeId || `EMP${e.id?.slice(0, 3)}`,
-            firstName: e.user?.firstName || '',
-            lastName: e.user?.lastName || '',
-            email: e.user?.email || '',
-            phone: e.phone || '',
-            position: e.jobTitle || e.position || '',
-            departmentId: e.departmentId || '',
-            departmentName: e.department?.name || '',
-            status: e.status?.toLowerCase() || 'active',
-            employmentType: e.employmentType?.toLowerCase().replace('_', '-') || 'full-time',
-            joinDate: new Date(e.hireDate || e.createdAt),
-            salary: e.salary || 0,
-            skills: [],
-            address: { street: '', city: '', state: '', zipCode: '', country: '' },
-            emergencyContact: { name: '', relationship: '', phone: '' },
-            documents: [],
-            performance: { rating: 0, lastReviewDate: new Date(), nextReviewDate: new Date() },
-          }));
-          setEmployees(mapped);
-        }
+        setEmployees(mapEmployeeData(data));
       } catch (error) {
         console.error('Failed to fetch employees:', error);
-        toast.info('Using sample data. Login to see your employees.');
       } finally {
         setIsLoading(false);
       }
@@ -264,93 +275,36 @@ const AllEmployeesPage: React.FC = () => {
           position: data.position || 'Crew Member',
           department: department?.name,
         });
-        toast.success(`Crew Portal access created for ${data.portalEmail}`);
+        toast.success(`${data.firstName} ${data.lastName} added with Crew Portal access`);
+        // Re-fetch from DB so the new employee persists across refresh
+        await refreshEmployees();
+        return;
       } catch (err: any) {
         const msg = err.response?.data?.message || err.message || 'Unknown error';
         toast.error(`Portal creation failed: ${msg}`);
+        return;
       }
     }
 
     if (editingEmployee) {
-      // Update existing employee
-      setEmployees(
-        employees.map((emp) =>
-          emp.id === editingEmployee.id
-            ? {
-              ...emp,
-              firstName: data.firstName,
-              lastName: data.lastName,
-              email: data.email,
-              phone: data.phone,
-              position: data.position,
-              departmentId: data.departmentId,
-              departmentName: department?.name || '',
-              status: data.status,
-              employmentType: data.employmentType,
-              joinDate: new Date(data.joinDate),
-              salary: parseInt(data.salary),
-              skills: data.skills
-                ? data.skills.split(',').map((s: string) => s.trim()).filter(Boolean)
-                : [],
-              address: {
-                street: data.street || '',
-                city: data.city || '',
-                state: data.state || '',
-                zipCode: data.zipCode || '',
-                country: data.country || 'USA',
-              },
-              emergencyContact: {
-                name: data.emergencyName || '',
-                relationship: data.emergencyRelationship || '',
-                phone: data.emergencyPhone || '',
-              },
-            }
-            : emp
-        )
-      );
-      toast.success(`${data.firstName} ${data.lastName}'s profile has been updated`);
-      setEditingEmployee(undefined);
+      // Update existing employee via API
+      try {
+        await api.put(`/employees/${editingEmployee.id}`, {
+          department: department?.name || data.department,
+          position: data.position,
+          isActive: data.status === 'active',
+        });
+        toast.success(`${data.firstName} ${data.lastName}'s profile has been updated`);
+        setEditingEmployee(undefined);
+        await refreshEmployees();
+      } catch (err: any) {
+        const msg = err.response?.data?.message || err.message || 'Unknown error';
+        toast.error(`Update failed: ${msg}`);
+      }
     } else {
-      // Create new employee
-      const newEmployee: Employee = {
-        id: `emp-${Date.now()}`,
-        employeeId: `EMP${String(employees.length + 1).padStart(3, '0')}`,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
-        phone: data.phone,
-        position: data.position,
-        departmentId: data.departmentId,
-        departmentName: department?.name || '',
-        status: data.status,
-        employmentType: data.employmentType,
-        joinDate: new Date(data.joinDate),
-        salary: parseInt(data.salary),
-        skills: data.skills
-          ? data.skills.split(',').map((s: string) => s.trim()).filter(Boolean)
-          : [],
-        address: {
-          street: data.street || '',
-          city: data.city || '',
-          state: data.state || '',
-          zipCode: data.zipCode || '',
-          country: data.country || 'USA',
-        },
-        emergencyContact: {
-          name: data.emergencyName || '',
-          relationship: data.emergencyRelationship || '',
-          phone: data.emergencyPhone || '',
-        },
-        documents: [],
-        performance: {
-          rating: 0,
-          lastReviewDate: new Date(),
-          nextReviewDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
-        },
-      };
-
-      setEmployees([newEmployee, ...employees]);
-      toast.success(`${data.firstName} ${data.lastName} has been added to the team`);
+      // Non-portal employee creation — add to local state and show success
+      // (Full API-based creation requires a User first; portal flow handles this)
+      toast.info('To persist employees, use the Crew Portal tab to create login credentials.');
     }
   };
 

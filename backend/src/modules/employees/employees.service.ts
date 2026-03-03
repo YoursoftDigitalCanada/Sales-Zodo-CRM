@@ -1,9 +1,11 @@
 import { employeesRepository } from './employees.repository';
 import { CreateEmployeeDto, UpdateEmployeeDto, EmployeeQueryDto, toEmployeeResponseDto } from './employees.dto';
-import { NotFoundError } from '../../common/errors/HttpErrors';
+import { NotFoundError, ConflictError, BadRequestError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
 import { activityLogger } from '../../common/services/activity-logger.service';
 import { eventBus } from '../../common/events/event-bus';
+import { prisma } from '../../config/database';
+import { hashPassword } from '../../common/utils/password';
 
 export class EmployeesService {
     async create(tenantId: string, data: CreateEmployeeDto) {
@@ -25,6 +27,99 @@ export class EmployeesService {
         });
 
         return dto;
+    }
+
+    /**
+     * Create portal access for an employee (User + Employee in same tenant).
+     * CRM admin calls this to give crew members login credentials.
+     */
+    async createPortalAccess(tenantId: string, data: {
+        email: string;
+        password: string;
+        firstName: string;
+        lastName: string;
+        position?: string;
+        department?: string;
+    }) {
+        // Validate email domain
+        if (!data.email.endsWith('@zodo.ca')) {
+            throw new BadRequestError('Portal email must end with @zodo.ca');
+        }
+
+        // Check if user already exists
+        const existingUser = await prisma.user.findUnique({
+            where: { email: data.email.toLowerCase() },
+        });
+
+        if (existingUser) {
+            throw new ConflictError(
+                'An account with this email already exists',
+                ErrorCodes.USER_ALREADY_EXISTS
+            );
+        }
+
+        // Find Staff role for this tenant (lowest permission level for crew)
+        const staffRole = await prisma.role.findFirst({
+            where: { tenantId, name: 'Staff' },
+        });
+
+        if (!staffRole) {
+            throw new BadRequestError('Staff role not found for this tenant. Please contact support.');
+        }
+
+        const passwordHash = await hashPassword(data.password);
+
+        // Create User + Employee in a transaction
+        const result = await prisma.$transaction(async (tx) => {
+            const user = await tx.user.create({
+                data: {
+                    email: data.email.toLowerCase(),
+                    passwordHash,
+                    firstName: data.firstName,
+                    lastName: data.lastName,
+                    status: 'ACTIVE',
+                    emailVerified: true,
+                    tenantId,
+                },
+            });
+
+            const employee = await tx.employee.create({
+                data: {
+                    userId: user.id,
+                    tenantId,
+                    roleId: staffRole.id,
+                    position: data.position || 'Crew Member',
+                    department: data.department || null,
+                    isActive: true,
+                },
+                include: {
+                    user: { select: { email: true, firstName: true, lastName: true } },
+                    role: { select: { name: true } },
+                },
+            });
+
+            return { user, employee };
+        });
+
+        activityLogger.log({
+            tenantId, entityType: 'Employee', entityId: result.employee.id,
+            action: 'CREATE', module: 'employees',
+            description: `Created crew portal access for ${data.firstName} ${data.lastName} (${data.email})`,
+            metadata: { portalEmail: data.email },
+        });
+
+        return {
+            success: true,
+            message: `Portal access created for ${data.email}`,
+            employee: {
+                id: result.employee.id,
+                userId: result.user.id,
+                email: result.user.email,
+                firstName: result.user.firstName,
+                lastName: result.user.lastName,
+                role: result.employee.role?.name,
+            },
+        };
     }
 
     async getById(id: string, tenantId: string) {
@@ -73,3 +168,4 @@ export class EmployeesService {
 }
 
 export const employeesService = new EmployeesService();
+

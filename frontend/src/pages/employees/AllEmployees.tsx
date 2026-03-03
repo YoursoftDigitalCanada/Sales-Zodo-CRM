@@ -36,6 +36,7 @@ import {
   EmploymentType,
 } from '@/components/employees';
 import { getEmployees } from "@/features/users";
+import api from "@/lib/axios";
 
 interface FilterState {
   departments: string[];
@@ -252,28 +253,21 @@ const AllEmployeesPage: React.FC = () => {
   const handleAddEmployee = async (data: any) => {
     const department = mockDepartments.find((d) => d.id === data.departmentId);
 
-    // If portal credentials are provided, register user via API
+    // If portal credentials are provided, create crew portal access within this tenant
     if (data.portalEmail && data.portalPassword && !editingEmployee) {
       try {
-        const API_BASE = import.meta.env.VITE_API_URL || 'https://api.zodo.ca/api/v1';
-        const res = await fetch(`${API_BASE}/auth/register`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: data.portalEmail,
-            password: data.portalPassword,
-            firstName: data.firstName,
-            lastName: data.lastName,
-          }),
+        await api.post('/employees/create-portal-access', {
+          email: data.portalEmail,
+          password: data.portalPassword,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          position: data.position || 'Crew Member',
+          department: department?.name,
         });
-        const result = await res.json();
-        if (!res.ok) {
-          toast.error(`Portal creation failed: ${result.message || 'Unknown error'}`);
-        } else {
-          toast.success(`Crew Portal access created for ${data.portalEmail}`);
-        }
+        toast.success(`Crew Portal access created for ${data.portalEmail}`);
       } catch (err: any) {
-        toast.error(`Portal creation failed: ${err.message}`);
+        const msg = err.response?.data?.message || err.message || 'Unknown error';
+        toast.error(`Portal creation failed: ${msg}`);
       }
     }
 

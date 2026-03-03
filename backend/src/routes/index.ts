@@ -70,6 +70,9 @@ import timelineRoutes from '../modules/timeline/timeline.routes';
 import adminRoutes from '../modules/super-admin/admin.routes';
 import { adminAuthService } from '../modules/super-admin/admin-auth.service';
 
+// Crew Portal module
+import crewRoutes from '../modules/crew/crew.routes';
+
 /**
  * Register all API routes
  *
@@ -178,6 +181,9 @@ export function registerRoutes(app: Application): void {
 
   // Timeline
   protectedRouter.use('/timeline', timelineRoutes);
+
+  // Crew Portal
+  protectedRouter.use('/crew', crewRoutes);
 
   // Mount protected router on the main API router
   apiRouter.use(protectedRouter);

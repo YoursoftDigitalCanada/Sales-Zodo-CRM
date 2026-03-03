@@ -110,6 +110,13 @@ enum ProjectStatus {
   ARCHIVED
 }
 
+enum TimeEntryStatus {
+  CLOCKED_IN
+  COMPLETED
+  APPROVED
+  REJECTED
+}
+
 enum InvoiceStatus {
   DRAFT
   SENT
@@ -329,6 +336,8 @@ model Tenant {
   leadInspections       LeadInspection[]
   leadInsuranceClaims   LeadInsuranceClaim[]
   subscription          Subscription?
+  timeEntries           TimeEntry[]
+  jobNotes              JobNote[]
 
   @@index([status])
   @@index([slug])
@@ -429,6 +438,8 @@ model Employee {
   eventAttendees        CalendarEventAttendee[]
   createdQuotes         Quote[]         @relation("CreatedByEmployee")
   createdContracts      Contract[]      @relation("ContractCreatedBy")
+  timeEntries           TimeEntry[]
+  jobNotes              JobNote[]
 
   @@unique([tenantId, userId])
   @@unique([tenantId, employeeNumber])
@@ -1155,6 +1166,7 @@ model Task {
   subtasks        Task[]        @relation("TaskSubtasks")
   parentTask      Task?         @relation("TaskSubtasks", fields: [parentTaskId], references: [id], onDelete: SetNull)
   parentTaskId    String?
+  timeEntries     TimeEntry[]
 
   @@index([tenantId])
   @@index([status])
@@ -1233,6 +1245,8 @@ model Project {
   invoices        Invoice[]
   emails          Email[]
   contracts       Contract[]
+  timeEntries     TimeEntry[]
+  jobNotes        JobNote[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -1259,23 +1273,82 @@ model ProjectMember {
   @@index([employeeId])
 }
 
-// FUTURE: Time Tracking (stub for extensibility)
-// model TimeEntry {
-//   id          String    @id @default(uuid())
-//   description String?
-//   startTime   DateTime
-//   endTime     DateTime?
-//   duration    Int       // in minutes
-//   billable    Boolean   @default(true)
-//   
-//   taskId      String?
-//   projectId   String
-//   employeeId  String
-//   tenantId    String
-//   
-//   createdAt   DateTime  @default(now())
-//   updatedAt   DateTime  @updatedAt
-// }
+// ============================================================================
+// TIME TRACKING MODULE (Crew Portal)
+// ============================================================================
+
+model TimeEntry {
+  id              String          @id @default(uuid())
+  description     String?
+
+  // Clock times
+  startTime       DateTime
+  endTime         DateTime?
+  duration        Int?            // in minutes (auto-calc on clock-out)
+
+  // Billing
+  billable        Boolean         @default(true)
+  hourlyRate      Decimal?        @db.Decimal(10, 2)
+
+  // Phase / category
+  phase           String?         // Inspection, Tear-off, Install, Cleanup, Travel
+  notes           String?         @db.Text
+
+  // GPS
+  clockInLat      Float?
+  clockInLng      Float?
+  clockOutLat     Float?
+  clockOutLng     Float?
+
+  // Status
+  status          TimeEntryStatus @default(CLOCKED_IN)
+
+  // Relations
+  taskId          String?
+  task            Task?           @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  projectId       String?
+  project         Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  employeeId      String
+  employee        Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  tenantId        String
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([tenantId])
+  @@index([employeeId])
+  @@index([projectId])
+  @@index([status])
+  @@index([startTime])
+}
+
+model JobNote {
+  id              String      @id @default(uuid())
+  content         String      @db.Text
+  noteType        String      @default("GENERAL")  // UPDATE, ISSUE, SAFETY, GENERAL
+  photos          Json        @default("[]")        // Array of photo URLs
+  visibility      String      @default("INTERNAL")  // INTERNAL, CLIENT_VISIBLE
+
+  projectId       String
+  project         Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  employeeId      String
+  employee        Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  tenantId        String
+  tenant          Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([tenantId])
+  @@index([projectId])
+  @@index([employeeId])
+}
 
 // ============================================================================
 // CALENDAR MODULE

@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getClientById, createClient, updateClient } from "@/services/clientService";
+import { getEmployees } from "@/features/users";
 
 // ============================================
 // CANADIAN DATA
@@ -502,6 +503,24 @@ const AddClientPage = () => {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>(initialFormState);
   const [activeSection, setActiveSection] = useState<string>("basic");
+  const [employeeOptions, setEmployeeOptions] = useState<{ value: string; label: string }[]>([]);
+
+  // Fetch employees for the Assigned Owner dropdown
+  useEffect(() => {
+    const fetchEmployeeList = async () => {
+      try {
+        const data = (await getEmployees()) as any[] || [];
+        const options = data.map((e: any) => ({
+          value: e.id,
+          label: `${e.user?.firstName || ''} ${e.user?.lastName || ''}`.trim() || e.id,
+        }));
+        setEmployeeOptions(options);
+      } catch (error) {
+        console.error('Failed to fetch employees for dropdown:', error);
+      }
+    };
+    fetchEmployeeList();
+  }, []);
 
   // Fetch client data if editing
   useEffect(() => {
@@ -928,13 +947,14 @@ const AddClientPage = () => {
                         ]}
                       />
 
-                      <StyledInput
+                      <StyledSelect
                         label="Assigned Owner"
-                        id="assignedOwner"
-                        placeholder="e.g. John Smith"
                         value={formData.assignedOwner}
-                        onChange={handleInputChange}
-                        icon={User}
+                        onValueChange={(val) =>
+                          handleSelectChange("assignedOwner", val)
+                        }
+                        placeholder="Select an employee"
+                        options={employeeOptions}
                       />
                     </div>
                   </div>

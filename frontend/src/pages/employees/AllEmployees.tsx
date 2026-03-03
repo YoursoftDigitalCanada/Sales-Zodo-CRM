@@ -249,8 +249,33 @@ const AllEmployeesPage: React.FC = () => {
   };
 
   // Add/Edit employee submission
-  const handleAddEmployee = (data: any) => {
+  const handleAddEmployee = async (data: any) => {
     const department = mockDepartments.find((d) => d.id === data.departmentId);
+
+    // If portal credentials are provided, register user via API
+    if (data.portalEmail && data.portalPassword && !editingEmployee) {
+      try {
+        const API_BASE = import.meta.env.VITE_API_URL || 'https://api.zodo.ca/api/v1';
+        const res = await fetch(`${API_BASE}/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: data.portalEmail,
+            password: data.portalPassword,
+            firstName: data.firstName,
+            lastName: data.lastName,
+          }),
+        });
+        const result = await res.json();
+        if (!res.ok) {
+          toast.error(`Portal creation failed: ${result.message || 'Unknown error'}`);
+        } else {
+          toast.success(`Crew Portal access created for ${data.portalEmail}`);
+        }
+      } catch (err: any) {
+        toast.error(`Portal creation failed: ${err.message}`);
+      }
+    }
 
     if (editingEmployee) {
       // Update existing employee

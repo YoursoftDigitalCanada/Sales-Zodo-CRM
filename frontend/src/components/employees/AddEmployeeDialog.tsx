@@ -3,17 +3,21 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  X, 
-  User, 
-  Mail, 
-  Phone, 
-  Building2, 
-  Briefcase, 
+import {
+  X,
+  User,
+  Mail,
+  Phone,
+  Building2,
+  Briefcase,
   Calendar,
   MapPin,
   DollarSign,
-  Upload
+  Upload,
+  Lock,
+  Eye,
+  EyeOff,
+  Globe
 } from 'lucide-react';
 import {
   Dialog,
@@ -63,6 +67,14 @@ const employeeFormSchema = z.object({
   emergencyRelationship: z.string().optional(),
   emergencyPhone: z.string().optional(),
   skills: z.string().optional(),
+  portalEmail: z.string().optional().refine(
+    (val) => !val || val.endsWith('@zodo.ca'),
+    { message: 'Portal email must end with @zodo.ca' }
+  ),
+  portalPassword: z.string().optional().refine(
+    (val) => !val || val.length >= 8,
+    { message: 'Password must be at least 8 characters' }
+  ),
 });
 
 type EmployeeFormValues = z.infer<typeof employeeFormSchema>;
@@ -93,8 +105,8 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
       departmentId: editingEmployee?.departmentId || '',
       employmentType: editingEmployee?.employmentType || 'full-time',
       status: editingEmployee?.status || 'active',
-      joinDate: editingEmployee?.joinDate 
-        ? new Date(editingEmployee.joinDate).toISOString().split('T')[0] 
+      joinDate: editingEmployee?.joinDate
+        ? new Date(editingEmployee.joinDate).toISOString().split('T')[0]
         : new Date().toISOString().split('T')[0],
       salary: editingEmployee?.salary?.toString() || '',
       street: editingEmployee?.address?.street || '',
@@ -106,6 +118,8 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
       emergencyRelationship: editingEmployee?.emergencyContact?.relationship || '',
       emergencyPhone: editingEmployee?.emergencyContact?.phone || '',
       skills: editingEmployee?.skills?.join(', ') || '',
+      portalEmail: editingEmployee?.portalEmail || '',
+      portalPassword: '',
     },
   });
 
@@ -127,11 +141,12 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
             <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="basic">Basic Info</TabsTrigger>
                 <TabsTrigger value="employment">Employment</TabsTrigger>
                 <TabsTrigger value="address">Address</TabsTrigger>
                 <TabsTrigger value="emergency">Emergency</TabsTrigger>
+                <TabsTrigger value="portal">Crew Portal</TabsTrigger>
               </TabsList>
 
               <TabsContent value="basic" className="space-y-4 mt-4">
@@ -229,8 +244,8 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
                     <FormItem>
                       <FormLabel>Skills (comma separated)</FormLabel>
                       <FormControl>
-                        <Textarea 
-                          {...field} 
+                        <Textarea
+                          {...field}
                           placeholder="React, TypeScript, Node.js, AWS..."
                           className="resize-none"
                           rows={2}
@@ -455,7 +470,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
               <TabsContent value="emergency" className="space-y-4 mt-4">
                 <div className="bg-amber-50 border border-amber-200 rounded-md p-4 mb-4">
                   <p className="text-sm text-amber-800">
-                    Emergency contact information is important for workplace safety. 
+                    Emergency contact information is important for workplace safety.
                     Please provide accurate details.
                   </p>
                 </div>
@@ -505,17 +520,97 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
                   )}
                 />
               </TabsContent>
+
+              <TabsContent value="portal" className="space-y-4 mt-4">
+                <div className="bg-cyan-50 border border-cyan-200 rounded-md p-4 mb-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Globe className="w-4 h-4 text-cyan-700" />
+                    <p className="text-sm font-semibold text-cyan-800">Crew Portal Access</p>
+                  </div>
+                  <p className="text-sm text-cyan-700">
+                    Create login credentials for the employee to access the Crew Portal at{' '}
+                    <strong>crew.zodo.ca</strong>. Leave empty to skip portal access.
+                  </p>
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="portalEmail"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Portal Email</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
+                          <Input
+                            {...field}
+                            className="pl-10"
+                            placeholder="firstname.lastname@zodo.ca"
+                            onChange={(e) => {
+                              let val = e.target.value;
+                              field.onChange(val);
+                            }}
+                          />
+                        </div>
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">Must end with @zodo.ca</p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="portalPassword"
+                  render={({ field }) => {
+                    const [showPw, setShowPw] = React.useState(false);
+                    return (
+                      <FormItem>
+                        <FormLabel>Portal Password</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
+                            <Input
+                              {...field}
+                              type={showPw ? 'text' : 'password'}
+                              className="pl-10 pr-10"
+                              placeholder="Min 8 characters"
+                            />
+                            <button
+                              type="button"
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#0F172A]"
+                              onClick={() => setShowPw(!showPw)}
+                            >
+                              {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          </div>
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground">Min 8 chars, must include uppercase, lowercase, number, and special character (!@#$%...)</p>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
+
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+                  <p className="text-xs text-blue-700">
+                    <strong>Tip:</strong> Use the format <code>firstname.lastname@zodo.ca</code> for consistency.
+                    The employee will use these credentials to log into the Crew Portal to view assigned jobs,
+                    track time, submit checklists, and more.
+                  </p>
+                </div>
+              </TabsContent>
             </Tabs>
 
             <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button 
-                type="button" 
-                variant="outline" 
+              <Button
+                type="button"
+                variant="outline"
                 onClick={() => onOpenChange(false)}
               >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 type="submit"
                 className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white"
               >

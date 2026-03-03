@@ -1,18 +1,10 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator
+  Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList,
+  BreadcrumbPage, BreadcrumbSeparator
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -25,96 +17,40 @@ import { getInvoices } from "@/features/invoices/services/invoice-service";
 import { ActivityTimeline } from "@/components/ActivityTimeline";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Bell, Mail, Phone, MapPin, Star, Tag, User, Calendar, Plus, MoreHorizontal,
+  Mail, Phone, MapPin, Tag, User, Calendar, Plus, MoreHorizontal,
   Pencil, MessageSquare, FileText, CheckSquare, TrendingUp, FolderOpen,
-  Send, ArrowLeft, Loader2, DollarSign, Clock, Users, Download, Trash2, X,
-  Image as ImageIcon, File, Files, Clock3, Receipt,
-  Home, Shield, Landmark, AlertTriangle, ChevronDown, ChevronUp, Globe, BanIcon,
-  Layers, Ruler, Wrench, Building2, CreditCard, CircleDollarSign
+  Send, ArrowLeft, Loader2, DollarSign, Clock, Download, X,
+  Home, Shield, AlertTriangle, ChevronDown, Globe, BanIcon,
+  Layers, Ruler, Wrench, Building2, CreditCard, CircleDollarSign,
+  Receipt, PhoneCall, StickyNote, ExternalLink, Upload
 } from "lucide-react";
 
 // ── Interfaces ──────────────────────────────────────────────────────
 interface ClientData {
-  id: string;
-  clientName: string;
-  companyName?: string;
-  clientType: string;
-  clientLogo?: string;
-  primaryEmail: string;
-  primaryPhone: string;
-  secondaryPhone?: string;
-  spouseCoOwnerName?: string;
-  status: string;
-  lifecycleStage?: string;
-  assignedOwner?: any;
-
-  // Address
-  streetAddress?: string;
-  suite?: string;
-  city?: string;
-  province?: string;
-  postalCode?: string;
-  country?: string;
-
-  // Property & Roof
-  propertyType?: string;
-  numberOfStories?: string;
-  currentRoofMaterial?: string;
-  roofAge?: string;
-  roofSize?: string;
-  roofPitch?: string;
-  serviceType?: string;
-  isHomeowner?: string;
-  isHOA?: string;
-  hoaRestrictions?: string;
-
-  // Insurance
-  insuranceCompanyName?: string;
-  isInsuranceClaim?: string;
-
-  // Lead
-  leadSource?: string;
-  clientCategory?: string;
-  budgetRange?: string;
+  id: string; clientName: string; companyName?: string; clientType: string;
+  clientLogo?: string; primaryEmail: string; primaryPhone: string;
+  secondaryPhone?: string; spouseCoOwnerName?: string; status: string;
+  lifecycleStage?: string; assignedOwner?: any;
+  streetAddress?: string; suite?: string; city?: string; province?: string;
+  postalCode?: string; country?: string;
+  propertyType?: string; numberOfStories?: string; currentRoofMaterial?: string;
+  roofAge?: string; roofSize?: string; roofPitch?: string; serviceType?: string;
+  isHomeowner?: string; isHOA?: string; hoaRestrictions?: string;
+  insuranceCompanyName?: string; isInsuranceClaim?: string;
+  leadSource?: string; clientCategory?: string; budgetRange?: string;
   urgencyLevel?: string;
-
-  // Financial
-  creditLimit?: number;
-  paymentTerms?: string;
-  currency?: string;
-  totalRevenue?: number;
-
-  // Communication
-  preferredContactMethod?: string;
-  bestTimeToContact?: string;
-  language?: string;
-  doNotContact?: boolean;
-  nextFollowUp?: string;
-
-  // Notes
-  internalNotes?: string;
-  tags?: any;
-
-  // Contact
-  contactName?: string;
-  position?: string;
-  directPhone?: string;
-
-  // Warranty
+  creditLimit?: number; paymentTerms?: string; currency?: string; totalRevenue?: number;
+  preferredContactMethod?: string; bestTimeToContact?: string; language?: string;
+  doNotContact?: boolean; nextFollowUp?: string;
+  internalNotes?: string; tags?: any;
+  contactName?: string; position?: string; directPhone?: string;
   warrantyExpiration?: string;
-
-  // Counts
   _count?: { contacts?: number; projects?: number; invoices?: number; quotes?: number; files?: number };
-
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt?: string; updatedAt?: string;
 }
 
 interface ClientTask {
-  id: string;
-  title: string;
-  dueDate: string;
-  completed: boolean;
+  id: string; title: string; dueDate: string; completed: boolean;
   priority: 'High' | 'Medium' | 'Low';
 }
 
@@ -148,56 +84,116 @@ const formatAssignedOwner = (o: unknown): string => {
   if (!o) return "";
   if (typeof o === "string") return o;
   const x = o as any;
-  const fn = x.firstName || x.user?.firstName || "";
-  const ln = x.lastName || x.user?.lastName || "";
-  return `${fn} ${ln}`.trim();
+  return `${x.firstName || x.user?.firstName || ""} ${x.lastName || x.user?.lastName || ""}`.trim();
 };
 
-const buildAddress = (d: ClientData) => {
-  return [d.streetAddress, d.suite, d.city, d.province, d.postalCode, d.country].filter(Boolean).join(", ");
-};
+const buildAddress = (d: ClientData) =>
+  [d.streetAddress, d.suite, d.city, d.province, d.postalCode, d.country].filter(Boolean).join(", ");
 
-const getInitials = (name: string) => name ? name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : "CL";
+const getInitials = (name: string) =>
+  name ? name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : "CL";
 
 const fmtCurrency = (n?: number, currency = 'CAD') =>
   new Intl.NumberFormat('en-CA', { style: 'currency', currency, minimumFractionDigits: 2 }).format(n || 0);
 
 const fmtDate = (d?: string) => d ? new Date(d).toLocaleDateString() : "—";
 
-// ── Collapsible Section ─────────────────────────────────────────────
-function Section({ title, icon: Icon, children, defaultOpen = true }: {
-  title: string; icon: any; children: React.ReactNode; defaultOpen?: boolean;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
+const fmtPhone = (p?: string) => {
+  if (!p) return "";
+  const digits = p.replace(/\D/g, '');
+  if (digits.length === 10) return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  if (digits.length === 11 && digits[0] === '1') return `(${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
+  return p;
+};
+
+// ── Animated Counter ────────────────────────────────────────────────
+function AnimatedNumber({ value, prefix = "", suffix = "" }: { value: number; prefix?: string; suffix?: string }) {
+  const [display, setDisplay] = useState(0);
+  useEffect(() => {
+    if (value === 0) { setDisplay(0); return; }
+    const duration = 600;
+    const start = Date.now();
+    const tick = () => {
+      const elapsed = Date.now() - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplay(Math.round(value * eased));
+      if (progress < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }, [value]);
+  return <>{prefix}{display.toLocaleString()}{suffix}</>;
+}
+
+// ── Card Wrapper ────────────────────────────────────────────────────
+function DashCard({ children, className = "", delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
   return (
-    <Card>
-      <CardHeader
-        className="pb-2 cursor-pointer flex flex-row items-center justify-between border-b hover:bg-slate-50/50 transition"
-        onClick={() => setOpen(!open)}
-      >
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 bg-[#0891B2]/10 rounded-md"><Icon className="h-3.5 w-3.5 text-[#0891B2]" /></div>
-          <CardTitle className="text-xs font-semibold text-[#0F172A] uppercase tracking-wide">{title}</CardTitle>
-        </div>
-        {open ? <ChevronUp className="h-3.5 w-3.5 text-[#94A3B8]" /> : <ChevronDown className="h-3.5 w-3.5 text-[#94A3B8]" />}
-      </CardHeader>
-      {open && <CardContent className="pt-3 space-y-2.5">{children}</CardContent>}
-    </Card>
+    <div
+      className={`bg-white rounded-xl border border-[#E5E7EB] p-5 transition-all duration-200
+        hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5
+        shadow-[0_1px_3px_rgba(0,0,0,0.08)] ${className}`}
+      style={{ animation: `fadeSlideUp 0.4s ease ${delay}ms both` }}
+    >
+      {children}
+    </div>
   );
 }
 
-function Field({ label, value, icon: Icon }: { label: string; value?: string | number | null; icon?: any }) {
-  if (!value && value !== 0) return null;
+function CardHeader({ icon, title, count, action, actionLabel = "View All →", onAction }: {
+  icon: React.ReactNode; title: string; count?: number; action?: () => void;
+  actionLabel?: string; onAction?: () => void;
+}) {
   return (
-    <div className="flex items-start gap-2.5 group">
-      {Icon && (
-        <div className="p-1.5 bg-[#F8FAFC] rounded-md group-hover:bg-[#0891B2]/10 transition-colors mt-0.5">
-          <Icon className="h-3 w-3 text-[#475569] group-hover:text-[#0891B2]" />
-        </div>
+    <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#F1F5F9]">
+      <div className="flex items-center gap-2">
+        {icon}
+        <h3 className="text-sm font-semibold text-[#111827]">{title}</h3>
+        {count !== undefined && (
+          <span className="text-xs bg-[#F1F5F9] text-[#6B7280] px-2 py-0.5 rounded-full font-medium">{count}</span>
+        )}
+      </div>
+      {(action || onAction) && (
+        <button
+          onClick={action || onAction}
+          className="text-xs font-medium text-[#14B8A6] hover:text-[#0D9488] transition-colors"
+        >
+          {actionLabel}
+        </button>
       )}
-      <div className="min-w-0 flex-1">
-        <p className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-medium">{label}</p>
-        <p className="text-sm font-medium text-[#0F172A] break-words">{String(value)}</p>
+    </div>
+  );
+}
+
+function EmptyState({ icon, title, subtitle, cta, onCta }: {
+  icon: React.ReactNode; title: string; subtitle: string; cta?: string; onCta?: () => void;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center py-8 text-center">
+      <div className="w-12 h-12 rounded-full bg-[#F1F5F9] flex items-center justify-center mb-3">{icon}</div>
+      <h4 className="text-sm font-semibold text-[#111827] mb-1">{title}</h4>
+      <p className="text-xs text-[#6B7280] mb-3 max-w-[220px]">{subtitle}</p>
+      {cta && onCta && (
+        <button onClick={onCta} className="text-xs font-medium text-white bg-[#14B8A6] hover:bg-[#0D9488] px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5">
+          <Plus size={14} />{cta}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function InfoField({ label, value, icon: Icon, href }: { label: string; value?: string | null; icon?: any; href?: string }) {
+  if (!value) return null;
+  const content = href ? (
+    <a href={href} className="text-sm text-[#14B8A6] hover:underline font-medium break-all">{value}</a>
+  ) : (
+    <p className="text-sm font-medium text-[#111827] break-words">{value}</p>
+  );
+  return (
+    <div className="flex items-start gap-2.5 py-1.5">
+      {Icon && <div className="p-1 bg-[#F9FAFB] rounded mt-0.5"><Icon className="h-3.5 w-3.5 text-[#6B7280]" /></div>}
+      <div className="flex-1 min-w-0">
+        <p className="text-[10px] text-[#9CA3AF] uppercase tracking-wider font-medium mb-0.5">{label}</p>
+        {content}
       </div>
     </div>
   );
@@ -210,12 +206,12 @@ const ClientDetailPage = () => {
   const { toast } = useToast();
   const [client, setClient] = useState<ClientData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("deals");
 
   // Notes
   const [internalNotes, setInternalNotes] = useState("");
   const [newNote, setNewNote] = useState("");
   const [savingNote, setSavingNote] = useState(false);
+  const [showNoteForm, setShowNoteForm] = useState(false);
 
   // Tasks
   const [tasks, setTasks] = useState<ClientTask[]>([]);
@@ -238,20 +234,17 @@ const ClientDetailPage = () => {
   const [newTaskPriority, setNewTaskPriority] = useState<"High" | "Medium" | "Low">("Medium");
   const [savingTask, setSavingTask] = useState(false);
 
+  // More actions dropdown
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+
   // ── Data Fetching ───────────────────────────────────────────────
   const fetchClient = useCallback(async () => {
     try {
       setIsLoading(true);
       const data = await getClientById(id!) as any;
-      if (data) {
-        setClient(data);
-        setInternalNotes(data.internalNotes || "");
-      }
-    } catch (error) {
-      console.error("Error fetching client:", error);
-    } finally {
-      setIsLoading(false);
-    }
+      if (data) { setClient(data); setInternalNotes(data.internalNotes || ""); }
+    } catch (error) { console.error("Error fetching client:", error); }
+    finally { setIsLoading(false); }
   }, [id]);
 
   const fetchTasks = useCallback(async () => {
@@ -259,8 +252,7 @@ const ClientDetailPage = () => {
       setLoadingTasks(true);
       const data = await getTasks({ clientId: id!, limit: 100 }) as any[];
       setTasks(data.map((t: any) => ({
-        id: t.id,
-        title: t.title,
+        id: t.id, title: t.title,
         dueDate: t.dueDate ? new Date(t.dueDate).toLocaleDateString() : "No Date",
         completed: t.status === "DONE" || t.status === "COMPLETED",
         priority: mapPriority(t.priority),
@@ -269,19 +261,23 @@ const ClientDetailPage = () => {
   }, [id]);
 
   const fetchDeals = useCallback(async () => {
-    try { setLoadingDeals(true); const data = await getProjects({ clientId: id!, limit: 100 }); setDeals(data); } catch { } finally { setLoadingDeals(false); }
+    try { setLoadingDeals(true); const data = await getProjects({ clientId: id!, limit: 100 }); setDeals(data); }
+    catch { } finally { setLoadingDeals(false); }
   }, [id]);
 
   const fetchDocuments = useCallback(async () => {
-    try { setLoadingDocs(true); const data = await getFiles({ clientId: id!, limit: 100 }); setDocuments(Array.isArray(data) ? data : []); } catch { } finally { setLoadingDocs(false); }
+    try { setLoadingDocs(true); const data = await getFiles({ clientId: id!, limit: 100 }); setDocuments(Array.isArray(data) ? data : []); }
+    catch { } finally { setLoadingDocs(false); }
   }, [id]);
 
   const fetchEmails = useCallback(async () => {
-    try { setLoadingEmails(true); const data = await getEmails({ clientId: id!, limit: 50 }); setEmails(Array.isArray(data) ? data : []); } catch { } finally { setLoadingEmails(false); }
+    try { setLoadingEmails(true); const data = await getEmails({ clientId: id!, limit: 50 }); setEmails(Array.isArray(data) ? data : []); }
+    catch { } finally { setLoadingEmails(false); }
   }, [id]);
 
   const fetchInvoices = useCallback(async () => {
-    try { setLoadingInvoices(true); const data = await getInvoices({ clientId: id! }); setInvoices(Array.isArray(data) ? data : []); } catch { } finally { setLoadingInvoices(false); }
+    try { setLoadingInvoices(true); const data = await getInvoices({ clientId: id! }); setInvoices(Array.isArray(data) ? data : []); }
+    catch { } finally { setLoadingInvoices(false); }
   }, [id]);
 
   useEffect(() => {
@@ -295,8 +291,7 @@ const ClientDetailPage = () => {
     try {
       const updated = internalNotes ? `${newNote.trim()}\n\n---\n\n${internalNotes}` : newNote.trim();
       await updateClient(id!, { internalNotes: updated });
-      setInternalNotes(updated);
-      setNewNote("");
+      setInternalNotes(updated); setNewNote(""); setShowNoteForm(false);
       toast({ title: "Note Saved", description: "Your note has been saved." });
     } catch {
       toast({ title: "Error", description: "Failed to save note.", variant: "destructive" });
@@ -327,7 +322,11 @@ const ClientDetailPage = () => {
   };
 
   // ── Render ──────────────────────────────────────────────────────
-  if (isLoading) return <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center"><Loader2 className="animate-spin text-[#0891B2]" size={40} /></div>;
+  if (isLoading) return (
+    <div className="min-h-screen bg-[#F9FAFB] flex items-center justify-center">
+      <Loader2 className="animate-spin text-[#14B8A6]" size={40} />
+    </div>
+  );
   if (!client) return null;
 
   const address = buildAddress(client);
@@ -335,379 +334,444 @@ const ClientDetailPage = () => {
   const ownerName = formatAssignedOwner(client.assignedOwner);
   const statusLabel = toStatusLabel(client.status);
   const typeLabel = toClientTypeLabel(client.clientType);
-
-  const tabs = [
-    { id: 'deals', label: 'Deals', icon: TrendingUp },
-    { id: 'timeline', label: 'Timeline', icon: Clock },
-    { id: 'notes', label: 'Notes', icon: FileText },
-    { id: 'tasks', label: 'Tasks', icon: CheckSquare },
-    { id: 'documents', label: 'Documents', icon: FolderOpen },
-    { id: 'invoices', label: 'Invoices', icon: Receipt },
-    { id: 'mail', label: 'Mail', icon: Mail },
-  ];
+  const openTasks = tasks.filter(t => !t.completed).length;
+  const totalRevenue = Number(client.totalRevenue) || 0;
+  const paidInvoices = invoices.filter((i: any) => (i.status || '').toUpperCase() === 'PAID');
+  const overdueInvoices = invoices.filter((i: any) => (i.status || '').toUpperCase() === 'OVERDUE');
+  const openInvoices = invoices.filter((i: any) => !['PAID', 'CANCELLED'].includes((i.status || '').toUpperCase()));
+  const outstandingAmount = openInvoices.reduce((s: number, i: any) => s + (Number(i.amountDue) || Number(i.total) || 0) - (Number(i.amountPaid) || 0), 0);
+  const lastEmail = emails.length > 0 ? emails[0] : null;
+  const lastContactedDate = lastEmail?.sentAt ? new Date(lastEmail.sentAt).toLocaleDateString() : null;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
-      <main className="min-h-screen transition-all duration-300">
-        {/* Header */}
-        <header className="sticky top-0 z-30 border-b bg-white px-6 h-16 flex items-center justify-between shadow-sm">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/client-list')} className="hover:bg-[#F8FAFC]"><ArrowLeft className="h-5 w-5" /></Button>
-            <Breadcrumb><BreadcrumbList>
-              <BreadcrumbItem><BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink></BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem><BreadcrumbLink href="/client-list">Clients</BreadcrumbLink></BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem><BreadcrumbPage className="font-semibold text-[#0891B2]">{client.clientName}</BreadcrumbPage></BreadcrumbItem>
-            </BreadcrumbList></Breadcrumb>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button variant="outline" className="gap-2"><Send className="h-4 w-4" /><span className="hidden sm:inline">Email</span></Button>
-            <Button className="bg-[#0891B2] hover:bg-[#0891B2]/80 gap-2"><span className="hidden sm:inline">Actions</span><MoreHorizontal className="h-4 w-4" /></Button>
-          </div>
-        </header>
+    <div className="min-h-screen bg-[#F9FAFB]">
+      <style>{`
+        @keyframes fadeSlideUp {
+          from { opacity: 0; transform: translateY(12px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
 
-        <div className="p-4 md:p-6 max-w-[1600px] mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
+      {/* ═══════════ SECTION 1: STICKY PROFILE HEADER ═══════════ */}
+      <header className="sticky top-0 z-30 bg-white border-b border-[#E5E7EB] shadow-[0_2px_4px_rgba(0,0,0,0.05)]">
+        {/* Breadcrumb */}
+        <div className="px-6 pt-3 pb-1">
+          <Breadcrumb><BreadcrumbList>
+            <BreadcrumbItem><BreadcrumbLink href="/dashboard" className="text-xs">Dashboard</BreadcrumbLink></BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem><BreadcrumbLink href="/client-list" className="text-xs">Clients</BreadcrumbLink></BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem><BreadcrumbPage className="text-xs font-semibold text-[#14B8A6]">{client.clientName}</BreadcrumbPage></BreadcrumbItem>
+          </BreadcrumbList></Breadcrumb>
+        </div>
 
-            {/* ═══════════ LEFT PANEL — 6 SECTIONS ═══════════ */}
-            <div className="lg:col-span-4 space-y-3">
-
-              {/* Profile Card */}
-              <Card className="overflow-hidden border-none shadow-md">
-                <div className="bg-gradient-to-r from-[#0891B2] to-[#06b6d4] h-20" />
-                <CardContent className="pt-0 -mt-10">
-                  <div className="flex flex-col items-center text-center">
-                    <Avatar className="h-20 w-20 border-4 border-white shadow-md bg-white">
-                      <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${client.clientName}`} />
-                      <AvatarFallback className="bg-[#0891B2]/10 text-[#0891B2] text-xl font-bold">{getInitials(client.clientName)}</AvatarFallback>
-                    </Avatar>
-                    <h2 className="text-lg font-bold text-[#0F172A] mt-2">{client.clientName}</h2>
-                    {client.companyName && <p className="text-xs text-[#475569]">{client.companyName}</p>}
-                    <p className="text-xs text-[#94A3B8]">{typeLabel}</p>
-                    <div className="flex items-center gap-1 mt-2">
-                      <Badge className={`px-3 py-0.5 text-xs ${statusLabel === 'Active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>{statusLabel}</Badge>
-                      {client.doNotContact && <Badge className="bg-red-100 text-red-600 text-xs px-2 py-0.5 gap-1"><BanIcon className="h-3 w-3" /> DNC</Badge>}
-                    </div>
-                    {ownerName && <p className="text-xs text-[#94A3B8] mt-2">Assigned to <span className="font-medium text-[#0F172A]">{ownerName}</span></p>}
-                    <p className="text-[10px] text-[#CBD5E1] mt-1">Client since {fmtDate(client.createdAt)}</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* 1️⃣ Contact Information */}
-              <Section title="Contact Information" icon={User}>
-                <Field label="Primary Email" value={client.primaryEmail} icon={Mail} />
-                <Field label="Primary Phone" value={client.primaryPhone} icon={Phone} />
-                <Field label="Alternate Phone" value={client.secondaryPhone} icon={Phone} />
-                <Field label="Address" value={address} icon={MapPin} />
-                <Field label="Contact Person" value={client.contactName} icon={User} />
-                {client.directPhone && <Field label="Direct Line" value={client.directPhone} icon={Phone} />}
-                <Field label="Spouse / Co-Owner" value={client.spouseCoOwnerName} icon={Users} />
-                <Field label="Preferred Contact" value={client.preferredContactMethod} icon={MessageSquare} />
-                <Field label="Best Time" value={client.bestTimeToContact} icon={Clock} />
-                <Field label="Language" value={client.language} icon={Globe} />
-              </Section>
-
-              {/* 2️⃣ Property Details */}
-              <Section title="Property Details" icon={Home} defaultOpen={false}>
-                <Field label="Property Type" value={client.propertyType} icon={Building2} />
-                <Field label="Stories" value={client.numberOfStories} icon={Layers} />
-                <Field label="Roof Material" value={client.currentRoofMaterial} icon={Home} />
-                <Field label="Roof Age" value={client.roofAge} icon={Clock3} />
-                <Field label="Roof Size (sqft)" value={client.roofSize} icon={Ruler} />
-                <Field label="Roof Pitch / Layers" value={client.roofPitch} icon={Layers} />
-                <Field label="Service Type" value={client.serviceType} icon={Wrench} />
-                <Field label="Homeowner" value={client.isHomeowner} icon={Home} />
-                <Field label="HOA" value={client.isHOA} icon={Landmark} />
-                {client.hoaRestrictions && <Field label="HOA Restrictions" value={client.hoaRestrictions} icon={AlertTriangle} />}
-                <Field label="Photos / Files" value={client._count?.files ? `${client._count.files} file(s)` : undefined} icon={ImageIcon} />
-              </Section>
-
-              {/* 3️⃣ Lead & Source Tracking */}
-              <Section title="Lead & Source Tracking" icon={TrendingUp} defaultOpen={false}>
-                <Field label="Lead Source" value={client.leadSource} icon={Globe} />
-                <Field label="Category" value={client.clientCategory} icon={Tag} />
-                <Field label="Budget Range" value={client.budgetRange} icon={DollarSign} />
-                <Field label="Urgency" value={client.urgencyLevel} icon={AlertTriangle} />
-                <Field label="Lifecycle Stage" value={client.lifecycleStage} icon={TrendingUp} />
-                <Field label="Lead Date" value={fmtDate(client.createdAt)} icon={Calendar} />
-              </Section>
-
-              {/* 4️⃣ Sales & Financial */}
-              <Section title="Sales & Financial" icon={CircleDollarSign} defaultOpen={false}>
-                <Field label="Total Revenue" value={fmtCurrency(Number(client.totalRevenue), client.currency)} icon={DollarSign} />
-                <Field label="Payment Terms" value={client.paymentTerms} icon={Clock} />
-                <Field label="Credit Limit" value={client.creditLimit ? fmtCurrency(client.creditLimit, client.currency) : undefined} icon={CreditCard} />
-                <Field label="Currency" value={client.currency} icon={CircleDollarSign} />
-                <Field label="Insurance Company" value={client.insuranceCompanyName} icon={Shield} />
-                <Field label="Insurance Claim" value={client.isInsuranceClaim} icon={Shield} />
-              </Section>
-
-              {/* 5️⃣ Project & Service History */}
-              <Section title="Project & Service History" icon={FolderOpen} defaultOpen={false}>
-                <Field label="Projects" value={client._count?.projects ? `${client._count.projects} project(s)` : "0"} icon={FolderOpen} />
-                <Field label="Quotes" value={client._count?.quotes ? `${client._count.quotes} quote(s)` : "0"} icon={FileText} />
-                <Field label="Invoices" value={client._count?.invoices ? `${client._count.invoices} invoice(s)` : "0"} icon={Receipt} />
-                <Field label="Warranty Expiration" value={client.warrantyExpiration ? fmtDate(client.warrantyExpiration) : undefined} icon={Shield} />
-              </Section>
-
-              {/* 6️⃣ Communication & Notes */}
-              <Section title="Communication & Notes" icon={MessageSquare} defaultOpen={false}>
-                <Field label="Do Not Contact" value={client.doNotContact ? "Yes — Opted Out" : "No"} icon={BanIcon} />
-                <Field label="Next Follow-Up" value={client.nextFollowUp ? fmtDate(client.nextFollowUp) : undefined} icon={Calendar} />
-                <Field label="Notes" value={client.internalNotes ? `${client.internalNotes.split('---').length} note(s)` : "0 notes"} icon={FileText} />
-                {/* Tags */}
-                <div>
-                  <p className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-medium mb-1.5">Tags</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {tags.length > 0 ? tags.map((tag, i) => (
-                      <span key={i} className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#0891B2]/10 text-[#0891B2]">
-                        <Tag size={10} className="mr-1" />{tag}
-                      </span>
-                    )) : <span className="text-xs text-[#94A3B8] italic">No tags</span>}
-                  </div>
-                </div>
-              </Section>
+        {/* Profile Row */}
+        <div className="px-6 pb-3 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <button onClick={() => navigate('/client-list')} className="p-1.5 rounded-lg hover:bg-[#F9FAFB] text-[#6B7280] transition-colors flex-shrink-0">
+              <ArrowLeft size={18} />
+            </button>
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#14B8A6] to-[#0D9488] flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-sm">
+              {getInitials(client.clientName)}
             </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-lg font-bold text-[#111827] truncate">{client.clientName}</h1>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#F3F4F6] text-[#6B7280]">{typeLabel}</span>
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${statusLabel === 'Active' ? 'bg-[#DCFCE7] text-[#166534]' : 'bg-[#FEE2E2] text-[#991B1B]'}`}>{statusLabel}</span>
+                {client.doNotContact && <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#FEE2E2] text-[#DC2626] flex items-center gap-0.5"><BanIcon size={10} />DNC</span>}
+              </div>
+              <p className="text-[11px] text-[#9CA3AF] mt-0.5">
+                Client since {fmtDate(client.createdAt)}
+                {ownerName && <> · Assigned to <span className="font-medium text-[#6B7280]">{ownerName}</span></>}
+              </p>
+            </div>
+          </div>
 
-            {/* ═══════════ RIGHT PANEL — TABS ═══════════ */}
-            <div className="lg:col-span-8">
-              <Card className="h-full border-none shadow-md bg-white">
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-                  <CardHeader className="pb-0 border-b px-0">
-                    <div className="px-6 overflow-x-auto scrollbar-hide">
-                      <TabsList className="bg-transparent h-auto p-0 gap-6 inline-flex w-max min-w-full justify-start">
-                        {tabs.map((tab) => (
-                          <TabsTrigger key={tab.id} value={tab.id}
-                            className="px-0 py-4 rounded-none border-b-2 bg-transparent text-sm font-medium text-[#475569]
-                              data-[state=active]:border-[#0891B2] data-[state=active]:text-[#0891B2]
-                              hover:text-[#0F172A] transition-colors gap-2">
-                            <tab.icon className="h-4 w-4" />{tab.label}
-                          </TabsTrigger>
-                        ))}
-                      </TabsList>
-                    </div>
-                  </CardHeader>
+          {/* Quick Actions */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {client.primaryPhone && (
+              <a href={`tel:${client.primaryPhone}`} className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#E5E7EB] text-xs font-medium text-[#374151] hover:bg-[#F9FAFB] hover:border-[#D1D5DB] transition-all hover:scale-[1.02]">
+                <PhoneCall size={14} className="text-[#14B8A6]" />Call
+              </a>
+            )}
+            <a href={`mailto:${client.primaryEmail}`} className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#E5E7EB] text-xs font-medium text-[#374151] hover:bg-[#F9FAFB] hover:border-[#D1D5DB] transition-all hover:scale-[1.02]">
+              <Mail size={14} className="text-[#14B8A6]" />Email
+            </a>
+            <button onClick={() => setShowNoteForm(true)} className="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#E5E7EB] text-xs font-medium text-[#374151] hover:bg-[#F9FAFB] hover:border-[#D1D5DB] transition-all hover:scale-[1.02]">
+              <StickyNote size={14} className="text-[#14B8A6]" />Add Note
+            </button>
+            <button onClick={() => navigate('/projects/add')} className="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#14B8A6] text-white text-xs font-semibold hover:bg-[#0D9488] transition-all hover:scale-[1.02] shadow-sm">
+              <DollarSign size={14} />Create Deal
+            </button>
 
-                  <CardContent className="p-6 flex-1 bg-[#F8FAFC]/30">
-                    {/* Deals */}
-                    <TabsContent value="deals" className="m-0 space-y-4">
-                      {loadingDeals ? (
-                        <div className="flex items-center justify-center py-12"><Loader2 className="animate-spin text-[#0891B2] mr-2" size={20} /><span className="text-sm text-[#94A3B8]">Loading deals…</span></div>
-                      ) : deals.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-16 text-center">
-                          <div className="w-16 h-16 rounded-full bg-[#0891B2]/10 flex items-center justify-center mb-4"><DollarSign className="h-8 w-8 text-[#0891B2]" /></div>
-                          <h3 className="text-lg font-semibold text-[#0F172A] mb-1">No Deals Yet</h3>
-                          <p className="text-sm text-[#475569] max-w-sm">Deals associated with this client will appear here once they are created.</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          {deals.map((deal: any) => {
-                            const status = (deal.status || 'IN_PROGRESS').toUpperCase();
-                            const statusColor = status === 'COMPLETED' ? 'bg-green-100 text-green-700' : status === 'ON_HOLD' ? 'bg-amber-100 text-amber-700' : status === 'CANCELLED' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700';
-                            const statusLabel = status === 'IN_PROGRESS' ? 'In Progress' : status === 'ON_HOLD' ? 'On Hold' : status.charAt(0) + status.slice(1).toLowerCase();
-                            return (
-                              <div key={deal.id} className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-100 hover:shadow-sm transition-shadow">
-                                <div className="flex-1">
-                                  <h4 className="font-medium text-[#0F172A] text-sm">{deal.name || deal.Name}</h4>
-                                  <div className="flex items-center gap-3 mt-1">
-                                    {(deal.budget || deal.Budget) && <span className="text-xs text-[#475569] flex items-center gap-1"><DollarSign size={10} />{fmtCurrency(Number(deal.budget || deal.Budget))}</span>}
-                                    {(deal.dueDate || deal.DueDate) && <span className="text-xs text-[#94A3B8] flex items-center gap-1"><Calendar size={10} />{new Date(deal.dueDate || deal.DueDate).toLocaleDateString()}</span>}
-                                  </div>
-                                </div>
-                                <Badge className={`${statusColor} text-xs font-medium`}>{statusLabel}</Badge>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </TabsContent>
-
-                    {/* Timeline */}
-                    <TabsContent value="timeline" className="m-0 px-2">
-                      <ActivityTimeline entityType="Client" entityId={id!} />
-                    </TabsContent>
-
-                    {/* Notes */}
-                    <TabsContent value="notes" className="m-0 space-y-6">
-                      <div className="bg-white p-4 rounded-md border border-[rgba(15,23,42,0.06)] shadow-sm">
-                        <label className="text-sm font-medium text-[#475569] mb-2 block">Add a new note</label>
-                        <Textarea placeholder="Type your note here..." className="resize-none min-h-[80px]" value={newNote} onChange={(e) => setNewNote(e.target.value)} />
-                        <div className="flex justify-end mt-3">
-                          <Button size="sm" className="bg-[#0891B2] text-white" onClick={handleAddNote} disabled={savingNote || !newNote.trim()}>
-                            {savingNote ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
-                            {savingNote ? "Saving..." : "Save Note"}
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="space-y-4">
-                        {!internalNotes ? (
-                          <div className="text-center py-10 text-[#94A3B8]">No notes yet. Add one above.</div>
-                        ) : internalNotes.split('\n\n---\n\n').map((note, index) => (
-                          <div key={index} className="bg-yellow-50/50 p-4 rounded-md border border-yellow-100">
-                            <p className="text-[#0F172A] text-sm whitespace-pre-wrap">{note}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </TabsContent>
-
-                    {/* Tasks */}
-                    <TabsContent value="tasks" className="m-0 space-y-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-semibold text-[#0F172A]">To-Do List</h3>
-                        <Button variant="outline" size="sm" onClick={() => setIsTaskModalOpen(true)} className="bg-white hover:bg-[#F8FAFC]"><Plus className="h-3 w-3 mr-1" /> New Task</Button>
-                      </div>
-                      {tasks.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-12 text-center">
-                          <div className="w-14 h-14 rounded-full bg-orange-50 flex items-center justify-center mb-3"><CheckSquare className="h-6 w-6 text-orange-500" /></div>
-                          <h4 className="text-sm font-semibold text-[#0F172A] mb-1">No Tasks Yet</h4>
-                          <p className="text-xs text-[#475569]">Create a task to keep track of to-dos for this client.</p>
-                        </div>
-                      ) : tasks.map(task => (
-                        <div key={task.id} className="flex items-center gap-3 p-3 bg-white rounded-md hover:shadow-sm transition-shadow">
-                          <Checkbox id={`task-${task.id}`} checked={task.completed} onCheckedChange={() => toggleTask(task.id)} />
-                          <div className="flex-1">
-                            <label htmlFor={`task-${task.id}`} className={`text-sm font-medium cursor-pointer ${task.completed ? 'text-[#94A3B8] line-through' : 'text-[#0F172A]'}`}>{task.title}</label>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className={`text-xs px-1.5 py-0.5 rounded ${task.priority === 'High' ? 'bg-red-50 text-red-600' : task.priority === 'Medium' ? 'bg-orange-50 text-orange-600' : 'bg-green-50 text-green-600'}`}>{task.priority}</span>
-                              <span className="text-xs text-[#94A3B8] flex items-center gap-1"><Clock size={10} /> {task.dueDate}</span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </TabsContent>
-
-                    {/* Documents */}
-                    <TabsContent value="documents" className="m-0 space-y-6">
-                      {loadingDocs ? (
-                        <div className="flex items-center justify-center py-12"><Loader2 className="animate-spin text-[#0891B2] mr-2" size={20} /><span className="text-sm text-[#94A3B8]">Loading documents…</span></div>
-                      ) : documents.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-16 text-center">
-                          <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-4"><FolderOpen className="h-8 w-8 text-[#0891B2]" /></div>
-                          <h3 className="text-lg font-semibold text-[#0F172A] mb-1">No Documents</h3>
-                          <p className="text-sm text-[#475569] max-w-sm">Documents linked to this client will appear here.</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {documents.map((doc: any) => {
-                            const ext = doc.extension || doc.name?.split('.').pop() || '';
-                            const sizeKb = doc.size ? (Number(doc.size) / 1024).toFixed(1) : '—';
-                            return (
-                              <div key={doc.id} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-100 hover:shadow-sm transition-shadow">
-                                <div className="w-9 h-9 rounded-md bg-blue-50 flex items-center justify-center flex-shrink-0"><FileText className="h-4 w-4 text-blue-600" /></div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-[#0F172A] truncate">{doc.originalName || doc.name}</p>
-                                  <p className="text-xs text-[#94A3B8]">{sizeKb} KB · {ext.toUpperCase()} · {doc.createdAt ? new Date(doc.createdAt).toLocaleDateString() : ''}</p>
-                                </div>
-                                <a href={doc.path} target="_blank" rel="noreferrer" className="text-[#0891B2] hover:text-[#0891B2]/80"><Download size={16} /></a>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </TabsContent>
-
-                    {/* Invoices */}
-                    <TabsContent value="invoices" className="m-0 space-y-4">
-                      {loadingInvoices ? (
-                        <div className="flex items-center justify-center py-12"><Loader2 className="animate-spin text-[#0891B2] mr-2" size={20} /><span className="text-sm text-[#94A3B8]">Loading invoices…</span></div>
-                      ) : invoices.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-12 text-center">
-                          <div className="w-14 h-14 rounded-full bg-teal-50 flex items-center justify-center mb-3"><Receipt className="h-6 w-6 text-[#0891B2]" /></div>
-                          <h4 className="text-sm font-semibold text-[#0F172A] mb-1">No Invoices</h4>
-                          <p className="text-xs text-[#475569]">Invoices for this client will appear here.</p>
-                          <Button variant="outline" size="sm" className="mt-4 text-[#0891B2] border-[#0891B2]/30 hover:bg-[#0891B2]/5" onClick={() => navigate('/invoice/create')}><Plus className="h-4 w-4 mr-1" /> Create Invoice</Button>
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {invoices.map((inv: any) => {
-                            const status = (inv.status || 'DRAFT').toString();
-                            const statusColor = status === 'PAID' ? 'bg-green-100 text-green-700' : status === 'SENT' ? 'bg-blue-100 text-blue-700' : status === 'OVERDUE' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600';
-                            const total = Number(inv.total) || 0;
-                            const amountDue = Number(inv.amountDue) || (total - (Number(inv.amountPaid) || 0));
-                            return (
-                              <div key={inv.id} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-100 hover:shadow-sm transition-shadow cursor-pointer" onClick={() => navigate('/invoice')}>
-                                <div className="w-9 h-9 rounded-full bg-teal-50 flex items-center justify-center flex-shrink-0"><Receipt className="h-4 w-4 text-[#0891B2]" /></div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center justify-between">
-                                    <p className="text-sm font-semibold text-[#0F172A]">{inv.invoiceNumber || 'N/A'}</p>
-                                    <Badge className={`text-[10px] px-2 py-0.5 ${statusColor}`}>{status}</Badge>
-                                  </div>
-                                  <div className="flex items-center justify-between mt-1">
-                                    <span className="text-xs text-[#94A3B8]">{inv.issueDate ? new Date(inv.issueDate).toLocaleDateString() : '—'}</span>
-                                    <div className="text-right">
-                                      <span className="text-sm font-bold text-[#0F172A]">{fmtCurrency(total, inv.currency || 'CAD')}</span>
-                                      {amountDue > 0 && status !== 'PAID' && <span className="block text-[10px] text-amber-600">Due: {fmtCurrency(amountDue, inv.currency || 'CAD')}</span>}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </TabsContent>
-
-                    {/* Mail */}
-                    <TabsContent value="mail" className="m-0 space-y-4">
-                      {loadingEmails ? (
-                        <div className="flex items-center justify-center py-12"><Loader2 className="animate-spin text-[#0891B2] mr-2" size={20} /><span className="text-sm text-[#94A3B8]">Loading emails…</span></div>
-                      ) : emails.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-12 text-center">
-                          <div className="w-14 h-14 rounded-full bg-purple-50 flex items-center justify-center mb-3"><Mail className="h-6 w-6 text-purple-500" /></div>
-                          <h4 className="text-sm font-semibold text-[#0F172A] mb-1">No Emails</h4>
-                          <p className="text-xs text-[#475569]">Emails linked to this client will appear here.</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {emails.map((email: any) => (
-                            <div key={email.id} className={`flex items-start gap-3 p-3 bg-white rounded-lg border border-gray-100 hover:shadow-sm transition-shadow ${!email.isRead ? 'border-l-2 border-l-[#0891B2]' : ''}`}>
-                              <div className="w-9 h-9 rounded-full bg-purple-50 flex items-center justify-center flex-shrink-0 mt-0.5"><Mail className="h-4 w-4 text-purple-600" /></div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between">
-                                  <p className={`text-sm truncate ${!email.isRead ? 'font-semibold text-[#0F172A]' : 'font-medium text-[#475569]'}`}>{email.subject || '(No Subject)'}</p>
-                                  <span className="text-xs text-[#94A3B8] ml-2 whitespace-nowrap">{email.sentAt ? new Date(email.sentAt).toLocaleDateString() : ''}</span>
-                                </div>
-                                <p className="text-xs text-[#94A3B8] mt-0.5 truncate">{email.fromName || email.fromAddress || '—'}</p>
-                                {email.bodyText && <p className="text-xs text-[#64748B] mt-1 line-clamp-2">{email.bodyText.slice(0, 150)}</p>}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </TabsContent>
-                  </CardContent>
-                </Tabs>
-              </Card>
+            {/* More Actions */}
+            <div className="relative">
+              <button onClick={() => setShowMoreMenu(!showMoreMenu)} className="p-2 rounded-lg border border-[#E5E7EB] hover:bg-[#F9FAFB] transition-colors">
+                <MoreHorizontal size={16} className="text-[#6B7280]" />
+              </button>
+              {showMoreMenu && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowMoreMenu(false)} />
+                  <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl border border-[#E5E7EB] shadow-lg z-50 py-1 animate-in fade-in zoom-in-95 duration-150">
+                    {[
+                      { label: "Edit Client", icon: Pencil, action: () => navigate(`/client-list/${id}/edit`) },
+                      { label: "View on Map", icon: MapPin, action: () => window.open(`https://maps.google.com/?q=${encodeURIComponent(address)}`, '_blank') },
+                    ].map((item, i) => (
+                      <button key={i} onClick={() => { item.action(); setShowMoreMenu(false); }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-xs text-[#374151] hover:bg-[#F9FAFB] transition-colors">
+                        <item.icon size={14} className="text-[#6B7280]" />{item.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
-      </main>
+      </header>
 
-      {/* Task Modal */}
+      {/* ═══════════ MAIN CONTENT ═══════════ */}
+      <div className="p-4 md:p-6 max-w-[1400px] mx-auto space-y-5">
+
+        {/* ═══════════ SECTION 2: KPI STATS ROW ═══════════ */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4" style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
+          {[
+            { icon: <DollarSign size={18} />, iconBg: "bg-[#CCFBF1]", iconColor: "text-[#0D9488]", value: deals.length, label: "Total Deals" },
+            { icon: <CheckSquare size={18} />, iconBg: "bg-[#FFF7ED]", iconColor: "text-[#EA580C]", value: openTasks, label: "Open Tasks" },
+            { icon: <TrendingUp size={18} />, iconBg: "bg-[#DCFCE7]", iconColor: "text-[#16A34A]", value: totalRevenue, label: "Total Revenue", isCurrency: true },
+            { icon: <Clock size={18} />, iconBg: "bg-[#EFF6FF]", iconColor: "text-[#2563EB]", value: lastContactedDate || "Never", label: "Last Contacted", isText: true },
+          ].map((stat, i) => (
+            <div key={i} className="bg-white rounded-xl border border-[#E5E7EB] p-4 shadow-[0_1px_3px_rgba(0,0,0,0.08)] transition-all duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5"
+              style={{ animation: `fadeSlideUp 0.4s ease ${100 + i * 80}ms both` }}>
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-lg ${stat.iconBg} flex items-center justify-center ${stat.iconColor}`}>{stat.icon}</div>
+                <div>
+                  <div className={`text-xl font-bold ${stat.isText && stat.value === "Never" ? "text-[#EF4444]" : "text-[#111827]"}`}>
+                    {stat.isCurrency ? fmtCurrency(stat.value as number) : stat.isText ? stat.value : <AnimatedNumber value={stat.value as number} />}
+                  </div>
+                  <div className="text-[11px] text-[#6B7280] font-medium">{stat.label}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* ═══════════ SECTION 3: CARD GRID ═══════════ */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+          {/* ── CARD 1: Contact Information ── */}
+          <DashCard delay={200}>
+            <CardHeader
+              icon={<div className="w-7 h-7 rounded-lg bg-[#CCFBF1] flex items-center justify-center"><User size={14} className="text-[#0D9488]" /></div>}
+              title="Contact Information"
+              actionLabel="✏️ Edit"
+              action={() => navigate(`/client-list/${id}/edit`)}
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-0.5">
+              <InfoField label="Primary Email" value={client.primaryEmail} icon={Mail} href={`mailto:${client.primaryEmail}`} />
+              <InfoField label="Contact Person" value={client.contactName} icon={User} />
+              <InfoField label="Primary Phone" value={fmtPhone(client.primaryPhone)} icon={Phone} href={`tel:${client.primaryPhone}`} />
+              <InfoField label="Direct Line" value={fmtPhone(client.directPhone)} icon={Phone} href={client.directPhone ? `tel:${client.directPhone}` : undefined} />
+              <InfoField label="Alternate Phone" value={fmtPhone(client.secondaryPhone)} icon={Phone} href={client.secondaryPhone ? `tel:${client.secondaryPhone}` : undefined} />
+              <InfoField label="Preferred Contact" value={client.preferredContactMethod} icon={MessageSquare} />
+            </div>
+            <div className="mt-2 pt-2 border-t border-[#F3F4F6] space-y-0.5">
+              <InfoField label="Best Time to Contact" value={client.bestTimeToContact} icon={Clock} />
+              {address && (
+                <div className="flex items-start gap-2.5 py-1.5">
+                  <div className="p-1 bg-[#F9FAFB] rounded mt-0.5"><MapPin className="h-3.5 w-3.5 text-[#6B7280]" /></div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] text-[#9CA3AF] uppercase tracking-wider font-medium mb-0.5">Address</p>
+                    <p className="text-sm font-medium text-[#111827]">{address}</p>
+                    <a href={`https://maps.google.com/?q=${encodeURIComponent(address)}`} target="_blank" rel="noreferrer"
+                      className="text-xs text-[#14B8A6] hover:underline flex items-center gap-1 mt-1">
+                      <MapPin size={10} />View on Map <ExternalLink size={10} />
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
+          </DashCard>
+
+          {/* ── CARD 2: Deals ── */}
+          <DashCard delay={280}>
+            <CardHeader
+              icon={<div className="w-7 h-7 rounded-lg bg-[#CCFBF1] flex items-center justify-center"><DollarSign size={14} className="text-[#0D9488]" /></div>}
+              title="Deals"
+              count={deals.length}
+              actionLabel="View All →"
+              action={() => navigate('/projects')}
+            />
+            {loadingDeals ? (
+              <div className="flex items-center justify-center py-8"><Loader2 className="animate-spin text-[#14B8A6]" size={20} /></div>
+            ) : deals.length === 0 ? (
+              <EmptyState icon={<DollarSign size={20} className="text-[#9CA3AF]" />} title="No deals yet" subtitle="Create your first deal to start tracking revenue" cta="Create New Deal" onCta={() => navigate('/projects/add')} />
+            ) : (
+              <div className="space-y-2">
+                {deals.slice(0, 4).map((deal: any) => {
+                  const status = (deal.status || 'IN_PROGRESS').toUpperCase();
+                  const statusColor = status === 'COMPLETED' ? 'bg-[#DCFCE7] text-[#166534]' : status === 'ON_HOLD' ? 'bg-[#FEF3C7] text-[#92400E]' : status === 'CANCELLED' ? 'bg-[#FEE2E2] text-[#991B1B]' : 'bg-[#DBEAFE] text-[#1E40AF]';
+                  const statusLabel = status === 'IN_PROGRESS' ? 'In Progress' : status === 'ON_HOLD' ? 'On Hold' : status.charAt(0) + status.slice(1).toLowerCase();
+                  return (
+                    <div key={deal.id} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-[#F9FAFB] transition-colors cursor-pointer" onClick={() => navigate(`/projects/${deal.id}`)}>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-[#111827] truncate">{deal.name || deal.Name}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {(deal.budget || deal.Budget) && <span className="text-xs text-[#6B7280]">{fmtCurrency(Number(deal.budget || deal.Budget))}</span>}
+                          {(deal.dueDate || deal.DueDate) && <span className="text-[10px] text-[#9CA3AF]">{fmtDate(deal.dueDate || deal.DueDate)}</span>}
+                        </div>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusColor} flex-shrink-0`}>{statusLabel}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </DashCard>
+
+          {/* ── CARD 3: Tasks ── */}
+          <DashCard delay={360}>
+            <CardHeader
+              icon={<div className="w-7 h-7 rounded-lg bg-[#FFF7ED] flex items-center justify-center"><CheckSquare size={14} className="text-[#EA580C]" /></div>}
+              title="Tasks"
+              count={tasks.length}
+              actionLabel="View All →"
+              action={() => navigate('/tasks')}
+            />
+            {loadingTasks ? (
+              <div className="flex items-center justify-center py-8"><Loader2 className="animate-spin text-[#14B8A6]" size={20} /></div>
+            ) : tasks.length === 0 ? (
+              <EmptyState icon={<CheckSquare size={20} className="text-[#9CA3AF]" />} title="No tasks yet" subtitle="Create a task to keep track of to-dos" cta="Add New Task" onCta={() => setIsTaskModalOpen(true)} />
+            ) : (
+              <div className="space-y-1">
+                {tasks.slice(0, 4).map(task => {
+                  const prioColor = task.priority === 'High' ? 'bg-[#FEE2E2] text-[#DC2626]' : task.priority === 'Medium' ? 'bg-[#FEF3C7] text-[#D97706]' : 'bg-[#DCFCE7] text-[#16A34A]';
+                  const prioIcon = task.priority === 'High' ? '🔴' : task.priority === 'Medium' ? '🟡' : '🟢';
+                  return (
+                    <div key={task.id} className="flex items-center gap-3 py-2 px-2 rounded-lg hover:bg-[#F9FAFB] transition-colors group">
+                      <Checkbox id={`t-${task.id}`} checked={task.completed} onCheckedChange={() => toggleTask(task.id)} className="flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <label htmlFor={`t-${task.id}`} className={`text-sm font-medium cursor-pointer block truncate transition-all ${task.completed ? 'text-[#9CA3AF] line-through' : 'text-[#111827]'}`}>{task.title}</label>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px]">{prioIcon}</span>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${prioColor}`}>{task.priority}</span>
+                          <span className="text-[10px] text-[#9CA3AF] flex items-center gap-0.5"><Clock size={9} />{task.dueDate}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                <button onClick={() => setIsTaskModalOpen(true)} className="w-full text-left text-xs font-medium text-[#14B8A6] hover:text-[#0D9488] py-2 px-2 flex items-center gap-1 transition-colors">
+                  <Plus size={12} />Add New Task
+                </button>
+              </div>
+            )}
+          </DashCard>
+
+          {/* ── CARD 4: Financial Summary ── */}
+          <DashCard delay={440}>
+            <CardHeader
+              icon={<div className="w-7 h-7 rounded-lg bg-[#DCFCE7] flex items-center justify-center"><CircleDollarSign size={14} className="text-[#16A34A]" /></div>}
+              title="Financial Summary"
+              actionLabel="View Details →"
+              action={() => navigate('/invoice')}
+            />
+            <div className="space-y-0">
+              {[
+                { label: "Total Revenue", value: fmtCurrency(totalRevenue, client.currency), bold: true },
+                { label: "Open Invoices", value: openInvoices.length.toString() },
+                { label: "Overdue Invoices", value: overdueInvoices.length.toString(), danger: overdueInvoices.length > 0 },
+                { label: "Outstanding Amount", value: fmtCurrency(outstandingAmount, client.currency), danger: outstandingAmount > 0 },
+                { label: "Lifetime Value", value: fmtCurrency(totalRevenue + paidInvoices.reduce((s: number, i: any) => s + (Number(i.total) || 0), 0), client.currency) },
+              ].map((row, i) => (
+                <div key={i} className={`flex items-center justify-between py-2.5 ${i < 4 ? 'border-b border-dashed border-[#F1F5F9]' : ''}`}>
+                  <span className="text-xs text-[#6B7280]">{row.label}</span>
+                  <span className={`text-sm font-semibold ${row.danger ? 'text-[#EF4444]' : row.bold ? 'text-[#111827]' : 'text-[#374151]'}`}>{row.value}</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[#F1F5F9]">
+              <button onClick={() => navigate('/invoice/create')} className="text-xs font-medium text-[#14B8A6] flex items-center gap-1 hover:text-[#0D9488] transition-colors">
+                <Plus size={12} />Create Invoice
+              </button>
+            </div>
+          </DashCard>
+
+          {/* ── CARD 5: Property Details ── */}
+          <DashCard delay={520}>
+            <CardHeader
+              icon={<div className="w-7 h-7 rounded-lg bg-[#FEF3C7] flex items-center justify-center"><Home size={14} className="text-[#D97706]" /></div>}
+              title="Property Details"
+              actionLabel="✏️ Edit"
+              action={() => navigate(`/client-list/${id}/edit`)}
+            />
+            {!client.propertyType && !client.currentRoofMaterial && !client.roofSize ? (
+              <EmptyState icon={<Home size={20} className="text-[#9CA3AF]" />} title="No property details" subtitle="Add property details to this client" cta="Add Property Details" onCta={() => navigate(`/client-list/${id}/edit`)} />
+            ) : (
+              <div className="grid grid-cols-2 gap-x-6 gap-y-0.5">
+                <InfoField label="Property Type" value={client.propertyType} icon={Building2} />
+                <InfoField label="Stories" value={client.numberOfStories} icon={Layers} />
+                <InfoField label="Roof Material" value={client.currentRoofMaterial} icon={Home} />
+                <InfoField label="Roof Age" value={client.roofAge} icon={Clock} />
+                <InfoField label="Roof Size (sqft)" value={client.roofSize} icon={Ruler} />
+                <InfoField label="Roof Pitch" value={client.roofPitch} icon={Layers} />
+                <InfoField label="Service Type" value={client.serviceType} icon={Wrench} />
+                <InfoField label="Homeowner" value={client.isHomeowner} icon={Home} />
+                <InfoField label="HOA" value={client.isHOA} icon={Shield} />
+                {client.hoaRestrictions && <InfoField label="HOA Restrictions" value={client.hoaRestrictions} icon={AlertTriangle} />}
+              </div>
+            )}
+          </DashCard>
+
+          {/* ── CARD 6: Recent Activity / Timeline ── */}
+          <DashCard delay={600}>
+            <CardHeader
+              icon={<div className="w-7 h-7 rounded-lg bg-[#EFF6FF] flex items-center justify-center"><Clock size={14} className="text-[#2563EB]" /></div>}
+              title="Recent Activity"
+            />
+            <div className="max-h-[280px] overflow-y-auto -mx-1 px-1">
+              <ActivityTimeline entityType="Client" entityId={id!} />
+            </div>
+          </DashCard>
+
+          {/* ── CARD 7: Documents ── */}
+          <DashCard delay={680}>
+            <CardHeader
+              icon={<div className="w-7 h-7 rounded-lg bg-[#EDE9FE] flex items-center justify-center"><FolderOpen size={14} className="text-[#7C3AED]" /></div>}
+              title="Documents"
+              count={documents.length}
+            />
+            {loadingDocs ? (
+              <div className="flex items-center justify-center py-8"><Loader2 className="animate-spin text-[#14B8A6]" size={20} /></div>
+            ) : documents.length === 0 ? (
+              <EmptyState icon={<FolderOpen size={20} className="text-[#9CA3AF]" />} title="No documents uploaded" subtitle="Upload certificates, contracts, and files" cta="Upload Document" onCta={() => navigate('/filemanager')} />
+            ) : (
+              <div className="space-y-2">
+                {documents.slice(0, 4).map((doc: any) => {
+                  const ext = doc.extension || doc.name?.split('.').pop() || '';
+                  const sizeKb = doc.size ? (Number(doc.size) / 1024).toFixed(1) : '—';
+                  return (
+                    <div key={doc.id} className="flex items-center gap-3 py-2 px-2 rounded-lg hover:bg-[#F9FAFB] transition-colors">
+                      <div className="w-8 h-8 rounded-lg bg-[#EDE9FE] flex items-center justify-center flex-shrink-0">
+                        <FileText size={14} className="text-[#7C3AED]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-[#111827] truncate">{doc.originalName || doc.name}</p>
+                        <p className="text-[10px] text-[#9CA3AF]">{sizeKb} KB · {ext.toUpperCase()} · {doc.createdAt ? new Date(doc.createdAt).toLocaleDateString() : ''}</p>
+                      </div>
+                      <a href={doc.path} target="_blank" rel="noreferrer" className="text-[#14B8A6] hover:text-[#0D9488] p-1"><Download size={14} /></a>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </DashCard>
+
+          {/* ── CARD 8: Lead & Source Tracking ── */}
+          <DashCard delay={760}>
+            <CardHeader
+              icon={<div className="w-7 h-7 rounded-lg bg-[#FCE7F3] flex items-center justify-center"><TrendingUp size={14} className="text-[#DB2777]" /></div>}
+              title="Lead & Source"
+              actionLabel="✏️ Edit"
+              action={() => navigate(`/client-list/${id}/edit`)}
+            />
+            <div className="space-y-0">
+              {[
+                { label: "Lead Source", value: client.leadSource || "—" },
+                { label: "Category", value: client.clientCategory || "—" },
+                { label: "Budget Range", value: client.budgetRange || "—" },
+                { label: "Urgency Level", value: client.urgencyLevel || "—" },
+                { label: "Lifecycle Stage", value: client.lifecycleStage || "—" },
+                { label: "Conversion Date", value: fmtDate(client.createdAt) },
+              ].map((row, i) => (
+                <div key={i} className={`flex items-center justify-between py-2.5 ${i < 5 ? 'border-b border-dashed border-[#F1F5F9]' : ''}`}>
+                  <span className="text-xs text-[#6B7280]">{row.label}</span>
+                  <span className="text-sm font-medium text-[#374151]">{row.value}</span>
+                </div>
+              ))}
+            </div>
+            {/* Tags */}
+            {tags.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-[#F1F5F9]">
+                <p className="text-[10px] text-[#9CA3AF] uppercase tracking-wider font-medium mb-2">Tags</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {tags.map((tag, i) => (
+                    <span key={i} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-[#14B8A6]/10 text-[#0D9488]">
+                      <Tag size={10} className="mr-1" />{tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </DashCard>
+
+          {/* ── CARD 9: Notes (full width) ── */}
+          <DashCard delay={840} className="lg:col-span-2">
+            <CardHeader
+              icon={<div className="w-7 h-7 rounded-lg bg-[#FEF9C3] flex items-center justify-center"><StickyNote size={14} className="text-[#CA8A04]" /></div>}
+              title="Internal Notes"
+              actionLabel="+ Add Note"
+              action={() => setShowNoteForm(!showNoteForm)}
+            />
+            {showNoteForm && (
+              <div className="bg-[#F9FAFB] p-4 rounded-lg mb-3 border border-[#E5E7EB]">
+                <Textarea placeholder="Type your note here..." className="resize-none min-h-[80px] bg-white" value={newNote} onChange={(e) => setNewNote(e.target.value)} autoFocus />
+                <div className="flex justify-end gap-2 mt-3">
+                  <Button variant="outline" size="sm" onClick={() => setShowNoteForm(false)}>Cancel</Button>
+                  <Button size="sm" className="bg-[#14B8A6] text-white hover:bg-[#0D9488]" onClick={handleAddNote} disabled={savingNote || !newNote.trim()}>
+                    {savingNote ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+                    {savingNote ? "Saving..." : "Save Note"}
+                  </Button>
+                </div>
+              </div>
+            )}
+            {!internalNotes && !showNoteForm ? (
+              <EmptyState icon={<StickyNote size={20} className="text-[#9CA3AF]" />} title="No notes yet" subtitle="Add a note to keep track of important information" cta="Add Note" onCta={() => setShowNoteForm(true)} />
+            ) : internalNotes ? (
+              <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                {internalNotes.split('\n\n---\n\n').map((note, index) => (
+                  <div key={index} className="bg-[#FFFBEB] p-3 rounded-lg border border-[#FDE68A]/50">
+                    <p className="text-sm text-[#111827] whitespace-pre-wrap leading-relaxed">{note}</p>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </DashCard>
+        </div>
+      </div>
+
+      {/* ═══════════ TASK MODAL ═══════════ */}
       {isTaskModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-md shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center p-4 border-b">
-              <h3 className="font-semibold text-lg">Add New Task</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center p-5 border-b">
+              <h3 className="font-semibold text-lg text-[#111827]">Add New Task</h3>
               <Button variant="ghost" size="icon" onClick={() => setIsTaskModalOpen(false)}><X className="h-4 w-4" /></Button>
             </div>
-            <div className="p-4 space-y-4">
-              <div className="space-y-2"><label className="text-sm font-medium text-[#475569]">Task Title</label><Input placeholder="Enter task description..." value={newTaskTitle} onChange={(e) => setNewTaskTitle(e.target.value)} autoFocus /></div>
+            <div className="p-5 space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[#374151]">Task Title</label>
+                <Input placeholder="Enter task description..." value={newTaskTitle} onChange={(e) => setNewTaskTitle(e.target.value)} autoFocus />
+              </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2"><label className="text-sm font-medium text-[#475569]">Due Date</label><Input type="date" value={newTaskDate} onChange={(e) => setNewTaskDate(e.target.value)} /></div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-[#475569]">Priority</label>
+                  <label className="text-sm font-medium text-[#374151]">Due Date</label>
+                  <Input type="date" value={newTaskDate} onChange={(e) => setNewTaskDate(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-[#374151]">Priority</label>
                   <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" value={newTaskPriority} onChange={(e) => setNewTaskPriority(e.target.value as any)}>
                     <option value="High">High</option><option value="Medium">Medium</option><option value="Low">Low</option>
                   </select>
                 </div>
               </div>
             </div>
-            <div className="p-4 bg-[#F8FAFC] flex justify-end gap-2">
+            <div className="p-5 bg-[#F9FAFB] flex justify-end gap-2 border-t">
               <Button variant="outline" onClick={() => setIsTaskModalOpen(false)}>Cancel</Button>
-              <Button className="bg-[#0891B2] hover:bg-[#0891B2]/80 text-white" onClick={handleAddTask} disabled={savingTask}>{savingTask ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}Add Task</Button>
+              <Button className="bg-[#14B8A6] hover:bg-[#0D9488] text-white" onClick={handleAddTask} disabled={savingTask}>
+                {savingTask ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}Add Task
+              </Button>
             </div>
           </div>
         </div>

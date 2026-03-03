@@ -79,15 +79,15 @@ export class EmployeesService {
                     lastName: data.lastName,
                     status: 'ACTIVE',
                     emailVerified: true,
-                    tenantId,
+                    tenant: { connect: { id: tenantId } },
                 },
             });
 
             const employee = await tx.employee.create({
                 data: {
-                    userId: user.id,
-                    tenantId,
-                    roleId: staffRole.id,
+                    user: { connect: { id: user.id } },
+                    tenant: { connect: { id: tenantId } },
+                    role: { connect: { id: staffRole.id } },
                     position: data.position || 'Crew Member',
                     department: data.department || null,
                     isActive: true,

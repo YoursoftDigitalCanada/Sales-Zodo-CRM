@@ -1039,7 +1039,7 @@ const ClientContactListPage = () => {
   const fetchContacts = async () => {
     setIsLoading(true);
     try {
-      const res = await api.get("/contacts", { params: { limit: 200, sortBy: "contactName", sortOrder: "asc" } });
+      const res = await api.get("/contacts", { params: { limit: 100, sortBy: "contactName", sortOrder: "asc" } });
       const apiContacts = res.data?.data?.data || res.data?.data || [];
       const mapped = (apiContacts || []).map((c: any) => ({
         id: c.id,

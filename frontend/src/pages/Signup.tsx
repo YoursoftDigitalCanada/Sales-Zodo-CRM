@@ -94,8 +94,14 @@ const SignUpPage = () => {
   const [btnState, setBtnState] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [pwFocused, setPwFocused] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
+  const mountedRef = useRef(false);
+  const anim = (val: string): string | undefined => mountedRef.current ? undefined : val;
 
-  useEffect(() => { nameRef.current?.focus(); }, []);
+  useEffect(() => {
+    nameRef.current?.focus();
+    const t = setTimeout(() => { mountedRef.current = true; }, 1200);
+    return () => clearTimeout(t);
+  }, []);
   useEffect(() => {
     if (dark) document.body.classList.add("dark"); else document.body.classList.remove("dark");
     localStorage.setItem("zodo-theme", dark ? "dark" : "light");
@@ -180,33 +186,56 @@ const SignUpPage = () => {
   const validIcon = <svg width="16" height="16" fill={V.success} viewBox="0 0 24 24"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" /></svg>;
   const invalidIcon = <svg width="16" height="16" fill={V.error} viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" /></svg>;
 
-  const Field = ({ field, label, icon, placeholder, type = "text", optional, validation, errorMsg, idx }: { field: string; label: string; icon: React.ReactNode; placeholder: string; type?: string; optional?: boolean; validation?: boolean | null; errorMsg?: string; idx: number }) => (
-    <div style={{ marginBottom: 14, animation: `fadeInUp 0.5s ease ${0.5 + idx * 0.05}s both` }}>
-      <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14, fontWeight: 600, color: dark ? "#e2e8f0" : "#374151", marginBottom: 6, transition: "color 0.3s" }}>
-        {label}{optional && <span style={{ fontSize: 11, color: V.textLight, fontWeight: 400 }}>(optional)</span>}
-      </label>
-      <div style={{ position: "relative" }}>
-        <span style={iL}>{icon}</span>
-        <input type={type === "password" ? (field === "password" ? (showPw ? "text" : "password") : (showCpw ? "text" : "password")) : type}
-          value={(form as any)[field]} placeholder={placeholder} aria-label={label} aria-required={!optional ? "true" : undefined}
-          ref={field === "fullName" ? nameRef : undefined}
-          onChange={e => set(field, e.target.value)} onFocus={() => { setFocus(field, true); if (field === "password") setPwFocused(true); }}
-          onBlur={() => { setFocus(field, false); touch(field); if (field === "password") setPwFocused(false); }}
-          onKeyUp={e => { if (type === "password") setCapsLock(e.getModifierState("CapsLock")); }}
-          disabled={isLoading}
-          style={inputS(field, touched[field] ? validation ?? null : null)}
-        />
-        {type === "password" && (
-          <button type="button" onClick={() => field === "password" ? setShowPw(!showPw) : setShowCpw(!showCpw)} aria-label="Show/Hide password"
-            style={{ ...iR, background: "none", border: "none", cursor: "pointer", color: V.textLight, transition: "color 0.2s", padding: 0 }}>
-            {(field === "password" ? showPw : showCpw) ? <EyeOffIcon /> : <EyeIcon />}
-          </button>
-        )}
-        {type !== "password" && touched[field] && validation != null && <span style={iR}>{validation ? validIcon : invalidIcon}</span>}
+  const Field = ({ field, label, icon, placeholder, type = "text", optional, validation, errorMsg, idx }: { field: string; label: string; icon: React.ReactNode; placeholder: string; type?: string; optional?: boolean; validation?: boolean | null; errorMsg?: string; idx: number }) => {
+    const isPasswordField = type === "password";
+    const showPassword = field === "password" ? showPw : showCpw;
+    const togglePassword = () => field === "password" ? setShowPw(!showPw) : setShowCpw(!showCpw);
+    const inputType = isPasswordField ? (showPassword ? "text" : "password") : type;
+    const f = focusMap[field];
+    const isTouched = touched[field];
+    const currentInputStyle: React.CSSProperties = {
+      width: "100%", height: 48, padding: "0 44px",
+      border: `1.5px solid ${isTouched && validation === false ? V.error : isTouched && validation === true ? V.success : f ? V.primary : border}`,
+      borderRadius: 12, background: dark ? V.dmInputBg : V.inputBg, fontFamily: V.font, fontSize: 15,
+      color: dark ? V.dmText : V.textDark, outline: "none", transition: "all 0.25s ease",
+      boxShadow: isTouched && validation === false ? "0 0 0 4px rgba(239,68,68,0.10)" : isTouched && validation === true ? "0 0 0 4px rgba(16,185,129,0.10)" : f ? "0 0 0 4px rgba(0,212,255,0.10)" : "none",
+      animation: isTouched && validation === false ? "shake 0.5s" : undefined,
+    };
+
+    return (
+      <div style={{ marginBottom: 14, animation: anim(`fadeInUp 0.5s ease ${0.5 + idx * 0.05}s both`) }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14, fontWeight: 600, color: dark ? "#e2e8f0" : "#374151", marginBottom: 6, transition: "color 0.3s" }}>
+          {label}{optional && <span style={{ fontSize: 11, color: V.textLight, fontWeight: 400 }}>(optional)</span>}
+        </label>
+        <div style={{ position: "relative" }}>
+          <span style={iL}>{icon}</span>
+          <input
+            key={field}
+            type={inputType}
+            value={(form as any)[field]}
+            placeholder={placeholder}
+            aria-label={label}
+            aria-required={!optional ? "true" : undefined}
+            ref={field === "fullName" ? nameRef : undefined}
+            onChange={e => set(field, e.target.value)}
+            onFocus={() => { setFocus(field, true); if (field === "password") setPwFocused(true); }}
+            onBlur={() => { setFocus(field, false); touch(field); if (field === "password") setPwFocused(false); }}
+            onKeyUp={e => { if (isPasswordField) setCapsLock(e.getModifierState("CapsLock")); }}
+            disabled={isLoading}
+            style={currentInputStyle}
+          />
+          {isPasswordField && (
+            <button type="button" onClick={togglePassword} aria-label="Show/Hide password"
+              style={{ ...iR, background: "none", border: "none", cursor: "pointer", color: V.textLight, transition: "color 0.2s", padding: 0 }}>
+              {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+            </button>
+          )}
+          {!isPasswordField && isTouched && validation != null && <span style={iR}>{validation ? validIcon : invalidIcon}</span>}
+        </div>
+        {isTouched && validation === false && errorMsg && <p role="alert" aria-live="polite" style={{ color: V.error, fontSize: 12, marginTop: 4 }}>{errorMsg}</p>}
       </div>
-      {touched[field] && validation === false && errorMsg && <p role="alert" aria-live="polite" style={{ color: V.error, fontSize: 12, marginTop: 4 }}>{errorMsg}</p>}
-    </div>
-  );
+    );
+  };
 
   return (
     <>
@@ -261,17 +290,17 @@ const SignUpPage = () => {
             <a href="/" aria-label="ZODO CRM Home"><img src={logo} alt="ZODO CRM" style={{ width: 100, margin: "0 auto 28px", display: "block", cursor: "pointer" }} /></a>
           </div>
           <div style={{ width: "100%", maxWidth: 420 }}>
-            <span style={{ display: "inline-block", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.20)", borderRadius: 9999, padding: "6px 16px", color: V.success, fontSize: 13, fontWeight: 500, marginBottom: 16, animation: "fadeInUp 0.5s ease 0.1s both" }}>✦ Free 14-Day Trial</span>
-            <h2 style={{ fontSize: 28, fontWeight: 700, color: textH, marginBottom: 8, animation: "fadeInUp 0.5s ease 0.2s both", transition: "color 0.3s" }}>Create your free account</h2>
-            <p style={{ fontSize: 14, color: textSub, marginBottom: 12, animation: "fadeInUp 0.5s ease 0.3s both", transition: "color 0.3s" }}>Start your 14-day free trial.<br />No credit card required. Cancel anytime.</p>
+            <span style={{ display: "inline-block", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.20)", borderRadius: 9999, padding: "6px 16px", color: V.success, fontSize: 13, fontWeight: 500, marginBottom: 16, animation: anim("fadeInUp 0.5s ease 0.1s both") }}>✦ Free 14-Day Trial</span>
+            <h2 style={{ fontSize: 28, fontWeight: 700, color: textH, marginBottom: 8, animation: anim("fadeInUp 0.5s ease 0.2s both"), transition: "color 0.3s" }}>Create your free account</h2>
+            <p style={{ fontSize: 14, color: textSub, marginBottom: 12, animation: anim("fadeInUp 0.5s ease 0.3s both"), transition: "color 0.3s" }}>Start your 14-day free trial.<br />No credit card required. Cancel anytime.</p>
 
             {/* Progress Bar */}
-            <div style={{ height: 3, background: dark ? V.dmBorder : V.inputBorder, borderRadius: 99, overflow: "hidden", marginBottom: 24, animation: "fadeInUp 0.5s ease 0.35s both" }}>
+            <div style={{ height: 3, background: dark ? V.dmBorder : V.inputBorder, borderRadius: 99, overflow: "hidden", marginBottom: 24, animation: anim("fadeInUp 0.5s ease 0.35s both") }}>
               <div style={{ height: "100%", borderRadius: 99, width: `${progress}%`, background: V.gradBtn, transition: "width 0.4s ease" }} />
             </div>
 
             {/* Social */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 20, animation: "fadeInUp 0.5s ease 0.4s both" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 20, animation: anim("fadeInUp 0.5s ease 0.4s both") }}>
               {[{ icon: <GoogleIcon />, label: "Google" }, { icon: <GithubIcon dark={dark} />, label: "GitHub" }, { icon: <MicrosoftIcon />, label: "Microsoft" }].map(b => (
                 <button key={b.label} onClick={() => social(b.label)} style={{ height: 44, background: cardBg, border: `1.5px solid ${border}`, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: 13, fontWeight: 500, color: dark ? V.dmText : "#374151", cursor: "pointer", transition: "all 0.25s" }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = V.primary; e.currentTarget.style.transform = "translateY(-1px)"; }}
@@ -281,7 +310,7 @@ const SignUpPage = () => {
               ))}
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "4px 0 20px", animation: "fadeInUp 0.5s ease 0.45s both" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "4px 0 20px", animation: anim("fadeInUp 0.5s ease 0.45s both") }}>
               <div style={{ flex: 1, height: 1, background: border, transition: "background 0.3s" }} />
               <span style={{ fontSize: 12, color: V.textLight }}>or sign up with email</span>
               <div style={{ flex: 1, height: 1, background: border, transition: "background 0.3s" }} />
@@ -318,7 +347,7 @@ const SignUpPage = () => {
               <Field field="company" label="Company Name" icon={<BuildingIcon color={focusMap.company ? V.primary : V.textLight} />} placeholder="Your company name" optional idx={4} />
 
               {/* Terms */}
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 8, margin: "16px 0", animation: "fadeInUp 0.5s ease 0.8s both" }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 8, margin: "16px 0", animation: anim("fadeInUp 0.5s ease 0.8s both") }}>
                 <div onClick={() => { setAgreeTerms(!agreeTerms); setTermsError(false); }} style={{ width: 18, height: 18, borderRadius: 5, border: agreeTerms ? "none" : `1.5px solid ${termsError ? V.error : border}`, background: agreeTerms ? V.gradBtn : (dark ? V.dmInputBg : "#fff"), display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", transition: "all 0.2s", flexShrink: 0, marginTop: 2 }}>
                   {agreeTerms && <CheckSvg />}
                 </div>
@@ -336,7 +365,7 @@ const SignUpPage = () => {
                 width: "100%", height: 52, background: btnState === "success" ? "linear-gradient(135deg,#10b981,#059669)" : V.gradBtn,
                 border: "none", borderRadius: 12, color: "#fff", fontSize: 15, fontWeight: 600, letterSpacing: 0.3, cursor: isLoading ? "not-allowed" : "pointer",
                 position: "relative", overflow: "hidden", transition: "all 0.3s", marginBottom: 20, opacity: isLoading ? 0.85 : 1,
-                transform: btnState === "success" ? "scale(1.01)" : undefined, animation: `fadeInUp 0.5s ease 0.85s both${btnState === "error" ? ", shake 0.5s" : ""}`,
+                transform: btnState === "success" ? "scale(1.01)" : undefined, animation: btnState === "error" ? "shake 0.5s" : anim("fadeInUp 0.5s ease 0.85s both"),
               }} onMouseEnter={e => { if (!isLoading) { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = V.shadowGlow; } }}
                 onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none"; }}>
                 <span style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
@@ -348,12 +377,12 @@ const SignUpPage = () => {
               </button>
             </form>
 
-            <p style={{ textAlign: "center", fontSize: 14, color: textSub, marginBottom: 24, animation: "fadeInUp 0.5s ease 0.9s both", transition: "color 0.3s" }}>
+            <p style={{ textAlign: "center", fontSize: 14, color: textSub, marginBottom: 24, animation: anim("fadeInUp 0.5s ease 0.9s both"), transition: "color 0.3s" }}>
               Already have an account?{" "}
               <NavLink to="/login" style={{ color: V.primary, fontWeight: 600, textDecoration: "none" }} onMouseEnter={e => (e.currentTarget.style.textDecoration = "underline")} onMouseLeave={e => (e.currentTarget.style.textDecoration = "none")}>Sign in</NavLink>
             </p>
 
-            <div style={{ paddingTop: 20, borderTop: `1px solid ${border}`, display: "flex", justifyContent: "center", alignItems: "center", gap: 20, animation: "fadeInUp 0.5s ease 0.95s both", transition: "border-color 0.3s" }}>
+            <div style={{ paddingTop: 20, borderTop: `1px solid ${border}`, display: "flex", justifyContent: "center", alignItems: "center", gap: 20, animation: anim("fadeInUp 0.5s ease 0.95s both"), transition: "border-color 0.3s" }}>
               {[{ e: "🔒", t: "SSL Secured" }, null, { e: "🛡️", t: "SOC 2 Ready" }, null, { e: "✅", t: "GDPR Compliant" }].map((b, i) =>
                 b ? <span key={i} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: V.textLight }}>{b.e} {b.t}</span>
                   : <span key={i} style={{ width: 1, height: 14, background: border, transition: "background 0.3s" }} />

@@ -21,9 +21,10 @@ export const createLeadSourceSchema = z.object({
     sourceType: sourceTypeEnum.optional().default('WEBSITE'),
     category: categoryEnum.optional().default('DIGITAL'),
     icon: z.string().max(50).optional().nullable(),
-    color: z.string().max(10).optional().nullable(),
+    color: z.string().max(20).optional().nullable(),
 
     // Integration
+    integrationStatus: integrationStatusEnum.optional().default('DISCONNECTED'),
     integrationConfig: z.any().optional().nullable(),
     apiEndpoint: z.string().url().optional().nullable(),
 
@@ -52,8 +53,8 @@ export const createLeadSourceSchema = z.object({
 
     // Status
     status: statusEnum.optional().default('ACTIVE'),
-  }),
-});
+  }).passthrough(),
+}).passthrough();
 
 // ── Update ──────────────────────────────────────────────────────────
 export const updateLeadSourceSchema = z.object({
@@ -65,8 +66,9 @@ export const updateLeadSourceSchema = z.object({
     sourceType: sourceTypeEnum.optional(),
     category: categoryEnum.optional(),
     icon: z.string().max(50).optional().nullable(),
-    color: z.string().max(10).optional().nullable(),
+    color: z.string().max(20).optional().nullable(),
 
+    integrationStatus: integrationStatusEnum.optional(),
     integrationConfig: z.any().optional().nullable(),
     apiEndpoint: z.string().url().optional().nullable(),
 
@@ -90,8 +92,8 @@ export const updateLeadSourceSchema = z.object({
     defaultValues: z.any().optional().nullable(),
 
     status: statusEnum.optional(),
-  }),
-});
+  }).passthrough(),
+}).passthrough();
 
 // ── Query ───────────────────────────────────────────────────────────
 export const leadSourceQuerySchema = z.object({

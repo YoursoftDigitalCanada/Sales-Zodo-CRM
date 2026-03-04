@@ -86,7 +86,11 @@ export class LeadSourcesRepository {
         where,
         include: {
           _count: {
-            select: { leads: true },
+            select: {
+              leads: {
+                where: { tenantId },
+              },
+            },
           },
         },
         orderBy: { name: 'asc' },
@@ -140,6 +144,7 @@ export class LeadSourcesRepository {
       where: { tenantId, isActive: true },
       include: {
         leads: {
+          where: { tenantId },
           select: {
             id: true,
             status: true,

@@ -250,7 +250,7 @@ const LeadSourceDetail = () => {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen">
                 <p className="text-[#475569] mb-4">Source not found</p>
-                <Button onClick={() => navigate("/lead-sources")} className="rounded-xl">Go Back</Button>
+                <Button onClick={() => navigate("/leads/sources")} className="rounded-xl">Go Back</Button>
             </div>
         );
     }
@@ -267,7 +267,7 @@ const LeadSourceDetail = () => {
             <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-[rgba(15,23,42,0.06)]">
                 <div className="flex h-16 items-center justify-between px-6">
                     <div className="flex items-center gap-2 text-sm">
-                        <button onClick={() => navigate("/lead-sources")} className="text-[#475569] hover:text-[#0891B2] transition-colors flex items-center gap-1">
+                        <button onClick={() => navigate("/leads/sources")} className="text-[#475569] hover:text-[#0891B2] transition-colors flex items-center gap-1">
                             <ArrowLeft size={14} />
                             Lead Sources
                         </button>

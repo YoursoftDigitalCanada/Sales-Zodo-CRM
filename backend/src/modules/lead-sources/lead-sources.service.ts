@@ -5,7 +5,6 @@ import {
   LeadSourceQueryDto,
   LeadSourceResponseDto,
   LeadSourceListResponseDto,
-  LeadSourceWithStatsDto,
   toLeadSourceResponseDto,
 } from './lead-sources.dto';
 import { NotFoundError, ConflictError, BadRequestError } from '../../common/errors/HttpErrors';
@@ -30,7 +29,7 @@ export class LeadSourcesService {
       tenantId, entityType: 'LeadSource', entityId: dto.id,
       action: 'CREATE', module: 'lead-sources',
       description: `Created lead source "${data.name}"`,
-      metadata: { sourceName: data.name },
+      metadata: { sourceName: data.name, sourceType: data.sourceType },
     });
 
     return dto;
@@ -84,11 +83,7 @@ export class LeadSourcesService {
   /**
    * Update lead source
    */
-  async update(
-    id: string,
-    tenantId: string,
-    data: UpdateLeadSourceDto
-  ): Promise<LeadSourceResponseDto> {
+  async update(id: string, tenantId: string, data: UpdateLeadSourceDto): Promise<LeadSourceResponseDto> {
     const existing = await leadSourcesRepository.findById(id, tenantId);
 
     if (!existing) {
@@ -148,6 +143,140 @@ export class LeadSourcesService {
    */
   async getStatistics(tenantId: string): Promise<any[]> {
     return leadSourcesRepository.getStatistics(tenantId);
+  }
+
+  /**
+   * Get available source types
+   */
+  getSourceTypes() {
+    return leadSourcesRepository.getSourceTypes();
+  }
+
+  /**
+   * Pause a lead source
+   */
+  async pause(id: string, tenantId: string): Promise<LeadSourceResponseDto> {
+    const existing = await leadSourcesRepository.findById(id, tenantId);
+    if (!existing) {
+      throw new NotFoundError('Lead source not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    }
+
+    const source = await leadSourcesRepository.update(id, tenantId, { status: 'PAUSED' } as any);
+    return toLeadSourceResponseDto(source);
+  }
+
+  /**
+   * Resume a lead source
+   */
+  async resume(id: string, tenantId: string): Promise<LeadSourceResponseDto> {
+    const existing = await leadSourcesRepository.findById(id, tenantId);
+    if (!existing) {
+      throw new NotFoundError('Lead source not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    }
+
+    const source = await leadSourcesRepository.update(id, tenantId, { status: 'ACTIVE' } as any);
+    return toLeadSourceResponseDto(source);
+  }
+
+  /**
+   * Test connection for a lead source
+   */
+  async testConnection(id: string, tenantId: string): Promise<{ success: boolean; message: string }> {
+    const existing = await leadSourcesRepository.findById(id, tenantId);
+    if (!existing) {
+      throw new NotFoundError('Lead source not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    }
+
+    // For manual sources, always return success
+    if (['COLD_CALL', 'REFERRAL', 'WALK_IN', 'TRADE_SHOW'].includes(existing.sourceType)) {
+      await leadSourcesRepository.createLog({
+        leadSourceId: id,
+        eventType: 'connection_test',
+        status: 'success',
+        direction: 'outbound',
+        responsePayload: { message: 'Manual source - no connection needed' },
+      });
+      return { success: true, message: 'Manual source — no external connection needed.' };
+    }
+
+    // For webhook sources (website, email), check if webhook URL exists
+    if (['WEBSITE', 'EMAIL_CAMPAIGN'].includes(existing.sourceType)) {
+      const hasWebhook = !!existing.webhookUrl;
+      await leadSourcesRepository.createLog({
+        leadSourceId: id,
+        eventType: 'connection_test',
+        status: hasWebhook ? 'success' : 'failed',
+        direction: 'outbound',
+        responsePayload: { hasWebhook, webhookUrl: existing.webhookUrl },
+      });
+      return {
+        success: hasWebhook,
+        message: hasWebhook
+          ? `Webhook URL is ready: ${existing.webhookUrl}`
+          : 'No webhook URL configured.',
+      };
+    }
+
+    // For API-based sources (Google, Social Media) — placeholder
+    await leadSourcesRepository.createLog({
+      leadSourceId: id,
+      eventType: 'connection_test',
+      status: 'pending',
+      direction: 'outbound',
+      responsePayload: { message: 'OAuth connection required' },
+    });
+    return { success: false, message: 'OAuth connection not yet configured. Connect your account first.' };
+  }
+
+  /**
+   * Regenerate webhook secret
+   */
+  async regenerateWebhookSecret(id: string, tenantId: string): Promise<{ webhookUrl: string; webhookSecret: string }> {
+    const existing = await leadSourcesRepository.findById(id, tenantId);
+    if (!existing) {
+      throw new NotFoundError('Lead source not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    }
+
+    const updated = await leadSourcesRepository.regenerateWebhookSecret(id, tenantId);
+    return {
+      webhookUrl: updated.webhookUrl || '',
+      webhookSecret: updated.webhookSecret || '',
+    };
+  }
+
+  /**
+   * Get webhook logs for a source
+   */
+  async getLogs(id: string, tenantId: string, query: { page?: number; limit?: number; eventType?: string; status?: string }) {
+    const existing = await leadSourcesRepository.findById(id, tenantId);
+    if (!existing) {
+      throw new NotFoundError('Lead source not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    }
+
+    return leadSourcesRepository.getLogs(id, query);
+  }
+
+  /**
+   * Get summary stats across all sources
+   */
+  async getStatsSummary(tenantId: string) {
+    const stats = await leadSourcesRepository.getStatistics(tenantId);
+
+    const totalSources = stats.length;
+    const activeSources = stats.filter((s) => s.isActive && s.status !== 'PAUSED').length;
+    const totalLeads = stats.reduce((sum, s) => sum + s.leadCount, 0);
+    const totalConverted = stats.reduce((sum, s) => sum + s.convertedCount, 0);
+    const totalRevenue = stats.reduce((sum, s) => sum + s.totalValue, 0);
+    const avgConversionRate = totalLeads > 0 ? (totalConverted / totalLeads) * 100 : 0;
+
+    return {
+      totalSources,
+      activeSources,
+      totalLeads,
+      totalConverted,
+      totalRevenue,
+      avgConversionRate: Math.round(avgConversionRate * 10) / 10,
+    };
   }
 }
 

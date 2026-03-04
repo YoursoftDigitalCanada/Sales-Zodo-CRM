@@ -58,6 +58,47 @@ enum LeadLifecycleStage {
   OPPORTUNITY    // Active deal in progress
 }
 
+// ── Lead Source Enums ──
+
+enum LeadSourceType {
+  COLD_CALL
+  EMAIL_CAMPAIGN
+  GOOGLE_ADS
+  REFERRAL
+  SOCIAL_MEDIA
+  TRADE_SHOW
+  WALK_IN
+  WEBSITE
+}
+
+enum LeadSourceCategory {
+  DIGITAL
+  MANUAL
+}
+
+enum IntegrationStatus {
+  DISCONNECTED
+  CONNECTING
+  CONNECTED
+  ERROR
+  EXPIRED
+}
+
+enum AssignmentMethod {
+  MANUAL_ASSIGN
+  ROUND_ROBIN
+  TERRITORY
+  LOAD_BALANCE
+  FIRST_AVAILABLE
+}
+
+enum LeadSourceStatus {
+  ACTIVE
+  INACTIVE
+  PAUSED
+  ARCHIVED
+}
+
 enum ClientLifecycleStage {
   NEW_CUSTOMER   // Just converted from lead
   ONBOARDING     // Going through setup / first project
@@ -592,22 +633,159 @@ model RolePermission {
 // ============================================================================
 
 model LeadSource {
-  id              String      @id @default(uuid())
+  id              String              @id @default(uuid())
   name            String
+  slug            String?
   description     String?
-  isActive        Boolean     @default(true)
-  
+  isActive        Boolean             @default(true)
+
+  // Type & Category
+  sourceType      LeadSourceType      @default(WEBSITE)
+  category        LeadSourceCategory  @default(DIGITAL)
+  icon            String?             // icon name for UI
+  color           String?             // hex color for UI
+
+  // Integration
+  integrationStatus IntegrationStatus @default(DISCONNECTED)
+  integrationConfig Json?             // platform-specific config (page IDs, form IDs, etc.)
+  webhookUrl        String?           // auto-generated webhook URL
+  webhookSecret     String?           // for signature verification
+  apiEndpoint       String?           // optional custom endpoint
+
+  // OAuth (encrypted at app level)
+  accessToken           String?       @db.Text
+  refreshToken          String?       @db.Text
+  tokenExpiresAt        DateTime?
+  tokenScopes           String[]      @default([])
+  externalAccountId     String?
+  externalAccountName   String?
+
+  // Cost Tracking
+  costPerLead     Decimal?            @db.Decimal(10, 2)
+  monthlyBudget   Decimal?            @db.Decimal(10, 2)
+  autoSyncCost    Boolean             @default(false)
+
+  // Assignment Rules
+  autoAssign        Boolean           @default(false)
+  assignmentMethod  AssignmentMethod  @default(MANUAL_ASSIGN)
+  assignedUserId    String?
+  assignedTeamId    String?
+  territoryRules    Json?             // zip code mapping, etc.
+
+  // Automation
+  sendWelcomeEmail        Boolean     @default(false)
+  welcomeEmailTemplateId  String?
+  sendWelcomeSms          Boolean     @default(false)
+  welcomeSmsTemplateId    String?
+  createFollowupTask      Boolean     @default(true)
+  followupDelayMinutes    Int         @default(30)
+  notifyAssignee          Boolean     @default(true)
+  notificationChannels    String[]    @default(["email", "in_app"])
+
+  // Field Mapping
+  fieldMapping     Json?              // maps external fields -> CRM fields
+  defaultValues    Json?              // default values for unmapped fields
+
+  // Cached Statistics
+  totalLeads       Int                @default(0)
+  convertedLeads   Int                @default(0)
+  totalRevenue     Decimal?           @db.Decimal(15, 2) @default(0)
+  lastLeadAt       DateTime?
+  statsUpdatedAt   DateTime?
+
+  // Source Status
+  status           LeadSourceStatus   @default(ACTIVE)
+  lastSyncAt       DateTime?
+  lastError        String?            @db.Text
+  lastErrorAt      DateTime?
+  errorCount       Int                @default(0)
+
+  // Tenant & Timestamps
   tenantId        String
-  tenant          Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  
+  tenant          Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdById     String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  // Relations
   leads           Lead[]
+  credentials     LeadSourceCredential[]
+  webhooks        LeadSourceWebhook[]
+  logs            LeadSourceLog[]
 
   @@unique([tenantId, name])
+  @@unique([tenantId, slug])
   @@index([tenantId])
   @@index([isActive])
+  @@index([sourceType])
+  @@index([status])
+  @@index([integrationStatus])
+}
+
+model LeadSourceCredential {
+  id              String      @id @default(uuid())
+  leadSourceId    String
+  leadSource      LeadSource  @relation(fields: [leadSourceId], references: [id], onDelete: Cascade)
+
+  credentialKey   String      // e.g. 'api_key', 'client_id', 'client_secret'
+  credentialValue String      @db.Text  // encrypted with AES-256
+  credentialType  String      @default("api_key") // api_key, oauth_token, secret, password
+  expiresAt       DateTime?
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@unique([leadSourceId, credentialKey])
+  @@index([leadSourceId])
+}
+
+model LeadSourceWebhook {
+  id                  String      @id @default(uuid())
+  leadSourceId        String
+  leadSource          LeadSource  @relation(fields: [leadSourceId], references: [id], onDelete: Cascade)
+
+  externalWebhookId   String?     // webhook ID from external platform
+  webhookUrl          String
+  webhookSecret       String
+  verifyToken         String?     // for verification challenges
+  subscribedEvents    String[]    @default([])
+
+  status              String      @default("pending") // pending, active, failed, disabled
+  failureCount        Int         @default(0)
+  lastTriggeredAt     DateTime?
+  lastSuccessAt       DateTime?
+  lastFailureAt       DateTime?
+  lastFailureReason   String?     @db.Text
+
+  createdAt           DateTime    @default(now())
+
+  @@index([leadSourceId])
+  @@index([status])
+}
+
+model LeadSourceLog {
+  id              String      @id @default(uuid())
+  leadSourceId    String
+  leadSource      LeadSource  @relation(fields: [leadSourceId], references: [id], onDelete: Cascade)
+
+  eventType       String      // webhook_received, lead_created, lead_duplicate, connection_test, error, etc.
+  status          String      // success, failed, pending, skipped
+  direction       String      @default("inbound") // inbound, outbound
+
+  requestPayload  Json?       // sanitized — no sensitive data
+  responsePayload Json?
+  errorMessage    String?     @db.Text
+  processingTimeMs Int?
+
+  leadId          String?     // if a lead was created
+  ipAddress       String?
+  userAgent       String?
+
+  createdAt       DateTime    @default(now())
+
+  @@index([leadSourceId, createdAt(sort: Desc)])
+  @@index([eventType])
+  @@index([status])
 }
 
 model Lead {

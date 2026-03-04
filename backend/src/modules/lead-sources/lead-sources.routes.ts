@@ -1,131 +1,156 @@
 import { Router } from 'express';
 import { leadSourcesController } from './lead-sources.controller';
-import { authenticate, loadEmployee } from '../../common/middleware/auth.middleware';
-import { requirePermission } from '../../common/middleware/permission.middleware';
 import { validate } from '../../common/middleware/validate.middleware';
-import { PERMISSIONS } from '../../common/constants/permissions';
 import {
   createLeadSourceSchema,
   updateLeadSourceSchema,
   leadSourceQuerySchema,
   leadSourceIdSchema,
+  leadSourceLogQuerySchema,
 } from './lead-sources.validators';
 
 const router = Router();
 
-// All routes require authentication
-router.use(authenticate);
-router.use(loadEmployee);
+// ── Static lists (must be before /:id routes) ──────────────────────
+/**
+ * GET /lead-sources/types
+ * Get available source types for the "Add Source" wizard
+ */
+router.get(
+  '/types',
+  leadSourcesController.getTypes.bind(leadSourcesController)
+);
 
 /**
- * @swagger
- * /lead-sources:
- *   get:
- *     summary: Get lead sources
- *     tags: [Lead Sources]
- *     security:
- *       - bearerAuth: []
+ * GET /lead-sources/active
+ * Get all active lead sources (for dropdowns)
+ */
+router.get(
+  '/active',
+  leadSourcesController.getActive.bind(leadSourcesController)
+);
+
+/**
+ * GET /lead-sources/statistics
+ * Get per-source statistics
+ */
+router.get(
+  '/statistics',
+  leadSourcesController.getStatistics.bind(leadSourcesController)
+);
+
+/**
+ * GET /lead-sources/stats/summary
+ * Get summary stats across all sources
+ */
+router.get(
+  '/stats/summary',
+  leadSourcesController.getStatsSummary.bind(leadSourcesController)
+);
+
+// ── CRUD ────────────────────────────────────────────────────────────
+/**
+ * GET /lead-sources
+ * List sources with pagination, search, and filters
  */
 router.get(
   '/',
-  requirePermission(PERMISSIONS.LEAD_SOURCES_VIEW),
   validate(leadSourceQuerySchema),
   leadSourcesController.getMany.bind(leadSourcesController)
 );
 
 /**
- * @swagger
- * /lead-sources/active:
- *   get:
- *     summary: Get active lead sources (for dropdowns)
- *     tags: [Lead Sources]
- *     security:
- *       - bearerAuth: []
- */
-router.get(
-  '/active',
-  requirePermission(PERMISSIONS.LEAD_SOURCES_VIEW),
-  leadSourcesController.getActive.bind(leadSourcesController)
-);
-
-/**
- * @swagger
- * /lead-sources/statistics:
- *   get:
- *     summary: Get lead source statistics
- *     tags: [Lead Sources]
- *     security:
- *       - bearerAuth: []
- */
-router.get(
-  '/statistics',
-  requirePermission(PERMISSIONS.LEAD_SOURCES_VIEW),
-  leadSourcesController.getStatistics.bind(leadSourcesController)
-);
-
-/**
- * @swagger
- * /lead-sources:
- *   post:
- *     summary: Create lead source
- *     tags: [Lead Sources]
- *     security:
- *       - bearerAuth: []
+ * POST /lead-sources
+ * Create a new lead source
  */
 router.post(
   '/',
-  requirePermission(PERMISSIONS.LEAD_SOURCES_CREATE),
   validate(createLeadSourceSchema),
   leadSourcesController.create.bind(leadSourcesController)
 );
 
 /**
- * @swagger
- * /lead-sources/{id}:
- *   get:
- *     summary: Get lead source by ID
- *     tags: [Lead Sources]
- *     security:
- *       - bearerAuth: []
+ * GET /lead-sources/:id
+ * Get lead source details
  */
 router.get(
   '/:id',
-  requirePermission(PERMISSIONS.LEAD_SOURCES_VIEW),
   validate(leadSourceIdSchema),
   leadSourcesController.getById.bind(leadSourcesController)
 );
 
 /**
- * @swagger
- * /lead-sources/{id}:
- *   put:
- *     summary: Update lead source
- *     tags: [Lead Sources]
- *     security:
- *       - bearerAuth: []
+ * PUT /lead-sources/:id
+ * Update a lead source
  */
 router.put(
   '/:id',
-  requirePermission(PERMISSIONS.LEAD_SOURCES_UPDATE),
   validate(leadSourceIdSchema),
   validate(updateLeadSourceSchema),
   leadSourcesController.update.bind(leadSourcesController)
 );
 
 /**
- * @swagger
- * /lead-sources/{id}:
- *   delete:
- *     summary: Delete lead source
- *     tags: [Lead Sources]
- *     security:
- *       - bearerAuth: []
+ * DELETE /lead-sources/:id
+ * Delete a lead source
  */
 router.delete(
   '/:id',
-  requirePermission(PERMISSIONS.LEAD_SOURCES_DELETE),
   validate(leadSourceIdSchema),
   leadSourcesController.delete.bind(leadSourcesController)
+);
+
+// ── Actions ─────────────────────────────────────────────────────────
+/**
+ * POST /lead-sources/:id/pause
+ * Pause a lead source
+ */
+router.post(
+  '/:id/pause',
+  validate(leadSourceIdSchema),
+  leadSourcesController.pause.bind(leadSourcesController)
+);
+
+/**
+ * POST /lead-sources/:id/resume
+ * Resume a lead source
+ */
+router.post(
+  '/:id/resume',
+  validate(leadSourceIdSchema),
+  leadSourcesController.resume.bind(leadSourcesController)
+);
+
+/**
+ * POST /lead-sources/:id/test
+ * Test connection
+ */
+router.post(
+  '/:id/test',
+  validate(leadSourceIdSchema),
+  leadSourcesController.testConnection.bind(leadSourcesController)
+);
+
+// ── Webhook Management ──────────────────────────────────────────────
+/**
+ * POST /lead-sources/:id/webhook/regenerate
+ * Regenerate webhook secret
+ */
+router.post(
+  '/:id/webhook/regenerate',
+  validate(leadSourceIdSchema),
+  leadSourcesController.regenerateWebhookSecret.bind(leadSourcesController)
+);
+
+// ── Logs ────────────────────────────────────────────────────────────
+/**
+ * GET /lead-sources/:id/logs
+ * Get webhook/event logs
+ */
+router.get(
+  '/:id/logs',
+  validate(leadSourceIdSchema),
+  leadSourcesController.getLogs.bind(leadSourcesController)
 );
 
 export default router;

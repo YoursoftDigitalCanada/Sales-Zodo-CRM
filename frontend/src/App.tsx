@@ -23,7 +23,8 @@ import AllLeads from "./pages/Leads/AllLeads";
 import Pipeline from "./pages/Leads/Pipeline";
 import LeadDetailPage from "./pages/Leads/LeadDetailPage";
 import ClientGroupPage from "./pages/ClientGroups";
-import LeadSources from "./pages/Leads/LeadSources";
+import LeadSources from "./pages/LeadSources/LeadSources";
+import LeadSourceDetail from "./pages/LeadSources/LeadSourceDetail";
 import CalendarPage from "./pages/Calendar";
 import CRMPage from "./pages/CRMPage";
 import ClientDetailPage from "./pages/ClientDetail";
@@ -165,6 +166,14 @@ const AppRoutes = () => {
           element={
             <FeatureGuard featureId="leads">
               <LeadSources />
+            </FeatureGuard>
+          }
+        />
+        <Route
+          path="/lead-sources/:id"
+          element={
+            <FeatureGuard featureId="leads">
+              <LeadSourceDetail />
             </FeatureGuard>
           }
         />

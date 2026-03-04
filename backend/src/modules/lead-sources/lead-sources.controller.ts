@@ -1,118 +1,142 @@
 import { Request, Response, NextFunction } from 'express';
 import { leadSourcesService } from './lead-sources.service';
-import { sendSuccess, sendCreated, sendNoContent } from '../../common/utils/responseFormatter';
-import { sanitizeBody } from '../../common/utils/sanitize-body';
 
 export class LeadSourcesController {
-  /**
-   * POST /lead-sources
-   */
-  async create(req: Request, res: Response, next: NextFunction): Promise<void> {
+  /** POST / — Create lead source */
+  async create(req: Request, res: Response, next: NextFunction) {
     try {
-      const tenantId = req.context.tenantId;
-      const data = sanitizeBody(req.body);
-
+      const tenantId = (req as any).tenantId;
+      const data = req.body;
       const source = await leadSourcesService.create(tenantId, data);
-
-      sendCreated(res, source, 'Lead source created successfully');
-    } catch (error) {
-      next(error);
-    }
+      res.status(201).json({ success: true, data: source });
+    } catch (error) { next(error); }
   }
 
-  /**
-   * GET /lead-sources
-   */
-  async getMany(req: Request, res: Response, next: NextFunction): Promise<void> {
+  /** GET / — List lead sources */
+  async getMany(req: Request, res: Response, next: NextFunction) {
     try {
-      const tenantId = req.context.tenantId;
-      const query = req.query as any;
-
-      const result = await leadSourcesService.getMany(tenantId, query);
-
-      sendSuccess(res, result.data, undefined, 200, result.meta);
-    } catch (error) {
-      next(error);
-    }
+      const tenantId = (req as any).tenantId;
+      const query = req.query;
+      const result = await leadSourcesService.getMany(tenantId, query as any);
+      res.json({ success: true, ...result });
+    } catch (error) { next(error); }
   }
 
-  /**
-   * GET /lead-sources/active
-   */
-  async getActive(req: Request, res: Response, next: NextFunction): Promise<void> {
+  /** GET /active — Active sources for dropdowns */
+  async getActive(req: Request, res: Response, next: NextFunction) {
     try {
-      const tenantId = req.context.tenantId;
-
+      const tenantId = (req as any).tenantId;
       const sources = await leadSourcesService.getActive(tenantId);
-
-      sendSuccess(res, sources);
-    } catch (error) {
-      next(error);
-    }
+      res.json({ success: true, data: sources });
+    } catch (error) { next(error); }
   }
 
-  /**
-   * GET /lead-sources/statistics
-   */
-  async getStatistics(req: Request, res: Response, next: NextFunction): Promise<void> {
+  /** GET /types — Available source types */
+  async getTypes(req: Request, res: Response, next: NextFunction) {
     try {
-      const tenantId = req.context.tenantId;
+      const types = leadSourcesService.getSourceTypes();
+      res.json({ success: true, data: types });
+    } catch (error) { next(error); }
+  }
 
+  /** GET /stats/summary — Summary stats */
+  async getStatsSummary(req: Request, res: Response, next: NextFunction) {
+    try {
+      const tenantId = (req as any).tenantId;
+      const summary = await leadSourcesService.getStatsSummary(tenantId);
+      res.json({ success: true, data: summary });
+    } catch (error) { next(error); }
+  }
+
+  /** GET /statistics — Statistics per source */
+  async getStatistics(req: Request, res: Response, next: NextFunction) {
+    try {
+      const tenantId = (req as any).tenantId;
       const statistics = await leadSourcesService.getStatistics(tenantId);
-
-      sendSuccess(res, statistics);
-    } catch (error) {
-      next(error);
-    }
+      res.json({ success: true, data: statistics });
+    } catch (error) { next(error); }
   }
 
-  /**
-   * GET /lead-sources/:id
-   */
-  async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
+  /** GET /:id — Get source details */
+  async getById(req: Request, res: Response, next: NextFunction) {
     try {
-      const tenantId = req.context.tenantId;
+      const tenantId = (req as any).tenantId;
       const { id } = req.params;
-
       const source = await leadSourcesService.getById(id, tenantId);
-
-      sendSuccess(res, source);
-    } catch (error) {
-      next(error);
-    }
+      res.json({ success: true, data: source });
+    } catch (error) { next(error); }
   }
 
-  /**
-   * PUT /lead-sources/:id
-   */
-  async update(req: Request, res: Response, next: NextFunction): Promise<void> {
+  /** PUT /:id — Update source */
+  async update(req: Request, res: Response, next: NextFunction) {
     try {
-      const tenantId = req.context.tenantId;
+      const tenantId = (req as any).tenantId;
       const { id } = req.params;
-      const data = sanitizeBody(req.body);
-
+      const data = req.body;
       const source = await leadSourcesService.update(id, tenantId, data);
-
-      sendSuccess(res, source, 'Lead source updated successfully');
-    } catch (error) {
-      next(error);
-    }
+      res.json({ success: true, data: source });
+    } catch (error) { next(error); }
   }
 
-  /**
-   * DELETE /lead-sources/:id
-   */
-  async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
+  /** DELETE /:id — Delete source */
+  async delete(req: Request, res: Response, next: NextFunction) {
     try {
-      const tenantId = req.context.tenantId;
+      const tenantId = (req as any).tenantId;
       const { id } = req.params;
-
       await leadSourcesService.delete(id, tenantId);
+      res.json({ success: true, message: 'Lead source deleted' });
+    } catch (error) { next(error); }
+  }
 
-      sendNoContent(res);
-    } catch (error) {
-      next(error);
-    }
+  /** POST /:id/pause — Pause source */
+  async pause(req: Request, res: Response, next: NextFunction) {
+    try {
+      const tenantId = (req as any).tenantId;
+      const { id } = req.params;
+      const source = await leadSourcesService.pause(id, tenantId);
+      res.json({ success: true, data: source });
+    } catch (error) { next(error); }
+  }
+
+  /** POST /:id/resume — Resume source */
+  async resume(req: Request, res: Response, next: NextFunction) {
+    try {
+      const tenantId = (req as any).tenantId;
+      const { id } = req.params;
+      const source = await leadSourcesService.resume(id, tenantId);
+      res.json({ success: true, data: source });
+    } catch (error) { next(error); }
+  }
+
+  /** POST /:id/test — Test connection */
+  async testConnection(req: Request, res: Response, next: NextFunction) {
+    try {
+      const tenantId = (req as any).tenantId;
+      const { id } = req.params;
+      const result = await leadSourcesService.testConnection(id, tenantId);
+      res.json({ success: true, data: result });
+    } catch (error) { next(error); }
+  }
+
+  /** POST /:id/webhook/regenerate — Regenerate webhook secret */
+  async regenerateWebhookSecret(req: Request, res: Response, next: NextFunction) {
+    try {
+      const tenantId = (req as any).tenantId;
+      const { id } = req.params;
+      const result = await leadSourcesService.regenerateWebhookSecret(id, tenantId);
+      res.json({ success: true, data: result });
+    } catch (error) { next(error); }
+  }
+
+  /** GET /:id/logs — Get webhook logs */
+  async getLogs(req: Request, res: Response, next: NextFunction) {
+    try {
+      const tenantId = (req as any).tenantId;
+      const { id } = req.params;
+      const query = req.query as any;
+      const result = await leadSourcesService.getLogs(id, tenantId, query);
+      res.json({ success: true, ...result });
+    } catch (error) { next(error); }
   }
 }
 

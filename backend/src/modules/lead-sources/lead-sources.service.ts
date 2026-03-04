@@ -260,13 +260,31 @@ export class LeadSourcesService {
    * Get summary stats across all sources
    */
   async getStatsSummary(tenantId: string) {
+    // Count sources from our repo (already tenant-scoped)
     const stats = await leadSourcesRepository.getStatistics(tenantId);
+    const { data: allSources } = await leadSourcesRepository.findMany(tenantId, { page: 1, limit: 1000 });
 
-    const totalSources = stats.length;
-    const activeSources = stats.filter((s) => s.isActive && s.status !== 'PAUSED').length;
-    const totalLeads = stats.reduce((sum, s) => sum + s.leadCount, 0);
-    const totalConverted = stats.reduce((sum, s) => sum + s.convertedCount, 0);
-    const totalRevenue = stats.reduce((sum, s) => sum + s.totalValue, 0);
+    const totalSources = allSources.length;
+    const activeSources = allSources.filter((s: any) => s.isActive && s.status !== 'PAUSED').length;
+
+    // Count ALL leads for this tenant directly (including those without a source)
+    const { prisma } = await import('../../config/database');
+    const [leadAgg, wonAgg] = await Promise.all([
+      prisma.lead.aggregate({
+        where: { tenantId },
+        _count: { id: true },
+        _sum: { potentialValue: true },
+      }),
+      prisma.lead.aggregate({
+        where: { tenantId, status: 'WON' },
+        _count: { id: true },
+        _sum: { potentialValue: true },
+      }),
+    ]);
+
+    const totalLeads = leadAgg._count.id || 0;
+    const totalConverted = wonAgg._count.id || 0;
+    const totalRevenue = Number(wonAgg._sum.potentialValue || 0);
     const avgConversionRate = totalLeads > 0 ? (totalConverted / totalLeads) * 100 : 0;
 
     return {

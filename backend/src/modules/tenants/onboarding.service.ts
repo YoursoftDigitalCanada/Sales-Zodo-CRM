@@ -152,14 +152,14 @@ const STAFF_PERMISSIONS: string[] = [
 // ============================================================================
 
 const DEFAULT_LEAD_SOURCES = [
-    { name: 'Website', description: 'Leads from website contact forms' },
-    { name: 'Referral', description: 'Referred by existing clients or partners' },
-    { name: 'Social Media', description: 'Leads from social media channels' },
-    { name: 'Cold Call', description: 'Outbound cold call prospecting' },
-    { name: 'Email Campaign', description: 'Leads from email marketing campaigns' },
-    { name: 'Walk-In', description: 'Walk-in or in-person inquiries' },
-    { name: 'Trade Show', description: 'Leads from trade shows and events' },
-    { name: 'Google Ads', description: 'Leads from Google Ads campaigns' },
+    { name: 'Cold Call', slug: 'cold-call', description: 'Outbound cold call prospecting', sourceType: 'COLD_CALL', category: 'MANUAL', icon: 'Phone', color: '#6366F1', integrationStatus: 'CONNECTED' },
+    { name: 'Email Campaign', slug: 'email-campaign', description: 'Leads from email marketing campaigns', sourceType: 'EMAIL_CAMPAIGN', category: 'DIGITAL', icon: 'Mail', color: '#EC4899', integrationStatus: 'DISCONNECTED' },
+    { name: 'Google Ads', slug: 'google-ads', description: 'Leads from Google Ads campaigns', sourceType: 'GOOGLE_ADS', category: 'DIGITAL', icon: 'Chrome', color: '#4285F4', integrationStatus: 'DISCONNECTED' },
+    { name: 'Referral', slug: 'referral', description: 'Referred by existing clients or partners', sourceType: 'REFERRAL', category: 'MANUAL', icon: 'UserPlus', color: '#10B981', integrationStatus: 'CONNECTED' },
+    { name: 'Social Media', slug: 'social-media', description: 'Leads from social media channels', sourceType: 'SOCIAL_MEDIA', category: 'DIGITAL', icon: 'Share2', color: '#3B82F6', integrationStatus: 'DISCONNECTED' },
+    { name: 'Trade Show', slug: 'trade-show', description: 'Leads from trade shows and events', sourceType: 'TRADE_SHOW', category: 'MANUAL', icon: 'Presentation', color: '#F59E0B', integrationStatus: 'CONNECTED' },
+    { name: 'Walk-In', slug: 'walk-in', description: 'Walk-in or in-person inquiries', sourceType: 'WALK_IN', category: 'MANUAL', icon: 'MapPin', color: '#8B5CF6', integrationStatus: 'CONNECTED' },
+    { name: 'Website', slug: 'website', description: 'Leads from website contact forms', sourceType: 'WEBSITE', category: 'DIGITAL', icon: 'Globe', color: '#0891B2', integrationStatus: 'DISCONNECTED' },
 ];
 
 const DEFAULT_TAGS = [
@@ -264,10 +264,9 @@ class OnboardingService {
         await tx.leadSource.createMany({
             data: DEFAULT_LEAD_SOURCES.map((src) => ({
                 tenantId,
-                name: src.name,
-                description: src.description,
+                ...src,
                 isActive: true,
-            })),
+            })) as any,
         });
 
         // ── 5. Default Tags ─────────────────────────────────────────────────

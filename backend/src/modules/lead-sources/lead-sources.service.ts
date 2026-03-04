@@ -253,7 +253,7 @@ export class LeadSourcesService {
       throw new NotFoundError('Lead source not found', ErrorCodes.RESOURCE_NOT_FOUND);
     }
 
-    return leadSourcesRepository.getLogs(id, query);
+    return leadSourcesRepository.getLogs(id, tenantId, query);
   }
 
   /**

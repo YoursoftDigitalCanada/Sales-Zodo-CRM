@@ -24,7 +24,11 @@ export class LeadSourcesRepository {
       } as any,
       include: {
         _count: {
-          select: { leads: true },
+          select: {
+            leads: {
+              where: { tenantId },
+            },
+          },
         },
       },
     });
@@ -38,7 +42,11 @@ export class LeadSourcesRepository {
       where: { id, tenantId },
       include: {
         _count: {
-          select: { leads: true },
+          select: {
+            leads: {
+              where: { tenantId },
+            },
+          },
         },
       },
     });
@@ -121,7 +129,11 @@ export class LeadSourcesRepository {
       data: updateData,
       include: {
         _count: {
-          select: { leads: true },
+          select: {
+            leads: {
+              where: { tenantId },
+            },
+          },
         },
       },
     });
@@ -247,11 +259,18 @@ export class LeadSourcesRepository {
   /**
    * Get logs for a lead source
    */
-  async getLogs(leadSourceId: string, query: { page?: number; limit?: number; eventType?: string; status?: string }) {
+  async getLogs(
+    leadSourceId: string,
+    tenantId: string,
+    query: { page?: number; limit?: number; eventType?: string; status?: string }
+  ) {
     const page = query.page || 1;
     const limit = query.limit || 20;
 
-    const where: any = { leadSourceId };
+    const where: Prisma.LeadSourceLogWhereInput = {
+      leadSourceId,
+      leadSource: { tenantId },
+    };
     if (query.eventType) where.eventType = query.eventType;
     if (query.status) where.status = query.status;
 

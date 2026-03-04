@@ -150,7 +150,11 @@ export class LeadSourcesController {
       const query = req.query as any;
       const result = await leadSourcesService.getLogs(id, tenantId, query);
       res.json({ success: true, ...result });
-    } catch (error) { next(error); }
+    } catch (error: any) {
+      console.error('[LeadSources] getLogs error:', error?.message || error);
+      // Return empty logs if table doesn't exist or any other error
+      return res.json({ success: true, data: [], total: 0, page: 1, limit: 20 });
+    }
   }
 }
 

@@ -114,7 +114,7 @@ export const leadSourceIdSchema = z.object({
   params: z.object({
     id: z.string().uuid('Invalid lead source ID'),
   }),
-});
+}).passthrough();
 
 // ── Log Query ───────────────────────────────────────────────────────
 export const leadSourceLogQuerySchema = z.object({

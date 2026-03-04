@@ -3,6 +3,7 @@ import { getLeads, createLead, updateLead, deleteLead, updateLeadStatus } from "
 import { createCalendarEvent } from "@/features/calendar";
 import { autocompleteAddress } from "@/features/roof-estimator/services/roof-estimator-service";
 import { getEmployees } from "@/features/users";
+import api from "@/lib/axios";
 // import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { AiInsightBadge, getLeadInsights } from "@/components/ai/AiInsightBadge";
 import { motion, AnimatePresence } from "framer-motion";
@@ -164,6 +165,7 @@ interface Lead {
   currency: string;
   assignedTo: string;
   assignedToId?: string;
+  leadSourceId?: string;
   tags?: string[];
   notes?: string;
   lastContact?: string;
@@ -924,6 +926,7 @@ const LeadFormDialog = ({
     website: "",
     location: "",
     source: "website",
+    leadSourceId: "",
     status: "new" as Lead["status"],
     temperature: "warm" as Lead["temperature"],
     value: "",
@@ -992,6 +995,7 @@ const LeadFormDialog = ({
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
   const [employees, setEmployees] = useState<{ id: string; name: string }[]>([]);
+  const [leadSourceOptions, setLeadSourceOptions] = useState<{ id: string; name: string }[]>([]);
 
   // Fetch employees for the Assigned To dropdown
   useEffect(() => {
@@ -1006,6 +1010,14 @@ const LeadFormDialog = ({
           );
         })
         .catch(() => setEmployees([]));
+
+      // Fetch lead sources
+      api.get("/lead-sources/active")
+        .then((res) => {
+          const sources = res.data?.data || [];
+          setLeadSourceOptions(sources.map((s: any) => ({ id: s.id, name: s.name })));
+        })
+        .catch(() => setLeadSourceOptions([]));
     }
   }, [isOpen]);
 
@@ -1021,6 +1033,7 @@ const LeadFormDialog = ({
         website: lead.website || "",
         location: lead.location,
         source: lead.source,
+        leadSourceId: lead.leadSourceId || "",
         status: lead.status,
         temperature: lead.temperature,
         value: lead.value.toString(),
@@ -1083,7 +1096,7 @@ const LeadFormDialog = ({
       setFormData({
         firstName: "", lastName: "", email: "", phone: "",
         company: "", jobTitle: "", website: "", location: "",
-        source: "website", status: "new", temperature: "warm",
+        source: "website", leadSourceId: "", status: "new", temperature: "warm",
         value: "", assignedTo: "", tags: "", notes: "",
         propertyAddress: "", city: "", state: "", zipCode: "", propertyType: "",
         serviceType: "", isInsuranceClaim: "", urgencyLevel: "",
@@ -2004,6 +2017,31 @@ const LeadFormDialog = ({
               </div>
 
               <div className="space-y-2">
+                <Label className="text-sm font-medium text-[#475569]">Lead Source</Label>
+                <Select
+                  value={formData.leadSourceId}
+                  onValueChange={(val) => setFormData({ ...formData, leadSourceId: val })}
+                >
+                  <SelectTrigger className="h-11 rounded-md">
+                    <div className="flex items-center gap-2">
+                      <Target size={16} className="text-[#475569]" />
+                      <SelectValue placeholder="Select source" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md">
+                    <SelectItem value="none" className="rounded-md">
+                      <span className="text-[#94A3B8]">No Source</span>
+                    </SelectItem>
+                    {leadSourceOptions.map((src) => (
+                      <SelectItem key={src.id} value={src.id} className="rounded-md">
+                        {src.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#475569]">Tags</Label>
                 <div className="relative">
                   <Tag size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
@@ -2812,6 +2850,7 @@ const mapApiLead = (apiLead: any): Lead => ({
     ? `${apiLead.assignedTo.user?.firstName || ""} ${apiLead.assignedTo.user?.lastName || ""}`.trim()
     : "",
   assignedToId: apiLead.assignedToId || apiLead.assignedTo?.id || "",
+  leadSourceId: apiLead.leadSourceId || "",
   tags: apiLead.tags?.map((t: any) => t.name) || [],
   notes: apiLead.notes,
   lastContact: apiLead.lastContact,
@@ -3087,6 +3126,11 @@ const AllLeads = () => {
         notes: data.notes || undefined,
         ...buildNewFieldsPayload(data),
       };
+      // Send leadSourceId if selected
+      if (data.leadSourceId && data.leadSourceId !== "none" && data.leadSourceId !== "") {
+        apiData.leadSourceId = data.leadSourceId;
+      }
+
       // Only send assignedToId if a valid employee is selected
       if (data.assignedTo && data.assignedTo !== "unassigned" && data.assignedTo !== "") {
         apiData.assignedToId = data.assignedTo;
@@ -3127,6 +3171,13 @@ const AllLeads = () => {
         notes: data.notes || undefined,
         ...buildNewFieldsPayload(data),
       };
+      // Send leadSourceId if selected
+      if (data.leadSourceId && data.leadSourceId !== "none" && data.leadSourceId !== "") {
+        apiData.leadSourceId = data.leadSourceId;
+      } else {
+        apiData.leadSourceId = null;
+      }
+
       // Only send assignedToId if a valid employee is selected
       if (data.assignedTo && data.assignedTo !== "unassigned" && data.assignedTo !== "") {
         apiData.assignedToId = data.assignedTo;

@@ -1,86 +1,120 @@
-import { Project, ProjectStatus, Currency } from '@prisma/client';
-
-// ============================================================================
-// PROJECTS DTOs - Matching Prisma Schema
-// Project fields: name, description, code, status(ProjectStatus), startDate,
-// endDate, actualEndDate, budget(Decimal), currency(Currency), progress(Int),
-// clientId, tenantId. Relations: tasks, members(ProjectMember), files
-// ============================================================================
-
-export interface CreateProjectDto {
-    name: string;
-    description?: string | null;
-    code?: string | null;
-    status?: ProjectStatus;
-    startDate?: Date | string | null;
-    endDate?: Date | string | null;
-    budget?: number | null;
-    currency?: Currency;
-    progress?: number;
-    clientId?: string | null;
-    teamMembers?: string[]; // employee IDs
-}
-
-export interface UpdateProjectDto extends Partial<CreateProjectDto> { }
+import { ProjectStatus, ProjectPriority, ProjectType, PropertyType, TaskPriority, TaskStatus } from '@prisma/client';
 
 export interface ProjectQueryDto {
-    page?: number;
-    limit?: number;
-    search?: string;
-    status?: ProjectStatus;
-    clientId?: string;
-    sortBy?: 'name' | 'createdAt' | 'endDate' | 'status';
-    sortOrder?: 'asc' | 'desc';
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: ProjectStatus;
+  priority?: ProjectPriority;
+  projectType?: ProjectType;
+  stageId?: string;
+  clientId?: string;
+  projectManagerId?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  startDate?: string;
+  endDate?: string;
 }
 
-export interface ProjectResponseDto {
-    id: string;
-    name: string;
-    description: string | null;
-    code: string | null;
-    status: ProjectStatus;
-    startDate: Date | null;
-    endDate: Date | null;
-    actualEndDate: Date | null;
-    budget: number | null;
-    currency: Currency;
-    progress: number;
-    client: { id: string; clientName: string } | null;
-    teamMembers: { id: string; role: string | null; employee: { id: string; user: { firstName: string; lastName: string } } }[];
-    tasksCount: number;
-    filesCount: number;
-    createdAt: Date;
-    updatedAt: Date;
+export interface CreateProjectDto {
+  name: string;
+  projectNumber?: string;
+  description?: string | null;
+  clientId?: string | null;
+  quoteId?: string | null;
+  leadId?: string | null;
+  projectType?: ProjectType;
+  propertyType?: PropertyType;
+  status?: ProjectStatus;
+  priority?: ProjectPriority;
+  projectManagerId?: string | null;
+  salesRepId?: string | null;
+  stageId?: string | null;
+  contractValue?: number | null;
+  estimatedCost?: number | null;
+  budget?: number | null;
+  currency?: string | null;
+  estimatedStartDate?: string | null;
+  estimatedEndDate?: string | null;
+  estimatedDuration?: number | null;
+  roofType?: string | null;
+  roofSquares?: number | null;
+  roofPitch?: string | null;
+  roofLayers?: number | null;
+  stories?: number | null;
+  shingleManufacturer?: string | null;
+  shingleProduct?: string | null;
+  shingleColor?: string | null;
+  jobSiteAddress?: string | null;
+  jobSiteAddress2?: string | null;
+  jobSiteCity?: string | null;
+  jobSiteState?: string | null;
+  jobSiteZip?: string | null;
+  jobSiteCountry?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  isInsuranceJob?: boolean;
+  insuranceCompany?: string | null;
+  claimNumber?: string | null;
+  policyNumber?: string | null;
+  deductible?: number | null;
+  dateOfLoss?: string | null;
+  permitRequired?: boolean;
+  permitNumber?: string | null;
+  warrantyType?: string | null;
+  warrantyYears?: number | null;
+  tags?: string[];
+  customFields?: Record<string, unknown> | null;
+  internalNotes?: string | null;
 }
 
-type ProjectWithRelations = Project & {
-    client?: { id: string; clientName: string } | null;
-    members?: { id: string; role: string | null; employee: { id: string; user: { firstName: string; lastName: string } } }[];
-    _count?: { tasks: number; files: number };
-};
+export type UpdateProjectDto = Partial<CreateProjectDto>;
 
-export function toProjectResponseDto(p: ProjectWithRelations): ProjectResponseDto {
-    return {
-        id: p.id,
-        name: p.name,
-        description: p.description,
-        code: p.code,
-        status: p.status,
-        startDate: p.startDate,
-        endDate: p.endDate,
-        actualEndDate: p.actualEndDate,
-        budget: p.budget ? Number(p.budget) : null,
-        currency: p.currency,
-        progress: p.progress,
-        client: p.client ? { id: p.client.id, clientName: p.client.clientName } : null,
-        teamMembers: (p.members || []).map((m) => ({
-            id: m.id,
-            role: m.role,
-            employee: { id: m.employee.id, user: { firstName: m.employee.user.firstName, lastName: m.employee.user.lastName } },
-        })),
-        tasksCount: p._count?.tasks || 0,
-        filesCount: p._count?.files || 0,
-        createdAt: p.createdAt,
-        updatedAt: p.updatedAt,
-    };
+export interface CreateProjectTaskDto {
+  title: string;
+  description?: string;
+  taskType?: string;
+  priority?: TaskPriority;
+  status?: TaskStatus;
+  assignedToId?: string;
+  dueDate?: string;
+  startDate?: string;
+  estimatedMinutes?: number;
+  sortOrder?: number;
+  parentTaskId?: string;
+  isChecklist?: boolean;
+  checklistItems?: unknown;
+}
+
+export interface FinancialSummaryDto {
+  contractValue: number;
+  estimatedCost: number;
+  actualCost: number;
+  grossProfit: number;
+  profitMargin: number;
+  materialsCost: number;
+  laborCost: number;
+  expenseCost: number;
+  invoiced: number;
+  paid: number;
+  outstanding: number;
+}
+
+export function toNumber(value: any): number {
+  if (value === null || value === undefined) return 0;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : 0;
+}
+
+export function normalizeProjectDto(input: Record<string, any>): CreateProjectDto {
+  const data = { ...input };
+
+  // backward compatibility with current frontend payload
+  if (data.projectTitle && !data.name) data.name = data.projectTitle;
+  if (data.dueDate && !data.estimatedEndDate) data.estimatedEndDate = data.dueDate;
+  if (data.progressPercentage !== undefined && data.completionPercentage === undefined) {
+    data.completionPercentage = data.progressPercentage;
+  }
+
+  return data as CreateProjectDto;
 }

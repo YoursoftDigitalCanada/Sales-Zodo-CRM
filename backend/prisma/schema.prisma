@@ -130,25 +130,76 @@ enum ContactType {
 
 enum TaskStatus {
   TODO
+  PENDING
   IN_PROGRESS
   REVIEW
+  COMPLETED
   DONE
+  CANCELLED
+  BLOCKED
 }
 
 enum TaskPriority {
   LOW
+  NORMAL
   MEDIUM
   HIGH
   URGENT
 }
 
 enum ProjectStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  SCHEDULED
+  IN_PROGRESS
   PLANNING
   ACTIVE
   ON_HOLD
   COMPLETED
   CANCELLED
   ARCHIVED
+  WARRANTY_WORK
+}
+
+enum ProjectType {
+  REPAIR
+  REPLACEMENT
+  NEW_CONSTRUCTION
+  INSPECTION
+  MAINTENANCE
+  EMERGENCY
+  INSURANCE_CLAIM
+  COMMERCIAL
+  GUTTER
+  SIDING
+  OTHER
+}
+
+enum PropertyType {
+  RESIDENTIAL
+  COMMERCIAL
+  MULTI_FAMILY
+  HOA
+  GOVERNMENT
+  INDUSTRIAL
+}
+
+enum ProjectPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+  EMERGENCY
+}
+
+enum PermitStatus {
+  NOT_REQUIRED
+  PENDING
+  SUBMITTED
+  APPROVED
+  REJECTED
+  EXPIRED
 }
 
 enum TimeEntryStatus {
@@ -170,10 +221,239 @@ enum CrewNotificationType {
 enum PhotoCategory {
   BEFORE
   DURING
+  PROGRESS
+  DELIVERY
   AFTER
+  COMPLETED
+  INSPECTION
+  ISSUE
+  WARRANTY
   DAMAGE
   SAFETY
   MATERIAL
+}
+
+enum ProjectTaskType {
+  GENERAL
+  MATERIAL_ORDER
+  PERMIT
+  SCHEDULING
+  INSPECTION
+  DOCUMENTATION
+  COMMUNICATION
+  PAYMENT
+  WARRANTY
+  FOLLOWUP
+}
+
+enum ProjectMaterialCategory {
+  ROOFING
+  SHINGLES
+  UNDERLAYMENT
+  FLASHING
+  VENTILATION
+  GUTTERS
+  FASTENERS
+  SEALANTS
+  LUMBER
+  EQUIPMENT
+  SAFETY
+  MISC
+}
+
+enum MaterialOrderStatus {
+  NOT_ORDERED
+  PENDING
+  ORDERED
+  BACKORDERED
+  PARTIAL
+  COMPLETE
+  CANCELLED
+}
+
+enum DeliveryStatus {
+  PENDING
+  SCHEDULED
+  IN_TRANSIT
+  DELIVERED
+  PARTIAL
+  RETURNED
+}
+
+enum WorkerType {
+  EMPLOYEE
+  SUBCONTRACTOR
+  TEMP
+  OWNER
+}
+
+enum LaborActivityType {
+  GENERAL
+  TEAR_OFF
+  INSTALL_DECK
+  INSTALL_UNDERLAYMENT
+  INSTALL_SHINGLES
+  INSTALL_FLASHING
+  INSTALL_VENTS
+  INSTALL_GUTTERS
+  CLEANUP
+  REPAIR
+  INSPECTION
+  TRAVEL
+  BREAK
+}
+
+enum ProjectExpenseCategory {
+  PERMIT
+  DUMP_FEE
+  EQUIPMENT_RENTAL
+  FUEL
+  SUBCONTRACTOR
+  DELIVERY_FEE
+  INSPECTION_FEE
+  INSURANCE
+  MISC_SUPPLIES
+  TRAVEL
+  MEALS
+  PARKING
+  OTHER
+}
+
+enum ProjectPaymentStatus {
+  UNPAID
+  PENDING
+  PAID
+  REFUNDED
+}
+
+enum CrewAssignmentStatus {
+  SCHEDULED
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  POSTPONED
+}
+
+enum ProjectDocumentCategory {
+  CONTRACT
+  CHANGE_ORDER
+  PERMIT
+  INSPECTION_REPORT
+  INSURANCE_CLAIM
+  INSURANCE_APPROVAL
+  SUPPLEMENT
+  WARRANTY
+  INVOICE
+  RECEIPT
+  PROPOSAL
+  MEASUREMENT_REPORT
+  MATERIAL_LIST
+  MANUFACTURER_SPECS
+  PHOTO
+  OTHER
+}
+
+enum ProjectNoteType {
+  GENERAL
+  ISSUE
+  RESOLUTION
+  CLIENT_REQUEST
+  CHANGE_ORDER
+  IMPORTANT
+  FOLLOW_UP
+}
+
+enum CommunicationType {
+  PHONE_CALL
+  TEXT_MESSAGE
+  EMAIL
+  IN_PERSON
+  VIDEO_CALL
+  VOICEMAIL
+}
+
+enum CommunicationDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum CommunicationStatus {
+  SCHEDULED
+  ATTEMPTED
+  COMPLETED
+  MISSED
+  CANCELLED
+}
+
+enum InspectionType {
+  INITIAL
+  PRE_CONSTRUCTION
+  PROGRESS
+  FINAL
+  WARRANTY
+  INSURANCE
+  CITY_PERMIT
+  HOA
+}
+
+enum InspectionStatus {
+  SCHEDULED
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  POSTPONED
+}
+
+enum InspectionResult {
+  PASSED
+  PASSED_WITH_NOTES
+  FAILED
+  CONDITIONAL
+  PENDING
+}
+
+enum ChangeOrderReason {
+  CLIENT_REQUEST
+  UNFORESEEN_DAMAGE
+  CODE_REQUIREMENT
+  MATERIAL_CHANGE
+  SCOPE_CHANGE
+  INSURANCE_SUPPLEMENT
+  ERROR_CORRECTION
+  OTHER
+}
+
+enum ChangeOrderStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum WeatherType {
+  RAIN
+  SNOW
+  ICE
+  HIGH_WIND
+  EXTREME_HEAT
+  EXTREME_COLD
+  STORM
+  HURRICANE
+  TORNADO
+  OTHER
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  PENDING
+  SENT
+  CONFIRMED
+  PARTIAL_RECEIVED
+  RECEIVED
+  CANCELLED
 }
 
 enum IncidentType {
@@ -1450,21 +1730,106 @@ model Project {
   name            String
   description     String?         @db.Text
   code            String?         // Project code/identifier
+  projectNumber   String?         // Auto-generated: PRJ-2026-0001
+  internalNotes   String?         @db.Text
+  tags            String[]        @default([])
+  customFields    Json?           @default("{}")
+  deletedAt       DateTime?
   
   // Status
   status          ProjectStatus   @default(PLANNING)
+  priority        ProjectPriority @default(NORMAL)
+  projectType     ProjectType     @default(REPLACEMENT)
+  propertyType    PropertyType    @default(RESIDENTIAL)
+  
+  // Pipeline stage
+  stageId         String?
+  stage           ProjectStage?   @relation(fields: [stageId], references: [id], onDelete: SetNull)
   
   // Dates
   startDate       DateTime?
   endDate         DateTime?
   actualEndDate   DateTime?
+  estimatedStartDate DateTime?
+  actualStartDate DateTime?
+  estimatedEndDate DateTime?
+  estimatedDuration Int?
+  actualDuration  Int?
   
   // Budget
   budget          Decimal?        @db.Decimal(15, 2)
   currency        Currency        @default(USD)
+  contractValue   Decimal?        @db.Decimal(12, 2)
+  estimatedCost   Decimal?        @db.Decimal(12, 2)
+  actualCost      Decimal?        @db.Decimal(12, 2)
+  grossProfit     Decimal?        @db.Decimal(12, 2)
+  profitMargin    Decimal?        @db.Decimal(5, 2)
+  deductible      Decimal?        @db.Decimal(10, 2)
+  insuranceApprovedAmount Decimal? @db.Decimal(12, 2)
+  permitCost      Decimal?        @db.Decimal(10, 2)
   
   // Progress (0-100)
   progress        Int             @default(0)
+  completionPercentage Int        @default(0)
+  isCompleted     Boolean         @default(false)
+  completedAt     DateTime?
+  completedById   String?
+  
+  // Quality & customer satisfaction
+  qualityScore    Int?
+  clientRating    Int?
+  clientReviewRequested Boolean   @default(false)
+  clientReviewReceived Boolean    @default(false)
+  
+  // Job site and roof metadata
+  roofType        String?
+  roofSquares     Decimal?        @db.Decimal(10, 2)
+  roofPitch       String?
+  roofLayers      Int?            @default(1)
+  stories         Int?            @default(1)
+  shingleManufacturer String?
+  shingleProduct  String?
+  shingleColor    String?
+  
+  jobSiteAddress  String?
+  jobSiteAddress2 String?
+  jobSiteCity     String?
+  jobSiteState    String?
+  jobSiteZip      String?
+  jobSiteCountry  String?         @default("US")
+  latitude        Decimal?        @db.Decimal(10, 8)
+  longitude       Decimal?        @db.Decimal(11, 8)
+  
+  // Insurance
+  isInsuranceJob  Boolean         @default(false)
+  insuranceCompany String?
+  claimNumber     String?
+  policyNumber    String?
+  insuranceApproved Boolean?
+  adjusterId      String?
+  adjusterName    String?
+  adjusterPhone   String?
+  adjusterEmail   String?
+  dateOfLoss      DateTime?
+  
+  // Permit
+  permitRequired  Boolean         @default(true)
+  permitNumber    String?
+  permitStatus    PermitStatus?
+  permitPulledDate DateTime?
+  permitApprovedDate DateTime?
+  
+  // Warranty
+  warrantyType    String?
+  warrantyYears   Int?
+  warrantyRegistered Boolean      @default(false)
+  warrantyRegisteredDate DateTime?
+  warrantyNumber  String?
+  
+  // Assignment
+  projectManagerId String?
+  salesRepId      String?
+  createdById     String?
   
   // Client relation (optional)
   clientId        String?
@@ -1489,9 +1854,24 @@ model Project {
   
   // Relations
   tasks           Task[]
+  projectTasks    ProjectTask[]
+  projectMaterials ProjectMaterial[]
+  projectLaborEntries ProjectLabor[]
+  projectExpenses ProjectExpense[]
+  projectDocuments ProjectDocument[]
+  projectPhotos   ProjectPhoto[]
+  projectNotes    ProjectNote[]
+  projectCommunications ProjectCommunication[]
+  crewAssignments ProjectCrewAssignment[]
+  projectInspections ProjectInspection[]
+  changeOrders    ChangeOrder[]
+  weatherDelays   WeatherDelay[]
+  purchaseOrders  PurchaseOrder[]
+  projectStageHistory ProjectStageHistory[]
   members         ProjectMember[]
   files           File[]
   invoices        Invoice[]
+  payments        InvoicePayment[]
   emails          Email[]
   contracts       Contract[]
   timeEntries     TimeEntry[]
@@ -1504,11 +1884,17 @@ model Project {
   jobCompletion   JobCompletion?
 
   @@unique([tenantId, code])
+  @@unique([tenantId, projectNumber])
   @@index([tenantId])
   @@index([status])
+  @@index([priority])
   @@index([clientId])
   @@index([quoteId])
   @@index([leadId])
+  @@index([stageId])
+  @@index([projectManagerId])
+  @@index([createdAt])
+  @@index([deletedAt])
 }
 
 model ProjectMember {
@@ -1526,6 +1912,599 @@ model ProjectMember {
   @@unique([projectId, employeeId])
   @@index([projectId])
   @@index([employeeId])
+}
+
+model ProjectStage {
+  id              String    @id @default(uuid())
+  tenantId        String
+
+  name            String
+  slug            String
+  description     String?
+  color           String    @default("#6B7280")
+  icon            String?
+
+  order           Int
+  isDefault       Boolean   @default(false)
+  isCompleted     Boolean   @default(false)
+  isCancelled     Boolean   @default(false)
+
+  autoNotifyClient Boolean  @default(false)
+  clientNotificationTemplate String?
+  autoNotifyTeam   Boolean  @default(false)
+  teamNotificationTemplate String?
+  autoCreateTask   Boolean  @default(false)
+  taskTemplate     String?
+
+  projectCount    Int       @default(0)
+  totalValue      Decimal   @default(0) @db.Decimal(12, 2)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  projects        Project[]
+  stageHistory    ProjectStageHistory[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, order])
+}
+
+model ProjectStageHistory {
+  id              String    @id @default(uuid())
+  tenantId        String
+  projectId       String
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  stageId         String
+  stage           ProjectStage @relation(fields: [stageId], references: [id], onDelete: Cascade)
+
+  enteredAt       DateTime  @default(now())
+  exitedAt        DateTime?
+  durationMinutes Int?
+
+  changedById     String?
+  notes           String?
+
+  @@index([tenantId, projectId])
+  @@index([projectId, enteredAt])
+}
+
+model ProjectTask {
+  id              String    @id @default(uuid())
+  tenantId        String
+  projectId       String
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  title           String
+  description     String?
+
+  taskType        ProjectTaskType @default(GENERAL)
+  priority        TaskPriority @default(NORMAL)
+  status          TaskStatus @default(PENDING)
+
+  assignedToId    String?
+
+  dueDate         DateTime?
+  startDate       DateTime?
+  completedAt     DateTime?
+  completedById   String?
+
+  estimatedMinutes Int?
+  actualMinutes   Int?
+
+  isChecklist     Boolean   @default(false)
+  checklistItems  Json?
+
+  sortOrder       Int       @default(0)
+
+  parentTaskId    String?
+  parentTask      ProjectTask? @relation("ProjectTaskDependencies", fields: [parentTaskId], references: [id], onDelete: SetNull)
+  subTasks        ProjectTask[] @relation("ProjectTaskDependencies")
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdById     String?
+
+  laborEntries    ProjectLabor[]
+  photos          ProjectPhoto[]
+
+  @@index([tenantId, projectId])
+  @@index([projectId, status])
+  @@index([assignedToId, status])
+}
+
+model ProjectMaterial {
+  id              String    @id @default(uuid())
+  tenantId        String
+  projectId       String
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  name            String
+  description     String?
+  category        ProjectMaterialCategory @default(ROOFING)
+  sku             String?
+
+  quantityNeeded  Decimal   @db.Decimal(10, 2)
+  quantityOrdered Decimal?  @db.Decimal(10, 2)
+  quantityReceived Decimal? @db.Decimal(10, 2)
+  quantityUsed    Decimal?  @db.Decimal(10, 2)
+  quantityReturned Decimal? @db.Decimal(10, 2)
+  unit            String    @default("each")
+
+  unitCost        Decimal   @db.Decimal(10, 2)
+  totalCost       Decimal   @db.Decimal(12, 2)
+  markup          Decimal?  @db.Decimal(5, 2)
+  sellPrice       Decimal?  @db.Decimal(10, 2)
+
+  supplierId      String?
+  supplier        Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  supplierName    String?
+
+  purchaseOrderId String?
+  purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
+  orderStatus     MaterialOrderStatus @default(NOT_ORDERED)
+  orderedAt       DateTime?
+  orderedById     String?
+
+  expectedDeliveryDate DateTime?
+  actualDeliveryDate   DateTime?
+  deliveryStatus       DeliveryStatus @default(PENDING)
+  deliveryNotes        String?
+
+  deductFromInventory Boolean @default(false)
+  inventoryItemId     String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([tenantId, projectId])
+  @@index([projectId, category])
+}
+
+model ProjectCrewAssignment {
+  id              String    @id @default(uuid())
+  tenantId        String
+  projectId       String
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  crewId          String
+  crew            Crew      @relation(fields: [crewId], references: [id], onDelete: Cascade)
+  crewLeadId      String?
+
+  scheduledStartDate DateTime
+  scheduledEndDate DateTime
+  actualStartDate  DateTime?
+  actualEndDate    DateTime?
+
+  status          CrewAssignmentStatus @default(SCHEDULED)
+
+  workerCount     Int       @default(0)
+  assignedWorkers Json?
+
+  notes           String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  laborEntries    ProjectLabor[]
+
+  @@index([tenantId, projectId])
+  @@index([crewId, scheduledStartDate])
+}
+
+model ProjectLabor {
+  id              String    @id @default(uuid())
+  tenantId        String
+  projectId       String
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  userId          String?
+  workerName      String
+  workerType      WorkerType @default(EMPLOYEE)
+
+  crewAssignmentId String?
+  crewAssignment  ProjectCrewAssignment? @relation(fields: [crewAssignmentId], references: [id], onDelete: SetNull)
+
+  date            DateTime  @db.Date
+  startTime       DateTime?
+  endTime         DateTime?
+  hoursWorked     Decimal   @db.Decimal(5, 2)
+  breakMinutes    Int       @default(0)
+  overtimeHours   Decimal?  @db.Decimal(5, 2)
+
+  taskId          String?
+  task            ProjectTask? @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  activityType    LaborActivityType @default(GENERAL)
+  description     String?
+
+  hourlyRate      Decimal   @db.Decimal(10, 2)
+  overtimeRate    Decimal?  @db.Decimal(10, 2)
+  totalCost       Decimal   @db.Decimal(12, 2)
+
+  isBillable      Boolean   @default(true)
+  billedToClient  Boolean   @default(false)
+
+  verified        Boolean   @default(false)
+  verifiedById    String?
+  verifiedAt      DateTime?
+
+  checkInLatitude   Decimal?  @db.Decimal(10, 8)
+  checkInLongitude  Decimal?  @db.Decimal(11, 8)
+  checkOutLatitude  Decimal?  @db.Decimal(10, 8)
+  checkOutLongitude Decimal?  @db.Decimal(11, 8)
+
+  notes           String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdById     String?
+
+  @@index([tenantId, projectId])
+  @@index([projectId, date])
+  @@index([userId, date])
+}
+
+model ProjectExpense {
+  id              String    @id @default(uuid())
+  tenantId        String
+  projectId       String
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  category        ProjectExpenseCategory @default(OTHER)
+  description     String
+  vendor          String?
+
+  amount          Decimal   @db.Decimal(12, 2)
+  taxAmount       Decimal?  @db.Decimal(10, 2)
+  totalAmount     Decimal   @db.Decimal(12, 2)
+
+  paymentMethod   PaymentMethod?
+  paymentStatus   ProjectPaymentStatus @default(UNPAID)
+  paidAt          DateTime?
+  referenceNumber String?
+
+  receiptDocumentId String?
+
+  isReimbursable  Boolean   @default(false)
+  reimbursedToId  String?
+  reimbursedAt    DateTime?
+
+  billableToClient Boolean  @default(false)
+  billedToClient   Boolean  @default(false)
+
+  expenseDate     DateTime  @db.Date
+  notes           String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdById     String?
+
+  @@index([tenantId, projectId])
+  @@index([projectId, category])
+}
+
+model ProjectDocument {
+  id              String    @id @default(uuid())
+  tenantId        String
+  projectId       String
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  documentId      String
+  category        ProjectDocumentCategory @default(OTHER)
+  description     String?
+
+  visibleToClient Boolean   @default(false)
+
+  requiresSignature Boolean @default(false)
+  signedAt          DateTime?
+  signedById        String?
+  signatureDocumentId String?
+
+  addedAt         DateTime  @default(now())
+  addedById       String?
+
+  @@index([tenantId, projectId])
+  @@index([projectId, category])
+}
+
+model ProjectPhoto {
+  id              String    @id @default(uuid())
+  tenantId        String
+  projectId       String
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  url             String
+  thumbnailUrl    String?
+  filename        String
+  fileSize        Int
+  mimeType        String
+
+  category        PhotoCategory @default(PROGRESS)
+  description     String?
+
+  latitude        Decimal?  @db.Decimal(10, 8)
+  longitude       Decimal?  @db.Decimal(11, 8)
+
+  takenAt         DateTime?
+  takenById       String?
+
+  taskId          String?
+  task            ProjectTask? @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  visibleToClient Boolean   @default(false)
+  visibleToInsurance Boolean @default(false)
+
+  aiAnalyzed      Boolean   @default(false)
+  aiAnalysis      Json?
+
+  sortOrder       Int       @default(0)
+
+  createdAt       DateTime  @default(now())
+  uploadedById    String?
+
+  @@index([tenantId, projectId])
+  @@index([projectId, category])
+}
+
+model ProjectNote {
+  id              String    @id @default(uuid())
+  tenantId        String
+  projectId       String
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  content         String
+  noteType        ProjectNoteType @default(GENERAL)
+
+  mentionedUserIds String[]
+
+  isInternal      Boolean   @default(true)
+  visibleToClient Boolean   @default(false)
+  isPinned        Boolean   @default(false)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdById     String?
+
+  @@index([tenantId, projectId])
+  @@index([projectId, createdAt])
+}
+
+model ProjectCommunication {
+  id              String    @id @default(uuid())
+  tenantId        String
+  projectId       String
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  type            CommunicationType
+  direction       CommunicationDirection
+
+  subject         String?
+  content         String
+
+  fromUserId      String?
+  fromName        String?
+  fromEmail       String?
+  fromPhone       String?
+
+  toClientId      String?
+  toName          String?
+  toEmail         String?
+  toPhone         String?
+
+  status          CommunicationStatus @default(COMPLETED)
+
+  callDuration    Int?
+  callRecordingUrl String?
+
+  emailMessageId  String?
+  emailThreadId   String?
+
+  attachmentIds   String[]
+
+  communicatedAt  DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+  createdById     String?
+
+  @@index([tenantId, projectId])
+  @@index([projectId, communicatedAt])
+}
+
+model ProjectInspection {
+  id              String    @id @default(uuid())
+  tenantId        String
+  projectId       String
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  type            InspectionType
+
+  scheduledDate   DateTime?
+  scheduledTime   String?
+  actualDate      DateTime?
+
+  inspectorName   String?
+  inspectorPhone  String?
+  inspectorEmail  String?
+  inspectionCompany String?
+
+  status          InspectionStatus @default(SCHEDULED)
+  result          InspectionResult?
+
+  notes           String?
+  failureReasons  String[]
+  requiredFixes   String?
+
+  reinspectionRequired Boolean @default(false)
+  reinspectionDate     DateTime?
+
+  reportDocumentId String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdById     String?
+
+  @@index([tenantId, projectId])
+  @@index([projectId, type])
+}
+
+model ChangeOrder {
+  id              String    @id @default(uuid())
+  tenantId        String
+  projectId       String
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  changeOrderNumber String
+  title           String
+  description     String
+  reason          ChangeOrderReason
+
+  previousContractValue Decimal @db.Decimal(12, 2)
+  changeAmount          Decimal @db.Decimal(12, 2)
+  newContractValue      Decimal @db.Decimal(12, 2)
+
+  status          ChangeOrderStatus @default(DRAFT)
+  clientApproved  Boolean?
+  clientApprovedAt DateTime?
+  clientSignatureId String?
+
+  isInsuranceSupplement Boolean @default(false)
+  supplementNumber      String?
+  insuranceApproved     Boolean?
+  insuranceApprovedAmount Decimal? @db.Decimal(12, 2)
+
+  additionalDays  Int?
+
+  documentId      String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdById     String?
+
+  @@unique([tenantId, projectId, changeOrderNumber])
+  @@index([tenantId, projectId])
+}
+
+model WeatherDelay {
+  id              String    @id @default(uuid())
+  tenantId        String
+  projectId       String
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  date            DateTime  @db.Date
+  weatherType     WeatherType
+  description     String?
+
+  workdayLost     Boolean   @default(true)
+  hoursLost       Decimal?  @db.Decimal(5, 2)
+
+  photoIds        String[]
+
+  createdAt       DateTime  @default(now())
+  createdById     String?
+
+  @@index([tenantId, projectId])
+  @@index([projectId, date])
+}
+
+model Crew {
+  id              String    @id @default(uuid())
+  tenantId        String
+
+  name            String
+  description     String?
+  color           String?
+
+  crewLeadId      String?
+  memberIds       String[]  @default([])
+
+  maxMembers      Int       @default(6)
+  defaultHourlyRate Decimal? @db.Decimal(10, 2)
+
+  isActive        Boolean   @default(true)
+  completedProjects Int     @default(0)
+  averageRating   Decimal?  @db.Decimal(3, 2)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  assignments     ProjectCrewAssignment[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId, isActive])
+}
+
+model Supplier {
+  id              String    @id @default(uuid())
+  tenantId        String
+
+  name            String
+  contactName     String?
+  email           String?
+  phone           String?
+  website         String?
+
+  address         String?
+  city            String?
+  state           String?
+  zip             String?
+
+  accountNumber   String?
+  paymentTerms    String?
+
+  isPreferred     Boolean   @default(false)
+  categories      ProjectMaterialCategory[]
+
+  notes           String?
+  isActive        Boolean   @default(true)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  materials       ProjectMaterial[]
+  purchaseOrders  PurchaseOrder[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId, isActive])
+}
+
+model PurchaseOrder {
+  id              String    @id @default(uuid())
+  tenantId        String
+
+  poNumber        String
+  supplierId      String
+  supplier        Supplier  @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+
+  projectId       String?
+  project         Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  orderDate       DateTime  @default(now())
+  expectedDeliveryDate DateTime?
+  actualDeliveryDate DateTime?
+
+  subtotal        Decimal   @db.Decimal(12, 2)
+  taxAmount       Decimal?  @db.Decimal(10, 2)
+  shippingAmount  Decimal?  @db.Decimal(10, 2)
+  totalAmount     Decimal   @db.Decimal(12, 2)
+
+  status          PurchaseOrderStatus @default(DRAFT)
+
+  deliveryAddress String?
+  deliveryCity    String?
+  deliveryState   String?
+  deliveryZip     String?
+  deliveryNotes   String?
+
+  internalNotes   String?
+  supplierNotes   String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdById     String?
+
+  materials       ProjectMaterial[]
+
+  @@unique([tenantId, poNumber])
+  @@index([tenantId, status])
+  @@index([tenantId, supplierId])
 }
 
 // ============================================================================
@@ -2220,6 +3199,10 @@ model InvoicePayment {
   clientId        String
   client          Client        @relation(fields: [clientId], references: [id], onDelete: Restrict)
   
+  // Optional project link (for project-level payment tracking)
+  projectId       String?
+  project         Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  
   // Payment details
   amount          Decimal       @db.Decimal(15, 2)
   paymentMethod   PaymentMethod
@@ -2237,6 +3220,7 @@ model InvoicePayment {
 
   @@index([invoiceId])
   @@index([clientId])
+  @@index([projectId])
   @@index([tenantId])
   @@index([paymentDate])
 }

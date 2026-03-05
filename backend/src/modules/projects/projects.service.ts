@@ -1,166 +1,367 @@
+import { Prisma } from '@prisma/client';
 import { projectsRepository } from './projects.repository';
-import { CreateProjectDto, UpdateProjectDto, ProjectQueryDto, toProjectResponseDto } from './projects.dto';
-import { NotFoundError } from '../../common/errors/HttpErrors';
+import { normalizeProjectDto, ProjectQueryDto, toNumber } from './projects.dto';
+import {
+  BadRequestError,
+  ConflictError,
+  NotFoundError,
+} from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
-import { eventBus } from '../../common/events/event-bus';
-import { clientLifecycleService } from '../../common/services/client-lifecycle.service';
-import { activityLogger } from '../../common/services/activity-logger.service';
 
-/**
- * Maps the validated request body (from the validator schema) to the
- * CreateProjectDto / UpdateProjectDto that the repository understands.
- * This bridges the naming gap between the API contract and the Prisma model.
- */
+const NOT_FOUND_MESSAGES = new Set([
+  'PROJECT_NOT_FOUND',
+  'PROJECT_TASK_NOT_FOUND',
+  'PROJECT_MATERIAL_NOT_FOUND',
+  'PROJECT_LABOR_NOT_FOUND',
+  'PROJECT_EXPENSE_NOT_FOUND',
+  'PROJECT_CREW_ASSIGNMENT_NOT_FOUND',
+  'PROJECT_DOCUMENT_NOT_FOUND',
+  'PROJECT_PHOTO_NOT_FOUND',
+  'PROJECT_NOTE_NOT_FOUND',
+  'PROJECT_INSPECTION_NOT_FOUND',
+  'PROJECT_CHANGE_ORDER_NOT_FOUND',
+  'QUOTE_NOT_FOUND',
+]);
 
-/** Map frontend status names → Prisma ProjectStatus enum values */
-const STATUS_MAP: Record<string, string> = {
-    NOT_STARTED: 'PLANNING',
-    IN_PROGRESS: 'ACTIVE',
-    PLANNING: 'PLANNING',
-    ACTIVE: 'ACTIVE',
-    ON_HOLD: 'ON_HOLD',
-    COMPLETED: 'COMPLETED',
-    CANCELLED: 'CANCELLED',
-    ARCHIVED: 'ARCHIVED',
-};
+function mapProjectError(error: unknown): never {
+  if (error instanceof NotFoundError || error instanceof BadRequestError || error instanceof ConflictError) {
+    throw error;
+  }
 
-function mapBodyToDto(body: Record<string, any>): Record<string, any> {
-    const mapped: Record<string, any> = { ...body };
+  if (error instanceof Error && NOT_FOUND_MESSAGES.has(error.message)) {
+    throw new NotFoundError('Requested resource not found', ErrorCodes.RESOURCE_NOT_FOUND);
+  }
 
-    // projectTitle → name
-    if (mapped.projectTitle !== undefined) {
-        mapped.name = mapped.projectTitle;
-        delete mapped.projectTitle;
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error.code === 'P2002') {
+      throw new ConflictError('A project resource with this unique value already exists', ErrorCodes.RESOURCE_ALREADY_EXISTS);
     }
-
-    // dueDate → endDate
-    if (mapped.dueDate !== undefined) {
-        mapped.endDate = mapped.dueDate;
-        delete mapped.dueDate;
+    if (error.code === 'P2003') {
+      throw new BadRequestError('Invalid related resource reference', ErrorCodes.INVALID_INPUT);
     }
+  }
 
-    // progressPercentage → progress
-    if (mapped.progressPercentage !== undefined) {
-        mapped.progress = mapped.progressPercentage;
-        delete mapped.progressPercentage;
-    }
+  if (error instanceof Error) {
+    throw new BadRequestError(error.message, ErrorCodes.INVALID_INPUT);
+  }
 
-    // Map status to valid Prisma enum value
-    if (mapped.status) {
-        mapped.status = STATUS_MAP[mapped.status] || 'PLANNING';
-    }
-
-    // Auto-generate a project code if not supplied
-    if (!mapped.code) {
-        const prefix = (mapped.name || 'PRJ').substring(0, 3).toUpperCase();
-        mapped.code = `${prefix}-${Date.now().toString(36).toUpperCase()}`;
-    }
-
-    // Strip fields the repository doesn't handle (stored as-is or ignored)
-    // These prevent Prisma errors for unknown columns
-    delete mapped.priority;
-    delete mapped.category;
-    delete mapped.estimatedHours;
-    delete mapped.tags;
-    delete mapped.milestones;
-    delete mapped.attachments;
-    delete mapped.notifyTeamMembers;
-    delete mapped.projectManagerId;
-
-    return mapped;
+  throw new BadRequestError('Project operation failed', ErrorCodes.INVALID_INPUT);
 }
 
 export class ProjectsService {
-    async create(tenantId: string, data: any, createdByUserId?: string) {
-        const dto = mapBodyToDto(data) as CreateProjectDto;
-        const project = await projectsRepository.create(tenantId, dto);
-        const responseDto = toProjectResponseDto(project);
-
-        // Domain event: project created
-        eventBus.emit('project.created', {
-            tenantId,
-            projectId: responseDto.id,
-            projectName: (project as any).name,
-            clientId: (project as any).clientId || (project as any).client?.id,
-            assignedToUserId: createdByUserId,
-        });
-
-        // Lifecycle: client with active project → ACTIVE
-        const clientId = (project as any).clientId || (project as any).client?.id;
-        if (clientId) {
-            await clientLifecycleService.progressTo(clientId, tenantId, 'ACTIVE');
-            await clientLifecycleService.reinforceEngagement(clientId, tenantId);
-        }
-
-        activityLogger.log({
-            tenantId, entityType: 'Project', entityId: responseDto.id,
-            action: 'CREATE', module: 'projects',
-            description: `Created project "${(project as any).name || responseDto.id}"`,
-            userId: createdByUserId,
-            metadata: { projectName: (project as any).name, clientId },
-        });
-
-        return responseDto;
+  private async guarded<T>(fn: () => Promise<T>): Promise<T> {
+    try {
+      return await fn();
+    } catch (error) {
+      mapProjectError(error);
     }
+  }
 
-    async getById(id: string, tenantId: string) {
-        const project = await projectsRepository.findById(id, tenantId);
-        if (!project) throw new NotFoundError('Project not found', ErrorCodes.RESOURCE_NOT_FOUND);
-        return toProjectResponseDto(project);
-    }
+  async create(tenantId: string, data: Record<string, any>, createdById?: string) {
+    const dto = normalizeProjectDto(data);
+    return this.guarded(() => projectsRepository.create(tenantId, dto, createdById));
+  }
 
-    async getMany(tenantId: string, query: ProjectQueryDto) {
-        const { data, total } = await projectsRepository.findMany(tenantId, query);
-        const page = query.page || 1, limit = query.limit || 20;
-        return {
-            data: data.map(toProjectResponseDto),
-            meta: { page, limit, total, totalPages: Math.ceil(total / limit), hasNextPage: page < Math.ceil(total / limit), hasPrevPage: page > 1 },
-        };
-    }
+  async createFromQuote(tenantId: string, quoteId: string, userId?: string) {
+    return this.guarded(() => projectsRepository.createFromQuote(tenantId, quoteId, userId));
+  }
 
-    async update(id: string, tenantId: string, data: any) {
-        const existing = await projectsRepository.findById(id, tenantId);
-        if (!existing) throw new NotFoundError('Project not found', ErrorCodes.RESOURCE_NOT_FOUND);
-        const dto = mapBodyToDto(data) as UpdateProjectDto;
-        const project = await projectsRepository.update(id, tenantId, dto);
-        const responseDto = toProjectResponseDto(project);
+  async getById(id: string, tenantId: string) {
+    return this.guarded(async () => {
+      const project = await projectsRepository.findById(id, tenantId);
+      if (!project) {
+        throw new NotFoundError('Project not found', ErrorCodes.RESOURCE_NOT_FOUND);
+      }
+      return project;
+    });
+  }
 
-        // Detect status change and emit event
-        const oldStatus = (existing as any).status;
-        const newStatus = (project as any).status;
-        if (oldStatus && newStatus && oldStatus !== newStatus) {
-            eventBus.emit('project.statusChanged', {
-                tenantId,
-                projectId: responseDto.id,
-                projectName: (project as any).name || responseDto.id,
-                previousStatus: oldStatus,
-                newStatus,
-                clientId: (project as any).clientId || (project as any).client?.id,
-            });
-        }
+  async getMany(tenantId: string, query: ProjectQueryDto) {
+    return this.guarded(async () => {
+      const { data, total } = await projectsRepository.findMany(tenantId, query);
+      const page = query.page ?? 1;
+      const limit = query.limit ?? 20;
+      const totalPages = Math.ceil(total / limit);
 
-        activityLogger.log({
-            tenantId, entityType: 'Project', entityId: responseDto.id,
-            action: 'UPDATE', module: 'projects',
-            description: `Updated project "${(project as any).name || responseDto.id}"`,
-            metadata: { updatedFields: Object.keys(data) },
-        });
+      return {
+        data,
+        meta: {
+          page,
+          limit,
+          total,
+          totalPages,
+          hasNextPage: page < totalPages,
+          hasPrevPage: page > 1,
+        },
+      };
+    });
+  }
 
-        return responseDto;
-    }
+  async getKanban(tenantId: string) {
+    return this.guarded(() => projectsRepository.getKanban(tenantId));
+  }
 
-    async delete(id: string, tenantId: string) {
-        const existing = await projectsRepository.findById(id, tenantId);
-        if (!existing) throw new NotFoundError('Project not found', ErrorCodes.RESOURCE_NOT_FOUND);
+  async getCalendar(tenantId: string) {
+    return this.guarded(() => projectsRepository.getCalendar(tenantId));
+  }
 
-        activityLogger.log({
-            tenantId, entityType: 'Project', entityId: id,
-            action: 'DELETE', module: 'projects',
-            description: `Deleted project "${(existing as any).name || id}"`,
-        });
+  async getMap(tenantId: string) {
+    return this.guarded(() => projectsRepository.getMap(tenantId));
+  }
 
-        await projectsRepository.delete(id, tenantId);
-    }
+  async getSummaryStats(tenantId: string) {
+    return this.guarded(() => projectsRepository.getSummaryStats(tenantId));
+  }
+
+  async update(id: string, tenantId: string, data: Record<string, any>) {
+    const dto = normalizeProjectDto(data);
+    return this.guarded(() => projectsRepository.update(id, tenantId, dto));
+  }
+
+  async updateStage(id: string, tenantId: string, stageId: string, changedById?: string, notes?: string) {
+    return this.guarded(() => projectsRepository.updateStage(id, tenantId, stageId, changedById, notes));
+  }
+
+  async updateStatus(id: string, tenantId: string, status: string) {
+    return this.guarded(() => projectsRepository.updateStatus(id, tenantId, status));
+  }
+
+  async assignProjectManager(id: string, tenantId: string, projectManagerId?: string | null) {
+    return this.guarded(() => projectsRepository.assignProjectManager(id, tenantId, projectManagerId));
+  }
+
+  async delete(id: string, tenantId: string) {
+    return this.guarded(async () => {
+      await projectsRepository.softDelete(id, tenantId);
+    });
+  }
+
+  async getFinancials(id: string, tenantId: string) {
+    return this.guarded(() => projectsRepository.getFinancials(id, tenantId));
+  }
+
+  async getProfitability(id: string, tenantId: string) {
+    return this.guarded(async () => {
+      const financials = await projectsRepository.getFinancials(id, tenantId);
+      const contractValue = toNumber(financials.project?.contractValue);
+      const actualCost = financials.materialsCost + financials.laborCost + financials.expensesCost;
+      const grossProfit = contractValue - actualCost;
+      const profitMargin = contractValue > 0 ? (grossProfit / contractValue) * 100 : 0;
+
+      return {
+        project: financials.project,
+        contractValue,
+        actualCost,
+        grossProfit,
+        profitMargin,
+        estimatedCost: toNumber(financials.project?.estimatedCost),
+        invoiced: financials.invoiced,
+        paid: financials.paid,
+        outstanding: financials.invoiced - financials.paid,
+        breakdown: {
+          materials: financials.materialsCost,
+          labor: financials.laborCost,
+          expenses: financials.expensesCost,
+        },
+      };
+    });
+  }
+
+  async recalculateFinancials(id: string, tenantId: string) {
+    return this.guarded(() => projectsRepository.recalculateFinancials(id, tenantId));
+  }
+
+  async getTasks(projectId: string, tenantId: string) {
+    return this.guarded(() => projectsRepository.getTasks(projectId, tenantId));
+  }
+
+  async createTask(projectId: string, tenantId: string, data: Record<string, any>, userId?: string) {
+    return this.guarded(() => projectsRepository.createTask(projectId, tenantId, data, userId));
+  }
+
+  async updateTask(projectId: string, taskId: string, tenantId: string, data: Record<string, any>) {
+    return this.guarded(() => projectsRepository.updateTask(projectId, taskId, tenantId, data));
+  }
+
+  async completeTask(projectId: string, taskId: string, tenantId: string, userId?: string) {
+    return this.guarded(() => projectsRepository.completeTask(projectId, taskId, tenantId, userId));
+  }
+
+  async deleteTask(projectId: string, taskId: string, tenantId: string) {
+    return this.guarded(() => projectsRepository.deleteTask(projectId, taskId, tenantId));
+  }
+
+  async getMaterials(projectId: string, tenantId: string) {
+    return this.guarded(() => projectsRepository.getMaterials(projectId, tenantId));
+  }
+
+  async addMaterial(projectId: string, tenantId: string, data: Record<string, any>) {
+    return this.guarded(() => projectsRepository.addMaterial(projectId, tenantId, data));
+  }
+
+  async updateMaterial(projectId: string, materialId: string, tenantId: string, data: Record<string, any>) {
+    return this.guarded(() => projectsRepository.updateMaterial(projectId, materialId, tenantId, data));
+  }
+
+  async deleteMaterial(projectId: string, materialId: string, tenantId: string) {
+    return this.guarded(() => projectsRepository.deleteMaterial(projectId, materialId, tenantId));
+  }
+
+  async importMaterialsFromQuote(projectId: string, tenantId: string) {
+    return this.guarded(() => projectsRepository.importMaterialsFromQuote(projectId, tenantId));
+  }
+
+  async getLabor(projectId: string, tenantId: string) {
+    return this.guarded(() => projectsRepository.getLabor(projectId, tenantId));
+  }
+
+  async addLabor(projectId: string, tenantId: string, data: Record<string, any>, userId?: string) {
+    return this.guarded(() => projectsRepository.addLabor(projectId, tenantId, data, userId));
+  }
+
+  async updateLabor(projectId: string, laborId: string, tenantId: string, data: Record<string, any>) {
+    return this.guarded(() => projectsRepository.updateLabor(projectId, laborId, tenantId, data));
+  }
+
+  async deleteLabor(projectId: string, laborId: string, tenantId: string) {
+    return this.guarded(() => projectsRepository.deleteLabor(projectId, laborId, tenantId));
+  }
+
+  async getLaborSummary(projectId: string, tenantId: string) {
+    return this.guarded(() => projectsRepository.getLaborSummary(projectId, tenantId));
+  }
+
+  async getExpenses(projectId: string, tenantId: string) {
+    return this.guarded(() => projectsRepository.getExpenses(projectId, tenantId));
+  }
+
+  async addExpense(projectId: string, tenantId: string, data: Record<string, any>, userId?: string) {
+    return this.guarded(() => projectsRepository.addExpense(projectId, tenantId, data, userId));
+  }
+
+  async updateExpense(projectId: string, expenseId: string, tenantId: string, data: Record<string, any>) {
+    return this.guarded(() => projectsRepository.updateExpense(projectId, expenseId, tenantId, data));
+  }
+
+  async deleteExpense(projectId: string, expenseId: string, tenantId: string) {
+    return this.guarded(() => projectsRepository.deleteExpense(projectId, expenseId, tenantId));
+  }
+
+  async getCrewAssignments(projectId: string, tenantId: string) {
+    return this.guarded(() => projectsRepository.getCrewAssignments(projectId, tenantId));
+  }
+
+  async assignCrew(projectId: string, tenantId: string, data: Record<string, any>) {
+    return this.guarded(() => projectsRepository.assignCrew(projectId, tenantId, data));
+  }
+
+  async updateCrewAssignment(projectId: string, assignmentId: string, tenantId: string, data: Record<string, any>) {
+    return this.guarded(() => projectsRepository.updateCrewAssignment(projectId, assignmentId, tenantId, data));
+  }
+
+  async deleteCrewAssignment(projectId: string, assignmentId: string, tenantId: string) {
+    return this.guarded(() => projectsRepository.deleteCrewAssignment(projectId, assignmentId, tenantId));
+  }
+
+  async getDocuments(projectId: string, tenantId: string) {
+    return this.guarded(() => projectsRepository.getDocuments(projectId, tenantId));
+  }
+
+  async attachDocument(projectId: string, tenantId: string, data: Record<string, any>, userId?: string) {
+    return this.guarded(() => projectsRepository.attachDocument(projectId, tenantId, data, userId));
+  }
+
+  async removeDocument(projectId: string, docId: string, tenantId: string) {
+    return this.guarded(() => projectsRepository.removeDocument(projectId, docId, tenantId));
+  }
+
+  async getPhotos(projectId: string, tenantId: string) {
+    return this.guarded(() => projectsRepository.getPhotos(projectId, tenantId));
+  }
+
+  async uploadPhoto(projectId: string, tenantId: string, data: Record<string, any>, userId?: string) {
+    return this.guarded(() => projectsRepository.uploadPhoto(projectId, tenantId, data, userId));
+  }
+
+  async updatePhoto(projectId: string, photoId: string, tenantId: string, data: Record<string, any>) {
+    return this.guarded(() => projectsRepository.updatePhoto(projectId, photoId, tenantId, data));
+  }
+
+  async deletePhoto(projectId: string, photoId: string, tenantId: string) {
+    return this.guarded(() => projectsRepository.deletePhoto(projectId, photoId, tenantId));
+  }
+
+  async getNotes(projectId: string, tenantId: string) {
+    return this.guarded(() => projectsRepository.getNotes(projectId, tenantId));
+  }
+
+  async addNote(projectId: string, tenantId: string, data: Record<string, any>, userId?: string) {
+    return this.guarded(() => projectsRepository.addNote(projectId, tenantId, data, userId));
+  }
+
+  async updateNote(projectId: string, noteId: string, tenantId: string, data: Record<string, any>) {
+    return this.guarded(() => projectsRepository.updateNote(projectId, noteId, tenantId, data));
+  }
+
+  async deleteNote(projectId: string, noteId: string, tenantId: string) {
+    return this.guarded(() => projectsRepository.deleteNote(projectId, noteId, tenantId));
+  }
+
+  async getCommunications(projectId: string, tenantId: string) {
+    return this.guarded(() => projectsRepository.getCommunications(projectId, tenantId));
+  }
+
+  async logCommunication(projectId: string, tenantId: string, data: Record<string, any>, userId?: string) {
+    return this.guarded(() => projectsRepository.logCommunication(projectId, tenantId, data, userId));
+  }
+
+  async getInspections(projectId: string, tenantId: string) {
+    return this.guarded(() => projectsRepository.getInspections(projectId, tenantId));
+  }
+
+  async scheduleInspection(projectId: string, tenantId: string, data: Record<string, any>, userId?: string) {
+    return this.guarded(() => projectsRepository.scheduleInspection(projectId, tenantId, data, userId));
+  }
+
+  async updateInspection(projectId: string, inspId: string, tenantId: string, data: Record<string, any>) {
+    return this.guarded(() => projectsRepository.updateInspection(projectId, inspId, tenantId, data));
+  }
+
+  async recordInspectionResult(projectId: string, inspId: string, tenantId: string, data: Record<string, any>) {
+    return this.guarded(() => projectsRepository.recordInspectionResult(projectId, inspId, tenantId, data));
+  }
+
+  async getChangeOrders(projectId: string, tenantId: string) {
+    return this.guarded(() => projectsRepository.getChangeOrders(projectId, tenantId));
+  }
+
+  async createChangeOrder(projectId: string, tenantId: string, data: Record<string, any>, userId?: string) {
+    return this.guarded(() => projectsRepository.createChangeOrder(projectId, tenantId, data, userId));
+  }
+
+  async updateChangeOrder(projectId: string, coId: string, tenantId: string, data: Record<string, any>) {
+    return this.guarded(() => projectsRepository.updateChangeOrder(projectId, coId, tenantId, data));
+  }
+
+  async approveChangeOrder(projectId: string, coId: string, tenantId: string) {
+    return this.guarded(() => projectsRepository.approveChangeOrder(projectId, coId, tenantId));
+  }
+
+  async getWeatherDelays(projectId: string, tenantId: string) {
+    return this.guarded(() => projectsRepository.getWeatherDelays(projectId, tenantId));
+  }
+
+  async addWeatherDelay(projectId: string, tenantId: string, data: Record<string, any>, userId?: string) {
+    return this.guarded(() => projectsRepository.addWeatherDelay(projectId, tenantId, data, userId));
+  }
+
+  async getTimeline(projectId: string, tenantId: string) {
+    return this.guarded(() => projectsRepository.getTimeline(projectId, tenantId));
+  }
+
+  async getStageHistory(projectId: string, tenantId: string) {
+    return this.guarded(() => projectsRepository.getStageHistory(projectId, tenantId));
+  }
 }
 
 export const projectsService = new ProjectsService();

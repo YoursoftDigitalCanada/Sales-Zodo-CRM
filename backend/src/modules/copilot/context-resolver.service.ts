@@ -156,7 +156,7 @@ class ContextResolverService {
             budget: project.budget,
             progress: project.progress,
             client: project.client?.clientName || null,
-            tasksCount: project.tasksCount,
+            tasksCount: project._count?.projectTasks ?? 0,
         };
     }
 }

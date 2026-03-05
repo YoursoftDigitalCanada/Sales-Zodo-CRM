@@ -10,6 +10,8 @@ import {
 import { NotFoundError, ConflictError, BadRequestError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
 import { activityLogger } from '../../common/services/activity-logger.service';
+import { logger } from '../../common/utils/logger';
+import { leadSourceSyncService } from './lead-source-sync.service';
 
 export class LeadSourcesService {
   /**
@@ -31,6 +33,17 @@ export class LeadSourcesService {
       description: `Created lead source "${data.name}"`,
       metadata: { sourceName: data.name, sourceType: data.sourceType },
     });
+
+    // Auto-connect if API endpoint is configured
+    if (source.apiEndpoint) {
+      void leadSourceSyncService.maybeAutoConnectAndSync(source.id, tenantId).catch((error) => {
+        logger.warn('[LeadSources] Auto-connect after create failed', {
+          sourceId: source.id,
+          tenantId,
+          error: (error as Error)?.message || String(error),
+        });
+      });
+    }
 
     return dto;
   }
@@ -107,6 +120,23 @@ export class LeadSourcesService {
       description: `Updated lead source "${(source as any).name || dto.id}"`,
       metadata: { updatedFields: Object.keys(data) },
     });
+
+    // Reconnect automatically when integration settings change.
+    const integrationTouched = (
+      data.apiEndpoint !== undefined
+      || data.integrationConfig !== undefined
+      || data.fieldMapping !== undefined
+      || data.defaultValues !== undefined
+    );
+    if (integrationTouched && source.apiEndpoint) {
+      void leadSourceSyncService.maybeAutoConnectAndSync(source.id, tenantId).catch((error) => {
+        logger.warn('[LeadSources] Auto-connect after update failed', {
+          sourceId: source.id,
+          tenantId,
+          error: (error as Error)?.message || String(error),
+        });
+      });
+    }
 
     return dto;
   }
@@ -199,33 +229,62 @@ export class LeadSourcesService {
       return { success: true, message: 'Manual source — no external connection needed.' };
     }
 
-    // For webhook sources (website, email), check if webhook URL exists
-    if (['WEBSITE', 'EMAIL_CAMPAIGN'].includes(existing.sourceType)) {
-      const hasWebhook = !!existing.webhookUrl;
+    if (existing.apiEndpoint) {
+      try {
+        const result = await leadSourceSyncService.syncSourceById(id, tenantId, 'connection_test');
+        await leadSourcesRepository.createLog({
+          leadSourceId: id,
+          eventType: 'connection_test',
+          status: result.failed > 0 ? 'partial' : 'success',
+          direction: 'outbound',
+          responsePayload: {
+            imported: result.imported,
+            skipped: result.skipped,
+            failed: result.failed,
+            totalReceived: result.totalReceived,
+          },
+        });
+
+        return {
+          success: true,
+          message: `Connected successfully. Imported ${result.imported} new leads (${result.skipped} duplicates skipped).`,
+        };
+      } catch (error) {
+        const message = (error as Error)?.message || 'Failed to connect to external API';
+        await leadSourcesRepository.createLog({
+          leadSourceId: id,
+          eventType: 'connection_test',
+          status: 'failed',
+          direction: 'outbound',
+          errorMessage: message,
+        });
+        return { success: false, message };
+      }
+    }
+
+    // For webhook-only sources, confirm webhook endpoint is ready.
+    if (existing.webhookUrl) {
       await leadSourcesRepository.createLog({
         leadSourceId: id,
         eventType: 'connection_test',
-        status: hasWebhook ? 'success' : 'failed',
+        status: 'success',
         direction: 'outbound',
-        responsePayload: { hasWebhook, webhookUrl: existing.webhookUrl },
+        responsePayload: { webhookUrl: existing.webhookUrl },
       });
       return {
-        success: hasWebhook,
-        message: hasWebhook
-          ? `Webhook URL is ready: ${existing.webhookUrl}`
-          : 'No webhook URL configured.',
+        success: true,
+        message: `Webhook URL is ready: ${existing.webhookUrl}`,
       };
     }
 
-    // For API-based sources (Google, Social Media) — placeholder
     await leadSourcesRepository.createLog({
       leadSourceId: id,
       eventType: 'connection_test',
-      status: 'pending',
+      status: 'failed',
       direction: 'outbound',
-      responsePayload: { message: 'OAuth connection required' },
+      errorMessage: 'No API endpoint or webhook URL configured',
     });
-    return { success: false, message: 'OAuth connection not yet configured. Connect your account first.' };
+    return { success: false, message: 'Add an API endpoint (or use webhook URL) to enable automatic lead sync.' };
   }
 
   /**

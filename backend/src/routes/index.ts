@@ -9,6 +9,7 @@ import { stripTenantFromBody } from '../common/middleware/sanitize-body.middlewa
 import authRoutes from '../modules/auth/auth.routes';
 import leadsRoutes from '../modules/leads/leads.routes';
 import leadSourcesRoutes from '../modules/lead-sources/lead-sources.routes';
+import leadSourceWebhooksRoutes from '../modules/lead-sources/lead-source-webhooks.routes';
 import tagsRoutes from '../modules/tags/tags.routes';
 import notificationsRoutes from '../modules/notifications/notifications.routes';
 
@@ -94,6 +95,7 @@ export function registerRoutes(app: Application): void {
 
   apiRouter.use('/auth', authRoutes);
   apiRouter.use('/public', quotesPublicRoutes);
+  apiRouter.use('/webhooks/leads', leadSourceWebhooksRoutes);
 
   // =========================================================================
   // SUPER ADMIN ROUTES (separate auth — NOT behind CRM middleware)

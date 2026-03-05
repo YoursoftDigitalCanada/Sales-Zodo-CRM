@@ -23,6 +23,7 @@ import { setupSwagger } from './config/swagger';
 
 // Automation engine
 import { automationService } from './modules/automation/automation.service';
+import { leadSourceSyncScheduler } from './modules/lead-sources/lead-source-sync.scheduler';
 
 /**
  * Create and configure Express application
@@ -141,6 +142,12 @@ export function createApp(): Application {
 
   const { lifecycleCronService } = require('./common/services/lifecycle-cron.service');
   lifecycleCronService.start();
+
+  // =========================================================================
+  // LEAD SOURCE API SYNC SCHEDULER (poll connected lead source APIs)
+  // =========================================================================
+
+  leadSourceSyncScheduler.start();
 
   // =========================================================================
   // API ROUTES

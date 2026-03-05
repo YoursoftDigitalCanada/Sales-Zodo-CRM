@@ -1,12 +1,39 @@
-// src/pages/Projects.tsx
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-// import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { motion } from "framer-motion";
+import {
+  AlertCircle,
+  BarChart3,
+  CalendarDays,
+  CheckCircle2,
+  CircleDollarSign,
+  ClipboardList,
+  Clock3,
+  FileStack,
+  HardHat,
+  MapPin,
+  MoreHorizontal,
+  Plus,
+  RefreshCw,
+  Search,
+  Shield,
+  Sparkles,
+  TrendingUp,
+  Wrench,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -14,15 +41,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  DropdownMenuCheckboxItem,
-  DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,2084 +51,885 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
 import {
-  Bell,
-  Plus,
-  Loader2,
-  Eye,
-  Pencil,
-  Trash2,
-  Search,
-  User,
-  Users,
-  Building2,
-  Briefcase,
-  MoreHorizontal,
-  MoreVertical,
-  Filter,
-  SlidersHorizontal,
-  LayoutGrid,
-  List,
-  Kanban,
-  GripVertical,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
-  Download,
-  Upload,
-  RefreshCw,
-  X,
-  Sparkles,
-  ArrowUpDown,
-  Copy,
-  ExternalLink,
-  Calendar,
-  Star,
-  StarOff,
-  Clock,
-  FileSpreadsheet,
-  FileText,
-  Columns,
-  FolderOpen,
-  FolderPlus,
-  Target,
-  TrendingUp,
-  AlertCircle,
-  CheckCircle2,
-  PauseCircle,
-  XCircle,
-  PlayCircle,
-  Timer,
-  CalendarDays,
-  BarChart3,
-  PieChart,
-  Activity,
-  Zap,
-  Archive,
-  Share2,
-  Settings,
-  ArrowUp,
-  ArrowDown,
-  CircleDot,
-  Flag,
-} from "lucide-react";
+  ProjectEntity,
+  getProjectCalendar,
+  getProjectKanban,
+  getProjectMap,
+  getProjectSummaryStats,
+  getProjects,
+  deleteProjectById,
+  updateProjectStatus,
+} from "@/features/projects";
 import { cn } from "@/lib/utils";
-import { getProjects, deleteProjectById, createProject, updateProject } from "@/features/projects";
 
-// ============================================
-// CONFIGURATION
-// ============================================
+function useDebouncedValue<T>(value: T, delay = 300): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
 
-// ============================================
-// TYPES
-// ============================================
+  useEffect(() => {
+    const timeout = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(timeout);
+  }, [value, delay]);
 
-interface Project {
-  id: number;
-  name: string;
-  projectManager: string;
-  description: string;
-  progress: number;
-  status: string;
-  dueDate: string;
-  startDate?: string;
-  budget?: number;
-  spent?: number;
-  priority?: string;
-  category?: string;
-  clientName?: string;
-  teamMembers?: { id: number; name: string; avatar?: string }[];
-  isFavorite?: boolean;
-  tasksCompleted?: number;
-  totalTasks?: number;
-  createdAt?: string;
+  return debouncedValue;
 }
 
-interface ColumnConfig {
-  key: string;
-  label: string;
-  visible: boolean;
-  sortable: boolean;
-}
+const STATUS_OPTIONS = [
+  { value: "ALL", label: "All Status" },
+  { value: "DRAFT", label: "Draft" },
+  { value: "PENDING", label: "Pending" },
+  { value: "APPROVED", label: "Approved" },
+  { value: "SCHEDULED", label: "Scheduled" },
+  { value: "IN_PROGRESS", label: "In Progress" },
+  { value: "ON_HOLD", label: "On Hold" },
+  { value: "COMPLETED", label: "Completed" },
+  { value: "CANCELLED", label: "Cancelled" },
+  { value: "WARRANTY_WORK", label: "Warranty Work" },
+] as const;
 
-interface User {
-  firstName: string;
-  lastName: string;
-}
+const PRIORITY_OPTIONS = [
+  { value: "ALL", label: "All Priority" },
+  { value: "LOW", label: "Low" },
+  { value: "NORMAL", label: "Normal" },
+  { value: "HIGH", label: "High" },
+  { value: "URGENT", label: "Urgent" },
+  { value: "EMERGENCY", label: "Emergency" },
+] as const;
 
-// ============================================
-// CONSTANTS
-// ============================================
+const TYPE_OPTIONS = [
+  { value: "ALL", label: "All Types" },
+  { value: "REPLACEMENT", label: "Replacement" },
+  { value: "REPAIR", label: "Repair" },
+  { value: "INSPECTION", label: "Inspection" },
+  { value: "MAINTENANCE", label: "Maintenance" },
+  { value: "INSURANCE_CLAIM", label: "Insurance Claim" },
+  { value: "GUTTER", label: "Gutter" },
+  { value: "SIDING", label: "Siding" },
+] as const;
 
-const defaultColumns: ColumnConfig[] = [
-  { key: "name", label: "Project", visible: true, sortable: true },
-  { key: "clientName", label: "Client", visible: true, sortable: true },
-  { key: "projectManager", label: "Manager", visible: true, sortable: true },
-  { key: "status", label: "Status", visible: true, sortable: true },
-  { key: "priority", label: "Priority", visible: true, sortable: true },
-  { key: "progress", label: "Progress", visible: true, sortable: true },
-  { key: "dueDate", label: "Due Date", visible: true, sortable: true },
-];
-
-const statusOptions = [
-  { value: "all", label: "All Status", icon: CircleDot },
-  { value: "not_started", label: "Not Started", icon: CircleDot, color: "slate" },
-  { value: "planning", label: "Planning", icon: Target, color: "blue" },
-  { value: "in_progress", label: "In Progress", icon: PlayCircle, color: "teal" },
-  { value: "on_hold", label: "On Hold", icon: PauseCircle, color: "amber" },
-  { value: "completed", label: "Completed", icon: CheckCircle2, color: "green" },
-  { value: "cancelled", label: "Cancelled", icon: XCircle, color: "red" },
-];
-
-const priorityOptions = [
-  { value: "all", label: "All Priority" },
-  { value: "low", label: "Low", color: "slate" },
-  { value: "medium", label: "Medium", color: "blue" },
-  { value: "high", label: "High", color: "amber" },
-  { value: "critical", label: "Critical", color: "red" },
-];
-
-// ============================================
-// UTILITY FUNCTIONS
-// ============================================
-
-const getInitials = (name: string) => {
-  if (!name) return "??";
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
+const statusStyles: Record<string, string> = {
+  DRAFT: "bg-slate-100 text-slate-700",
+  PENDING: "bg-amber-100 text-amber-700",
+  APPROVED: "bg-blue-100 text-blue-700",
+  SCHEDULED: "bg-indigo-100 text-indigo-700",
+  IN_PROGRESS: "bg-[#0891B2]/10 text-[#0891B2]",
+  ACTIVE: "bg-[#0891B2]/10 text-[#0891B2]",
+  ON_HOLD: "bg-orange-100 text-orange-700",
+  COMPLETED: "bg-emerald-100 text-emerald-700",
+  CANCELLED: "bg-rose-100 text-rose-700",
+  ARCHIVED: "bg-slate-100 text-slate-500",
+  WARRANTY_WORK: "bg-violet-100 text-violet-700",
 };
 
-const getRelativeTime = (dateString?: string) => {
-  if (!dateString) return "No date";
-  const date = new Date(dateString);
+const priorityStyles: Record<string, string> = {
+  LOW: "bg-slate-100 text-slate-700",
+  NORMAL: "bg-[#0891B2]/10 text-[#0891B2]",
+  MEDIUM: "bg-[#0891B2]/10 text-[#0891B2]",
+  HIGH: "bg-amber-100 text-amber-700",
+  URGENT: "bg-orange-100 text-orange-700",
+  EMERGENCY: "bg-rose-100 text-rose-700",
+};
+
+const currency = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  maximumFractionDigits: 0,
+});
+
+function toNumber(value: unknown): number {
+  if (typeof value === "number") return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+}
+
+function getProgressValue(project: ProjectEntity): number {
+  const value = project.completionPercentage ?? project.progress ?? 0;
+  const normalized = toNumber(value);
+  return Math.max(0, Math.min(100, normalized));
+}
+
+function formatStatusLabel(status?: string | null): string {
+  if (!status) return "Unknown";
+  return status
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function formatDate(value?: string | null): string {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatRelativeDate(value?: string | null): string {
+  if (!value) return "No date";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "No date";
+
+  const msPerDay = 1000 * 60 * 60 * 24;
   const now = new Date();
-  const diffInDays = Math.floor(
-    (date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-  );
+  const diff = Math.ceil((date.getTime() - now.getTime()) / msPerDay);
 
-  if (diffInDays < 0) return `${Math.abs(diffInDays)} days overdue`;
-  if (diffInDays === 0) return "Due today";
-  if (diffInDays === 1) return "Due tomorrow";
-  if (diffInDays < 7) return `${diffInDays} days left`;
-  if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks left`;
-  return `${Math.floor(diffInDays / 30)} months left`;
-};
+  if (diff < 0) return `${Math.abs(diff)} day${Math.abs(diff) > 1 ? "s" : ""} overdue`;
+  if (diff === 0) return "Due today";
+  if (diff === 1) return "Due tomorrow";
+  return `${diff} days out`;
+}
 
-const isOverdue = (dateString?: string) => {
-  if (!dateString) return false;
-  return new Date(dateString) < new Date();
-};
+function isOverdue(project: ProjectEntity): boolean {
+  const dueDate = project.estimatedEndDate ?? project.dueDate;
+  if (!dueDate) return false;
+  const due = new Date(dueDate);
+  if (Number.isNaN(due.getTime())) return false;
+  return due.getTime() < Date.now() && project.status !== "COMPLETED";
+}
 
-const getStatusConfig = (status: string) => {
-  const configs: Record<string, { bg: string; text: string; dot: string; icon: React.ElementType }> = {
-    not_started: { bg: "bg-white/5", text: "text-[#475569]", dot: "bg-slate-400", icon: CircleDot },
-    planning: { bg: "bg-blue-100", text: "text-[#0891B2]", dot: "bg-[#0891B2]", icon: Target },
-    in_progress: { bg: "bg-[#0891B2]/10", text: "text-[#0891B2]", dot: "bg-[#0891B2]", icon: PlayCircle },
-    active: { bg: "bg-[#0891B2]/10", text: "text-[#0891B2]", dot: "bg-[#0891B2]", icon: PlayCircle },
-    on_hold: { bg: "bg-amber-100", text: "text-amber-600", dot: "bg-amber-500", icon: PauseCircle },
-    completed: { bg: "bg-green-100", text: "text-green-600", dot: "bg-green-500", icon: CheckCircle2 },
-    cancelled: { bg: "bg-red-100", text: "text-red-600", dot: "bg-red-500", icon: XCircle },
-    archived: { bg: "bg-slate-100", text: "text-slate-500", dot: "bg-slate-400", icon: Archive },
-  };
-  return configs[status?.toLowerCase().replace(" ", "_")] || configs.planning;
-};
+function getClientName(project: ProjectEntity): string {
+  const direct = project.client?.clientName;
+  if (direct && direct.trim()) return direct;
+  const fallback = project.clientName as string | undefined;
+  return fallback?.trim() || "Unassigned client";
+}
 
-const getPriorityConfig = (priority: string) => {
-  const configs: Record<string, { bg: string; text: string; border: string }> = {
-    low: { bg: "bg-white/5", text: "text-[#475569]", border: "border-[rgba(15,23,42,0.06)]" },
-    medium: { bg: "bg-blue-100", text: "text-[#0891B2]", border: "border-blue-200" },
-    high: { bg: "bg-amber-100", text: "text-amber-600", border: "border-amber-200" },
-    critical: { bg: "bg-red-100", text: "text-red-600", border: "border-red-200" },
-  };
-  return configs[priority?.toLowerCase()] || configs.medium;
-};
+function getProjectValue(project: ProjectEntity): number {
+  const contractValue = toNumber(project.contractValue);
+  const budget = toNumber(project.budget as number | string | undefined);
+  return contractValue || budget;
+}
 
-const getProgressColor = (progress: number) => {
-  if (progress < 25) return "bg-slate-400";
-  if (progress < 50) return "bg-amber-500";
-  if (progress < 75) return "bg-[#0891B2]";
-  return "bg-[#0891B2]";
-};
+function getProjectCost(project: ProjectEntity): number {
+  return toNumber(project.actualCost ?? project.spent);
+}
 
-const formatCurrency = (amount?: number) => {
-  if (!amount) return "$0";
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-};
-
-// ============================================
-// STAT CARD COMPONENT
-// ============================================
-
-const StatCard = ({
+function MetricCard({
   title,
   value,
-  subtitle,
+  description,
   icon: Icon,
-  color,
-  trend,
-  delay = 0,
+  tone,
 }: {
   title: string;
-  value: string | number;
-  subtitle: string;
+  value: string;
+  description: string;
   icon: React.ElementType;
-  color: "teal" | "gold" | "navy" | "purple" | "green" | "red";
-  trend?: { value: number; positive: boolean };
-  delay?: number;
-}) => {
-  const colorClasses = {
-    teal: { bg: "bg-[#0891B2]", light: "bg-[#0891B2]/10", text: "text-[#0891B2]" },
-    gold: { bg: "bg-[#D97706]", light: "bg-[#D97706]/10", text: "text-[#D97706]" },
-    navy: { bg: "bg-[#F8FAFC]", light: "bg-[#F8FAFC]/10", text: "text-[#0F172A]" },
-    purple: { bg: "bg-purple-500", light: "bg-purple-500/10", text: "text-purple-500" },
-    green: { bg: "bg-green-500", light: "bg-green-500/10", text: "text-green-500" },
-    red: { bg: "bg-red-500", light: "bg-red-500/10", text: "text-red-500" },
-  };
-
-  const colors = colorClasses[color];
+  tone: "teal" | "navy" | "green" | "amber";
+}) {
+  const tones = {
+    teal: "bg-[#0891B2]/10 text-[#0891B2]",
+    navy: "bg-slate-100 text-[#0F172A]",
+    green: "bg-emerald-100 text-emerald-700",
+    amber: "bg-amber-100 text-amber-700",
+  } as const;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay }}
-      whileHover={{ y: -4 }}
-      className="relative bg-white rounded-md p-5 border border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg  transition-all overflow-hidden group"
-    >
-      <div className={cn("absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-10 group-hover:opacity-20 transition-all", colors.bg)} />
-
-      <div className="relative flex items-start justify-between">
-        <div>
-          <p className="text-sm text-[#94A3B8] mb-1">{title}</p>
-          <div className="flex items-baseline gap-2">
-            <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">{value}</p>
-            {trend && (
-              <span className={cn(
-                "flex items-center text-xs font-semibold",
-                trend.positive ? "text-green-600" : "text-red-600"
-              )}>
-                {trend.positive ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
-                {trend.value}%
-              </span>
-            )}
+    <Card className="border-[rgba(15,23,42,0.08)] shadow-sm">
+      <CardContent className="p-4 md:p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#64748B]">{title}</p>
+            <p className="mt-2 text-2xl font-bold text-[#0F172A]">{value}</p>
+            <p className="mt-1 text-xs text-[#64748B]">{description}</p>
           </div>
-          <p className="text-xs text-[#475569] mt-1">{subtitle}</p>
+          <div className={cn("h-10 w-10 rounded-md flex items-center justify-center", tones[tone])}>
+            <Icon size={18} />
+          </div>
         </div>
-        <div className={cn("w-10 h-10 rounded-md flex items-center justify-center", colors.light)}>
-          <Icon size={18} className={colors.text} />
-        </div>
-      </div>
-    </motion.div>
+      </CardContent>
+    </Card>
   );
-};
+}
 
-// ============================================
-// PROJECT ROW COMPONENT
-// ============================================
-
-const ProjectRow = ({
-  project,
-  isSelected,
-  onSelect,
-  onView,
-  onEdit,
-  onDelete,
-  onToggleFavorite,
-  onDuplicate,
-  columns,
-}: {
-  project: Project;
-  isSelected: boolean;
-  onSelect: (checked: boolean) => void;
-  onView: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-  onToggleFavorite: () => void;
-  onDuplicate: () => void;
-  columns: ColumnConfig[];
-}) => {
-  const statusConfig = getStatusConfig(project.status);
-  const priorityConfig = getPriorityConfig(project.priority || "medium");
-  const overdue = isOverdue(project.dueDate) && project.status !== "completed";
-  const StatusIcon = statusConfig.icon;
-
+function EmptyState({ onCreate }: { onCreate: () => void }) {
   return (
-    <motion.tr
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className={cn(
-        "group hover:bg-[#F8FAFC]/80 transition-colors cursor-pointer border-b border-[rgba(15,23,42,0.06)] last:border-0",
-        isSelected && "bg-[#0891B2]/5"
-      )}
-      onClick={onView}
-    >
-      {/* Checkbox */}
-      <td className="py-4 px-4" onClick={(e) => e.stopPropagation()}>
-        <Checkbox
-          checked={isSelected}
-          onCheckedChange={onSelect}
-          className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
-        />
-      </td>
-
-      {/* Favorite */}
-      <td className="py-4 px-2" onClick={(e) => e.stopPropagation()}>
-        <button
-          onClick={onToggleFavorite}
-          className="p-1 rounded-md hover:bg-white/10 transition-colors"
-        >
-          {project.isFavorite ? (
-            <Star size={16} className="text-[#D97706] fill-[#FBBF24]" />
-          ) : (
-            <StarOff size={16} className="text-[#475569] group-hover:text-[#475569]" />
-          )}
-        </button>
-      </td>
-
-      {/* Project Name */}
-      {columns.find((c) => c.key === "name")?.visible && (
-        <td className="py-4 px-4">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="w-11 h-11 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] font-semibold text-sm">
-                {getInitials(project.name)}
-              </div>
-              {project.progress === 100 && (
-                <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                  <CheckCircle2 size={12} className="text-[#0F172A]" />
-                </div>
-              )}
-            </div>
-            <div>
-              <div className="font-semibold text-[#0F172A] group-hover:text-[#0891B2] transition-colors flex items-center gap-2">
-                {project.name}
-                {project.category && (
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-white/5 text-[#94A3B8]">
-                    {project.category}
-                  </span>
-                )}
-              </div>
-              {project.description && (
-                <div className="text-xs text-[#475569] truncate max-w-[200px]">
-                  {project.description}
-                </div>
-              )}
-            </div>
-          </div>
-        </td>
-      )}
-
-      {/* Client */}
-      {columns.find((c) => c.key === "clientName")?.visible && (
-        <td className="py-4 px-4">
-          <div className="flex items-center gap-2">
-            <Building2 size={14} className="text-[#475569]" />
-            <span className="text-sm text-[#475569]">
-              {project.clientName || "-"}
-            </span>
-          </div>
-        </td>
-      )}
-
-      {/* Project Manager */}
-      {columns.find((c) => c.key === "projectManager")?.visible && (
-        <td className="py-4 px-4">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-md bg-[#F8FAFC]/10 flex items-center justify-center text-[#0F172A] text-xs font-semibold">
-              {getInitials(project.projectManager)}
-            </div>
-            <span className="text-sm text-[#475569]">
-              {project.projectManager || "-"}
-            </span>
-          </div>
-        </td>
-      )}
-
-      {/* Status */}
-      {columns.find((c) => c.key === "status")?.visible && (
-        <td className="py-4 px-4">
-          <span className={cn(
-            "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold",
-            statusConfig.bg,
-            statusConfig.text
-          )}>
-            <StatusIcon size={12} />
-            {project.status}
-          </span>
-        </td>
-      )}
-
-      {/* Priority */}
-      {columns.find((c) => c.key === "priority")?.visible && (
-        <td className="py-4 px-4">
-          <span className={cn(
-            "inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border",
-            priorityConfig.bg,
-            priorityConfig.text,
-            priorityConfig.border
-          )}>
-            <Flag size={10} />
-            {project.priority || "Medium"}
-          </span>
-        </td>
-      )}
-
-      {/* Progress */}
-      {columns.find((c) => c.key === "progress")?.visible && (
-        <td className="py-4 px-4">
-          <div className="flex items-center gap-3">
-            <div className="flex-1 min-w-[80px]">
-              <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${project.progress}%` }}
-                  transition={{ duration: 0.5, ease: "easeOut" }}
-                  className={cn("h-full rounded-full", getProgressColor(project.progress))}
-                />
-              </div>
-            </div>
-            <span className={cn(
-              "text-xs font-semibold min-w-[36px]",
-              project.progress >= 75 ? "text-[#0891B2]" : "text-[#94A3B8]"
-            )}>
-              {project.progress}%
-            </span>
-          </div>
-        </td>
-      )}
-
-      {/* Due Date */}
-      {columns.find((c) => c.key === "dueDate")?.visible && (
-        <td className="py-4 px-4">
-          {project.dueDate && !isNaN(new Date(project.dueDate).getTime()) ? (
-            <div className={cn(
-              "flex items-center gap-2 text-sm",
-              overdue ? "text-red-600" : "text-[#475569]"
-            )}>
-              <CalendarDays size={14} className={overdue ? "text-red-400" : "text-[#475569]"} />
-              <div>
-                <div>{new Date(project.dueDate).toLocaleDateString()}</div>
-                <div className={cn(
-                  "text-xs",
-                  overdue ? "text-red-500 font-semibold" : "text-[#475569]"
-                )}>
-                  {getRelativeTime(project.dueDate)}
-                </div>
-              </div>
-              {overdue && (
-                <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-600 text-[10px] font-semibold">
-                  OVERDUE
-                </span>
-              )}
-            </div>
-          ) : (
-            <span className="text-sm text-[#94A3B8]">No date</span>
-          )}
-        </td>
-      )}
-
-      {/* Actions */}
-      <td className="py-4 px-4" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={onView}
-            className="p-2 rounded-md hover:bg-[#0891B2]/10 text-[#0891B2] transition-colors"
-            title="View Project"
-          >
-            <Eye size={16} />
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={onEdit}
-            className="p-2 rounded-md hover:bg-white/10 text-[#94A3B8] transition-colors"
-            title="Edit Project"
-          >
-            <Pencil size={16} />
-          </motion.button>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="p-2 rounded-md hover:bg-white/10 text-[#475569] transition-colors">
-                <MoreVertical size={16} />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 rounded-md">
-              <DropdownMenuItem onClick={onView} className="rounded-md">
-                <Eye size={14} className="mr-2" />
-                View Details
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onEdit} className="rounded-md">
-                <Pencil size={14} className="mr-2" />
-                Edit Project
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onDuplicate} className="rounded-md">
-                <Copy size={14} className="mr-2" />
-                Duplicate
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="rounded-md">
-                <Share2 size={14} className="mr-2" />
-                Share
-              </DropdownMenuItem>
-              <DropdownMenuItem className="rounded-md">
-                <Archive size={14} className="mr-2" />
-                Archive
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="rounded-md text-red-600 focus:text-red-600 focus:bg-red-50"
-                onClick={onDelete}
-              >
-                <Trash2 size={14} className="mr-2" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+    <Card className="border-dashed border-[rgba(15,23,42,0.18)] bg-white">
+      <CardContent className="py-14 text-center">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#0891B2]/10">
+          <HardHat className="text-[#0891B2]" />
         </div>
-      </td>
-    </motion.tr>
+        <h3 className="text-lg font-semibold text-[#0F172A]">No projects match this filter</h3>
+        <p className="mx-auto mt-2 max-w-md text-sm text-[#64748B]">
+          Create your first roofing project to track production, materials, crews, and profitability from contract to completion.
+        </p>
+        <Button className="mt-5 bg-[#0891B2] hover:bg-[#0E7490]" onClick={onCreate}>
+          <Plus className="mr-2 h-4 w-4" />
+          Create Project
+        </Button>
+      </CardContent>
+    </Card>
   );
-};
-
-// ============================================
-// PROJECT CARD COMPONENT (Grid View)
-// ============================================
-
-const ProjectCard = ({
-  project,
-  isSelected,
-  onSelect,
-  onView,
-  onEdit,
-  onDelete,
-  onToggleFavorite,
-}: {
-  project: Project;
-  isSelected: boolean;
-  onSelect: (checked: boolean) => void;
-  onView: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-  onToggleFavorite: () => void;
-}) => {
-  const statusConfig = getStatusConfig(project.status);
-  const priorityConfig = getPriorityConfig(project.priority || "medium");
-  const overdue = isOverdue(project.dueDate) && project.status !== "completed";
-  const StatusIcon = statusConfig.icon;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      whileHover={{ y: -4 }}
-      className={cn(
-        "bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden cursor-pointer group",
-        "hover:border-[#22D3EE]/30 hover:shadow-lg  transition-all",
-        isSelected && "border-[#22D3EE] bg-[#0891B2]/5"
-      )}
-      onClick={onView}
-    >
-      {/* Progress Bar Top */}
-      <div className="h-1 bg-white/5">
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${project.progress}%` }}
-          className={cn("h-full", getProgressColor(project.progress))}
-        />
-      </div>
-
-      <div className="p-5">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <Checkbox
-              checked={isSelected}
-              onCheckedChange={onSelect}
-              onClick={(e) => e.stopPropagation()}
-              className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
-            />
-            <div className="w-12 h-12 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] font-bold text-sm">
-              {getInitials(project.name)}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-            <button
-              onClick={onToggleFavorite}
-              className="p-1.5 rounded-md hover:bg-white/10 transition-colors"
-            >
-              {project.isFavorite ? (
-                <Star size={16} className="text-[#D97706] fill-[#FBBF24]" />
-              ) : (
-                <StarOff size={16} className="text-[#475569]" />
-              )}
-            </button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="p-1.5 rounded-md hover:bg-white/10 text-[#475569]">
-                  <MoreHorizontal size={16} />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 rounded-md">
-                <DropdownMenuItem onClick={onView} className="rounded-md">
-                  <Eye size={14} className="mr-2" />
-                  View Details
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={onEdit} className="rounded-md">
-                  <Pencil size={14} className="mr-2" />
-                  Edit
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="rounded-md text-red-600"
-                  onClick={onDelete}
-                >
-                  <Trash2 size={14} className="mr-2" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-
-        {/* Project Info */}
-        <div className="mb-4">
-          <h3 className="font-semibold text-[#0F172A] group-hover:text-[#0891B2] transition-colors mb-1 line-clamp-1">
-            {project.name}
-          </h3>
-          {project.description && (
-            <p className="text-sm text-[#94A3B8] line-clamp-2 mb-2">
-              {project.description}
-            </p>
-          )}
-          {project.clientName && (
-            <div className="flex items-center gap-2 text-xs text-[#475569]">
-              <Building2 size={12} />
-              {project.clientName}
-            </div>
-          )}
-        </div>
-
-        {/* Status & Priority */}
-        <div className="flex items-center gap-2 mb-4">
-          <span className={cn(
-            "inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-semibold",
-            statusConfig.bg,
-            statusConfig.text
-          )}>
-            <StatusIcon size={10} />
-            {project.status}
-          </span>
-          <span className={cn(
-            "inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border",
-            priorityConfig.bg,
-            priorityConfig.text,
-            priorityConfig.border
-          )}>
-            <Flag size={8} />
-            {project.priority || "Medium"}
-          </span>
-        </div>
-
-        {/* Progress */}
-        <div className="mb-4">
-          <div className="flex items-center justify-between text-sm mb-2">
-            <span className="text-[#94A3B8]">Progress</span>
-            <span className={cn(
-              "font-semibold",
-              project.progress >= 75 ? "text-[#0891B2]" : "text-[#475569]"
-            )}>
-              {project.progress}%
-            </span>
-          </div>
-          <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${project.progress}%` }}
-              className={cn("h-full rounded-full", getProgressColor(project.progress))}
-            />
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-between pt-4 border-t border-[rgba(15,23,42,0.06)]">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md bg-[#F8FAFC]/10 flex items-center justify-center text-[#0F172A] text-[10px] font-semibold">
-              {getInitials(project.projectManager)}
-            </div>
-            <span className="text-xs text-[#94A3B8]">{project.projectManager}</span>
-          </div>
-          <div className={cn(
-            "flex items-center gap-1 text-xs",
-            overdue ? "text-red-600" : "text-[#475569]"
-          )}>
-            <CalendarDays size={12} />
-            <span>{getRelativeTime(project.dueDate)}</span>
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-};
-
-// ============================================
-// EMPTY STATE COMPONENT
-// ============================================
-// KANBAN BOARD COMPONENT
-// ============================================
-
-const KANBAN_COLUMNS: { status: string; label: string }[] = [
-  { status: "PLANNING", label: "Planning" },
-  { status: "ACTIVE", label: "Active" },
-  { status: "ON_HOLD", label: "On Hold" },
-  { status: "COMPLETED", label: "Completed" },
-  { status: "CANCELLED", label: "Cancelled" },
-];
-
-const KanbanBoard = ({
-  projects,
-  onStatusChange,
-  onView,
-  onEdit,
-  onDelete,
-}: {
-  projects: Project[];
-  onStatusChange: (projectId: number, newStatus: string) => void;
-  onView: (id: number) => void;
-  onEdit: (id: number) => void;
-  onDelete: (project: Project) => void;
-}) => {
-  const [draggedProject, setDraggedProject] = useState<Project | null>(null);
-  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
-
-  const handleDragStart = (e: React.DragEvent, project: Project) => {
-    setDraggedProject(project);
-    e.dataTransfer.effectAllowed = "move";
-    // Store project id for the drop
-    e.dataTransfer.setData("text/plain", String(project.id));
-  };
-
-  const handleDragOver = (e: React.DragEvent, status: string) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    setDragOverColumn(status);
-  };
-
-  const handleDragLeave = () => {
-    setDragOverColumn(null);
-  };
-
-  const handleDrop = (e: React.DragEvent, newStatus: string) => {
-    e.preventDefault();
-    setDragOverColumn(null);
-    if (draggedProject && draggedProject.status !== newStatus) {
-      onStatusChange(draggedProject.id, newStatus);
-    }
-    setDraggedProject(null);
-  };
-
-  const handleDragEnd = () => {
-    setDraggedProject(null);
-    setDragOverColumn(null);
-  };
-
-  return (
-    <div className="p-6 overflow-x-auto">
-      <div className="flex gap-4 min-w-max">
-        {KANBAN_COLUMNS.map((col) => {
-          const columnProjects = projects.filter(
-            (p) => p.status.toUpperCase() === col.status
-          );
-          const config = getStatusConfig(col.status);
-          const StatusIcon = config.icon;
-          const isOver = dragOverColumn === col.status;
-
-          return (
-            <div
-              key={col.status}
-              className={cn(
-                "w-[300px] flex-shrink-0 rounded-lg border-2 transition-all duration-200",
-                isOver
-                  ? "border-[#22D3EE] bg-[#0891B2]/5"
-                  : "border-transparent bg-[#F8FAFC]/60"
-              )}
-              onDragOver={(e) => handleDragOver(e, col.status)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, col.status)}
-            >
-              {/* Column Header */}
-              <div className="flex items-center justify-between px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <div className={cn("w-3 h-3 rounded-full", config.dot)} />
-                  <h3 className="font-semibold text-sm text-[#0F172A]">{col.label}</h3>
-                  <span className={cn(
-                    "text-xs font-bold px-2 py-0.5 rounded-full",
-                    config.bg, config.text
-                  )}>
-                    {columnProjects.length}
-                  </span>
-                </div>
-              </div>
-
-              {/* Cards Container */}
-              <div className="px-3 pb-3 space-y-3 min-h-[120px]">
-                <AnimatePresence>
-                  {columnProjects.map((project) => {
-                    const isDragging = draggedProject?.id === project.id;
-                    const priorityConfig = getPriorityConfig(project.priority || "medium");
-
-                    return (
-                      <motion.div
-                        key={project.id}
-                        layout
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: isDragging ? 0.5 : 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.9 }}
-                        draggable
-                        onDragStart={(e: any) => handleDragStart(e, project)}
-                        onDragEnd={handleDragEnd}
-                        className={cn(
-                          "bg-white rounded-lg border border-[rgba(15,23,42,0.08)] p-4 cursor-grab active:cursor-grabbing",
-                          "hover:border-[#22D3EE]/40 hover:shadow-md transition-all group",
-                          isDragging && "opacity-50 shadow-lg"
-                        )}
-                      >
-                        {/* Card Header */}
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex-1 min-w-0">
-                            <h4
-                              className="font-semibold text-sm text-[#0F172A] truncate cursor-pointer hover:text-[#0891B2] transition-colors"
-                              onClick={() => onView(project.id)}
-                            >
-                              {project.name}
-                            </h4>
-                            {project.clientName && (
-                              <p className="text-xs text-[#94A3B8] mt-0.5 flex items-center gap-1">
-                                <Building2 size={10} />
-                                {project.clientName}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); onView(project.id); }}
-                              className="p-1 rounded hover:bg-[#F1F5F9] text-[#94A3B8] hover:text-[#0891B2] transition-colors"
-                            >
-                              <Eye size={14} />
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); onEdit(project.id); }}
-                              className="p-1 rounded hover:bg-[#F1F5F9] text-[#94A3B8] hover:text-[#475569] transition-colors"
-                            >
-                              <Pencil size={14} />
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Description */}
-                        {project.description && (
-                          <p className="text-xs text-[#94A3B8] mb-3 line-clamp-2">
-                            {project.description}
-                          </p>
-                        )}
-
-                        {/* Progress Bar */}
-                        <div className="mb-3">
-                          <div className="flex items-center justify-between text-xs mb-1">
-                            <span className="text-[#94A3B8]">Progress</span>
-                            <span className={cn(
-                              "font-semibold",
-                              project.progress >= 75 ? "text-[#0891B2]" : "text-[#475569]"
-                            )}>
-                              {project.progress}%
-                            </span>
-                          </div>
-                          <div className="h-1.5 bg-[#F1F5F9] rounded-full overflow-hidden">
-                            <motion.div
-                              initial={{ width: 0 }}
-                              animate={{ width: `${project.progress}%` }}
-                              className={cn("h-full rounded-full", getProgressColor(project.progress))}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Footer */}
-                        <div className="flex items-center justify-between">
-                          <span className={cn(
-                            "inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium border",
-                            priorityConfig.bg,
-                            priorityConfig.text,
-                            priorityConfig.border
-                          )}>
-                            <Flag size={8} />
-                            {project.priority || "Medium"}
-                          </span>
-
-                          {project.dueDate && !isNaN(new Date(project.dueDate).getTime()) && (
-                            <div className={cn(
-                              "flex items-center gap-1 text-[10px]",
-                              isOverdue(project.dueDate) && project.status !== "COMPLETED"
-                                ? "text-red-500 font-semibold"
-                                : "text-[#94A3B8]"
-                            )}>
-                              <CalendarDays size={10} />
-                              {getRelativeTime(project.dueDate)}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Drag Handle Hint */}
-                        <div className="flex items-center justify-center mt-2 opacity-0 group-hover:opacity-40 transition-opacity">
-                          <GripVertical size={14} className="text-[#94A3B8]" />
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </AnimatePresence>
-
-                {/* Empty Column State */}
-                {columnProjects.length === 0 && !isOver && (
-                  <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center mb-2", config.bg)}>
-                      <StatusIcon size={18} className={config.text} />
-                    </div>
-                    <p className="text-xs text-[#94A3B8]">
-                      No {col.label.toLowerCase()} projects
-                    </p>
-                    <p className="text-[10px] text-[#CBD5E1] mt-0.5">
-                      Drag projects here
-                    </p>
-                  </div>
-                )}
-
-                {/* Drop Zone Indicator */}
-                {isOver && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="border-2 border-dashed border-[#22D3EE] rounded-lg p-4 flex items-center justify-center"
-                  >
-                    <p className="text-xs text-[#0891B2] font-medium">
-                      Drop to move to {col.label}
-                    </p>
-                  </motion.div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
-
-// ============================================
-// EMPTY STATE COMPONENT
-// ============================================
-
-const EmptyState = ({ onAdd }: { onAdd: () => void }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    className="flex flex-col items-center justify-center py-16 px-4"
-  >
-    <div className="w-20 h-20 rounded-md bg-[#F1F5F9] flex items-center justify-center mb-6">
-      <FolderOpen size={40} className="text-[#0891B2]" />
-    </div>
-    <h3 className="text-xl font-semibold text-[#0F172A] mb-2">No projects yet</h3>
-    <p className="text-[#94A3B8] text-center max-w-sm mb-6">
-      Get started by creating your first project. Track progress, manage teams, and deliver on time.
-    </p>
-    <Button
-      onClick={onAdd}
-      className="bg-[#F1F5F9]/90 hover:from-[#22D3EE]/90 hover:to-[#22D3EE] text-[#0F172A] rounded-md "
-    >
-      <Plus size={18} className="mr-2" />
-      Create Your First Project
-    </Button>
-  </motion.div>
-);
-
-// ============================================
-// MAIN COMPONENT
-// ============================================
+}
 
 const ProjectsPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  // State
-    const [projects, setProjects] = useState<Project[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [viewMode, setViewMode] = useState<"table" | "grid" | "kanban">("table");
-  const [selectedProjects, setSelectedProjects] = useState<number[]>([]);
-  const [columns, setColumns] = useState<ColumnConfig[]>(defaultColumns);
-  const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [filterPriority, setFilterPriority] = useState("all");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [user, setUser] = useState<User | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [priorityFilter, setPriorityFilter] = useState("ALL");
+  const [typeFilter, setTypeFilter] = useState("ALL");
+  const [activeTab, setActiveTab] = useState<"portfolio" | "pipeline" | "schedule">("portfolio");
+  const [pendingDelete, setPendingDelete] = useState<ProjectEntity | null>(null);
 
-  // Dialog State
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const debouncedSearch = useDebouncedValue(search, 350);
 
-  // ============================================
-  // EFFECTS
-  // ============================================
+  const projectsQuery = useQuery({
+    queryKey: ["projects", debouncedSearch, statusFilter, priorityFilter, typeFilter],
+    queryFn: () =>
+      getProjects({
+        page: 1,
+        limit: 200,
+        ...(debouncedSearch ? { search: debouncedSearch } : {}),
+        ...(statusFilter !== "ALL" ? { status: statusFilter } : {}),
+        ...(priorityFilter !== "ALL" ? { priority: priorityFilter } : {}),
+        ...(typeFilter !== "ALL" ? { projectType: typeFilter } : {}),
+        sortBy: "createdAt",
+        sortOrder: "desc",
+      }),
+  });
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (e) {
-        console.error("Failed to parse user data");
-      }
-    }
-  }, []);
+  const summaryQuery = useQuery({
+    queryKey: ["projects-summary"],
+    queryFn: getProjectSummaryStats,
+  });
 
-  useEffect(() => {
-    fetchProjects();
-  }, []);
+  const kanbanQuery = useQuery({
+    queryKey: ["projects-kanban"],
+    queryFn: getProjectKanban,
+  });
 
-  // ============================================
-  // API CALLS
-  // ============================================
+  const calendarQuery = useQuery({
+    queryKey: ["projects-calendar"],
+    queryFn: getProjectCalendar,
+  });
 
-  const fetchProjects = async () => {
-    setIsLoading(true);
-    try {
-      const data = await getProjects();
-      const mapped = (data || []).map((p: any, index: number) => ({
-        id: p.id ?? p.Id ?? index,
-        name: p.name ?? p.Name ?? "Untitled Project",
-        projectManager: p.teamMembers?.[0]
-          ? `${p.teamMembers[0].employee?.user?.firstName || ""} ${p.teamMembers[0].employee?.user?.lastName || ""}`.trim()
-          : (p.projectManager ?? p.ProjectManager ?? ""),
-        description: p.description ?? p.Description ?? "",
-        progress: p.progress ?? p.Progress ?? 0,
-        status: p.status ?? p.Status ?? "PLANNING",
-        dueDate: p.endDate ?? p.dueDate ?? p.DueDate ?? "",
-        startDate: p.startDate ?? p.StartDate,
-        budget: p.budget ? Number(p.budget) : (p.Budget ? Number(p.Budget) : undefined),
-        spent: p.spent ?? p.Spent,
-        priority: p.priority ?? p.Priority ?? "Medium",
-        category: p.category ?? p.Category,
-        clientName: p.client?.clientName ?? p.clientName ?? p.ClientName ?? "",
-        isFavorite: false,
-        tasksCompleted: p.tasksCompleted ?? 0,
-        totalTasks: p.totalTasks ?? p.tasksCount ?? 0,
-      }));
-      setProjects(mapped);
-    } catch (err) {
-      console.error("Failed to fetch projects", err);
-      toast({
-        title: "Error",
-        description: "Failed to load projects",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const mapQuery = useQuery({
+    queryKey: ["projects-map"],
+    queryFn: getProjectMap,
+  });
 
-  const handleDeleteProject = async () => {
-    if (!projectToDelete) return;
-    setIsDeleting(true);
-    try {
-      await deleteProjectById(projectToDelete.id);
-      setProjects((prev) => prev.filter((p) => p.id !== projectToDelete.id));
-      toast({
-        title: "Deleted",
-        description: `"${projectToDelete.name}" has been deleted.`,
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete project",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeleting(false);
-      setDeleteDialogOpen(false);
-      setProjectToDelete(null);
-    }
-  };
+  const deleteMutation = useMutation({
+    mutationFn: (id: string | number) => deleteProjectById(id),
+    onSuccess: () => {
+      setPendingDelete(null);
+      toast({ title: "Project archived", description: "Project was removed from active portfolio." });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["projects-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["projects-kanban"] });
+    },
+    onError: () => {
+      toast({ title: "Delete failed", description: "Could not archive project right now.", variant: "destructive" });
+    },
+  });
 
-  const handleBulkDelete = async () => {
-    if (selectedProjects.length === 0) return;
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string | number; status: string }) => updateProjectStatus(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["projects-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["projects-kanban"] });
+      toast({ title: "Project updated", description: "Status change saved." });
+    },
+    onError: () => {
+      toast({ title: "Update failed", description: "Status was not updated.", variant: "destructive" });
+    },
+  });
 
-    try {
-      await Promise.all(selectedProjects.map((id) => deleteProjectById(id)));
-      setProjects((prev) => prev.filter((p) => !selectedProjects.includes(p.id)));
-      toast({
-        title: "Deleted",
-        description: `${selectedProjects.length} projects have been deleted.`,
-      });
-      setSelectedProjects([]);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete projects",
-        variant: "destructive",
-      });
-    }
-  };
+  const projects = useMemo(() => projectsQuery.data ?? [], [projectsQuery.data]);
 
-  // ============================================
-  // FILTERING & SORTING
-  // ============================================
+  const orderedProjects = useMemo(() => {
+    return [...projects].sort((a, b) => {
+      const aOverdue = isOverdue(a);
+      const bOverdue = isOverdue(b);
+      if (aOverdue && !bOverdue) return -1;
+      if (bOverdue && !aOverdue) return 1;
 
-  const filteredProjects = useMemo(() => {
-    let result = [...projects];
-
-    // Search
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      result = result.filter(
-        (p) =>
-          p.name.toLowerCase().includes(term) ||
-          p.projectManager?.toLowerCase().includes(term) ||
-          p.clientName?.toLowerCase().includes(term) ||
-          p.description?.toLowerCase().includes(term)
-      );
-    }
-
-    // Status Filter
-    if (filterStatus !== "all") {
-      result = result.filter(
-        (p) => p.status.toLowerCase().replace(" ", "_") === filterStatus
-      );
-    }
-
-    // Priority Filter
-    if (filterPriority !== "all") {
-      result = result.filter(
-        (p) => p.priority?.toLowerCase() === filterPriority
-      );
-    }
-
-    // Sorting
-    if (sortConfig) {
-      result.sort((a, b) => {
-        let aVal = a[sortConfig.key as keyof Project];
-        let bVal = b[sortConfig.key as keyof Project];
-
-        if (sortConfig.key === "dueDate") {
-          aVal = new Date(aVal as string).getTime();
-          bVal = new Date(bVal as string).getTime();
-        }
-
-        if (typeof aVal === "number" && typeof bVal === "number") {
-          return sortConfig.direction === "asc" ? aVal - bVal : bVal - aVal;
-        }
-
-        return sortConfig.direction === "asc"
-          ? String(aVal || "").localeCompare(String(bVal || ""))
-          : String(bVal || "").localeCompare(String(aVal || ""));
-      });
-    }
-
-    return result;
-  }, [projects, searchTerm, filterStatus, filterPriority, sortConfig]);
-
-  // Pagination
-  const totalPages = Math.ceil(filteredProjects.length / pageSize);
-  const paginatedProjects = filteredProjects.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
-
-  // Stats
-  const stats = useMemo(() => {
-    const total = projects.length;
-    const inProgress = projects.filter((p) =>
-      p.status.toLowerCase().includes("progress")
-    ).length;
-    const completed = projects.filter((p) =>
-      p.status.toLowerCase() === "completed"
-    ).length;
-    const overdue = projects.filter((p) =>
-      isOverdue(p.dueDate) && p.status.toLowerCase() !== "completed"
-    ).length;
-    const avgProgress = total > 0
-      ? Math.round(projects.reduce((acc, p) => acc + p.progress, 0) / total)
-      : 0;
-
-    return { total, inProgress, completed, overdue, avgProgress };
+      const aDate = new Date(a.estimatedEndDate ?? a.dueDate ?? a.createdAt ?? 0).getTime();
+      const bDate = new Date(b.estimatedEndDate ?? b.dueDate ?? b.createdAt ?? 0).getTime();
+      return aDate - bDate;
+    });
   }, [projects]);
 
-  // ============================================
-  // HANDLERS
-  // ============================================
+  const topSchedule = useMemo(() => {
+    const list = calendarQuery.data ?? [];
+    return [...list]
+      .filter((item) => item.estimatedStartDate || item.actualStartDate)
+      .sort((a, b) => {
+        const aTime = new Date(a.estimatedStartDate ?? a.actualStartDate ?? 0).getTime();
+        const bTime = new Date(b.estimatedStartDate ?? b.actualStartDate ?? 0).getTime();
+        return aTime - bTime;
+      })
+      .slice(0, 8);
+  }, [calendarQuery.data]);
 
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedProjects(paginatedProjects.map((p) => p.id));
-    } else {
-      setSelectedProjects([]);
+  const mappedProjects = useMemo(() => {
+    const list = mapQuery.data ?? [];
+    return list.filter((item) => item.latitude || item.longitude || item.jobSiteCity || item.jobSiteAddress);
+  }, [mapQuery.data]);
+
+  const fallbackPipeline = useMemo(() => {
+    const grouped = new Map<string, ProjectEntity[]>();
+    for (const item of projects) {
+      const key = item.status || "UNSPECIFIED";
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key)?.push(item);
     }
-  };
 
-  const handleSelectProject = (id: number, checked: boolean) => {
-    if (checked) {
-      setSelectedProjects((prev) => [...prev, id]);
-    } else {
-      setSelectedProjects((prev) => prev.filter((p) => p !== id));
-    }
-  };
-
-  const handleSort = (key: string) => {
-    setSortConfig((prev) => {
-      if (prev?.key === key) {
-        return { key, direction: prev.direction === "asc" ? "desc" : "asc" };
-      }
-      return { key, direction: "asc" };
-    });
-  };
-
-  const handleToggleFavorite = (id: number) => {
-    setProjects((prev) =>
-      prev.map((p) =>
-        p.id === id ? { ...p, isFavorite: !p.isFavorite } : p
-      )
-    );
-  };
-
-  // Kanban drag-and-drop status change
-  const handleKanbanStatusChange = async (projectId: number, newStatus: string) => {
-    // Optimistic update
-    setProjects((prev) =>
-      prev.map((p) => (p.id === projectId ? { ...p, status: newStatus } : p))
-    );
-
-    try {
-      await updateProject(projectId, { status: newStatus });
-      toast({
-        title: "Status Updated",
-        description: `Project moved to ${newStatus.replace("_", " ").charAt(0) + newStatus.replace("_", " ").slice(1).toLowerCase()}.`,
-      });
-    } catch (error) {
-      console.error("Failed to update project status", error);
-      // Revert optimistic update
-      fetchProjects();
-      toast({
-        title: "Error",
-        description: "Failed to update project status.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDuplicate = async (project: Project) => {
-    try {
-      const duplicateData = {
-        projectTitle: `${project.name} (Copy)`,
-        description: project.description || "",
-        status: "NOT_STARTED",
-        priority: project.priority?.toUpperCase() || "MEDIUM",
-        budget: project.budget || 0,
-        startDate: project.startDate ? new Date(project.startDate).toISOString() : null,
-        dueDate: project.dueDate ? new Date(project.dueDate).toISOString() : null,
-      };
-      const result = await createProject(duplicateData);
-      const newProject = {
-        ...project,
-        id: result.id || result.Id || Date.now(),
-        name: `${project.name} (Copy)`,
-        progress: 0,
-        status: "Not Started",
-        isFavorite: false,
-      };
-      setProjects((prev) => [newProject, ...prev]);
-      toast({
-        title: "Duplicated",
-        description: `Project "${project.name}" has been duplicated.`,
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to duplicate project",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleExport = () => {
-    const data = filteredProjects.map((p) => ({
-      Name: p.name,
-      Manager: p.projectManager,
-      Client: p.clientName,
-      Status: p.status,
-      Priority: p.priority,
-      Progress: `${p.progress}%`,
-      DueDate: p.dueDate,
+    return Array.from(grouped.entries()).map(([status, entries], index) => ({
+      id: `fallback-${status}-${index}`,
+      name: formatStatusLabel(status),
+      slug: status,
+      order: index,
+      count: entries.length,
+      projects: entries,
     }));
+  }, [projects]);
 
-    const csv = [
-      Object.keys(data[0]).join(","),
-      ...data.map((row) => Object.values(row).join(",")),
-    ].join("\n");
-
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "projects.csv";
-    a.click();
-
-    toast({
-      title: "Exported",
-      description: "Projects exported to CSV successfully.",
-    });
-  };
-
-  const toggleColumn = (key: string) => {
-    setColumns((prev) =>
-      prev.map((col) =>
-        col.key === key ? { ...col, visible: !col.visible } : col
-      )
-    );
-  };
-
-  // ============================================
-  // RENDER
-  // ============================================
+  const pipelineColumns = (kanbanQuery.data && kanbanQuery.data.length > 0 ? kanbanQuery.data : fallbackPipeline).filter(
+    (column) => column && Array.isArray(column.projects),
+  );
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
-<main
-        className={cn(
-          "flex-1 transition-all duration-300"
-        )}
-      >
-        {/* ============================================ */}
-        {/* HEADER */}
-        {/* ============================================ */}
-        <header className="sticky top-0 z-30 backdrop-blur-xl bg-white/80 border-b border-[rgba(15,23,42,0.06)]/50">
-          <div className="flex h-16 items-center justify-between px-6">
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-[#475569]">Dashboard</span>
-              <ChevronRight size={16} className="text-[#475569]" />
-              <span className="font-medium text-[#0F172A]">Projects</span>
+    <div className="min-h-screen bg-[#F8FAFC] pb-8">
+      <div className="mx-auto w-full max-w-[1600px] px-4 py-4 md:px-6 md:py-6">
+        <motion.div
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative overflow-hidden rounded-2xl border border-[#0f172a1f] bg-gradient-to-br from-[#0F172A] via-[#0C3140] to-[#0891B2] p-6 text-white shadow-[0_10px_40px_rgba(8,145,178,0.25)] md:p-8"
+        >
+          <div className="pointer-events-none absolute -top-12 right-8 h-40 w-40 rounded-full bg-[#22D3EE]/20 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-12 left-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
+
+          <div className="relative flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+            <div className="max-w-3xl">
+              <Badge className="mb-4 border-0 bg-white/15 text-white">
+                <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                Roofing CRM Project Command Center
+              </Badge>
+              <h1 className="text-2xl font-semibold leading-tight md:text-3xl">
+                Run every roofing job like an enterprise operations board
+              </h1>
+              <p className="mt-2 text-sm text-cyan-100/90 md:text-base">
+                Track production, crews, permits, insurance claims, and gross profit from contract approval to final completion.
+              </p>
             </div>
 
-            <div className="flex items-center gap-3">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="relative p-2 rounded-md hover:bg-white/10 text-[#475569] transition-colors"
-              >
-                <Bell size={20} />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#0891B2] rounded-full" />
-              </motion.button>
-
-              <div className="flex items-center gap-3 pl-3 border-l border-[rgba(15,23,42,0.06)]">
-                <div className="w-9 h-9 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] font-semibold text-sm">
-                  {user ? getInitials(`${user.firstName} ${user.lastName}`) : "?"}
-                </div>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {/* ============================================ */}
-        {/* CONTENT */}
-        {/* ============================================ */}
-        <div className="p-4 md:p-6 space-y-4 md:space-y-6">
-          {/* Page Title */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex items-center justify-between"
-          >
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-md bg-[#F1F5F9] flex items-center justify-center ">
-                <Briefcase size={24} className="text-[#0F172A]" />
-              </div>
-              <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Projects</h1>
-                <p className="text-[#94A3B8]">
-                  Manage and track all your projects
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={fetchProjects}
-                className="p-2.5 rounded-md border border-[rgba(15,23,42,0.06)] hover:bg-[#F8FAFC] text-[#475569] transition-colors"
-              >
-                <RefreshCw size={18} />
-              </motion.button>
-
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleExport}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-md border border-[rgba(15,23,42,0.06)] hover:bg-[#F8FAFC] text-[#475569] transition-colors"
-              >
-                <Download size={18} />
-                <span className="font-medium">Export</span>
-              </motion.button>
-
+            <div className="flex flex-wrap gap-2">
               <Button
-                onClick={() => navigate("/projects/add")}
-                className="bg-[#F1F5F9]/90 hover:from-[#22D3EE]/90 hover:to-[#22D3EE] text-[#0F172A] rounded-md  px-5"
+                variant="outline"
+                className="border-white/30 bg-white/10 text-white hover:bg-white/20"
+                onClick={() => {
+                  queryClient.invalidateQueries({ queryKey: ["projects"] });
+                  queryClient.invalidateQueries({ queryKey: ["projects-summary"] });
+                  queryClient.invalidateQueries({ queryKey: ["projects-kanban"] });
+                  queryClient.invalidateQueries({ queryKey: ["projects-calendar"] });
+                  queryClient.invalidateQueries({ queryKey: ["projects-map"] });
+                }}
               >
-                <Plus size={18} className="mr-2" />
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Refresh
+              </Button>
+              <Button className="bg-white text-[#0F172A] hover:bg-cyan-50" onClick={() => navigate("/projects/add")}>
+                <Plus className="mr-2 h-4 w-4" />
                 New Project
               </Button>
             </div>
-          </motion.div>
-
-          {/* Stats Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
-            <StatCard
-              title="Total Projects"
-              value={stats.total}
-              subtitle="All time"
-              icon={Briefcase}
-              color="teal"
-              delay={0}
-            />
-            <StatCard
-              title="In Progress"
-              value={stats.inProgress}
-              subtitle={`${Math.round((stats.inProgress / stats.total) * 100) || 0}% of total`}
-              icon={PlayCircle}
-              color="gold"
-              delay={0.1}
-            />
-            <StatCard
-              title="Completed"
-              value={stats.completed}
-              subtitle={`${Math.round((stats.completed / stats.total) * 100) || 0}% completion rate`}
-              icon={CheckCircle2}
-              color="green"
-              delay={0.2}
-            />
-            <StatCard
-              title="Overdue"
-              value={stats.overdue}
-              subtitle="Need attention"
-              icon={AlertCircle}
-              color="red"
-              delay={0.3}
-            />
-            <StatCard
-              title="Avg Progress"
-              value={`${stats.avgProgress}%`}
-              subtitle="Across all projects"
-              icon={TrendingUp}
-              color="purple"
-              delay={0.4}
-            />
           </div>
+        </motion.div>
 
-          {/* Filters & Actions Bar */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4"
-          >
-            <div className="flex items-center justify-between gap-4">
-              {/* Left Side - Search & Filters */}
-              <div className="flex items-center gap-3 flex-1">
-                {/* Search */}
-                <div className="relative max-w-md flex-1">
-                  <Search
-                    size={18}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]"
-                  />
-                  <Input
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Search projects..."
-                    className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
-                  />
-                  {searchTerm && (
-                    <button
-                      onClick={() => setSearchTerm("")}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#475569] hover:text-[#475569]"
-                    >
-                      <X size={16} />
-                    </button>
-                  )}
-                </div>
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <MetricCard
+            title="Total Jobs"
+            value={String(summaryQuery.data?.total ?? projects.length)}
+            description="Open + completed projects"
+            icon={ClipboardList}
+            tone="teal"
+          />
+          <MetricCard
+            title="Active Production"
+            value={String(summaryQuery.data?.active ?? 0)}
+            description="Currently moving in field"
+            icon={HardHat}
+            tone="navy"
+          />
+          <MetricCard
+            title="Completed"
+            value={String(summaryQuery.data?.completed ?? 0)}
+            description="Delivered to clients"
+            icon={CheckCircle2}
+            tone="green"
+          />
+          <MetricCard
+            title="Gross Profit"
+            value={currency.format(summaryQuery.data?.grossProfit ?? 0)}
+            description="Contract value minus actual costs"
+            icon={TrendingUp}
+            tone="amber"
+          />
+        </div>
 
-                {/* Status Filter */}
-                <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="h-11 w-[160px] rounded-md border-[rgba(15,23,42,0.06)]">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-md">
-                    {statusOptions.map((opt) => (
-                      <SelectItem
-                        key={opt.value}
-                        value={opt.value}
-                        className="rounded-md"
-                      >
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {/* Priority Filter */}
-                <Select value={filterPriority} onValueChange={setFilterPriority}>
-                  <SelectTrigger className="h-11 w-[160px] rounded-md border-[rgba(15,23,42,0.06)]">
-                    <SelectValue placeholder="Priority" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-md">
-                    {priorityOptions.map((opt) => (
-                      <SelectItem
-                        key={opt.value}
-                        value={opt.value}
-                        className="rounded-md"
-                      >
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {/* Clear Filters */}
-                {(filterStatus !== "all" || filterPriority !== "all" || searchTerm) && (
-                  <motion.button
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    onClick={() => {
-                      setSearchTerm("");
-                      setFilterStatus("all");
-                      setFilterPriority("all");
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-md text-sm text-[#94A3B8] hover:text-[#0891B2] hover:bg-[#0891B2]/5 transition-colors"
-                  >
-                    <X size={14} />
-                    Clear
-                  </motion.button>
-                )}
+        <Card className="mt-5 border-[rgba(15,23,42,0.08)]">
+          <CardContent className="p-4">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-[1.2fr,repeat(3,minmax(0,0.55fr)),auto]">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
+                <Input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search project, client, or project number"
+                  className="pl-9"
+                />
               </div>
 
-              {/* Right Side - View & Column Toggles */}
-              <div className="flex items-center gap-2">
-                {/* Bulk Actions */}
-                <AnimatePresence>
-                  {selectedProjects.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      className="flex items-center gap-2 pr-3 mr-3 border-r border-[rgba(15,23,42,0.06)]"
-                    >
-                      <span className="text-sm text-[#94A3B8]">
-                        {selectedProjects.length} selected
-                      </span>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={handleBulkDelete}
-                        className="h-9 rounded-md border-red-200 text-red-600 hover:bg-red-50"
-                      >
-                        <Trash2 size={14} className="mr-1" />
-                        Delete
-                      </Button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUS_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-                {/* Column Toggle */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="p-2.5 rounded-md border border-[rgba(15,23,42,0.06)] hover:bg-[#F8FAFC] text-[#475569] transition-colors">
-                      <Columns size={18} />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48 rounded-md">
-                    <DropdownMenuLabel className="text-xs text-[#475569] font-medium">
-                      Toggle Columns
-                    </DropdownMenuLabel>
-                    {columns.map((col) => (
-                      <DropdownMenuCheckboxItem
-                        key={col.key}
-                        checked={col.visible}
-                        onCheckedChange={() => toggleColumn(col.key)}
-                        className="rounded-md"
-                      >
-                        {col.label}
-                      </DropdownMenuCheckboxItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PRIORITY_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-                {/* View Toggle */}
-                <div className="flex items-center p-1 bg-white/5 rounded-md">
-                  <button
-                    onClick={() => setViewMode("table")}
-                    className={cn(
-                      "p-2 rounded-md transition-all",
-                      viewMode === "table"
-                        ? "bg-white text-[#0891B2] shadow-sm"
-                        : "text-[#94A3B8] hover:text-slate-200"
-                    )}
-                  >
-                    <List size={18} />
-                  </button>
-                  <button
-                    onClick={() => setViewMode("grid")}
-                    className={cn(
-                      "p-2 rounded-md transition-all",
-                      viewMode === "grid"
-                        ? "bg-white text-[#0891B2] shadow-sm"
-                        : "text-[#94A3B8] hover:text-slate-200"
-                    )}
-                  >
-                    <LayoutGrid size={18} />
-                  </button>
-                  <button
-                    onClick={() => setViewMode("kanban")}
-                    className={cn(
-                      "p-2 rounded-md transition-all",
-                      viewMode === "kanban"
-                        ? "bg-white text-[#0891B2] shadow-sm"
-                        : "text-[#94A3B8] hover:text-slate-200"
-                    )}
-                  >
-                    <Kanban size={18} />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </motion.div>
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Project Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TYPE_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-          {/* Content */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden"
-          >
-            {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-20">
-                <Loader2 size={40} className="animate-spin text-[#0891B2] mb-4" />
-                <p className="text-[#94A3B8]">Loading projects...</p>
-              </div>
-            ) : filteredProjects.length === 0 ? (
-              <EmptyState onAdd={() => navigate("/projects/add")} />
-            ) : viewMode === "kanban" ? (
-              <KanbanBoard
-                projects={filteredProjects}
-                onStatusChange={handleKanbanStatusChange}
-                onView={(id) => navigate(`/projects/${id}`)}
-                onEdit={(id) => navigate(`/projects/${id}/edit`)}
-                onDelete={(project) => {
-                  setProjectToDelete(project);
-                  setDeleteDialogOpen(true);
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSearch("");
+                  setStatusFilter("ALL");
+                  setPriorityFilter("ALL");
+                  setTypeFilter("ALL");
                 }}
-              />
-            ) : viewMode === "table" ? (
-              <>
-                {/* Table View */}
-                <div className="responsive-table">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]/50">
-                        <th className="py-4 px-4 text-left">
-                          <Checkbox
-                            checked={
-                              selectedProjects.length === paginatedProjects.length &&
-                              paginatedProjects.length > 0
-                            }
-                            onCheckedChange={handleSelectAll}
-                            className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
-                          />
-                        </th>
-                        <th className="py-4 px-2 text-left w-10"></th>
-                        {columns.filter((c) => c.visible).map((col) => (
-                          <th
-                            key={col.key}
-                            className="py-4 px-4 text-left text-xs font-semibold text-[#94A3B8] uppercase tracking-wider"
-                          >
-                            {col.sortable ? (
-                              <button
-                                onClick={() => handleSort(col.key)}
-                                className="flex items-center gap-1.5 hover:text-[#0891B2] transition-colors"
-                              >
-                                {col.label}
-                                <ArrowUpDown
-                                  size={14}
-                                  className={cn(
-                                    sortConfig?.key === col.key
-                                      ? "text-[#0891B2]"
-                                      : "text-[#475569]"
-                                  )}
-                                />
-                              </button>
-                            ) : (
-                              col.label
-                            )}
-                          </th>
-                        ))}
-                        <th className="py-4 px-4 text-right text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <AnimatePresence>
-                        {paginatedProjects.map((project) => (
-                          <ProjectRow
-                            key={project.id}
-                            project={project}
-                            isSelected={selectedProjects.includes(project.id)}
-                            onSelect={(checked) => handleSelectProject(project.id, checked)}
-                            onView={() => navigate(`/projects/${project.id}`)}
-                            onEdit={() => navigate(`/projects/${project.id}/edit`)}
-                            onDelete={() => {
-                              setProjectToDelete(project);
-                              setDeleteDialogOpen(true);
-                            }}
-                            onToggleFavorite={() => handleToggleFavorite(project.id)}
-                            onDuplicate={() => handleDuplicate(project)}
-                            columns={columns}
-                          />
-                        ))}
-                      </AnimatePresence>
-                    </tbody>
-                  </table>
-                </div>
+              >
+                Reset
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
-                {/* Pagination */}
-                <div className="flex items-center justify-between px-6 py-4 border-t border-[rgba(15,23,42,0.06)]">
-                  <div className="flex items-center gap-2 text-sm text-[#94A3B8]">
-                    <span>
-                      Showing {((currentPage - 1) * pageSize) + 1} to{" "}
-                      {Math.min(currentPage * pageSize, filteredProjects.length)} of{" "}
-                      {filteredProjects.length}
-                    </span>
-                    <Select
-                      value={String(pageSize)}
-                      onValueChange={(v) => {
-                        setPageSize(Number(v));
-                        setCurrentPage(1);
-                      }}
-                    >
-                      <SelectTrigger className="h-8 w-[70px] rounded-md text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-md">
-                        {[10, 20, 50, 100].map((size) => (
-                          <SelectItem key={size} value={String(size)} className="rounded-md">
-                            {size}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <span>per page</span>
-                  </div>
+        <div className="mt-5 flex flex-wrap gap-2">
+          {["portfolio", "pipeline", "schedule"].map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setActiveTab(tab as typeof activeTab)}
+              className={cn(
+                "rounded-md border px-4 py-2 text-sm font-medium transition",
+                activeTab === tab
+                  ? "border-[#0891B2] bg-[#0891B2]/10 text-[#0891B2]"
+                  : "border-[rgba(15,23,42,0.08)] bg-white text-[#334155] hover:bg-slate-50",
+              )}
+            >
+              {tab === "portfolio" && "Portfolio"}
+              {tab === "pipeline" && "Pipeline"}
+              {tab === "schedule" && "Schedule & Map"}
+            </button>
+          ))}
+        </div>
 
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(1)}
-                      disabled={currentPage === 1}
-                      className="h-9 w-9 p-0 rounded-md"
-                    >
-                      <ChevronsLeft size={16} />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
-                      className="h-9 w-9 p-0 rounded-md"
-                    >
-                      <ChevronLeft size={16} />
-                    </Button>
-
-                    {/* Page Numbers */}
-                    <div className="flex items-center gap-1 mx-2">
-                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                        let pageNum;
-                        if (totalPages <= 5) {
-                          pageNum = i + 1;
-                        } else if (currentPage <= 3) {
-                          pageNum = i + 1;
-                        } else if (currentPage >= totalPages - 2) {
-                          pageNum = totalPages - 4 + i;
-                        } else {
-                          pageNum = currentPage - 2 + i;
-                        }
-                        return (
-                          <button
-                            key={pageNum}
-                            onClick={() => setCurrentPage(pageNum)}
-                            className={cn(
-                              "h-9 w-9 rounded-md text-sm font-medium transition-all",
-                              currentPage === pageNum
-                                ? "bg-[#0891B2] text-white "
-                                : "text-[#475569] hover:bg-white/10"
-                            )}
-                          >
-                            {pageNum}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                      disabled={currentPage === totalPages}
-                      className="h-9 w-9 p-0 rounded-md"
-                    >
-                      <ChevronRight size={16} />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(totalPages)}
-                      disabled={currentPage === totalPages}
-                      className="h-9 w-9 p-0 rounded-md"
-                    >
-                      <ChevronsRight size={16} />
-                    </Button>
-                  </div>
-                </div>
-              </>
+        {activeTab === "portfolio" && (
+          <div className="mt-5">
+            {projectsQuery.isLoading ? (
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <Card key={index} className="border-[rgba(15,23,42,0.08)]">
+                    <CardContent className="space-y-3 p-5">
+                      <Skeleton className="h-5 w-1/2" />
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-2 w-full" />
+                      <div className="grid grid-cols-2 gap-2">
+                        <Skeleton className="h-10" />
+                        <Skeleton className="h-10" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : orderedProjects.length === 0 ? (
+              <EmptyState onCreate={() => navigate("/projects/add")} />
             ) : (
-              /* Grid View */
-              <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                  <AnimatePresence>
-                    {paginatedProjects.map((project, index) => (
-                      <motion.div
-                        key={project.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                      >
-                        <ProjectCard
-                          project={project}
-                          isSelected={selectedProjects.includes(project.id)}
-                          onSelect={(checked) => handleSelectProject(project.id, checked)}
-                          onView={() => navigate(`/projects/${project.id}`)}
-                          onEdit={() => navigate(`/projects/${project.id}/edit`)}
-                          onDelete={() => {
-                            setProjectToDelete(project);
-                            setDeleteDialogOpen(true);
-                          }}
-                          onToggleFavorite={() => handleToggleFavorite(project.id)}
-                        />
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                </div>
-
-                {/* Grid Pagination */}
-                <div className="flex items-center justify-center gap-2 mt-8">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    className="rounded-md"
-                  >
-                    <ChevronLeft size={16} className="mr-1" />
-                    Previous
-                  </Button>
-
-                  <div className="flex items-center gap-1 mx-4">
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      let pageNum;
-                      if (totalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (currentPage <= 3) {
-                        pageNum = i + 1;
-                      } else if (currentPage >= totalPages - 2) {
-                        pageNum = totalPages - 4 + i;
-                      } else {
-                        pageNum = currentPage - 2 + i;
-                      }
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => setCurrentPage(pageNum)}
-                          className={cn(
-                            "h-9 w-9 rounded-md text-sm font-medium transition-all",
-                            currentPage === pageNum
-                              ? "bg-[#0891B2] text-white "
-                              : "text-[#475569] hover:bg-white/10"
-                          )}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                    className="rounded-md"
-                  >
-                    Next
-                    <ChevronRight size={16} className="ml-1" />
-                  </Button>
-                </div>
-              </div>
-            )}
-          </motion.div>
-
-          {/* Quick Stats Footer */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4"
-          >
-            {/* Status Distribution */}
-            <div className="col-span-2 bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-[#0F172A]">Status Distribution</h3>
-                <PieChart size={18} className="text-[#475569]" />
-              </div>
-              <div className="space-y-3">
-                {statusOptions.slice(1).map((status) => {
-                  const count = projects.filter(
-                    (p) => p.status.toLowerCase().replace(" ", "_") === status.value
-                  ).length;
-                  const percentage = projects.length > 0 ? (count / projects.length) * 100 : 0;
-                  const config = getStatusConfig(status.value);
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+                {orderedProjects.map((project) => {
+                  const progress = getProgressValue(project);
+                  const status = project.status ?? "UNKNOWN";
+                  const priority = project.priority ?? "NORMAL";
+                  const value = getProjectValue(project);
+                  const cost = getProjectCost(project);
+                  const grossProfit = toNumber(project.grossProfit) || value - cost;
+                  const overdue = isOverdue(project);
 
                   return (
-                    <div key={status.value} className="flex items-center gap-3">
-                      <div className={cn("w-3 h-3 rounded-full", config.dot)} />
-                      <span className="text-sm text-[#475569] flex-1">{status.label}</span>
-                      <span className="text-sm font-semibold text-[#0F172A]">{count}</span>
-                      <div className="w-24 h-2 bg-white/5 rounded-full overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${percentage}%` }}
-                          className={cn("h-full rounded-full", config.dot)}
-                        />
+                    <motion.div
+                      key={project.id}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="rounded-2xl border border-[rgba(15,23,42,0.08)] bg-white p-5 shadow-sm transition hover:border-[#22D3EE]/50 hover:shadow-md"
+                    >
+                      <div className="mb-4 flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#64748B]">
+                            {project.projectNumber || project.code || "PROJECT"}
+                          </p>
+                          <h3
+                            className="mt-1 cursor-pointer text-base font-semibold text-[#0F172A] hover:text-[#0891B2]"
+                            onClick={() => navigate(`/projects/${project.id}`)}
+                          >
+                            {project.name}
+                          </h3>
+                          <p className="mt-1 text-sm text-[#64748B]">{getClientName(project)}</p>
+                        </div>
+
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className="rounded-md p-1.5 text-[#64748B] hover:bg-slate-100 hover:text-[#0F172A]">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}`)}>Open Project</DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => statusMutation.mutate({ id: project.id, status: "IN_PROGRESS" })}
+                            >
+                              Move to In Progress
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => statusMutation.mutate({ id: project.id, status: "COMPLETED" })}
+                            >
+                              Mark Completed
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-rose-600" onClick={() => setPendingDelete(project)}>
+                              Archive Project
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
-                      <span className="text-xs text-[#475569] w-10 text-right">
-                        {percentage.toFixed(0)}%
-                      </span>
-                    </div>
+
+                      <div className="mb-3 flex flex-wrap gap-2">
+                        <Badge className={cn("border-0", statusStyles[status] || "bg-slate-100 text-slate-700")}>
+                          {formatStatusLabel(status)}
+                        </Badge>
+                        <Badge className={cn("border-0", priorityStyles[priority] || "bg-slate-100 text-slate-700")}>
+                          {formatStatusLabel(priority)}
+                        </Badge>
+                        {project.roofType ? (
+                          <Badge variant="outline" className="border-[#22D3EE]/40 bg-[#22D3EE]/10 text-[#0E7490]">
+                            <Wrench className="mr-1 h-3 w-3" />
+                            {project.roofType}
+                          </Badge>
+                        ) : null}
+                        {project.isInsuranceJob ? (
+                          <Badge variant="outline" className="border-violet-300 bg-violet-50 text-violet-700">
+                            <Shield className="mr-1 h-3 w-3" />
+                            Insurance
+                          </Badge>
+                        ) : null}
+                        {project.permitRequired ? (
+                          <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-700">
+                            <FileStack className="mr-1 h-3 w-3" />
+                            Permit
+                          </Badge>
+                        ) : null}
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs text-[#64748B]">
+                          <span>Completion</span>
+                          <span className="font-semibold text-[#0F172A]">{progress}%</span>
+                        </div>
+                        <Progress value={progress} className="h-2" />
+                        <div className="flex items-center justify-between text-xs">
+                          <span className={cn("font-medium", overdue ? "text-rose-600" : "text-[#64748B]")}>
+                            <Clock3 className="mr-1 inline h-3.5 w-3.5" />
+                            {formatRelativeDate(project.estimatedEndDate ?? project.dueDate)}
+                          </span>
+                          <span className="text-[#64748B]">{formatDate(project.estimatedEndDate ?? project.dueDate)}</span>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-3 gap-2 rounded-md border border-[rgba(15,23,42,0.07)] bg-slate-50/70 p-3">
+                        <div>
+                          <p className="text-[10px] uppercase tracking-wide text-[#64748B]">Contract</p>
+                          <p className="mt-1 text-sm font-semibold text-[#0F172A]">{currency.format(value)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] uppercase tracking-wide text-[#64748B]">Actual Cost</p>
+                          <p className="mt-1 text-sm font-semibold text-[#0F172A]">{currency.format(cost)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] uppercase tracking-wide text-[#64748B]">Gross Profit</p>
+                          <p className={cn("mt-1 text-sm font-semibold", grossProfit >= 0 ? "text-emerald-700" : "text-rose-700")}>
+                            {currency.format(grossProfit)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex items-center justify-between">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-[rgba(15,23,42,0.12)]"
+                          onClick={() => navigate(`/projects/${project.id}`)}
+                        >
+                          View Details
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="bg-[#0891B2] hover:bg-[#0E7490]"
+                          onClick={() => navigate(`/projects/${project.id}`)}
+                        >
+                          Manage Job
+                        </Button>
+                      </div>
+                    </motion.div>
                   );
                 })}
               </div>
-            </div>
+            )}
+          </div>
+        )}
 
-            {/* Recent Activity */}
-            <div className="col-span-2 bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-[#0F172A]">Recent Activity</h3>
-                <Activity size={18} className="text-[#475569]" />
-              </div>
-              <div className="space-y-3">
-                {projects.slice(0, 5).map((project, index) => (
-                  <motion.div
-                    key={project.id}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="flex items-center gap-3 p-2 rounded-md hover:bg-[#F8FAFC] cursor-pointer transition-colors"
-                    onClick={() => navigate(`/projects/${project.id}`)}
-                  >
-                    <div className="w-8 h-8 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0891B2] text-xs font-semibold">
-                      {getInitials(project.name)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-[#0F172A] truncate">
-                        {project.name}
-                      </p>
-                      <p className="text-xs text-[#475569]">
-                        Progress updated to {project.progress}%
-                      </p>
-                    </div>
-                    <span className="text-xs text-[#475569]">Just now</span>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-        </div>
+        {activeTab === "pipeline" && (
+          <div className="mt-5 overflow-x-auto pb-2">
+            <div className="flex min-w-[920px] gap-4">
+              {kanbanQuery.isLoading
+                ? Array.from({ length: 4 }).map((_, index) => (
+                    <Card key={index} className="w-[300px] shrink-0 border-[rgba(15,23,42,0.08)]">
+                      <CardContent className="space-y-3 p-4">
+                        <Skeleton className="h-5 w-2/3" />
+                        <Skeleton className="h-20 w-full" />
+                        <Skeleton className="h-20 w-full" />
+                      </CardContent>
+                    </Card>
+                  ))
+                : pipelineColumns.map((column, columnIndex) => (
+                    <Card key={column.id || `${column.name}-${columnIndex}`} className="w-[320px] shrink-0 border-[rgba(15,23,42,0.08)] bg-white">
+                      <CardContent className="p-4">
+                        <div className="mb-3 flex items-center justify-between">
+                          <div>
+                            <h3 className="text-sm font-semibold text-[#0F172A]">{column.name}</h3>
+                            <p className="text-xs text-[#64748B]">{column.count} project{column.count === 1 ? "" : "s"}</p>
+                          </div>
+                          <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: column.color || "#0891B2" }} />
+                        </div>
 
-        {/* ============================================ */}
-        {/* DELETE CONFIRMATION DIALOG */}
-        {/* ============================================ */}
-        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent className="rounded-md">
-            <AlertDialogHeader>
-              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
-                <Trash2 size={24} className="text-red-600" />
-              </div>
-              <AlertDialogTitle className="text-center text-[#0F172A]">
-                Delete Project
-              </AlertDialogTitle>
-              <AlertDialogDescription className="text-center">
-                Are you sure you want to delete{" "}
-                <span className="font-semibold text-[#0F172A]">
-                  "{projectToDelete?.name}"
-                </span>
-                ? This action cannot be undone and all associated data will be permanently removed.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter className="gap-3 sm:justify-center">
-              <AlertDialogCancel className="rounded-md">Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleDeleteProject}
-                disabled={isDeleting}
-                className="bg-red-600 hover:bg-red-700 rounded-md"
-              >
-                {isDeleting ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin mr-2" />
-                    Deleting...
-                  </>
+                        <div className="max-h-[62vh] space-y-3 overflow-y-auto pr-1 scrollbar-thin">
+                          {column.projects.length === 0 ? (
+                            <div className="rounded-md border border-dashed border-[rgba(15,23,42,0.14)] p-4 text-center text-xs text-[#64748B]">
+                              No projects in this stage
+                            </div>
+                          ) : (
+                            column.projects.map((project) => (
+                              <div
+                                key={project.id}
+                                className="rounded-md border border-[rgba(15,23,42,0.08)] bg-slate-50/70 p-3 transition hover:border-[#22D3EE]/50 hover:bg-white"
+                              >
+                                <button
+                                  className="line-clamp-2 text-left text-sm font-semibold text-[#0F172A] hover:text-[#0891B2]"
+                                  onClick={() => navigate(`/projects/${project.id}`)}
+                                >
+                                  {project.name}
+                                </button>
+                                <p className="mt-1 text-xs text-[#64748B]">{getClientName(project)}</p>
+
+                                <div className="mt-3 flex items-center justify-between text-xs text-[#64748B]">
+                                  <span>{currency.format(getProjectValue(project))}</span>
+                                  <span>{formatDate(project.estimatedEndDate ?? project.dueDate)}</span>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+            </div>
+          </div>
+        )}
+
+        {activeTab === "schedule" && (
+          <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-3">
+            <Card className="xl:col-span-2 border-[rgba(15,23,42,0.08)]">
+              <CardContent className="p-4">
+                <div className="mb-4 flex items-center gap-2">
+                  <CalendarDays className="h-4 w-4 text-[#0891B2]" />
+                  <h3 className="text-sm font-semibold text-[#0F172A]">Upcoming Job Schedule</h3>
+                </div>
+
+                {calendarQuery.isLoading ? (
+                  <div className="space-y-3">
+                    {Array.from({ length: 5 }).map((_, index) => (
+                      <Skeleton key={index} className="h-14 w-full" />
+                    ))}
+                  </div>
+                ) : topSchedule.length === 0 ? (
+                  <div className="rounded-md border border-dashed border-[rgba(15,23,42,0.14)] p-6 text-center text-sm text-[#64748B]">
+                    No scheduled start dates yet.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {topSchedule.map((project) => (
+                      <button
+                        key={project.id}
+                        className="flex w-full items-center justify-between rounded-md border border-[rgba(15,23,42,0.08)] bg-white p-3 text-left transition hover:border-[#22D3EE]/40 hover:bg-slate-50"
+                        onClick={() => navigate(`/projects/${project.id}`)}
+                      >
+                        <div>
+                          <p className="font-medium text-[#0F172A]">{project.name}</p>
+                          <p className="text-xs text-[#64748B]">{getClientName(project)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Start</p>
+                          <p className="text-sm font-medium text-[#0F172A]">{formatDate(project.estimatedStartDate ?? project.actualStartDate)}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border-[rgba(15,23,42,0.08)]">
+              <CardContent className="p-4">
+                <div className="mb-4 flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-[#0891B2]" />
+                  <h3 className="text-sm font-semibold text-[#0F172A]">Map Coverage</h3>
+                </div>
+
+                {mapQuery.isLoading ? (
+                  <div className="space-y-2">
+                    {Array.from({ length: 6 }).map((_, index) => (
+                      <Skeleton key={index} className="h-10 w-full" />
+                    ))}
+                  </div>
+                ) : mappedProjects.length === 0 ? (
+                  <div className="rounded-md border border-dashed border-[rgba(15,23,42,0.14)] p-4 text-center text-sm text-[#64748B]">
+                    No mappable job sites found.
+                  </div>
                 ) : (
                   <>
-                    <Trash2 size={16} className="mr-2" />
-                    Delete Project
+                    <div className="mb-3 grid grid-cols-2 gap-2">
+                      <div className="rounded-md bg-[#0891B2]/10 p-3">
+                        <p className="text-[11px] uppercase tracking-wide text-[#0E7490]">Mappable Jobs</p>
+                        <p className="mt-1 text-xl font-semibold text-[#0F172A]">{mappedProjects.length}</p>
+                      </div>
+                      <div className="rounded-md bg-amber-100 p-3">
+                        <p className="text-[11px] uppercase tracking-wide text-amber-700">In Progress</p>
+                        <p className="mt-1 text-xl font-semibold text-[#0F172A]">
+                          {mappedProjects.filter((item) => item.status === "IN_PROGRESS").length}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="max-h-[300px] space-y-2 overflow-y-auto pr-1 scrollbar-thin">
+                      {mappedProjects.slice(0, 14).map((project) => (
+                        <button
+                          key={project.id}
+                          onClick={() => navigate(`/projects/${project.id}`)}
+                          className="w-full rounded-md border border-[rgba(15,23,42,0.08)] p-2.5 text-left transition hover:border-[#22D3EE]/40 hover:bg-slate-50"
+                        >
+                          <p className="text-sm font-medium text-[#0F172A]">{project.name}</p>
+                          <p className="text-xs text-[#64748B]">
+                            {project.jobSiteCity || project.jobSiteAddress || "Job site"}
+                            {project.jobSiteState ? `, ${project.jobSiteState}` : ""}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
                   </>
                 )}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </main>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
+
+      <AlertDialog open={Boolean(pendingDelete)} onOpenChange={(open) => !open && setPendingDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Archive this project?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingDelete?.name
+                ? `This will archive "${pendingDelete.name}" and remove it from active lists.`
+                : "This will archive the selected project."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleteMutation.isPending || !pendingDelete?.id}
+              className="bg-rose-600 hover:bg-rose-700"
+              onClick={(event) => {
+                event.preventDefault();
+                if (pendingDelete?.id) {
+                  deleteMutation.mutate(pendingDelete.id);
+                }
+              }}
+            >
+              {deleteMutation.isPending ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Archiving...
+                </>
+              ) : (
+                "Archive"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {(projectsQuery.isError || summaryQuery.isError || kanbanQuery.isError) && (
+        <div className="fixed bottom-4 right-4 z-50 max-w-sm rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-lg">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <div>
+              <p className="font-semibold">Some project data could not be loaded.</p>
+              <p className="text-xs text-rose-600">Try refreshing or check your API connectivity.</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

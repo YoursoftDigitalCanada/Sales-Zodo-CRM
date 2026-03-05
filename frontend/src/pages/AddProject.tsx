@@ -67,6 +67,7 @@ import {
   CircleDot,
   Timer,
   CalendarDays,
+  Shield,
   UserPlus,
   Settings,
   HelpCircle,
@@ -139,19 +140,23 @@ const toDisplayString = (value: unknown, fallback = ""): string => {
 // ============================================
 
 const statusOptions = [
-  { value: "not_started", label: "Not Started", color: "slate", icon: CircleDot },
-  { value: "planning", label: "Planning", color: "blue", icon: Target },
-  { value: "in_progress", label: "In Progress", color: "teal", icon: Timer },
-  { value: "on_hold", label: "On Hold", color: "amber", icon: AlertCircle },
-  { value: "completed", label: "Completed", color: "green", icon: CheckCircle2 },
-  { value: "cancelled", label: "Cancelled", color: "red", icon: X },
+  { value: "DRAFT", label: "Draft", color: "slate", icon: CircleDot },
+  { value: "PENDING", label: "Pending", color: "blue", icon: Target },
+  { value: "APPROVED", label: "Approved", color: "teal", icon: CheckCircle2 },
+  { value: "SCHEDULED", label: "Scheduled", color: "blue", icon: CalendarDays },
+  { value: "IN_PROGRESS", label: "In Progress", color: "teal", icon: Timer },
+  { value: "ON_HOLD", label: "On Hold", color: "amber", icon: AlertCircle },
+  { value: "COMPLETED", label: "Completed", color: "green", icon: CheckCircle2 },
+  { value: "CANCELLED", label: "Cancelled", color: "red", icon: X },
+  { value: "WARRANTY_WORK", label: "Warranty Work", color: "blue", icon: Shield },
 ];
 
 const priorityOptions = [
-  { value: "low", label: "Low", color: "bg-white/5 text-[#475569] border-[rgba(15,23,42,0.06)]" },
-  { value: "medium", label: "Medium", color: "bg-blue-100 text-[#0891B2] border-blue-200" },
-  { value: "high", label: "High", color: "bg-amber-100 text-amber-600 border-amber-200" },
-  { value: "critical", label: "Critical", color: "bg-red-100 text-red-600 border-red-200" },
+  { value: "LOW", label: "Low", color: "bg-white/5 text-[#475569] border-[rgba(15,23,42,0.06)]" },
+  { value: "NORMAL", label: "Normal", color: "bg-blue-100 text-[#0891B2] border-blue-200" },
+  { value: "HIGH", label: "High", color: "bg-amber-100 text-amber-600 border-amber-200" },
+  { value: "URGENT", label: "Urgent", color: "bg-red-100 text-red-600 border-red-200" },
+  { value: "EMERGENCY", label: "Emergency", color: "bg-red-200 text-red-700 border-red-300" },
 ];
 
 const categoryOptions = [
@@ -183,14 +188,17 @@ const getInitials = (name: string) => {
 
 const getStatusColor = (status: string) => {
   const colors: Record<string, { bg: string; text: string; dot: string }> = {
-    not_started: { bg: "bg-white/5", text: "text-[#475569]", dot: "bg-slate-400" },
-    planning: { bg: "bg-blue-100", text: "text-[#0891B2]", dot: "bg-[#0891B2]" },
-    in_progress: { bg: "bg-[#0891B2]/10", text: "text-[#0891B2]", dot: "bg-[#0891B2]" },
-    on_hold: { bg: "bg-amber-100", text: "text-amber-600", dot: "bg-amber-500" },
-    completed: { bg: "bg-green-100", text: "text-green-600", dot: "bg-green-500" },
-    cancelled: { bg: "bg-red-100", text: "text-red-600", dot: "bg-red-500" },
+    DRAFT: { bg: "bg-white/5", text: "text-[#475569]", dot: "bg-slate-400" },
+    PENDING: { bg: "bg-blue-100", text: "text-[#0891B2]", dot: "bg-[#0891B2]" },
+    APPROVED: { bg: "bg-[#0891B2]/10", text: "text-[#0891B2]", dot: "bg-[#0891B2]" },
+    SCHEDULED: { bg: "bg-blue-100", text: "text-blue-700", dot: "bg-blue-500" },
+    IN_PROGRESS: { bg: "bg-[#0891B2]/10", text: "text-[#0891B2]", dot: "bg-[#0891B2]" },
+    ON_HOLD: { bg: "bg-amber-100", text: "text-amber-600", dot: "bg-amber-500" },
+    COMPLETED: { bg: "bg-green-100", text: "text-green-600", dot: "bg-green-500" },
+    CANCELLED: { bg: "bg-red-100", text: "text-red-600", dot: "bg-red-500" },
+    WARRANTY_WORK: { bg: "bg-violet-100", text: "text-violet-700", dot: "bg-violet-500" },
   };
-  return colors[status] || colors.not_started;
+  return colors[status] || colors.PENDING;
 };
 
 // ============================================
@@ -664,8 +672,8 @@ const AddProjectPage = () => {
   const [description, setDescription] = useState("");
   const [clientId, setClientId] = useState("");
   const [projectManager, setProjectManager] = useState("");
-  const [status, setStatus] = useState("not_started");
-  const [priority, setPriority] = useState("medium");
+  const [status, setStatus] = useState("PENDING");
+  const [priority, setPriority] = useState("NORMAL");
   const [progress, setProgress] = useState(0);
   const [startDate, setStartDate] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -817,8 +825,8 @@ const AddProjectPage = () => {
         description: description || null,
         clientId: clientId || null,
         projectManagerId: projectManager || null,
-        status: isDraft ? "NOT_STARTED" : status.toUpperCase().replace(/ /g, "_"),
-        priority: priority.toUpperCase(),
+        status: isDraft ? "DRAFT" : status,
+        priority,
         progressPercentage: Number(progress),
         startDate: startDate ? new Date(startDate).toISOString() : null,
         dueDate: dueDate ? new Date(dueDate).toISOString() : null,

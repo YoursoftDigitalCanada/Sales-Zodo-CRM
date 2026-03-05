@@ -31,12 +31,18 @@ import { useToast } from "@/components/ui/use-toast";
 
 // Status config
 const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
+    DRAFT: { label: "Draft", color: "text-slate-700", bg: "bg-slate-100" },
+    PENDING: { label: "Pending", color: "text-amber-700", bg: "bg-amber-100" },
+    APPROVED: { label: "Approved", color: "text-blue-700", bg: "bg-blue-100" },
+    SCHEDULED: { label: "Scheduled", color: "text-indigo-700", bg: "bg-indigo-100" },
+    ACTIVE: { label: "Active", color: "text-[#0891B2]", bg: "bg-[#0891B2]/10" },
     PLANNING: { label: "Planning", color: "text-purple-700", bg: "bg-purple-100" },
     NOT_STARTED: { label: "Not Started", color: "text-slate-700", bg: "bg-slate-100" },
     IN_PROGRESS: { label: "In Progress", color: "text-blue-700", bg: "bg-blue-100" },
     ON_HOLD: { label: "On Hold", color: "text-amber-700", bg: "bg-amber-100" },
     COMPLETED: { label: "Completed", color: "text-green-700", bg: "bg-green-100" },
     CANCELLED: { label: "Cancelled", color: "text-red-700", bg: "bg-red-100" },
+    WARRANTY_WORK: { label: "Warranty Work", color: "text-violet-700", bg: "bg-violet-100" },
 };
 
 const getProgressColor = (v: number) =>
@@ -179,11 +185,11 @@ const ProjectDetailPage = () => {
     // --- Derived Values ---
     const status = project.status || "PLANNING";
     const statusInfo = statusConfig[status] || statusConfig.PLANNING;
-    const progress = project.progress ?? 0;
+    const progress = project.completionPercentage ?? project.progress ?? 0;
     const membersList = project.members || project.teamMembers || [];
     const clientName = project.client?.clientName;
-    const tasksCount = project._count?.tasks || project.tasksCount || tasks.length;
-    const filesCount = project._count?.files || project.filesCount || files.length;
+    const tasksCount = project._count?.projectTasks || project._count?.tasks || project.tasksCount || tasks.length;
+    const filesCount = project._count?.projectDocuments || project._count?.files || project.filesCount || files.length;
 
     const doneTasks = tasks.filter((t: any) => t.status === "DONE" || t.status === "COMPLETED").length;
     const openTasks = tasks.length - doneTasks;
@@ -351,11 +357,11 @@ const ProjectDetailPage = () => {
                                     )}
                                     <div className="flex justify-between items-center text-sm">
                                         <span className="text-[#94A3B8] flex items-center gap-1.5"><Calendar size={12} /> Start Date</span>
-                                        <span className="font-medium text-[#0F172A]">{formatDate(project.startDate)}</span>
+                                        <span className="font-medium text-[#0F172A]">{formatDate(project.startDate || project.estimatedStartDate || project.actualStartDate)}</span>
                                     </div>
                                     <div className="flex justify-between items-center text-sm">
                                         <span className="text-[#94A3B8] flex items-center gap-1.5"><Calendar size={12} /> Due Date</span>
-                                        <span className="font-medium text-[#0F172A]">{formatDate(project.endDate)}</span>
+                                        <span className="font-medium text-[#0F172A]">{formatDate(project.endDate || project.estimatedEndDate || project.actualEndDate)}</span>
                                     </div>
                                     {project.actualEndDate && (
                                         <div className="flex justify-between items-center text-sm">

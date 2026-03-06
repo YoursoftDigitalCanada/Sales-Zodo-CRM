@@ -115,6 +115,16 @@ export interface CrewOption {
   memberCount?: number;
 }
 
+const DEFAULT_STAGE_FALLBACKS: Array<{ id: string; name: string; color: string }> = [
+  { id: "PENDING", name: "Pending", color: "#F59E0B" },
+  { id: "APPROVED", name: "Approved", color: "#3B82F6" },
+  { id: "SCHEDULED", name: "Scheduled", color: "#6366F1" },
+  { id: "IN_PROGRESS", name: "In Progress", color: "#0891B2" },
+  { id: "ON_HOLD", name: "On Hold", color: "#FB923C" },
+  { id: "COMPLETED", name: "Completed", color: "#10B981" },
+  { id: "CANCELLED", name: "Cancelled", color: "#EF4444" },
+];
+
 export async function getProjects(params?: Record<string, unknown>): Promise<ProjectEntity[]> {
   const response = await api.get("/projects", { params: { limit: 100, ...params } });
   return extractApiArray<ProjectEntity>(response.data);
@@ -204,7 +214,7 @@ export async function getProjectStages(): Promise<ProjectStageOption[]> {
   }
 
   const columns = await getProjectKanban();
-  return columns
+  const mapped = columns
     .map((col) => ({
       id: col.id,
       name: col.name,
@@ -215,6 +225,20 @@ export async function getProjectStages(): Promise<ProjectStageOption[]> {
       statusFallback: safeString(col.slug || col.name).toUpperCase().replace(/\s+/g, "_"),
     }))
     .filter((row) => row.id.length > 0);
+
+  if (mapped.length > 0) {
+    return mapped;
+  }
+
+  return DEFAULT_STAGE_FALLBACKS.map((stage) => ({
+    id: stage.id,
+    name: stage.name,
+    slug: stage.id.toLowerCase(),
+    color: stage.color,
+    isDefault: stage.id === "PENDING",
+    isUuid: false,
+    statusFallback: stage.id,
+  }));
 }
 
 export async function searchProjectClients(search: string): Promise<ProjectClientOption[]> {

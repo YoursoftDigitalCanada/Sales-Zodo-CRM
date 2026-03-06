@@ -179,57 +179,53 @@ export async function getProjectMap(): Promise<ProjectEntity[]> {
   return extractApiArray<ProjectEntity>(response.data);
 }
 
-function isUuid(value: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-}
-
 function safeString(value: unknown): string {
   if (typeof value === "string") return value.trim();
   if (typeof value === "number") return String(value);
   return "";
 }
 
-export async function getProjectStages(): Promise<ProjectStageOption[]> {
-  try {
-    const response = await api.get("/project-stages");
-    const rows = extractApiArray<Record<string, unknown>>(response.data);
-    if (rows.length > 0) {
-      return rows
-        .map((row) => {
-          const id = safeString(row.id);
-          return {
-            id,
-            name: safeString(row.name) || "Stage",
-            slug: safeString(row.slug) || undefined,
-            color: safeString(row.color) || undefined,
-            isDefault: Boolean(row.isDefault),
-            isUuid: isUuid(id),
-            statusFallback: safeString(row.slug || row.name).toUpperCase().replace(/\s+/g, "_"),
-          } satisfies ProjectStageOption;
-        })
-        .filter((row) => row.id.length > 0);
-    }
-  } catch {
-    // fallback below
-  }
-
-  const columns = await getProjectKanban();
-  const mapped = columns
-    .map((col) => ({
-      id: col.id,
-      name: col.name,
-      slug: col.slug,
-      color: col.color,
-      isDefault: false,
-      isUuid: isUuid(col.id),
-      statusFallback: safeString(col.slug || col.name).toUpperCase().replace(/\s+/g, "_"),
+function mapClientRows(rows: Array<Record<string, unknown>>): ProjectClientOption[] {
+  return rows
+    .map((row) => ({
+      id: safeString(row.id ?? row.Id),
+      name:
+        safeString(row.clientName ?? row.name ?? row.companyName) ||
+        [safeString(row.firstName), safeString(row.lastName)].filter(Boolean).join(" ").trim() ||
+        "Client",
+      email: safeString(row.primaryEmail ?? row.email) || null,
+      phone: safeString(row.primaryPhone ?? row.phone ?? row.mobile) || null,
+      address: safeString(row.streetAddress ?? row.address) || null,
+      city: safeString(row.city) || null,
+      state: safeString(row.province ?? row.state) || null,
+      zip: safeString(row.postalCode ?? row.zip) || null,
     }))
     .filter((row) => row.id.length > 0);
+}
 
-  if (mapped.length > 0) {
-    return mapped;
-  }
+function mapEmployeesToCrewOptions(
+  employees: Array<Record<string, unknown>>,
+  params?: { startDate?: string; endDate?: string },
+): CrewOption[] {
+  return employees
+    .map((emp) => {
+      const dept = safeString(emp.department);
+      const user = (emp.user as Record<string, unknown> | undefined) || {};
+      return {
+        id: safeString(emp.id ?? emp.userId ?? user.id),
+        name: dept || [safeString(user.firstName), safeString(user.lastName)].filter(Boolean).join(" ").trim() || "Crew",
+        isAvailable: true,
+        availabilityNote: params?.startDate
+          ? `Available for ${params.startDate}${params.endDate ? ` - ${params.endDate}` : ""}`
+          : "Availability not provided",
+        memberCount: 1,
+      } satisfies CrewOption;
+    })
+    .filter((row) => row.id.length > 0);
+}
 
+export async function getProjectStages(): Promise<ProjectStageOption[]> {
+  // Use local defaults because some deployments do not expose /project-stages yet.
   return DEFAULT_STAGE_FALLBACKS.map((stage) => ({
     id: stage.id,
     name: stage.name,
@@ -242,41 +238,17 @@ export async function getProjectStages(): Promise<ProjectStageOption[]> {
 }
 
 export async function searchProjectClients(search: string): Promise<ProjectClientOption[]> {
-  try {
-    const response = await api.get("/clients/search", { params: { q: search, limit: 20 } });
-    return extractApiArray<Record<string, unknown>>(response.data)
-      .map((row) => ({
-        id: safeString(row.id ?? row.Id),
-        name:
-          safeString(row.clientName ?? row.name ?? row.companyName) ||
-          [safeString(row.firstName), safeString(row.lastName)].filter(Boolean).join(" ").trim() ||
-          "Client",
-        email: safeString(row.primaryEmail ?? row.email) || null,
-        phone: safeString(row.primaryPhone ?? row.phone ?? row.mobile) || null,
-        address: safeString(row.streetAddress ?? row.address) || null,
-        city: safeString(row.city) || null,
-        state: safeString(row.province ?? row.state) || null,
-        zip: safeString(row.postalCode ?? row.zip) || null,
-      }))
-      .filter((row) => row.id.length > 0);
-  } catch {
-    const response = await api.get("/clients", { params: { search, page: 1, limit: 50 } });
-    return extractApiArray<Record<string, unknown>>(response.data)
-      .map((row) => ({
-        id: safeString(row.id ?? row.Id),
-        name:
-          safeString(row.clientName ?? row.name ?? row.companyName) ||
-          [safeString(row.firstName), safeString(row.lastName)].filter(Boolean).join(" ").trim() ||
-          "Client",
-        email: safeString(row.primaryEmail ?? row.email) || null,
-        phone: safeString(row.primaryPhone ?? row.phone ?? row.mobile) || null,
-        address: safeString(row.streetAddress ?? row.address) || null,
-        city: safeString(row.city) || null,
-        state: safeString(row.province ?? row.state) || null,
-        zip: safeString(row.postalCode ?? row.zip) || null,
-      }))
-      .filter((row) => row.id.length > 0);
+  const normalizedSearch = search.trim();
+  const params: Record<string, string | number> = {
+    page: 1,
+    limit: 50,
+  };
+  if (normalizedSearch.length > 0) {
+    params.search = normalizedSearch;
   }
+
+  const response = await api.get("/clients", { params });
+  return mapClientRows(extractApiArray<Record<string, unknown>>(response.data));
 }
 
 export async function getProjectManagers(): Promise<ProjectUserOption[]> {
@@ -352,32 +324,11 @@ export async function getSalesReps(): Promise<ProjectUserOption[]> {
 
 export async function getCrews(params?: { startDate?: string; endDate?: string }): Promise<CrewOption[]> {
   try {
-    const response = await api.get("/crews", { params });
-    return extractApiArray<Record<string, unknown>>(response.data)
-      .map((row) => ({
-        id: safeString(row.id),
-        name: safeString(row.name) || "Crew",
-        isAvailable: typeof row.isAvailable === "boolean" ? row.isAvailable : true,
-        availabilityNote: safeString(row.availabilityNote) || undefined,
-        memberCount: Number(row.workerCount ?? row.memberCount ?? row.members ?? 0) || undefined,
-      }))
-      .filter((row) => row.id.length > 0);
+    // Most environments expose /employees but not /crews yet.
+    const response = await api.get("/employees", { params: { page: 1, limit: 200 } });
+    return mapEmployeesToCrewOptions(extractApiArray<Record<string, unknown>>(response.data), params);
   } catch {
-    const fallback = await api.get("/employees", { params: { page: 1, limit: 200 } });
-    const employees = extractApiArray<Record<string, unknown>>(fallback.data);
-    return employees
-      .map((emp) => {
-        const dept = safeString(emp.department);
-        const user = (emp.user as Record<string, unknown> | undefined) || {};
-        return {
-          id: safeString(emp.id),
-          name: dept || [safeString(user.firstName), safeString(user.lastName)].filter(Boolean).join(" ").trim() || "Crew",
-          isAvailable: true,
-          availabilityNote: params?.startDate ? `Available for ${params.startDate}${params.endDate ? ` - ${params.endDate}` : ""}` : "Availability not provided",
-          memberCount: 1,
-        } satisfies CrewOption;
-      })
-      .filter((row) => row.id.length > 0);
+    return [];
   }
 }
 

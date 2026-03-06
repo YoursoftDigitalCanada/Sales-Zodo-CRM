@@ -37,6 +37,7 @@ import ProjectDetailPage from "./pages/ProjectDetail";
 import ClientListPage from "./pages/ClientList";
 import ClientContactListPage from "./pages/ClientContactList";
 import AddProjectPage from "./pages/AddProject";
+import ProjectCreateWizardPage from "./pages/ProjectCreateWizard";
 import KanbanPage from "./pages/Kanban";
 import AddClientPage from "./pages/AddClient";
 import LetterBoxPage from "./pages/LetterBoxPage";
@@ -283,7 +284,7 @@ const AppRoutes = () => {
           path="/projects/add"
           element={
             <FeatureGuard featureId="tasks">
-              <AddProjectPage />
+              <ProjectCreateWizardPage />
             </FeatureGuard>
           }
         />

@@ -227,7 +227,7 @@ export const leadIdSchema = z.object({
 export const convertLeadSchema = z.object({
   body: z.object({
     createClient: z.boolean().default(true),
-    clientType: z.enum(['BUSINESS', 'INDIVIDUAL']).default('BUSINESS'),
+    clientType: z.enum(['BUSINESS', 'INDIVIDUAL', 'COMPANY']).default('BUSINESS'),
     createContact: z.boolean().default(false),
   }),
 });

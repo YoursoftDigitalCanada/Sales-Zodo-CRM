@@ -602,17 +602,21 @@ export class LeadsService {
     }
 
     // ── Atomic writes ─────────────────────────────────────────────────────
+    // Normalize clientType: frontend sends 'COMPANY' but Prisma enum is 'BUSINESS'
+    const normalizedClientType = (options.clientType === 'COMPANY' ? 'BUSINESS' : options.clientType) as ClientType;
+    const isBusinessClient = normalizedClientType === 'BUSINESS';
+
     const result = await prisma.$transaction(async (tx) => {
       // 1. Create client — maps lead fields to CreateClientDto shape
       const client = await tx.client.create({
         data: {
           tenantId,
-          clientType: options.clientType as ClientType,
+          clientType: normalizedClientType,
           clientName:
-            options.clientType === 'COMPANY'
+            isBusinessClient
               ? (lead.companyName || `${lead.firstName} ${lead.lastName}`)
               : `${lead.firstName} ${lead.lastName}`,
-          companyName: options.clientType === 'COMPANY' ? lead.companyName : null,
+          companyName: isBusinessClient ? lead.companyName : null,
           primaryEmail: lead.email || '',
           primaryPhone: lead.phone || '',
           status: 'ACTIVE',
@@ -645,7 +649,7 @@ export class LeadsService {
 
       // 2. Create primary contact (company leads only)
       let contact = null;
-      if (options.createContact && options.clientType === 'COMPANY') {
+      if (options.createContact && isBusinessClient) {
         contact = await tx.contact.create({
           data: {
             tenantId,

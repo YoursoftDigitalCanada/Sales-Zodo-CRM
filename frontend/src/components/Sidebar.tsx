@@ -903,7 +903,7 @@ export function Sidebar({
                                     )}
                                   </div>
                                 </Link>
-                              )
+                              )}
                             </motion.div>
                           ))}
                         </div>

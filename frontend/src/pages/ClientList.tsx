@@ -101,6 +101,7 @@ import { getClients, deleteClient } from "@/services/clientService";
 interface Client {
   id: string | number;
   clientName: string;
+  companyName?: string;
   clientType: string;
   primaryContactName: string;
   primaryEmail: string;
@@ -268,6 +269,7 @@ const formatAssignedOwner = (assignedOwner: unknown): string => {
 const mapClientFromApi = (client: any): Client => ({
   id: client.id,
   clientName: client.clientName || "Unnamed Client",
+  companyName: client.companyName || "",
   clientType: toClientTypeLabel(client.clientType),
   primaryContactName: client.contactName || client.primaryContactName || "-",
   primaryEmail: client.primaryEmail || "",
@@ -445,6 +447,13 @@ const ClientRow = ({
                 {client.clientName}
               </div>
               <div className="flex items-center gap-2 text-xs text-[#475569]">
+                {client.companyName && client.clientType === "Business" && (
+                  <>
+                    <Building2 size={12} className="text-[#0891B2]" />
+                    <span className="font-medium text-[#0F172A]">{client.companyName}</span>
+                    <span>•</span>
+                  </>
+                )}
                 <span>{client.clientType}</span>
                 {client.clientCategory && (
                   <>
@@ -752,6 +761,13 @@ const ClientCard = ({
           {client.clientName}
         </h3>
         <div className="flex items-center gap-2 text-xs text-[#475569]">
+          {client.companyName && client.clientType === "Business" && (
+            <>
+              <Building2 size={12} className="text-[#0891B2]" />
+              <span className="font-medium text-[#0F172A]">{client.companyName}</span>
+              <span>•</span>
+            </>
+          )}
           <span>{client.clientType}</span>
           {client.clientCategory && (
             <>
@@ -844,7 +860,7 @@ const ClientListPage = () => {
   const { toast } = useToast();
 
   // State
-    const [clients, setClients] = useState<Client[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");

@@ -253,6 +253,7 @@ export interface BulkUpdateStatusDto {
 
 export interface LeadResponseDto {
   id: string;
+  leadNumber?: string;
   firstName: string;
   lastName: string;
   fullName: string;
@@ -411,6 +412,7 @@ export interface LeadStatisticsDto {
 export function toLeadResponseDto(lead: any): LeadResponseDto {
   return {
     id: lead.id,
+    leadNumber: lead.leadNumber || undefined,
     firstName: lead.firstName,
     lastName: lead.lastName,
     fullName: `${lead.firstName} ${lead.lastName}`,

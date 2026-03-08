@@ -55,6 +55,9 @@ import { leadsService } from '../leads/leads.service';
 import { filesService } from '../files/files.service';
 import { analyticsService } from '../analytics/analytics.service';
 import { analyticsRepository } from '../analytics/analytics.repository';
+import { mailerService } from '../../common/services/mailer.service';
+import { smsService } from '../../common/services/sms.service';
+import { foldersService } from '../folders/folders.service';
 import { LeadStatus, TaskStatus } from '@prisma/client';
 import { estimationWorkflowService } from '../leads/estimation-workflow.service';
 import { proposalAutomationService } from '../quotes/proposal-automation.service';
@@ -159,12 +162,103 @@ export class AutomationService {
                 ? `${event.leadName} (${event.companyName})`
                 : event.leadName;
 
-            // 1️⃣  Notify the assigned owner
+            // Fetch tenant name for email/SMS templates
+            let tenantName = 'Our Team';
+            try {
+                const tenant = await prisma.tenant.findUnique({
+                    where: { id: event.tenantId },
+                    select: { name: true },
+                });
+                if (tenant?.name) tenantName = tenant.name;
+            } catch { /* fallback to default */ }
+
+            const isStormDamage = event.serviceType === 'Storm/Hail Damage'
+                || event.serviceType === 'STORM_DAMAGE'
+                || (event.serviceType || '').toLowerCase().includes('storm');
+
+            // ─────────────────────────────────────────────────────────────
+            // 1️⃣  AUTOMATION — Create follow-up task
+            // ─────────────────────────────────────────────────────────────
+            try {
+                const dueDate = new Date();
+                if (isStormDamage) {
+                    dueDate.setHours(dueDate.getHours() + 1);   // 1 hour for storm damage
+                } else {
+                    dueDate.setHours(dueDate.getHours() + 4);   // 4 hours for all others
+                }
+
+                await tasksService.create(event.tenantId, {
+                    title: `Call ${event.leadName} - New Lead`,
+                    description: [
+                        `New lead captured${event.source ? ` from ${event.source}` : ''}.`,
+                        event.email ? `Email: ${event.email}` : '',
+                        event.phone ? `Phone: ${event.phone}` : '',
+                        event.serviceType ? `Service: ${event.serviceType}` : '',
+                        event.propertyAddress ? `Property: ${event.propertyAddress}` : '',
+                        '',
+                        'Action items:',
+                        '• Call the lead immediately',
+                        '• Confirm property address and service needed',
+                        '• Schedule inspection if applicable',
+                    ].filter(Boolean).join('\n'),
+                    priority: isStormDamage ? 'HIGH' : 'MEDIUM',
+                    dueDate,
+                    assignedToId: event.ownerId || null,
+                });
+                logger.info('[Automation] lead.created → follow-up task created', {
+                    ...ctx, priority: isStormDamage ? 'HIGH' : 'MEDIUM',
+                    dueInHours: isStormDamage ? 1 : 4,
+                });
+            } catch (err) {
+                logger.error('[Automation] lead.created → task creation failed', { ...ctx, err });
+            }
+
+            // ─────────────────────────────────────────────────────────────
+            // 2️⃣  AUTOMATION — Create calendar follow-up event
+            // ─────────────────────────────────────────────────────────────
+            try {
+                const startTime = new Date();
+                // If after 4 PM, schedule for tomorrow 9 AM
+                if (startTime.getHours() >= 16) {
+                    startTime.setDate(startTime.getDate() + 1);
+                    startTime.setHours(9, 0, 0, 0);
+                } else {
+                    // Schedule 2 hours from now
+                    startTime.setHours(startTime.getHours() + 2);
+                    startTime.setMinutes(0, 0, 0);
+                }
+                const endTime = new Date(startTime);
+                endTime.setMinutes(endTime.getMinutes() + 30);
+
+                await calendarService.create(event.tenantId, {
+                    title: `Follow-up: ${event.leadName}`,
+                    description: [
+                        `Follow-up with new lead "${event.leadName}".`,
+                        event.serviceType ? `Service needed: ${event.serviceType}` : '',
+                        event.propertyAddress ? `Property: ${event.propertyAddress}` : '',
+                        event.phone ? `Phone: ${event.phone}` : '',
+                        event.email ? `Email: ${event.email}` : '',
+                    ].filter(Boolean).join('\n'),
+                    startTime,
+                    endTime,
+                    eventType: 'MEETING',
+                    priority: isStormDamage ? 'HIGH' : 'MEDIUM',
+                    category: 'lead-follow-up',
+                    color: '#22D3EE',
+                });
+                logger.info('[Automation] lead.created → calendar follow-up created', ctx);
+            } catch (err) {
+                logger.error('[Automation] lead.created → calendar event creation failed', { ...ctx, err });
+            }
+
+            // ─────────────────────────────────────────────────────────────
+            // 3️⃣  AUTOMATION — Notify the assigned sales rep
+            // ─────────────────────────────────────────────────────────────
             if (event.ownerUserId) {
                 try {
                     await notificationsService.create({
                         title: '🆕 New Lead Assigned',
-                        message: `A new lead "${label}" has been assigned to you${event.source ? ` from ${event.source}` : ''}.`,
+                        message: `New Lead Assigned: ${event.leadName}${event.source ? ` (via ${event.source})` : ''}. ${event.serviceType ? `Service: ${event.serviceType}` : ''}`,
                         type: 'INFO',
                         userId: event.ownerUserId,
                         tenantId: event.tenantId,
@@ -177,7 +271,7 @@ export class AutomationService {
                 }
             }
 
-            // 2️⃣  Notify all admins / owners
+            // Notify all admins / owners
             try {
                 const adminEmployees = await prisma.employee.findMany({
                     where: {
@@ -204,60 +298,93 @@ export class AutomationService {
                 logger.error('[Automation] lead.created → admin notifications failed', { ...ctx, err });
             }
 
-            // 3️⃣  Auto-create follow-up task (due in 2 days, HIGH priority)
-            try {
-                const dueDate = new Date();
-                dueDate.setDate(dueDate.getDate() + 2);
-
-                await tasksService.create(event.tenantId, {
-                    title: `Follow up with lead: ${label}`,
-                    description: [
-                        `New lead captured${event.source ? ` from ${event.source}` : ''}.`,
-                        event.email ? `Email: ${event.email}` : '',
-                        event.companyName ? `Company: ${event.companyName}` : '',
-                        '',
-                        'Action items:',
-                        '• Send introduction email',
-                        '• Schedule discovery call',
-                        '• Qualify budget & timeline',
-                    ].filter(Boolean).join('\n'),
-                    priority: 'HIGH',
-                    dueDate,
-                    assignedToId: event.ownerId || null,
-                });
-                logger.info('[Automation] lead.created → follow-up task created', ctx);
-            } catch (err) {
-                logger.error('[Automation] lead.created → task creation failed', { ...ctx, err });
+            // ─────────────────────────────────────────────────────────────
+            // 4️⃣  AUTOMATION — Send auto thank-you email to the lead
+            // ─────────────────────────────────────────────────────────────
+            if (event.email) {
+                try {
+                    const firstName = event.leadName.split(' ')[0] || 'there';
+                    await mailerService.sendMail({
+                        to: event.email,
+                        subject: 'Thank you for contacting us',
+                        html: `
+                            <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
+                                <div style="background: linear-gradient(135deg, #0891B2, #22D3EE); padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
+                                    <h1 style="color: white; margin: 0; font-size: 24px;">Thank You!</h1>
+                                </div>
+                                <div style="background: #ffffff; padding: 32px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 12px 12px;">
+                                    <p style="color: #334155; font-size: 16px; line-height: 1.6;">Hi ${firstName},</p>
+                                    <p style="color: #334155; font-size: 16px; line-height: 1.6;">
+                                        Thank you for contacting <strong>${tenantName}</strong>.
+                                        A member of our team will reach out shortly to discuss your project.
+                                    </p>
+                                    ${event.serviceType ? `<p style="color: #64748b; font-size: 14px;">Service requested: <strong>${event.serviceType}</strong></p>` : ''}
+                                    ${event.leadNumber ? `<p style="color: #64748b; font-size: 14px;">Your reference number: <strong>${event.leadNumber}</strong></p>` : ''}
+                                    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+                                    <p style="color: #334155; font-size: 16px; line-height: 1.6;">
+                                        Best regards,<br />
+                                        <strong>${tenantName}</strong>
+                                    </p>
+                                </div>
+                            </div>
+                        `,
+                        text: `Hi ${firstName},\n\nThank you for contacting ${tenantName}. A member of our team will reach out shortly to discuss your project.\n\nBest regards,\n${tenantName}`,
+                    });
+                    logger.info('[Automation] lead.created → thank-you email sent', { ...ctx, to: event.email });
+                } catch (err) {
+                    logger.error('[Automation] lead.created → email send failed', { ...ctx, err });
+                }
             }
 
-            // 4️⃣  Auto-create discovery call calendar event (next business day, 30 min)
-            try {
-                const nextBizDay = this.getNextBusinessDay();
-                nextBizDay.setHours(10, 0, 0, 0); // 10:00 AM
-                const endTime = new Date(nextBizDay);
-                endTime.setMinutes(endTime.getMinutes() + 30);
-
-                await calendarService.create(event.tenantId, {
-                    title: `Discovery Call — ${label}`,
-                    description: [
-                        `Introductory call with new lead "${event.leadName}".`,
-                        event.companyName ? `Company: ${event.companyName}` : '',
-                        event.email ? `Contact: ${event.email}` : '',
-                        event.source ? `Source: ${event.source}` : '',
-                    ].filter(Boolean).join('\n'),
-                    startTime: nextBizDay,
-                    endTime,
-                    eventType: 'MEETING',
-                    priority: 'HIGH',
-                    category: 'lead-follow-up',
-                    color: '#22D3EE',
-                });
-                logger.info('[Automation] lead.created → discovery call event created', ctx);
-            } catch (err) {
-                logger.error('[Automation] lead.created → calendar event creation failed', { ...ctx, err });
+            // ─────────────────────────────────────────────────────────────
+            // 5️⃣  AUTOMATION — Send auto SMS to the lead
+            // ─────────────────────────────────────────────────────────────
+            if (event.phone) {
+                try {
+                    const firstName = event.leadName.split(' ')[0] || 'there';
+                    await smsService.sendSms({
+                        to: event.phone,
+                        message: `Hi ${firstName}! Thanks for reaching out to ${tenantName}. A team member will call you soon.`,
+                        tenantId: event.tenantId,
+                    });
+                    logger.info('[Automation] lead.created → auto-SMS sent', { ...ctx, to: event.phone });
+                } catch (err) {
+                    logger.error('[Automation] lead.created → SMS send failed', { ...ctx, err });
+                }
             }
 
-            // 5️⃣  Analytics — enrich audit trail with lead source tracking
+            // ─────────────────────────────────────────────────────────────
+            // 6️⃣  AUTOMATION — Create document folder
+            // ─────────────────────────────────────────────────────────────
+            try {
+                const leadRef = event.leadNumber || event.leadId.substring(0, 8);
+                const folderName = `${leadRef}-${event.leadName.replace(/\s+/g, '-')}`;
+
+                // Find or create the /Leads parent folder
+                let leadsParentFolder = await prisma.folder.findFirst({
+                    where: { tenantId: event.tenantId, name: 'Leads', parentId: null },
+                });
+                if (!leadsParentFolder) {
+                    leadsParentFolder = await prisma.folder.create({
+                        data: { name: 'Leads', tenantId: event.tenantId },
+                    });
+                }
+
+                // Create the lead-specific subfolder
+                await foldersService.create(event.tenantId, {
+                    name: folderName,
+                    parentId: leadsParentFolder.id,
+                });
+                logger.info('[Automation] lead.created → document folder created', {
+                    ...ctx, folderPath: `/Leads/${folderName}/`,
+                });
+            } catch (err) {
+                logger.error('[Automation] lead.created → folder creation failed', { ...ctx, err });
+            }
+
+            // ─────────────────────────────────────────────────────────────
+            // 7️⃣  Analytics — enrich audit trail
+            // ─────────────────────────────────────────────────────────────
             try {
                 activityLogger.log({
                     tenantId: event.tenantId,
@@ -268,10 +395,13 @@ export class AutomationService {
                     description: `Lead automation triggered for "${label}"`,
                     metadata: {
                         leadName: event.leadName,
+                        leadNumber: event.leadNumber,
                         source: event.source || 'Direct',
                         email: event.email,
+                        phone: event.phone,
+                        serviceType: event.serviceType,
                         companyName: event.companyName,
-                        automationActions: ['notification', 'task', 'calendar', 'analytics'],
+                        automationActions: ['task', 'calendar', 'notification', 'email', 'sms', 'folder', 'analytics'],
                     },
                 });
                 logger.debug('[Automation] lead.created → analytics logged', ctx);

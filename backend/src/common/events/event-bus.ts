@@ -11,7 +11,11 @@ export interface LeadCreatedEvent {
     ownerUserId?: string;
     source?: string;
     email?: string;
+    phone?: string;
     companyName?: string;
+    serviceType?: string;
+    propertyAddress?: string;
+    leadNumber?: string;
 }
 
 export interface LeadStatusChangedEvent {

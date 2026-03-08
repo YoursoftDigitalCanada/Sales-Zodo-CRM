@@ -69,6 +69,49 @@ export class LeadsService {
         throw new BadRequestError('One or more tags not found', ErrorCodes.RESOURCE_NOT_FOUND);
       }
     }
+    // ── Auto-generate leadNumber (LD-YYYY-XXXX) ─────────────────────────
+    const year = new Date().getFullYear();
+    const leadCount = await prisma.lead.count({
+      where: { tenantId, leadNumber: { startsWith: `LD-${year}-` } },
+    });
+    const leadNumber = `LD-${year}-${String(leadCount + 1).padStart(4, '0')}`;
+    (data as any).leadNumber = leadNumber;
+
+    // ── Round-robin auto-assignment ──────────────────────────────────────
+    if (!data.assignedToId) {
+      try {
+        // Find active sales employees, pick the one with fewest active leads
+        const salesEmployees = await prisma.employee.findMany({
+          where: {
+            tenantId,
+            isActive: true,
+            role: { name: { in: ['Sales Rep', 'Sales Manager', 'Owner', 'Admin'] } },
+          },
+          select: {
+            id: true,
+            userId: true,
+            _count: {
+              select: {
+                assignedLeads: {
+                  where: { status: { notIn: ['WON', 'LOST'] } },
+                },
+              },
+            },
+          },
+          orderBy: { assignedLeads: { _count: 'asc' } },
+          take: 1,
+        });
+        if (salesEmployees.length > 0) {
+          data.assignedToId = salesEmployees[0].id;
+          logger.info('[LeadsService] Round-robin assigned', {
+            tenantId, leadNumber,
+            assignedToId: salesEmployees[0].id,
+          });
+        }
+      } catch (err) {
+        logger.warn('[LeadsService] Round-robin assignment failed, proceeding unassigned', { err });
+      }
+    }
 
     const lead = await leadsRepository.create(tenantId, data, createdById);
     const dto = toLeadResponseDto(lead);
@@ -89,7 +132,11 @@ export class LeadsService {
       ownerUserId: dto.assignedTo?.userId,
       source: dto.leadSource?.name,
       email: dto.email,
+      phone: dto.phone,
       companyName: dto.companyName,
+      serviceType: (lead as any).serviceType || undefined,
+      propertyAddress: dto.propertyAddress || undefined,
+      leadNumber: (lead as any).leadNumber || undefined,
     });
 
     // ▸ Audit: centralized audit trail

@@ -1076,6 +1076,7 @@ model LeadSourceLog {
 
 model Lead {
   id                String          @id @default(uuid())
+  leadNumber        String?         @unique   // Auto-generated: LD-YYYY-0001
   
   // Basic Info
   firstName         String

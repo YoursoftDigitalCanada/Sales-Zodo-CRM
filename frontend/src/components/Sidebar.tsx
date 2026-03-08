@@ -166,8 +166,8 @@ const navigationItems: NavigationItem[] = [
     featureId: "tasks",
     submenu: [
       { title: "Active Projects", path: "/projects", featureId: "tasks" },
-      { title: "Archived", path: "/projects/archived", featureId: "tasks" },
-      { title: "Templates", path: "/projects/templates", featureId: "tasks" },
+      { title: "Archived", path: "javascript:void(0)", featureId: "tasks" },
+      { title: "Templates", path: "javascript:void(0)", featureId: "tasks" },
     ]
   },
   {
@@ -199,7 +199,7 @@ const navigationItems: NavigationItem[] = [
     submenu: [
       { title: "All Invoices", path: "/invoice", featureId: "invoices" },
       { title: "Create Invoice", path: "/invoice/create", featureId: "invoices" },
-      { title: "Recurring", path: "/invoice/recurring", featureId: "invoices" },
+      { title: "Recurring", path: "javascript:void(0)", featureId: "invoices" },
     ]
   },
   {
@@ -221,9 +221,9 @@ const navigationItems: NavigationItem[] = [
     icon: CreditCard,
     featureId: "invoices",
     submenu: [
-      { title: "All Payments", path: "/payments", featureId: "invoices" },
-      { title: "Payment Methods", path: "/payments/methods", featureId: "invoices" },
-      { title: "Transactions", path: "/payments/transactions", featureId: "invoices" },
+      { title: "All Payments", path: "javascript:void(0)", featureId: "invoices" },
+      { title: "Payment Methods", path: "javascript:void(0)", featureId: "invoices" },
+      { title: "Transactions", path: "javascript:void(0)", featureId: "invoices" },
     ]
   },
 
@@ -261,9 +261,9 @@ const navigationItems: NavigationItem[] = [
     featureId: "documents",
     submenu: [
       { title: "All Documents", path: "/documents", featureId: "documents" },
-      { title: "Contracts", path: "/documents/contracts", featureId: "documents" },
-      { title: "Proposals", path: "/documents/proposals", featureId: "documents" },
-      { title: "Templates", path: "/documents/templates", featureId: "documents" },
+      { title: "Contracts", path: "javascript:void(0)", featureId: "documents" },
+      { title: "Proposals", path: "javascript:void(0)", featureId: "documents" },
+      { title: "Templates", path: "javascript:void(0)", featureId: "documents" },
     ]
   },
   {
@@ -284,7 +284,7 @@ const navigationItems: NavigationItem[] = [
   {
     title: "Insurance Claims",
     icon: Shield,
-    path: "/insurance-claims",
+    path: "javascript:void(0)",
     featureId: "leads",
     isNew: true,
   },
@@ -855,35 +855,55 @@ export function Sidebar({
                               animate={{ opacity: 1, x: 0 }}
                               transition={{ delay: subIndex * 0.05 }}
                             >
-                              <Link
-                                to={subItem.path}
-                                className={cn(
-                                  "flex items-center justify-between gap-2 px-3 py-2 rounded-md text-sm transition-all group/sub",
-                                  isActive(subItem.path)
-                                    ? "bg-[#0891B2]/10 text-[#0891B2] font-medium"
-                                    : "text-[#475569] hover:bg-[#F1F5F9] hover:text-[#0F172A]"
-                                )}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <Circle
-                                    className={cn(
-                                      "h-1.5 w-1.5 transition-all",
-                                      isActive(subItem.path)
-                                        ? "fill-[#22D3EE] scale-125"
-                                        : "fill-[#64748B] group-hover/sub:fill-[#22D3EE]"
-                                    )}
-                                  />
-                                  <span>{subItem.title}</span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                  {subItem.isNew && <Tag type="new" />}
-                                  {subItem.badge && (
-                                    <Badge color={subItem.badgeColor} size="xs">
-                                      {subItem.badge}
-                                    </Badge>
+                              {subItem.path.startsWith("javascript:") ? (
+                                <a
+                                  href="javascript:void(0)"
+                                  className={cn(
+                                    "flex items-center justify-between gap-2 px-3 py-2 rounded-md text-sm transition-all group/sub cursor-not-allowed opacity-60",
+                                    "text-[#475569] hover:bg-[#F1F5F9] hover:text-[#0F172A]"
                                   )}
-                                </div>
-                              </Link>
+                                  title="Coming Soon"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <Circle className="h-1.5 w-1.5 fill-[#64748B]" />
+                                    <span>{subItem.title}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="px-1.5 py-0.5 text-[8px] font-bold bg-[#F1F5F9] text-[#94A3B8] rounded uppercase tracking-wider">Soon</span>
+                                    {subItem.isNew && <Tag type="new" />}
+                                  </div>
+                                </a>
+                              ) : (
+                                <Link
+                                  to={subItem.path}
+                                  className={cn(
+                                    "flex items-center justify-between gap-2 px-3 py-2 rounded-md text-sm transition-all group/sub",
+                                    isActive(subItem.path)
+                                      ? "bg-[#0891B2]/10 text-[#0891B2] font-medium"
+                                      : "text-[#475569] hover:bg-[#F1F5F9] hover:text-[#0F172A]"
+                                  )}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <Circle
+                                      className={cn(
+                                        "h-1.5 w-1.5 transition-all",
+                                        isActive(subItem.path)
+                                          ? "fill-[#22D3EE] scale-125"
+                                          : "fill-[#64748B] group-hover/sub:fill-[#22D3EE]"
+                                      )}
+                                    />
+                                    <span>{subItem.title}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5">
+                                    {subItem.isNew && <Tag type="new" />}
+                                    {subItem.badge && (
+                                      <Badge color={subItem.badgeColor} size="xs">
+                                        {subItem.badge}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </Link>
+                              )
                             </motion.div>
                           ))}
                         </div>
@@ -897,63 +917,99 @@ export function Sidebar({
             // Regular Link
             return (
               <motion.div key={index} whileHover={{ x: collapsed ? 0 : 4 }}>
-                <Link
-                  to={item.path || "#"}
-                  className={cn(
-                    "flex items-center justify-between gap-3 px-3 py-2 rounded-md transition-all group relative",
-                    isActive(item.path!)
-                      ? "bg-[#F0FDFA] text-[#0891B2]"
-                      : "text-[#475569] hover:bg-[#F1F5F9] hover:text-[#0F172A]",
-                    collapsed && "justify-center px-3"
-                  )}
-                >
-                  {/* Active Indicator */}
-                  {isActive(item.path!) && (
-                    <motion.div
-                      layoutId="activeIndicator"
-                      className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 bg-[#0891B2] rounded-r-full"
-                    />
-                  )}
-
-                  <div className="flex items-center gap-3">
-                    <div className={cn(
-                      "transition-colors",
-                      isActive(item.path!) ? "text-[#0891B2]" : "text-[#94A3B8] group-hover:text-[#475569]"
-                    )}>
-                      {Icon && <Icon size={18} strokeWidth={1.75} />}
-                      {collapsed && item.badge && (
-                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+                {(item.path || "").startsWith("javascript:") ? (
+                  <a
+                    href="javascript:void(0)"
+                    className={cn(
+                      "flex items-center justify-between gap-3 px-3 py-2 rounded-md transition-all group relative cursor-not-allowed opacity-60",
+                      "text-[#475569] hover:bg-[#F1F5F9] hover:text-[#0F172A]",
+                      collapsed && "justify-center px-3"
+                    )}
+                    title="Coming Soon"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="text-[#94A3B8] group-hover:text-[#475569] transition-colors">
+                        {Icon && <Icon size={18} strokeWidth={1.75} />}
+                      </div>
+                      {!collapsed && (
+                        <span className="font-medium text-sm">{item.title}</span>
                       )}
                     </div>
                     {!collapsed && (
-                      <span className="font-medium text-sm">{item.title}</span>
-                    )}
-                  </div>
-
-                  {!collapsed && (
-                    <div className="flex items-center gap-1.5">
-                      {item.isNew && <Tag type="new" />}
-                      {item.isPro && <Tag type="pro" />}
-                      {item.badge && (
-                        <Badge color={item.badgeColor}>{item.badge}</Badge>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Tooltip for collapsed state */}
-                  {collapsed && (
-                    <div className="absolute left-full ml-2 px-3 py-2 bg-white border border-[rgba(15,23,42,0.06)] rounded-md text-[#0F172A] text-sm font-medium opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 card-shadow">
-                      <div className="flex items-center gap-2">
-                        {item.title}
-                        {item.badge && typeof item.badge === "number" && (
-                          <Badge color={item.badgeColor} size="xs">{item.badge}</Badge>
-                        )}
+                      <div className="flex items-center gap-1.5">
+                        <span className="px-1.5 py-0.5 text-[8px] font-bold bg-[#F1F5F9] text-[#94A3B8] rounded uppercase tracking-wider">Soon</span>
                         {item.isNew && <Tag type="new" />}
                       </div>
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-white border-l border-b border-[rgba(15,23,42,0.06)] rotate-45" />
+                    )}
+                    {collapsed && (
+                      <div className="absolute left-full ml-2 px-3 py-2 bg-white border border-[rgba(15,23,42,0.06)] rounded-md text-[#0F172A] text-sm font-medium opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 card-shadow">
+                        <div className="flex items-center gap-2">
+                          {item.title}
+                          <span className="px-1.5 py-0.5 text-[8px] font-bold bg-[#F1F5F9] text-[#94A3B8] rounded uppercase">Soon</span>
+                        </div>
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-white border-l border-b border-[rgba(15,23,42,0.06)] rotate-45" />
+                      </div>
+                    )}
+                  </a>
+                ) : (
+                  <Link
+                    to={item.path || "#"}
+                    className={cn(
+                      "flex items-center justify-between gap-3 px-3 py-2 rounded-md transition-all group relative",
+                      isActive(item.path!)
+                        ? "bg-[#F0FDFA] text-[#0891B2]"
+                        : "text-[#475569] hover:bg-[#F1F5F9] hover:text-[#0F172A]",
+                      collapsed && "justify-center px-3"
+                    )}
+                  >
+                    {/* Active Indicator */}
+                    {isActive(item.path!) && (
+                      <motion.div
+                        layoutId="activeIndicator"
+                        className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 bg-[#0891B2] rounded-r-full"
+                      />
+                    )}
+
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "transition-colors",
+                        isActive(item.path!) ? "text-[#0891B2]" : "text-[#94A3B8] group-hover:text-[#475569]"
+                      )}>
+                        {Icon && <Icon size={18} strokeWidth={1.75} />}
+                        {collapsed && item.badge && (
+                          <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+                        )}
+                      </div>
+                      {!collapsed && (
+                        <span className="font-medium text-sm">{item.title}</span>
+                      )}
                     </div>
-                  )}
-                </Link>
+
+                    {!collapsed && (
+                      <div className="flex items-center gap-1.5">
+                        {item.isNew && <Tag type="new" />}
+                        {item.isPro && <Tag type="pro" />}
+                        {item.badge && (
+                          <Badge color={item.badgeColor}>{item.badge}</Badge>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Tooltip for collapsed state */}
+                    {collapsed && (
+                      <div className="absolute left-full ml-2 px-3 py-2 bg-white border border-[rgba(15,23,42,0.06)] rounded-md text-[#0F172A] text-sm font-medium opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 card-shadow">
+                        <div className="flex items-center gap-2">
+                          {item.title}
+                          {item.badge && typeof item.badge === "number" && (
+                            <Badge color={item.badgeColor} size="xs">{item.badge}</Badge>
+                          )}
+                          {item.isNew && <Tag type="new" />}
+                        </div>
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-white border-l border-b border-[rgba(15,23,42,0.06)] rotate-45" />
+                      </div>
+                    )}
+                  </Link>
+                )}
               </motion.div>
             );
           })}

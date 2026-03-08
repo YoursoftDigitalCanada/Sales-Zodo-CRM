@@ -1,4 +1,4 @@
-import { LeadStatus, LeadTemperature } from '@prisma/client';
+import { LeadStatus, LeadTemperature, EstimationMethod } from '@prisma/client';
 
 // ============================================================================
 // REQUEST DTOs
@@ -102,6 +102,7 @@ export interface CreateLeadDto {
 
   // ── Stage 2: Sales Assessment ────────────────────────────────────────
   leadScore?: number;
+  estimationMethod?: EstimationMethod;
   disqualifiedReason?: string;
   nextStep?: string;
   followUpDateTime?: string;
@@ -207,6 +208,7 @@ export interface UpdateLeadDto {
 
   // ── Stage 2: Sales Assessment ────────────────────────────────────────
   leadScore?: number;
+  estimationMethod?: EstimationMethod;
   disqualifiedReason?: string;
   nextStep?: string;
   followUpDateTime?: string;
@@ -363,6 +365,7 @@ export interface LeadResponseDto {
 
   // ── Stage 2: Sales Assessment ────────────────────────────────────────
   leadScore?: number;
+  estimationMethod?: EstimationMethod;
   disqualifiedReason?: string;
   nextStep?: string;
   followUpDateTime?: Date;
@@ -526,6 +529,7 @@ export function toLeadResponseDto(lead: any): LeadResponseDto {
 
     // ── Stage 2: Sales Assessment ──────────────────────────────────────
     leadScore: lead.leadScore ?? undefined,
+    estimationMethod: lead.estimationMethod || undefined,
     disqualifiedReason: lead.disqualifiedReason || undefined,
     nextStep: lead.nextStep || undefined,
     followUpDateTime: lead.followUpDateTime || undefined,

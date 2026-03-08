@@ -19,6 +19,7 @@ import {
   bulkAssignSchema,
   bulkStatusSchema,
   pipelineQuerySchema,
+  setEstimationMethodSchema,
 } from './leads.validators';
 import { inspectionsController } from './inspections.controller';
 import {
@@ -299,6 +300,36 @@ router.patch(
   requirePermission(PERMISSIONS.LEADS_ASSIGN),
   validate(leadIdSchema),
   leadsController.assign.bind(leadsController)
+);
+
+/**
+ * @swagger
+ * /leads/{id}/estimation-method:
+ *   patch:
+ *     summary: Set estimation method for a qualified lead
+ *     tags: [Leads]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/IdParam'
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - estimationMethod
+ *             properties:
+ *               estimationMethod:
+ *                 type: string
+ *                 enum: [PHYSICAL_INSPECTION, AI_ESTIMATION, BOTH]
+ */
+router.patch(
+  '/:id/estimation-method',
+  requirePermission(PERMISSIONS.LEADS_UPDATE),
+  validate(setEstimationMethodSchema),
+  leadsController.setEstimationMethod.bind(leadsController)
 );
 
 /**

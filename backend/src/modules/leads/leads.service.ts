@@ -307,7 +307,69 @@ export class LeadsService {
     return dto;
   }
 
+  // ── SET ESTIMATION METHOD ───────────────────────────────────────────────
+
+  /**
+   * Set estimation method for a qualified lead and trigger estimation workflow.
+   * Lead must be at QUALIFIED stage or beyond to set estimation method.
+   */
+  async setEstimationMethod(
+    id: string,
+    tenantId: string,
+    estimationMethod: 'PHYSICAL_INSPECTION' | 'AI_ESTIMATION' | 'BOTH'
+  ): Promise<LeadResponseDto> {
+    const existing = await leadsRepository.findById(id, tenantId);
+    if (!existing) {
+      throw new NotFoundError('Lead not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    }
+
+    // Validate lead is at QUALIFIED stage or beyond
+    const validStatuses: LeadStatus[] = ['QUALIFIED', 'PROPOSAL', 'NEGOTIATION'];
+    if (!validStatuses.includes(existing.status)) {
+      throw new BadRequestError(
+        `Lead must be at QUALIFIED stage or beyond to set estimation method. Current status: ${existing.status}`
+      );
+    }
+
+    // Update estimation method
+    const rawLead = await prisma.lead.update({
+      where: { id, tenantId },
+      data: { estimationMethod },
+      include: {
+        assignedTo: { include: { user: true } },
+        leadSource: true,
+        tags: { include: { tag: true } },
+      },
+    });
+
+    const dto = toLeadResponseDto(rawLead);
+
+    // Log activity
+    await this.logActivity(tenantId, id, 'UPDATE',
+      `Estimation method set to: ${estimationMethod.replace(/_/g, ' ').toLowerCase()}`,
+      { estimationMethod }
+    );
+
+    // Emit lead.qualified event to trigger estimation workflow
+    eventBus.emit('lead.qualified', {
+      tenantId,
+      leadId: id,
+      leadName: `${existing.firstName} ${existing.lastName}`,
+      estimationMethod,
+      propertyAddress: (existing as any).propertyAddress || undefined,
+      ownerId: existing.assignedToId || undefined,
+      ownerUserId: dto.assignedTo?.userId,
+    });
+
+    logger.info('[LeadsService] Estimation method set', {
+      leadId: id, tenantId, estimationMethod,
+    });
+
+    return dto;
+  }
+
   // ── ASSIGNMENT ─────────────────────────────────────────────────────────
+
 
   /**
    * Assign lead to employee

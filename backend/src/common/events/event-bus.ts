@@ -323,6 +323,81 @@ export interface QuoteStatusChangedEvent {
     items: { description: string; quantity: number; unitPrice: number; total: number }[];
 }
 
+// ── Estimation & Proposal Workflow Events ───────────────────────────────
+
+export interface LeadQualifiedEvent {
+    tenantId: string;
+    leadId: string;
+    leadName: string;
+    estimationMethod: 'PHYSICAL_INSPECTION' | 'AI_ESTIMATION' | 'BOTH';
+    propertyAddress?: string;
+    ownerId?: string;
+    ownerUserId?: string;
+}
+
+export interface InspectionCompletedEvent {
+    tenantId: string;
+    leadId: string;
+    inspectionId: string;
+    inspectorName?: string;
+    totalEstimate?: number;
+}
+
+export interface AIEstimateCompletedEvent {
+    tenantId: string;
+    leadId: string;
+    estimateId: string;
+    roofAreaSqft?: number;
+    totalEstimate?: number;
+}
+
+export interface ReportsReadyEvent {
+    tenantId: string;
+    leadId: string;
+    leadName: string;
+    estimationMethod: 'PHYSICAL_INSPECTION' | 'AI_ESTIMATION' | 'BOTH';
+    inspectionId?: string;
+    estimateId?: string;
+    ownerId?: string;
+    ownerUserId?: string;
+}
+
+export interface ProposalSentEvent {
+    tenantId: string;
+    leadId: string;
+    quoteId: string;
+    quoteNumber: string;
+    recipientEmail?: string;
+    ownerUserId?: string;
+}
+
+export interface ProposalAcceptedEvent {
+    tenantId: string;
+    leadId: string;
+    quoteId: string;
+    quoteNumber: string;
+    total: number;
+    ownerUserId?: string;
+}
+
+export interface ProposalDeclinedEvent {
+    tenantId: string;
+    leadId: string;
+    quoteId: string;
+    quoteNumber: string;
+    ownerUserId?: string;
+}
+
+export interface DealWonEvent {
+    tenantId: string;
+    leadId: string;
+    leadName: string;
+    quoteId?: string;
+    total?: number;
+    ownerUserId?: string;
+    ownerId?: string;
+}
+
 // ── Event Map ───────────────────────────────────────────────────────────
 
 export interface CRMEventMap {
@@ -365,6 +440,15 @@ export interface CRMEventMap {
     'calendar.completed': CalendarEventCompletedEvent;
     'quote.created': QuoteCreatedEvent;
     'quote.statusChanged': QuoteStatusChangedEvent;
+    // Estimation & Proposal Workflow
+    'lead.qualified': LeadQualifiedEvent;
+    'inspection.completed': InspectionCompletedEvent;
+    'ai_estimate.completed': AIEstimateCompletedEvent;
+    'reports.ready': ReportsReadyEvent;
+    'proposal.sent': ProposalSentEvent;
+    'proposal.accepted': ProposalAcceptedEvent;
+    'proposal.declined': ProposalDeclinedEvent;
+    'deal.won': DealWonEvent;
 }
 
 export type CRMEventName = keyof CRMEventMap;

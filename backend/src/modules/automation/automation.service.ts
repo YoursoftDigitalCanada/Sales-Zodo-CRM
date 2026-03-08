@@ -56,6 +56,10 @@ import { filesService } from '../files/files.service';
 import { analyticsService } from '../analytics/analytics.service';
 import { analyticsRepository } from '../analytics/analytics.repository';
 import { LeadStatus, TaskStatus } from '@prisma/client';
+import { estimationWorkflowService } from '../leads/estimation-workflow.service';
+import { proposalAutomationService } from '../quotes/proposal-automation.service';
+import { dealConversionService } from '../leads/deal-conversion.service';
+import { leadAutomationService } from '../leads/lead-automation.service';
 
 // ── Extensible Hook Types ────────────────────────────────────────────────
 
@@ -111,9 +115,15 @@ export class AutomationService {
         // === Activate any externally registered hooks ===
         this.activateHooks();
 
+        // === Workflow automation services ===
+        estimationWorkflowService.initialize();
+        proposalAutomationService.initialize();
+        dealConversionService.initialize();
+
         logger.info('[Automation] Initialized', {
             builtInRules: this.getBuiltInRuleNames(),
             externalHooks: this.hooks.map(h => `${h.event} → ${h.name}`),
+            workflowServices: ['EstimationWorkflow', 'ProposalAutomation', 'DealConversion'],
         });
     }
 
@@ -298,6 +308,137 @@ export class AutomationService {
                 leadId: event.leadId,
                 clientId: event.clientId,
             });
+
+            // ── Auto-create project from lead data ──────────────────────────
+            // Always create a project when a lead converts, regardless of
+            // whether a quote exists. If `client.created` already bootstrapped
+            // a project from an accepted quote, this will skip (idempotent).
+            try {
+                // Check if a project already exists for this client+lead
+                const existingProject = await prisma.project.findFirst({
+                    where: {
+                        tenantId: event.tenantId,
+                        clientId: event.clientId,
+                        leadId: event.leadId,
+                    },
+                    select: { id: true },
+                });
+
+                if (existingProject) {
+                    logger.debug('[Automation] lead.converted → project already exists, skipping', {
+                        leadId: event.leadId,
+                        clientId: event.clientId,
+                        projectId: existingProject.id,
+                    });
+                } else {
+                    // Fetch lead data for project creation
+                    const lead = await prisma.lead.findUnique({
+                        where: { id: event.leadId },
+                        select: {
+                            firstName: true,
+                            lastName: true,
+                            serviceType: true,
+                            propertyAddress: true,
+                            city: true,
+                            state: true,
+                            zipCode: true,
+                            potentialValue: true,
+                            assignedToId: true,
+                            isInsuranceClaim: true,
+                            insuranceCompanyName: true,
+                            claimNumber: true,
+                            notes: true,
+                        },
+                    });
+
+                    if (lead) {
+                        const projectCount = await prisma.project.count({ where: { tenantId: event.tenantId } });
+                        const projectNumber = `PRJ-${new Date().getFullYear()}-${String(projectCount + 1).padStart(4, '0')}`;
+                        const clientName = event.leadName;
+
+                        const project = await prisma.project.create({
+                            data: {
+                                tenantId: event.tenantId,
+                                name: `${lead.serviceType || 'Roofing'} — ${clientName}`,
+                                description: [
+                                    `Project auto-created from lead conversion.`,
+                                    `Client: ${clientName}`,
+                                    lead.propertyAddress ? `Property: ${lead.propertyAddress}` : '',
+                                    lead.serviceType ? `Service: ${lead.serviceType}` : '',
+                                    lead.potentialValue ? `Estimated value: $${Number(lead.potentialValue).toLocaleString()}` : '',
+                                ].filter(Boolean).join('\n'),
+                                clientId: event.clientId,
+                                leadId: event.leadId,
+                                status: 'PLANNING',
+                                priority: 'NORMAL',
+                                projectNumber,
+                                contractValue: lead.potentialValue ? Number(lead.potentialValue) : undefined,
+                                salesRepId: lead.assignedToId,
+                                jobSiteAddress: lead.propertyAddress || undefined,
+                                jobSiteCity: lead.city || undefined,
+                                jobSiteState: lead.state || undefined,
+                                jobSiteZip: lead.zipCode || undefined,
+                                isInsuranceJob: lead.isInsuranceClaim === 'Yes',
+                                insuranceCompany: lead.insuranceCompanyName || undefined,
+                                claimNumber: lead.claimNumber || undefined,
+                            },
+                        });
+
+                        logger.info('[Automation] lead.converted → project auto-created', {
+                            leadId: event.leadId,
+                            clientId: event.clientId,
+                            projectId: project.id,
+                            projectNumber,
+                        });
+
+                        // Emit project.created to trigger downstream automation
+                        // (milestone tasks, project folder, notifications, etc.)
+                        eventBus.emit('project.created', {
+                            tenantId: event.tenantId,
+                            projectId: project.id,
+                            projectName: project.name,
+                            clientId: event.clientId,
+                            assignedToUserId: event.ownerUserId,
+                        });
+
+                        // Notify the assigned rep
+                        if (event.ownerUserId) {
+                            await notificationsService.create({
+                                title: '📁 Project Auto-Created',
+                                message: `A new project "${project.name}" has been created for client "${clientName}".`,
+                                type: 'INFO',
+                                userId: event.ownerUserId,
+                                tenantId: event.tenantId,
+                                actionUrl: `/projects/${project.id}`,
+                                actionLabel: 'View Project',
+                            });
+                        }
+
+                        // Audit trail
+                        activityLogger.log({
+                            tenantId: event.tenantId,
+                            entityType: 'Project',
+                            entityId: project.id,
+                            action: 'CREATE',
+                            module: 'automation',
+                            description: `Project "${project.name}" auto-created from lead conversion of "${clientName}"`,
+                            metadata: {
+                                leadId: event.leadId,
+                                clientId: event.clientId,
+                                projectNumber,
+                                trigger: 'lead.converted',
+                            },
+                        });
+                    }
+                }
+            } catch (err) {
+                logger.error('[Automation] lead.converted → project auto-creation failed', {
+                    leadId: event.leadId,
+                    clientId: event.clientId,
+                    tenantId: event.tenantId,
+                    err,
+                });
+            }
         });
 
         // ── Lead Status Changed (QUALIFIED / WON / LOST) ──

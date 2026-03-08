@@ -253,3 +253,10 @@ export const pipelineQuerySchema = z.object({
     leadSource: z.string().optional(),
   }),
 });
+
+export const setEstimationMethodSchema = z.object({
+  params: z.object({ id: z.string().uuid() }),
+  body: z.object({
+    estimationMethod: z.enum(['PHYSICAL_INSPECTION', 'AI_ESTIMATION', 'BOTH']),
+  }),
+});

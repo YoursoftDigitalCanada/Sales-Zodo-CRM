@@ -161,6 +161,24 @@ export class LeadsController {
   }
 
   /**
+   * PATCH /leads/:id/estimation-method
+   * Set estimation method for a qualified lead
+   */
+  async setEstimationMethod(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const tenantId = req.context.tenantId;
+      const { id } = req.params;
+      const { estimationMethod } = req.body;
+
+      const lead = await leadsService.setEstimationMethod(id, tenantId, estimationMethod);
+
+      sendSuccess(res, lead, 'Estimation method set successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * PATCH /leads/:id/assign
    * Assign lead to employee
    */

@@ -34,6 +34,10 @@ import {
     // Nearmap schemas
     nearmapExtractSchema,
     roofDataByClientSchema,
+    // Solar + Segmentation schemas
+    solarInsightsSchema,
+    detectSegmentedSchema,
+    validatePolygonSchema,
 } from './roof-estimator.validators';
 
 const router = Router();
@@ -82,6 +86,28 @@ router.get(
     '/nearmap-coverage',
     requirePermission(PERMISSIONS.ROOF_ESTIMATOR_VIEW),
     roofEstimatorController.checkNearmapCoverage.bind(roofEstimatorController)
+);
+
+// ── Solar API + Segmentation (upgraded pipeline) ──────────────────────────
+router.post(
+    '/solar-insights',
+    requirePermission(PERMISSIONS.ROOF_ESTIMATOR_CREATE),
+    validate(solarInsightsSchema),
+    roofEstimatorController.solarInsights.bind(roofEstimatorController)
+);
+
+router.post(
+    '/detect-segmented',
+    requirePermission(PERMISSIONS.ROOF_ESTIMATOR_CREATE),
+    validate(detectSegmentedSchema),
+    roofEstimatorController.detectSegmented.bind(roofEstimatorController)
+);
+
+router.post(
+    '/validate-polygon',
+    requirePermission(PERMISSIONS.ROOF_ESTIMATOR_CREATE),
+    validate(validatePolygonSchema),
+    roofEstimatorController.validatePolygon.bind(roofEstimatorController)
 );
 
 // ── F3: Manual entry ──────────────────────────────────────────────────────

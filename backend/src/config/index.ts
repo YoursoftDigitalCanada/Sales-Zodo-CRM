@@ -63,6 +63,7 @@ const envSchema = z.object({
   GOOGLE_STATIC_MAPS_API_KEY: z.string().optional(),
   GOOGLE_PLACES_API_KEY: z.string().optional(),
   GOOGLE_MAPS_JS_API_KEY: z.string().optional(),
+  GOOGLE_SOLAR_API_KEY: z.string().optional(),
   AI_SERVICE_URL: z.string().default('http://127.0.0.1:8001'),
   NEARMAP_API_KEY: z.string().optional(),
 
@@ -141,6 +142,10 @@ export const config = {
       staticMapsApiKey: parsed.data.GOOGLE_STATIC_MAPS_API_KEY || parsed.data.GOOGLE_MAPS_JS_API_KEY,
       placesApiKey:
         parsed.data.GOOGLE_PLACES_API_KEY
+        || parsed.data.GOOGLE_GEOCODING_API_KEY
+        || parsed.data.GOOGLE_MAPS_JS_API_KEY,
+      solarApiKey:
+        parsed.data.GOOGLE_SOLAR_API_KEY
         || parsed.data.GOOGLE_GEOCODING_API_KEY
         || parsed.data.GOOGLE_MAPS_JS_API_KEY,
     },

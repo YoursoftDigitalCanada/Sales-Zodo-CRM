@@ -287,3 +287,33 @@ export const roofDataByClientSchema = z.object({
         clientId: z.string().uuid(),
     }),
 });
+
+// ── Solar API + Segmentation (upgraded pipeline) ──────────────────────────
+
+export const solarInsightsSchema = z.object({
+    body: z.object({
+        latitude: z.number().min(-90).max(90),
+        longitude: z.number().min(-180).max(180),
+        address: z.string().optional(),
+        estimateId: z.string().uuid().optional(),
+    }),
+});
+
+export const detectSegmentedSchema = z.object({
+    body: z.object({
+        latitude: z.number().min(-90).max(90),
+        longitude: z.number().min(-180).max(180),
+        address: z.string().optional(),
+        estimateId: z.string().uuid().optional(),
+        zoom: z.number().int().min(15).max(22).optional(),
+        imageSize: z.number().int().min(256).max(2048).optional(),
+        roofType: roofTypeSchema,
+    }),
+});
+
+export const validatePolygonSchema = z.object({
+    body: z.object({
+        aiAreaSqft: z.number().positive('AI area must be positive'),
+        solarAreaSqft: z.number().positive('Solar area must be positive'),
+    }),
+});

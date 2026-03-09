@@ -777,6 +777,116 @@ export class RoofEstimatorService {
     }
 
     /**
+     * Full segmentation pipeline:
+     *   satellite image → AI segmentation → mask→polygon → Solar API validation
+     *   → roof plane detection → ridge/valley/hip/eave/rake → pitch correction
+     *   → confidence scoring → final measurements
+     *
+     * Integrates SolarRoofService + RoofGeometryService.
+     */
+    async detectRoofSegmented(params: {
+        lat: number;
+        lng: number;
+        address?: string;
+        tenantId: string;
+        estimateId?: string;
+        zoom?: number;
+        imageSize?: number;
+        roofType?: string;
+    }): Promise<{
+        measurements: import('./roof-geometry.service').RoofMeasurements;
+        solarInsights: import('./solar-roof.service').SolarRoofInsights | null;
+        validation: import('./solar-roof.service').RoofValidationResult | null;
+        aiModel: string;
+        processingTimeSec: number;
+    }> {
+        const { roofGeometryService } = await import('./roof-geometry.service');
+        const { solarRoofService } = await import('./solar-roof.service');
+
+        const startTime = Date.now();
+        const zoom = params.zoom || 20;
+        const imageSize = params.imageSize || 1024;
+        const sizeStr = `${imageSize}x${imageSize}`;
+
+        // ── Step 1: Fetch Solar API data (parallel with satellite image) ──
+        let solarInsights: import('./solar-roof.service').SolarRoofInsights | null = null;
+        const solarPromise = solarRoofService
+            .getRoofInsights(params.lat, params.lng, params.tenantId, params.estimateId, params.address)
+            .catch((err: Error) => {
+                logger.warn('[detectRoofSegmented] Solar API failed (non-blocking)', {
+                    error: err.message,
+                    lat: params.lat,
+                    lng: params.lng,
+                });
+                return null;
+            });
+
+        // ── Step 2: Fetch satellite image ──
+        const satelliteUrl = this.getSatelliteImageUrl(params.lat, params.lng, zoom, sizeStr);
+        const imageBuffer = await this.fetchSatelliteImageBuffer(satelliteUrl);
+
+        // ── Step 3: Send to AI service for segmentation ──
+        const segResult = await this.detectRoof({
+            imageBuffer,
+            latitude: params.lat,
+            zoom,
+        });
+
+        // Wait for Solar API
+        solarInsights = await solarPromise;
+
+        // ── Step 4: Compute geometry + measurements ──
+        const solarSegments = solarInsights?.segments?.map((s) => ({
+            pitchDegrees: s.pitchDegrees,
+            azimuthDegrees: s.azimuthDegrees,
+            areaSqft: s.areaSqft,
+            areaMeters2: s.areaMeters2,
+            centerLat: s.centerLat,
+            centerLng: s.centerLng,
+        }));
+
+        const measurements = roofGeometryService.computeAllMeasurements({
+            segmentation: segResult as any,
+            centerLat: params.lat,
+            centerLng: params.lng,
+            zoom,
+            imageWidth: imageSize,
+            imageHeight: imageSize,
+            solarSegments,
+            solarAreaSqft: solarInsights?.roofAreaSqft,
+            roofType: params.roofType,
+        });
+
+        // ── Step 5: Solar API validation ──
+        let validation: import('./solar-roof.service').RoofValidationResult | null = null;
+        if (solarInsights) {
+            validation = solarRoofService.validateRoofArea(
+                measurements.roofAreaSqft,
+                solarInsights.roofAreaSqft,
+            );
+        }
+
+        const processingTimeSec = (Date.now() - startTime) / 1000;
+
+        logger.info('[detectRoofSegmented] Pipeline complete', {
+            roofAreaSqft: measurements.roofAreaSqft,
+            trueSurfaceArea: measurements.trueSurfaceAreaSqft,
+            planes: measurements.planes.length,
+            confidence: measurements.confidenceScore,
+            solarValidated: !!validation?.valid,
+            processingTimeSec,
+        });
+
+        return {
+            measurements,
+            solarInsights,
+            validation,
+            aiModel: segResult.model || 'unknown',
+            processingTimeSec,
+        };
+    }
+
+    /**
      * Generate a detailed roofing cost estimate using OpenAI GPT-4o-mini
      */
     async generateEstimate(params: {

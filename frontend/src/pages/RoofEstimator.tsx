@@ -14,8 +14,12 @@ import {
     updateEstimateSettings,
     generateEstimate as generateEstimateApi,
     autocompleteAddress as autocompleteAddressApi,
+    detectSegmented as detectSegmentedApi,
 } from "@/features/roof-estimator/services/roof-estimator-service";
-import type { GeneratedEstimate } from "@/features/roof-estimator/services/roof-estimator-service";
+import type {
+    GeneratedEstimate,
+    SegmentedDetectionResult,
+} from "@/features/roof-estimator/services/roof-estimator-service";
 import { getClients } from "@/features/clients/services/clients-service";
 import {
     buildRoofProposalPdf,
@@ -103,6 +107,8 @@ import {
     Search,
     Sparkles,
     Hammer,
+    Shield,
+    AlertTriangle,
     type LucideIcon,
 } from "lucide-react";
 
@@ -257,6 +263,7 @@ const RoofEstimator: React.FC = () => {
 
     // AI Estimate
     const [aiEstimate, setAiEstimate] = useState<GeneratedEstimate | null>(null);
+    const [segmentedResult, setSegmentedResult] = useState<SegmentedDetectionResult | null>(null);
     const [roofType, setRoofType] = useState("Gable");
     const [material, setMaterial] = useState("Asphalt Shingles");
     const [stories, setStories] = useState(1);
@@ -414,16 +421,45 @@ const RoofEstimator: React.FC = () => {
         if (!satellite) return;
         setLoadingDetection(true);
         setDetection(null);
+        setSegmentedResult(null);
         try {
-            const data = await detectRoofApi({
-                satelliteImageUrl: satellite.satelliteImageUrl,
+            // Try upgraded segmentation pipeline first
+            const segResult = await detectSegmentedApi({
                 latitude: satellite.latitude,
                 longitude: satellite.longitude,
+                address: satellite.formattedAddress,
+                roofType: roofType?.toLowerCase(),
             });
-            setDetection(data);
-            toast({ title: "Roof detected!", description: `${data?.roofAreaSqft} sq ft at ${data?.confidence}% confidence` });
-        } catch (err: any) {
-            toast({ title: "Detection failed", description: err.response?.data?.message || err.message, variant: "destructive" });
+            setSegmentedResult(segResult);
+            // Map segmented result to legacy DetectionResult shape for backward compat
+            setDetection({
+                roofAreaSqft: segResult.measurements.trueSurfaceAreaSqft || segResult.measurements.roofAreaSqft,
+                confidence: Math.round(segResult.measurements.confidenceScore * 100),
+                processingTimeSec: segResult.processingTimeSec,
+                aiModel: segResult.aiModel,
+            });
+            const validationLabel = segResult.validation
+                ? segResult.validation.action === 'accept' ? 'Validated ✓'
+                    : segResult.validation.action === 'correct' ? 'Corrected'
+                        : 'Needs Review'
+                : '';
+            toast({
+                title: "Roof detected!",
+                description: `${segResult.measurements.roofAreaSqft} sq ft · ${segResult.measurements.planes.length} plane(s) · ${validationLabel}`,
+            });
+        } catch {
+            // Fallback to legacy detection
+            try {
+                const data = await detectRoofApi({
+                    satelliteImageUrl: satellite.satelliteImageUrl,
+                    latitude: satellite.latitude,
+                    longitude: satellite.longitude,
+                });
+                setDetection(data);
+                toast({ title: "Roof detected!", description: `${data?.roofAreaSqft} sq ft at ${data?.confidence}% confidence` });
+            } catch (err: any) {
+                toast({ title: "Detection failed", description: err.response?.data?.message || err.message, variant: "destructive" });
+            }
         } finally {
             setLoadingDetection(false);
         }
@@ -448,11 +484,20 @@ const RoofEstimator: React.FC = () => {
                 snowMode,
                 notes: notes || undefined,
                 clientId: selectedClientId || undefined,
+                // Segmentation fields (when available)
+                ...(segmentedResult ? {
+                    ridgeLengthFt: segmentedResult.measurements.ridgeLengthFt,
+                    valleyLengthFt: segmentedResult.measurements.valleyLengthFt,
+                    hipLengthFt: segmentedResult.measurements.hipLengthFt,
+                    eaveLengthFt: segmentedResult.measurements.eaveLengthFt,
+                    rakeLengthFt: segmentedResult.measurements.rakeLengthFt,
+                    measurementSource: 'ai_segmented',
+                } : {}),
             });
             toast({ title: "Estimate saved!", description: `$${totalEstimate.toLocaleString()} estimate saved.` });
             fetchEstimates();
             fetchStatistics();
-            setAddress(""); setSelectedPlaceId(""); setSatellite(null); setDetection(null);
+            setAddress(""); setSelectedPlaceId(""); setSatellite(null); setDetection(null); setSegmentedResult(null);
             setManualAdjustment(0); setNotes(""); setSelectedClientId("");
         } catch (err: any) {
             toast({ title: "Save failed", description: err.response?.data?.message || err.message, variant: "destructive" });
@@ -935,6 +980,73 @@ const RoofEstimator: React.FC = () => {
                                                         })()}
                                                     </div>
 
+                                                    {/* Geometry Measurements (from segmentation) */}
+                                                    {segmentedResult && (
+                                                        <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-5">
+                                                            <div className="flex items-center gap-2 mb-4">
+                                                                <Ruler className="w-4 h-4 text-[#D97706]" />
+                                                                <h3 className="text-sm font-semibold text-[#0F172A]">Roof Geometry</h3>
+                                                                {segmentedResult.validation && (
+                                                                    <span className={cn(
+                                                                        "ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium",
+                                                                        segmentedResult.validation.action === 'accept'
+                                                                            ? "bg-green-50 text-green-600"
+                                                                            : segmentedResult.validation.action === 'correct'
+                                                                                ? "bg-yellow-50 text-yellow-600"
+                                                                                : "bg-red-50 text-red-600"
+                                                                    )}>
+                                                                        {segmentedResult.validation.action === 'accept' ? (
+                                                                            <><Shield className="w-3 h-3" /> Area Validated</>
+                                                                        ) : segmentedResult.validation.action === 'correct' ? (
+                                                                            <><Shield className="w-3 h-3" /> Area Corrected ({Math.round(segmentedResult.validation.errorPercent * 100)}% diff)</>
+                                                                        ) : (
+                                                                            <><AlertTriangle className="w-3 h-3" /> Needs Review ({Math.round(segmentedResult.validation.errorPercent * 100)}% diff)</>
+                                                                        )}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            {/* Measurements grid */}
+                                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                                                {[
+                                                                    { label: "True Area", value: `${segmentedResult.measurements.trueSurfaceAreaSqft.toLocaleString()} sqft`, highlight: true },
+                                                                    { label: "Roof Squares", value: segmentedResult.measurements.roofSquares.toFixed(1) },
+                                                                    { label: "Planes", value: segmentedResult.measurements.planes.length },
+                                                                    { label: "Ridge", value: `${segmentedResult.measurements.ridgeLengthFt.toFixed(0)} ft` },
+                                                                    { label: "Valley", value: `${segmentedResult.measurements.valleyLengthFt.toFixed(0)} ft` },
+                                                                    { label: "Hip", value: `${segmentedResult.measurements.hipLengthFt.toFixed(0)} ft` },
+                                                                    { label: "Eave", value: `${segmentedResult.measurements.eaveLengthFt.toFixed(0)} ft` },
+                                                                    { label: "Rake", value: `${segmentedResult.measurements.rakeLengthFt.toFixed(0)} ft` },
+                                                                    { label: "Perimeter", value: `${segmentedResult.measurements.perimeterFt.toFixed(0)} ft` },
+                                                                ].map((item) => (
+                                                                    <div
+                                                                        key={item.label}
+                                                                        className={cn(
+                                                                            "rounded-md border px-3 py-2",
+                                                                            (item as any).highlight
+                                                                                ? "bg-[#0891B2]/5 border-[#0891B2]/20"
+                                                                                : "bg-[#F8FAFC] border-[rgba(15,23,42,0.06)]"
+                                                                        )}
+                                                                    >
+                                                                        <div className="text-[10px] text-[#94A3B8]">{item.label}</div>
+                                                                        <div className={cn(
+                                                                            "text-sm font-semibold",
+                                                                            (item as any).highlight ? "text-[#0891B2]" : "text-[#0F172A]"
+                                                                        )}>{item.value}</div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                            {/* Flagged for review warning */}
+                                                            {segmentedResult.measurements.flaggedForReview && (
+                                                                <div className="mt-3 flex items-center gap-2 px-3 py-2 rounded-md bg-amber-50 border border-amber-200">
+                                                                    <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                                                                    <p className="text-xs text-amber-700">
+                                                                        Low confidence ({Math.round(segmentedResult.measurements.confidenceScore * 100)}%) — measurements should be manually reviewed before generating a proposal.
+                                                                    </p>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+
                                                     {/* Adjustments */}
                                                     <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-5">
                                                         <div className="flex items-center justify-between mb-4">
@@ -1283,7 +1395,22 @@ const RoofEstimator: React.FC = () => {
                                                                 </span>
                                                             </TableCell>
                                                             <TableCell>
-                                                                <span className="text-sm font-medium text-[#0F172A]">{est.roofAreaSqft.toLocaleString()} sqft</span>
+                                                                <div>
+                                                                    <span className="text-sm font-medium text-[#0F172A]">{est.roofAreaSqft.toLocaleString()} sqft</span>
+                                                                    {est.measurementSource && (
+                                                                        <span className={cn(
+                                                                            "block text-[9px] mt-0.5 font-medium",
+                                                                            est.measurementSource === 'ai_segmented' ? "text-purple-500"
+                                                                                : est.measurementSource === 'manual' ? "text-[#94A3B8]"
+                                                                                    : "text-[#0891B2]"
+                                                                        )}>
+                                                                            {est.measurementSource === 'ai_segmented' ? '⚡ AI Segmented'
+                                                                                : est.measurementSource === 'manual' ? '✏️ Manual'
+                                                                                    : est.measurementSource === 'ai_satellite' ? '🛰️ AI Satellite'
+                                                                                        : est.measurementSource}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
                                                             </TableCell>
                                                             <TableCell>
                                                                 <span className={cn("inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium", confBadge.bg, confBadge.text)}>

@@ -439,6 +439,92 @@ export class RoofEstimatorController {
         }
     }
 
+    // ── AI Segmentation + Solar API (upgraded pipeline) ──────────────────
+
+    async solarInsights(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const tenantId = req.context.tenantId;
+            const { latitude, longitude, address, estimateId } = req.body;
+
+            const { solarRoofService } = await import('./solar-roof.service');
+            const insights = await solarRoofService.getRoofInsights(
+                latitude,
+                longitude,
+                tenantId,
+                estimateId,
+                address,
+            );
+
+            sendSuccess(res, insights, 'Solar roof insights retrieved');
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async detectSegmented(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const tenantId = req.context.tenantId;
+            const { latitude, longitude, address, estimateId, zoom, imageSize, roofType } = req.body;
+
+            const result = await roofEstimatorService.detectRoofSegmented({
+                lat: latitude,
+                lng: longitude,
+                address,
+                tenantId,
+                estimateId,
+                zoom,
+                imageSize,
+                roofType,
+            });
+
+            // Optionally persist segmentation results on the estimate
+            if (estimateId) {
+                await prisma.roofEstimate.update({
+                    where: { id: estimateId, tenantId },
+                    data: {
+                        roofAreaSqft: result.measurements.roofAreaSqft,
+                        trueSurfaceAreaSqft: result.measurements.trueSurfaceAreaSqft,
+                        ridgeLengthFt: result.measurements.ridgeLengthFt,
+                        valleyLengthFt: result.measurements.valleyLengthFt,
+                        hipLengthFt: result.measurements.hipLengthFt,
+                        eaveLengthFt: result.measurements.eaveLengthFt,
+                        rakeLengthFt: result.measurements.rakeLengthFt,
+                        roofPolygon: result.measurements.polygon as any,
+                        roofPlanes: result.measurements.planes as any,
+                        confidence: result.measurements.confidenceScore,
+                        confidenceScore: result.measurements.confidenceScore,
+                        flaggedForReview: result.measurements.flaggedForReview,
+                        solarValidated: !!result.validation?.valid,
+                        correctionFactor: result.validation?.correctionFactor,
+                        aiModel: result.aiModel,
+                        processingTimeSec: result.processingTimeSec,
+                        measurementSource: 'ai_segmented',
+                    },
+                }).catch((err: Error) => {
+                    // Non-blocking: estimate may not exist yet
+                    // (detectSegmented can be called before saving estimate)
+                });
+            }
+
+            sendSuccess(res, result, 'Segmented roof detection completed');
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async validatePolygon(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const { aiAreaSqft, solarAreaSqft } = req.body;
+
+            const { solarRoofService } = await import('./solar-roof.service');
+            const result = solarRoofService.validateRoofArea(aiAreaSqft, solarAreaSqft);
+
+            sendSuccess(res, result, 'Polygon validation completed');
+        } catch (error) {
+            next(error);
+        }
+    }
+
     // ── Existing CRUD ─────────────────────────────────────────────────────
 
     async create(req: Request, res: Response, next: NextFunction): Promise<void> {

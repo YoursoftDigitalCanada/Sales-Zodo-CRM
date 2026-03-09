@@ -20,7 +20,7 @@ export interface RoofEstimate {
     clientId: string | null;
     createdAt: string;
     client?: { id: string; clientName: string; companyName: string | null } | null;
-    // New fields
+    // Geometry fields
     pitch: string | null;
     pitchDegrees: number | null;
     stories: number | null;
@@ -38,6 +38,13 @@ export interface RoofEstimate {
     photoUrls: string[] | null;
     publicToken: string | null;
     takeoffs?: RoofTakeoff[];
+    // Segmentation fields
+    roofPolygon?: any;
+    roofPlanes?: any;
+    solarValidated?: boolean;
+    correctionFactor?: number | null;
+    confidenceScore?: number | null;
+    flaggedForReview?: boolean;
 }
 
 export interface EstimateSettings {
@@ -515,6 +522,77 @@ export async function checkNearmapCoverage(latitude: number, longitude: number):
     const res = await api.get("/roof-estimator/nearmap-coverage", {
         params: { latitude, longitude },
     });
+    return res.data?.data;
+}
+
+// ── AI Segmentation + Geometry Detection (Upgraded Pipeline) ─────────────
+
+export interface RoofPlane {
+    id: string;
+    areaSqft: number;
+    pitchDegrees: number;
+    azimuthDegrees: number;
+    centroid: [number, number];
+}
+
+export interface RoofEdge {
+    type: 'ridge' | 'valley' | 'hip' | 'eave' | 'rake';
+    start: [number, number];
+    end: [number, number];
+    lengthFt: number;
+    planeIds: string[];
+}
+
+export interface RoofMeasurements {
+    roofAreaSqft: number;
+    trueSurfaceAreaSqft: number;
+    roofSquares: number;
+    ridgeLengthFt: number;
+    valleyLengthFt: number;
+    hipLengthFt: number;
+    eaveLengthFt: number;
+    rakeLengthFt: number;
+    perimeterFt: number;
+    polygon: { type: string; coordinates: number[][][] };
+    planes: RoofPlane[];
+    edges: RoofEdge[];
+    confidenceScore: number;
+    flaggedForReview: boolean;
+}
+
+export interface RoofValidationResult {
+    valid: boolean;
+    errorPercent: number;
+    correctionFactor: number;
+    action: 'accept' | 'correct' | 'flag_review';
+    blendedAreaSqft?: number;
+    solarAreaSqft: number;
+    aiAreaSqft: number;
+}
+
+export interface SegmentedDetectionResult {
+    measurements: RoofMeasurements;
+    solarInsights: any | null;  // internal-only (used for area validation)
+    validation: RoofValidationResult | null;
+    aiModel: string;
+    processingTimeSec: number;
+}
+
+export async function detectSegmented(payload: {
+    latitude: number;
+    longitude: number;
+    address?: string;
+    estimateId?: string;
+    zoom?: number;
+    imageSize?: number;
+    roofType?: string;
+}): Promise<SegmentedDetectionResult> {
+    const res = await api.post("/roof-estimator/detect-segmented", payload);
+    return res.data?.data;
+}
+
+export async function validatePolygon(aiAreaSqft: number, solarAreaSqft: number): Promise<RoofValidationResult> {
+    const res = await api.post("/roof-estimator/validate-polygon", { aiAreaSqft, solarAreaSqft });
     return res.data?.data;
 }
 

@@ -701,6 +701,7 @@ model Tenant {
   roofEstimates         RoofEstimate[]
   roofEstimateSettings  RoofEstimateSettings?
   roofData              RoofData[]
+  solarRoofData         SolarRoofData[]
   roofMaterials         RoofMaterial[]
   roofTakeoffs          RoofTakeoff[]
   roofLaborRates        RoofLaborRate[]
@@ -4071,6 +4072,15 @@ model RoofEstimate {
   // Public access (for e-sign / client view)
   publicToken         String?   @unique
 
+  // AI Segmentation Results
+  roofPolygon         Json?               // GeoJSON polygon from segmentation mask
+  roofPlanes          Json?               // detected roof planes [{area, pitch, azimuth, vertices}]
+  detectedLines       Json?               // Hough/edge-detected structural lines
+  solarValidated      Boolean   @default(false)
+  correctionFactor    Float?              // Solar API correction factor applied
+  confidenceScore     Float?              // composite 0-1 confidence
+  flaggedForReview    Boolean   @default(false) // confidence < 0.75
+
   // Relations
   tenantId            String
   tenant              Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -4090,6 +4100,7 @@ model RoofEstimate {
   // Back-relations
   quotes              Quote[]
   takeoffs            RoofTakeoff[]
+  solarData           SolarRoofData[]
 
   @@index([tenantId])
   @@index([clientId])
@@ -4437,6 +4448,43 @@ model RoofData {
 
   @@index([clientId])
   @@index([tenantId])
+}
+
+model SolarRoofData {
+  id                String          @id @default(uuid())
+
+  // Location
+  latitude          Float
+  longitude         Float
+  address           String?
+
+  // Solar API Extracted Data
+  roofAreaSqft      Float?          // converted from roofAreaMeters2
+  roofAreaMeters2   Float?          // raw from API
+  roofSegments      Json?           // roofSegmentStats array from API
+  pitchDegrees      Float?          // primary pitch
+  azimuthDegrees    Float?          // primary azimuth
+  maxSunshineHours  Float?
+  carbonOffset      Float?          // annual kg CO2 offset
+  panelCapacity     Int?            // max solar panel count
+
+  // Raw API Response (audit/debugging)
+  rawResponse       Json?
+
+  // Relations
+  estimateId        String?
+  estimate          RoofEstimate?   @relation(fields: [estimateId], references: [id], onDelete: SetNull)
+
+  tenantId          String
+  tenant            Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Timestamps
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([estimateId])
+  @@index([tenantId])
+  @@index([latitude, longitude])
 }
 
 // ============================================================================

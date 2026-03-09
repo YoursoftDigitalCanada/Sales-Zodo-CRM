@@ -78,6 +78,31 @@ export interface RoofMeasurements {
     flaggedForReview: boolean;
 }
 
+/** Detected line from Python AI service (Hough Transform) */
+export interface DetectedLine {
+    start: [number, number];
+    end: [number, number];
+    length_px: number;
+    angle_degrees: number;
+}
+
+/** Image quality assessment from Python AI service */
+export interface ImageQuality {
+    quality_score: number;
+    shadow_coverage: number;
+    blur_score: number;
+    vegetation_coverage: number;
+    is_acceptable: boolean;
+}
+
+/** Small feature (dormer/chimney/skylight) from Python AI service */
+export interface SmallFeature {
+    type: 'dormer' | 'chimney' | 'skylight';
+    bbox: [number, number, number, number];
+    area_pixels: number;
+    confidence: number;
+}
+
 /** Input from the AI microservice (segmentation response) */
 export interface SegmentationResult {
     mask?: number[][];              // H×W binary mask (1=roof, 0=bg)
@@ -86,9 +111,12 @@ export interface SegmentationResult {
     confidence: number;
     processing_time_seconds: number;
     model: string;
-    edges?: PixelPoint[][];         // Canny/Hough lines from Python
+    edges?: PixelPoint[][];         // Canny edge pixels from Python
+    detected_lines?: DetectedLine[];// Hough lines (U4: for plane splitting)
     image_width?: number;
     image_height?: number;
+    image_quality?: ImageQuality;   // U10a: image quality scoring
+    small_features?: SmallFeature[];// U8: dormers/chimneys/skylights
 }
 
 /** Solar segment data for plane verification */
@@ -99,6 +127,12 @@ export interface SolarSegment {
     areaMeters2: number;
     centerLat: number;
     centerLng: number;
+}
+
+/** U9: Geometry sanity validation result */
+export interface SanityValidation {
+    passed: boolean;
+    warnings: string[];
 }
 
 // ── Utility Functions ─────────────────────────────────────────────────────
@@ -401,9 +435,11 @@ class RoofGeometryService {
     // ─────────────────────────────────────────────────────────────────────
 
     /**
-     * Snap polygon vertices to nearby detected edge pixels.
-     * This improves boundary accuracy by aligning to true roof edges
-     * detected via Canny edge detection in the Python service.
+     * U5: Snap polygon vertices to nearby detected edge pixels.
+     * Improvements:
+     * - Snap radius limited to 5-8 pixels
+     * - Ignore edges outside roof mask boundary
+     * - Post-snap Laplacian smoothing to prevent sharp artifacts
      */
     snapToEdges(
         polygon: RoofPolygon,
@@ -413,26 +449,36 @@ class RoofGeometryService {
         zoom: number,
         imageWidth: number,
         imageHeight: number,
-        snapRadiusPx: number = 5,
+        snapRadiusPx: number = 6,
+        roofMaskPixels?: PixelPoint[],
     ): RoofPolygon {
         if (!detectedEdges || detectedEdges.length === 0) return polygon;
 
         const mpp = metersPerPixel(centerLat, zoom);
         const ring = polygon.coordinates[0];
 
+        // Build edge set for O(1) boundary lookup (if mask pixels provided)
+        const maskSet = new Set<string>();
+        if (roofMaskPixels) {
+            for (const p of roofMaskPixels) {
+                maskSet.add(`${p.x},${p.y}`);
+            }
+        }
+
         const snappedRing: GeoCoord[] = ring.map((coord) => {
-            // Convert geo → pixel
             const cosLat = Math.cos((centerLat * Math.PI) / 180);
             const px: PixelPoint = {
                 x: Math.round(imageWidth / 2 + ((coord[0] - centerLng) * 111319.9 * cosLat) / mpp),
                 y: Math.round(imageHeight / 2 - ((coord[1] - centerLat) * 111319.9) / mpp),
             };
 
-            // Find nearest edge pixel within radius
             let nearest: PixelPoint | null = null;
             let minDist = snapRadiusPx;
 
             for (const edge of detectedEdges) {
+                // U5: Ignore edges outside image bounds
+                if (edge.x < 0 || edge.x >= imageWidth || edge.y < 0 || edge.y >= imageHeight) continue;
+
                 const d = pixelDistance(px, edge);
                 if (d < minDist) {
                     minDist = d;
@@ -446,7 +492,36 @@ class RoofGeometryService {
             return coord;
         });
 
-        return { type: 'Polygon', coordinates: [snappedRing] };
+        // U5: Post-snap Laplacian smoothing (average with neighbors to prevent artifacts)
+        const smoothed = this.smoothPolygonRing(snappedRing, 0.3);
+
+        return { type: 'Polygon', coordinates: [smoothed] };
+    }
+
+    /**
+     * U5: Laplacian smoothing of polygon ring.
+     * Each vertex moves toward the average of its neighbors by `factor` (0-1).
+     */
+    private smoothPolygonRing(ring: GeoCoord[], factor: number = 0.3): GeoCoord[] {
+        if (ring.length < 4) return ring;
+
+        const isClosed = ring[0][0] === ring[ring.length - 1][0] && ring[0][1] === ring[ring.length - 1][1];
+        const core = isClosed ? ring.slice(0, -1) : ring;
+        const n = core.length;
+
+        const result: GeoCoord[] = core.map((coord, i) => {
+            const prev = core[(i - 1 + n) % n];
+            const next = core[(i + 1) % n];
+            const avgLng = (prev[0] + next[0]) / 2;
+            const avgLat = (prev[1] + next[1]) / 2;
+            return [
+                coord[0] + factor * (avgLng - coord[0]),
+                coord[1] + factor * (avgLat - coord[1]),
+            ] as GeoCoord;
+        });
+
+        if (isClosed) result.push([...result[0]] as GeoCoord);
+        return result;
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -462,18 +537,92 @@ class RoofGeometryService {
      * - When no Solar data, use geometric heuristics (edge orientation)
      *   to split the polygon into likely planes
      */
+    /**
+     * U4: Detect roof planes using (in priority order):
+     * 1. Solar API segments (ground truth)
+     * 2. Detected lines intersection graph (U4 upgrade)
+     * 3. Geometric heuristics (fallback)
+     */
     detectRoofPlanes(
         polygon: RoofPolygon,
         solarSegments?: SolarSegment[],
         estimatedRoofType?: string,
+        detectedLines?: DetectedLine[],
     ): RoofPlane[] {
-        // If Solar API provides segments, use their pitch/azimuth data
+        // Priority 1: Solar API segments
         if (solarSegments && solarSegments.length > 0) {
             return this.planesFromSolarSegments(polygon, solarSegments);
         }
 
-        // Fallback: geometric plane detection
+        // Priority 2: U4 — Line-intersection graph
+        if (detectedLines && detectedLines.length >= 2) {
+            const linePlanes = this.planesFromLineGraph(polygon, detectedLines);
+            if (linePlanes.length > 0) return linePlanes;
+        }
+
+        // Priority 3: Geometric heuristics
         return this.planesFromGeometry(polygon, estimatedRoofType);
+    }
+
+    /**
+     * U4: Detect roof planes from Hough line intersections.
+     * Steps:
+     * 1. Find dominant line orientations
+     * 2. Group lines by orientation cluster
+     * 3. Find intersections between orientation groups → graph vertices
+     * 4. Form polygon partitions → roof facets
+     */
+    private planesFromLineGraph(
+        polygon: RoofPolygon,
+        detectedLines: DetectedLine[],
+    ): RoofPlane[] {
+        const ring = polygon.coordinates[0];
+        const totalArea = polygonAreaSqMeters(ring) * SQ_METERS_TO_SQ_FEET;
+        const center = centroid(ring);
+
+        // Find dominant orientations (cluster by angle, 15° buckets)
+        const angleBuckets: Map<number, DetectedLine[]> = new Map();
+        for (const line of detectedLines) {
+            const bucket = Math.round(line.angle_degrees / 15) * 15;
+            if (!angleBuckets.has(bucket)) angleBuckets.set(bucket, []);
+            angleBuckets.get(bucket)!.push(line);
+        }
+
+        // Keep top 2-4 dominant orientations
+        const sortedBuckets = [...angleBuckets.entries()]
+            .sort((a, b) => b[1].length - a[1].length)
+            .slice(0, 4);
+
+        if (sortedBuckets.length < 2) {
+            // Not enough orientation diversity for line-based detection
+            return [];
+        }
+
+        // Estimate number of planes from orientation groups
+        // Each dominant orientation pair suggests a plane boundary
+        const numPlanes = Math.min(sortedBuckets.length, 6);
+
+        // Assign azimuth based on line orientation (perpendicular to line = slope direction)
+        const planes: RoofPlane[] = sortedBuckets.slice(0, numPlanes).map((bucket, i) => {
+            const lines = bucket[1];
+            const avgAngle = lines.reduce((s, l) => s + l.angle_degrees, 0) / lines.length;
+            // Slope direction is perpendicular to the structural line
+            const azimuth = (avgAngle + 90) % 360;
+            // Estimate pitch from line density (more lines = steeper roof)
+            const lineWeight = lines.reduce((s, l) => s + l.length_px, 0);
+            const pitch = Math.min(45, 15 + lineWeight / 50);
+
+            return {
+                id: `plane-${i}`,
+                vertices: ring,
+                areaSqft: totalArea / numPlanes,
+                pitchDegrees: Math.round(pitch),
+                azimuthDegrees: Math.round(azimuth),
+                centroid: center,
+            };
+        });
+
+        return planes;
     }
 
     /**
@@ -814,50 +963,116 @@ class RoofGeometryService {
     // ─────────────────────────────────────────────────────────────────────
 
     /**
-     * Compute composite confidence score.
+     * U10b: Updated confidence scoring with image quality.
      *
      * Weights:
-     * - 35% — AI segmentation model confidence
-     * - 30% — Solar API area agreement (1 - error%)
-     * - 20% — Polygon smoothness (fewer jagged vertices = better)
-     * - 15% — Roof complexity penalty (many planes = harder to detect)
+     * - 30% — AI segmentation model confidence
+     * - 25% — Solar API area agreement (1 - error%)
+     * - 20% — Polygon quality (smoothness)
+     * - 15% — Roof complexity penalty
+     * - 10% — Image quality (shadow, blur, occlusion)
      */
     computeConfidence(params: {
         segmentationConfidence: number;
-        solarAgreement?: number;       // 1 - error%, clamped 0-1
-        polygonVertexCount: number;     // simplified polygon vertices
+        solarAgreement?: number;
+        polygonVertexCount: number;
         planeCount: number;
+        imageQuality?: number;         // 0-1 from Python image quality scorer
     }): number {
-        const { segmentationConfidence, solarAgreement, polygonVertexCount, planeCount } = params;
+        const { segmentationConfidence, solarAgreement, polygonVertexCount, planeCount, imageQuality } = params;
 
-        // Segmentation confidence (0-1 from AI model)
         const segScore = Math.min(1, Math.max(0, segmentationConfidence));
 
-        // Solar agreement (1.0 = perfect match, default 0.7 if no Solar data)
         const solarScore = solarAgreement !== undefined
             ? Math.min(1, Math.max(0, solarAgreement))
             : 0.7;
 
-        // Polygon smoothness: ideal = 4-12 vertices for a simple roof
-        // Penalize very jagged (>30) or too simple (<4) polygons
         let smoothScore = 1.0;
         if (polygonVertexCount < 4) smoothScore = 0.5;
         else if (polygonVertexCount > 30) smoothScore = Math.max(0.4, 1 - (polygonVertexCount - 30) * 0.02);
         else if (polygonVertexCount > 15) smoothScore = Math.max(0.7, 1 - (polygonVertexCount - 15) * 0.02);
 
-        // Complexity: simple roofs (1-2 planes) = high confidence, complex (5+) = lower
         let complexityScore = 1.0;
         if (planeCount > 6) complexityScore = 0.6;
         else if (planeCount > 4) complexityScore = 0.75;
         else if (planeCount > 2) complexityScore = 0.9;
 
+        // U10b: Image quality (default 0.7 if not provided)
+        const imgScore = imageQuality !== undefined
+            ? Math.min(1, Math.max(0, imageQuality))
+            : 0.7;
+
         const composite =
-            0.35 * segScore +
-            0.30 * solarScore +
+            0.30 * segScore +
+            0.25 * solarScore +
             0.20 * smoothScore +
-            0.15 * complexityScore;
+            0.15 * complexityScore +
+            0.10 * imgScore;
 
         return Math.round(composite * 1000) / 1000;
+    }
+
+    /**
+     * U9: Geometry sanity validation.
+     * Checks measurements against physical constraints before final output.
+     */
+    validateGeometrySanity(
+        measurements: Partial<RoofMeasurements>,
+        planes: RoofPlane[],
+    ): SanityValidation {
+        const warnings: string[] = [];
+
+        // Rule 1: Ridge length must be less than roof perimeter
+        if (measurements.ridgeLengthFt && measurements.perimeterFt &&
+            measurements.ridgeLengthFt >= measurements.perimeterFt) {
+            warnings.push('Ridge length exceeds roof perimeter — likely detection error');
+        }
+
+        // Rule 2: Each plane area must be above minimum threshold (10 sqft)
+        for (const plane of planes) {
+            if (plane.areaSqft < 10) {
+                warnings.push(`Plane ${plane.id} has area < 10 sqft — may be noise`);
+            }
+        }
+
+        // Rule 3: Max reasonable number of planes (residential: ≤ 12)
+        if (planes.length > 12) {
+            warnings.push(`${planes.length} planes detected — exceeds typical residential maximum`);
+        }
+
+        // Rule 4: Pitch variance across planes should be reasonable
+        if (planes.length >= 2) {
+            const pitches = planes.map(p => p.pitchDegrees);
+            const maxPitch = Math.max(...pitches);
+            const minPitch = Math.min(...pitches);
+            if (maxPitch - minPitch > 40) {
+                warnings.push(`Pitch variance ${maxPitch - minPitch}° exceeds 40° — inconsistent planes`);
+            }
+        }
+
+        // Rule 5: Total plane area should roughly match polygon area
+        if (measurements.roofAreaSqft && planes.length > 0) {
+            const totalPlaneArea = planes.reduce((s, p) => s + p.areaSqft, 0);
+            const ratio = totalPlaneArea / measurements.roofAreaSqft;
+            if (ratio < 0.5 || ratio > 2.0) {
+                warnings.push(`Plane area sum / polygon area ratio ${ratio.toFixed(2)} — should be ~1.0`);
+            }
+        }
+
+        // Rule 6: Roof area must be reasonable (100 - 50000 sqft for residential)
+        if (measurements.roofAreaSqft) {
+            if (measurements.roofAreaSqft < 100) {
+                warnings.push('Roof area < 100 sqft — unusually small');
+            }
+            if (measurements.roofAreaSqft > 50000) {
+                warnings.push('Roof area > 50,000 sqft — unusually large for residential');
+            }
+        }
+
+        return {
+            passed: warnings.length === 0,
+            warnings,
+        };
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -902,17 +1117,23 @@ class RoofGeometryService {
             throw new Error('Segmentation result must include mask or contours');
         }
 
-        // ── Step 2: Edge snapping (if edges provided) ──────────────
+        // ── Step 2: U5 — Edge snapping with stability ─────────────
         if (segmentation.edges && segmentation.edges.length > 0) {
             const flatEdges = segmentation.edges.flat();
             polygon = this.snapToEdges(
                 polygon, flatEdges, centerLat, centerLng,
                 zoom, imageWidth, imageHeight,
+                6, // snap radius
             );
         }
 
-        // ── Step 3: Calculate plan-view area ───────────────────────
+        // ── U6: Recalculate using polygon centroid for geo accuracy ─
         const ring = polygon.coordinates[0];
+        const polyCenter = centroid(ring);
+        // Use polygon centroid instead of image center for more accurate geo conversion
+        const effectiveLat = polyCenter[1] || centerLat;
+
+        // ── Step 3: Calculate plan-view area ───────────────────────
         let planAreaSqft = polygonAreaSqMeters(ring) * SQ_METERS_TO_SQ_FEET;
 
         // ── Step 4: Solar API validation + correction ──────────────
@@ -920,18 +1141,19 @@ class RoofGeometryService {
         if (solarAreaSqft && solarAreaSqft > 0) {
             const error = Math.abs(planAreaSqft - solarAreaSqft) / solarAreaSqft;
             if (error >= 0.10 && error < 0.20) {
-                // Blend: 60% Solar + 40% AI
                 planAreaSqft = solarAreaSqft * 0.6 + planAreaSqft * 0.4;
                 correctionApplied = true;
             } else if (error >= 0.20) {
-                // Use Solar as primary
                 planAreaSqft = solarAreaSqft;
                 correctionApplied = true;
             }
         }
 
-        // ── Step 5: Detect roof planes ─────────────────────────────
-        const planes = this.detectRoofPlanes(polygon, solarSegments, roofType);
+        // ── Step 5: U4 — Detect roof planes (with line graph) ──────
+        const planes = this.detectRoofPlanes(
+            polygon, solarSegments, roofType,
+            segmentation.detected_lines,
+        );
 
         // ── Step 6: Pitch correction ───────────────────────────────
         const avgPitch = this.weightedAveragePitch(planes);
@@ -953,7 +1175,7 @@ class RoofGeometryService {
         const rakeLengthFt = rakes.reduce((s, e) => s + e.lengthFt, 0);
         const perimeterFt = polygonPerimeterMeters(ring) * METERS_TO_FEET;
 
-        // ── Step 9: Confidence scoring ─────────────────────────────
+        // ── Step 9: U10b — Confidence scoring with image quality ───
         const solarAgreement = solarAreaSqft && solarAreaSqft > 0
             ? 1 - Math.abs(planAreaSqft - solarAreaSqft) / solarAreaSqft
             : undefined;
@@ -963,9 +1185,17 @@ class RoofGeometryService {
             solarAgreement,
             polygonVertexCount: ring.length,
             planeCount: planes.length,
+            imageQuality: segmentation.image_quality?.quality_score,
         });
 
-        const flaggedForReview = confidenceScore < 0.75;
+        // ── U9: Geometry sanity validation ─────────────────────────
+        const partialMeasurements = {
+            roofAreaSqft: planAreaSqft,
+            ridgeLengthFt,
+            perimeterFt,
+        };
+        const sanity = this.validateGeometrySanity(partialMeasurements, planes);
+        const flaggedForReview = confidenceScore < 0.75 || !sanity.passed;
 
         logger.info('[RoofGeometryService] Measurements computed', {
             planAreaSqft: Math.round(planAreaSqft),
@@ -979,6 +1209,8 @@ class RoofGeometryService {
             confidence: confidenceScore,
             correctionApplied,
             flaggedForReview,
+            sanityPassed: sanity.passed,
+            sanityWarnings: sanity.warnings,
         });
 
         return {

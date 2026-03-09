@@ -1,5 +1,5 @@
 """
-ZODO CRM — AI Roof Estimator Microservice  v3.0
+ZODO CRM — AI Roof Estimator Microservice  v3.1
 FastAPI + YOLOv8m-seg (CPU, FP16 optimized)
 Designed for Ubuntu 24.04 VPS (2 vCPU, 8GB RAM)
 
@@ -10,6 +10,7 @@ Production Hardening:
 - U7: Multi-tile support for large roofs
 - U8: Dormer/chimney detection stub
 - U10a: Image quality scoring (shadow, blur, occlusion)
+- Snake: Active Contour edge refinement
 """
 
 import io
@@ -24,6 +25,7 @@ import numpy as np
 from PIL import Image
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form
 from fastapi.responses import JSONResponse
+from snake_refinement import refine_polygon_snake
 
 # ============================================================================
 # Configuration
@@ -86,7 +88,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="ZODO Roof Estimator AI",
-    version="3.0.0",
+    version="3.1.0",
     lifespan=lifespan,
 )
 
@@ -682,6 +684,39 @@ async def detect_roof(
     # ---- U2: Multi-contour merging ----
     contours = extract_and_merge_contours(combined_mask, img_w, img_h)
 
+    # ---- Active Contour (Snake) Refinement ----
+    snake_result = None
+    if contours:
+        # Use the primary (highest scored) contour for snake refinement
+        primary_contour = contours[0]
+        try:
+            snake_result = refine_polygon_snake(
+                image=img_array,
+                mask=combined_mask,
+                polygon_points=primary_contour["points"],
+            )
+            if not snake_result.get("fallback", False):
+                # Update the primary contour with refined points
+                refined_pts = snake_result["refined_points"]
+                contours[0] = {
+                    **primary_contour,
+                    "points": refined_pts,
+                    "num_vertices": len(refined_pts),
+                    "snake_refined": True,
+                }
+                logger.info(
+                    f"Snake refinement applied: {snake_result['iterations']} iters, "
+                    f"{snake_result['time_ms']:.1f}ms"
+                )
+        except Exception as snake_err:
+            logger.warning(f"Snake refinement failed: {snake_err}")
+            snake_result = {
+                "fallback": True,
+                "fallback_reason": str(snake_err),
+                "iterations": 0,
+                "time_ms": 0.0,
+            }
+
     # ---- RLE ----
     rle = mask_to_rle(combined_mask)
 
@@ -703,7 +738,7 @@ async def detect_roof(
     processing_time = round(time.time() - t0, 3)
 
     logger.info(
-        f"Detection v3: {area_sqft} sqft, conf {avg_confidence}%, "
+        f"Detection v3.1: {area_sqft} sqft, conf {avg_confidence}%, "
         f"time {processing_time}s, contours {len(contours)}, "
         f"edges {len(edge_pixels)}, lines {len(roof_lines)}, "
         f"features {len(small_features)}, quality {image_quality['quality_score']}"
@@ -730,6 +765,16 @@ async def detect_roof(
             # ── v3 production hardening ──
             "small_features": small_features,
             "image_quality": image_quality,
+
+            # ── v3.1 snake refinement ──
+            "snake_refinement": {
+                "applied": snake_result is not None and not snake_result.get("fallback", True),
+                "iterations": snake_result["iterations"] if snake_result else 0,
+                "time_ms": snake_result.get("time_ms", 0) if snake_result else 0,
+                "converged": snake_result.get("converged", False) if snake_result else False,
+                "avg_movement_px": snake_result.get("avg_movement", 0) if snake_result else 0,
+                "fallback_reason": snake_result.get("fallback_reason") if snake_result else None,
+            },
         }
     )
 

@@ -117,6 +117,13 @@ export interface SegmentationResult {
     image_height?: number;
     image_quality?: ImageQuality;   // U10a: image quality scoring
     small_features?: SmallFeature[];// U8: dormers/chimneys/skylights
+    snake_refinement?: {            // v3.1: Active Contour refinement
+        applied: boolean;
+        iterations: number;
+        time_ms: number;
+        converged: boolean;
+        avg_movement_px: number;
+    };
 }
 
 /** Solar segment data for plane verification */
@@ -1117,8 +1124,9 @@ class RoofGeometryService {
             throw new Error('Segmentation result must include mask or contours');
         }
 
-        // ── Step 2: U5 — Edge snapping with stability ─────────────
-        if (segmentation.edges && segmentation.edges.length > 0) {
+        // ── Step 2: U5 — Edge snapping (skip if snake refinement was applied) ──
+        const snakeApplied = segmentation.snake_refinement?.applied ?? false;
+        if (!snakeApplied && segmentation.edges && segmentation.edges.length > 0) {
             const flatEdges = segmentation.edges.flat();
             polygon = this.snapToEdges(
                 polygon, flatEdges, centerLat, centerLng,

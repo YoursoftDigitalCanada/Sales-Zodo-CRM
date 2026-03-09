@@ -264,8 +264,10 @@ export class LeadSourcesRepository {
     tenantId: string,
     query: { page?: number; limit?: number; eventType?: string; status?: string }
   ) {
-    const page = query.page || 1;
-    const limit = query.limit || 20;
+    const pageRaw = Number(query.page);
+    const limitRaw = Number(query.limit);
+    const page = Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : 1;
+    const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(Math.floor(limitRaw), 100) : 20;
 
     const where: Prisma.LeadSourceLogWhereInput = {
       leadSourceId,

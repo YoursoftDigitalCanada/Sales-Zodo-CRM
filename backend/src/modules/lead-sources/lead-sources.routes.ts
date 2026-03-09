@@ -150,6 +150,7 @@ router.post(
 router.get(
   '/:id/logs',
   validate(leadSourceIdSchema),
+  validate(leadSourceLogQuerySchema),
   leadSourcesController.getLogs.bind(leadSourcesController)
 );
 

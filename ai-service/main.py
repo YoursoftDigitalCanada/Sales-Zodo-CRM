@@ -79,6 +79,149 @@ app = FastAPI(
 # ============================================================================
 
 
+def cleanup_mask(mask: np.ndarray) -> np.ndarray:
+    """
+    STEP 6 — Mask Cleanup
+
+    Clean raw segmentation mask using morphological operations:
+    1. Morphological closing — fill small holes inside the roof
+    2. Morphological opening — remove small noise blobs
+    3. Remove small connected components (< 500 pixels)
+    4. Gaussian blur + re-threshold — smooth jagged edges
+    """
+    mask_uint8 = mask.astype(np.uint8)
+
+    # Kernel for morphological ops (5×5 ellipse)
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+
+    # 1. Closing: fill small holes inside the roof area
+    closed = cv2.morphologyEx(mask_uint8, cv2.MORPH_CLOSE, kernel, iterations=2)
+
+    # 2. Opening: remove small noise blobs outside the roof
+    opened = cv2.morphologyEx(closed, cv2.MORPH_OPEN, kernel, iterations=1)
+
+    # 3. Remove small connected components (keep only blobs >= 500 px)
+    num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(
+        opened, connectivity=8
+    )
+    cleaned = np.zeros_like(opened)
+    for label_id in range(1, num_labels):  # skip background (0)
+        if stats[label_id, cv2.CC_STAT_AREA] >= 500:
+            cleaned[labels == label_id] = 1
+
+    # 4. Smooth edges: Gaussian blur + re-threshold
+    smoothed = cv2.GaussianBlur(cleaned.astype(np.float32), (3, 3), sigmaX=1.0)
+    final = (smoothed > 0.5).astype(np.uint8)
+
+    pixels_before = int(mask.sum())
+    pixels_after = int(final.sum())
+    logger.info(
+        f"Mask cleanup: {pixels_before} → {pixels_after} pixels "
+        f"(delta {pixels_after - pixels_before})"
+    )
+
+    return final
+
+
+def detect_edges(image: np.ndarray, mask: np.ndarray) -> list:
+    """
+    STEP 9 — Canny Edge Detection
+
+    Apply Canny edge detection on the satellite image, masked to the roof area.
+    Returns list of edge pixel coordinates [[x, y], ...] for the backend's
+    snapToEdges() function.
+    """
+    # Convert to grayscale
+    gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+
+    # Apply bilateral filter to reduce noise while preserving edges
+    filtered = cv2.bilateralFilter(gray, d=9, sigmaColor=75, sigmaSpace=75)
+
+    # Canny edge detection with auto-thresholds (Otsu)
+    median_val = int(np.median(filtered))
+    low_thresh = max(10, int(median_val * 0.5))
+    high_thresh = min(250, int(median_val * 1.5))
+    edges = cv2.Canny(filtered, low_thresh, high_thresh)
+
+    # Mask edges to roof region + small dilation to catch nearby edges
+    dilated_mask = cv2.dilate(mask, np.ones((7, 7), np.uint8), iterations=1)
+    roof_edges = cv2.bitwise_and(edges, edges, mask=dilated_mask)
+
+    # Extract edge pixel coordinates
+    edge_points = np.column_stack(np.where(roof_edges > 0))  # [row, col]
+
+    # Subsample if too many points (keep every Nth for efficiency)
+    max_points = 2000
+    if len(edge_points) > max_points:
+        step = len(edge_points) // max_points
+        edge_points = edge_points[::step]
+
+    # Convert to [x, y] format (col, row)
+    edge_list = [[int(p[1]), int(p[0])] for p in edge_points]
+
+    logger.info(f"Canny edge detection: {len(edge_list)} edge points extracted")
+    return edge_list
+
+
+def detect_roof_lines(image: np.ndarray, mask: np.ndarray) -> list:
+    """
+    STEP 11 — Hough Transform Line Detection
+
+    Detect roof structure lines (ridges, valleys, hips) using
+    probabilistic Hough Transform on the Canny edge output.
+    Returns list of line segments {start: [x,y], end: [x,y], angle, length}.
+    """
+    # Convert to grayscale
+    gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+
+    # Bilateral filter for edge-preserving smoothing
+    filtered = cv2.bilateralFilter(gray, d=9, sigmaColor=75, sigmaSpace=75)
+
+    # Canny edges
+    median_val = int(np.median(filtered))
+    edges = cv2.Canny(filtered, max(10, int(median_val * 0.4)), min(250, int(median_val * 1.3)))
+
+    # Mask to roof region
+    roof_edges = cv2.bitwise_and(edges, edges, mask=mask)
+
+    # Probabilistic Hough Transform
+    lines = cv2.HoughLinesP(
+        roof_edges,
+        rho=1,
+        theta=np.pi / 180,
+        threshold=30,
+        minLineLength=20,
+        maxLineGap=10,
+    )
+
+    detected_lines = []
+    if lines is not None:
+        for line in lines:
+            x1, y1, x2, y2 = line[0]
+            length = float(np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2))
+            angle = float(np.degrees(np.arctan2(y2 - y1, x2 - x1))) % 180
+
+            # Filter very short lines (noise)
+            if length < 15:
+                continue
+
+            detected_lines.append({
+                "start": [int(x1), int(y1)],
+                "end": [int(x2), int(y2)],
+                "length_px": round(length, 1),
+                "angle_degrees": round(angle, 1),
+            })
+
+    # Sort by length descending (most significant lines first)
+    detected_lines.sort(key=lambda l: l["length_px"], reverse=True)
+
+    # Keep top 50 lines max
+    detected_lines = detected_lines[:50]
+
+    logger.info(f"Hough line detection: {len(detected_lines)} lines detected")
+    return detected_lines
+
+
 def mask_to_rle(mask: np.ndarray) -> dict:
     """Convert binary mask to Run-Length Encoding for efficient transfer."""
     pixels = mask.flatten()
@@ -317,11 +460,21 @@ async def detect_roof(
         roof_pixels = int(combined_mask.sum())
         logger.warning("No strong detections — using fallback heuristic (ellipse)")
 
-    # ---- Extract contours from the mask ----
+    # ---- STEP 6: Mask Cleanup (morphological operations) ----
+    combined_mask = cleanup_mask(combined_mask)
+    roof_pixels = int(combined_mask.sum())
+
+    # ---- Extract contours from the cleaned mask ----
     contours = extract_contours(combined_mask)
 
     # ---- Run-length encode the mask ----
     rle = mask_to_rle(combined_mask)
+
+    # ---- STEP 9: Canny Edge Detection ----
+    edge_pixels = detect_edges(img_array, combined_mask)
+
+    # ---- STEP 11: Hough Line Detection ----
+    roof_lines = detect_roof_lines(img_array, combined_mask)
 
     # ---- Convert pixels → area ----
     mpp = meters_per_pixel(latitude, zoom)
@@ -329,9 +482,12 @@ async def detect_roof(
     area_sqft = round(area_m2 * SQFT_PER_SQM, 1)
     avg_confidence = round((sum(confidences) / len(confidences)) * 100, 1)
 
+    processing_time = round(time.time() - t0, 3)  # re-measure including post-processing
+
     logger.info(
         f"Detection complete: {area_sqft} sqft, confidence {avg_confidence}%, "
         f"time {processing_time}s, contours {len(contours)}, "
+        f"edges {len(edge_pixels)}, lines {len(roof_lines)}, "
         f"segments {len(segments_data)}, mpp {mpp:.4f}"
     )
 
@@ -351,6 +507,10 @@ async def detect_roof(
                 "width": img_w,
                 "height": img_h,
             },
+
+            # ── v3 edge + line detection fields (Steps 9, 10, 11) ──
+            "edges": edge_pixels,           # for backend snapToEdges()
+            "detected_lines": roof_lines,   # for backend roof plane splitting
         }
     )
 

@@ -13,6 +13,7 @@ import { NotFoundError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
 import { logger } from '../../common/utils/logger';
 import { Request } from 'express';
+import { LeadSourceRequestMetadata } from './lead-source-detector';
 
 
 /**
@@ -30,7 +31,8 @@ export class LeadsManager {
     data: CreateLeadDto,
     createdById: string
   ): Promise<LeadResponseDto> {
-    const lead = await leadsService.create(tenantId, data, createdById);
+    const sourceMetadata = this.buildLeadSourceMetadata(req, data);
+    const lead = await leadsService.create(tenantId, data, createdById, sourceMetadata);
 
     // Notify assigned employee if different from creator
     if (data.assignedToId && data.assignedToId !== createdById) {
@@ -350,6 +352,40 @@ export class LeadsManager {
     const { data } = await leadsService.getMany(tenantId, { ...query, limit: 10000 });
 
     return data;
+  }
+
+  private buildLeadSourceMetadata(
+    req: Request,
+    data: CreateLeadDto
+  ): LeadSourceRequestMetadata {
+    const query = req.query as Record<string, unknown>;
+    const headers = req.headers as Record<string, string | string[] | undefined>;
+    const first = (value: unknown): string | null => {
+      if (Array.isArray(value)) return typeof value[0] === 'string' ? value[0] : null;
+      return typeof value === 'string' ? value : null;
+    };
+
+    const queryLanding = first(query.landingPageURL) || first(query.landingPageUrl) || first(query.landing_page_url);
+    const requestLanding =
+      queryLanding ||
+      first(headers['x-landing-page']) ||
+      first(headers.referer) ||
+      first(headers.referrer);
+
+    return {
+      utmSource: data.leadSourceUTM || first(query.utm_source) || first(headers['x-utm-source']),
+      utmMedium: data.leadMediumUTM || first(query.utm_medium) || first(headers['x-utm-medium']),
+      utmCampaign: data.leadCampaignUTM || first(query.utm_campaign) || first(headers['x-utm-campaign']),
+      referralParam:
+        first(query.referral) ||
+        first(query.ref) ||
+        first(query.partner) ||
+        first(headers['x-referral']),
+      formOrigin: first(query.form_origin) || first(headers['x-form-origin']),
+      referrer: first(headers.referer) || first(headers.referrer),
+      landingPageUrl: data.landingPageURL || requestLanding,
+      headers,
+    };
   }
 }
 

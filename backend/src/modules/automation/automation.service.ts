@@ -58,6 +58,7 @@ import { analyticsRepository } from '../analytics/analytics.repository';
 import { mailerService } from '../../common/services/mailer.service';
 import { smsService } from '../../common/services/sms.service';
 import { foldersService } from '../folders/folders.service';
+import { communicationLogService } from '../communication-logs/communication-log.service';
 import { LeadStatus, TaskStatus } from '@prisma/client';
 import { estimationWorkflowService } from '../leads/estimation-workflow.service';
 import { proposalAutomationService } from '../quotes/proposal-automation.service';
@@ -243,6 +244,7 @@ export class AutomationService {
                     endTime,
                     eventType: 'MEETING',
                     priority: isStormDamage ? 'HIGH' : 'MEDIUM',
+                    reminderMinutes: 15,
                     category: 'lead-follow-up',
                     color: '#22D3EE',
                 });
@@ -256,15 +258,22 @@ export class AutomationService {
             // ─────────────────────────────────────────────────────────────
             if (event.ownerUserId) {
                 try {
+                    const assignmentMessage = `New lead assigned: ${event.leadName}`;
                     await notificationsService.create({
-                        title: '🆕 New Lead Assigned',
-                        message: `New Lead Assigned: ${event.leadName}${event.source ? ` (via ${event.source})` : ''}. ${event.serviceType ? `Service: ${event.serviceType}` : ''}`,
+                        title: 'New Lead Assigned',
+                        message: assignmentMessage,
                         type: 'INFO',
                         userId: event.ownerUserId,
                         tenantId: event.tenantId,
                         actionUrl: `/leads/${event.leadId}`,
                         actionLabel: 'View Lead',
                     });
+                    await notificationsService.sendPushNotification(
+                        event.ownerUserId,
+                        'New Lead Assigned',
+                        assignmentMessage,
+                        { leadId: event.leadId, tenantId: event.tenantId }
+                    );
                     logger.debug('[Automation] lead.created → owner notification sent', ctx);
                 } catch (err) {
                     logger.error('[Automation] lead.created → owner notification failed', { ...ctx, err });
@@ -304,10 +313,8 @@ export class AutomationService {
             if (event.email) {
                 try {
                     const firstName = event.leadName.split(' ')[0] || 'there';
-                    await mailerService.sendMail({
-                        to: event.email,
-                        subject: 'Thank you for contacting us',
-                        html: `
+                    const subject = 'Thank you for contacting us!';
+                    const html = `
                             <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
                                 <div style="background: linear-gradient(135deg, #0891B2, #22D3EE); padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
                                     <h1 style="color: white; margin: 0; font-size: 24px;">Thank You!</h1>
@@ -327,8 +334,24 @@ export class AutomationService {
                                     </p>
                                 </div>
                             </div>
-                        `,
-                        text: `Hi ${firstName},\n\nThank you for contacting ${tenantName}. A member of our team will reach out shortly to discuss your project.\n\nBest regards,\n${tenantName}`,
+                        `;
+                    const text = `Hi ${firstName},\n\nThank you for contacting ${tenantName}. A member of our team will reach out shortly to discuss your project.\n\nBest regards,\n${tenantName}`;
+
+                    await mailerService.sendMail({
+                        to: event.email,
+                        subject,
+                        html,
+                        text,
+                    });
+
+                    await communicationLogService.createSafe({
+                        tenantId: event.tenantId,
+                        leadId: event.leadId,
+                        type: 'EMAIL',
+                        direction: 'OUTBOUND',
+                        subject,
+                        content: html,
+                        to: event.email,
                     });
                     logger.info('[Automation] lead.created → thank-you email sent', { ...ctx, to: event.email });
                 } catch (err) {
@@ -342,10 +365,20 @@ export class AutomationService {
             if (event.phone) {
                 try {
                     const firstName = event.leadName.split(' ')[0] || 'there';
+                    const message = `Hi ${firstName}! Thanks for reaching out to ${tenantName}. A team member will call you soon.`;
                     await smsService.sendSms({
                         to: event.phone,
-                        message: `Hi ${firstName}! Thanks for reaching out to ${tenantName}. A team member will call you soon.`,
+                        message,
                         tenantId: event.tenantId,
+                    });
+
+                    await communicationLogService.createSafe({
+                        tenantId: event.tenantId,
+                        leadId: event.leadId,
+                        type: 'SMS',
+                        direction: 'OUTBOUND',
+                        content: message,
+                        to: event.phone,
                     });
                     logger.info('[Automation] lead.created → auto-SMS sent', { ...ctx, to: event.phone });
                 } catch (err) {

@@ -8,8 +8,16 @@ import {
 } from './notifications.dto';
 import { NotFoundError } from '../../common/errors/HttpErrors';
 import { logger } from '../../common/utils/logger';
+import { PushPayload, PushProvider } from './push.types';
+import { WebPushProvider } from './web-push.provider';
 
 export class NotificationsService {
+  private readonly pushProviders: PushProvider[];
+
+  constructor(pushProviders: PushProvider[] = [new WebPushProvider()]) {
+    this.pushProviders = pushProviders;
+  }
+
   /**
    * Create notification
    */
@@ -152,6 +160,37 @@ export class NotificationsService {
     logger.info(`Cleaned up ${result.count} notifications`, { tenantId, retentionDays });
 
     return result.count;
+  }
+
+  /**
+   * Send push notification using configured providers.
+   */
+  async sendPushNotification(
+    userId: string,
+    title: string,
+    message: string,
+    data?: Record<string, unknown>
+  ): Promise<void> {
+    const payload: PushPayload = { title, message, data };
+
+    if (!this.pushProviders.length) {
+      logger.debug('[Notifications] No push providers configured');
+      return;
+    }
+
+    const results = await Promise.allSettled(
+      this.pushProviders.map((provider) => provider.send(userId, payload))
+    );
+
+    for (const [index, result] of results.entries()) {
+      if (result.status === 'rejected') {
+        logger.error('[Notifications] Push provider failed', {
+          userId,
+          providerIndex: index,
+          error: result.reason,
+        });
+      }
+    }
   }
 
   /**

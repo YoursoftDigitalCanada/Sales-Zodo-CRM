@@ -373,6 +373,7 @@ enum ProjectNoteType {
 enum CommunicationType {
   PHONE_CALL
   TEXT_MESSAGE
+  SMS
   EMAIL
   IN_PERSON
   VIDEO_CALL
@@ -691,6 +692,7 @@ model Tenant {
   productCategories     ProductCategory[]
   orders                Order[]
   emails                Email[]
+  communicationLogs     CommunicationLog[]
   emailLabels           EmailLabel[]
   chatRooms             ChatRoom[]
   notifications         Notification[]
@@ -1209,6 +1211,7 @@ model Lead {
   projects          Project[]
   files             File[]
   emails            Email[]
+  communicationLogs CommunicationLog[]
   inspections       LeadInspection[]
   insuranceClaims   LeadInsuranceClaim[]
   roofEstimates     RoofEstimate[]
@@ -3624,6 +3627,24 @@ model OrderItem {
 // ============================================================================
 // COMMUNICATION - EMAIL (LETTER BOX)
 // ============================================================================
+
+model CommunicationLog {
+  id        String                 @id @default(uuid())
+  tenantId  String
+  tenant    Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  leadId    String?
+  lead      Lead?                  @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  type      CommunicationType
+  direction CommunicationDirection
+  subject   String?
+  content   String
+  to        String
+  createdAt DateTime               @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, leadId])
+  @@index([tenantId, type])
+}
 
 model EmailLabel {
   id              String      @id @default(uuid())

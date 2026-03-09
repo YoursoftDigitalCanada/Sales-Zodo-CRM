@@ -22,6 +22,10 @@ import { prisma } from '../../config/database';
 import { logger } from '../../common/utils/logger';
 import { clientLifecycleService } from '../../common/services/client-lifecycle.service';
 import { activityLogger } from '../../common/services/activity-logger.service';
+import {
+  detectLeadSource,
+  LeadSourceRequestMetadata,
+} from './lead-source-detector';
 
 // ── Lifecycle Stage Auto-Progression Map ────────────────────────────────
 // Maps LeadStatus → appropriate LeadLifecycleStage
@@ -44,7 +48,8 @@ export class LeadsService {
   async create(
     tenantId: string,
     data: CreateLeadDto,
-    createdById?: string
+    createdById?: string,
+    requestMetadata?: LeadSourceRequestMetadata
   ): Promise<LeadResponseDto> {
     // Validate assigned employee
     if (data.assignedToId) {
@@ -69,6 +74,13 @@ export class LeadsService {
         throw new BadRequestError('One or more tags not found', ErrorCodes.RESOURCE_NOT_FOUND);
       }
     }
+
+    const detectedSourceName = await this.applyLeadSourceAutoDetection(
+      tenantId,
+      data,
+      requestMetadata
+    );
+
     // ── Auto-generate leadNumber (LD-YYYY-XXXX) ─────────────────────────
     const year = new Date().getFullYear();
     const leadCount = await prisma.lead.count({
@@ -77,39 +89,50 @@ export class LeadsService {
     const leadNumber = `LD-${year}-${String(leadCount + 1).padStart(4, '0')}`;
     (data as any).leadNumber = leadNumber;
 
-    // ── Round-robin auto-assignment ──────────────────────────────────────
+    // ── Territory-first assignment, then round-robin fallback ────────────
     if (!data.assignedToId) {
       try {
-        // Find active sales employees, pick the one with fewest active leads
-        const salesEmployees = await prisma.employee.findMany({
-          where: {
+        const territoryAssignee = await this.findTerritoryAssignee(tenantId, data);
+        if (territoryAssignee) {
+          data.assignedToId = territoryAssignee.employeeId;
+          logger.info('[LeadsService] Territory assignment applied', {
             tenantId,
-            isActive: true,
-            role: { name: { in: ['Sales Rep', 'Sales Manager', 'Owner', 'Admin'] } },
-          },
-          select: {
-            id: true,
-            userId: true,
-            _count: {
-              select: {
-                assignedLeads: {
-                  where: { status: { notIn: ['WON', 'LOST'] } },
+            leadNumber,
+            assignedToId: territoryAssignee.employeeId,
+            sourceId: territoryAssignee.sourceId,
+          });
+        } else {
+          // Find active sales employees, pick the one with fewest active leads
+          const salesEmployees = await prisma.employee.findMany({
+            where: {
+              tenantId,
+              isActive: true,
+              role: { name: { in: ['Sales Rep', 'Sales Manager', 'Owner', 'Admin'] } },
+            },
+            select: {
+              id: true,
+              userId: true,
+              _count: {
+                select: {
+                  assignedLeads: {
+                    where: { status: { notIn: ['WON', 'LOST'] } },
+                  },
                 },
               },
             },
-          },
-          orderBy: { assignedLeads: { _count: 'asc' } },
-          take: 1,
-        });
-        if (salesEmployees.length > 0) {
-          data.assignedToId = salesEmployees[0].id;
-          logger.info('[LeadsService] Round-robin assigned', {
-            tenantId, leadNumber,
-            assignedToId: salesEmployees[0].id,
+            orderBy: { assignedLeads: { _count: 'asc' } },
+            take: 1,
           });
+          if (salesEmployees.length > 0) {
+            data.assignedToId = salesEmployees[0].id;
+            logger.info('[LeadsService] Round-robin assigned', {
+              tenantId, leadNumber,
+              assignedToId: salesEmployees[0].id,
+            });
+          }
         }
       } catch (err) {
-        logger.warn('[LeadsService] Round-robin assignment failed, proceeding unassigned', { err });
+        logger.warn('[LeadsService] Auto-assignment failed, proceeding unassigned', { err });
       }
     }
 
@@ -120,7 +143,7 @@ export class LeadsService {
     await this.logActivity(tenantId, dto.id, 'CREATED', 'Lead created', {
       name: dto.fullName,
       email: dto.email,
-      source: dto.leadSource?.name,
+      source: dto.leadSource?.name || detectedSourceName,
     });
 
     // ▸ Domain event: lead created
@@ -130,7 +153,7 @@ export class LeadsService {
       leadName: dto.fullName,
       ownerId: data.assignedToId,
       ownerUserId: dto.assignedTo?.userId,
-      source: dto.leadSource?.name,
+      source: dto.leadSource?.name || detectedSourceName,
       email: dto.email,
       phone: dto.phone,
       companyName: dto.companyName,
@@ -770,6 +793,255 @@ export class LeadsService {
   }
 
   // ── PRIVATE HELPERS ────────────────────────────────────────────────────
+
+  /**
+   * Auto-detect lead source when the source is not explicitly selected.
+   * Priority: UTM -> form origin -> referral -> Website.
+   */
+  private async applyLeadSourceAutoDetection(
+    tenantId: string,
+    data: CreateLeadDto,
+    requestMetadata?: LeadSourceRequestMetadata
+  ): Promise<string | undefined> {
+    const metadata: LeadSourceRequestMetadata = {
+      ...requestMetadata,
+      utmSource: data.leadSourceUTM || requestMetadata?.utmSource || null,
+      utmMedium: data.leadMediumUTM || requestMetadata?.utmMedium || null,
+      utmCampaign: data.leadCampaignUTM || requestMetadata?.utmCampaign || null,
+      landingPageUrl: data.landingPageURL || requestMetadata?.landingPageUrl || null,
+    };
+
+    if (!data.leadSourceUTM && metadata.utmSource) data.leadSourceUTM = metadata.utmSource;
+    if (!data.leadMediumUTM && metadata.utmMedium) data.leadMediumUTM = metadata.utmMedium;
+    if (!data.leadCampaignUTM && metadata.utmCampaign) data.leadCampaignUTM = metadata.utmCampaign;
+    if (!data.landingPageURL && metadata.landingPageUrl) data.landingPageURL = metadata.landingPageUrl;
+
+    if (data.leadSourceId) return undefined;
+
+    const detected = detectLeadSource(metadata);
+
+    const normalizedSourceName = detected.sourceName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    const normalizedUtm = (metadata.utmSource || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+
+    const nameCandidates = Array.from(
+      new Set([detected.sourceName, metadata.utmSource].filter(Boolean) as string[])
+    );
+    const slugCandidates = Array.from(
+      new Set([detected.normalizedKey, normalizedSourceName, normalizedUtm].filter(Boolean))
+    );
+
+    const explicitFilters: Array<Record<string, unknown>> = [
+      ...nameCandidates.map((name) => ({
+        name: { equals: name, mode: 'insensitive' as const },
+      })),
+      ...slugCandidates.map((slug) => ({
+        slug: { equals: slug, mode: 'insensitive' as const },
+      })),
+    ];
+
+    let matchedSource: { id: string; name: string } | null = null;
+
+    if (explicitFilters.length > 0) {
+      matchedSource = await prisma.leadSource.findFirst({
+        where: { tenantId, isActive: true, OR: explicitFilters as any },
+        select: { id: true, name: true },
+      });
+    }
+
+    if (!matchedSource) {
+      matchedSource = await prisma.leadSource.findFirst({
+        where: { tenantId, isActive: true, sourceType: detected.sourceType },
+        select: { id: true, name: true },
+      });
+    }
+
+    if (matchedSource) {
+      data.leadSourceId = matchedSource.id;
+    }
+
+    logger.debug('[LeadsService] Lead source auto-detected', {
+      tenantId,
+      matchedBy: detected.matchedBy,
+      sourceType: detected.sourceType,
+      sourceName: matchedSource?.name || detected.sourceName,
+      leadSourceId: matchedSource?.id,
+    });
+
+    return matchedSource?.name || detected.sourceName;
+  }
+
+  /**
+   * Resolve territory-based assignment if configured.
+   */
+  private async findTerritoryAssignee(
+    tenantId: string,
+    data: CreateLeadDto
+  ): Promise<{ employeeId: string; sourceId: string } | null> {
+    const territorySources = await prisma.leadSource.findMany({
+      where: {
+        tenantId,
+        isActive: true,
+        assignmentMethod: 'TERRITORY',
+      },
+      select: {
+        id: true,
+        assignedUserId: true,
+        territoryRules: true,
+      },
+    });
+
+    if (!territorySources.length) {
+      return null;
+    }
+
+    for (const source of territorySources) {
+      const rules = this.normalizeTerritoryRules(source.territoryRules);
+      if (!rules.length) continue;
+
+      for (const rule of rules) {
+        if (!this.territoryRuleMatchesLead(rule, data)) {
+          continue;
+        }
+
+        const employee = await this.resolveTerritoryEmployee(
+          tenantId,
+          rule,
+          source.assignedUserId || null
+        );
+
+        if (employee) {
+          return { employeeId: employee.id, sourceId: source.id };
+        }
+      }
+    }
+
+    return null;
+  }
+
+  private normalizeTerritoryRules(rawRules: unknown): Record<string, unknown>[] {
+    if (!rawRules) return [];
+
+    if (Array.isArray(rawRules)) {
+      return rawRules.filter((item): item is Record<string, unknown> => !!item && typeof item === 'object');
+    }
+
+    if (typeof rawRules === 'object') {
+      const rulesObject = rawRules as Record<string, unknown>;
+      const nested = rulesObject.rules || rulesObject.territories;
+
+      if (Array.isArray(nested)) {
+        return nested.filter((item): item is Record<string, unknown> => !!item && typeof item === 'object');
+      }
+
+      return [rulesObject];
+    }
+
+    return [];
+  }
+
+  private getRuleValue(rule: Record<string, unknown>, keys: string[]): string | null {
+    for (const key of keys) {
+      const directValue = rule[key];
+      if (typeof directValue === 'string' && directValue.trim()) {
+        return directValue.trim();
+      }
+
+      const locationObject = rule.location;
+      if (locationObject && typeof locationObject === 'object') {
+        const nestedValue = (locationObject as Record<string, unknown>)[key];
+        if (typeof nestedValue === 'string' && nestedValue.trim()) {
+          return nestedValue.trim();
+        }
+      }
+    }
+
+    return null;
+  }
+
+  private territoryRuleMatchesLead(rule: Record<string, unknown>, data: CreateLeadDto): boolean {
+    const ruleState = this.getRuleValue(rule, ['province', 'state']);
+    const ruleCity = this.getRuleValue(rule, ['city']);
+    const ruleZip = this.getRuleValue(rule, ['zipCode', 'zip', 'postalCode']);
+    const ruleAddressContains = this.getRuleValue(rule, ['addressContains', 'area', 'propertyAddress']);
+
+    const leadState = this.normalizeLocationToken(data.state);
+    const leadCity = this.normalizeLocationToken(data.city);
+    const leadZip = this.normalizeLocationToken(data.zipCode);
+    const leadAddress = this.normalizeLocationToken(data.propertyAddress);
+
+    const hasRuleConstraint = Boolean(ruleState || ruleCity || ruleZip || ruleAddressContains);
+    if (!hasRuleConstraint) return false;
+
+    if (ruleState && this.normalizeLocationToken(ruleState) !== leadState) {
+      return false;
+    }
+
+    if (ruleCity && this.normalizeLocationToken(ruleCity) !== leadCity) {
+      return false;
+    }
+
+    if (ruleZip) {
+      const normalizedRuleZip = this.normalizeLocationToken(ruleZip).replace(/\s+/g, '');
+      const normalizedLeadZip = leadZip.replace(/\s+/g, '');
+
+      if (!normalizedLeadZip) return false;
+
+      if (normalizedRuleZip.endsWith('*')) {
+        const prefix = normalizedRuleZip.slice(0, -1);
+        if (!normalizedLeadZip.startsWith(prefix)) {
+          return false;
+        }
+      } else if (normalizedRuleZip !== normalizedLeadZip) {
+        return false;
+      }
+    }
+
+    if (ruleAddressContains) {
+      const normalizedAddressNeedle = this.normalizeLocationToken(ruleAddressContains);
+      if (!leadAddress.includes(normalizedAddressNeedle)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  private async resolveTerritoryEmployee(
+    tenantId: string,
+    rule: Record<string, unknown>,
+    sourceAssignedUserId: string | null
+  ): Promise<{ id: string } | null> {
+    const ruleEmployeeId = this.getRuleValue(rule, ['ownerEmployeeId', 'employeeId', 'assignedToId']);
+    if (ruleEmployeeId) {
+      const employee = await prisma.employee.findFirst({
+        where: { tenantId, id: ruleEmployeeId, isActive: true },
+        select: { id: true },
+      });
+      if (employee) return employee;
+    }
+
+    const ruleUserId = this.getRuleValue(rule, ['ownerUserId', 'userId']) || sourceAssignedUserId;
+    if (!ruleUserId) return null;
+
+    return prisma.employee.findFirst({
+      where: {
+        tenantId,
+        userId: ruleUserId,
+        isActive: true,
+      },
+      select: { id: true },
+    });
+  }
+
+  private normalizeLocationToken(value?: string | null): string {
+    return (value || '').trim().toLowerCase();
+  }
 
   /**
    * Log a lead activity entry for the timeline

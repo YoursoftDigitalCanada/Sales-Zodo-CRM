@@ -728,6 +728,7 @@ model Tenant {
   employeeDocuments     EmployeeDocument[]
   jobCompletions        JobCompletion[]
   proposals             Proposal[]
+  signedContracts       SignedContract[]
 
   @@index([status])
   @@index([slug])
@@ -4463,6 +4464,8 @@ model Proposal {
   signedAt              DateTime?
   signedByName          String?
   signatureData         String?         @db.Text    // base64 signature image
+  initials              String?                     // Stage 5: signer initials
+  signerIpAddress       String?                     // Stage 5: IP address at signing
 
   // Stage 4: View Tracking & Delivery
   lastViewedAt          DateTime?
@@ -4487,6 +4490,38 @@ model Proposal {
   @@index([leadId])
   @@index([quoteId])
   @@index([status])
+}
+
+// ============================================================================
+// SIGNED CONTRACTS MODULE (Stage 5)
+// ============================================================================
+
+model SignedContract {
+  id              String   @id @default(uuid())
+
+  // References
+  proposalId      String
+  leadId          String
+  clientId        String?
+
+  // E-Signature Data
+  fullLegalName   String
+  signatureImage  String   @db.Text
+  initials        String
+  dateSigned      DateTime
+  ipAddress       String
+
+  // Signed PDF
+  signedPdfUrl    String?
+
+  // Tenant
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime @default(now())
+
+  @@index([proposalId])
+  @@index([tenantId])
 }
 
 // ============================================================================

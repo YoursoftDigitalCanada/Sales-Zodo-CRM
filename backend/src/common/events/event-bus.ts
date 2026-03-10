@@ -397,10 +397,16 @@ export interface ProposalViewedEvent {
 
 export interface ProposalAcceptedEvent {
     tenantId: string;
+    proposalId: string;
     leadId: string;
+    leadName: string;
     quoteId: string;
     quoteNumber: string;
     total: number;
+    clientEmail?: string;
+    clientPhone?: string;
+    signedPdfUrl?: string;
+    salesRepId?: string;
     ownerUserId?: string;
 }
 

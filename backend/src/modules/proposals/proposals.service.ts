@@ -493,7 +493,12 @@ export class ProposalsService {
 
     // ── Public: sign proposal ───────────────────────────────────────────
 
-    async signProposal(token: string, data: { signedByName: string; signatureData?: string }) {
+    async signProposal(token: string, data: {
+        signedByName: string;
+        signatureData?: string;
+        initials?: string;
+        ipAddress?: string;
+    }) {
         const proposal = await proposalsRepository.findByPublicToken(token);
         if (!proposal) throw new NotFoundError('Proposal not found or link has expired');
 
@@ -501,25 +506,59 @@ export class ProposalsService {
             throw new BadRequestError(`This proposal has already been ${(proposal as any).status.toLowerCase()}`);
         }
 
+        const now = new Date();
+
+        // Update proposal status to ACCEPTED
         await proposalsRepository.update(proposal.id, proposal.tenantId, {
             status: 'ACCEPTED',
-            signedAt: new Date(),
+            signedAt: now,
             signedByName: data.signedByName,
             signatureData: data.signatureData || null,
+            initials: data.initials || null,
+            signerIpAddress: data.ipAddress || null,
         });
 
-        // Emit proposal.accepted event
+        // Stage 5: Create SignedContract record
+        await (prisma as any).signedContract.create({
+            data: {
+                proposalId: proposal.id,
+                leadId: proposal.leadId,
+                fullLegalName: data.signedByName,
+                signatureImage: data.signatureData || '',
+                initials: data.initials || '',
+                dateSigned: now,
+                ipAddress: data.ipAddress || 'unknown',
+                tenantId: proposal.tenantId,
+            },
+        });
+
+        // Get lead details for the enhanced event
         const lead = await prisma.lead.findUnique({
             where: { id: proposal.leadId },
-            select: { firstName: true, lastName: true, assignedTo: { select: { userId: true } } },
+            select: {
+                firstName: true,
+                lastName: true,
+                email: true,
+                phone: true,
+                assignedTo: { select: { userId: true } },
+                assignedToId: true,
+            },
         });
 
+        const leadName = lead ? `${lead.firstName} ${lead.lastName}` : '';
+
+        // Emit enhanced proposal.accepted event (Stage 5)
         eventBus.emit('proposal.accepted', {
             tenantId: proposal.tenantId,
+            proposalId: proposal.id,
             leadId: proposal.leadId,
+            leadName,
             quoteId: proposal.quoteId,
             quoteNumber: (proposal as any).quote?.quoteNumber || '',
             total: (proposal as any).quote ? Number((proposal as any).quote.total) : 0,
+            clientEmail: lead?.email || undefined,
+            clientPhone: lead?.phone || undefined,
+            salesRepId: lead?.assignedToId || undefined,
             ownerUserId: lead?.assignedTo?.userId,
         });
 
@@ -530,7 +569,7 @@ export class ProposalsService {
             action: 'STATUS_CHANGE',
             module: 'proposals',
             description: `Proposal "${(proposal as any).proposalNumber}" accepted and signed by ${data.signedByName}`,
-            metadata: { action: 'accept', signedByName: data.signedByName },
+            metadata: { action: 'accept', signedByName: data.signedByName, initials: data.initials },
         });
 
         return { success: true, status: 'ACCEPTED', proposalNumber: (proposal as any).proposalNumber };

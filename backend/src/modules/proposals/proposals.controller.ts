@@ -105,17 +105,22 @@ export class ProposalsController {
         } catch (err) { next(err); }
     }
 
-    // Sign proposal via public token
+    // Sign proposal via public token (Stage 5: e-signature)
     async signPublic(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const { signedByName, signatureData } = req.body;
+            const { signedByName, signatureData, initials } = req.body;
             if (!signedByName) {
                 res.status(400).json({ success: false, message: 'signedByName is required' });
                 return;
             }
+            const ipAddress = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim()
+                || req.socket?.remoteAddress
+                || 'unknown';
             const result = await proposalsService.signProposal(req.params.token, {
                 signedByName,
                 signatureData,
+                initials,
+                ipAddress,
             });
             res.json(result);
         } catch (err) { next(err); }

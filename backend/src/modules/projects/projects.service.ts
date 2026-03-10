@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client';
+import { prisma } from '../../config/database';
 import { projectsRepository } from './projects.repository';
 import { normalizeProjectDto, ProjectQueryDto, toNumber } from './projects.dto';
 import {
@@ -119,7 +120,35 @@ export class ProjectsService {
   }
 
   async updateStage(id: string, tenantId: string, stageId: string, changedById?: string, notes?: string) {
-    return this.guarded(() => projectsRepository.updateStage(id, tenantId, stageId, changedById, notes));
+    // Fetch current project + stage info before update
+    const currentProject = await projectsRepository.findById(id, tenantId);
+    const previousStage = (currentProject as any)?.stage;
+
+    const updated = await this.guarded(() => projectsRepository.updateStage(id, tenantId, stageId, changedById, notes));
+
+    // Fetch new stage to get slug/name
+    const newStage = await prisma.projectStage.findUnique({ where: { id: stageId } });
+
+    if (newStage) {
+      const { eventBus } = await import('../../common/events/event-bus');
+      eventBus.emit('project.stageChanged', {
+        tenantId,
+        projectId: id,
+        projectName: (updated as any)?.name || '',
+        clientId: (updated as any)?.clientId || undefined,
+        clientName: (updated as any)?.client?.clientName || undefined,
+        previousStageSlug: previousStage?.slug || undefined,
+        previousStageName: previousStage?.name || undefined,
+        newStageSlug: newStage.slug,
+        newStageName: newStage.name,
+        contractValue: (updated as any)?.contractValue ? Number((updated as any).contractValue) : undefined,
+        changedById,
+        projectManagerId: (updated as any)?.projectManagerId || undefined,
+        salesRepId: (updated as any)?.salesRepId || undefined,
+      });
+    }
+
+    return updated;
   }
 
   async updateStatus(id: string, tenantId: string, status: string) {

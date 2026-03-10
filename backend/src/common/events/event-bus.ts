@@ -442,6 +442,24 @@ export interface DealWonEvent {
     ownerId?: string;
 }
 
+// ── Stage 6: Project Stage Changed ──────────────────────────────────────
+
+export interface ProjectStageChangedEvent {
+    tenantId: string;
+    projectId: string;
+    projectName: string;
+    clientId?: string;
+    clientName?: string;
+    previousStageSlug?: string;
+    previousStageName?: string;
+    newStageSlug: string;
+    newStageName: string;
+    contractValue?: number;
+    changedById?: string;
+    projectManagerId?: string;
+    salesRepId?: string;
+}
+
 // ── Event Map ───────────────────────────────────────────────────────────
 
 export interface CRMEventMap {
@@ -495,6 +513,8 @@ export interface CRMEventMap {
     'proposal.accepted': ProposalAcceptedEvent;
     'proposal.declined': ProposalDeclinedEvent;
     'deal.won': DealWonEvent;
+    // Stage 6: Project Execution
+    'project.stageChanged': ProjectStageChangedEvent;
 }
 
 export type CRMEventName = keyof CRMEventMap;

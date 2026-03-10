@@ -68,6 +68,8 @@ import { stage3WorkflowService } from '../proposals/stage3-workflow.service';
 import { stage4SendWorkflowService } from '../proposals/stage4-send-workflow.service';
 import { proposalReminderService } from '../proposals/proposal-reminder.service';
 import { stage5ConversionWorkflowService } from '../proposals/stage5-conversion-workflow.service';
+import { stage6ProjectWorkflowService } from '../projects/stage6-project-workflow.service';
+import { seedProjectStages } from '../projects/seed-project-stages';
 
 // ── Extensible Hook Types ────────────────────────────────────────────────
 
@@ -131,11 +133,15 @@ export class AutomationService {
         stage4SendWorkflowService.initialize();
         proposalReminderService.initialize();
         stage5ConversionWorkflowService.initialize();
+        stage6ProjectWorkflowService.initialize();
+
+        // Seed default Kanban stages
+        seedProjectStages().catch((err) => logger.error('[Automation] Stage seeder failed', { err: err.message }));
 
         logger.info('[Automation] Initialized', {
             builtInRules: this.getBuiltInRuleNames(),
             externalHooks: this.hooks.map(h => `${h.event} → ${h.name}`),
-            workflowServices: ['EstimationWorkflow', 'ProposalAutomation', 'DealConversion', 'Stage3Workflow', 'Stage4SendWorkflow', 'ProposalReminder', 'Stage5Conversion'],
+            workflowServices: ['EstimationWorkflow', 'ProposalAutomation', 'DealConversion', 'Stage3Workflow', 'Stage4SendWorkflow', 'ProposalReminder', 'Stage5Conversion', 'Stage6ProjectWorkflow'],
         });
     }
 

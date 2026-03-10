@@ -63,6 +63,11 @@ export interface CreateEstimateDto {
     measurementSource?: string;
     tearOffRequired?: boolean;
     photoUrls?: string[];
+    // Stage 3: Estimator Request Fields
+    desiredNewMaterial?: string;
+    preferredManufacturer?: string;
+    qualityTier?: string;
+    additionalPhotoUrls?: string[];
 }
 
 export interface UpdateEstimateDto {

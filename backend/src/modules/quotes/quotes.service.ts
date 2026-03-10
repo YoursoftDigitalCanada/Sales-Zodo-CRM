@@ -458,3 +458,106 @@ export class QuotesService {
 }
 
 export const quotesService = new QuotesService();
+
+// ── Stage 3B: Create Quote from AI Estimate ─────────────────────────────
+
+/**
+ * Auto-populate a quote from an AI roof estimate.
+ * Loads the estimate + takeoff data and populates line items.
+ */
+export async function createQuoteFromEstimate(
+    tenantId: string,
+    estimateId: string,
+    overrides?: {
+        leadId?: string;
+        clientId?: string;
+        taxRate?: number;
+        paymentScheduleType?: string;
+        warrantySelected?: string;
+        validDays?: number;
+        notes?: string;
+    },
+    createdById?: string,
+) {
+    // 1. Load the AI estimate
+    const estimate = await prisma.roofEstimate.findFirst({
+        where: { id: estimateId, tenantId },
+    });
+
+    if (!estimate) {
+        throw new BadRequestError('AI estimate not found. Cannot create quote without a completed estimate.');
+    }
+
+    if (estimate.roofAreaSqft <= 0) {
+        throw new BadRequestError('AI estimate has no roof area. Please run the AI estimator first.');
+    }
+
+    // 2. Load material takeoffs (if available)
+    const takeoffs = await prisma.roofTakeoff.findMany({
+        where: { estimateId, tenantId },
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+    });
+
+    const takeoffData = takeoffs.length > 0 ? (takeoffs[0] as any) : null;
+
+    // 3. Build line items from takeoff or estimate data
+    const items: Array<{ description: string; quantity: number; unitPrice: number; total: number; sortOrder: number }> = [];
+
+    if (takeoffData?.items && Array.isArray(takeoffData.items)) {
+        // Use detailed takeoff data
+        (takeoffData.items as any[]).forEach((item: any, idx: number) => {
+            items.push({
+                description: item.description || 'Material',
+                quantity: Number(item.totalQuantity || item.quantity || 1),
+                unitPrice: Number(item.unitPrice || 0),
+                total: Number(item.totalPrice || item.total || 0),
+                sortOrder: idx,
+            });
+        });
+    } else {
+        // Fallback: create basic line items from estimate data
+        const roofArea = estimate.roofAreaSqft;
+        const pricePerSqft = estimate.pricePerSqft || 5.50;
+        const materialCost = roofArea * pricePerSqft * 0.45; // ~45% materials
+        const laborCost = roofArea * pricePerSqft * 0.40;    // ~40% labor
+        const overheadCost = roofArea * pricePerSqft * 0.10; // ~10% overhead
+        const permitCost = 350;                               // flat permit fee
+
+        items.push(
+            { description: 'Roofing Materials (Shingles, Underlayment, Flashing)', quantity: 1, unitPrice: Math.round(materialCost * 100) / 100, total: Math.round(materialCost * 100) / 100, sortOrder: 0 },
+            { description: 'Labor — Roof Installation', quantity: 1, unitPrice: Math.round(laborCost * 100) / 100, total: Math.round(laborCost * 100) / 100, sortOrder: 1 },
+            { description: 'Tear-off & Disposal', quantity: 1, unitPrice: Math.round(overheadCost * 100) / 100, total: Math.round(overheadCost * 100) / 100, sortOrder: 2 },
+            { description: 'Permits & Inspection', quantity: 1, unitPrice: permitCost, total: permitCost, sortOrder: 3 },
+        );
+    }
+
+    // 4. Calculate totals
+    const subtotal = items.reduce((sum, item) => sum + item.total, 0);
+    const taxRate = overrides?.taxRate ?? 13; // default 13% HST
+    const taxAmount = Math.round(subtotal * (taxRate / 100) * 100) / 100;
+    const total = subtotal + taxAmount;
+
+    // 5. Calculate valid until date
+    const validDays = overrides?.validDays ?? 30;
+    const validUntil = new Date();
+    validUntil.setDate(validUntil.getDate() + validDays);
+
+    // 6. Create the quote
+    return quotesService.create(
+        tenantId,
+        {
+            leadId: overrides?.leadId || estimate.leadId || null,
+            clientId: overrides?.clientId || estimate.clientId || null,
+            validUntil: validUntil.toISOString(),
+            taxRate,
+            roofEstimateId: estimateId,
+            paymentScheduleType: overrides?.paymentScheduleType || null,
+            warrantySelected: overrides?.warrantySelected || null,
+            validDays,
+            notes: overrides?.notes || `Auto-generated from AI Estimate (${estimate.address}). Roof area: ${estimate.roofAreaSqft.toLocaleString()} sq ft.`,
+            items,
+        },
+        createdById,
+    );
+}

@@ -24,6 +24,11 @@ export const createQuoteSchema = z.object({
     notes: z.string().nullable().optional(),
     terms: z.string().nullable().optional(),
     sourceEventId: z.string().uuid().nullable().optional(),
+    roofEstimateId: z.string().uuid().nullable().optional(),
+    // Stage 3 fields
+    paymentScheduleType: z.enum(['full_upfront', '50_50', 'milestone', 'net_30']).nullable().optional(),
+    warrantySelected: z.enum(['standard', 'extended', 'premium']).nullable().optional(),
+    validDays: z.number().int().min(1).max(365).optional(),
     items: z.array(quoteItemSchema).min(1, 'At least one item is required'),
 });
 
@@ -42,6 +47,10 @@ export const updateQuoteSchema = z.object({
     notes: z.string().nullable().optional(),
     terms: z.string().nullable().optional(),
     items: z.array(quoteItemSchema).optional(),
+    roofEstimateId: z.string().uuid().nullable().optional(),
+    paymentScheduleType: z.enum(['full_upfront', '50_50', 'milestone', 'net_30']).nullable().optional(),
+    warrantySelected: z.enum(['standard', 'extended', 'premium']).nullable().optional(),
+    validDays: z.number().int().min(1).max(365).optional(),
 });
 
 // ── Query ───────────────────────────────────────────────────────────────

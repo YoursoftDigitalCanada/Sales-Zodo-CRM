@@ -64,6 +64,9 @@ import { estimationWorkflowService } from '../leads/estimation-workflow.service'
 import { proposalAutomationService } from '../quotes/proposal-automation.service';
 import { dealConversionService } from '../leads/deal-conversion.service';
 import { leadAutomationService } from '../leads/lead-automation.service';
+import { stage3WorkflowService } from '../proposals/stage3-workflow.service';
+import { stage4SendWorkflowService } from '../proposals/stage4-send-workflow.service';
+import { proposalReminderService } from '../proposals/proposal-reminder.service';
 
 // ── Extensible Hook Types ────────────────────────────────────────────────
 
@@ -123,11 +126,14 @@ export class AutomationService {
         estimationWorkflowService.initialize();
         proposalAutomationService.initialize();
         dealConversionService.initialize();
+        stage3WorkflowService.initialize();
+        stage4SendWorkflowService.initialize();
+        proposalReminderService.initialize();
 
         logger.info('[Automation] Initialized', {
             builtInRules: this.getBuiltInRuleNames(),
             externalHooks: this.hooks.map(h => `${h.event} → ${h.name}`),
-            workflowServices: ['EstimationWorkflow', 'ProposalAutomation', 'DealConversion'],
+            workflowServices: ['EstimationWorkflow', 'ProposalAutomation', 'DealConversion', 'Stage3Workflow', 'Stage4SendWorkflow', 'ProposalReminder'],
         });
     }
 

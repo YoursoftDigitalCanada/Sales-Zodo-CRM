@@ -237,6 +237,31 @@ export interface ConvertLeadDto {
   createContact?: boolean;
 }
 
+export interface MarkLeadContactedDto {
+  propertyType: string;
+  numberOfStories: string;
+  approxRoofAge: string;
+  currentRoofMaterial?: string | null;
+
+  mainIssue: string[];
+  urgencyLevel: string;
+  issueStartTimeline: string;
+
+  isInsuranceClaim: boolean;
+  insuranceCompany?: string | null;
+  claimFiled?: string | null;
+  dateOfDamage?: Date | string | null;
+  claimNumber?: string | null;
+
+  decisionMaker: string;
+  decisionTimeline: string;
+  gettingOtherQuotes?: boolean | null;
+
+  contactNotes: string;
+  leadTemperature: string;
+  estimatedDealValue: number;
+}
+
 export interface BulkAssignLeadsDto {
   leadIds: string[];
   assignedToId: string;
@@ -372,6 +397,30 @@ export interface LeadResponseDto {
   followUpDateTime?: Date;
   inspectionAppointmentDate?: Date;
   qualificationCallNotes?: string;
+
+  contactedDetails?: {
+    id: string;
+    propertyType: string;
+    numberOfStories: string;
+    approxRoofAge: string;
+    currentRoofMaterial?: string;
+    mainIssue: string[];
+    urgencyLevel: string;
+    issueStartTimeline: string;
+    isInsuranceClaim: boolean;
+    insuranceCompany?: string;
+    claimFiled?: string;
+    dateOfDamage?: Date;
+    claimNumber?: string;
+    decisionMaker: string;
+    decisionTimeline: string;
+    gettingOtherQuotes?: boolean;
+    contactNotes: string;
+    leadTemperature: string;
+    estimatedDealValue: number;
+    createdAt: Date;
+    updatedAt: Date;
+  };
 }
 
 export interface LeadListResponseDto {
@@ -537,5 +586,30 @@ export function toLeadResponseDto(lead: any): LeadResponseDto {
     followUpDateTime: lead.followUpDateTime || undefined,
     inspectionAppointmentDate: lead.inspectionAppointmentDate || undefined,
     qualificationCallNotes: lead.qualificationCallNotes || undefined,
+    contactedDetails: lead.contactedDetails
+      ? {
+        id: lead.contactedDetails.id,
+        propertyType: lead.contactedDetails.propertyType,
+        numberOfStories: lead.contactedDetails.numberOfStories,
+        approxRoofAge: lead.contactedDetails.approxRoofAge,
+        currentRoofMaterial: lead.contactedDetails.currentRoofMaterial || undefined,
+        mainIssue: lead.contactedDetails.mainIssue || [],
+        urgencyLevel: lead.contactedDetails.urgencyLevel,
+        issueStartTimeline: lead.contactedDetails.issueStartTimeline,
+        isInsuranceClaim: lead.contactedDetails.isInsuranceClaim,
+        insuranceCompany: lead.contactedDetails.insuranceCompany || undefined,
+        claimFiled: lead.contactedDetails.claimFiled || undefined,
+        dateOfDamage: lead.contactedDetails.dateOfDamage || undefined,
+        claimNumber: lead.contactedDetails.claimNumber || undefined,
+        decisionMaker: lead.contactedDetails.decisionMaker,
+        decisionTimeline: lead.contactedDetails.decisionTimeline,
+        gettingOtherQuotes: lead.contactedDetails.gettingOtherQuotes ?? undefined,
+        contactNotes: lead.contactedDetails.contactNotes,
+        leadTemperature: lead.contactedDetails.leadTemperature,
+        estimatedDealValue: Number(lead.contactedDetails.estimatedDealValue),
+        createdAt: lead.contactedDetails.createdAt,
+        updatedAt: lead.contactedDetails.updatedAt,
+      }
+      : undefined,
   };
 }

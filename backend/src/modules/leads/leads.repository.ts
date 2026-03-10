@@ -35,6 +35,7 @@ export class LeadsRepository {
         tag: true,
       },
     },
+    contactedDetails: true,
   };
 
   /**

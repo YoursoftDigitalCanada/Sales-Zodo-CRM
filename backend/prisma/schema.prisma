@@ -712,6 +712,7 @@ model Tenant {
   contracts             Contract[]
   leadInspections       LeadInspection[]
   leadInsuranceClaims   LeadInsuranceClaim[]
+  leadContactedDetails  LeadContactedDetails[]
   subscription          Subscription?
   timeEntries           TimeEntry[]
   jobNotes              JobNote[]
@@ -726,6 +727,7 @@ model Tenant {
   leaveRequests         LeaveRequest[]
   employeeDocuments     EmployeeDocument[]
   jobCompletions        JobCompletion[]
+  proposals             Proposal[]
 
   @@index([status])
   @@index([slug])
@@ -841,6 +843,7 @@ model Employee {
   availability          Availability[]
   employeeDocuments     EmployeeDocument[]
   jobCompletions        JobCompletion[]
+  createdProposals      Proposal[]       @relation("ProposalCreatedBy")
 
   @@unique([tenantId, userId])
   @@unique([tenantId, employeeNumber])
@@ -1212,9 +1215,11 @@ model Lead {
   files             File[]
   emails            Email[]
   communicationLogs CommunicationLog[]
+  contactedDetails  LeadContactedDetails?
   inspections       LeadInspection[]
   insuranceClaims   LeadInsuranceClaim[]
   roofEstimates     RoofEstimate[]
+  proposals         Proposal[]
 
   @@index([tenantId])
   @@index([status])
@@ -1225,6 +1230,48 @@ model Lead {
   @@index([serviceType])
   @@index([isInsuranceClaim])
   @@index([zipCode])
+}
+
+model LeadContactedDetails {
+  id                  String   @id @default(uuid())
+  tenantId            String
+  tenant              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  leadId              String   @unique
+  lead                Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  // Property info
+  propertyType        String
+  numberOfStories     String
+  approxRoofAge       String
+  currentRoofMaterial String?
+
+  // Problem / need
+  mainIssue           String[]
+  urgencyLevel        String
+  issueStartTimeline  String
+
+  // Insurance (conditional)
+  isInsuranceClaim    Boolean
+  insuranceCompany    String?
+  claimFiled          String?
+  dateOfDamage        DateTime?
+  claimNumber         String?
+
+  // Decision & timeline
+  decisionMaker       String
+  decisionTimeline    String
+  gettingOtherQuotes  Boolean?
+
+  // Sales notes
+  contactNotes        String
+  leadTemperature     String
+  estimatedDealValue  Decimal  @db.Decimal(12, 2)
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([tenantId, leadId])
 }
 
 model LeadInspection {
@@ -4122,6 +4169,7 @@ model RoofEstimate {
   quotes              Quote[]
   takeoffs            RoofTakeoff[]
   solarData           SolarRoofData[]
+  proposals           Proposal[]
 
   @@index([tenantId])
   @@index([clientId])
@@ -4306,6 +4354,11 @@ model Quote {
   notes             String?         @db.Text
   terms             String?         @db.Text
   
+  // Stage 3: Payment & Warranty
+  paymentScheduleType String?                 // "full_upfront", "50_50", "milestone", "net_30"
+  warrantySelected    String?                 // "standard", "extended", "premium"
+  validDays           Int             @default(30)
+  
   // Source context (which meeting triggered this)
   sourceEventId     String?         // Calendar event that triggered quote creation
   
@@ -4337,6 +4390,7 @@ model Quote {
   invoices          Invoice[]
   files             File[]
   emails            Email[]
+  proposals         Proposal[]
 
   @@unique([tenantId, quoteNumber])
   @@index([tenantId])
@@ -4363,6 +4417,76 @@ model QuoteItem {
   quote         Quote     @relation(fields: [quoteId], references: [id], onDelete: Cascade)
 
   @@index([quoteId])
+}
+
+// ============================================================================
+// PROPOSALS MODULE
+// ============================================================================
+
+enum ProposalStatus {
+  DRAFT
+  GENERATED
+  SENT
+  VIEWED
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+model Proposal {
+  id                    String          @id @default(uuid())
+  proposalNumber        String                          // PR-YYYY-0001
+
+  // Status
+  status                ProposalStatus  @default(DRAFT)
+
+  // Links
+  leadId                String
+  lead                  Lead            @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  quoteId               String
+  quote                 Quote           @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  roofEstimateId        String?
+  roofEstimate          RoofEstimate?   @relation(fields: [roofEstimateId], references: [id], onDelete: SetNull)
+
+  // Content
+  customMessageToClient String?         @db.Text
+  coverPageHtml         String?         @db.Text
+  scopeOfWork           String?         @db.Text
+  termsAndConditions    String?         @db.Text
+
+  // PDF
+  pdfUrl                String?
+  pdfGeneratedAt        DateTime?
+
+  // E-Signature
+  publicToken           String?         @unique
+  signedAt              DateTime?
+  signedByName          String?
+  signatureData         String?         @db.Text    // base64 signature image
+
+  // Stage 4: View Tracking & Delivery
+  lastViewedAt          DateTime?
+  viewCount             Int             @default(0)
+  deliveryMethod        String?                         // "email", "sms", "email_sms"
+
+  // Tenant
+  tenantId              String
+  tenant                Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Created by
+  createdById           String?
+  createdBy             Employee?       @relation("ProposalCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  // Timestamps
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  sentAt                DateTime?
+
+  @@unique([tenantId, proposalNumber])
+  @@index([tenantId])
+  @@index([leadId])
+  @@index([quoteId])
+  @@index([status])
 }
 
 // ============================================================================

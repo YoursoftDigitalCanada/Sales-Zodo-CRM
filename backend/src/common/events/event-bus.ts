@@ -368,11 +368,31 @@ export interface ReportsReadyEvent {
 
 export interface ProposalSentEvent {
     tenantId: string;
+    proposalId: string;
     leadId: string;
+    leadName: string;
+    leadEmail?: string;
+    leadPhone?: string;
     quoteId: string;
     quoteNumber: string;
-    recipientEmail?: string;
+    proposalPdfUrl?: string;
+    aiReportUrl?: string;
+    deliveryMethod: 'email' | 'sms' | 'email_sms';
+    publicToken: string;
+    proposalLink: string;
+    total: number;
+    salesRepId: string;
     ownerUserId?: string;
+    recipientEmail?: string;
+}
+
+export interface ProposalViewedEvent {
+    tenantId: string;
+    proposalId: string;
+    leadId: string;
+    leadName: string;
+    ownerUserId?: string;
+    viewCount: number;
 }
 
 export interface ProposalAcceptedEvent {
@@ -389,6 +409,20 @@ export interface ProposalDeclinedEvent {
     leadId: string;
     quoteId: string;
     quoteNumber: string;
+    ownerUserId?: string;
+}
+
+export interface ProposalGeneratedEvent {
+    tenantId: string;
+    leadId: string;
+    leadName: string;
+    proposalId: string;
+    quoteId: string;
+    quoteNumber: string;
+    estimateId: string;
+    total: number;
+    pdfUrl?: string;
+    ownerId?: string;
     ownerUserId?: string;
 }
 
@@ -449,7 +483,9 @@ export interface CRMEventMap {
     'inspection.completed': InspectionCompletedEvent;
     'ai_estimate.completed': AIEstimateCompletedEvent;
     'reports.ready': ReportsReadyEvent;
+    'proposal.generated': ProposalGeneratedEvent;
     'proposal.sent': ProposalSentEvent;
+    'proposal.viewed': ProposalViewedEvent;
     'proposal.accepted': ProposalAcceptedEvent;
     'proposal.declined': ProposalDeclinedEvent;
     'deal.won': DealWonEvent;

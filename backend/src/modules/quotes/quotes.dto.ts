@@ -26,6 +26,10 @@ export interface CreateQuoteDto {
     terms?: string | null;
     sourceEventId?: string | null;  // calendar event that triggered this
     roofEstimateId?: string | null; // linked roof estimate for PDF attachment
+    // Stage 3 fields
+    paymentScheduleType?: string | null;  // "full_upfront", "50_50", "milestone", "net_30"
+    warrantySelected?: string | null;     // "standard", "extended", "premium"
+    validDays?: number;                   // days quote remains valid (default: 30)
     items: QuoteItemDto[];
 }
 
@@ -67,6 +71,10 @@ export interface QuoteResponseDto {
     updatedAt: Date;
     sentAt: Date | null;
     acceptedAt: Date | null;
+    // Stage 3 fields
+    paymentScheduleType: string | null;
+    warrantySelected: string | null;
+    validDays: number;
 }
 
 type QuoteWithRelations = Quote & {
@@ -104,5 +112,8 @@ export function toQuoteResponseDto(q: QuoteWithRelations): QuoteResponseDto {
         updatedAt: q.updatedAt,
         sentAt: q.sentAt,
         acceptedAt: q.acceptedAt,
+        paymentScheduleType: (q as any).paymentScheduleType || null,
+        warrantySelected: (q as any).warrantySelected || null,
+        validDays: (q as any).validDays ?? 30,
     };
 }

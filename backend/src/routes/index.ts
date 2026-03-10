@@ -39,6 +39,10 @@ import quotesPublicRoutes from '../modules/quotes/quotes.public-routes';
 import servicesRoutes from '../modules/services/services.routes';
 import contractsRoutes from '../modules/contracts/contracts.routes';
 
+// Proposals module
+import proposalsRoutes from '../modules/proposals/proposals.routes';
+import proposalsPublicRoutes from '../modules/proposals/proposals.public-routes';
+
 // File management modules
 import filesRoutes from '../modules/files/files.routes';
 import foldersRoutes from '../modules/folders/folders.routes';
@@ -95,6 +99,7 @@ export function registerRoutes(app: Application): void {
 
   apiRouter.use('/auth', authRoutes);
   apiRouter.use('/public', quotesPublicRoutes);
+  apiRouter.use('/public', proposalsPublicRoutes);
   apiRouter.use('/webhooks/leads', leadSourceWebhooksRoutes);
 
   // =========================================================================
@@ -151,6 +156,7 @@ export function registerRoutes(app: Application): void {
   // protectedRouter.use('/bookings', bookingsRoutes);
   protectedRouter.use('/services', servicesRoutes);
   protectedRouter.use('/contracts', contractsRoutes);
+  protectedRouter.use('/proposals', proposalsRoutes);
 
   // File Management
   protectedRouter.use('/files', filesRoutes);
@@ -255,6 +261,7 @@ export function registerRoutes(app: Application): void {
         roofEstimator: `${apiPrefix}/roof-estimator`,
         copilot: `${apiPrefix}/copilot`,
         contracts: `${apiPrefix}/contracts`,
+        proposals: `${apiPrefix}/proposals`,
       },
     });
   });

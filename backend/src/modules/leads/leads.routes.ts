@@ -20,6 +20,8 @@ import {
   bulkStatusSchema,
   pipelineQuerySchema,
   setEstimationMethodSchema,
+  checkDuplicatesSchema,
+  mergeLeadsSchema,
 } from './leads.validators';
 import { inspectionsController } from './inspections.controller';
 import {
@@ -221,6 +223,22 @@ router.post(
 
 /**
  * @swagger
+ * /leads/check-duplicates:
+ *   post:
+ *     summary: Check for duplicate leads before creation
+ *     tags: [Leads]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.post(
+  '/check-duplicates',
+  requirePermission(PERMISSIONS.LEADS_VIEW),
+  validate(checkDuplicatesSchema),
+  leadsController.checkDuplicates.bind(leadsController)
+);
+
+/**
+ * @swagger
  * /leads/{id}:
  *   get:
  *     summary: Get lead by ID
@@ -362,6 +380,22 @@ router.delete(
   requirePermission(PERMISSIONS.LEADS_DELETE),
   validate(leadIdSchema),
   leadsController.delete.bind(leadsController)
+);
+
+/**
+ * @swagger
+ * /leads/{id}/merge:
+ *   post:
+ *     summary: Merge a source lead into this target lead
+ *     tags: [Leads]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.post(
+  '/:id/merge',
+  requirePermission(PERMISSIONS.LEADS_UPDATE),
+  validate(mergeLeadsSchema),
+  leadsController.merge.bind(leadsController)
 );
 
 // ============================================

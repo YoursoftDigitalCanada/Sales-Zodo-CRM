@@ -49,3 +49,18 @@ export const setEstimationMethodSchema = z.object({
   }),
 });
 
+export const checkDuplicatesSchema = z.object({
+  body: z.object({
+    phone: z.string().optional().nullable(),
+    email: z.string().email().optional().nullable(),
+    propertyAddress: z.string().optional().nullable(),
+    excludeLeadId: z.string().uuid().optional(),
+  }),
+});
+
+export const mergeLeadsSchema = z.object({
+  params: z.object({ id: z.string().uuid() }),
+  body: z.object({
+    sourceLeadId: z.string().uuid(),
+  }),
+});

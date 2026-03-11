@@ -108,6 +108,12 @@ export interface CreateLeadDto {
   followUpDateTime?: string;
   inspectionAppointmentDate?: string;
   qualificationCallNotes?: string;
+
+  // Closure / Inactive State Fields
+  closureReason?: string;
+  duplicateOfLeadId?: string;
+  closedAt?: string;
+  reactivateAt?: string;
 }
 
 export interface UpdateLeadDto {
@@ -214,6 +220,12 @@ export interface UpdateLeadDto {
   followUpDateTime?: string;
   inspectionAppointmentDate?: string;
   qualificationCallNotes?: string;
+
+  // Closure / Inactive State Fields
+  closureReason?: string;
+  duplicateOfLeadId?: string;
+  closedAt?: string;
+  reactivateAt?: string;
 }
 
 export interface LeadQueryDto {
@@ -397,6 +409,12 @@ export interface LeadResponseDto {
   followUpDateTime?: Date;
   inspectionAppointmentDate?: Date;
   qualificationCallNotes?: string;
+
+  // Closure / Inactive State Fields
+  closureReason?: string;
+  duplicateOfLeadId?: string;
+  closedAt?: Date;
+  reactivateAt?: Date;
 
   contactedDetails?: {
     id: string;
@@ -586,6 +604,13 @@ export function toLeadResponseDto(lead: any): LeadResponseDto {
     followUpDateTime: lead.followUpDateTime || undefined,
     inspectionAppointmentDate: lead.inspectionAppointmentDate || undefined,
     qualificationCallNotes: lead.qualificationCallNotes || undefined,
+
+    // Closure / Inactive State Fields
+    closureReason: lead.closureReason || undefined,
+    duplicateOfLeadId: lead.duplicateOfLeadId || undefined,
+    closedAt: lead.closedAt || undefined,
+    reactivateAt: lead.reactivateAt || undefined,
+
     contactedDetails: lead.contactedDetails
       ? {
         id: lead.contactedDetails.id,

@@ -31,10 +31,11 @@ export class LeadsManager {
     req: Request,
     tenantId: string,
     data: CreateLeadDto,
-    createdById: string
+    createdById: string,
+    options?: { skipDuplicateCheck?: boolean }
   ): Promise<LeadResponseDto> {
     const sourceMetadata = this.buildLeadSourceMetadata(req, data);
-    const lead = await leadsService.create(tenantId, data, createdById, sourceMetadata);
+    const lead = await leadsService.create(tenantId, data, createdById, sourceMetadata, options);
 
     // Notify assigned employee if different from creator
     if (data.assignedToId && data.assignedToId !== createdById) {
@@ -117,20 +118,38 @@ export class LeadsManager {
   }
 
   /**
-   * Update lead status
+   * Update lead status (with optional closure reason for inactive states)
    */
   async updateLeadStatus(
     req: Request,
     id: string,
     tenantId: string,
-    status: LeadStatus
+    status: LeadStatus,
+    reasonPayload?: {
+      closureReason?: string;
+      duplicateOfLeadId?: string;
+      reactivateAt?: string;
+    }
   ): Promise<LeadResponseDto> {
     const existing = await leadsRepository.findById(id, tenantId);
     if (!existing) {
       throw new NotFoundError('Lead not found', ErrorCodes.RESOURCE_NOT_FOUND);
     }
 
-    const lead = await leadsService.updateStatus(id, tenantId, status);
+    // Use the reason-aware update if any closure fields are provided
+    const hasReasonFields = reasonPayload?.closureReason || reasonPayload?.duplicateOfLeadId || reasonPayload?.reactivateAt;
+    let lead: LeadResponseDto;
+
+    if (hasReasonFields) {
+      lead = await leadsService.updateStatusWithReason(id, tenantId, {
+        status,
+        closureReason: reasonPayload?.closureReason,
+        duplicateOfLeadId: reasonPayload?.duplicateOfLeadId,
+        reactivateAt: reasonPayload?.reactivateAt,
+      });
+    } else {
+      lead = await leadsService.updateStatusWithReason(id, tenantId, { status });
+    }
 
     logger.info('Lead status updated', {
       leadId: id,
@@ -319,9 +338,10 @@ export class LeadsManager {
     tenantId: string,
     leads: CreateLeadDto[],
     createdById: string
-  ): Promise<{ imported: number; failed: number; errors: string[] }> {
+  ): Promise<{ imported: number; failed: number; duplicates: number; errors: string[] }> {
     let imported = 0;
     let failed = 0;
+    let duplicatesFound = 0;
     const errors: string[] = [];
 
     for (let i = 0; i < leads.length; i++) {
@@ -329,8 +349,21 @@ export class LeadsManager {
         await leadsService.create(tenantId, leads[i], createdById);
         imported++;
       } catch (error: any) {
-        failed++;
-        errors.push(`Row ${i + 1}: ${error.message}`);
+        if (error.name === 'DuplicateLeadError') {
+          // Track as duplicate but still create with skipDuplicateCheck
+          duplicatesFound++;
+          errors.push(`Row ${i + 1}: Duplicate detected (${error.duplicates?.[0]?.matchedFields?.join(', ') || 'unknown field'}), created anyway`);
+          try {
+            await leadsService.create(tenantId, leads[i], createdById, undefined, { skipDuplicateCheck: true });
+            imported++;
+          } catch (innerErr: any) {
+            failed++;
+            errors.push(`Row ${i + 1}: ${innerErr.message}`);
+          }
+        } else {
+          failed++;
+          errors.push(`Row ${i + 1}: ${error.message}`);
+        }
       }
     }
 
@@ -338,9 +371,10 @@ export class LeadsManager {
       tenantId,
       imported,
       failed,
+      duplicatesFound,
     });
 
-    return { imported, failed, errors };
+    return { imported, failed, duplicates: duplicatesFound, errors };
   }
 
   /**

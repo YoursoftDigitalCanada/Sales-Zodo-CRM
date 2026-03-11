@@ -35,6 +35,12 @@ enum LeadStatus {
   NEGOTIATION
   WON
   LOST
+  DUPLICATE
+  UNQUALIFIED
+  NO_RESPONSE
+  OUT_OF_SERVICE_AREA
+  FUTURE_FOLLOW_UP
+  DORMANT_PROPOSAL
 }
 
 enum LeadTemperature {
@@ -1194,6 +1200,12 @@ model Lead {
   followUpDateTime      DateTime?
   inspectionAppointmentDate DateTime?
   qualificationCallNotes String?  @db.Text
+
+  // ── Closure / Inactive State Fields ────────────────────────────────────
+  closureReason         String?   @db.Text    // Required for LOST, DUPLICATE; optional for other inactive states
+  duplicateOfLeadId     String?               // Links to original lead when status = DUPLICATE
+  closedAt              DateTime?             // When the lead was moved to a terminal/inactive state
+  reactivateAt          DateTime?             // For FUTURE_FOLLOW_UP: date-based reactivation
 
   // Tenant relation
   tenantId          String

@@ -80,6 +80,12 @@ export const CreateLeadSchema = z.object({
   followUpDateTime: nullableDateTime,
   inspectionAppointmentDate: nullableDateTime,
   qualificationCallNotes: z.string().max(2000).optional().nullable(),
+
+  // ── Closure / Inactive State Fields ───────────────────────────────────
+  closureReason: z.string().max(1000).optional().nullable(),
+  duplicateOfLeadId: z.string().uuid().optional().nullable(),
+  closedAt: z.string().datetime().optional().nullable(),
+  reactivateAt: z.string().datetime().optional().nullable(),
 });
 
 export const UpdateLeadSchema = CreateLeadSchema.partial();

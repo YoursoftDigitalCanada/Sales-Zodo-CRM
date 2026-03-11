@@ -9,6 +9,8 @@ import {
 } from '../../common/utils/responseFormatter';
 import type { CreateLeadDto, UpdateLeadDto } from '@contracts/lead';
 import { sanitizeBody } from '../../common/utils/sanitize-body';
+import { duplicateDetectionService } from './duplicate-detection.service';
+import { DuplicateLeadError } from './leads.service';
 
 export class LeadsController {
   /**
@@ -20,11 +22,24 @@ export class LeadsController {
       const tenantId = req.context.tenantId;
       const employeeId = req.user!.employeeId!;
       const data = sanitizeBody<CreateLeadDto>(req.body);
+      const skipDuplicateCheck = req.body.skipDuplicateCheck === true;
 
-      const lead = await leadsManager.createLead(req, tenantId, data as CreateLeadDto, employeeId);
+      const lead = await leadsManager.createLead(
+        req, tenantId, data as CreateLeadDto, employeeId,
+        { skipDuplicateCheck }
+      );
 
       sendCreated(res, lead, 'Lead created successfully');
     } catch (error) {
+      if (error instanceof DuplicateLeadError) {
+        res.status(409).json({
+          success: false,
+          message: error.message,
+          error: 'DUPLICATE_LEAD_DETECTED',
+          duplicates: error.duplicates,
+        });
+        return;
+      }
       next(error);
     }
   }
@@ -144,15 +159,19 @@ export class LeadsController {
 
   /**
    * PATCH /leads/:id/status
-   * Update lead status
+   * Update lead status (with optional closure reason for inactive states)
    */
   async updateStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const tenantId = req.context.tenantId;
       const { id } = req.params;
-      const { status } = req.body;
+      const { status, closureReason, duplicateOfLeadId, reactivateAt } = req.body;
 
-      const lead = await leadsManager.updateLeadStatus(req, id, tenantId, status);
+      const lead = await leadsManager.updateLeadStatus(req, id, tenantId, status, {
+        closureReason,
+        duplicateOfLeadId,
+        reactivateAt,
+      });
 
       sendSuccess(res, lead, 'Lead status updated');
     } catch (error) {
@@ -309,6 +328,49 @@ export class LeadsController {
       const data = await leadsManager.exportLeads(req, tenantId, query);
 
       sendSuccess(res, data);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /leads/check-duplicates
+   * Pre-creation duplicate check
+   */
+  async checkDuplicates(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const tenantId = req.context.tenantId;
+      const { phone, email, propertyAddress, excludeLeadId } = req.body;
+
+      const result = await duplicateDetectionService.findDuplicates(
+        tenantId,
+        { phone, email, propertyAddress },
+        excludeLeadId,
+      );
+
+      sendSuccess(res, result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /leads/:id/merge
+   * Merge source lead into target lead
+   */
+  async merge(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const tenantId = req.context.tenantId;
+      const targetLeadId = req.params.id;
+      const { sourceLeadId } = req.body;
+
+      const result = await duplicateDetectionService.mergeLeads(
+        tenantId,
+        targetLeadId,
+        sourceLeadId,
+      );
+
+      sendSuccess(res, result, 'Leads merged successfully');
     } catch (error) {
       next(error);
     }

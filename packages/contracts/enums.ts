@@ -16,6 +16,12 @@ export const LeadStatusValues = [
   "NEGOTIATION",
   "WON",
   "LOST",
+  "DUPLICATE",
+  "UNQUALIFIED",
+  "NO_RESPONSE",
+  "OUT_OF_SERVICE_AREA",
+  "FUTURE_FOLLOW_UP",
+  "DORMANT_PROPOSAL",
 ] as const;
 export const LeadStatus = enumObject(LeadStatusValues);
 export const LeadStatusSchema = z.enum(LeadStatusValues);

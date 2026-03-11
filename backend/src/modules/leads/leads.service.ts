@@ -28,6 +28,18 @@ import {
   detectLeadSource,
   LeadSourceRequestMetadata,
 } from './lead-source-detector';
+import { duplicateDetectionService } from './duplicate-detection.service';
+
+// Custom error class for duplicate detection
+export class DuplicateLeadError extends Error {
+  public readonly statusCode = 409;
+  public readonly duplicates: any[];
+  constructor(message: string, duplicates: any[]) {
+    super(message);
+    this.name = 'DuplicateLeadError';
+    this.duplicates = duplicates;
+  }
+}
 
 // ── Lifecycle Stage Auto-Progression Map ────────────────────────────────
 // Maps LeadStatus → appropriate LeadLifecycleStage
@@ -38,8 +50,21 @@ const STATUS_TO_LIFECYCLE: Partial<Record<LeadStatus, LeadLifecycleStage>> = {
   PROPOSAL: 'SQL',
   NEGOTIATION: 'OPPORTUNITY',
   WON: 'OPPORTUNITY',
-  // LOST doesn't change lifecycle — they stay at whatever stage they were
+  // Inactive/closure states don't change lifecycle — lead stays at whatever stage it was
+  // LOST, DUPLICATE, UNQUALIFIED, NO_RESPONSE, OUT_OF_SERVICE_AREA, FUTURE_FOLLOW_UP, DORMANT_PROPOSAL
 };
+
+// Terminal and inactive statuses that should not be counted as active leads
+const INACTIVE_STATUSES: LeadStatus[] = [
+  'WON', 'LOST', 'DUPLICATE', 'UNQUALIFIED', 'NO_RESPONSE',
+  'OUT_OF_SERVICE_AREA', 'FUTURE_FOLLOW_UP', 'DORMANT_PROPOSAL',
+];
+
+// Statuses that require a mandatory closureReason
+const REASON_REQUIRED_STATUSES: LeadStatus[] = ['LOST', 'DUPLICATE'];
+
+// Statuses that require reactivateAt date
+const REACTIVATION_REQUIRED_STATUSES: LeadStatus[] = ['FUTURE_FOLLOW_UP'];
 
 export class LeadsService {
   // ── CREATE ──────────────────────────────────────────────────────────────
@@ -51,13 +76,29 @@ export class LeadsService {
     tenantId: string,
     data: CreateLeadDto,
     createdById?: string,
-    requestMetadata?: LeadSourceRequestMetadata
+    requestMetadata?: LeadSourceRequestMetadata,
+    options?: { skipDuplicateCheck?: boolean }
   ): Promise<LeadResponseDto> {
     // Validate assigned employee
     if (data.assignedToId) {
       const exists = await leadsRepository.employeeExists(data.assignedToId, tenantId);
       if (!exists) {
         throw new BadRequestError('Assigned employee not found', ErrorCodes.EMPLOYEE_NOT_FOUND);
+      }
+    }
+
+    // ── Duplicate detection ──────────────────────────────────────────────
+    if (!options?.skipDuplicateCheck) {
+      const dupResult = await duplicateDetectionService.findDuplicates(tenantId, {
+        phone: data.phone,
+        email: data.email,
+        propertyAddress: data.propertyAddress,
+      });
+      if (dupResult.hasDuplicates) {
+        throw new DuplicateLeadError(
+          'Potential duplicate leads found. Review matches before creating.',
+          dupResult.duplicates,
+        );
       }
     }
 
@@ -117,7 +158,7 @@ export class LeadsService {
               _count: {
                 select: {
                   assignedLeads: {
-                    where: { status: { notIn: ['WON', 'LOST'] } },
+                    where: { status: { notIn: INACTIVE_STATUSES } },
                   },
                 },
               },
@@ -374,6 +415,126 @@ export class LeadsService {
     logger.info('[LeadsService] Lead status updated', {
       leadId: id, tenantId, oldStatus, newStatus: status,
       lifecycleChanged: !!updateData.lifecycleStage,
+    });
+
+    return dto;
+  }
+
+  /**
+   * Update lead status with reason capture for inactive/closure states.
+   * Enforces business rules:
+   * - LOST, DUPLICATE → require closureReason
+   * - DUPLICATE → require duplicateOfLeadId
+   * - FUTURE_FOLLOW_UP → require reactivateAt date
+   */
+  async updateStatusWithReason(
+    id: string,
+    tenantId: string,
+    payload: {
+      status: LeadStatus;
+      closureReason?: string;
+      duplicateOfLeadId?: string;
+      reactivateAt?: string;
+    }
+  ): Promise<LeadResponseDto> {
+    const { status, closureReason, duplicateOfLeadId, reactivateAt } = payload;
+
+    // ── Validate mandatory fields for specific statuses ──────────────────
+    if (REASON_REQUIRED_STATUSES.includes(status) && !closureReason) {
+      throw new BadRequestError(
+        `A closure reason is required when setting status to ${status}`,
+        ErrorCodes.VALIDATION_FAILED
+      );
+    }
+
+    if (status === 'DUPLICATE' && !duplicateOfLeadId) {
+      throw new BadRequestError(
+        'duplicateOfLeadId is required when marking a lead as DUPLICATE',
+        ErrorCodes.VALIDATION_FAILED
+      );
+    }
+
+    if (REACTIVATION_REQUIRED_STATUSES.includes(status) && !reactivateAt) {
+      throw new BadRequestError(
+        'reactivateAt date is required for FUTURE_FOLLOW_UP status',
+        ErrorCodes.VALIDATION_FAILED
+      );
+    }
+
+    const existing = await leadsRepository.findById(id, tenantId);
+    if (!existing) {
+      throw new NotFoundError('Lead not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    }
+
+    const oldStatus = existing.status;
+    const oldLifecycle = (existing as any).lifecycleStage;
+
+    // Build update data
+    const newLifecycle = STATUS_TO_LIFECYCLE[status];
+    const updateData: any = {
+      status,
+      closureReason: closureReason || null,
+      duplicateOfLeadId: duplicateOfLeadId || null,
+      reactivateAt: reactivateAt ? new Date(reactivateAt) : null,
+    };
+
+    // Set closedAt timestamp for all inactive statuses
+    if (INACTIVE_STATUSES.includes(status)) {
+      updateData.closedAt = new Date();
+    } else {
+      // If reactivating (moving back to an active status), clear closure fields
+      updateData.closedAt = null;
+      updateData.closureReason = null;
+      updateData.duplicateOfLeadId = null;
+      updateData.reactivateAt = null;
+    }
+
+    if (newLifecycle && newLifecycle !== oldLifecycle) {
+      updateData.lifecycleStage = newLifecycle;
+    }
+
+    const rawLead = await prisma.lead.update({
+      where: { id, tenantId },
+      data: updateData,
+      include: {
+        assignedTo: { include: { user: true } },
+        leadSource: true,
+        tags: { include: { tag: true } },
+      },
+    });
+
+    const dto = toLeadResponseDto(rawLead);
+
+    // ▸ Timeline
+    const reasonText = closureReason ? ` (Reason: ${closureReason})` : '';
+    await this.logActivity(tenantId, id, 'STATUS_CHANGE',
+      `Status: ${oldStatus} → ${status}${reasonText}`,
+      { oldStatus, newStatus: status, closureReason, duplicateOfLeadId, reactivateAt }
+    );
+
+    // ▸ Event: emit for automation engine
+    eventBus.emit('lead.statusChanged', {
+      tenantId,
+      leadId: id,
+      leadName: `${existing.firstName} ${existing.lastName}`,
+      oldStatus,
+      newStatus: status,
+      ownerId: existing.assignedToId || undefined,
+      ownerUserId: dto.assignedTo?.userId,
+      email: dto.email,
+      companyName: dto.companyName,
+    });
+
+    // ▸ Audit
+    activityLogger.log({
+      tenantId, entityType: 'Lead', entityId: id,
+      action: 'STATUS_CHANGE', module: 'leads',
+      description: `Lead status: ${oldStatus} → ${status}${reasonText}`,
+      metadata: { oldStatus, newStatus: status, closureReason, duplicateOfLeadId, reactivateAt },
+    });
+
+    logger.info('[LeadsService] Lead status updated with reason', {
+      leadId: id, tenantId, oldStatus, newStatus: status, closureReason,
     });
 
     return dto;

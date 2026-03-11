@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { getLeads, createLead, updateLead, deleteLead, updateLeadStatus } from "@/features/leads";
+import { getLeads, createLead, updateLead, deleteLead, updateLeadStatus, checkDuplicates, mergeLeads } from "@/features/leads";
 import { getLeadSources } from "@/features/leads/services/lead-sources-service";
 import { LeadStatus, LeadTemperature } from "@/types/lead-contracts";
 import { createCalendarEvent } from "@/features/calendar";
@@ -141,6 +141,11 @@ import {
   ThermometerSun,
   Snowflake,
   Video,
+  Ban,
+  PhoneOff,
+  MapPinOff,
+  CalendarClock,
+  FileX2,
   type LucideIcon,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
@@ -247,6 +252,12 @@ interface Lead {
   followUpDateTime?: string;
   inspectionAppointmentDate?: string;
   qualificationCallNotes?: string;
+
+  // ── Closure / Inactive State Fields ───────────────────────────────────
+  closureReason?: string;
+  duplicateOfLeadId?: string;
+  closedAt?: string;
+  reactivateAt?: string;
 }
 
 interface LeadStats {
@@ -284,6 +295,13 @@ const leadStatuses = [
   { id: LeadStatus.NEGOTIATION, name: "Negotiation", color: "#F97316", bgColor: "#FFF7ED", icon: Clock },
   { id: LeadStatus.WON, name: "Won", color: "#10B981", bgColor: "#ECFDF5", icon: CheckCircle2 },
   { id: LeadStatus.LOST, name: "Lost", color: "#EF4444", bgColor: "#FEF2F2", icon: AlertCircle },
+  // ── Inactive / Closure statuses ──
+  { id: LeadStatus.DUPLICATE, name: "Duplicate", color: "#64748B", bgColor: "#F1F5F9", icon: Copy },
+  { id: LeadStatus.UNQUALIFIED, name: "Unqualified", color: "#475569", bgColor: "#F1F5F9", icon: Ban },
+  { id: LeadStatus.NO_RESPONSE, name: "No Response", color: "#D97706", bgColor: "#FFFBEB", icon: PhoneOff },
+  { id: LeadStatus.OUT_OF_SERVICE_AREA, name: "Out of Area", color: "#EA580C", bgColor: "#FFF7ED", icon: MapPinOff },
+  { id: LeadStatus.FUTURE_FOLLOW_UP, name: "Future Follow-Up", color: "#0891B2", bgColor: "#ECFEFF", icon: CalendarClock },
+  { id: LeadStatus.DORMANT_PROPOSAL, name: "Dormant Proposal", color: "#7C3AED", bgColor: "#F5F3FF", icon: FileX2 },
 ];
 
 
@@ -2954,6 +2972,11 @@ const AllLeads = () => {
   const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
   const [pendingQualifiedLead, setPendingQualifiedLead] = useState<Lead | null>(null);
 
+  // Duplicate detection states
+  const [isDuplicateWarningOpen, setIsDuplicateWarningOpen] = useState(false);
+  const [duplicateMatches, setDuplicateMatches] = useState<any[]>([]);
+  const [pendingLeadData, setPendingLeadData] = useState<Record<string, any> | null>(null);
+
   // Side panel state
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const [sidePanelLead, setSidePanelLead] = useState<Lead | null>(null);
@@ -3146,10 +3169,72 @@ const AllLeads = () => {
         description: `${newLead.firstName} ${newLead.lastName} has been added to your leads.`,
       });
     } catch (error: any) {
+      // Handle duplicate detection (409 response)
+      if (error.response?.status === 409 && error.response?.data?.error === 'DUPLICATE_LEAD_DETECTED') {
+        setDuplicateMatches(error.response.data.duplicates || []);
+        setPendingLeadData(apiData);
+        setIsDuplicateWarningOpen(true);
+        return;
+      }
       console.error("Failed to add lead:", error);
       toast({
         title: "Error",
         description: error.response?.data?.message || "Failed to add lead.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Create lead anyway (skip duplicate check)
+  const handleCreateAnyway = async () => {
+    if (!pendingLeadData) return;
+    try {
+      const responseData = await createLead({ ...pendingLeadData, skipDuplicateCheck: true });
+      const newLead = mapApiLead(responseData);
+      setLeads((prev) => [newLead, ...prev]);
+      setIsDuplicateWarningOpen(false);
+      setPendingLeadData(null);
+      setDuplicateMatches([]);
+      toast({
+        title: "Lead Added",
+        description: `${newLead.firstName} ${newLead.lastName} has been added (duplicate check skipped).`,
+      });
+    } catch (error: any) {
+      console.error("Failed to create lead:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to add lead.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Merge with an existing duplicate lead
+  const handleMergeWithDuplicate = async (targetLeadId: string) => {
+    if (!pendingLeadData) return;
+    try {
+      // First create the lead (skip check), then merge it into the target
+      const responseData = await createLead({ ...pendingLeadData, skipDuplicateCheck: true });
+      const newLeadId = (responseData as any).id;
+      const mergeResult = await mergeLeads(targetLeadId, newLeadId);
+
+      // Refresh leads list
+      const response = await getLeads();
+      const apiLeads = Array.isArray(response) ? response : [];
+      setLeads(apiLeads.map(mapApiLead));
+
+      setIsDuplicateWarningOpen(false);
+      setPendingLeadData(null);
+      setDuplicateMatches([]);
+      toast({
+        title: "Leads Merged",
+        description: `Lead data merged into existing record. ${mergeResult.fieldsMerged?.length || 0} fields updated.`,
+      });
+    } catch (error: any) {
+      console.error("Failed to merge leads:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || error.message || "Failed to merge leads.",
         variant: "destructive",
       });
     }
@@ -3947,6 +4032,66 @@ const AllLeads = () => {
               className="bg-red-500 hover:bg-red-600 rounded-md"
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ── Duplicate Warning Dialog ── */}
+      <AlertDialog open={isDuplicateWarningOpen} onOpenChange={setIsDuplicateWarningOpen}>
+        <AlertDialogContent className="rounded-md max-w-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-amber-600">
+              <AlertCircle size={20} />
+              Potential Duplicate Detected
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p className="text-sm text-[#475569]">
+                  We found {duplicateMatches.length} existing lead{duplicateMatches.length > 1 ? 's' : ''} that may be a duplicate. Review before creating.
+                </p>
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {duplicateMatches.map((match: any) => (
+                    <div key={match.leadId} className="flex items-center justify-between p-3 bg-[#FFFBEB] border border-amber-200 rounded-md">
+                      <div className="flex-1">
+                        <p className="font-medium text-[#0F172A] text-sm">{match.leadName}</p>
+                        {match.leadNumber && <p className="text-xs text-[#94A3B8]">{match.leadNumber}</p>}
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {match.matchedFields?.map((f: string) => (
+                            <span key={f} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-700">
+                              {f}
+                            </span>
+                          ))}
+                        </div>
+                        <p className="text-xs text-[#64748B] mt-1">Confidence: {match.confidenceScore}%</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="ml-2 rounded-md text-xs"
+                        onClick={() => handleMergeWithDuplicate(match.leadId)}
+                      >
+                        Merge
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-md" onClick={() => {
+              setIsDuplicateWarningOpen(false);
+              setPendingLeadData(null);
+              setDuplicateMatches([]);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCreateAnyway}
+              className="bg-amber-500 hover:bg-amber-600 rounded-md"
+            >
+              Create Anyway
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

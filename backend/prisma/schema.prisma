@@ -4110,6 +4110,10 @@ model RoofEstimate {
   latitude            Float
   longitude           Float
   satelliteImageUrl   String?
+  placeId             String?             // Google place_id for precise re-lookup
+  locationType        String?             // ROOFTOP, RANGE_INTERPOLATED, GEOMETRIC_CENTER, APPROXIMATE
+  parcelPolygon       Json?               // ATTOM parcel boundary polygon coordinates
+  attomPropertyId     String?             // ATTOM property identifier
 
   // AI Results
   roofAreaSqft        Float

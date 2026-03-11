@@ -66,6 +66,28 @@ export interface SatelliteResult {
     longitude: number;
     formattedAddress: string;
     satelliteImageUrl: string;
+    locationType?: string;
+    placeId?: string;
+}
+
+export interface ParcelBoundaryResult {
+    parcelPolygon: number[][] | null;
+    attomPropertyId: string | null;
+    lotSize: string | null;
+}
+
+export interface PlaceDetailsResult {
+    placeId: string;
+    formattedAddress: string;
+    lat: number;
+    lng: number;
+    locationType: string;
+    types: string[];
+    url: string | null;
+    viewport: {
+        northeast: { lat: number; lng: number };
+        southwest: { lat: number; lng: number };
+    } | null;
 }
 
 export interface DetectionResult {
@@ -311,6 +333,27 @@ export async function updateEstimateSettings(data: Partial<EstimateSettings>): P
 export async function autocompleteAddress(input: string): Promise<Array<{ description: string; placeId: string }>> {
     const res = await api.get("/roof-estimator/autocomplete", { params: { input } });
     return res.data?.data || [];
+}
+
+export async function fetchParcelBoundary(latitude: number, longitude: number): Promise<ParcelBoundaryResult> {
+    const res = await api.post("/roof-estimator/parcel-boundary", { latitude, longitude });
+    return res.data?.data || { parcelPolygon: null, attomPropertyId: null, lotSize: null };
+}
+
+export async function getPlaceDetails(placeId: string): Promise<PlaceDetailsResult> {
+    const res = await api.post("/roof-estimator/place-details", { placeId });
+    return res.data?.data;
+}
+
+/**
+ * Returns the Google Maps JS API key for frontend interactive map.
+ * This is the same key used for satellite/geocoding on the backend,
+ * exposed via a lightweight config endpoint or hardcoded from env.
+ */
+export function getGoogleMapsJsApiKey(): string {
+    // The API key is exposed through the satellite image URL.
+    // We extract it from there or use the env variable.
+    return import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 }
 
 export async function generateEstimate(params: {

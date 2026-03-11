@@ -12,9 +12,14 @@ import { BadRequestError, ServiceUnavailableError } from '../../common/errors/Ht
 const GOOGLE_GEOCODING_API_KEY = config.integrations.google.geocodingApiKey || '';
 const GOOGLE_STATIC_MAPS_API_KEY = config.integrations.google.staticMapsApiKey || GOOGLE_GEOCODING_API_KEY || '';
 const GOOGLE_PLACES_API_KEY = config.integrations.google.placesApiKey || '';
+const ATTOM_API_KEY = config.integrations.attomApiKey || '';
 const OPENAI_API_KEY = config.ai.openaiApiKey || '';
 const AI_SERVICE_URL = config.integrations.aiServiceUrl;
 const NOMINATIM_SEARCH_URL = 'https://nominatim.openstreetmap.org/search';
+
+// ── In-memory parcel cache (keyed by rounded lat,lng) ─────────────────────
+const parcelCache = new Map<string, { data: any; timestamp: number }>();
+const PARCEL_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 type GoogleAddressComponent = {
     long_name: string;
@@ -441,7 +446,7 @@ export class RoofEstimatorService {
         }
     }
 
-    private async geocodePlaceIdViaGeocoding(placeId: string): Promise<{ lat: number; lng: number; formattedAddress: string }> {
+    private async geocodePlaceIdViaGeocoding(placeId: string): Promise<{ lat: number; lng: number; formattedAddress: string; locationType: string }> {
         if (!GOOGLE_GEOCODING_API_KEY) {
             throw new ServiceUnavailableError(
                 'Roof estimator geocoding is not configured. Set GOOGLE_GEOCODING_API_KEY (or GOOGLE_MAPS_JS_API_KEY) on the backend.'
@@ -487,6 +492,87 @@ export class RoofEstimatorService {
             lat: result.geometry.location.lat,
             lng: result.geometry.location.lng,
             formattedAddress: result.formatted_address,
+            locationType: result.geometry?.location_type || 'UNKNOWN',
+        };
+    }
+
+    /**
+     * Google Place Details API — fetch detailed place info after autocomplete selection.
+     * Returns full address, coordinates, place types, and viewport for precise map centering.
+     */
+    async getPlaceDetails(placeId: string): Promise<{
+        placeId: string;
+        formattedAddress: string;
+        lat: number;
+        lng: number;
+        locationType: string;
+        types: string[];
+        url: string | null;
+        viewport: { northeast: { lat: number; lng: number }; southwest: { lat: number; lng: number } } | null;
+    }> {
+        if (!GOOGLE_PLACES_API_KEY) {
+            throw new ServiceUnavailableError(
+                'Google Places API key is not configured. Set GOOGLE_PLACES_API_KEY in .env'
+            );
+        }
+
+        const response = await axios.get('https://maps.googleapis.com/maps/api/place/details/json', {
+            params: {
+                place_id: placeId,
+                key: GOOGLE_PLACES_API_KEY,
+                fields: 'formatted_address,geometry,type,url,address_component,place_id',
+                language: 'en',
+            },
+            timeout: 10000,
+        });
+
+        const status = response.data.status as string;
+        const errorMessage = response.data.error_message as string | undefined;
+
+        if (status !== 'OK' || !response.data.result?.geometry?.location) {
+            if (status === 'NOT_FOUND' || status === 'ZERO_RESULTS') {
+                throw new BadRequestError(
+                    'Selected place could not be found. Please choose another suggestion.',
+                    'PLACE_DETAILS_NOT_FOUND'
+                );
+            }
+            throw new ServiceUnavailableError(
+                errorMessage
+                    ? `Google Place Details API error: ${errorMessage}`
+                    : `Google Place Details API error (${status}).`
+            );
+        }
+
+        const result = response.data.result;
+        const lat = Number(result.geometry.location.lat);
+        const lng = Number(result.geometry.location.lng);
+
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+            throw new ServiceUnavailableError('Google Place Details returned invalid coordinates.');
+        }
+
+        const viewport = result.geometry.viewport
+            ? {
+                northeast: {
+                    lat: Number(result.geometry.viewport.northeast.lat),
+                    lng: Number(result.geometry.viewport.northeast.lng),
+                },
+                southwest: {
+                    lat: Number(result.geometry.viewport.southwest.lat),
+                    lng: Number(result.geometry.viewport.southwest.lng),
+                },
+            }
+            : null;
+
+        return {
+            placeId: result.place_id || placeId,
+            formattedAddress: result.formatted_address || '',
+            lat,
+            lng,
+            locationType: result.geometry.location_type || 'ROOFTOP', // Place Details gives precise coords
+            types: Array.isArray(result.types) ? result.types : [],
+            url: result.url || null,
+            viewport,
         };
     }
 
@@ -538,9 +624,10 @@ export class RoofEstimatorService {
         };
     }
 
-    private async geocodeByPlaceId(placeId: string): Promise<{ lat: number; lng: number; formattedAddress: string }> {
+    private async geocodeByPlaceId(placeId: string): Promise<{ lat: number; lng: number; formattedAddress: string; locationType: string }> {
         try {
-            return await this.geocodePlaceIdViaGeocoding(placeId);
+            const result = await this.geocodePlaceIdViaGeocoding(placeId);
+            return { ...result, locationType: result.locationType || 'UNKNOWN' };
         } catch (err: unknown) {
             logger.warn('Place ID geocoding via Geocoding API failed; trying Places Details', {
                 placeId,
@@ -548,14 +635,15 @@ export class RoofEstimatorService {
             });
         }
 
-        return this.geocodePlaceIdViaPlacesDetails(placeId);
+        const result = await this.geocodePlaceIdViaPlacesDetails(placeId);
+        return { ...result, locationType: 'ROOFTOP' }; // Place Details always returns exact location
     }
 
     /**
      * Geocode an address using Google Geocoding API.
      * If a Google placeId is provided, resolve that first for exact matching.
      */
-    async geocodeAddress(address: string, placeId?: string): Promise<{ lat: number; lng: number; formattedAddress: string }> {
+    async geocodeAddress(address: string, placeId?: string): Promise<{ lat: number; lng: number; formattedAddress: string; locationType: string }> {
         const normalizedPlaceId = typeof placeId === 'string' ? placeId.trim() : '';
         if (normalizedPlaceId) {
             try {
@@ -563,6 +651,7 @@ export class RoofEstimatorService {
                 logger.info('Resolved address using placeId for roof estimator geocoding', {
                     placeId: normalizedPlaceId,
                     formattedAddress: resolved.formattedAddress,
+                    locationType: resolved.locationType,
                 });
                 return resolved;
             } catch (err: unknown) {
@@ -575,11 +664,12 @@ export class RoofEstimatorService {
         }
 
         if (!GOOGLE_GEOCODING_API_KEY) {
-            return this.geocodeAddressWithFallback(
+            const fallback = await this.geocodeAddressWithFallback(
                 address,
                 'google_key_missing',
                 'Roof estimator geocoding is not configured. Set GOOGLE_GEOCODING_API_KEY (or GOOGLE_MAPS_JS_API_KEY) on the backend.'
             );
+            return { ...fallback, locationType: 'APPROXIMATE' };
         }
 
         try {
@@ -618,28 +708,31 @@ export class RoofEstimatorService {
                 }
 
                 if (status === 'REQUEST_DENIED') {
-                    return this.geocodeAddressWithFallback(
+                    const fb = await this.geocodeAddressWithFallback(
                         address,
                         'google_request_denied',
                         errorMessage
                             ? `Google Geocoding API denied the request: ${errorMessage}`
                             : 'Google Geocoding API denied the request. Check key restrictions and billing.'
                     );
+                    return { ...fb, locationType: 'APPROXIMATE' };
                 }
 
                 if (status === 'OVER_DAILY_LIMIT' || status === 'OVER_QUERY_LIMIT') {
-                    return this.geocodeAddressWithFallback(
+                    const fb = await this.geocodeAddressWithFallback(
                         address,
                         'google_quota_exceeded',
                         'Google Geocoding API quota exceeded. Check quota and billing in Google Cloud.'
                     );
+                    return { ...fb, locationType: 'APPROXIMATE' };
                 }
 
-                return this.geocodeAddressWithFallback(
+                const fb = await this.geocodeAddressWithFallback(
                     address,
                     `google_status_${status}`,
                     errorMessage || `Geocoding failed (${status}). Please try again later.`
                 );
+                return { ...fb, locationType: 'APPROXIMATE' };
             }
 
             const results = response.data.results as GoogleGeocodingResult[];
@@ -655,6 +748,7 @@ export class RoofEstimatorService {
                 lat,
                 lng,
                 formattedAddress: bestResult.formatted_address || address,
+                locationType: bestResult.geometry?.location_type || 'UNKNOWN',
             };
         } catch (err: unknown) {
             if (err instanceof BadRequestError || err instanceof ServiceUnavailableError) {
@@ -670,20 +764,22 @@ export class RoofEstimatorService {
             });
 
             if (axiosError?.code === 'ECONNABORTED') {
-                return this.geocodeAddressWithFallback(
+                const fb = await this.geocodeAddressWithFallback(
                     address,
                     'google_timeout',
                     'Geocoding request timed out. Please try again.'
                 );
+                return { ...fb, locationType: 'APPROXIMATE' };
             }
 
-            return this.geocodeAddressWithFallback(
+            const fb = await this.geocodeAddressWithFallback(
                 address,
                 'google_network_error',
                 axiosError?.message
                     ? `Geocoding request failed: ${axiosError.message}`
                     : 'Geocoding request failed. Please try again.'
             );
+            return { ...fb, locationType: 'APPROXIMATE' };
         }
     }
 
@@ -1054,6 +1150,107 @@ Be realistic with Canadian pricing. Include removal & disposal, underlayment, fl
 
     async getStatistics(tenantId: string) {
         return roofEstimatorRepository.getStatistics(tenantId);
+    }
+
+    // ── ATTOM Property / Parcel API ──────────────────────────────────────────
+
+    async getParcelBoundary(latitude: number, longitude: number): Promise<{
+        parcelPolygon: number[][] | null;
+        attomPropertyId: string | null;
+        lotSize: string | null;
+    }> {
+        if (!ATTOM_API_KEY) {
+            logger.warn('ATTOM API key not configured — parcel boundary unavailable');
+            return { parcelPolygon: null, attomPropertyId: null, lotSize: null };
+        }
+
+        // Check cache
+        const cacheKey = `${latitude.toFixed(5)},${longitude.toFixed(5)}`;
+        const cached = parcelCache.get(cacheKey);
+        if (cached && (Date.now() - cached.timestamp) < PARCEL_CACHE_TTL_MS) {
+            logger.info('Returning cached parcel boundary', { cacheKey });
+            return cached.data;
+        }
+
+        try {
+            // ATTOM Property API — search by coordinates
+            const response = await axios.get('https://api.gateway.attomdata.com/propertyapi/v1.0.0/property/expandedprofile', {
+                params: {
+                    latitude,
+                    longitude,
+                    radius: 0.01, // Very tight radius to match exact property
+                },
+                headers: {
+                    'apikey': ATTOM_API_KEY,
+                    'Accept': 'application/json',
+                },
+                timeout: 10000,
+            });
+
+            const properties = response.data?.property || [];
+            if (!properties.length) {
+                logger.info('ATTOM returned no properties for coordinates', { latitude, longitude });
+                const emptyResult = { parcelPolygon: null, attomPropertyId: null, lotSize: null };
+                parcelCache.set(cacheKey, { data: emptyResult, timestamp: Date.now() });
+                return emptyResult;
+            }
+
+            const property = properties[0];
+            const attomPropertyId = property.identifier?.attomId
+                ? String(property.identifier.attomId)
+                : null;
+
+            // Extract lot boundary if available
+            let parcelPolygon: number[][] | null = null;
+            const lot = property.lot;
+            if (lot?.lotBoundary?.coordinates) {
+                // ATTOM returns GeoJSON-style coordinates
+                parcelPolygon = lot.lotBoundary.coordinates;
+            } else if (lot?.lotBoundaryWKT) {
+                // Parse WKT POLYGON format
+                parcelPolygon = this.parseWktPolygon(lot.lotBoundaryWKT);
+            }
+
+            const lotSize = lot?.lotSize1 ? String(lot.lotSize1) : null;
+
+            const result = { parcelPolygon, attomPropertyId, lotSize };
+            parcelCache.set(cacheKey, { data: result, timestamp: Date.now() });
+
+            logger.info('ATTOM parcel boundary retrieved', {
+                attomPropertyId,
+                hasPolygon: !!parcelPolygon,
+                lotSize,
+            });
+
+            return result;
+        } catch (err: any) {
+            logger.error('ATTOM parcel boundary request failed', {
+                message: err.message,
+                status: err.response?.status,
+                latitude,
+                longitude,
+            });
+            // Non-blocking — return null so estimator still works without parcel
+            return { parcelPolygon: null, attomPropertyId: null, lotSize: null };
+        }
+    }
+
+    /**
+     * Parse a WKT POLYGON string into coordinate array
+     * e.g. "POLYGON((-73.98 40.74, -73.97 40.74, ...))" → [[-73.98, 40.74], ...]
+     */
+    private parseWktPolygon(wkt: string): number[][] | null {
+        try {
+            const match = wkt.match(/POLYGON\s*\(\((.+)\)\)/i);
+            if (!match) return null;
+
+            return match[1].split(',').map(pair => {
+                const [lng, lat] = pair.trim().split(/\s+/).map(Number);
+                return [lat, lng]; // Return as [lat, lng] for Google Maps
+            });
+        } catch {
+            return null;
+        }
     }
 }
 

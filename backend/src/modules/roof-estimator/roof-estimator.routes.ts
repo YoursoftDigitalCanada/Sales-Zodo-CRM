@@ -38,6 +38,9 @@ import {
     solarInsightsSchema,
     detectSegmentedSchema,
     validatePolygonSchema,
+    // Place Details + Parcel boundary
+    placeDetailsSchema,
+    parcelBoundarySchema,
 } from './roof-estimator.validators';
 
 const router = Router();
@@ -52,12 +55,28 @@ router.get(
     roofEstimatorController.autocomplete.bind(roofEstimatorController)
 );
 
+// ── Place Details (Google Places API) ─────────────────────────────────────
+router.post(
+    '/place-details',
+    requireAnyPermission([PERMISSIONS.ROOF_ESTIMATOR_VIEW, PERMISSIONS.ROOF_ESTIMATOR_CREATE]),
+    validate(placeDetailsSchema),
+    roofEstimatorController.getPlaceDetails.bind(roofEstimatorController)
+);
+
 // ── Satellite & AI detection ──────────────────────────────────────────────
 router.post(
     '/satellite',
     requirePermission(PERMISSIONS.ROOF_ESTIMATOR_CREATE),
     validate(satelliteRequestSchema),
     roofEstimatorController.getSatellite.bind(roofEstimatorController)
+);
+
+// ── Parcel boundary (ATTOM proxy) ─────────────────────────────────────────
+router.post(
+    '/parcel-boundary',
+    requireAnyPermission([PERMISSIONS.ROOF_ESTIMATOR_VIEW, PERMISSIONS.ROOF_ESTIMATOR_CREATE]),
+    validate(parcelBoundarySchema),
+    roofEstimatorController.getParcelBoundary.bind(roofEstimatorController)
 );
 
 router.post(

@@ -1,10 +1,21 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FileDown, Loader2, MapPin, Save, Satellite, Sparkles, Users } from "lucide-react";
 
+import InteractiveSatelliteMap from "@/components/InteractiveSatelliteMap";
 import RoofPolygonEditor, {
   normalizePolygonPoints,
   type PolygonPoint,
 } from "@/components/RoofPolygonEditor";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,9 +32,13 @@ import { getLeads } from "@/features/leads/services/leads-service";
 import {
   autocompleteAddress,
   detectRoof,
+  fetchParcelBoundary,
   fetchSatelliteImage,
+  getGoogleMapsJsApiKey,
+  getPlaceDetails,
   saveEstimate,
   type DetectionResult,
+  type ParcelBoundaryResult,
   type SatelliteResult,
   type SaveEstimatePayload,
 } from "@/features/roof-estimator/services/roof-estimator-service";
@@ -68,6 +83,15 @@ type AddressSuggestion = {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
+}
+
+function extractApiKeyFromUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return parsed.searchParams.get("key") || "";
+  } catch {
+    return "";
+  }
 }
 
 function createFallbackPolygon(width: number, height: number): PolygonPoint[] {
@@ -316,6 +340,11 @@ export default function EstimateModule(): JSX.Element {
   const [creatingAndSaving, setCreatingAndSaving] = useState(false);
   const [downloadingProposal, setDownloadingProposal] = useState(false);
   const [searchingAddress, setSearchingAddress] = useState(false);
+  const [parcelData, setParcelData] = useState<ParcelBoundaryResult | null>(null);
+  const [loadingParcel, setLoadingParcel] = useState(false);
+  const [precisionWarning, setPrecisionWarning] = useState<string | null>(null);
+  const [showPrecisionConfirm, setShowPrecisionConfirm] = useState(false);
+  const [pendingSatelliteData, setPendingSatelliteData] = useState<SatelliteResult | null>(null);
 
   const addressAutocompleteRef = useRef<HTMLDivElement | null>(null);
   const addressDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -495,13 +524,65 @@ export default function EstimateModule(): JSX.Element {
     }, 280);
   }, []);
 
-  const handleAddressSuggestionSelect = useCallback((suggestion: AddressSuggestion) => {
+  const handleAddressSuggestionSelect = useCallback(async (suggestion: AddressSuggestion) => {
     setAddress(suggestion.description);
     setSelectedAddressPlaceId(suggestion.placeId);
     setAddressSuggestions([]);
     setShowAddressSuggestions(false);
     setAddressSuggestionError(null);
+
+    // Fetch Place Details for precise coordinates
+    if (suggestion.placeId) {
+      try {
+        const details = await getPlaceDetails(suggestion.placeId);
+        if (details.formattedAddress) {
+          setAddress(details.formattedAddress);
+        }
+      } catch {
+        // Non-blocking — fallback to description from autocomplete
+      }
+    }
   }, []);
+
+  const finalizeSatelliteLoad = useCallback((data: SatelliteResult) => {
+    const parsedSize = parseStaticMapSize(data.satelliteImageUrl);
+    const parsedZoom = parseStaticMapZoom(data.satelliteImageUrl);
+
+    setSatellite(data);
+    setImageWidth(parsedSize.width);
+    setImageHeight(parsedSize.height);
+    setZoom(parsedZoom);
+
+    const fallbackPolygon = createFallbackPolygon(parsedSize.width, parsedSize.height);
+    setInitialPolygon(fallbackPolygon);
+    setCurrentPolygon(fallbackPolygon);
+    setEditorResetToken((previous) => previous + 1);
+    buildPayloadFromPolygon(fallbackPolygon, { detection: null, satelliteData: data });
+
+    toast({
+      title: "Satellite image loaded",
+      description: data.formattedAddress,
+    });
+
+    // Fetch parcel boundary in background (non-blocking)
+    setLoadingParcel(true);
+    fetchParcelBoundary(data.latitude, data.longitude)
+      .then((parcel) => {
+        setParcelData(parcel);
+        if (parcel.parcelPolygon) {
+          toast({
+            title: "Parcel boundary loaded",
+            description: parcel.lotSize
+              ? `Lot size: ${parcel.lotSize} sq ft`
+              : "Property parcel boundary available",
+          });
+        }
+      })
+      .catch(() => {
+        // Non-blocking — parcel boundary is optional
+      })
+      .finally(() => setLoadingParcel(false));
+  }, [buildPayloadFromPolygon, toast]);
 
   const handleLoadSatellite = useCallback(async () => {
     if (!address.trim()) {
@@ -517,30 +598,30 @@ export default function EstimateModule(): JSX.Element {
     setShowAddressSuggestions(false);
     setDetection(null);
     setDraftPayload(null);
+    setParcelData(null);
+    setPrecisionWarning(null);
+    setPendingSatelliteData(null);
 
     try {
       const data = await fetchSatelliteImage(
         address.trim(),
         selectedAddressPlaceId || undefined,
       );
-      const parsedSize = parseStaticMapSize(data.satelliteImageUrl);
-      const parsedZoom = parseStaticMapZoom(data.satelliteImageUrl);
 
-      setSatellite(data);
-      setImageWidth(parsedSize.width);
-      setImageHeight(parsedSize.height);
-      setZoom(parsedZoom);
+      // Check geocoding precision
+      const locType = data.locationType || "UNKNOWN";
+      if (locType !== "ROOFTOP" && locType !== "RANGE_INTERPOLATED") {
+        setPrecisionWarning(
+          `Geocoding precision: ${locType.replace(/_/g, " ")}. The map may not be centered on the exact rooftop. Select an autocomplete suggestion for better accuracy.`
+        );
+        // Show confirm dialog for non-ROOFTOP results
+        setPendingSatelliteData(data);
+        setShowPrecisionConfirm(true);
+        setLoadingSatellite(false);
+        return;
+      }
 
-      const fallbackPolygon = createFallbackPolygon(parsedSize.width, parsedSize.height);
-      setInitialPolygon(fallbackPolygon);
-      setCurrentPolygon(fallbackPolygon);
-      setEditorResetToken((previous) => previous + 1);
-      buildPayloadFromPolygon(fallbackPolygon, { detection: null, satelliteData: data });
-
-      toast({
-        title: "Satellite image loaded",
-        description: data.formattedAddress,
-      });
+      finalizeSatelliteLoad(data);
     } catch (error: any) {
       toast({
         title: "Failed to load satellite",
@@ -550,7 +631,21 @@ export default function EstimateModule(): JSX.Element {
     } finally {
       setLoadingSatellite(false);
     }
-  }, [address, buildPayloadFromPolygon, selectedAddressPlaceId, toast]);
+  }, [address, finalizeSatelliteLoad, selectedAddressPlaceId, toast]);
+
+  const handlePrecisionConfirm = useCallback(() => {
+    setShowPrecisionConfirm(false);
+    if (pendingSatelliteData) {
+      finalizeSatelliteLoad(pendingSatelliteData);
+      setPendingSatelliteData(null);
+    }
+  }, [finalizeSatelliteLoad, pendingSatelliteData]);
+
+  const handlePrecisionCancel = useCallback(() => {
+    setShowPrecisionConfirm(false);
+    setPendingSatelliteData(null);
+    setPrecisionWarning(null);
+  }, []);
 
   const handleDetectAndSeedPolygon = useCallback(async () => {
     if (!satellite) return;
@@ -901,6 +996,19 @@ export default function EstimateModule(): JSX.Element {
     selectedAddressPlaceId,
   ]);
 
+  const precisionBadge = useMemo(() => {
+    if (!satellite) return null;
+    const locType = satellite.locationType || "UNKNOWN";
+    const isHighPrecision = locType === "ROOFTOP" || locType === "RANGE_INTERPOLATED";
+    return {
+      label: locType.replace(/_/g, " "),
+      color: isHighPrecision
+        ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+        : "bg-amber-100 text-amber-800 border-amber-200",
+      icon: isHighPrecision ? "✓" : "⚠",
+    };
+  }, [satellite]);
+
   return (
     <section className="mx-auto flex w-full max-w-[1500px] flex-col gap-4 p-4 lg:p-6">
       <header className="rounded-xl border bg-white p-4">
@@ -957,7 +1065,7 @@ export default function EstimateModule(): JSX.Element {
                 </div>
               </div>
 
-              <Button type="button" variant="outline" className="mt-auto" onClick={handleLoadSatellite} disabled={loadingSatellite}>
+              <Button type="button" variant="outline" className="mt-auto" onClick={handleLoadSatellite} disabled={loadingSatellite || !selectedAddressPlaceId}>
                 {loadingSatellite ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Satellite className="mr-2 h-4 w-4" />}
                 Load Satellite
               </Button>
@@ -972,8 +1080,73 @@ export default function EstimateModule(): JSX.Element {
                 Save Estimate
               </Button>
             </div>
-            <p className="mt-2 text-[11px] text-slate-500">{addressHelperText}</p>
+            <p className="mt-2 flex items-center gap-2 text-[11px] text-slate-500">
+              <span>{addressHelperText}</span>
+              {precisionBadge && (
+                <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${precisionBadge.color}`}>
+                  {precisionBadge.icon} {precisionBadge.label}
+                </span>
+              )}
+            </p>
+            {precisionWarning && (
+              <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                <span className="font-medium">⚠ Precision Warning:</span> {precisionWarning}
+              </div>
+            )}
           </div>
+
+          {/* Parcel Info Bar */}
+          {satellite && (
+            <div className="rounded-xl border bg-white p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-lg bg-blue-50 p-2">
+                    <MapPin className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-slate-700">
+                      {satellite.formattedAddress}
+                    </p>
+                    <p className="text-[10px] text-slate-500">
+                      {satellite.latitude.toFixed(6)}, {satellite.longitude.toFixed(6)}
+                      {satellite.placeId && (
+                        <span className="ml-2 text-blue-500">• Place ID verified</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {loadingParcel && (
+                    <span className="flex items-center gap-1 text-[10px] text-slate-400">
+                      <Loader2 className="h-3 w-3 animate-spin" /> Loading parcel...
+                    </span>
+                  )}
+                  {parcelData?.parcelPolygon && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700">
+                      ◆ Parcel boundary
+                      {parcelData.lotSize && ` • ${parcelData.lotSize} sq ft`}
+                    </span>
+                  )}
+                  {parcelData && !parcelData.parcelPolygon && !loadingParcel && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-500">
+                      No parcel data
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Interactive Google Maps Satellite View */}
+          {satellite && (
+            <InteractiveSatelliteMap
+              latitude={satellite.latitude}
+              longitude={satellite.longitude}
+              apiKey={extractApiKeyFromUrl(satellite.satelliteImageUrl) || getGoogleMapsJsApiKey()}
+              parcelPolygon={parcelData?.parcelPolygon}
+              zoom={zoom}
+            />
+          )}
 
           {satellite ? (
             <RoofPolygonEditor
@@ -986,10 +1159,26 @@ export default function EstimateModule(): JSX.Element {
               mapZoom={zoom}
               showEdgeLengths
               onChange={handlePolygonChange}
+              parcelBoundaryPixels={
+                parcelData?.parcelPolygon && satellite
+                  ? parcelData.parcelPolygon.map((coord) => {
+                      // Convert lat/lng to pixel coords relative to static map image center
+                      const latRad = (coord[0] * Math.PI) / 180;
+                      const centerLatRad = (satellite.latitude * Math.PI) / 180;
+                      const metersPerPixel = (156543.03392 * Math.cos(centerLatRad)) / Math.pow(2, zoom);
+                      const dLng = coord[1] - satellite.longitude;
+                      const dLngMeters = dLng * (111320 * Math.cos(centerLatRad));
+                      const dLatMeters = (coord[0] - satellite.latitude) * 111320;
+                      const px = imageWidth / 2 + dLngMeters / metersPerPixel;
+                      const py = imageHeight / 2 - dLatMeters / metersPerPixel;
+                      return { x: px, y: py };
+                    })
+                  : undefined
+              }
             />
           ) : (
             <div className="flex min-h-[640px] items-center justify-center rounded-xl border border-dashed bg-white text-sm text-slate-500">
-              Load a satellite image to start editing the roof polygon.
+              Select an address suggestion, then click Load Satellite.
             </div>
           )}
         </div>
@@ -1264,6 +1453,27 @@ export default function EstimateModule(): JSX.Element {
           </div>
         </aside>
       </div>
+
+      {/* Precision Confirmation Dialog */}
+      <AlertDialog open={showPrecisionConfirm} onOpenChange={setShowPrecisionConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>⚠ Low Precision Geocoding</AlertDialogTitle>
+            <AlertDialogDescription>
+              The geocoding result is <strong>{pendingSatelliteData?.locationType?.replace(/_/g, " ") || "APPROXIMATE"}</strong>,
+              which means the map may not be centered on the exact rooftop.
+              <br /><br />
+              For best results, select an address from the autocomplete suggestions. Do you want to proceed anyway?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handlePrecisionCancel}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handlePrecisionConfirm}>
+              Proceed Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 }

@@ -44,12 +44,34 @@ export class RoofEstimatorController {
         }
     }
 
+    async getPlaceDetails(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const { placeId } = req.body;
+            const details = await roofEstimatorService.getPlaceDetails(placeId);
+            sendSuccess(res, details, 'Place details retrieved');
+        } catch (error) {
+            next(error);
+        }
+    }
+
     async getSatellite(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const tenantId = req.context.tenantId;
             const { address, placeId } = req.body;
             const result = await roofEstimatorManager.getSatellite(tenantId, address, placeId);
             sendSuccess(res, result, 'Satellite image retrieved');
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async getParcelBoundary(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const { latitude, longitude } = req.body;
+            const result = await roofEstimatorService.getParcelBoundary(latitude, longitude);
+            sendSuccess(res, result, result.parcelPolygon
+                ? 'Parcel boundary retrieved'
+                : 'Parcel boundary not available for this location');
         } catch (error) {
             next(error);
         }

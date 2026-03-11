@@ -317,3 +317,20 @@ export const validatePolygonSchema = z.object({
         solarAreaSqft: z.number().positive('Solar area must be positive'),
     }),
 });
+
+// ── Place Details (Google Places API) ─────────────────────────────────────
+
+export const placeDetailsSchema = z.object({
+    body: z.object({
+        placeId: z.string().min(3, 'Place ID is required').max(255),
+    }),
+});
+
+// ── Parcel Boundary (ATTOM API proxy) ─────────────────────────────────────
+
+export const parcelBoundarySchema = z.object({
+    body: z.object({
+        latitude: z.number().min(-90).max(90),
+        longitude: z.number().min(-180).max(180),
+    }),
+});

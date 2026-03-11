@@ -29,6 +29,7 @@ export class RoofEstimatorManager {
             address: geo.formattedAddress,
             lat: geo.lat,
             lng: geo.lng,
+            locationType: geo.locationType,
         });
 
         return {
@@ -36,6 +37,8 @@ export class RoofEstimatorManager {
             longitude: geo.lng,
             formattedAddress: geo.formattedAddress,
             satelliteImageUrl,
+            locationType: geo.locationType,
+            placeId: placeId || undefined,
         };
     }
 

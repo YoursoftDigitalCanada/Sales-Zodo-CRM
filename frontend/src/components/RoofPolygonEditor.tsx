@@ -25,6 +25,8 @@ export interface RoofPolygonEditorProps {
   centerLat?: number;
   mapZoom?: number;
   showEdgeLengths?: boolean;
+  /** Parcel boundary as pixel coords [[x,y], ...] in image space. Vertices are snapped to boundary if dragged outside. */
+  parcelBoundaryPixels?: PolygonPoint[];
 }
 
 type PanStart = {
@@ -136,6 +138,55 @@ export function normalizePolygonPoints(
   }));
 }
 
+// ── Parcel boundary constraint helpers ────────────────────────────────────
+
+/** Ray-casting point-in-polygon test */
+function isPointInPolygon(point: PolygonPoint, polygon: PolygonPoint[]): boolean {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i].x, yi = polygon[i].y;
+    const xj = polygon[j].x, yj = polygon[j].y;
+    const intersect = ((yi > point.y) !== (yj > point.y)) &&
+      (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+/** Find the nearest point on a polygon boundary to the given point */
+function nearestPointOnPolygonBoundary(point: PolygonPoint, polygon: PolygonPoint[]): PolygonPoint {
+  let best: PolygonPoint = polygon[0] || point;
+  let bestDist = Number.POSITIVE_INFINITY;
+
+  for (let i = 0; i < polygon.length; i++) {
+    const a = polygon[i];
+    const b = polygon[(i + 1) % polygon.length];
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const len2 = dx * dx + dy * dy;
+
+    let t = 0;
+    if (len2 > 0) {
+      t = clamp(((point.x - a.x) * dx + (point.y - a.y) * dy) / len2, 0, 1);
+    }
+
+    const proj: PolygonPoint = { x: a.x + t * dx, y: a.y + t * dy };
+    const d = Math.hypot(point.x - proj.x, point.y - proj.y);
+    if (d < bestDist) {
+      bestDist = d;
+      best = proj;
+    }
+  }
+  return best;
+}
+
+/** Constrain a point to be inside the parcel boundary */
+function constrainToParcel(point: PolygonPoint, parcel: PolygonPoint[] | undefined): PolygonPoint {
+  if (!parcel || parcel.length < 3) return point;
+  if (isPointInPolygon(point, parcel)) return point;
+  return nearestPointOnPolygonBoundary(point, parcel);
+}
+
 export default function RoofPolygonEditor({
   imageUrl,
   initialPolygon,
@@ -146,6 +197,7 @@ export default function RoofPolygonEditor({
   centerLat,
   mapZoom,
   showEdgeLengths = true,
+  parcelBoundaryPixels,
 }: RoofPolygonEditorProps): JSX.Element {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const stageRef = useRef<Konva.Stage | null>(null);
@@ -588,13 +640,15 @@ export default function RoofPolygonEditor({
   const handleVertexDragMove = useCallback(
     (vertexIndex: number, event: KonvaEventObject<DragEvent>) => {
       if (readOnly) return;
-      const updatedPoint = stageToImagePoint(event.target.x(), event.target.y());
+      let updatedPoint = stageToImagePoint(event.target.x(), event.target.y());
+      // Constrain to parcel boundary if available
+      updatedPoint = constrainToParcel(updatedPoint, parcelBoundaryPixels);
 
       setPoints((previous) =>
         previous.map((point, index) => (index === vertexIndex ? updatedPoint : point)),
       );
     },
-    [readOnly, stageToImagePoint],
+    [readOnly, stageToImagePoint, parcelBoundaryPixels],
   );
 
   const handleVertexContextMenu = useCallback(

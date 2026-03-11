@@ -179,6 +179,8 @@ interface SatelliteResult {
     longitude: number;
     formattedAddress: string;
     satelliteImageUrl: string;
+    locationType: string;
+    placeId?: string;
 }
 
 interface Statistics {
@@ -337,8 +339,9 @@ const RoofEstimator: React.FC = () => {
         debounceTimer.current = setTimeout(async () => {
             try {
                 const results = await autocompleteAddressApi(value);
-                setSuggestions(results);
-                setShowSuggestions(results.length > 0);
+                const googleResults = results.filter((entry) => entry.placeId?.trim().length > 0);
+                setSuggestions(googleResults);
+                setShowSuggestions(googleResults.length > 0);
             } catch {
                 setSuggestions([]);
                 setShowSuggestions(false);
@@ -347,6 +350,7 @@ const RoofEstimator: React.FC = () => {
     }, []);
 
     const selectSuggestion = (description: string, placeId: string) => {
+        if (!placeId) return;
         setAddress(description);
         setSelectedPlaceId(placeId);
         setSuggestions([]);
@@ -403,11 +407,27 @@ const RoofEstimator: React.FC = () => {
             toast({ title: "Enter an address", description: "Please type a valid Canadian address", variant: "destructive" });
             return;
         }
+        if (!selectedPlaceId) {
+            toast({
+                title: "Suggestion required",
+                description: "Select an autocomplete suggestion before loading satellite imagery.",
+                variant: "destructive",
+            });
+            return;
+        }
         setLoadingSatellite(true);
         setSatellite(null);
         setDetection(null);
         try {
-            const data = await fetchSatelliteImage(address.trim(), selectedPlaceId || undefined);
+            const data = await fetchSatelliteImage(address.trim(), selectedPlaceId);
+            if (data.locationType !== "ROOFTOP") {
+                toast({
+                    title: "Rooftop precision required",
+                    description: `Selected address resolved as ${data.locationType.replace(/_/g, " ")}. Pick a more specific house suggestion.`,
+                    variant: "destructive",
+                });
+                return;
+            }
             setSatellite(data);
             toast({ title: "Satellite image loaded", description: data?.formattedAddress });
         } catch (err: any) {
@@ -823,7 +843,9 @@ const RoofEstimator: React.FC = () => {
                                                             onKeyDown={(e) => {
                                                                 if (e.key === "Enter") {
                                                                     setShowSuggestions(false);
-                                                                    handleLoadSatellite();
+                                                                    if (selectedPlaceId) {
+                                                                        handleLoadSatellite();
+                                                                    }
                                                                 }
                                                             }}
                                                             onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
@@ -850,7 +872,7 @@ const RoofEstimator: React.FC = () => {
                                                 </div>
                                                 <Button
                                                     onClick={handleLoadSatellite}
-                                                    disabled={loadingSatellite || !address.trim()}
+                                                    disabled={loadingSatellite || !selectedPlaceId}
                                                     className="w-full bg-[#0891B2] hover:bg-[#0891B2]/90 text-white font-medium"
                                                 >
                                                     {loadingSatellite ? (
@@ -859,6 +881,11 @@ const RoofEstimator: React.FC = () => {
                                                         <><Satellite className="w-4 h-4 mr-2" /> Load Satellite Image</>
                                                     )}
                                                 </Button>
+                                                <p className="text-[11px] text-[#94A3B8]">
+                                                    {selectedPlaceId
+                                                        ? "Exact suggestion selected."
+                                                        : "Select an autocomplete suggestion to lock rooftop coordinates."}
+                                                </p>
                                             </div>
                                         </div>
 

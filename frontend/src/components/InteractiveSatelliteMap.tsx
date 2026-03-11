@@ -147,18 +147,13 @@ export default function InteractiveSatelliteMap({
 
     polygonRef.current = new google.maps.Polygon({
       paths,
-      strokeColor: "#3B82F6",
-      strokeOpacity: 0.9,
+      strokeColor: "#00FFFF",
+      strokeOpacity: 0.95,
       strokeWeight: 2.5,
-      fillColor: "#3B82F6",
-      fillOpacity: 0.12,
+      fillColor: "#00FFFF",
+      fillOpacity: 0.05,
       map: mapRef.current,
     });
-
-    // Fit map to parcel bounds
-    const bounds = new google.maps.LatLngBounds();
-    paths.forEach((p) => bounds.extend(p));
-    mapRef.current.fitBounds(bounds, 40);
   }, [parcelPolygon, mapLoaded]);
 
   if (loadError) {

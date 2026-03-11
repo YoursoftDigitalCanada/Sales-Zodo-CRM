@@ -6,16 +6,6 @@ import RoofPolygonEditor, {
   normalizePolygonPoints,
   type PolygonPoint,
 } from "@/components/RoofPolygonEditor";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -342,9 +332,6 @@ export default function EstimateModule(): JSX.Element {
   const [searchingAddress, setSearchingAddress] = useState(false);
   const [parcelData, setParcelData] = useState<ParcelBoundaryResult | null>(null);
   const [loadingParcel, setLoadingParcel] = useState(false);
-  const [precisionWarning, setPrecisionWarning] = useState<string | null>(null);
-  const [showPrecisionConfirm, setShowPrecisionConfirm] = useState(false);
-  const [pendingSatelliteData, setPendingSatelliteData] = useState<SatelliteResult | null>(null);
 
   const addressAutocompleteRef = useRef<HTMLDivElement | null>(null);
   const addressDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -506,8 +493,9 @@ export default function EstimateModule(): JSX.Element {
       setSearchingAddress(true);
       try {
         const results = await autocompleteAddress(normalized);
-        setAddressSuggestions(results);
-        setShowAddressSuggestions(results.length > 0);
+        const googleResults = results.filter((entry) => entry.placeId?.trim().length > 0);
+        setAddressSuggestions(googleResults);
+        setShowAddressSuggestions(googleResults.length > 0);
         setAddressSuggestionError(null);
       } catch (error: any) {
         setAddressSuggestions([]);
@@ -593,31 +581,33 @@ export default function EstimateModule(): JSX.Element {
       });
       return;
     }
+    if (!selectedAddressPlaceId) {
+      toast({
+        title: "Suggestion required",
+        description: "Select an autocomplete suggestion before loading satellite imagery.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setLoadingSatellite(true);
     setShowAddressSuggestions(false);
     setDetection(null);
     setDraftPayload(null);
     setParcelData(null);
-    setPrecisionWarning(null);
-    setPendingSatelliteData(null);
 
     try {
       const data = await fetchSatelliteImage(
         address.trim(),
-        selectedAddressPlaceId || undefined,
+        selectedAddressPlaceId,
       );
 
-      // Check geocoding precision
-      const locType = data.locationType || "UNKNOWN";
-      if (locType !== "ROOFTOP" && locType !== "RANGE_INTERPOLATED") {
-        setPrecisionWarning(
-          `Geocoding precision: ${locType.replace(/_/g, " ")}. The map may not be centered on the exact rooftop. Select an autocomplete suggestion for better accuracy.`
-        );
-        // Show confirm dialog for non-ROOFTOP results
-        setPendingSatelliteData(data);
-        setShowPrecisionConfirm(true);
-        setLoadingSatellite(false);
+      if (data.locationType !== "ROOFTOP") {
+        toast({
+          title: "Rooftop precision required",
+          description: `Selected address resolved as ${data.locationType.replace(/_/g, " ")}. Choose a more specific house suggestion.`,
+          variant: "destructive",
+        });
         return;
       }
 
@@ -632,20 +622,6 @@ export default function EstimateModule(): JSX.Element {
       setLoadingSatellite(false);
     }
   }, [address, finalizeSatelliteLoad, selectedAddressPlaceId, toast]);
-
-  const handlePrecisionConfirm = useCallback(() => {
-    setShowPrecisionConfirm(false);
-    if (pendingSatelliteData) {
-      finalizeSatelliteLoad(pendingSatelliteData);
-      setPendingSatelliteData(null);
-    }
-  }, [finalizeSatelliteLoad, pendingSatelliteData]);
-
-  const handlePrecisionCancel = useCallback(() => {
-    setShowPrecisionConfirm(false);
-    setPendingSatelliteData(null);
-    setPrecisionWarning(null);
-  }, []);
 
   const handleDetectAndSeedPolygon = useCallback(async () => {
     if (!satellite) return;
@@ -985,9 +961,9 @@ export default function EstimateModule(): JSX.Element {
     if (selectedAddressPlaceId) return "Exact suggestion selected.";
     if (trimmed.length < 3) return "Type at least 3 characters to see address suggestions.";
     if (trimmed.length >= 3 && addressSuggestions.length === 0) {
-      return "No suggestions found. You can still continue with manual address.";
+      return "No Google address suggestions found yet. Keep typing full house number and street.";
     }
-    return "Select a suggestion for exact rooftop match.";
+    return "Select a suggestion to lock rooftop coordinates.";
   }, [
     address,
     addressSuggestionError,
@@ -998,8 +974,8 @@ export default function EstimateModule(): JSX.Element {
 
   const precisionBadge = useMemo(() => {
     if (!satellite) return null;
-    const locType = satellite.locationType || "UNKNOWN";
-    const isHighPrecision = locType === "ROOFTOP" || locType === "RANGE_INTERPOLATED";
+    const locType = satellite.locationType;
+    const isHighPrecision = locType === "ROOFTOP";
     return {
       label: locType.replace(/_/g, " "),
       color: isHighPrecision
@@ -1039,7 +1015,9 @@ export default function EstimateModule(): JSX.Element {
                       if (event.key === "Enter") {
                         event.preventDefault();
                         setShowAddressSuggestions(false);
-                        handleLoadSatellite();
+                        if (selectedAddressPlaceId) {
+                          handleLoadSatellite();
+                        }
                       }
                     }}
                     className="pl-9"
@@ -1088,11 +1066,6 @@ export default function EstimateModule(): JSX.Element {
                 </span>
               )}
             </p>
-            {precisionWarning && (
-              <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                <span className="font-medium">⚠ Precision Warning:</span> {precisionWarning}
-              </div>
-            )}
           </div>
 
           {/* Parcel Info Bar */}
@@ -1453,27 +1426,6 @@ export default function EstimateModule(): JSX.Element {
           </div>
         </aside>
       </div>
-
-      {/* Precision Confirmation Dialog */}
-      <AlertDialog open={showPrecisionConfirm} onOpenChange={setShowPrecisionConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>⚠ Low Precision Geocoding</AlertDialogTitle>
-            <AlertDialogDescription>
-              The geocoding result is <strong>{pendingSatelliteData?.locationType?.replace(/_/g, " ") || "APPROXIMATE"}</strong>,
-              which means the map may not be centered on the exact rooftop.
-              <br /><br />
-              For best results, select an address from the autocomplete suggestions. Do you want to proceed anyway?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={handlePrecisionCancel}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handlePrecisionConfirm}>
-              Proceed Anyway
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </section>
   );
 }

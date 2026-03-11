@@ -14,7 +14,7 @@ const materialCategorySchema = z.enum([
 export const satelliteRequestSchema = z.object({
     body: z.object({
         address: z.string().min(5, 'Address is required and must be at least 5 characters'),
-        placeId: z.string().min(3).max(255).optional(),
+        placeId: z.string().min(3, 'Select an autocomplete suggestion before loading satellite').max(255),
     }),
 });
 

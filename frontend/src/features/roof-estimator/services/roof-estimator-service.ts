@@ -66,7 +66,7 @@ export interface SatelliteResult {
     longitude: number;
     formattedAddress: string;
     satelliteImageUrl: string;
-    locationType?: string;
+    locationType: string;
     placeId?: string;
 }
 
@@ -299,11 +299,11 @@ export async function checkAiHealth(): Promise<boolean> {
     return res.data?.data?.healthy || false;
 }
 
-export async function fetchSatelliteImage(address: string, placeId?: string): Promise<SatelliteResult> {
-    const payload: Record<string, string> = { address };
-    if (placeId && placeId.trim()) {
-        payload.placeId = placeId.trim();
-    }
+export async function fetchSatelliteImage(address: string, placeId: string): Promise<SatelliteResult> {
+    const payload = {
+        address,
+        placeId: placeId.trim(),
+    };
     const res = await api.post("/roof-estimator/satellite", payload);
     return res.data?.data;
 }
@@ -638,4 +638,3 @@ export async function validatePolygon(aiAreaSqft: number, solarAreaSqft: number)
     const res = await api.post("/roof-estimator/validate-polygon", { aiAreaSqft, solarAreaSqft });
     return res.data?.data;
 }
-

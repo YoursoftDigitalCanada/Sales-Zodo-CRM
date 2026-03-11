@@ -1,46 +1,18 @@
-import { Invoice, InvoiceStatus, Currency } from '@prisma/client';
+import { Invoice } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
+import type {
+    CreateInvoiceDto,
+    UpdateInvoiceDto,
+    InvoiceQueryDto,
+    CanonicalInvoiceItemDto,
+} from '@contracts/invoice';
+import type { Currency, InvoiceStatus } from '@contracts/enums';
+
+type InvoiceItemDto = CanonicalInvoiceItemDto;
 
 // ============================================================================
 // INVOICES DTOs - Matching Prisma Schema (Invoice, InvoiceItem)
 // ============================================================================
-
-export interface InvoiceItemDto {
-    description: string;
-    quantity: number;
-    unitPrice: number;
-    amount: number;
-    taxRate?: number | null;
-    sortOrder?: number;
-}
-
-export interface CreateInvoiceDto {
-    invoiceNumber: string;
-    clientId: string;
-    issueDate?: Date | string;
-    dueDate: Date | string;
-    currency?: Currency;
-    taxRate?: number | null;
-    notes?: string | null;
-    terms?: string | null;
-    items: InvoiceItemDto[];
-}
-
-export interface UpdateInvoiceDto extends Partial<CreateInvoiceDto> {
-    status?: InvoiceStatus;
-}
-
-export interface InvoiceQueryDto {
-    page?: number;
-    limit?: number;
-    search?: string;
-    status?: InvoiceStatus;
-    clientId?: string;
-    startDate?: string;
-    endDate?: string;
-    sortBy?: 'invoiceNumber' | 'issueDate' | 'dueDate' | 'total';
-    sortOrder?: 'asc' | 'desc';
-}
 
 export interface InvoiceResponseDto {
     id: string;

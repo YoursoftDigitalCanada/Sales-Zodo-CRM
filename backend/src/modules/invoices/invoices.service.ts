@@ -1,5 +1,6 @@
 import { invoicesRepository } from './invoices.repository';
-import { CreateInvoiceDto, UpdateInvoiceDto, InvoiceQueryDto, toInvoiceResponseDto } from './invoices.dto';
+import { toInvoiceResponseDto } from './invoices.dto';
+import type { CreateInvoiceDto, UpdateInvoiceDto, InvoiceQueryDto } from '@contracts/invoice';
 import { NotFoundError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
 import { eventBus } from '../../common/events/event-bus';
@@ -33,6 +34,60 @@ export class InvoicesService {
         const invoice = await invoicesRepository.findById(id, tenantId);
         if (!invoice) throw new NotFoundError('Invoice not found', ErrorCodes.RESOURCE_NOT_FOUND);
         return toInvoiceResponseDto(invoice);
+    }
+
+    async generatePdf(id: string, tenantId: string): Promise<{ buffer: Buffer; fileName: string }> {
+        const invoice = await invoicesRepository.findById(id, tenantId);
+        if (!invoice) throw new NotFoundError('Invoice not found', ErrorCodes.RESOURCE_NOT_FOUND);
+
+        const { jsPDF } = await import('jspdf');
+        const autoTable = (await import('jspdf-autotable')).default as any;
+        const doc = new jsPDF();
+
+        const issueDate = new Date((invoice as any).issueDate).toLocaleDateString();
+        const dueDate = new Date((invoice as any).dueDate).toLocaleDateString();
+        const invoiceNumber = (invoice as any).invoiceNumber || id;
+        const clientName = (invoice as any).client?.clientName || 'Client';
+        const currency = (invoice as any).currency || 'CAD';
+
+        doc.setFontSize(18);
+        doc.text(`Invoice ${invoiceNumber}`, 14, 18);
+        doc.setFontSize(11);
+        doc.text(`Client: ${clientName}`, 14, 28);
+        doc.text(`Issue Date: ${issueDate}`, 14, 35);
+        doc.text(`Due Date: ${dueDate}`, 14, 42);
+        doc.text(`Status: ${(invoice as any).status}`, 14, 49);
+
+        const items = ((invoice as any).items || []).map((item: any) => [
+            item.description || 'Item',
+            Number(item.quantity || 0).toFixed(2),
+            Number(item.unitPrice || 0).toFixed(2),
+            Number(item.amount || 0).toFixed(2),
+        ]);
+
+        autoTable(doc, {
+            startY: 58,
+            head: [['Description', 'Qty', 'Rate', 'Amount']],
+            body: items,
+        });
+
+        const subtotal = Number((invoice as any).subtotal || 0).toFixed(2);
+        const taxAmount = Number((invoice as any).taxAmount || 0).toFixed(2);
+        const total = Number((invoice as any).total || 0).toFixed(2);
+        const amountPaid = Number((invoice as any).amountPaid || 0).toFixed(2);
+        const amountDue = Number((invoice as any).amountDue || 0).toFixed(2);
+        const finalY = (doc as any).lastAutoTable?.finalY || 120;
+
+        doc.text(`Subtotal: ${currency} ${subtotal}`, 14, finalY + 12);
+        doc.text(`Tax: ${currency} ${taxAmount}`, 14, finalY + 19);
+        doc.text(`Total: ${currency} ${total}`, 14, finalY + 26);
+        doc.text(`Paid: ${currency} ${amountPaid}`, 14, finalY + 33);
+        doc.text(`Amount Due: ${currency} ${amountDue}`, 14, finalY + 40);
+
+        const arrayBuffer = doc.output('arraybuffer');
+        const buffer = Buffer.from(arrayBuffer);
+        const fileName = `invoice-${invoiceNumber}.pdf`;
+        return { buffer, fileName };
     }
 
     async getMany(tenantId: string, query: InvoiceQueryDto) {

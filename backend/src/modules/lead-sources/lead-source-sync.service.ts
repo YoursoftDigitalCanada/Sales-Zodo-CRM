@@ -308,7 +308,7 @@ export class LeadSourceSyncService {
           continue;
         }
 
-        await leadsService.create(source.tenantId, dto);
+        await leadsService.create(source.tenantId, dto as any);
         result.imported += 1;
       } catch (error) {
         result.failed += 1;

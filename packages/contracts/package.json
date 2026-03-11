@@ -1,0 +1,19 @@
+{
+  "name": "@contracts/shared",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./enums": "./enums.ts",
+    "./lead": "./lead.ts",
+    "./invoice": "./invoice.ts",
+    "./project": "./project.ts",
+    "./proposal": "./proposal.ts"
+  },
+  "dependencies": {
+    "zod": "^3.22.4"
+  }
+}
+

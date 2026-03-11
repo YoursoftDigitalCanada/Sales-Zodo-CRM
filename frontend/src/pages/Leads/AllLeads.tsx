@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { getLeads, createLead, updateLead, deleteLead, updateLeadStatus } from "@/features/leads";
+import { getLeadSources } from "@/features/leads/services/lead-sources-service";
+import { LeadStatus, LeadTemperature } from "@/types/lead-contracts";
 import { createCalendarEvent } from "@/features/calendar";
 import { autocompleteAddress } from "@/features/roof-estimator/services/roof-estimator-service";
 import { getEmployees } from "@/features/users";
@@ -153,17 +155,17 @@ interface Lead {
   lastName: string;
   email: string;
   phone: string;
-  company: string;
+  companyName: string;
   jobTitle: string;
   website?: string;
   location: string;
-  source: string;
-  status: "new" | "contacted" | "qualified" | "proposal" | "negotiation" | "won" | "lost";
-  score: number;
-  temperature: "hot" | "warm" | "cold";
-  value: number;
+  leadSourceName: string;
+  status: LeadStatus;
+  displayScore: number;
+  temperature: LeadTemperature;
+  potentialValue: number;
   currency: string;
-  assignedTo: string;
+  assignedToName: string;
   assignedToId?: string;
   leadSourceId?: string;
   tags?: string[];
@@ -262,26 +264,28 @@ interface LeadStats {
 // CONSTANTS & DATA
 // ============================================
 
-const leadSources = [
-  { id: "website", name: "Website", icon: Globe, color: "#3B82F6" },
-  { id: "referral", name: "Referral", icon: Users, color: "#10B981" },
-  { id: "linkedin", name: "LinkedIn", icon: Linkedin, color: "#0A66C2" },
-  { id: "cold_call", name: "Cold Call", icon: Phone, color: "#F59E0B" },
-  { id: "email_campaign", name: "Email Campaign", icon: Mail, color: "#8B5CF6" },
-  { id: "trade_show", name: "Trade Show", icon: Building2, color: "#EC4899" },
-  { id: "social_media", name: "Social Media", icon: Twitter, color: "#06B6D4" },
-  { id: "other", name: "Other", icon: Target, color: "#64748B" },
-];
+// Lead sources: fallback icons/colors for dynamic sources loaded from API
+const sourceIconMap: Record<string, { icon: any; color: string }> = {
+  website: { icon: Globe, color: "#3B82F6" },
+  referral: { icon: Users, color: "#10B981" },
+  linkedin: { icon: Linkedin, color: "#0A66C2" },
+  cold_call: { icon: Phone, color: "#F59E0B" },
+  email_campaign: { icon: Mail, color: "#8B5CF6" },
+  trade_show: { icon: Building2, color: "#EC4899" },
+  social_media: { icon: Twitter, color: "#06B6D4" },
+  other: { icon: Target, color: "#64748B" },
+};
 
 const leadStatuses = [
-  { id: "new", name: "New", color: "#3B82F6", bgColor: "#EFF6FF", icon: Sparkles },
-  { id: "contacted", name: "Contacted", color: "#8B5CF6", bgColor: "#F5F3FF", icon: Phone },
-  { id: "qualified", name: "Qualified", color: "#F59E0B", bgColor: "#FFFBEB", icon: UserCheck },
-  { id: "proposal", name: "Proposal", color: "#22D3EE", bgColor: "#F0FDFA", icon: Send },
-  { id: "negotiation", name: "Negotiation", color: "#EC4899", bgColor: "#FDF2F8", icon: MessageSquare },
-  { id: "won", name: "Won", color: "#10B981", bgColor: "#ECFDF5", icon: CheckCircle2 },
-  { id: "lost", name: "Lost", color: "#EF4444", bgColor: "#FEF2F2", icon: AlertCircle },
+  { id: LeadStatus.NEW, name: "New", color: "#3B82F6", bgColor: "#EFF6FF", icon: Sparkles },
+  { id: LeadStatus.CONTACTED, name: "Contacted", color: "#8B5CF6", bgColor: "#F5F3FF", icon: Phone },
+  { id: LeadStatus.QUALIFIED, name: "Qualified", color: "#F59E0B", bgColor: "#FFFBEB", icon: UserCheck },
+  { id: LeadStatus.PROPOSAL, name: "Proposal", color: "#22D3EE", bgColor: "#F0FDFA", icon: Send },
+  { id: LeadStatus.NEGOTIATION, name: "Negotiation", color: "#F97316", bgColor: "#FFF7ED", icon: Clock },
+  { id: LeadStatus.WON, name: "Won", color: "#10B981", bgColor: "#ECFDF5", icon: CheckCircle2 },
+  { id: LeadStatus.LOST, name: "Lost", color: "#EF4444", bgColor: "#FEF2F2", icon: AlertCircle },
 ];
+
 
 // ============================================
 // UTILITY FUNCTIONS
@@ -320,17 +324,18 @@ const getStatusInfo = (statusId: string) => {
   return leadStatuses.find((s) => s.id === statusId) || leadStatuses[0];
 };
 
-const getSourceInfo = (sourceId: string) => {
-  return leadSources.find((s) => s.id === sourceId) || leadSources[7];
+const getSourceInfo = (sourceSlug: string) => {
+  const mapping = sourceIconMap[sourceSlug] || sourceIconMap["other"];
+  return { id: sourceSlug, name: sourceSlug.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()), icon: mapping.icon, color: mapping.color };
 };
 
 const getTemperatureInfo = (temp: string) => {
   switch (temp) {
-    case "hot":
+    case "HOT":
       return { icon: Flame, color: "#EF4444", bg: "#FEF2F2", label: "Hot" };
-    case "warm":
+    case "WARM":
       return { icon: ThermometerSun, color: "#F59E0B", bg: "#FFFBEB", label: "Warm" };
-    case "cold":
+    case "COLD":
       return { icon: Snowflake, color: "#3B82F6", bg: "#EFF6FF", label: "Cold" };
     default:
       return { icon: Thermometer, color: "#64748B", bg: "#F1F5F9", label: "Unknown" };
@@ -496,7 +501,7 @@ const LeadCard = ({
   delay?: number;
 }) => {
   const statusInfo = getStatusInfo(lead.status);
-  const sourceInfo = getSourceInfo(lead.source);
+  const sourceInfo = getSourceInfo(lead.leadSourceName);
   const tempInfo = getTemperatureInfo(lead.temperature);
   const TempIcon = tempInfo.icon;
   const SourceIcon = sourceInfo.icon;
@@ -595,24 +600,24 @@ const LeadCard = ({
             {lead.firstName} {lead.lastName}
           </h3>
           <p className="text-sm text-[#94A3B8]">{lead.jobTitle}</p>
-          <p className="text-xs text-[#475569]">{lead.company}</p>
+          <p className="text-xs text-[#475569]">{lead.companyName}</p>
         </div>
 
         {/* Score */}
         <div className="mb-4">
           <div className="flex items-center justify-between mb-1">
             <span className="text-xs text-[#94A3B8]">Lead Score</span>
-            <span className="text-sm font-bold" style={{ color: getScoreColor(lead.score) }}>
-              {lead.score}%
+            <span className="text-sm font-bold" style={{ color: getScoreColor(lead.leadScore) }}>
+              {lead.leadScore}%
             </span>
           </div>
           <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
             <motion.div
               initial={{ width: 0 }}
-              animate={{ width: `${lead.score}%` }}
+              animate={{ width: `${lead.leadScore}%` }}
               transition={{ duration: 1, ease: "easeOut" }}
               className="h-full rounded-full"
-              style={{ backgroundColor: getScoreColor(lead.score) }}
+              style={{ backgroundColor: getScoreColor(lead.leadScore) }}
             />
           </div>
         </div>
@@ -620,7 +625,7 @@ const LeadCard = ({
         {/* Value */}
         <div className="text-center mb-4">
           <span className="text-xl sm:text-2xl font-bold text-[#0F172A]">
-            {formatCurrency(lead.value, lead.currency)}
+            {formatCurrency(lead.potentialValue, lead.currency)}
           </span>
           <p className="text-xs text-[#475569]">Potential Value</p>
         </div>
@@ -720,7 +725,7 @@ const LeadRow = ({
   onStatusChange: (status: Lead["status"]) => void;
 }) => {
   const statusInfo = getStatusInfo(lead.status);
-  const sourceInfo = getSourceInfo(lead.source);
+  const sourceInfo = getSourceInfo(lead.leadSourceName);
   const tempInfo = getTemperatureInfo(lead.temperature);
   const TempIcon = tempInfo.icon;
   const SourceIcon = sourceInfo.icon;
@@ -760,7 +765,7 @@ const LeadRow = ({
       </TableCell>
       <TableCell>
         <div>
-          <p className="font-medium text-[#0F172A]">{lead.company || <span className="text-[#CBD5E1]">—</span>}</p>
+          <p className="font-medium text-[#0F172A]">{lead.companyName || <span className="text-[#CBD5E1]">—</span>}</p>
           <p className="text-sm text-[#94A3B8]">{lead.jobTitle}</p>
         </div>
       </TableCell>
@@ -786,16 +791,16 @@ const LeadRow = ({
         <div className="flex items-center gap-2">
           <div className="flex-1 max-w-[80px]">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-sm font-medium" style={{ color: getScoreColor(lead.score) }}>
-                {lead.score}
+              <span className="text-sm font-medium" style={{ color: getScoreColor(lead.leadScore) }}>
+                {lead.leadScore}
               </span>
             </div>
             <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
               <div
                 className="h-full rounded-full transition-all"
                 style={{
-                  width: `${lead.score}%`,
-                  backgroundColor: getScoreColor(lead.score),
+                  width: `${lead.leadScore}%`,
+                  backgroundColor: getScoreColor(lead.leadScore),
                 }}
               />
             </div>
@@ -810,7 +815,7 @@ const LeadRow = ({
       </TableCell>
       <TableCell>
         <span className="font-semibold text-[#0F172A]">
-          {formatCurrency(lead.value, lead.currency)}
+          {formatCurrency(lead.potentialValue, lead.currency)}
         </span>
       </TableCell>
       <TableCell>
@@ -921,16 +926,16 @@ const LeadFormDialog = ({
     lastName: "",
     email: "",
     phone: "",
-    company: "",
+    companyName: "",
     jobTitle: "",
     website: "",
     location: "",
     source: "website",
     leadSourceId: "",
-    status: "new" as Lead["status"],
-    temperature: "warm" as Lead["temperature"],
-    value: "",
-    assignedTo: "",
+    status: LeadStatus.NEW as Lead["status"],
+    temperature: LeadTemperature.WARM as Lead["temperature"],
+    potentialValue: "",
+    assignedToId: "",
     tags: "",
     notes: "",
     // Stage 1: Property Info
@@ -1028,16 +1033,16 @@ const LeadFormDialog = ({
         lastName: lead.lastName,
         email: lead.email,
         phone: lead.phone,
-        company: lead.company,
+        companyName: lead.companyName,
         jobTitle: lead.jobTitle,
         website: lead.website || "",
         location: lead.location,
-        source: lead.source,
+        source: lead.leadSourceName,
         leadSourceId: lead.leadSourceId || "",
         status: lead.status,
         temperature: lead.temperature,
-        value: lead.value.toString(),
-        assignedTo: lead.assignedToId || "",
+        potentialValue: lead.potentialValue.toString(),
+        assignedToId: lead.assignedToId || "",
         tags: lead.tags?.join(", ") || "",
         notes: lead.notes || "",
         // Stage 1
@@ -1095,9 +1100,9 @@ const LeadFormDialog = ({
     } else {
       setFormData({
         firstName: "", lastName: "", email: "", phone: "",
-        company: "", jobTitle: "", website: "", location: "",
-        source: "website", leadSourceId: "", status: "new", temperature: "warm",
-        value: "", assignedTo: "", tags: "", notes: "",
+        companyName: "", jobTitle: "", website: "", location: "",
+        source: "website", leadSourceId: "", status: LeadStatus.NEW, temperature: LeadTemperature.WARM,
+        potentialValue: "", assignedToId: "", tags: "", notes: "",
         propertyAddress: "", city: "", state: "", zipCode: "", propertyType: "",
         serviceType: "", isInsuranceClaim: "", urgencyLevel: "",
         preferredContactMethod: "", bestTimeToContact: "", issueDescription: "",
@@ -1128,7 +1133,7 @@ const LeadFormDialog = ({
     try {
       await onSubmit({
         ...formData,
-        value: parseFloat(formData.value) || 0,
+        potentialValue: parseFloat(formData.potentialValue) || 0,
         tags: formData.tags
           .split(",")
           .map((t) => t.trim())
@@ -1278,8 +1283,8 @@ const LeadFormDialog = ({
                 <div className="relative">
                   <Building2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                   <Input
-                    value={formData.company}
-                    onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                    value={formData.companyName}
+                    onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
                     placeholder="Acme Inc."
                     className="h-11 pl-10 rounded-md"
                   />
@@ -1472,18 +1477,18 @@ const LeadFormDialog = ({
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#475569]">How Did You Hear About Us?</Label>
                 <Select
-                  value={formData.source}
-                  onValueChange={(val) => setFormData({ ...formData, source: val })}
+                  value={formData.leadSourceName}
+                  onValueChange={(val) => setFormData({ ...formData, leadSourceName: val })}
                 >
                   <SelectTrigger className="h-11 rounded-md">
                     <SelectValue placeholder="Select" />
                   </SelectTrigger>
                   <SelectContent className="rounded-md">
-                    {leadSources.map((source) => (
-                      <SelectItem key={source.id} value={source.id} className="rounded-md">
+                    {Object.entries(sourceIconMap).map(([key, { icon: Icon, color }]) => (
+                      <SelectItem key={key} value={key} className="rounded-md">
                         <div className="flex items-center gap-2">
-                          <source.icon size={14} style={{ color: source.color }} />
-                          {source.name}
+                          <Icon size={14} style={{ color }} />
+                          {key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
                         </div>
                       </SelectItem>
                     ))}
@@ -1983,8 +1988,8 @@ const LeadFormDialog = ({
                   <DollarSign size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                   <Input
                     type="number"
-                    value={formData.value}
-                    onChange={(e) => setFormData({ ...formData, value: e.target.value })}
+                    value={formData.potentialValue}
+                    onChange={(e) => setFormData({ ...formData, potentialValue: e.target.value })}
                     placeholder="50000"
                     className="h-11 pl-10 rounded-md"
                   />
@@ -1994,8 +1999,8 @@ const LeadFormDialog = ({
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#475569]">Assigned To</Label>
                 <Select
-                  value={formData.assignedTo}
-                  onValueChange={(val) => setFormData({ ...formData, assignedTo: val })}
+                  value={formData.assignedToId}
+                  onValueChange={(val) => setFormData({ ...formData, assignedToId: val })}
                 >
                   <SelectTrigger className="h-11 rounded-md">
                     <div className="flex items-center gap-2">
@@ -2143,7 +2148,7 @@ const LeadDetailsDialog = ({
   if (!lead) return null;
 
   const statusInfo = getStatusInfo(lead.status);
-  const sourceInfo = getSourceInfo(lead.source);
+  const sourceInfo = getSourceInfo(lead.leadSourceName);
   const tempInfo = getTemperatureInfo(lead.temperature);
   const TempIcon = tempInfo.icon;
   const SourceIcon = sourceInfo.icon;
@@ -2182,7 +2187,7 @@ const LeadDetailsDialog = ({
                 </span>
               </div>
               <p className="text-[#475569]">{lead.jobTitle}</p>
-              <p className="text-sm text-[#94A3B8]">{lead.company}</p>
+              <p className="text-sm text-[#94A3B8]">{lead.companyName}</p>
             </div>
             <span
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium"
@@ -2202,17 +2207,17 @@ const LeadDetailsDialog = ({
               <div className="flex items-center gap-3">
                 <span
                   className="text-3xl font-bold"
-                  style={{ color: getScoreColor(lead.score) }}
+                  style={{ color: getScoreColor(lead.leadScore) }}
                 >
-                  {lead.score}
+                  {lead.leadScore}
                 </span>
                 <div className="flex-1">
                   <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
                     <div
                       className="h-full rounded-full"
                       style={{
-                        width: `${lead.score}%`,
-                        backgroundColor: getScoreColor(lead.score),
+                        width: `${lead.leadScore}%`,
+                        backgroundColor: getScoreColor(lead.leadScore),
                       }}
                     />
                   </div>
@@ -2222,7 +2227,7 @@ const LeadDetailsDialog = ({
             <div className="p-4 bg-[#F8FAFC] rounded-md">
               <p className="text-xs text-[#475569] mb-2">Potential Value</p>
               <span className="text-3xl font-bold text-[#0F172A]">
-                {formatCurrency(lead.value, lead.currency)}
+                {formatCurrency(lead.potentialValue, lead.currency)}
               </span>
             </div>
           </div>
@@ -2417,11 +2422,11 @@ const LeadDetailsDialog = ({
                     ))}
                   </div>
                   <p className="text-[11px] text-[#475569] leading-relaxed">
-                    {lead.score >= 80
-                      ? `High-value lead with ${lead.score}% score. Recommend prioritizing engagement.`
-                      : lead.score >= 50
-                        ? `Moderate lead score (${lead.score}%). Consider nurturing through targeted outreach.`
-                        : `Lead needs attention — score at ${lead.score}%. Review qualification criteria.`}
+                    {lead.leadScore >= 80
+                      ? `High-value lead with ${lead.leadScore}% score. Recommend prioritizing engagement.`
+                      : lead.leadScore >= 50
+                        ? `Moderate lead score (${lead.leadScore}%). Consider nurturing through targeted outreach.`
+                        : `Lead needs attention — score at ${lead.leadScore}%. Review qualification criteria.`}
                   </p>
                 </div>
               </div>
@@ -2573,7 +2578,7 @@ const ScheduleMeetingDialog = ({
 
       await onSchedule({
         title: meetingTitle || `Meeting with ${lead.firstName} ${lead.lastName}`,
-        description: `Qualification meeting with lead ${lead.firstName} ${lead.lastName}${lead.company ? ` from ${lead.company}` : ""}. ${meetingNotes ? `\n\nNotes: ${meetingNotes}` : ""}`,
+        description: `Qualification meeting with lead ${lead.firstName} ${lead.lastName}${lead.companyName ? ` from ${lead.companyName}` : ""}. ${meetingNotes ? `\n\nNotes: ${meetingNotes}` : ""}`,
         startTime: startTime.toISOString(),
         endTime: endTime.toISOString(),
         eventType: "MEETING",
@@ -2816,21 +2821,18 @@ const mapApiLead = (apiLead: any): Lead => ({
   lastName: apiLead.lastName || "",
   email: apiLead.email || "",
   phone: apiLead.phone || "",
-  company: (() => {
+  companyName: (() => {
     const cn = apiLead.companyName || "";
-    // If companyName looks like an email address, treat as empty
     if (cn && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cn)) return "";
     return cn;
   })(),
   jobTitle: apiLead.jobTitle || "",
   website: apiLead.website,
   location: apiLead.location || "",
-  source: (apiLead.leadSource?.name || "website").toLowerCase().replace(/\s+/g, "_"),
-  status: (apiLead.status || "NEW").toLowerCase(),
-  score: (() => {
-    // Use leadScore (1-10) from assessment if available, scale to 0-100
+  leadSourceName: (apiLead.leadSource?.name || "other").toLowerCase().replace(/\s+/g, "_"),
+  status: (apiLead.status || "NEW") as LeadStatus,
+  displayScore: (() => {
     if (apiLead.leadScore != null) return Math.min(apiLead.leadScore * 10, 100);
-    // Compute a basic score from data completeness signals
     let s = 20;
     if (apiLead.email) s += 10;
     if (apiLead.phone) s += 10;
@@ -2843,10 +2845,10 @@ const mapApiLead = (apiLead: any): Lead => ({
     if (apiLead.assignedToId) s += 5;
     return Math.min(s, 100);
   })(),
-  temperature: (apiLead.temperature || "warm").toLowerCase() as Lead["temperature"],
-  value: apiLead.potentialValue || 0,
+  temperature: (apiLead.temperature || "WARM") as LeadTemperature,
+  potentialValue: apiLead.potentialValue || 0,
   currency: "CAD",
-  assignedTo: apiLead.assignedTo
+  assignedToName: apiLead.assignedTo
     ? `${apiLead.assignedTo.user?.firstName || ""} ${apiLead.assignedTo.user?.lastName || ""}`.trim()
     : "",
   assignedToId: apiLead.assignedToId || apiLead.assignedTo?.id || "",
@@ -2981,15 +2983,15 @@ const AllLeads = () => {
 
     // Filter by tab
     if (activeTab === "new") {
-      result = result.filter((l) => l.status === "new");
+      result = result.filter((l) => l.status === "NEW");
     } else if (activeTab === "qualified") {
-      result = result.filter((l) => l.status === "qualified");
+      result = result.filter((l) => l.status === "QUALIFIED");
     } else if (activeTab === "hot") {
-      result = result.filter((l) => l.temperature === "hot");
+      result = result.filter((l) => l.temperature === "HOT");
     } else if (activeTab === "won") {
-      result = result.filter((l) => l.status === "won");
+      result = result.filter((l) => l.status === "WON");
     } else if (activeTab === "lost") {
-      result = result.filter((l) => l.status === "lost");
+      result = result.filter((l) => l.status === "LOST");
     }
 
     // Filter by search
@@ -3000,14 +3002,14 @@ const AllLeads = () => {
           l.firstName.toLowerCase().includes(query) ||
           l.lastName.toLowerCase().includes(query) ||
           l.email.toLowerCase().includes(query) ||
-          l.company.toLowerCase().includes(query) ||
+          l.companyName.toLowerCase().includes(query) ||
           l.jobTitle.toLowerCase().includes(query)
       );
     }
 
     // Filter by source
     if (selectedSource !== "all") {
-      result = result.filter((l) => l.source === selectedSource);
+      result = result.filter((l) => l.leadSourceName === selectedSource);
     }
 
     // Filter by status
@@ -3116,13 +3118,13 @@ const AllLeads = () => {
         lastName: data.lastName,
         email: data.email,
         phone: data.phone || undefined,
-        companyName: data.company,
+        companyName: data.companyName,
         jobTitle: data.jobTitle || undefined,
         website: data.website && data.website.trim() ? data.website.trim() : undefined,
         location: data.location || undefined,
         status: (data.status || "new").toUpperCase(),
         temperature: (data.temperature || "warm").toUpperCase(),
-        potentialValue: data.value || 0,
+        potentialValue: data.potentialValue || 0,
         notes: data.notes || undefined,
         ...buildNewFieldsPayload(data),
       };
@@ -3132,8 +3134,8 @@ const AllLeads = () => {
       }
 
       // Only send assignedToId if a valid employee is selected
-      if (data.assignedTo && data.assignedTo !== "unassigned" && data.assignedTo !== "") {
-        apiData.assignedToId = data.assignedTo;
+      if (data.assignedToId && data.assignedToId !== "unassigned" && data.assignedToId !== "") {
+        apiData.assignedToId = data.assignedToId;
       }
 
       const responseData = await createLead(apiData);
@@ -3161,13 +3163,13 @@ const AllLeads = () => {
         lastName: data.lastName,
         email: data.email,
         phone: data.phone || undefined,
-        companyName: data.company,
+        companyName: data.companyName,
         jobTitle: data.jobTitle || undefined,
         website: data.website && data.website.trim() ? data.website.trim() : undefined,
         location: data.location || undefined,
         status: data.status?.toUpperCase(),
         temperature: data.temperature?.toUpperCase(),
-        potentialValue: data.value || 0,
+        potentialValue: data.potentialValue || 0,
         notes: data.notes || undefined,
         ...buildNewFieldsPayload(data),
       };
@@ -3179,8 +3181,8 @@ const AllLeads = () => {
       }
 
       // Only send assignedToId if a valid employee is selected
-      if (data.assignedTo && data.assignedTo !== "unassigned" && data.assignedTo !== "") {
-        apiData.assignedToId = data.assignedTo;
+      if (data.assignedToId && data.assignedToId !== "unassigned" && data.assignedToId !== "") {
+        apiData.assignedToId = data.assignedToId;
       } else {
         apiData.assignedToId = null;
       }
@@ -3233,7 +3235,7 @@ const AllLeads = () => {
 
   const handleStatusChange = async (lead: Lead, status: Lead["status"]) => {
     // Intercept QUALIFIED status → show meeting scheduling dialog
-    if (status === "qualified" && lead.status !== "qualified") {
+    if (status === LeadStatus.QUALIFIED && lead.status !== "qualified") {
       setPendingQualifiedLead(lead);
       setIsMeetingDialogOpen(true);
       return;
@@ -3271,7 +3273,7 @@ const AllLeads = () => {
       setLeads((prev) =>
         prev.map((l) =>
           l.id === pendingQualifiedLead.id
-            ? { ...l, status: "qualified" as Lead["status"], updatedAt: new Date().toISOString() }
+            ? { ...l, status: LeadStatus.QUALIFIED as Lead["status"], updatedAt: new Date().toISOString() }
             : l
         )
       );
@@ -3303,7 +3305,7 @@ const AllLeads = () => {
       setLeads((prev) =>
         prev.map((l) =>
           l.id === pendingQualifiedLead.id
-            ? { ...l, status: "qualified" as Lead["status"], updatedAt: new Date().toISOString() }
+            ? { ...l, status: LeadStatus.QUALIFIED as Lead["status"], updatedAt: new Date().toISOString() }
             : l
         )
       );
@@ -3344,12 +3346,12 @@ const AllLeads = () => {
   };
 
   // Stats calculations
-  const newCount = leads.filter((l) => l.status === "new").length;
-  const qualifiedCount = leads.filter((l) => l.status === "qualified").length;
-  const hotCount = leads.filter((l) => l.temperature === "hot").length;
-  const wonCount = leads.filter((l) => l.status === "won").length;
-  const lostCount = leads.filter((l) => l.status === "lost").length;
-  const totalValue = leads.reduce((acc, l) => acc + l.value, 0);
+  const newCount = leads.filter((l) => l.status === "NEW").length;
+  const qualifiedCount = leads.filter((l) => l.status === "QUALIFIED").length;
+  const hotCount = leads.filter((l) => l.temperature === "HOT").length;
+  const wonCount = leads.filter((l) => l.status === "WON").length;
+  const lostCount = leads.filter((l) => l.status === "LOST").length;
+  const totalValue = leads.reduce((acc, l) => acc + l.potentialValue, 0);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
@@ -3530,11 +3532,11 @@ const AllLeads = () => {
                       </SelectTrigger>
                       <SelectContent className="rounded-md">
                         <SelectItem value="all" className="rounded-md">All Sources</SelectItem>
-                        {leadSources.map((source) => (
-                          <SelectItem key={source.id} value={source.id} className="rounded-md">
+                        {Object.entries(sourceIconMap).map(([key, { icon: Icon, color }]) => (
+                          <SelectItem key={key} value={key} className="rounded-md">
                             <div className="flex items-center gap-2">
-                              <source.icon size={14} style={{ color: source.color }} />
-                              {source.name}
+                              <Icon size={14} style={{ color }} />
+                              {key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
                             </div>
                           </SelectItem>
                         ))}
@@ -3653,7 +3655,7 @@ const AllLeads = () => {
                     )}
                     {selectedSource !== "all" && (
                       <span className="inline-flex items-center gap-1 px-2 py-1 bg-[#F1F5F9] text-[#475569] rounded-md text-xs">
-                        Source: {leadSources.find(s => s.id === selectedSource)?.name}
+                        Source: {getSourceInfo(selectedSource).name}
                         <button onClick={() => setSelectedSource("all")} className="ml-0.5 hover:text-red-500 transition-colors"><X size={12} /></button>
                       </span>
                     )}
@@ -3750,19 +3752,19 @@ const AllLeads = () => {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent className="rounded-md">
                         <DropdownMenuItem className="rounded-md" onClick={() => {
-                          setLeads((prev) => prev.map((l) => selectedLeads.has(l.id) ? { ...l, temperature: "hot" } : l));
+                          setLeads((prev) => prev.map((l) => selectedLeads.has(l.id) ? { ...l, temperature: LeadTemperature.HOT } : l));
                           toast({ title: "Temperature Updated", description: `${selectedLeads.size} lead(s) set to Hot.` });
                         }}>
                           <Flame size={14} className="mr-2 text-red-500" /> Hot
                         </DropdownMenuItem>
                         <DropdownMenuItem className="rounded-md" onClick={() => {
-                          setLeads((prev) => prev.map((l) => selectedLeads.has(l.id) ? { ...l, temperature: "warm" } : l));
+                          setLeads((prev) => prev.map((l) => selectedLeads.has(l.id) ? { ...l, temperature: LeadTemperature.WARM } : l));
                           toast({ title: "Temperature Updated", description: `${selectedLeads.size} lead(s) set to Warm.` });
                         }}>
                           <ThermometerSun size={14} className="mr-2 text-yellow-500" /> Warm
                         </DropdownMenuItem>
                         <DropdownMenuItem className="rounded-md" onClick={() => {
-                          setLeads((prev) => prev.map((l) => selectedLeads.has(l.id) ? { ...l, temperature: "cold" } : l));
+                          setLeads((prev) => prev.map((l) => selectedLeads.has(l.id) ? { ...l, temperature: LeadTemperature.COLD } : l));
                           toast({ title: "Temperature Updated", description: `${selectedLeads.size} lead(s) set to Cold.` });
                         }}>
                           <Snowflake size={14} className="mr-2 text-blue-500" /> Cold
@@ -3980,7 +3982,7 @@ const AllLeads = () => {
                     </Avatar>
                     <div>
                       <SheetTitle className="text-lg">{lead.firstName} {lead.lastName}</SheetTitle>
-                      <p className="text-sm text-[#94A3B8]">{lead.company || lead.email}</p>
+                      <p className="text-sm text-[#94A3B8]">{lead.companyName || lead.email}</p>
                     </div>
                   </div>
                 </SheetHeader>
@@ -4001,8 +4003,8 @@ const AllLeads = () => {
                       <TempIcon size={12} />
                       {tempInfo.label}
                     </span>
-                    <span className="ml-auto text-sm font-semibold" style={{ color: getScoreColor(lead.score) }}>
-                      Score: {lead.score}
+                    <span className="ml-auto text-sm font-semibold" style={{ color: getScoreColor(lead.leadScore) }}>
+                      Score: {lead.leadScore}
                     </span>
                   </div>
 
@@ -4028,20 +4030,20 @@ const AllLeads = () => {
                           <span className="text-[#475569]">{lead.location}</span>
                         </div>
                       )}
-                      {lead.company && (
+                      {lead.companyName && (
                         <div className="flex items-center gap-2 text-sm">
                           <Building2 size={14} className="text-[#94A3B8]" />
-                          <span className="text-[#475569]">{lead.company}</span>
+                          <span className="text-[#475569]">{lead.companyName}</span>
                         </div>
                       )}
                     </div>
                   </div>
 
                   {/* Value */}
-                  {lead.value > 0 && (
+                  {lead.potentialValue > 0 && (
                     <div className="p-3 bg-[#F8FAFC] rounded-md">
                       <p className="text-xs text-[#94A3B8] mb-1">Potential Value</p>
-                      <p className="text-lg font-bold text-[#0F172A]">{formatCurrency(lead.value)}</p>
+                      <p className="text-lg font-bold text-[#0F172A]">{formatCurrency(lead.potentialValue)}</p>
                     </div>
                   )}
 

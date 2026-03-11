@@ -3,11 +3,13 @@ import { prisma } from '../../config/database';
 import { leadsService } from './leads.service';
 import { leadsRepository } from './leads.repository';
 import {
+  LeadResponseDto,
+} from './leads.dto';
+import type {
   CreateLeadDto,
   UpdateLeadDto,
-  LeadResponseDto,
   ConvertLeadDto,
-} from './leads.dto';
+} from '@contracts/lead';
 import { notificationManager } from '../notifications/notifications.manager';
 import { NotFoundError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';

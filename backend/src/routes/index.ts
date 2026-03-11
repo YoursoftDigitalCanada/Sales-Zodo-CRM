@@ -28,6 +28,7 @@ import tenantsRoutes from '../modules/tenants/tenants.routes';
 import tasksRoutes from '../modules/tasks/tasks.routes';
 import projectsRoutes from '../modules/projects/projects.routes';
 import calendarRoutes from '../modules/calendar/calendar.routes';
+import pipelineRoutes from '../modules/pipeline/pipeline.routes';
 
 // Finance modules
 import invoicesRoutes from '../modules/invoices/invoices.routes';
@@ -145,6 +146,7 @@ export function registerRoutes(app: Application): void {
 
   // Projects & Tasks
   protectedRouter.use('/projects', projectsRoutes);
+  protectedRouter.use('/pipeline', pipelineRoutes);
   protectedRouter.use('/tasks', tasksRoutes);
   protectedRouter.use('/calendar', calendarRoutes);
 
@@ -232,6 +234,7 @@ export function registerRoutes(app: Application): void {
         tenants: `${apiPrefix}/tenants`,
         // Operations
         projects: `${apiPrefix}/projects`,
+        pipeline: `${apiPrefix}/pipeline`,
         tasks: `${apiPrefix}/tasks`,
         calendar: `${apiPrefix}/calendar`,
         // Finance

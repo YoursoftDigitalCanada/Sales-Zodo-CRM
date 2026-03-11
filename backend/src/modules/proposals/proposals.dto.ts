@@ -1,42 +1,20 @@
-import { Proposal, ProposalStatus } from '@prisma/client';
+import { Proposal } from '@prisma/client';
+import type { ProposalStatus } from '@contracts/enums';
+import type {
+    CreateProposalDto,
+    UpdateProposalDto,
+    ProposalQueryDto,
+} from '@contracts/proposal';
+
+export type {
+    CreateProposalDto,
+    UpdateProposalDto,
+    ProposalQueryDto,
+} from '@contracts/proposal';
 
 // ============================================================================
 // PROPOSALS DTOs — Stage 3: Business → Documents → Proposals
 // ============================================================================
-
-export interface CreateProposalDto {
-    leadId: string;
-    quoteId: string;
-    roofEstimateId?: string | null;
-    customMessageToClient?: string | null;
-    scopeOfWork?: string | null;
-    termsAndConditions?: string | null;
-}
-
-export interface UpdateProposalDto {
-    status?: ProposalStatus;
-    customMessageToClient?: string | null;
-    coverPageHtml?: string | null;
-    scopeOfWork?: string | null;
-    termsAndConditions?: string | null;
-    pdfUrl?: string | null;
-    pdfGeneratedAt?: Date | null;
-    signedAt?: Date | null;
-    signedByName?: string | null;
-    signatureData?: string | null;
-    sentAt?: Date | null;
-}
-
-export interface ProposalQueryDto {
-    page?: number;
-    limit?: number;
-    search?: string;
-    status?: ProposalStatus;
-    leadId?: string;
-    quoteId?: string;
-    sortBy?: 'proposalNumber' | 'createdAt' | 'status';
-    sortOrder?: 'asc' | 'desc';
-}
 
 export interface ProposalResponseDto {
     id: string;

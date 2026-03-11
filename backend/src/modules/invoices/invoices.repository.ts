@@ -1,5 +1,5 @@
 import { PrismaClient, Prisma, InvoiceStatus, Currency } from '@prisma/client';
-import { CreateInvoiceDto, UpdateInvoiceDto, InvoiceQueryDto } from './invoices.dto';
+import type { CreateInvoiceDto, UpdateInvoiceDto, InvoiceQueryDto } from '@contracts/invoice';
 
 const prisma = new PrismaClient();
 const invoiceInclude = {
@@ -16,13 +16,13 @@ function calculateTotals(items: { quantity: number; unitPrice: number; amount: n
 
 export class InvoicesRepository {
     async create(tenantId: string, data: CreateInvoiceDto) {
-        const { subtotal, taxAmount, total, amountDue } = calculateTotals(data.items, data.taxRate);
+        const { subtotal, taxAmount, total, amountDue } = calculateTotals(data.items as any, data.taxRate as any);
 
         return prisma.invoice.create({
             data: {
                 tenantId,
                 invoiceNumber: data.invoiceNumber,
-                clientId: data.clientId,
+                clientId: data.clientId || undefined,
                 issueDate: data.issueDate ? new Date(data.issueDate) : new Date(),
                 dueDate: new Date(data.dueDate),
                 currency: data.currency || 'USD',
@@ -45,7 +45,7 @@ export class InvoicesRepository {
                         sortOrder: item.sortOrder || index,
                     })),
                 },
-            },
+            } as any,
             include: invoiceInclude,
         });
     }
@@ -83,7 +83,7 @@ export class InvoicesRepository {
         let totals = {};
         if (data.items) {
             await prisma.invoiceItem.deleteMany({ where: { invoiceId: id } });
-            totals = calculateTotals(data.items, data.taxRate);
+            totals = calculateTotals(data.items as any, data.taxRate as any);
         }
 
         return prisma.invoice.update({
@@ -101,7 +101,7 @@ export class InvoicesRepository {
                 ...totals,
                 ...(data.items && {
                     items: {
-                        create: data.items.map((item, index) => ({
+                        create: data.items.map((item: any, index: number) => ({
                             description: item.description,
                             quantity: item.quantity,
                             unitPrice: item.unitPrice,
@@ -111,7 +111,7 @@ export class InvoicesRepository {
                         })),
                     },
                 }),
-            },
+            } as any,
             include: invoiceInclude,
         });
     }

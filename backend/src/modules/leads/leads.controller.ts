@@ -7,7 +7,7 @@ import {
   sendNoContent,
   sendPaginated,
 } from '../../common/utils/responseFormatter';
-import { CreateLeadDto, UpdateLeadDto } from './leads.dto';
+import type { CreateLeadDto, UpdateLeadDto } from '@contracts/lead';
 import { sanitizeBody } from '../../common/utils/sanitize-body';
 
 export class LeadsController {

@@ -5,6 +5,7 @@ import { requirePermission } from '../../common/middleware/permission.middleware
 import { validateQuery, validateBody } from '../../common/middleware/validate.middleware';
 import { PERMISSIONS } from '../../common/constants/permissions';
 import { createProposalSchema, updateProposalSchema, proposalQuerySchema } from './proposals.validators';
+import { z } from 'zod';
 
 const router = Router();
 router.use(authenticate);
@@ -13,6 +14,7 @@ router.use(loadEmployee);
 // CRUD
 router.get('/', requirePermission(PERMISSIONS.QUOTES_VIEW), validateQuery(proposalQuerySchema), proposalsController.getMany.bind(proposalsController));
 router.post('/', requirePermission(PERMISSIONS.QUOTES_CREATE), validateBody(createProposalSchema), proposalsController.create.bind(proposalsController));
+router.post('/generate', requirePermission(PERMISSIONS.QUOTES_UPDATE), validateBody(z.object({ proposalId: z.string().uuid() })), proposalsController.generate.bind(proposalsController));
 router.get('/:id', requirePermission(PERMISSIONS.QUOTES_VIEW), proposalsController.getById.bind(proposalsController));
 router.put('/:id', requirePermission(PERMISSIONS.QUOTES_UPDATE), validateBody(updateProposalSchema), proposalsController.update.bind(proposalsController));
 router.delete('/:id', requirePermission(PERMISSIONS.QUOTES_DELETE), proposalsController.delete.bind(proposalsController));

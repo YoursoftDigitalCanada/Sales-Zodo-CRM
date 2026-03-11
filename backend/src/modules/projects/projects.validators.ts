@@ -1,4 +1,12 @@
 import { z } from 'zod';
+import {
+  CreateProjectSchema,
+  UpdateProjectSchema,
+  ProjectQuerySchema,
+  ProjectStageUpdateSchema,
+  ProjectStatusUpdateSchema,
+  AssignProjectManagerSchema,
+} from '@contracts/project';
 
 const dateLike = z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}/)).optional().nullable();
 
@@ -81,101 +89,27 @@ export const nestedChangeOrderIdSchema = z.object({
 }).passthrough();
 
 export const createProjectSchema = z.object({
-  body: z.object({
-    name: z.string().min(1).max(255).optional(),
-    projectTitle: z.string().min(1).max(255).optional(),
-    description: z.string().max(5000).optional().nullable(),
-    clientId: z.string().uuid().optional().nullable(),
-    quoteId: z.string().uuid().optional().nullable(),
-    leadId: z.string().uuid().optional().nullable(),
-    projectType: z.string().optional(),
-    propertyType: z.string().optional(),
-    status: z.string().optional(),
-    priority: z.string().optional(),
-    stageId: z.string().uuid().optional().nullable(),
-    projectManagerId: z.string().optional().nullable(),
-    salesRepId: z.string().optional().nullable(),
-    contractValue: z.number().optional().nullable(),
-    estimatedCost: z.number().optional().nullable(),
-    budget: z.number().optional().nullable(),
-    estimatedStartDate: dateLike,
-    estimatedEndDate: dateLike,
-    dueDate: dateLike,
-    jobSiteAddress: z.string().optional().nullable(),
-    jobSiteCity: z.string().optional().nullable(),
-    jobSiteState: z.string().optional().nullable(),
-    jobSiteZip: z.string().optional().nullable(),
-    internalNotes: z.string().optional().nullable(),
-    tags: z.array(z.string()).optional(),
-    customFields: z.record(z.any()).optional().nullable(),
-  }).passthrough(),
+  body: CreateProjectSchema,
 }).passthrough();
 
 export const updateProjectSchema = z.object({
-  body: z.object({
-    name: z.string().min(1).max(255).optional(),
-    projectTitle: z.string().min(1).max(255).optional(),
-    description: z.string().max(5000).optional().nullable(),
-    clientId: z.string().uuid().optional().nullable(),
-    quoteId: z.string().uuid().optional().nullable(),
-    leadId: z.string().uuid().optional().nullable(),
-    projectType: z.string().optional(),
-    propertyType: z.string().optional(),
-    status: z.string().optional(),
-    priority: z.string().optional(),
-    stageId: z.string().uuid().optional().nullable(),
-    projectManagerId: z.string().optional().nullable(),
-    salesRepId: z.string().optional().nullable(),
-    contractValue: z.number().optional().nullable(),
-    estimatedCost: z.number().optional().nullable(),
-    budget: z.number().optional().nullable(),
-    estimatedStartDate: dateLike,
-    estimatedEndDate: dateLike,
-    dueDate: dateLike,
-    jobSiteAddress: z.string().optional().nullable(),
-    jobSiteCity: z.string().optional().nullable(),
-    jobSiteState: z.string().optional().nullable(),
-    jobSiteZip: z.string().optional().nullable(),
-    internalNotes: z.string().optional().nullable(),
-    tags: z.array(z.string()).optional(),
-    customFields: z.record(z.any()).optional().nullable(),
-  }).passthrough(),
+  body: UpdateProjectSchema,
 }).passthrough();
 
 export const projectQuerySchema = z.object({
-  query: z.object({
-    page: z.coerce.number().int().min(1).default(1),
-    limit: z.coerce.number().int().min(1).max(200).default(20),
-    search: z.string().optional(),
-    status: z.string().optional(),
-    priority: z.string().optional(),
-    stageId: z.string().uuid().optional(),
-    clientId: z.string().uuid().optional(),
-    projectManagerId: z.string().optional(),
-    sortBy: z.string().default('createdAt'),
-    sortOrder: z.enum(['asc', 'desc']).default('desc'),
-    startDate: z.string().optional(),
-    endDate: z.string().optional(),
-  }).passthrough(),
+  query: ProjectQuerySchema,
 }).passthrough();
 
 export const stageUpdateSchema = z.object({
-  body: z.object({
-    stageId: z.string().uuid(),
-    notes: z.string().optional(),
-  }),
+  body: ProjectStageUpdateSchema,
 }).passthrough();
 
 export const statusUpdateSchema = z.object({
-  body: z.object({
-    status: z.string().min(1),
-  }),
+  body: ProjectStatusUpdateSchema,
 }).passthrough();
 
 export const assignManagerSchema = z.object({
-  body: z.object({
-    projectManagerId: z.string().optional().nullable(),
-  }),
+  body: AssignProjectManagerSchema,
 }).passthrough();
 
 export const genericBodySchema = z.object({

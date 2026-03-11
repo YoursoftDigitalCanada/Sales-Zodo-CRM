@@ -1,15 +1,17 @@
 import { leadsRepository } from './leads.repository';
 import {
-  CreateLeadDto,
-  UpdateLeadDto,
-  LeadQueryDto,
   LeadResponseDto,
   LeadListResponseDto,
   LeadPipelineDto,
   LeadStatisticsDto,
-  ConvertLeadDto,
   toLeadResponseDto,
 } from './leads.dto';
+import type {
+  CreateLeadDto,
+  UpdateLeadDto,
+  LeadQueryDto,
+  ConvertLeadDto,
+} from '@contracts/lead';
 import {
   NotFoundError,
   BadRequestError,
@@ -136,7 +138,7 @@ export class LeadsService {
       }
     }
 
-    const lead = await leadsRepository.create(tenantId, data, createdById);
+    const lead = await leadsRepository.create(tenantId, data as any, createdById);
     const dto = toLeadResponseDto(lead);
 
     // ▸ Timeline: log activity
@@ -151,7 +153,7 @@ export class LeadsService {
       tenantId,
       leadId: dto.id,
       leadName: dto.fullName,
-      ownerId: data.assignedToId,
+      ownerId: data.assignedToId || undefined,
       ownerUserId: dto.assignedTo?.userId,
       source: dto.leadSource?.name || detectedSourceName,
       email: dto.email,
@@ -255,7 +257,7 @@ export class LeadsService {
       }
     }
 
-    const lead = await leadsRepository.update(id, tenantId, data);
+    const lead = await leadsRepository.update(id, tenantId, data as any);
     const dto = toLeadResponseDto(lead);
 
     // ▸ Timeline: log field changes
@@ -747,12 +749,15 @@ export class LeadsService {
     });
 
     // ── Post-commit domain side effects ───────────────────────────────────
+    const safeClientType = options.clientType === 'COMPANY'
+      ? 'BUSINESS'
+      : (options.clientType || 'BUSINESS');
 
     // Timeline: log conversion activity on the lead
     await this.logActivity(tenantId, leadId, 'CONVERTED', 'Lead converted to client', {
       clientId: result.client.id,
       clientName: result.client.clientName,
-      clientType: options.clientType,
+      clientType: safeClientType,
       contactId: result.contact?.id,
     });
 
@@ -771,7 +776,7 @@ export class LeadsService {
       leadId,
       leadName: `${lead.firstName} ${lead.lastName}`,
       clientId: result.client.id,
-      clientType: options.clientType,
+      clientType: safeClientType,
       convertedByUserId: actorUserId || '',
       ownerUserId: lead.assignedTo?.user?.id,
     });

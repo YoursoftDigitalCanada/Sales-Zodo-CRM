@@ -34,6 +34,19 @@ export class ProposalsController {
         } catch (err) { next(err); }
     }
 
+    async generate(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const tenantId = req.context.tenantId;
+            const proposalId = req.body?.proposalId as string | undefined;
+            if (!proposalId) {
+                res.status(400).json({ success: false, message: "proposalId is required" });
+                return;
+            }
+            await proposalsService.generateAndEmit(proposalId, tenantId);
+            res.json({ success: true, message: "Proposal generated successfully", proposalId });
+        } catch (err) { next(err); }
+    }
+
     async update(req: Request, res: Response, next: NextFunction) {
         try {
             const tenantId = req.context.tenantId;

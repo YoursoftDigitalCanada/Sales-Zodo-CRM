@@ -1,21 +1,14 @@
 import api from "@/lib/axios";
 import { extractApiArray, extractApiData } from "@/types/api";
-
-export type ProjectStatus =
-  | "DRAFT"
-  | "PENDING"
-  | "APPROVED"
-  | "SCHEDULED"
-  | "IN_PROGRESS"
-  | "PLANNING"
-  | "ACTIVE"
-  | "ON_HOLD"
-  | "COMPLETED"
-  | "CANCELLED"
-  | "ARCHIVED"
-  | "WARRANTY_WORK";
-
-export type ProjectPriority = "LOW" | "NORMAL" | "MEDIUM" | "HIGH" | "URGENT" | "EMERGENCY";
+import type {
+  CreateProjectDto,
+  UpdateProjectDto,
+} from "@contracts/project";
+import {
+  ProjectPriority,
+  ProjectStatus,
+  ProjectStatusValues,
+} from "@contracts/enums";
 
 export interface ProjectEntity {
   id: string;
@@ -115,15 +108,26 @@ export interface CrewOption {
   memberCount?: number;
 }
 
-const DEFAULT_STAGE_FALLBACKS: Array<{ id: string; name: string; color: string }> = [
-  { id: "PENDING", name: "Pending", color: "#F59E0B" },
-  { id: "APPROVED", name: "Approved", color: "#3B82F6" },
-  { id: "SCHEDULED", name: "Scheduled", color: "#6366F1" },
-  { id: "IN_PROGRESS", name: "In Progress", color: "#0891B2" },
-  { id: "ON_HOLD", name: "On Hold", color: "#FB923C" },
-  { id: "COMPLETED", name: "Completed", color: "#10B981" },
-  { id: "CANCELLED", name: "Cancelled", color: "#EF4444" },
-];
+const STATUS_COLOR_MAP: Partial<Record<ProjectStatus, string>> = {
+  DRAFT: "#64748B",
+  PENDING: "#F59E0B",
+  APPROVED: "#3B82F6",
+  SCHEDULED: "#6366F1",
+  IN_PROGRESS: "#0891B2",
+  PLANNING: "#A855F7",
+  ACTIVE: "#14B8A6",
+  ON_HOLD: "#FB923C",
+  COMPLETED: "#10B981",
+  CANCELLED: "#EF4444",
+  ARCHIVED: "#334155",
+  WARRANTY_WORK: "#0EA5E9",
+};
+
+const DEFAULT_STAGE_FALLBACKS: Array<{ id: ProjectStatus; name: string; color: string }> = ProjectStatusValues.map((status) => ({
+  id: status,
+  name: status.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase()),
+  color: STATUS_COLOR_MAP[status] || "#6B7280",
+}));
 
 export async function getProjects(params?: Record<string, unknown>): Promise<ProjectEntity[]> {
   const response = await api.get("/projects", { params: { limit: 100, ...params } });
@@ -139,17 +143,17 @@ export async function deleteProjectById(projectId: string | number): Promise<voi
   await api.delete(`/projects/${projectId}`);
 }
 
-export async function createProject(data: Record<string, unknown>): Promise<ProjectEntity> {
+export async function createProject(data: CreateProjectDto): Promise<ProjectEntity> {
   const response = await api.post("/projects", data);
   return extractApiData<ProjectEntity>(response.data);
 }
 
-export async function updateProject(projectId: string | number, data: Record<string, unknown>): Promise<ProjectEntity> {
+export async function updateProject(projectId: string | number, data: UpdateProjectDto): Promise<ProjectEntity> {
   const response = await api.put(`/projects/${projectId}`, data);
   return extractApiData<ProjectEntity>(response.data);
 }
 
-export async function updateProjectStatus(projectId: string | number, status: string): Promise<ProjectEntity> {
+export async function updateProjectStatus(projectId: string | number, status: ProjectStatus): Promise<ProjectEntity> {
   const response = await api.patch(`/projects/${projectId}/status`, { status });
   return extractApiData<ProjectEntity>(response.data);
 }

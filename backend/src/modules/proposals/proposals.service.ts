@@ -1,5 +1,6 @@
 import { proposalsRepository } from './proposals.repository';
-import { CreateProposalDto, UpdateProposalDto, ProposalQueryDto, toProposalResponseDto } from './proposals.dto';
+import { toProposalResponseDto } from './proposals.dto';
+import type { CreateProposalDto, UpdateProposalDto, ProposalQueryDto } from '@contracts/proposal';
 import { NotFoundError, BadRequestError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
 import { activityLogger } from '../../common/services/activity-logger.service';

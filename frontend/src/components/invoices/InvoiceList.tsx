@@ -1,8 +1,7 @@
 import { Plus, Download, MoreVertical, Edit, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { generateInvoicePDF } from '../../utils/generateInvoicePDF';
-import { getInvoices, deleteInvoice } from "@/services/invoiceService";
+import { getInvoices, deleteInvoice, downloadInvoicePdf } from "@/services/invoiceService";
 
 interface Invoice {
   id: string; // This is the GUID from backend
@@ -36,9 +35,9 @@ export default function InvoiceList() {
   // --- ACTIONS ---
 
   const handleDownload = (invoice: Invoice) => {
-    // ... (Your existing PDF logic here) ...
-    // Keeping it brief for readability, paste your PDF logic from previous step here
-    alert("Downloading PDF for " + invoice.invoiceNumber);
+    downloadInvoicePdf(invoice.id).catch((error) => {
+      console.error("Download error", error);
+    });
   };
 
   const handleDelete = async (id: string) => {

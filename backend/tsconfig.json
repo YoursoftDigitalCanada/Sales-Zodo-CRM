@@ -4,7 +4,7 @@
     "module": "commonjs",
     "lib": ["ES2022"],
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": "..",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -20,12 +20,14 @@
       "@config/*": ["config/*"],
       "@modules/*": ["modules/*"],
       "@common/*": ["common/*"],
-      "@prisma/*": ["../prisma/*"]
+      "@prisma/*": ["../prisma/*"],
+      "@contracts/*": ["../../packages/contracts/*"],
+      "zod": ["../node_modules/zod"]
     },
     "typeRoots": ["./node_modules/@types", "./src/types"],
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "../packages/contracts/**/*"],
   "exclude": ["node_modules", "dist"]
 }

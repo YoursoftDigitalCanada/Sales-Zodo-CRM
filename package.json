@@ -1,0 +1,10 @@
+{
+  "name": "your-soft-digital-crm",
+  "private": true,
+  "workspaces": [
+    "packages/contracts",
+    "backend",
+    "frontend"
+  ]
+}
+

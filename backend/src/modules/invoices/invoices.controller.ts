@@ -25,6 +25,15 @@ export class InvoicesController {
         } catch (e) { next(e); }
     }
 
+    async downloadPdf(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const { buffer, fileName } = await invoicesService.generatePdf(req.params.id, req.context.tenantId);
+            res.setHeader("Content-Type", "application/pdf");
+            res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+            res.send(buffer);
+        } catch (e) { next(e); }
+    }
+
     async update(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const invoice = await invoicesService.update(req.params.id, req.context.tenantId, sanitizeBody(req.body));

@@ -833,34 +833,34 @@ export class AutomationService {
             // ── Step 1: Projects — Create default phase tasks ──
             const phaseDefinitions = [
                 {
-                    title: `📋 Planning kick-off — ${event.projectName}`,
-                    description: `Initial planning phase:\n• Define project scope & objectives\n• Identify key stakeholders\n• Set budget & timeline expectations\n• Establish communication channels`,
+                    title: `📋 Site inspection & estimate — ${event.projectName}`,
+                    description: `Initial site assessment:\n• Inspect roof condition & take measurements\n• Identify damage, leaks, or structural issues\n• Take photos & document findings\n• Prepare detailed estimate & scope of work`,
                     priority: 'HIGH' as const,
                     offsetDays: 0,
                 },
                 {
-                    title: `📄 Requirements gathering — ${event.projectName}`,
-                    description: `Gather & document all project requirements:\n• Client interviews & questionnaires\n• Technical feasibility assessment\n• Resource planning\n• Risk identification`,
+                    title: `📄 Material ordering & scheduling — ${event.projectName}`,
+                    description: `Prepare for project execution:\n• Order shingles, underlayment & supplies\n• Confirm material delivery date\n• Schedule crew & equipment\n• Obtain necessary permits`,
                     priority: 'HIGH' as const,
                     offsetDays: 3,
                 },
                 {
-                    title: `🎨 Design & architecture — ${event.projectName}`,
-                    description: `Design phase:\n• Create wireframes / mockups\n• Technical architecture design\n• Data model planning\n• Client review & sign-off`,
-                    priority: 'MEDIUM' as const,
+                    title: `🏗️ Roof installation — ${event.projectName}`,
+                    description: `Core roofing work:\n• Tear-off old roofing (if applicable)\n• Install underlayment & flashing\n• Lay new shingles / roofing material\n• Install vents, ridge caps & trim`,
+                    priority: 'HIGH' as const,
                     offsetDays: 7,
                 },
                 {
-                    title: `🚀 Development sprint — ${event.projectName}`,
-                    description: `Core development phase:\n• Sprint planning & backlog grooming\n• Implementation of core features\n• Code reviews & quality checks\n• Progress updates to stakeholders`,
+                    title: `🧹 Cleanup & final inspection — ${event.projectName}`,
+                    description: `Post-installation wrap-up:\n• Remove all debris & materials from site\n• Magnetic nail sweep of property\n• Inspect workmanship & ensure code compliance\n• Take completion photos`,
                     priority: 'MEDIUM' as const,
                     offsetDays: 14,
                 },
                 {
-                    title: `✅ QA & delivery review — ${event.projectName}`,
-                    description: `Quality assurance & delivery:\n• Testing & bug fixes\n• Client UAT (User Acceptance Testing)\n• Final documentation\n• Project handover & sign-off`,
+                    title: `✅ Client walkthrough & handover — ${event.projectName}`,
+                    description: `Project completion:\n• Walk client through completed work\n• Review warranty information & maintenance tips\n• Collect final sign-off & satisfaction feedback\n• Submit permit close-out (if applicable)`,
                     priority: 'HIGH' as const,
-                    offsetDays: 28,
+                    offsetDays: 21,
                 },
             ];
 

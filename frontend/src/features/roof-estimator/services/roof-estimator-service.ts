@@ -454,6 +454,53 @@ export function getGoogleMapsJsApiKey(): string {
     return import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 }
 
+// ── Material Estimation Engine ───────────────────────────────────────────
+
+export interface MaterialLineItem {
+    item: string;
+    description: string;
+    quantity: number;
+    unit: string;
+    unitPrice: number;
+    total: number;
+}
+
+export interface MaterialEstimate {
+    roofAreaSq: number;
+    roofAreaSqFt: number;
+    wasteFactor: number;
+    adjustedSq: number;
+    complexity: string;
+    pitch: string;
+    materials: MaterialLineItem[];
+    materialCost: number;
+    laborCost: number;
+    removalCost: number;
+    subtotal: number;
+    tax: number;
+    totalEstimate: number;
+    roofPlanes: number;
+    ridgeLengthFt: number;
+    valleyLengthFt: number;
+    eaveLengthFt: number;
+    rakeLengthFt: number;
+    hipLengthFt: number;
+}
+
+export async function calculateMaterials(reportData: {
+    area?: string | number;
+    pitch?: string;
+    lengthRidge?: string | number;
+    lengthHip?: string | number;
+    lengthValley?: string | number;
+    lengthEave?: string | number;
+    lengthRake?: string | number;
+    totalRoofFacets?: string | number;
+}): Promise<MaterialEstimate> {
+    const res = await api.post("/roof-estimator/calculate-materials", { reportData });
+    return res.data?.data;
+}
+
 export async function generateEstimate(params: {
     roofAreaSqft: number;
     roofType: string;

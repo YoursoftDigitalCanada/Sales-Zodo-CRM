@@ -263,6 +263,13 @@ router.post(
     roofEstimatorController.segmentRoof.bind(roofEstimatorController)
 );
 
+// ── Material calculation from EagleView geometry ──────────────────────────
+router.post(
+    '/calculate-materials',
+    requirePermission(PERMISSIONS.ROOF_ESTIMATOR_VIEW),
+    roofEstimatorController.calculateMaterials.bind(roofEstimatorController)
+);
+
 // ── AI health check ───────────────────────────────────────────────────────
 router.get(
     '/ai-health',

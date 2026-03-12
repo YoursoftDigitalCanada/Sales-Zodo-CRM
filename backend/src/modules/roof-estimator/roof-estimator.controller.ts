@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { roofEstimatorService } from './roof-estimator.service';
 import { roofEstimatorManager } from './roof-estimator.manager';
 import { materialTakeoffService } from './material-takeoff.service';
+import { materialCalculatorService } from './material-calculator.service';
 import { roofEstimatorRepository } from './roof-estimator.repository';
 import { nearmapService } from './nearmap.service';
 import {
@@ -687,6 +688,26 @@ export class RoofEstimatorController {
 
             const result = await roofEstimatorService.segmentRoof(satelliteImageUrl);
             sendSuccess(res, result);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    /**
+     * POST /roof-estimator/calculate-materials
+     * Takes EagleView report data + optional pricing and returns material breakdown.
+     */
+    async calculateMaterials(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const { reportData, pricing } = req.body;
+
+            if (!reportData) {
+                res.status(400).json({ success: false, message: 'reportData is required' });
+                return;
+            }
+
+            const estimate = materialCalculatorService.calculateFromEagleView(reportData, pricing);
+            sendSuccess(res, estimate, 'Material estimate calculated');
         } catch (error) {
             next(error);
         }

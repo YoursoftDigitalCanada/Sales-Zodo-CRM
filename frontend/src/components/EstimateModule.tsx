@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FileDown, Loader2, MapPin, Save, Satellite, Sparkles, Users } from "lucide-react";
+import { Calculator, FileDown, FileText, Loader2, MapPin, Save, Satellite, Sparkles, Users } from "lucide-react";
 
 import InteractiveSatelliteMap from "@/components/InteractiveSatelliteMap";
 import RoofPolygonEditor, {
@@ -21,6 +21,7 @@ import { getClients } from "@/features/clients/services/clients-service";
 import { getLeads } from "@/features/leads/services/leads-service";
 import {
   autocompleteAddress,
+  calculateMaterials,
   createEagleViewOrder,
   detectRoof,
   fetchParcelBoundary,
@@ -33,6 +34,7 @@ import {
   type DetectionResult,
   type EagleViewPlaceOrderResponse,
   type EagleViewReport,
+  type MaterialEstimate,
   type ParcelBoundaryResult,
   type SatelliteResult,
   type SaveEstimatePayload,
@@ -340,6 +342,8 @@ export default function EstimateModule(): JSX.Element {
   const [eagleViewReport, setEagleViewReport] = useState<EagleViewReport | null>(null);
   const [orderingEagleView, setOrderingEagleView] = useState(false);
   const [pollingEagleView, setPollingEagleView] = useState(false);
+  const [materialEstimate, setMaterialEstimate] = useState<MaterialEstimate | null>(null);
+  const [calculatingMaterials, setCalculatingMaterials] = useState(false);
   const [downloadingProposal, setDownloadingProposal] = useState(false);
   const [searchingAddress, setSearchingAddress] = useState(false);
   const [parcelData, setParcelData] = useState<ParcelBoundaryResult | null>(null);
@@ -1311,6 +1315,190 @@ export default function EstimateModule(): JSX.Element {
                   >
                     {pollingEagleView ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : null}
                     Refresh Status
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Material Estimation Panel */}
+          {eagleViewReport && eagleViewReport.area && (
+            <div className="rounded-xl border bg-white p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                  <Calculator className="h-4 w-4 text-emerald-500" />
+                  Material Estimate
+                </h3>
+                {materialEstimate && (
+                  <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    {materialEstimate.complexity} roof • {materialEstimate.adjustedSq} SQ
+                  </span>
+                )}
+              </div>
+
+              {!materialEstimate && !calculatingMaterials && (
+                <Button
+                  type="button"
+                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white"
+                  onClick={async () => {
+                    setCalculatingMaterials(true);
+                    try {
+                      const est = await calculateMaterials(eagleViewReport);
+                      setMaterialEstimate(est);
+                    } catch (e: any) {
+                      toast({ title: "Calculation failed", description: e?.message || "Error", variant: "destructive" });
+                    } finally {
+                      setCalculatingMaterials(false);
+                    }
+                  }}
+                >
+                  Calculate Materials
+                </Button>
+              )}
+
+              {calculatingMaterials && (
+                <div className="flex items-center justify-center py-4 text-sm text-slate-500">
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Calculating...
+                </div>
+              )}
+
+              {materialEstimate && (
+                <div className="space-y-3">
+                  {/* Summary row */}
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className="rounded-lg bg-emerald-50 p-2 text-center">
+                      <div className="text-[10px] text-emerald-500">Area</div>
+                      <div className="font-bold text-emerald-700">{materialEstimate.roofAreaSq.toFixed(1)} SQ</div>
+                    </div>
+                    <div className="rounded-lg bg-emerald-50 p-2 text-center">
+                      <div className="text-[10px] text-emerald-500">Waste</div>
+                      <div className="font-bold text-emerald-700">{(materialEstimate.wasteFactor * 100).toFixed(0)}%</div>
+                    </div>
+                    <div className="rounded-lg bg-emerald-50 p-2 text-center">
+                      <div className="text-[10px] text-emerald-500">Adjusted</div>
+                      <div className="font-bold text-emerald-700">{materialEstimate.adjustedSq} SQ</div>
+                    </div>
+                  </div>
+
+                  {/* Material line items */}
+                  <div className="rounded-lg border">
+                    <table className="w-full text-[11px]">
+                      <thead>
+                        <tr className="border-b bg-slate-50">
+                          <th className="text-left px-2 py-1.5 font-medium text-slate-500">Material</th>
+                          <th className="text-right px-2 py-1.5 font-medium text-slate-500">Qty</th>
+                          <th className="text-right px-2 py-1.5 font-medium text-slate-500">Unit $</th>
+                          <th className="text-right px-2 py-1.5 font-medium text-slate-500">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {materialEstimate.materials.map((m, i) => (
+                          <tr key={i} className="border-b last:border-0">
+                            <td className="px-2 py-1.5 text-slate-700 font-medium">{m.item}</td>
+                            <td className="px-2 py-1.5 text-right text-slate-600">{m.quantity} {m.unit}</td>
+                            <td className="px-2 py-1.5 text-right text-slate-600">${m.unitPrice}</td>
+                            <td className="px-2 py-1.5 text-right text-slate-700 font-medium">${m.total.toLocaleString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Cost summary */}
+                  <div className="space-y-1 text-xs">
+                    <div className="flex justify-between text-slate-600">
+                      <span>Materials</span>
+                      <span>${materialEstimate.materialCost.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-600">
+                      <span>Labor ({materialEstimate.adjustedSq} SQ)</span>
+                      <span>${materialEstimate.laborCost.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-600">
+                      <span>Tear-off & Disposal</span>
+                      <span>${materialEstimate.removalCost.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-500 border-t pt-1">
+                      <span>Subtotal</span>
+                      <span>${materialEstimate.subtotal.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-500">
+                      <span>HST (13%)</span>
+                      <span>${materialEstimate.tax.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between font-bold text-slate-900 border-t pt-1 text-sm">
+                      <span>Total Estimate</span>
+                      <span>${materialEstimate.totalEstimate.toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  {/* Print Proposal */}
+                  <Button
+                    type="button"
+                    className="w-full bg-slate-800 hover:bg-slate-900 text-white"
+                    onClick={() => {
+                      const w = window.open('', '_blank');
+                      if (!w) return;
+                      const est = materialEstimate;
+                      w.document.write(`<!DOCTYPE html><html><head><title>Roof Estimate — ${address || 'Property'}</title>
+                        <style>
+                          body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px 30px; color: #1e293b; }
+                          h1 { font-size: 22px; margin-bottom: 4px; }
+                          .subtitle { color: #64748b; font-size: 13px; margin-bottom: 24px; }
+                          .section { margin-bottom: 20px; }
+                          .section-title { font-size: 14px; font-weight: 600; color: #334155; border-bottom: 2px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 10px; }
+                          table { width: 100%; border-collapse: collapse; font-size: 13px; }
+                          th { text-align: left; padding: 8px 10px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; color: #64748b; font-weight: 500; }
+                          td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; }
+                          .text-right { text-align: right; }
+                          .total-row { font-weight: 700; font-size: 16px; border-top: 2px solid #1e293b; }
+                          .summary-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
+                          .logo { font-size: 28px; font-weight: 800; color: #059669; letter-spacing: -1px; }
+                          @media print { body { padding: 20px; } }
+                        </style></head><body>
+                        <div class="logo">ZODO</div>
+                        <h1>Roof Estimate Report</h1>
+                        <div class="subtitle">${address || ''} — Generated ${new Date().toLocaleDateString()}</div>
+                        <div class="section">
+                          <div class="section-title">Roof Measurements</div>
+                          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:13px;">
+                            <div><strong>Area:</strong> ${est.roofAreaSqFt.toLocaleString()} sq ft (${est.roofAreaSq.toFixed(1)} SQ)</div>
+                            <div><strong>Pitch:</strong> ${est.pitch}</div>
+                            <div><strong>Planes:</strong> ${est.roofPlanes}</div>
+                            <div><strong>Ridge:</strong> ${est.ridgeLengthFt} ft</div>
+                            <div><strong>Valley:</strong> ${est.valleyLengthFt} ft</div>
+                            <div><strong>Eave:</strong> ${est.eaveLengthFt} ft</div>
+                            <div><strong>Rake:</strong> ${est.rakeLengthFt} ft</div>
+                            <div><strong>Hip:</strong> ${est.hipLengthFt} ft</div>
+                            <div><strong>Complexity:</strong> ${est.complexity}</div>
+                          </div>
+                        </div>
+                        <div class="section">
+                          <div class="section-title">Material Breakdown (${(est.wasteFactor * 100).toFixed(0)}% waste included)</div>
+                          <table>
+                            <thead><tr><th>Material</th><th>Description</th><th class="text-right">Qty</th><th class="text-right">Unit Price</th><th class="text-right">Total</th></tr></thead>
+                            <tbody>
+                              ${est.materials.map(m => `<tr><td><strong>${m.item}</strong></td><td style="color:#64748b">${m.description}</td><td class="text-right">${m.quantity} ${m.unit}</td><td class="text-right">$${m.unitPrice}</td><td class="text-right"><strong>$${m.total.toLocaleString()}</strong></td></tr>`).join('')}
+                            </tbody>
+                          </table>
+                        </div>
+                        <div class="section">
+                          <div class="section-title">Cost Summary</div>
+                          <div class="summary-row"><span>Materials</span><span>$${est.materialCost.toLocaleString()}</span></div>
+                          <div class="summary-row"><span>Labor (${est.adjustedSq} SQ × $120/SQ)</span><span>$${est.laborCost.toLocaleString()}</span></div>
+                          <div class="summary-row"><span>Tear-off & Disposal</span><span>$${est.removalCost.toLocaleString()}</span></div>
+                          <div class="summary-row" style="border-top:1px solid #e2e8f0;padding-top:6px;"><span>Subtotal</span><span>$${est.subtotal.toLocaleString()}</span></div>
+                          <div class="summary-row"><span>HST (13%)</span><span>$${est.tax.toLocaleString()}</span></div>
+                          <div class="summary-row total-row" style="padding-top:8px;margin-top:4px;"><span>Total Estimate</span><span>$${est.totalEstimate.toLocaleString()}</span></div>
+                        </div>
+                        <div style="text-align:center;color:#94a3b8;font-size:11px;margin-top:40px;border-top:1px solid #e2e8f0;padding-top:16px;">Generated by Zodo CRM — zodo.ca</div>
+                      </body></html>`);
+                      w.document.close();
+                      setTimeout(() => w.print(), 500);
+                    }}
+                  >
+                    <FileText className="mr-2 h-4 w-4" />
+                    Print Proposal
                   </Button>
                 </div>
               )}

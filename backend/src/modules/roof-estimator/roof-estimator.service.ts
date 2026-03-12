@@ -607,11 +607,28 @@ export class RoofEstimatorService {
      */
     async geocodeAddress(address: string, placeId?: string): Promise<{ lat: number; lng: number; formattedAddress: string; locationType: string }> {
         const normalizedPlaceId = typeof placeId === 'string' ? placeId.trim() : '';
+
+        // If no placeId (e.g. Nominatim autocomplete fallback), geocode by address text
         if (!normalizedPlaceId) {
-            throw new BadRequestError(
-                'Select an autocomplete suggestion before loading satellite imagery.',
-                'PLACE_ID_REQUIRED'
+            if (!address || address.trim().length < 5) {
+                throw new BadRequestError(
+                    'Select an autocomplete suggestion before loading satellite imagery.',
+                    'PLACE_ID_REQUIRED'
+                );
+            }
+
+            logger.info('No placeId provided, falling back to Nominatim geocoding', {
+                inputAddress: address,
+            });
+
+            const fallback = await this.geocodeAddressWithFallback(
+                address,
+                'No placeId — Nominatim autocomplete suggestion selected',
             );
+            return {
+                ...fallback,
+                locationType: 'NOMINATIM',
+            };
         }
 
         try {

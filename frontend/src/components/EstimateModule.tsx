@@ -493,9 +493,8 @@ export default function EstimateModule(): JSX.Element {
       setSearchingAddress(true);
       try {
         const results = await autocompleteAddress(normalized);
-        const googleResults = results.filter((entry) => entry.placeId?.trim().length > 0);
-        setAddressSuggestions(googleResults);
-        setShowAddressSuggestions(googleResults.length > 0);
+        setAddressSuggestions(results);
+        setShowAddressSuggestions(results.length > 0);
         setAddressSuggestionError(null);
       } catch (error: any) {
         setAddressSuggestions([]);
@@ -595,7 +594,7 @@ export default function EstimateModule(): JSX.Element {
         selectedAddressPlaceId,
       );
 
-      if (data.locationType !== "ROOFTOP") {
+      if (data.locationType !== "ROOFTOP" && data.locationType !== "NOMINATIM") {
         toast({
           title: "Rooftop precision required",
           description: `Selected address resolved as ${data.locationType.replace(/_/g, " ")}. Choose a more specific house suggestion.`,

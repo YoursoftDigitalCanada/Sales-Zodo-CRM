@@ -339,9 +339,8 @@ const RoofEstimator: React.FC = () => {
         debounceTimer.current = setTimeout(async () => {
             try {
                 const results = await autocompleteAddressApi(value);
-                const googleResults = results.filter((entry) => entry.placeId?.trim().length > 0);
-                setSuggestions(googleResults);
-                setShowSuggestions(googleResults.length > 0);
+                setSuggestions(results);
+                setShowSuggestions(results.length > 0);
             } catch {
                 setSuggestions([]);
                 setShowSuggestions(false);
@@ -350,9 +349,8 @@ const RoofEstimator: React.FC = () => {
     }, []);
 
     const selectSuggestion = (description: string, placeId: string) => {
-        if (!placeId) return;
         setAddress(description);
-        setSelectedPlaceId(placeId);
+        setSelectedPlaceId(placeId || "");
         setSuggestions([]);
         setShowSuggestions(false);
     };
@@ -407,10 +405,10 @@ const RoofEstimator: React.FC = () => {
             toast({ title: "Enter an address", description: "Please type a valid Canadian address", variant: "destructive" });
             return;
         }
-        if (!selectedPlaceId) {
+        if (!selectedPlaceId && address.trim().length < 5) {
             toast({
                 title: "Suggestion required",
-                description: "Select an autocomplete suggestion before loading satellite imagery.",
+                description: "Select an autocomplete suggestion or enter a full address.",
                 variant: "destructive",
             });
             return;
@@ -420,7 +418,7 @@ const RoofEstimator: React.FC = () => {
         setDetection(null);
         try {
             const data = await fetchSatelliteImage(address.trim(), selectedPlaceId);
-            if (data.locationType !== "ROOFTOP") {
+            if (data.locationType !== "ROOFTOP" && data.locationType !== "NOMINATIM") {
                 toast({
                     title: "Rooftop precision required",
                     description: `Selected address resolved as ${data.locationType.replace(/_/g, " ")}. Pick a more specific house suggestion.`,

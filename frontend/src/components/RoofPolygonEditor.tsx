@@ -35,10 +35,10 @@ export interface RoofPolygonEditorProps {
   showEdgeLengths?: boolean;
   /** Parcel boundary as pixel coords [[x,y], ...] in image space. Vertices are snapped to boundary if dragged outside. */
   parcelBoundaryPixels?: PolygonPoint[];
-  /** HEAT-detected roof plane polygons (in image-pixel space, 256×256) */
+  /** HEAT-detected roof plane polygons (coords in original satellite image pixel space) */
   heatPlanes?: HeatPlane[] | null;
-  /** Original HEAT image size (model input resolution, typically 256) */
-  heatImageSize?: number;
+  /** Original satellite image dimensions that HEAT processed [width, height] */
+  heatOriginalImageSize?: number[] | null;
 }
 
 type PanStart = {
@@ -223,7 +223,7 @@ export default function RoofPolygonEditor({
   showEdgeLengths = true,
   parcelBoundaryPixels,
   heatPlanes,
-  heatImageSize = 256,
+  heatOriginalImageSize,
 }: RoofPolygonEditorProps): JSX.Element {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const stageRef = useRef<Konva.Stage | null>(null);
@@ -825,8 +825,13 @@ export default function RoofPolygonEditor({
 
             {/* HEAT roof plane overlays — rendered BEHIND the editable polygon */}
             {showHeatPlanes && heatPlanes && heatPlanes.length > 0 && heatPlanes.map((plane, idx) => {
-              const scaleX = width / heatImageSize;
-              const scaleY = height / heatImageSize;
+              // HEAT coords are in original satellite image space (e.g. 640×640)
+              // Editor space is width×height (e.g. 1024×1024)
+              // Scale from HEAT original image → editor image space
+              const heatW = heatOriginalImageSize?.[0] || width;
+              const heatH = heatOriginalImageSize?.[1] || height;
+              const scaleX = width / heatW;
+              const scaleY = height / heatH;
               const stagePoints = plane.polygon.flatMap((coord) => [
                 imageOffset.x + coord[0] * scaleX * imageScale,
                 imageOffset.y + coord[1] * scaleY * imageScale,

@@ -761,6 +761,7 @@ export class RoofEstimatorService {
         vertices: number[][];
         edges: number[][];
         inference_time_seconds: number;
+        original_image_size: number[];
     }> {
         let retries = 2;
         let lastError: Error | null = null;

@@ -107,6 +107,7 @@ export interface DetectionResult {
     heatVertices: number[][] | null;
     heatEdges: number[][] | null;
     heatInferenceTimeSec: number | null;
+    heatOriginalImageSize: number[] | null;
 }
 
 export interface SaveEstimatePayload {

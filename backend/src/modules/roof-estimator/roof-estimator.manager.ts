@@ -90,6 +90,7 @@ export class RoofEstimatorManager {
             heatVertices: heatResult?.vertices ?? null,
             heatEdges: heatResult?.edges ?? null,
             heatInferenceTimeSec: heatResult?.inference_time_seconds ?? null,
+            heatOriginalImageSize: heatResult?.original_image_size ?? null,
         };
     }
 

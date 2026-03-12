@@ -1123,7 +1123,7 @@ export default function EstimateModule(): JSX.Element {
               showEdgeLengths
               onChange={handlePolygonChange}
               heatPlanes={detection?.heatPlanes ?? undefined}
-              heatImageSize={256}
+              heatOriginalImageSize={detection?.heatOriginalImageSize ?? undefined}
               parcelBoundaryPixels={
                 parcelData?.parcelPolygon && satellite
                   ? parcelData.parcelPolygon.map((coord) => {

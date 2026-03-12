@@ -841,18 +841,29 @@ export default function RoofPolygonEditor({
                     closed
                     fill={color.fill}
                     stroke={color.stroke}
-                    strokeWidth={1.8}
+                    strokeWidth={2.2}
                     lineJoin="round"
                     lineCap="round"
                     perfectDrawEnabled={false}
                     listening={false}
                     dash={[6, 3]}
                   />
+                  <Rect
+                    x={centroidStageX - 14}
+                    y={centroidStageY - 10}
+                    width={28}
+                    height={20}
+                    fill="rgba(0, 0, 0, 0.7)"
+                    cornerRadius={4}
+                    listening={false}
+                  />
                   <KonvaText
-                    x={centroidStageX - 10}
-                    y={centroidStageY - 7}
+                    x={centroidStageX - 14}
+                    y={centroidStageY - 4}
+                    width={28}
                     text={`P${plane.plane_id}`}
-                    fontSize={11}
+                    align="center"
+                    fontSize={12}
                     fontStyle="bold"
                     fill="white"
                     listening={false}
@@ -861,21 +872,25 @@ export default function RoofPolygonEditor({
               );
             })}
 
-            <Line
-              points={polygonStagePoints}
-              closed
-              fill="rgba(220, 38, 38, 0.25)"
-              stroke={selected ? "#ef4444" : "#f87171"}
-              strokeWidth={selected ? 2.4 : 1.8}
-              lineJoin="round"
-              lineCap="round"
-              perfectDrawEnabled={false}
-              onClick={handlePolygonClick}
-              onTap={handlePolygonClick}
-              onDblClick={handlePolygonDoubleClick}
-            />
+            {/* Editable polygon — only show when NOT showing HEAT planes */}
+            {!(showHeatPlanes && heatPlanes && heatPlanes.length > 0) && (
+              <Line
+                points={polygonStagePoints}
+                closed
+                fill="rgba(220, 38, 38, 0.25)"
+                stroke={selected ? "#ef4444" : "#f87171"}
+                strokeWidth={selected ? 2.4 : 1.8}
+                lineJoin="round"
+                lineCap="round"
+                perfectDrawEnabled={false}
+                onClick={handlePolygonClick}
+                onTap={handlePolygonClick}
+                onDblClick={handlePolygonDoubleClick}
+              />
+            )}
 
-            {edgeLengthLabels.map((label) => {
+            {/* Edge labels — only show when NOT showing HEAT planes */}
+            {!(showHeatPlanes && heatPlanes && heatPlanes.length > 0) && edgeLengthLabels.map((label) => {
               const labelWidth = Math.max(58, label.text.length * 7 + 12);
               return (
                 <React.Fragment key={label.id}>
@@ -903,7 +918,8 @@ export default function RoofPolygonEditor({
               );
             })}
 
-            {points.map((point, index) => {
+            {/* Vertex anchors — only show when NOT showing HEAT planes */}
+            {!(showHeatPlanes && heatPlanes && heatPlanes.length > 0) && points.map((point, index) => {
               const stagePoint = imageToStagePoint(point);
               return (
                 <Circle

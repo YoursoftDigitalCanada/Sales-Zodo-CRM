@@ -330,6 +330,24 @@ export async function detectRoof(payload: {
     return res.data?.data;
 }
 
+export interface SegmentationResult {
+    found: boolean;
+    roof_polygon: number[][];
+    mask_area: number;
+    overlay_image: string; // base64 PNG
+    bbox: number[];
+    centroid: number[];
+    score: number;
+    image_size: number[];
+    inference_time_seconds: number;
+    message?: string;
+}
+
+export async function segmentRoof(satelliteImageUrl: string): Promise<SegmentationResult> {
+    const res = await api.post("/roof-estimator/segment-roof", { satelliteImageUrl });
+    return res.data?.data;
+}
+
 export async function saveEstimate(payload: SaveEstimatePayload): Promise<RoofEstimate> {
     const res = await api.post("/roof-estimator", payload);
     return res.data?.data;

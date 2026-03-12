@@ -27,10 +27,12 @@ import {
   getGoogleMapsJsApiKey,
   getPlaceDetails,
   saveEstimate,
+  segmentRoof,
   type DetectionResult,
   type ParcelBoundaryResult,
   type SatelliteResult,
   type SaveEstimatePayload,
+  type SegmentationResult,
 } from "@/features/roof-estimator/services/roof-estimator-service";
 import {
   calculatePolygonAreaPixels,
@@ -328,6 +330,8 @@ export default function EstimateModule(): JSX.Element {
   const [saving, setSaving] = useState(false);
   const [loadingRecipients, setLoadingRecipients] = useState(false);
   const [creatingAndSaving, setCreatingAndSaving] = useState(false);
+  const [samOverlay, setSamOverlay] = useState<string | null>(null);
+  const [segmenting, setSegmenting] = useState(false);
   const [downloadingProposal, setDownloadingProposal] = useState(false);
   const [searchingAddress, setSearchingAddress] = useState(false);
   const [parcelData, setParcelData] = useState<ParcelBoundaryResult | null>(null);
@@ -655,6 +659,44 @@ export default function EstimateModule(): JSX.Element {
       setDetecting(false);
     }
   }, [buildPayloadFromPolygon, imageHeight, imageWidth, satellite, toast, zoom]);
+
+  const handleSegmentRoof = useCallback(async () => {
+    if (!satellite) return;
+
+    setSegmenting(true);
+    setSamOverlay(null);
+
+    toast({
+      title: "SAM Segmentation started",
+      description: "This may take a few minutes on CPU. Please wait...",
+    });
+
+    try {
+      const result = await segmentRoof(satellite.satelliteImageUrl);
+
+      if (result.found && result.overlay_image) {
+        setSamOverlay(`data:image/png;base64,${result.overlay_image}`);
+        toast({
+          title: "Roof segmented",
+          description: `SAM detected roof (score: ${(result.score * 100).toFixed(0)}%, area: ${result.mask_area.toLocaleString()}px) in ${result.inference_time_seconds.toFixed(1)}s`,
+        });
+      } else {
+        toast({
+          title: "No roof found",
+          description: result.message || "SAM could not detect a roof in this image",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "SAM segmentation failed",
+        description: error?.response?.data?.message || error?.message || "Unexpected error",
+        variant: "destructive",
+      });
+    } finally {
+      setSegmenting(false);
+    }
+  }, [satellite, toast]);
 
   const handlePolygonChange = useCallback(
     (points: PolygonPoint[]) => {
@@ -1043,6 +1085,11 @@ export default function EstimateModule(): JSX.Element {
                 Detect + Seed Polygon
               </Button>
 
+              <Button type="button" className="mt-auto bg-purple-600 hover:bg-purple-700" onClick={handleSegmentRoof} disabled={!satellite || segmenting}>
+                {segmenting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                {segmenting ? "Segmenting..." : "Segment Roof (SAM)"}
+              </Button>
+
               <Button type="button" className="mt-auto" onClick={handleSaveEstimate} disabled={!draftPayload || saving}>
                 {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                 Save Estimate
@@ -1124,6 +1171,7 @@ export default function EstimateModule(): JSX.Element {
               onChange={handlePolygonChange}
               heatPlanes={detection?.heatPlanes ?? undefined}
               heatOriginalImageSize={detection?.heatOriginalImageSize ?? undefined}
+              samOverlayUrl={samOverlay ?? undefined}
               parcelBoundaryPixels={
                 parcelData?.parcelPolygon && satellite
                   ? parcelData.parcelPolygon.map((coord) => {

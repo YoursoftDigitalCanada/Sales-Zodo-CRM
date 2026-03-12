@@ -39,6 +39,8 @@ export interface RoofPolygonEditorProps {
   heatPlanes?: HeatPlane[] | null;
   /** Original satellite image dimensions that HEAT processed [width, height] */
   heatOriginalImageSize?: number[] | null;
+  /** SAM overlay image URL (data:image/png;base64,...) */
+  samOverlayUrl?: string;
 }
 
 type PanStart = {
@@ -224,6 +226,7 @@ export default function RoofPolygonEditor({
   parcelBoundaryPixels,
   heatPlanes,
   heatOriginalImageSize,
+  samOverlayUrl,
 }: RoofPolygonEditorProps): JSX.Element {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const stageRef = useRef<Konva.Stage | null>(null);
@@ -252,6 +255,8 @@ export default function RoofPolygonEditor({
   });
   const [points, setPoints] = useState<PolygonPoint[]>(() => sanitizePolygonInput(initialPolygon, width, height));
   const [showHeatPlanes, setShowHeatPlanes] = useState(true);
+  const [showSamOverlay, setShowSamOverlay] = useState(true);
+  const [samImageElement, setSamImageElement] = useState<HTMLImageElement | null>(null);
 
   const initialPolygonKey = useMemo(() => polygonSignature(initialPolygon), [initialPolygon]);
 
@@ -295,6 +300,25 @@ export default function RoofPolygonEditor({
       mounted = false;
     };
   }, [imageUrl]);
+
+  // Load SAM overlay image
+  useEffect(() => {
+    if (!samOverlayUrl) {
+      setSamImageElement(null);
+      return;
+    }
+    let mounted = true;
+    const img = new window.Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      if (mounted) setSamImageElement(img);
+    };
+    img.onerror = () => {
+      if (mounted) setSamImageElement(null);
+    };
+    img.src = samOverlayUrl;
+    return () => { mounted = false; };
+  }, [samOverlayUrl]);
 
   useLayoutEffect(() => {
     const element = containerRef.current;
@@ -747,6 +771,18 @@ export default function RoofPolygonEditor({
           Fit
         </Button>
 
+        {samOverlayUrl && (
+          <Button
+            type="button"
+            variant={showSamOverlay ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShowSamOverlay((p) => !p)}
+            className={showSamOverlay ? "bg-purple-600 hover:bg-purple-700" : ""}
+          >
+            {showSamOverlay ? "SAM: ON" : "SAM: OFF"}
+          </Button>
+        )}
+
         {heatPlanes && heatPlanes.length > 0 && (
           <Button
             type="button"
@@ -823,6 +859,18 @@ export default function RoofPolygonEditor({
               />
             )}
 
+            {/* SAM colored overlay — rendered on top of satellite image */}
+            {showSamOverlay && samImageElement && (
+              <KonvaImage
+                x={imageOffset.x}
+                y={imageOffset.y}
+                width={width * imageScale}
+                height={height * imageScale}
+                image={samImageElement}
+                opacity={0.65}
+                listening={false}
+              />
+            )}
             {/* HEAT roof plane overlays — rendered BEHIND the editable polygon */}
             {showHeatPlanes && heatPlanes && heatPlanes.length > 0 && heatPlanes.map((plane, idx) => {
               // HEAT coords are in original satellite image space (e.g. 640×640)

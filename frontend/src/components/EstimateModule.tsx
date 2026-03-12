@@ -1271,7 +1271,7 @@ export default function EstimateModule(): JSX.Element {
                       {eagleViewReport.area && (
                         <div className="rounded-lg bg-slate-50 p-2">
                           <div className="text-[10px] text-slate-400">Total Area</div>
-                          <div className="font-medium text-slate-700">{eagleViewReport.area} sq ft</div>
+                          <div className="font-medium text-slate-700">{eagleViewReport.area}</div>
                         </div>
                       )}
                       {eagleViewReport.pitch && (
@@ -1289,13 +1289,13 @@ export default function EstimateModule(): JSX.Element {
                       {eagleViewReport.lengthRidge && (
                         <div className="rounded-lg bg-slate-50 p-2">
                           <div className="text-[10px] text-slate-400">Ridge</div>
-                          <div className="font-medium text-slate-700">{eagleViewReport.lengthRidge} ft</div>
+                          <div className="font-medium text-slate-700">{eagleViewReport.lengthRidge}</div>
                         </div>
                       )}
                       {eagleViewReport.lengthValley && (
                         <div className="rounded-lg bg-slate-50 p-2">
                           <div className="text-[10px] text-slate-400">Valley</div>
-                          <div className="font-medium text-slate-700">{eagleViewReport.lengthValley} ft</div>
+                          <div className="font-medium text-slate-700">{eagleViewReport.lengthValley}</div>
                         </div>
                       )}
                     </div>

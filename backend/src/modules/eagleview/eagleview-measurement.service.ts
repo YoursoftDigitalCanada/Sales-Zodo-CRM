@@ -1,7 +1,14 @@
 /**
  * EagleView Measurement Orders Service
  *
- * Handles creating, tracking, and downloading roof measurement reports.
+ * Built from the official EagleView Measurement Order API Swagger spec.
+ *
+ * Endpoints used:
+ *   POST /v2/Order/PlaceOrder          — create order
+ *   GET  /v3/Report/GetReport          — get report status + measurements
+ *   POST /v3/Report/GetReports         — list reports (paginated)
+ *   GET  /v1/File/GetReportFile        — download report file
+ *   GET  /v2/Product/GetAvailableProducts — list available products
  */
 
 import axios from 'axios';
@@ -20,45 +27,58 @@ export interface MeasurementAddress {
     state: string;
     postalCode: string;
     country?: string;
+    latitude?: number;
+    longitude?: number;
 }
 
-export interface MeasurementOrderRequest {
+export interface PlaceOrderRequest {
     address: MeasurementAddress;
-    referenceId?: string;       // CRM lead/estimate ID for correlation
-    productType?: string;       // e.g. "PremiumRoofMeasurement"
-    callbackUrl?: string;       // webhook URL for status updates
+    primaryProductId?: number;       // default 2 (PremiumRoof)
+    deliveryProductId?: number;      // default 7 (PDF)
+    measurementInstructionType?: number; // default 1
+    changesInLast4Years?: boolean;
+    referenceId?: string;            // CRM lead/estimate ID
+    claimNumber?: string;
+    comments?: string;
 }
 
-export interface MeasurementOrderResponse {
-    orderId: string;
+export interface PlaceOrderResponse {
+    orderId: number;
+    reportIds: number[];
+}
+
+export interface ReportData {
+    reportId: number;
     status: string;
+    displayStatus?: string;
+    street?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
+    latitude?: number;
+    longitude?: number;
+    datePlaced?: string;
+    dateCompleted?: string | null;
     referenceId?: string;
-    createdAt?: string;
-    estimatedCompletionDate?: string;
-}
-
-export interface MeasurementReport {
-    orderId: string;
-    status: string;
-    reportUrl?: string;
-    completedAt?: string;
-    totalArea?: number;
-    totalSquares?: number;
-    roofFacets?: Array<{
-        id: string;
-        area: number;
-        pitch: string;
-        orientation: string;
-    }>;
+    area?: string;
+    pitch?: string;
+    lengthRidge?: string;
+    lengthValley?: string;
+    lengthEave?: string;
+    lengthRake?: string;
+    lengthHip?: string;
+    totalRoofFacets?: string;
+    productPrimary?: string;
+    productDelivery?: string;
+    reportDownloadLink?: string;
+    eligibleForUpgrade?: boolean;
+    canCancelReport?: boolean;
     rawData?: any;
 }
 
 // ── Service ──────────────────────────────────────────────────────────────
 
 class EagleViewMeasurementService {
-    /**
-     * Get authenticated axios headers.
-     */
     private async getHeaders(): Promise<Record<string, string>> {
         const token = await eagleViewAuthService.getToken();
         return {
@@ -68,9 +88,6 @@ class EagleViewMeasurementService {
         };
     }
 
-    /**
-     * Retry on 401 by refreshing token.
-     */
     private async requestWithRetry<T>(fn: () => Promise<T>): Promise<T> {
         try {
             return await fn();
@@ -85,127 +102,202 @@ class EagleViewMeasurementService {
     }
 
     /**
-     * Create a new measurement order.
+     * POST /v2/Order/PlaceOrder
+     *
+     * Required body fields:
+     *   OrderReports.ReportAddresses  { Address, City, State, Zip, AddressType }
+     *   OrderReports.PrimaryProductId
+     *   OrderReports.DeliveryProductId
+     *   OrderReports.MeasurementInstructionType
+     *   OrderReports.ChangesInLast4Years
      */
-    async createOrder(payload: MeasurementOrderRequest): Promise<MeasurementOrderResponse> {
-        logger.info('[EagleView] Creating measurement order', {
+    async placeOrder(payload: PlaceOrderRequest): Promise<PlaceOrderResponse> {
+        logger.info('[EagleView] Placing order', {
             address: payload.address.addressLine1,
             city: payload.address.city,
-            referenceId: payload.referenceId,
         });
 
         return this.requestWithRetry(async () => {
             const headers = await this.getHeaders();
 
-            const body: any = {
-                address: {
-                    addressLine1: payload.address.addressLine1,
-                    addressLine2: payload.address.addressLine2 || '',
-                    city: payload.address.city,
-                    state: payload.address.state,
-                    postalCode: payload.address.postalCode,
-                    country: payload.address.country || 'US',
+            const body = {
+                OrderReports: {
+                    ReportAddresses: {
+                        Address: payload.address.addressLine1,
+                        City: payload.address.city,
+                        State: payload.address.state,
+                        Zip: payload.address.postalCode,
+                        Country: payload.address.country || 'US',
+                        AddressType: 0,
+                        ...(payload.address.latitude && { Latitude: payload.address.latitude }),
+                        ...(payload.address.longitude && { Longitude: payload.address.longitude }),
+                    },
+                    PrimaryProductId: payload.primaryProductId || 2,
+                    DeliveryProductId: payload.deliveryProductId || 7,
+                    MeasurementInstructionType: payload.measurementInstructionType || 1,
+                    ChangesInLast4Years: payload.changesInLast4Years ?? false,
+                    ...(payload.referenceId && { ReferenceId: payload.referenceId }),
+                    ...(payload.claimNumber && { ClaimNumber: payload.claimNumber }),
+                    ...(payload.comments && { Comments: payload.comments }),
                 },
             };
 
-            if (payload.referenceId) body.referenceId = payload.referenceId;
-            if (payload.productType) body.productType = payload.productType;
-            if (payload.callbackUrl) body.callbackUrl = payload.callbackUrl;
-
             const response = await axios.post(
-                `${BASE_URL}/measurement-orders`,
+                `${BASE_URL}/v2/Order/PlaceOrder`,
                 body,
                 { headers, timeout: 30_000 },
             );
 
             const data = response.data;
 
-            logger.info('[EagleView] Order created', {
-                orderId: data.orderId || data.id,
-                status: data.status,
+            logger.info('[EagleView] Order placed successfully', {
+                orderId: data.OrderId,
+                reportIds: data.ReportIds,
             });
 
             return {
-                orderId: data.orderId || data.id || data.order_id,
-                status: data.status || 'pending',
-                referenceId: data.referenceId || payload.referenceId,
-                createdAt: data.createdAt || data.created_at,
-                estimatedCompletionDate: data.estimatedCompletionDate || data.estimated_completion_date,
+                orderId: data.OrderId,
+                reportIds: data.ReportIds || [],
             };
         });
     }
 
     /**
-     * Get order status and report data.
+     * GET /v3/Report/GetReport?reportId=...
+     *
+     * Returns full report data including measurements.
      */
-    async getOrder(orderId: string): Promise<MeasurementReport> {
-        logger.info('[EagleView] Fetching order status', { orderId });
+    async getReport(reportId: number): Promise<ReportData> {
+        logger.info('[EagleView] Fetching report', { reportId });
 
         return this.requestWithRetry(async () => {
             const headers = await this.getHeaders();
 
             const response = await axios.get(
-                `${BASE_URL}/measurement-orders/${orderId}`,
-                { headers, timeout: 15_000 },
+                `${BASE_URL}/v3/Report/GetReport`,
+                { headers, params: { reportId }, timeout: 15_000 },
             );
 
-            const data = response.data;
+            const d = response.data;
 
             return {
-                orderId: data.orderId || data.id || orderId,
-                status: data.status || 'unknown',
-                reportUrl: data.reportUrl || data.report_url,
-                completedAt: data.completedAt || data.completed_at,
-                totalArea: data.totalArea || data.total_area,
-                totalSquares: data.totalSquares || data.total_squares,
-                roofFacets: data.roofFacets || data.roof_facets,
-                rawData: data,
+                reportId: d.ReportId || reportId,
+                status: d.Status || d.DisplayStatus || 'unknown',
+                displayStatus: d.DisplayStatus,
+                street: d.Street,
+                city: d.City,
+                state: d.State,
+                zip: d.Zip,
+                latitude: d.Latitude,
+                longitude: d.Longitude,
+                datePlaced: d.DatePlaced,
+                dateCompleted: d.DateCompleted,
+                referenceId: d.ReferenceId,
+                area: d.Area,
+                pitch: d.Pitch,
+                lengthRidge: d.LengthRidge,
+                lengthValley: d.LengthValley,
+                lengthEave: d.LengthEave,
+                lengthRake: d.LengthRake,
+                lengthHip: d.LengthHip,
+                totalRoofFacets: d.TotalRoofFacets,
+                productPrimary: d.ProductPrimary,
+                productDelivery: d.ProductDelivery,
+                reportDownloadLink: d.ReportDownloadLink,
+                eligibleForUpgrade: d.EligibleForUpgrade,
+                canCancelReport: d.CanCancelReport,
+                rawData: d,
             };
         });
     }
 
     /**
-     * Download report PDF/data when order is completed.
+     * POST /v3/Report/GetReports?page=&count=
+     *
+     * List reports with optional filters.
      */
-    async downloadReport(reportUrl: string): Promise<Buffer> {
-        logger.info('[EagleView] Downloading report', { reportUrl: reportUrl.substring(0, 80) });
+    async getReports(page = 1, count = 20, filters?: {
+        productsToFilterBy?: number[];
+        statusesToFilterBy?: string;
+        referenceId?: string;
+    }): Promise<{ reports: ReportData[]; total: number }> {
+        return this.requestWithRetry(async () => {
+            const headers = await this.getHeaders();
+
+            const body = {
+                productsToFiterBy: filters?.productsToFilterBy || [],
+                ...(filters?.statusesToFilterBy && { statusesToFilterBy: filters.statusesToFilterBy }),
+                ...(filters?.referenceId && { referenceId: filters.referenceId }),
+            };
+
+            const response = await axios.post(
+                `${BASE_URL}/v3/Report/GetReports`,
+                body,
+                { headers, params: { page, count }, timeout: 15_000 },
+            );
+
+            const data = response.data;
+            const list = data?.ReportList || [];
+
+            return {
+                reports: (Array.isArray(list) ? list : [list]).map((r: any) => ({
+                    reportId: r.Id || r.ReportId,
+                    status: r.ReportStatus?.Status || r.ReportStatus?.DisplayStatus || 'unknown',
+                    displayStatus: r.ReportStatus?.DisplayStatus,
+                    street: r.Street1,
+                    city: r.City,
+                    state: r.State,
+                    zip: r.Zip,
+                    latitude: r.Latitude,
+                    longitude: r.Longitude,
+                    datePlaced: r.DatePlaced,
+                    dateCompleted: r.DateCompleted,
+                    referenceId: r.ReferenceId,
+                    reportDownloadLink: r.ReportDownloadLink,
+                    canCancelReport: r.CanCancelReport,
+                })),
+                total: data?.TotalOfReports || 0,
+            };
+        });
+    }
+
+    /**
+     * GET /v1/File/GetReportFile?reportId=&fileType=&fileFormat=
+     *
+     * fileType: 1=PDF, etc.
+     * fileFormat: 1=PDF, etc.
+     */
+    async getReportFile(reportId: number, fileType = 1, fileFormat = 1): Promise<Buffer> {
+        logger.info('[EagleView] Downloading report file', { reportId, fileType, fileFormat });
 
         const token = await eagleViewAuthService.getToken();
 
-        const response = await axios.get(reportUrl, {
-            headers: { Authorization: `Bearer ${token}` },
-            responseType: 'arraybuffer',
-            timeout: 60_000,
-        });
+        const response = await axios.get(
+            `${BASE_URL}/v1/File/GetReportFile`,
+            {
+                headers: { Authorization: `Bearer ${token}` },
+                params: { reportId, fileType, fileFormat },
+                responseType: 'arraybuffer',
+                timeout: 60_000,
+            },
+        );
 
         return Buffer.from(response.data);
     }
 
     /**
-     * List recent orders (optional filtering).
+     * GET /v2/Product/GetAvailableProducts
      */
-    async listOrders(params?: { status?: string; limit?: number }): Promise<MeasurementOrderResponse[]> {
+    async getAvailableProducts(): Promise<any[]> {
         return this.requestWithRetry(async () => {
             const headers = await this.getHeaders();
 
-            const queryParams = new URLSearchParams();
-            if (params?.status) queryParams.set('status', params.status);
-            if (params?.limit) queryParams.set('limit', String(params.limit));
+            const response = await axios.get(
+                `${BASE_URL}/GetAvailableProducts`,
+                { headers, timeout: 15_000 },
+            );
 
-            const url = `${BASE_URL}/measurement-orders${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
-
-            const response = await axios.get(url, { headers, timeout: 15_000 });
-
-            const orders = Array.isArray(response.data)
-                ? response.data
-                : response.data?.orders || response.data?.data || [];
-
-            return orders.map((o: any) => ({
-                orderId: o.orderId || o.id || o.order_id,
-                status: o.status,
-                referenceId: o.referenceId || o.reference_id,
-                createdAt: o.createdAt || o.created_at,
-            }));
+            return Array.isArray(response.data) ? response.data : [];
         });
     }
 }

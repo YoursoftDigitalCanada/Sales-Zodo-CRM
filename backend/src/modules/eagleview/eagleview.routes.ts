@@ -1,15 +1,17 @@
 /**
  * EagleView Routes
  *
- * Protected endpoints (require auth + tenant context):
- *   POST   /eagleview/orders              - Create measurement order
- *   GET    /eagleview/orders              - List orders
- *   GET    /eagleview/orders/:orderId     - Get order status
- *   GET    /eagleview/orders/:orderId/report - Download report
- *   GET    /eagleview/imagery             - Get property imagery
+ * Protected endpoints (auth + tenant):
+ *   POST   /eagleview/orders              - Place measurement order
+ *   GET    /eagleview/orders              - List reports
+ *   GET    /eagleview/orders/:orderId     - Get report status + measurements
+ *   GET    /eagleview/orders/:orderId/report - Download report PDF
+ *   GET    /eagleview/imagery             - Property imagery
  *   GET    /eagleview/health              - Health check
  *
- * The webhook endpoint is registered separately as a public route.
+ * Public webhook endpoints (EagleView calls these):
+ *   GET    /webhooks/eagleview/OrderStatusUpdate  - Status updates
+ *   POST   /webhooks/eagleview/FileDelivery       - File delivery
  */
 
 import { Router } from 'express';
@@ -17,52 +19,27 @@ import { eagleViewController } from './eagleview.controller';
 
 const router = Router();
 
-// EagleView routes are protected by the parent protectedRouter
-// (authenticate + tenantContext + moduleGuard)
-
 // ── Measurement Orders ───────────────────────────────────────────────────
 
-router.post(
-    '/orders',
-    eagleViewController.createOrder.bind(eagleViewController),
-);
-
-router.get(
-    '/orders',
-    eagleViewController.listOrders.bind(eagleViewController),
-);
-
-router.get(
-    '/orders/:orderId',
-    eagleViewController.getOrder.bind(eagleViewController),
-);
-
-router.get(
-    '/orders/:orderId/report',
-    eagleViewController.downloadReport.bind(eagleViewController),
-);
+router.post('/orders', eagleViewController.createOrder.bind(eagleViewController));
+router.get('/orders', eagleViewController.listOrders.bind(eagleViewController));
+router.get('/orders/:orderId', eagleViewController.getOrder.bind(eagleViewController));
+router.get('/orders/:orderId/report', eagleViewController.downloadReport.bind(eagleViewController));
 
 // ── Imagery ──────────────────────────────────────────────────────────────
 
-router.get(
-    '/imagery',
-    eagleViewController.getPropertyImagery.bind(eagleViewController),
-);
+router.get('/imagery', eagleViewController.getPropertyImagery.bind(eagleViewController));
 
 // ── Health ────────────────────────────────────────────────────────────────
 
-router.get(
-    '/health',
-    eagleViewController.healthCheck.bind(eagleViewController),
-);
+router.get('/health', eagleViewController.healthCheck.bind(eagleViewController));
 
 export default router;
 
-// ── Webhook route (public — no auth, EagleView calls this) ───────────────
+// ── Webhook routes (public — no auth) ────────────────────────────────────
+// EagleView sends GET /OrderStatusUpdate and POST /FileDelivery
 
 export const eagleViewWebhookRouter = Router();
 
-eagleViewWebhookRouter.post(
-    '/eagleview',
-    eagleViewController.handleWebhook.bind(eagleViewController),
-);
+eagleViewWebhookRouter.get('/OrderStatusUpdate', eagleViewController.handleWebhook.bind(eagleViewController));
+eagleViewWebhookRouter.post('/FileDelivery', eagleViewController.handleWebhook.bind(eagleViewController));

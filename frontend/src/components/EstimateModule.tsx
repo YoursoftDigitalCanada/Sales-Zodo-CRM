@@ -25,13 +25,14 @@ import {
   detectRoof,
   fetchParcelBoundary,
   fetchSatelliteImage,
-  getEagleViewOrder,
+  getEagleViewReport,
   getGoogleMapsJsApiKey,
   getPlaceDetails,
   saveEstimate,
   segmentRoof,
   type DetectionResult,
-  type EagleViewOrder,
+  type EagleViewPlaceOrderResponse,
+  type EagleViewReport,
   type ParcelBoundaryResult,
   type SatelliteResult,
   type SaveEstimatePayload,
@@ -335,7 +336,8 @@ export default function EstimateModule(): JSX.Element {
   const [creatingAndSaving, setCreatingAndSaving] = useState(false);
   const [samOverlay, setSamOverlay] = useState<string | null>(null);
   const [segmenting, setSegmenting] = useState(false);
-  const [eagleViewOrder, setEagleViewOrder] = useState<EagleViewOrder | null>(null);
+  const [eagleViewOrder, setEagleViewOrder] = useState<EagleViewPlaceOrderResponse | null>(null);
+  const [eagleViewReport, setEagleViewReport] = useState<EagleViewReport | null>(null);
   const [orderingEagleView, setOrderingEagleView] = useState(false);
   const [pollingEagleView, setPollingEagleView] = useState(false);
   const [downloadingProposal, setDownloadingProposal] = useState(false);
@@ -722,9 +724,18 @@ export default function EstimateModule(): JSX.Element {
       );
 
       setEagleViewOrder(order);
+
+      // Immediately fetch the first report status
+      if (order.reportIds?.length > 0) {
+        try {
+          const report = await getEagleViewReport(order.reportIds[0]);
+          setEagleViewReport(report);
+        } catch { /* report may not be ready yet */ }
+      }
+
       toast({
-        title: "EagleView Order Created",
-        description: `Order ${order.orderId} submitted. Status: ${order.status}`,
+        title: "EagleView Order Placed",
+        description: `Order #${order.orderId} — Report IDs: ${order.reportIds.join(", ")}`,
       });
     } catch (error: any) {
       toast({
@@ -738,14 +749,14 @@ export default function EstimateModule(): JSX.Element {
   }, [satellite, address, toast]);
 
   const handleCheckEagleViewStatus = useCallback(async () => {
-    if (!eagleViewOrder?.orderId) return;
+    if (!eagleViewOrder?.reportIds?.length) return;
     setPollingEagleView(true);
     try {
-      const updated = await getEagleViewOrder(eagleViewOrder.orderId);
-      setEagleViewOrder(updated);
+      const report = await getEagleViewReport(eagleViewOrder.reportIds[0]);
+      setEagleViewReport(report);
       toast({
         title: "EagleView Status",
-        description: `Order ${updated.orderId}: ${updated.status}`,
+        description: `Report ${report.reportId}: ${report.status}`,
       });
     } catch (error: any) {
       toast({
@@ -1215,15 +1226,15 @@ export default function EstimateModule(): JSX.Element {
                   <Satellite className="h-4 w-4 text-orange-500" />
                   EagleView Report
                 </h3>
-                {eagleViewOrder && (
+                {eagleViewReport && (
                   <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                    eagleViewOrder.status === 'completed' || eagleViewOrder.status === 'Completed'
+                    eagleViewReport.status?.toLowerCase().includes('complete')
                       ? 'bg-green-50 text-green-700 border border-green-200'
-                      : eagleViewOrder.status === 'failed' || eagleViewOrder.status === 'Failed'
+                      : eagleViewReport.status?.toLowerCase().includes('fail') || eagleViewReport.status?.toLowerCase().includes('close')
                         ? 'bg-red-50 text-red-700 border border-red-200'
                         : 'bg-amber-50 text-amber-700 border border-amber-200'
                   }`}>
-                    {eagleViewOrder.status}
+                    {eagleViewReport.displayStatus || eagleViewReport.status}
                   </span>
                 )}
               </div>
@@ -1246,34 +1257,47 @@ export default function EstimateModule(): JSX.Element {
                       <div className="font-mono text-slate-700 truncate">{eagleViewOrder.orderId}</div>
                     </div>
                     <div className="rounded-lg bg-slate-50 p-2">
-                      <div className="text-[10px] text-slate-400">Status</div>
-                      <div className="font-medium text-slate-700">{eagleViewOrder.status}</div>
+                      <div className="text-[10px] text-slate-400">Report ID</div>
+                      <div className="font-mono text-slate-700 truncate">{eagleViewOrder.reportIds?.[0] || '—'}</div>
                     </div>
-                    {eagleViewOrder.totalArea && (
-                      <div className="rounded-lg bg-slate-50 p-2">
-                        <div className="text-[10px] text-slate-400">Total Area</div>
-                        <div className="font-medium text-slate-700">{eagleViewOrder.totalArea.toLocaleString()} sq ft</div>
-                      </div>
-                    )}
-                    {eagleViewOrder.totalSquares && (
-                      <div className="rounded-lg bg-slate-50 p-2">
-                        <div className="text-[10px] text-slate-400">Squares</div>
-                        <div className="font-medium text-slate-700">{eagleViewOrder.totalSquares}</div>
-                      </div>
-                    )}
                   </div>
 
-                  {eagleViewOrder.roofFacets && eagleViewOrder.roofFacets.length > 0 && (
-                    <div className="rounded-lg border p-2">
-                      <div className="text-[10px] font-medium text-slate-500 mb-1">Roof Facets</div>
-                      <div className="space-y-1">
-                        {eagleViewOrder.roofFacets.map((f, i) => (
-                          <div key={i} className="flex justify-between text-[11px] text-slate-600">
-                            <span>Facet {f.id}</span>
-                            <span>{f.area} sqft • {f.pitch} • {f.orientation}</span>
-                          </div>
-                        ))}
+                  {eagleViewReport && (
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="rounded-lg bg-slate-50 p-2">
+                        <div className="text-[10px] text-slate-400">Status</div>
+                        <div className="font-medium text-slate-700">{eagleViewReport.displayStatus || eagleViewReport.status}</div>
                       </div>
+                      {eagleViewReport.area && (
+                        <div className="rounded-lg bg-slate-50 p-2">
+                          <div className="text-[10px] text-slate-400">Total Area</div>
+                          <div className="font-medium text-slate-700">{eagleViewReport.area} sq ft</div>
+                        </div>
+                      )}
+                      {eagleViewReport.pitch && (
+                        <div className="rounded-lg bg-slate-50 p-2">
+                          <div className="text-[10px] text-slate-400">Pitch</div>
+                          <div className="font-medium text-slate-700">{eagleViewReport.pitch}</div>
+                        </div>
+                      )}
+                      {eagleViewReport.totalRoofFacets && (
+                        <div className="rounded-lg bg-slate-50 p-2">
+                          <div className="text-[10px] text-slate-400">Facets</div>
+                          <div className="font-medium text-slate-700">{eagleViewReport.totalRoofFacets}</div>
+                        </div>
+                      )}
+                      {eagleViewReport.lengthRidge && (
+                        <div className="rounded-lg bg-slate-50 p-2">
+                          <div className="text-[10px] text-slate-400">Ridge</div>
+                          <div className="font-medium text-slate-700">{eagleViewReport.lengthRidge} ft</div>
+                        </div>
+                      )}
+                      {eagleViewReport.lengthValley && (
+                        <div className="rounded-lg bg-slate-50 p-2">
+                          <div className="text-[10px] text-slate-400">Valley</div>
+                          <div className="font-medium text-slate-700">{eagleViewReport.lengthValley} ft</div>
+                        </div>
+                      )}
                     </div>
                   )}
 

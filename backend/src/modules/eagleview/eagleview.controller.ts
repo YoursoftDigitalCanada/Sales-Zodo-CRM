@@ -1,10 +1,8 @@
 /**
  * EagleView Controller
  *
- * Handles HTTP requests for EagleView integration:
- *   - Measurement orders (create, get, list)
- *   - Property imagery
- *   - Webhooks (measurement.completed, measurement.failed)
+ * Handles HTTP requests for EagleView integration.
+ * Based on official EagleView Measurement Order API Swagger spec.
  */
 
 import { Request, Response, NextFunction } from 'express';
@@ -22,11 +20,11 @@ class EagleViewController {
 
     /**
      * POST /eagleview/orders
-     * Create a new measurement order.
+     * Place a new measurement order via EagleView PlaceOrder API.
      */
     async createOrder(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const { address, referenceId, productType } = req.body;
+            const { address, referenceId, primaryProductId, deliveryProductId } = req.body;
 
             if (!address || !address.addressLine1 || !address.city || !address.state || !address.postalCode) {
                 res.status(400).json({
@@ -36,36 +34,33 @@ class EagleViewController {
                 return;
             }
 
-            // Build callback URL for webhooks
-            const callbackUrl = `${req.protocol}://${req.get('host')}/api/v1/eagleview/webhooks`;
-
-            const order = await eagleViewMeasurementService.createOrder({
+            const order = await eagleViewMeasurementService.placeOrder({
                 address,
                 referenceId,
-                productType,
-                callbackUrl,
+                primaryProductId: primaryProductId || 2,
+                deliveryProductId: deliveryProductId || 7,
             });
 
-            sendSuccess(res, order, 'Measurement order created');
+            sendSuccess(res, order, 'Measurement order placed');
         } catch (error) {
             next(error);
         }
     }
 
     /**
-     * GET /eagleview/orders/:orderId
-     * Get measurement order status.
+     * GET /eagleview/orders/:reportId
+     * Get report status and measurement data.
      */
     async getOrder(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const { orderId } = req.params;
+            const reportId = parseInt(req.params.orderId, 10);
 
-            if (!orderId) {
-                res.status(400).json({ success: false, message: 'orderId is required' });
+            if (isNaN(reportId)) {
+                res.status(400).json({ success: false, message: 'reportId must be a number' });
                 return;
             }
 
-            const report = await eagleViewMeasurementService.getOrder(orderId);
+            const report = await eagleViewMeasurementService.getReport(reportId);
             sendSuccess(res, report);
         } catch (error) {
             next(error);
@@ -74,55 +69,38 @@ class EagleViewController {
 
     /**
      * GET /eagleview/orders
-     * List measurement orders.
+     * List reports (paginated).
      */
     async listOrders(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const { status, limit } = req.query;
+            const page = parseInt(req.query.page as string, 10) || 1;
+            const count = parseInt(req.query.count as string, 10) || 20;
 
-            const orders = await eagleViewMeasurementService.listOrders({
-                status: status as string | undefined,
-                limit: limit ? Number(limit) : undefined,
-            });
-
-            sendSuccess(res, orders);
+            const result = await eagleViewMeasurementService.getReports(page, count);
+            sendSuccess(res, result);
         } catch (error) {
             next(error);
         }
     }
 
     /**
-     * GET /eagleview/orders/:orderId/report
-     * Download the measurement report (when completed).
+     * GET /eagleview/orders/:reportId/report
+     * Download the completed report PDF file.
      */
     async downloadReport(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const { orderId } = req.params;
+            const reportId = parseInt(req.params.orderId, 10);
 
-            // First get the order to find the report URL
-            const order = await eagleViewMeasurementService.getOrder(orderId);
-
-            if (order.status !== 'completed' && order.status !== 'Completed') {
-                res.status(400).json({
-                    success: false,
-                    message: `Order is not completed yet. Current status: ${order.status}`,
-                });
+            if (isNaN(reportId)) {
+                res.status(400).json({ success: false, message: 'reportId must be a number' });
                 return;
             }
 
-            if (!order.reportUrl) {
-                res.status(404).json({
-                    success: false,
-                    message: 'No report URL available for this order',
-                });
-                return;
-            }
-
-            const reportBuffer = await eagleViewMeasurementService.downloadReport(order.reportUrl);
+            const reportBuffer = await eagleViewMeasurementService.getReportFile(reportId, 1, 1);
 
             res.set({
                 'Content-Type': 'application/pdf',
-                'Content-Disposition': `attachment; filename="eagleview-report-${orderId}.pdf"`,
+                'Content-Disposition': `attachment; filename="eagleview-report-${reportId}.pdf"`,
                 'Content-Length': reportBuffer.length.toString(),
             });
             res.send(reportBuffer);
@@ -135,7 +113,6 @@ class EagleViewController {
 
     /**
      * GET /eagleview/imagery?lat=...&lng=...
-     * Fetch orthographic property imagery.
      */
     async getPropertyImagery(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
@@ -156,9 +133,6 @@ class EagleViewController {
 
     // ── Health ────────────────────────────────────────────────────────────
 
-    /**
-     * GET /eagleview/health
-     */
     async healthCheck(req: Request, res: Response): Promise<void> {
         const configured = eagleViewAuthService.isConfigured();
         let tokenOk = false;
@@ -178,79 +152,51 @@ class EagleViewController {
                 configured,
                 authenticated: tokenOk,
                 baseUrl: config.integrations.eagleview.baseUrl,
-                environment: config.integrations.eagleview.baseUrl.includes('integrations')
+                environment: config.integrations.eagleview.baseUrl.includes('sandbox')
                     ? 'sandbox'
                     : 'production',
             },
         });
     }
 
-    // ── Webhook ──────────────────────────────────────────────────────────
+    // ── Webhooks ─────────────────────────────────────────────────────────
+    // EagleView sends webhooks as GET /OrderStatusUpdate?StatusId=&SubStatusId=&RefId=&ReportId=
 
     /**
-     * POST /eagleview/webhooks
-     * Handle EagleView webhook events.
-     * Events: measurement.completed, measurement.failed
+     * Handles both:
+     *   GET  /webhooks/eagleview/OrderStatusUpdate — order status changes
+     *   POST /webhooks/eagleview/FileDelivery      — file delivery
      */
     async handleWebhook(req: Request, res: Response): Promise<void> {
-        const webhookSecret = config.integrations.eagleview.webhookSecret;
+        const { StatusId, SubStatusId, RefId, ReportId } = req.query as Record<string, string>;
 
-        // Verify webhook signature if secret is configured
-        if (webhookSecret) {
-            const signature = req.headers['x-eagleview-signature'] || req.headers['x-webhook-signature'];
-            if (!signature || signature !== webhookSecret) {
-                logger.warn('[EagleView] Webhook signature mismatch');
-                res.status(401).json({ error: 'Invalid webhook signature' });
-                return;
-            }
-        }
-
-        const event = req.body;
-        const eventType = event?.event || event?.type || event?.eventType;
-        const orderId = event?.orderId || event?.order_id || event?.data?.orderId;
-
-        logger.info('[EagleView] Webhook received', { eventType, orderId });
+        logger.info('[EagleView] Webhook received', {
+            statusId: StatusId,
+            subStatusId: SubStatusId,
+            refId: RefId,
+            reportId: ReportId,
+            method: req.method,
+            path: req.path,
+        });
 
         try {
-            switch (eventType) {
-                case 'measurement.completed': {
-                    // Fetch the completed report
-                    const report = await eagleViewMeasurementService.getOrder(orderId);
+            // If this is a status update and we have a RefId, attach report to lead
+            if (ReportId && RefId) {
+                const reportId = parseInt(ReportId, 10);
 
-                    logger.info('[EagleView] Measurement completed', {
-                        orderId,
-                        totalArea: report.totalArea,
-                        totalSquares: report.totalSquares,
-                    });
-
-                    // If there's a referenceId, try to attach results to the lead
-                    const referenceId = event?.referenceId || event?.reference_id || report.rawData?.referenceId;
-                    if (referenceId) {
-                        await this.attachReportToLead(referenceId, report);
+                if (!isNaN(reportId)) {
+                    try {
+                        const report = await eagleViewMeasurementService.getReport(reportId);
+                        await this.attachReportToLead(RefId, report);
+                    } catch (err: any) {
+                        logger.warn('[EagleView] Could not fetch report for webhook', { reportId, err: err.message });
                     }
-
-                    break;
                 }
-
-                case 'measurement.failed': {
-                    const reason = event?.reason || event?.error || 'Unknown error';
-                    logger.error('[EagleView] Measurement failed', { orderId, reason });
-                    break;
-                }
-
-                default:
-                    logger.info('[EagleView] Unhandled webhook event', { eventType, orderId });
             }
 
-            // Always acknowledge the webhook
             res.status(200).json({ received: true });
         } catch (error: any) {
-            logger.error('[EagleView] Webhook processing failed', {
-                eventType,
-                orderId,
-                error: error.message,
-            });
-            // Still return 200 to prevent EagleView from retrying
+            logger.error('[EagleView] Webhook processing failed', { error: error.message });
             res.status(200).json({ received: true, processingError: true });
         }
     }
@@ -273,22 +219,22 @@ class EagleViewController {
             const existingNotes = lead.notes || '';
             const reportNote = [
                 '\n\n--- EagleView Report ---',
-                `Order ID: ${report.orderId}`,
-                `Total Area: ${report.totalArea || 'N/A'} sq ft`,
-                `Total Squares: ${report.totalSquares || 'N/A'}`,
-                `Completed: ${report.completedAt || new Date().toISOString()}`,
-                report.reportUrl ? `Report: ${report.reportUrl}` : '',
+                `Report ID: ${report.reportId}`,
+                `Status: ${report.status}`,
+                `Area: ${report.area || 'N/A'} sq ft`,
+                `Pitch: ${report.pitch || 'N/A'}`,
+                `Facets: ${report.totalRoofFacets || 'N/A'}`,
+                `Completed: ${report.dateCompleted || 'pending'}`,
+                report.reportDownloadLink ? `Download: ${report.reportDownloadLink}` : '',
                 '--- End EagleView Report ---',
             ].join('\n');
 
             await prisma.lead.update({
                 where: { id: leadId },
-                data: {
-                    notes: existingNotes + reportNote,
-                },
+                data: { notes: existingNotes + reportNote },
             });
 
-            logger.info('[EagleView] Report attached to lead', { leadId, orderId: report.orderId });
+            logger.info('[EagleView] Report attached to lead', { leadId, reportId: report.reportId });
         } catch (err) {
             logger.error('[EagleView] Failed to attach report to lead', { leadId, err });
         }

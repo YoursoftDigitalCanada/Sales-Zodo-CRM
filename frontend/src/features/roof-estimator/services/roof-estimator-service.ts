@@ -364,21 +364,33 @@ export interface EagleViewOrderAddress {
     country?: string;
 }
 
-export interface EagleViewOrder {
-    orderId: string;
+export interface EagleViewPlaceOrderResponse {
+    orderId: number;
+    reportIds: number[];
+}
+
+export interface EagleViewReport {
+    reportId: number;
     status: string;
+    displayStatus?: string;
+    street?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
+    datePlaced?: string;
+    dateCompleted?: string | null;
     referenceId?: string;
-    createdAt?: string;
-    estimatedCompletionDate?: string;
-    reportUrl?: string;
-    totalArea?: number;
-    totalSquares?: number;
-    roofFacets?: Array<{
-        id: string;
-        area: number;
-        pitch: string;
-        orientation: string;
-    }>;
+    area?: string;
+    pitch?: string;
+    lengthRidge?: string;
+    lengthValley?: string;
+    lengthEave?: string;
+    lengthRake?: string;
+    lengthHip?: string;
+    totalRoofFacets?: string;
+    productPrimary?: string;
+    reportDownloadLink?: string;
+    eligibleForUpgrade?: boolean;
 }
 
 export interface EagleViewHealth {
@@ -388,13 +400,13 @@ export interface EagleViewHealth {
     environment: string;
 }
 
-export async function createEagleViewOrder(address: EagleViewOrderAddress, referenceId?: string): Promise<EagleViewOrder> {
+export async function createEagleViewOrder(address: EagleViewOrderAddress, referenceId?: string): Promise<EagleViewPlaceOrderResponse> {
     const res = await api.post("/eagleview/orders", { address, referenceId });
     return res.data?.data;
 }
 
-export async function getEagleViewOrder(orderId: string): Promise<EagleViewOrder> {
-    const res = await api.get(`/eagleview/orders/${orderId}`);
+export async function getEagleViewReport(reportId: number): Promise<EagleViewReport> {
+    const res = await api.get(`/eagleview/orders/${reportId}`);
     return res.data?.data;
 }
 

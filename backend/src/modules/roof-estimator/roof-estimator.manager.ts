@@ -43,35 +43,53 @@ export class RoofEstimatorManager {
     }
 
     /**
-     * Run AI roof detection on a satellite image
+     * Run AI roof detection on a satellite image.
+     * Calls both the YOLOv8 segmentation service AND the HEAT roof-plane service in parallel.
      */
     async detectRoof(tenantId: string, satelliteImageUrl: string, latitude: number, longitude: number) {
-        // 1. Fetch image buffer
+        // 1. Fetch image buffer (for YOLOv8)
         const imageBuffer = await roofEstimatorService.fetchSatelliteImageBuffer(satelliteImageUrl);
         const zoom = this.parseZoomFromSatelliteUrl(satelliteImageUrl);
 
-        // 2. Send to AI service
-        const result = await roofEstimatorService.detectRoof({
-            imageBuffer,
-            latitude,
-            zoom,
-        });
+        // 2. Call both AI services in parallel
+        const [segResult, heatResult] = await Promise.all([
+            roofEstimatorService.detectRoof({
+                imageBuffer,
+                latitude,
+                zoom,
+            }),
+            roofEstimatorService.detectRoofPlanes(satelliteImageUrl).catch((err: Error) => {
+                logger.warn('HEAT plane detection failed (non-blocking)', {
+                    tenantId,
+                    error: err.message,
+                });
+                return null;
+            }),
+        ]);
 
         logger.info('Roof detection completed', {
             tenantId,
-            roofAreaSqft: result.roof_area_sqft,
-            confidence: result.confidence,
-            processingTime: result.processing_time_seconds,
+            roofAreaSqft: segResult.roof_area_sqft,
+            confidence: segResult.confidence,
+            processingTime: segResult.processing_time_seconds,
+            heatPlanes: heatResult?.plane_count ?? 0,
+            heatInferenceTime: heatResult?.inference_time_seconds,
         });
 
         return {
-            roofAreaSqft: result.roof_area_sqft,
-            confidence: result.confidence,
-            processingTimeSec: result.processing_time_seconds,
-            aiModel: result.model,
+            roofAreaSqft: segResult.roof_area_sqft,
+            confidence: segResult.confidence,
+            processingTimeSec: segResult.processing_time_seconds,
+            aiModel: segResult.model,
             satelliteImageUrl,
             latitude,
             longitude,
+            // HEAT plane data (null if service unavailable)
+            heatPlanes: heatResult?.roof_planes ?? null,
+            heatPlaneCount: heatResult?.plane_count ?? 0,
+            heatVertices: heatResult?.vertices ?? null,
+            heatEdges: heatResult?.edges ?? null,
+            heatInferenceTimeSec: heatResult?.inference_time_seconds ?? null,
         };
     }
 

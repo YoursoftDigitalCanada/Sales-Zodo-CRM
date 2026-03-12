@@ -725,22 +725,33 @@ export class AutomationService {
                 }
             }
 
-            // ── WON / LOST → Terminal state notification ──
-            if (event.ownerUserId && (event.newStatus === 'WON' || event.newStatus === 'LOST')) {
-                const emoji = event.newStatus === 'WON' ? '🏆' : '❌';
+            // ── Terminal / Inactive state notification ──
+            const inactiveStatusConfig: Record<string, { emoji: string; label: string; type: 'SUCCESS' | 'WARNING' | 'INFO' }> = {
+                WON: { emoji: '🏆', label: 'Won', type: 'SUCCESS' },
+                LOST: { emoji: '❌', label: 'Lost', type: 'WARNING' },
+                DUPLICATE: { emoji: '📋', label: 'Duplicate', type: 'INFO' },
+                UNQUALIFIED: { emoji: '🚫', label: 'Unqualified', type: 'INFO' },
+                NO_RESPONSE: { emoji: '📵', label: 'No Response', type: 'WARNING' },
+                OUT_OF_SERVICE_AREA: { emoji: '📍', label: 'Out of Service Area', type: 'INFO' },
+                FUTURE_FOLLOW_UP: { emoji: '📅', label: 'Future Follow-Up', type: 'INFO' },
+                DORMANT_PROPOSAL: { emoji: '💤', label: 'Dormant Proposal', type: 'WARNING' },
+            };
+
+            const statusConf = inactiveStatusConfig[event.newStatus];
+            if (event.ownerUserId && statusConf) {
                 try {
                     await notificationsService.create({
-                        title: `${emoji} Lead ${event.newStatus === 'WON' ? 'Won' : 'Lost'}`,
-                        message: `Lead "${event.leadName}" has been marked as ${event.newStatus}.`,
-                        type: event.newStatus === 'WON' ? 'SUCCESS' : 'WARNING',
+                        title: `${statusConf.emoji} Lead ${statusConf.label}`,
+                        message: `Lead "${event.leadName}" has been marked as ${statusConf.label}.`,
+                        type: statusConf.type,
                         userId: event.ownerUserId,
                         tenantId: event.tenantId,
                         actionUrl: `/leads/${event.leadId}`,
                         actionLabel: 'View Lead',
                     });
-                    logger.debug('[Automation] lead.statusChanged (terminal) → notification sent', ctx);
+                    logger.debug('[Automation] lead.statusChanged (inactive) → notification sent', ctx);
                 } catch (err) {
-                    logger.error('[Automation] lead.statusChanged (terminal) → notification failed', { ...ctx, err });
+                    logger.error('[Automation] lead.statusChanged (inactive) → notification failed', { ...ctx, err });
                 }
             }
         });
@@ -2582,7 +2593,11 @@ export class AutomationService {
         if (!lead) return 'missing';
 
         const currentStatus = lead.status as LeadStatus;
-        const blocklist: LeadStatus[] = ['PROPOSAL', 'NEGOTIATION', 'WON', 'LOST'];
+        const blocklist: LeadStatus[] = [
+            'PROPOSAL', 'NEGOTIATION', 'WON', 'LOST',
+            'DUPLICATE', 'UNQUALIFIED', 'NO_RESPONSE',
+            'OUT_OF_SERVICE_AREA', 'FUTURE_FOLLOW_UP', 'DORMANT_PROPOSAL',
+        ];
         if (blocklist.includes(currentStatus)) return 'already-proposal-or-later';
 
         await leadsService.updateStatus(leadId, tenantId, 'PROPOSAL');

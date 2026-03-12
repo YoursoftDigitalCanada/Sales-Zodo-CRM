@@ -641,8 +641,17 @@ export class RoofEstimatorController {
 
     async checkAiHealth(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const healthy = await roofEstimatorService.checkAiHealth();
-            sendSuccess(res, { healthy, service: 'ai-roof-estimator' });
+            const [aiHealthy, heatHealthy] = await Promise.all([
+                roofEstimatorService.checkAiHealth(),
+                roofEstimatorService.checkHeatHealth(),
+            ]);
+            sendSuccess(res, {
+                healthy: aiHealthy || heatHealthy,
+                services: {
+                    yolov8: { healthy: aiHealthy, service: 'ai-roof-estimator' },
+                    heat: { healthy: heatHealthy, service: 'heat-roof-planes' },
+                },
+            });
         } catch (error) {
             next(error);
         }

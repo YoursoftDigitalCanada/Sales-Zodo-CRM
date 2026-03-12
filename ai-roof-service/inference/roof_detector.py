@@ -81,8 +81,9 @@ class RoofDetector:
             from models.edge_models import HeatEdge
             from datasets.data_utils import get_pixel_features
 
-            # Load checkpoint
-            ckpt = torch.load(checkpoint_path, map_location=self.device)
+            # Load checkpoint (map_location handles CUDA→CPU transfer)
+            # weights_only=False needed because checkpoint stores argparse.Namespace
+            ckpt = torch.load(checkpoint_path, map_location=self.device, weights_only=False)
             self._ckpt_args = ckpt["args"]
             logger.info(f"Loaded checkpoint from epoch {ckpt['epoch']}")
 

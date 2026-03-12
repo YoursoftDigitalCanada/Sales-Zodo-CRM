@@ -15,6 +15,7 @@ const GOOGLE_PLACES_API_KEY = config.integrations.google.placesApiKey || '';
 const ATTOM_API_KEY = config.integrations.attomApiKey || '';
 const OPENAI_API_KEY = config.ai.openaiApiKey || '';
 const AI_SERVICE_URL = config.integrations.aiServiceUrl;
+const HEAT_SERVICE_URL = config.integrations.heatServiceUrl;
 const NOMINATIM_SEARCH_URL = 'https://nominatim.openstreetmap.org/search';
 
 // ── In-memory parcel cache (keyed by rounded lat,lng) ─────────────────────
@@ -739,6 +740,62 @@ export class RoofEstimatorService {
         try {
             const response = await axios.get(`${AI_SERVICE_URL}/health`, { timeout: 5000 });
             return response.data?.status === 'healthy';
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Send satellite image URL to HEAT Python microservice for roof plane extraction.
+     * Returns detected roof plane polygons with vertices and edges.
+     */
+    async detectRoofPlanes(imageUrl: string): Promise<{
+        roof_planes: Array<{
+            plane_id: number;
+            polygon: number[][];
+            area_pixels: number;
+            centroid: number[];
+            num_vertices: number;
+        }>;
+        plane_count: number;
+        vertices: number[][];
+        edges: number[][];
+        inference_time_seconds: number;
+    }> {
+        let retries = 2;
+        let lastError: Error | null = null;
+
+        while (retries >= 0) {
+            try {
+                const response = await axios.post(
+                    `${HEAT_SERVICE_URL}/analyze-roof`,
+                    { image_url: imageUrl },
+                    { timeout: 60000 }, // 60s — CPU inference can be slow
+                );
+                return response.data;
+            } catch (error: any) {
+                lastError = error;
+                retries--;
+                if (retries >= 0) {
+                    logger.warn(`HEAT service call failed, retrying... (${retries + 1} left)`, {
+                        error: error.message,
+                        status: error?.response?.status,
+                    });
+                    await new Promise((r) => setTimeout(r, 1000));
+                }
+            }
+        }
+
+        throw new Error(`HEAT service unavailable after retries: ${lastError?.message}`);
+    }
+
+    /**
+     * Check HEAT service health
+     */
+    async checkHeatHealth(): Promise<boolean> {
+        try {
+            const response = await axios.get(`${HEAT_SERVICE_URL}/health`, { timeout: 5000 });
+            return response.data?.model_loaded === true;
         } catch {
             return false;
         }

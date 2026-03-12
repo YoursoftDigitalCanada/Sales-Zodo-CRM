@@ -301,7 +301,9 @@ def analyze_roof_upload():
 
 # ── Main ─────────────────────────────────────────────────────────────────────
 
+# Load model at import time (works for both gunicorn --preload and direct execution)
+load_model()
+
 if __name__ == "__main__":
-    load_model()
     logger.info(f"Starting AI Roof Service on {HOST}:{PORT} (debug={DEBUG})")
     app.run(host=HOST, port=PORT, debug=DEBUG)

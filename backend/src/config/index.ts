@@ -65,6 +65,7 @@ const envSchema = z.object({
   GOOGLE_MAPS_JS_API_KEY: z.string().optional(),
   GOOGLE_SOLAR_API_KEY: z.string().optional(),
   AI_SERVICE_URL: z.string().default('http://127.0.0.1:8001'),
+  HEAT_SERVICE_URL: z.string().default('http://127.0.0.1:5001'),
   NEARMAP_API_KEY: z.string().optional(),
   ATTOM_API_KEY: z.string().optional(),
 
@@ -151,6 +152,7 @@ export const config = {
         || parsed.data.GOOGLE_MAPS_JS_API_KEY,
     },
     aiServiceUrl: parsed.data.AI_SERVICE_URL,
+    heatServiceUrl: parsed.data.HEAT_SERVICE_URL,
     nearmapApiKey: parsed.data.NEARMAP_API_KEY,
     attomApiKey: parsed.data.ATTOM_API_KEY,
   },

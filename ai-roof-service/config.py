@@ -11,7 +11,7 @@ HEAT_DIR = os.path.join(BASE_DIR, "heat-model", "2.- TRAINING-TESTING", "heat-ma
 # Checkpoint — override via env var or use default
 CHECKPOINT_PATH = os.environ.get(
     "HEAT_CHECKPOINT",
-    os.path.join(HEAT_DIR, "checkpoints", "ckpts_heat_outdoor_256", "checkpoint.pth"),
+    os.path.join(HEAT_DIR, "checkpoints", "ckpts_heat_outdoor_256_MODEL_ENSCHEDESOFIA", "checkpoint_best.pth"),
 )
 
 # ── Model settings ───────────────────────────────────────────────────────────

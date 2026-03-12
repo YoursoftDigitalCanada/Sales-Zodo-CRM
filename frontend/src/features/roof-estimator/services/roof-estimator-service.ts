@@ -95,6 +95,18 @@ export interface DetectionResult {
     confidence: number;
     processingTimeSec: number;
     aiModel: string;
+    // HEAT plane detection data (null if HEAT service unavailable)
+    heatPlanes: Array<{
+        plane_id: number;
+        polygon: number[][];
+        area_pixels: number;
+        centroid: number[];
+        num_vertices: number;
+    }> | null;
+    heatPlaneCount: number;
+    heatVertices: number[][] | null;
+    heatEdges: number[][] | null;
+    heatInferenceTimeSec: number | null;
 }
 
 export interface SaveEstimatePayload {

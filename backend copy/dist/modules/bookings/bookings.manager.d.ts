@@ -1,1 +1,0 @@
-//# sourceMappingURL=bookings.manager.d.ts.map

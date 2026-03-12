@@ -15,6 +15,14 @@ import { cn } from "@/lib/utils";
 
 export type PolygonPoint = { x: number; y: number };
 
+export interface HeatPlane {
+  plane_id: number;
+  polygon: number[][];
+  area_pixels: number;
+  centroid: number[];
+  num_vertices: number;
+}
+
 export interface RoofPolygonEditorProps {
   imageUrl: string;
   initialPolygon: PolygonPoint[];
@@ -27,6 +35,10 @@ export interface RoofPolygonEditorProps {
   showEdgeLengths?: boolean;
   /** Parcel boundary as pixel coords [[x,y], ...] in image space. Vertices are snapped to boundary if dragged outside. */
   parcelBoundaryPixels?: PolygonPoint[];
+  /** HEAT-detected roof plane polygons (in image-pixel space, 256×256) */
+  heatPlanes?: HeatPlane[] | null;
+  /** Original HEAT image size (model input resolution, typically 256) */
+  heatImageSize?: number;
 }
 
 type PanStart = {
@@ -44,6 +56,18 @@ const EDGE_INSERT_DISTANCE_STAGE_PX = 16;
 const FEET_PER_METER = 3.28084;
 const MIN_VIEWPORT_HEIGHT = 420;
 const MAX_VIEWPORT_HEIGHT = 980;
+
+/** Distinct colors for HEAT plane overlays */
+const HEAT_PLANE_COLORS = [
+  { fill: 'rgba(59, 130, 246, 0.30)', stroke: '#3b82f6' },   // blue
+  { fill: 'rgba(16, 185, 129, 0.30)', stroke: '#10b981' },   // emerald
+  { fill: 'rgba(245, 158, 11, 0.30)', stroke: '#f59e0b' },   // amber
+  { fill: 'rgba(168, 85, 247, 0.30)', stroke: '#a855f7' },    // purple
+  { fill: 'rgba(236, 72, 153, 0.30)', stroke: '#ec4899' },    // pink
+  { fill: 'rgba(6, 182, 212, 0.30)', stroke: '#06b6d4' },     // cyan
+  { fill: 'rgba(249, 115, 22, 0.30)', stroke: '#f97316' },    // orange
+  { fill: 'rgba(34, 197, 94, 0.30)', stroke: '#22c55e' },     // green
+];
 const MAX_FIT_SCALE = 1.35;
 
 const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
@@ -198,6 +222,8 @@ export default function RoofPolygonEditor({
   mapZoom,
   showEdgeLengths = true,
   parcelBoundaryPixels,
+  heatPlanes,
+  heatImageSize = 256,
 }: RoofPolygonEditorProps): JSX.Element {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const stageRef = useRef<Konva.Stage | null>(null);
@@ -225,6 +251,7 @@ export default function RoofPolygonEditor({
     ),
   });
   const [points, setPoints] = useState<PolygonPoint[]>(() => sanitizePolygonInput(initialPolygon, width, height));
+  const [showHeatPlanes, setShowHeatPlanes] = useState(true);
 
   const initialPolygonKey = useMemo(() => polygonSignature(initialPolygon), [initialPolygon]);
 
@@ -720,6 +747,18 @@ export default function RoofPolygonEditor({
           Fit
         </Button>
 
+        {heatPlanes && heatPlanes.length > 0 && (
+          <Button
+            type="button"
+            variant={showHeatPlanes ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShowHeatPlanes((p) => !p)}
+            className={showHeatPlanes ? "bg-blue-600 hover:bg-blue-700" : ""}
+          >
+            {showHeatPlanes ? `Planes: ${heatPlanes.length}` : "Show Planes"}
+          </Button>
+        )}
+
         <div className="ml-auto flex items-center gap-3 text-xs text-slate-600">
           <span className="rounded bg-slate-100 px-2 py-1">Vertices: {points.length}</span>
           <span className="rounded bg-slate-100 px-2 py-1">Zoom: {(zoom * 100).toFixed(0)}%</span>
@@ -783,6 +822,44 @@ export default function RoofPolygonEditor({
                 fill="#1e293b"
               />
             )}
+
+            {/* HEAT roof plane overlays — rendered BEHIND the editable polygon */}
+            {showHeatPlanes && heatPlanes && heatPlanes.length > 0 && heatPlanes.map((plane, idx) => {
+              const scaleX = width / heatImageSize;
+              const scaleY = height / heatImageSize;
+              const stagePoints = plane.polygon.flatMap((coord) => [
+                imageOffset.x + coord[0] * scaleX * imageScale,
+                imageOffset.y + coord[1] * scaleY * imageScale,
+              ]);
+              const color = HEAT_PLANE_COLORS[idx % HEAT_PLANE_COLORS.length];
+              const centroidStageX = imageOffset.x + plane.centroid[0] * scaleX * imageScale;
+              const centroidStageY = imageOffset.y + plane.centroid[1] * scaleY * imageScale;
+              return (
+                <React.Fragment key={`heat-plane-${plane.plane_id}`}>
+                  <Line
+                    points={stagePoints}
+                    closed
+                    fill={color.fill}
+                    stroke={color.stroke}
+                    strokeWidth={1.8}
+                    lineJoin="round"
+                    lineCap="round"
+                    perfectDrawEnabled={false}
+                    listening={false}
+                    dash={[6, 3]}
+                  />
+                  <KonvaText
+                    x={centroidStageX - 10}
+                    y={centroidStageY - 7}
+                    text={`P${plane.plane_id}`}
+                    fontSize={11}
+                    fontStyle="bold"
+                    fill="white"
+                    listening={false}
+                  />
+                </React.Fragment>
+              );
+            })}
 
             <Line
               points={polygonStagePoints}

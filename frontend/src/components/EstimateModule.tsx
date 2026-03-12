@@ -1440,59 +1440,266 @@ export default function EstimateModule(): JSX.Element {
                       const w = window.open('', '_blank');
                       if (!w) return;
                       const est = materialEstimate;
-                      w.document.write(`<!DOCTYPE html><html><head><title>Roof Estimate — ${address || 'Property'}</title>
-                        <style>
-                          body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px 30px; color: #1e293b; }
-                          h1 { font-size: 22px; margin-bottom: 4px; }
-                          .subtitle { color: #64748b; font-size: 13px; margin-bottom: 24px; }
-                          .section { margin-bottom: 20px; }
-                          .section-title { font-size: 14px; font-weight: 600; color: #334155; border-bottom: 2px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 10px; }
-                          table { width: 100%; border-collapse: collapse; font-size: 13px; }
-                          th { text-align: left; padding: 8px 10px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; color: #64748b; font-weight: 500; }
-                          td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; }
-                          .text-right { text-align: right; }
-                          .total-row { font-weight: 700; font-size: 16px; border-top: 2px solid #1e293b; }
-                          .summary-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
-                          .logo { font-size: 28px; font-weight: 800; color: #059669; letter-spacing: -1px; }
-                          @media print { body { padding: 20px; } }
-                        </style></head><body>
-                        <div class="logo">ZODO</div>
-                        <h1>Roof Estimate Report</h1>
-                        <div class="subtitle">${address || ''} — Generated ${new Date().toLocaleDateString()}</div>
-                        <div class="section">
-                          <div class="section-title">Roof Measurements</div>
-                          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:13px;">
-                            <div><strong>Area:</strong> ${est.roofAreaSqFt.toLocaleString()} sq ft (${est.roofAreaSq.toFixed(1)} SQ)</div>
-                            <div><strong>Pitch:</strong> ${est.pitch}</div>
-                            <div><strong>Planes:</strong> ${est.roofPlanes}</div>
-                            <div><strong>Ridge:</strong> ${est.ridgeLengthFt} ft</div>
-                            <div><strong>Valley:</strong> ${est.valleyLengthFt} ft</div>
-                            <div><strong>Eave:</strong> ${est.eaveLengthFt} ft</div>
-                            <div><strong>Rake:</strong> ${est.rakeLengthFt} ft</div>
-                            <div><strong>Hip:</strong> ${est.hipLengthFt} ft</div>
-                            <div><strong>Complexity:</strong> ${est.complexity}</div>
-                          </div>
-                        </div>
-                        <div class="section">
-                          <div class="section-title">Material Breakdown (${(est.wasteFactor * 100).toFixed(0)}% waste included)</div>
-                          <table>
-                            <thead><tr><th>Material</th><th>Description</th><th class="text-right">Qty</th><th class="text-right">Unit Price</th><th class="text-right">Total</th></tr></thead>
-                            <tbody>
-                              ${est.materials.map(m => `<tr><td><strong>${m.item}</strong></td><td style="color:#64748b">${m.description}</td><td class="text-right">${m.quantity} ${m.unit}</td><td class="text-right">$${m.unitPrice}</td><td class="text-right"><strong>$${m.total.toLocaleString()}</strong></td></tr>`).join('')}
-                            </tbody>
-                          </table>
-                        </div>
-                        <div class="section">
-                          <div class="section-title">Cost Summary</div>
-                          <div class="summary-row"><span>Materials</span><span>$${est.materialCost.toLocaleString()}</span></div>
-                          <div class="summary-row"><span>Labor (${est.adjustedSq} SQ × $120/SQ)</span><span>$${est.laborCost.toLocaleString()}</span></div>
-                          <div class="summary-row"><span>Tear-off & Disposal</span><span>$${est.removalCost.toLocaleString()}</span></div>
-                          <div class="summary-row" style="border-top:1px solid #e2e8f0;padding-top:6px;"><span>Subtotal</span><span>$${est.subtotal.toLocaleString()}</span></div>
-                          <div class="summary-row"><span>HST (13%)</span><span>$${est.tax.toLocaleString()}</span></div>
-                          <div class="summary-row total-row" style="padding-top:8px;margin-top:4px;"><span>Total Estimate</span><span>$${est.totalEstimate.toLocaleString()}</span></div>
-                        </div>
-                        <div style="text-align:center;color:#94a3b8;font-size:11px;margin-top:40px;border-top:1px solid #e2e8f0;padding-top:16px;">Generated by Zodo CRM — zodo.ca</div>
-                      </body></html>`);
+                      const satImg = satellite?.satelliteImageUrl || '';
+                      const reportDate = new Date().toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' });
+                      const totalPerimeter = est.eaveLengthFt + est.rakeLengthFt;
+
+                      // Generate waste factor grid (4% to 15%)
+                      const wasteRows: string[] = [];
+                      for (let pct = 4; pct <= 15; pct++) {
+                        const adjSq = (est.roofAreaSq * (1 + pct / 100)).toFixed(2);
+                        wasteRows.push(`<div class="wf-cell"><span class="wf-pct">${pct}%</span><span class="wf-val">${adjSq} SQ</span></div>`);
+                      }
+
+                      w.document.write(`<!DOCTYPE html><html><head>
+<title>Zodo Roof Report — ${address || 'Property'}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; color: #1e293b; font-size: 12px; line-height: 1.5; }
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page { page-break-after: always; }
+    .no-break { page-break-inside: avoid; }
+  }
+
+  /* Page 1 */
+  .page { max-width: 850px; margin: 0 auto; padding: 0; }
+
+  /* Header bar */
+  .header-bar { background: #dc2626; height: 6px; width: 100%; }
+  .header { display: flex; justify-content: space-between; align-items: center; padding: 20px 32px 16px; border-bottom: 2px solid #e2e8f0; }
+  .logo { font-size: 32px; font-weight: 800; color: #dc2626; letter-spacing: -1px; }
+  .logo span { color: #1e293b; }
+  .address-block { text-align: right; }
+  .address-main { font-size: 15px; font-weight: 700; color: #1e293b; }
+  .address-sub { font-size: 11px; color: #64748b; }
+
+  /* Content */
+  .content { padding: 20px 32px; }
+
+  /* Two column layout */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 20px; }
+
+  /* Project Totals */
+  .section-title { font-size: 13px; font-weight: 700; color: #1e293b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; padding-bottom: 4px; border-bottom: 2px solid #dc2626; }
+  .total-highlight { background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 10px 14px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+  .total-highlight .label { font-weight: 600; color: #dc2626; font-size: 13px; }
+  .total-highlight .value { font-weight: 800; color: #dc2626; font-size: 20px; }
+
+  /* Measurements table */
+  .measure-table { width: 100%; }
+  .measure-row { display: flex; justify-content: space-between; align-items: baseline; padding: 3px 0; border-bottom: 1px dotted #cbd5e1; }
+  .measure-row:last-child { border-bottom: none; }
+  .measure-label { font-weight: 500; color: #475569; font-size: 11.5px; }
+  .measure-label small { font-weight: 400; color: #94a3b8; font-size: 10px; }
+  .measure-value { font-weight: 700; color: #1e293b; font-size: 12px; }
+  .measure-group { margin-bottom: 10px; }
+  .measure-group-title { font-size: 10px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+
+  /* Satellite image */
+  .sat-img { width: 100%; height: 280px; object-fit: cover; border-radius: 8px; border: 1px solid #e2e8f0; }
+
+  /* Waste factor grid */
+  .wf-section { margin-bottom: 20px; }
+  .wf-title { font-size: 12px; font-weight: 700; margin-bottom: 8px; }
+  .wf-title span { font-weight: 400; color: #64748b; }
+  .wf-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+  .wf-cell { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 5px 6px; text-align: center; }
+  .wf-pct { display: block; font-weight: 700; font-size: 11px; color: #475569; }
+  .wf-val { display: block; font-size: 10px; color: #64748b; }
+
+  /* Page 2 — Materials & Cost */
+  .mat-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+  .mat-table th { text-align: left; padding: 8px 10px; background: #f1f5f9; border-bottom: 2px solid #dc2626; font-weight: 600; font-size: 11px; color: #475569; text-transform: uppercase; letter-spacing: 0.3px; }
+  .mat-table td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; font-size: 12px; }
+  .mat-table .desc { color: #64748b; font-size: 10.5px; }
+  .text-right { text-align: right; }
+  .mat-table tbody tr:hover { background: #fafbfc; }
+
+  /* Cost summary */
+  .cost-summary { max-width: 340px; margin-left: auto; }
+  .cost-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 12px; color: #475569; }
+  .cost-row.border-top { border-top: 1px solid #e2e8f0; padding-top: 8px; margin-top: 4px; }
+  .cost-row.total { border-top: 2px solid #1e293b; padding-top: 10px; margin-top: 6px; font-size: 16px; font-weight: 800; color: #1e293b; }
+
+  /* Footer */
+  .footer { margin-top: 32px; padding: 16px 32px; border-top: 2px solid #dc2626; display: flex; justify-content: space-between; align-items: center; }
+  .footer-left { font-size: 10px; color: #94a3b8; max-width: 500px; }
+  .footer-right { text-align: right; }
+  .footer-brand { font-size: 18px; font-weight: 800; color: #dc2626; }
+  .footer-info { font-size: 9px; color: #94a3b8; }
+
+  .disclaimer { background: #fef2f2; border: 1px solid #fecaca; border-radius: 4px; padding: 8px 12px; font-size: 9px; color: #991b1b; text-align: center; margin: 16px 32px; font-weight: 500; }
+</style>
+</head><body>
+
+<!-- PAGE 1: Measurements + Satellite -->
+<div class="page">
+  <div class="header-bar"></div>
+  <div class="header">
+    <div>
+      <div class="logo">Z<span>odo</span></div>
+      <div style="font-size:10px;color:#64748b;font-weight:500;">Roof Measurement Report</div>
+    </div>
+    <div class="address-block">
+      <div class="address-main">${address || 'Property Address'}</div>
+      <div class="address-sub">Report Date: ${reportDate}</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="two-col">
+      <!-- Left: Project Totals + Measurements -->
+      <div>
+        <div class="section-title">Project Totals</div>
+        <div class="total-highlight">
+          <span class="label">Total Roof Area</span>
+          <span class="value">${est.roofAreaSq.toFixed(2)} SQ</span>
+        </div>
+
+        <div class="measure-group">
+          <div class="measure-row">
+            <span class="measure-label">Total Area <small>(sq ft)</small></span>
+            <span class="measure-value">${est.roofAreaSqFt.toLocaleString()} SF</span>
+          </div>
+          <div class="measure-row">
+            <span class="measure-label">Pitch</span>
+            <span class="measure-value">${est.pitch}</span>
+          </div>
+          <div class="measure-row">
+            <span class="measure-label">Roof Planes</span>
+            <span class="measure-value">${est.roofPlanes}</span>
+          </div>
+          <div class="measure-row">
+            <span class="measure-label">Complexity</span>
+            <span class="measure-value" style="text-transform:capitalize">${est.complexity}</span>
+          </div>
+        </div>
+
+        <div class="section-title" style="margin-top:16px;">Roof Geometry</div>
+        <div class="measure-group">
+          <div class="measure-row">
+            <span class="measure-label">Eave</span>
+            <span class="measure-value">${est.eaveLengthFt} LF</span>
+          </div>
+          <div class="measure-row">
+            <span class="measure-label">Rake Edge</span>
+            <span class="measure-value">${est.rakeLengthFt} LF</span>
+          </div>
+          <div class="measure-row">
+            <span class="measure-label">Total Perimeter</span>
+            <span class="measure-value">${totalPerimeter} LF</span>
+          </div>
+        </div>
+
+        <div class="measure-group" style="margin-top:8px;">
+          <div class="measure-row">
+            <span class="measure-label">Ridge</span>
+            <span class="measure-value">${est.ridgeLengthFt} LF</span>
+          </div>
+          <div class="measure-row">
+            <span class="measure-label">Hip</span>
+            <span class="measure-value">${est.hipLengthFt} LF</span>
+          </div>
+          <div class="measure-row">
+            <span class="measure-label">Valley</span>
+            <span class="measure-value">${est.valleyLengthFt} LF</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Satellite Image -->
+      <div>
+        <div class="section-title">Aerial View</div>
+        ${satImg ? `<img class="sat-img" src="${satImg}" alt="Satellite view of ${address || 'property'}" />` : '<div style="height:280px;background:#f1f5f9;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#94a3b8;">No satellite image available</div>'}
+      </div>
+    </div>
+
+    <!-- Waste Factor Table -->
+    <div class="wf-section no-break">
+      <div class="wf-title">Waste Factor <span>(Total Roof Area)</span></div>
+      <div class="wf-grid">
+        ${wasteRows.join('')}
+      </div>
+    </div>
+  </div>
+
+  <div class="disclaimer">
+    THIS REPORT IS FOR ESTIMATION PURPOSES ONLY. VERIFY ALL DIMENSIONS AND TOTALS BEFORE PURCHASING MATERIALS.
+  </div>
+
+  <div class="footer">
+    <div class="footer-left">Zodo CRM Roof Measurement Report</div>
+    <div class="footer-right">
+      <div class="footer-brand">Zodo</div>
+      <div class="footer-info">zodo.ca | ${reportDate} | p.1/2</div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 2: Materials & Cost Estimate -->
+<div class="page">
+  <div class="header-bar"></div>
+  <div class="header">
+    <div>
+      <div class="logo">Z<span>odo</span></div>
+      <div style="font-size:10px;color:#64748b;font-weight:500;">Material & Cost Estimate</div>
+    </div>
+    <div class="address-block">
+      <div class="address-main">${address || 'Property Address'}</div>
+      <div class="address-sub">${reportDate} — ${est.complexity} roof (${(est.wasteFactor * 100).toFixed(0)}% waste factor)</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="section-title">Material Breakdown</div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Material</th>
+          <th>Description</th>
+          <th class="text-right">Quantity</th>
+          <th class="text-right">Unit Price</th>
+          <th class="text-right">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${est.materials.map(m => `<tr>
+          <td><strong>${m.item}</strong></td>
+          <td class="desc">${m.description}</td>
+          <td class="text-right">${m.quantity} ${m.unit}</td>
+          <td class="text-right">$${m.unitPrice.toFixed(2)}</td>
+          <td class="text-right"><strong>$${m.total.toLocaleString()}</strong></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+
+    <div class="section-title">Cost Summary</div>
+    <div class="cost-summary">
+      <div class="cost-row"><span>Materials</span><span>$${est.materialCost.toLocaleString()}</span></div>
+      <div class="cost-row"><span>Labor (${est.adjustedSq} SQ × $120/SQ)</span><span>$${est.laborCost.toLocaleString()}</span></div>
+      <div class="cost-row"><span>Tear-off & Disposal</span><span>$${est.removalCost.toLocaleString()}</span></div>
+      <div class="cost-row border-top"><span>Subtotal</span><span>$${est.subtotal.toLocaleString()}</span></div>
+      <div class="cost-row"><span>HST (13%)</span><span>$${est.tax.toLocaleString()}</span></div>
+      <div class="cost-row total"><span>Total Estimate</span><span>$${est.totalEstimate.toLocaleString()}</span></div>
+    </div>
+  </div>
+
+  <div class="disclaimer">
+    THIS REPORT IS FOR ESTIMATION PURPOSES ONLY. PRICES ARE SUBJECT TO CHANGE BASED ON MATERIAL AVAILABILITY AND SITE CONDITIONS.
+  </div>
+
+  <div class="footer">
+    <div class="footer-left">Zodo CRM Material & Cost Estimate</div>
+    <div class="footer-right">
+      <div class="footer-brand">Zodo</div>
+      <div class="footer-info">zodo.ca | ${reportDate} | p.2/2</div>
+    </div>
+  </div>
+</div>
+
+</body></html>`);
                       w.document.close();
                       setTimeout(() => w.print(), 500);
                     }}

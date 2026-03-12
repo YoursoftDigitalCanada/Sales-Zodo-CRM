@@ -420,6 +420,22 @@ export async function getEagleViewImagery(lat: number, lng: number): Promise<{ i
     return res.data?.data;
 }
 
+/**
+ * Fetch EagleView aerial image for a report (via auth-protected proxy).
+ * Returns a blob URL that can be used as an img src.
+ */
+export async function fetchEagleViewImage(reportId: number): Promise<string | null> {
+    try {
+        const res = await api.get(`/eagleview/orders/${reportId}/image`, { responseType: 'blob' });
+        if (res.data && res.data.size > 100) {
+            return URL.createObjectURL(res.data);
+        }
+        return null;
+    } catch {
+        return null;
+    }
+}
+
 export async function deleteEstimate(id: string): Promise<void> {
     await api.delete(`/roof-estimator/${id}`);
 }

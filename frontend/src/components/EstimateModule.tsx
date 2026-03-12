@@ -24,6 +24,7 @@ import {
   calculateMaterials,
   createEagleViewOrder,
   detectRoof,
+  fetchEagleViewImage,
   fetchParcelBoundary,
   fetchSatelliteImage,
   getEagleViewReport,
@@ -340,6 +341,7 @@ export default function EstimateModule(): JSX.Element {
   const [segmenting, setSegmenting] = useState(false);
   const [eagleViewOrder, setEagleViewOrder] = useState<EagleViewPlaceOrderResponse | null>(null);
   const [eagleViewReport, setEagleViewReport] = useState<EagleViewReport | null>(null);
+  const [eagleViewImageUrl, setEagleViewImageUrl] = useState<string | null>(null);
   const [orderingEagleView, setOrderingEagleView] = useState(false);
   const [pollingEagleView, setPollingEagleView] = useState(false);
   const [materialEstimate, setMaterialEstimate] = useState<MaterialEstimate | null>(null);
@@ -734,6 +736,9 @@ export default function EstimateModule(): JSX.Element {
         try {
           const report = await getEagleViewReport(order.reportIds[0]);
           setEagleViewReport(report);
+          // Try to fetch aerial image
+          const imgUrl = await fetchEagleViewImage(order.reportIds[0]);
+          if (imgUrl) setEagleViewImageUrl(imgUrl);
         } catch { /* report may not be ready yet */ }
       }
 
@@ -758,6 +763,9 @@ export default function EstimateModule(): JSX.Element {
     try {
       const report = await getEagleViewReport(eagleViewOrder.reportIds[0]);
       setEagleViewReport(report);
+      // Update aerial image
+      const imgUrl = await fetchEagleViewImage(eagleViewOrder.reportIds[0]);
+      if (imgUrl) setEagleViewImageUrl(imgUrl);
       toast({
         title: "EagleView Status",
         description: `Report ${report.reportId}: ${report.status}`,
@@ -1305,6 +1313,18 @@ export default function EstimateModule(): JSX.Element {
                     </div>
                   )}
 
+                  {eagleViewImageUrl && (
+                    <div className="rounded-lg border overflow-hidden">
+                      <div className="text-[10px] font-medium text-slate-500 px-2 py-1 bg-slate-50">EagleView Aerial</div>
+                      <img
+                        src={eagleViewImageUrl}
+                        alt="EagleView aerial view"
+                        className="w-full h-40 object-cover"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                    </div>
+                  )}
+
                   <Button
                     type="button"
                     variant="outline"
@@ -1440,7 +1460,7 @@ export default function EstimateModule(): JSX.Element {
                       const w = window.open('', '_blank');
                       if (!w) return;
                       const est = materialEstimate;
-                      const satImg = satellite?.satelliteImageUrl || '';
+                      const satImg = eagleViewImageUrl || satellite?.satelliteImageUrl || '';
                       const reportDate = new Date().toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' });
                       const totalPerimeter = est.eaveLengthFt + est.rakeLengthFt;
 

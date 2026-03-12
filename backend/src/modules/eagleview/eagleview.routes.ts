@@ -25,6 +25,7 @@ router.post('/orders', eagleViewController.createOrder.bind(eagleViewController)
 router.get('/orders', eagleViewController.listOrders.bind(eagleViewController));
 router.get('/orders/:orderId', eagleViewController.getOrder.bind(eagleViewController));
 router.get('/orders/:orderId/report', eagleViewController.downloadReport.bind(eagleViewController));
+router.get('/orders/:orderId/image', eagleViewController.getReportImage.bind(eagleViewController));
 
 // ── Imagery ──────────────────────────────────────────────────────────────
 

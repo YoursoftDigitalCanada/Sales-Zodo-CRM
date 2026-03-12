@@ -109,6 +109,54 @@ class EagleViewController {
         }
     }
 
+    /**
+     * GET /eagleview/orders/:reportId/image
+     * Proxy the EagleView aerial top-down image for a completed report.
+     * Tries fileType=2 (top-down image), falls back to fileType=3 (ortho).
+     */
+    async getReportImage(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const reportId = parseInt(req.params.orderId, 10);
+
+            if (isNaN(reportId)) {
+                res.status(400).json({ success: false, message: 'reportId must be a number' });
+                return;
+            }
+
+            let imageBuffer: Buffer | null = null;
+
+            // Try fileType=2 (top-down aerial image)
+            try {
+                imageBuffer = await eagleViewMeasurementService.getReportFile(reportId, 2, 1);
+            } catch {
+                logger.info('[EagleView] fileType=2 not available, trying fileType=3');
+            }
+
+            // Fallback: fileType=3 (ortho image)
+            if (!imageBuffer || imageBuffer.length < 100) {
+                try {
+                    imageBuffer = await eagleViewMeasurementService.getReportFile(reportId, 3, 1);
+                } catch {
+                    logger.info('[EagleView] fileType=3 not available either');
+                }
+            }
+
+            if (!imageBuffer || imageBuffer.length < 100) {
+                res.status(404).json({ success: false, message: 'No aerial image available for this report' });
+                return;
+            }
+
+            res.set({
+                'Content-Type': 'image/jpeg',
+                'Content-Length': imageBuffer.length.toString(),
+                'Cache-Control': 'public, max-age=86400',
+            });
+            res.send(imageBuffer);
+        } catch (error) {
+            next(error);
+        }
+    }
+
     // ── Imagery ──────────────────────────────────────────────────────────
 
     /**

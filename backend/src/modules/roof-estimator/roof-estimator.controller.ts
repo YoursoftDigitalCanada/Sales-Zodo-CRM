@@ -641,15 +641,17 @@ export class RoofEstimatorController {
 
     async checkAiHealth(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const [aiHealthy, heatHealthy] = await Promise.all([
+            const [aiHealthy, heatHealthy, samHealthy] = await Promise.all([
                 roofEstimatorService.checkAiHealth(),
                 roofEstimatorService.checkHeatHealth(),
+                roofEstimatorService.checkSamHealth(),
             ]);
             sendSuccess(res, {
-                healthy: aiHealthy || heatHealthy,
+                healthy: aiHealthy || heatHealthy || samHealthy,
                 services: {
                     yolov8: { healthy: aiHealthy, service: 'ai-roof-estimator' },
                     heat: { healthy: heatHealthy, service: 'heat-roof-planes' },
+                    sam: { healthy: samHealthy, service: 'sam-roof-segmentation' },
                 },
             });
         } catch (error) {
@@ -670,6 +672,21 @@ export class RoofEstimatorController {
                 currentCondition,
             });
             sendSuccess(res, estimate, 'Estimate generated successfully');
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async segmentRoof(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const { satelliteImageUrl } = req.body;
+            if (!satelliteImageUrl) {
+                res.status(400).json({ success: false, message: 'satelliteImageUrl is required' });
+                return;
+            }
+
+            const result = await roofEstimatorService.segmentRoof(satelliteImageUrl);
+            sendSuccess(res, result);
         } catch (error) {
             next(error);
         }

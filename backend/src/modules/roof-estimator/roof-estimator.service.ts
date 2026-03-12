@@ -16,6 +16,7 @@ const ATTOM_API_KEY = config.integrations.attomApiKey || '';
 const OPENAI_API_KEY = config.ai.openaiApiKey || '';
 const AI_SERVICE_URL = config.integrations.aiServiceUrl;
 const HEAT_SERVICE_URL = config.integrations.heatServiceUrl;
+const SAM_SERVICE_URL = config.integrations.samServiceUrl;
 const NOMINATIM_SEARCH_URL = 'https://nominatim.openstreetmap.org/search';
 
 // ── In-memory parcel cache (keyed by rounded lat,lng) ─────────────────────
@@ -796,6 +797,60 @@ export class RoofEstimatorService {
     async checkHeatHealth(): Promise<boolean> {
         try {
             const response = await axios.get(`${HEAT_SERVICE_URL}/health`, { timeout: 5000 });
+            return response.data?.model_loaded === true;
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Send satellite image URL to SAM service for roof segmentation.
+     * Returns colored overlay image (base64), roof polygon, and mask area.
+     */
+    async segmentRoof(imageUrl: string): Promise<{
+        found: boolean;
+        roof_polygon: number[][];
+        mask_area: number;
+        overlay_image: string;
+        bbox: number[];
+        centroid: number[];
+        score: number;
+        image_size: number[];
+        inference_time_seconds: number;
+    }> {
+        let retries = 2;
+        let lastError: Error | null = null;
+
+        while (retries >= 0) {
+            try {
+                const response = await axios.post(
+                    `${SAM_SERVICE_URL}/segment-roof`,
+                    { image_url: imageUrl },
+                    { timeout: 120000 }, // 120s — SAM on CPU can be slow
+                );
+                return response.data;
+            } catch (error: any) {
+                lastError = error;
+                retries--;
+                if (retries >= 0) {
+                    logger.warn(`SAM service call failed, retrying... (${retries + 1} left)`, {
+                        error: error.message,
+                        status: error?.response?.status,
+                    });
+                    await new Promise((r) => setTimeout(r, 1000));
+                }
+            }
+        }
+
+        throw new Error(`SAM service unavailable after retries: ${lastError?.message}`);
+    }
+
+    /**
+     * Check SAM service health
+     */
+    async checkSamHealth(): Promise<boolean> {
+        try {
+            const response = await axios.get(`${SAM_SERVICE_URL}/health`, { timeout: 5000 });
             return response.data?.model_loaded === true;
         } catch {
             return false;

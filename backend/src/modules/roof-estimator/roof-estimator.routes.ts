@@ -256,6 +256,13 @@ router.post(
     roofEstimatorController.generateEstimate.bind(roofEstimatorController)
 );
 
+// ── SAM roof segmentation ─────────────────────────────────────────────────
+router.post(
+    '/segment-roof',
+    requirePermission(PERMISSIONS.ROOF_ESTIMATOR_VIEW),
+    roofEstimatorController.segmentRoof.bind(roofEstimatorController)
+);
+
 // ── AI health check ───────────────────────────────────────────────────────
 router.get(
     '/ai-health',

@@ -1,0 +1,22 @@
+__pycache__
+*.pyc
+*.pyo
+.git
+.gitignore
+*.md
+heat-model/1.- DATA PREPARATION
+heat-model/3.- DATA POST-PROCESSING
+heat-model/4.- VECTORIZATION
+heat-model/5.-PLOTS
+heat-model/.git
+heat-model/2.- TRAINING-TESTING/heat-master/data
+heat-model/2.- TRAINING-TESTING/heat-master/runs
+heat-model/2.- TRAINING-TESTING/heat-master/results
+heat-model/2.- TRAINING-TESTING/heat-master/qualitative_outdoor
+heat-model/2.- TRAINING-TESTING/heat-master/s3d_preprocess
+heat-model/2.- TRAINING-TESTING/heat-master/s3d_floorplan_eval
+heat-model/2.- TRAINING-TESTING/heat-master/assets
+*.ipynb
+*.npy
+*.svg
+*.pdf

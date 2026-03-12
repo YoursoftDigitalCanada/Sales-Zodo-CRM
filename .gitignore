@@ -35,3 +35,4 @@ backend/prisma/*.db-journal
 *.tgz
 .cache/
 .temp/
+ai-roof-service/heat-model/

@@ -21,14 +21,17 @@ import { getClients } from "@/features/clients/services/clients-service";
 import { getLeads } from "@/features/leads/services/leads-service";
 import {
   autocompleteAddress,
+  createEagleViewOrder,
   detectRoof,
   fetchParcelBoundary,
   fetchSatelliteImage,
+  getEagleViewOrder,
   getGoogleMapsJsApiKey,
   getPlaceDetails,
   saveEstimate,
   segmentRoof,
   type DetectionResult,
+  type EagleViewOrder,
   type ParcelBoundaryResult,
   type SatelliteResult,
   type SaveEstimatePayload,
@@ -332,6 +335,9 @@ export default function EstimateModule(): JSX.Element {
   const [creatingAndSaving, setCreatingAndSaving] = useState(false);
   const [samOverlay, setSamOverlay] = useState<string | null>(null);
   const [segmenting, setSegmenting] = useState(false);
+  const [eagleViewOrder, setEagleViewOrder] = useState<EagleViewOrder | null>(null);
+  const [orderingEagleView, setOrderingEagleView] = useState(false);
+  const [pollingEagleView, setPollingEagleView] = useState(false);
   const [downloadingProposal, setDownloadingProposal] = useState(false);
   const [searchingAddress, setSearchingAddress] = useState(false);
   const [parcelData, setParcelData] = useState<ParcelBoundaryResult | null>(null);
@@ -697,6 +703,60 @@ export default function EstimateModule(): JSX.Element {
       setSegmenting(false);
     }
   }, [satellite, toast]);
+
+  const handleOrderEagleView = useCallback(async () => {
+    if (!satellite || !address) return;
+
+    setOrderingEagleView(true);
+    try {
+      // Parse address into components
+      const parts = address.split(",").map((s: string) => s.trim());
+      const addressLine1 = parts[0] || address;
+      const city = parts[1] || "";
+      const stateZip = (parts[2] || "").split(" ");
+      const state = stateZip[0] || "";
+      const postalCode = stateZip[1] || "";
+
+      const order = await createEagleViewOrder(
+        { addressLine1, city, state, postalCode },
+      );
+
+      setEagleViewOrder(order);
+      toast({
+        title: "EagleView Order Created",
+        description: `Order ${order.orderId} submitted. Status: ${order.status}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "EagleView order failed",
+        description: error?.response?.data?.message || error?.message || "Unexpected error",
+        variant: "destructive",
+      });
+    } finally {
+      setOrderingEagleView(false);
+    }
+  }, [satellite, address, toast]);
+
+  const handleCheckEagleViewStatus = useCallback(async () => {
+    if (!eagleViewOrder?.orderId) return;
+    setPollingEagleView(true);
+    try {
+      const updated = await getEagleViewOrder(eagleViewOrder.orderId);
+      setEagleViewOrder(updated);
+      toast({
+        title: "EagleView Status",
+        description: `Order ${updated.orderId}: ${updated.status}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Status check failed",
+        description: error?.message || "Unexpected error",
+        variant: "destructive",
+      });
+    } finally {
+      setPollingEagleView(false);
+    }
+  }, [eagleViewOrder, toast]);
 
   const handlePolygonChange = useCallback(
     (points: PolygonPoint[]) => {
@@ -1144,6 +1204,92 @@ export default function EstimateModule(): JSX.Element {
                   )}
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* EagleView Measurement Panel */}
+          {satellite && (
+            <div className="rounded-xl border bg-white p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                  <Satellite className="h-4 w-4 text-orange-500" />
+                  EagleView Report
+                </h3>
+                {eagleViewOrder && (
+                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                    eagleViewOrder.status === 'completed' || eagleViewOrder.status === 'Completed'
+                      ? 'bg-green-50 text-green-700 border border-green-200'
+                      : eagleViewOrder.status === 'failed' || eagleViewOrder.status === 'Failed'
+                        ? 'bg-red-50 text-red-700 border border-red-200'
+                        : 'bg-amber-50 text-amber-700 border border-amber-200'
+                  }`}>
+                    {eagleViewOrder.status}
+                  </span>
+                )}
+              </div>
+
+              {!eagleViewOrder ? (
+                <Button
+                  type="button"
+                  className="w-full bg-orange-500 hover:bg-orange-600 text-white"
+                  onClick={handleOrderEagleView}
+                  disabled={orderingEagleView}
+                >
+                  {orderingEagleView ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                  {orderingEagleView ? "Ordering..." : "Order Measurement Report"}
+                </Button>
+              ) : (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="rounded-lg bg-slate-50 p-2">
+                      <div className="text-[10px] text-slate-400">Order ID</div>
+                      <div className="font-mono text-slate-700 truncate">{eagleViewOrder.orderId}</div>
+                    </div>
+                    <div className="rounded-lg bg-slate-50 p-2">
+                      <div className="text-[10px] text-slate-400">Status</div>
+                      <div className="font-medium text-slate-700">{eagleViewOrder.status}</div>
+                    </div>
+                    {eagleViewOrder.totalArea && (
+                      <div className="rounded-lg bg-slate-50 p-2">
+                        <div className="text-[10px] text-slate-400">Total Area</div>
+                        <div className="font-medium text-slate-700">{eagleViewOrder.totalArea.toLocaleString()} sq ft</div>
+                      </div>
+                    )}
+                    {eagleViewOrder.totalSquares && (
+                      <div className="rounded-lg bg-slate-50 p-2">
+                        <div className="text-[10px] text-slate-400">Squares</div>
+                        <div className="font-medium text-slate-700">{eagleViewOrder.totalSquares}</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {eagleViewOrder.roofFacets && eagleViewOrder.roofFacets.length > 0 && (
+                    <div className="rounded-lg border p-2">
+                      <div className="text-[10px] font-medium text-slate-500 mb-1">Roof Facets</div>
+                      <div className="space-y-1">
+                        {eagleViewOrder.roofFacets.map((f, i) => (
+                          <div key={i} className="flex justify-between text-[11px] text-slate-600">
+                            <span>Facet {f.id}</span>
+                            <span>{f.area} sqft • {f.pitch} • {f.orientation}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={handleCheckEagleViewStatus}
+                    disabled={pollingEagleView}
+                  >
+                    {pollingEagleView ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : null}
+                    Refresh Status
+                  </Button>
+                </div>
+              )}
             </div>
           )}
 

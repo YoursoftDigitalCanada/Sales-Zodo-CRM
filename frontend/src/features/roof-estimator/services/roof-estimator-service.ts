@@ -353,6 +353,61 @@ export async function saveEstimate(payload: SaveEstimatePayload): Promise<RoofEs
     return res.data?.data;
 }
 
+// ── EagleView Integration ────────────────────────────────────────────────
+
+export interface EagleViewOrderAddress {
+    addressLine1: string;
+    addressLine2?: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country?: string;
+}
+
+export interface EagleViewOrder {
+    orderId: string;
+    status: string;
+    referenceId?: string;
+    createdAt?: string;
+    estimatedCompletionDate?: string;
+    reportUrl?: string;
+    totalArea?: number;
+    totalSquares?: number;
+    roofFacets?: Array<{
+        id: string;
+        area: number;
+        pitch: string;
+        orientation: string;
+    }>;
+}
+
+export interface EagleViewHealth {
+    configured: boolean;
+    authenticated: boolean;
+    baseUrl: string;
+    environment: string;
+}
+
+export async function createEagleViewOrder(address: EagleViewOrderAddress, referenceId?: string): Promise<EagleViewOrder> {
+    const res = await api.post("/eagleview/orders", { address, referenceId });
+    return res.data?.data;
+}
+
+export async function getEagleViewOrder(orderId: string): Promise<EagleViewOrder> {
+    const res = await api.get(`/eagleview/orders/${orderId}`);
+    return res.data?.data;
+}
+
+export async function getEagleViewHealth(): Promise<EagleViewHealth> {
+    const res = await api.get("/eagleview/health");
+    return res.data?.data;
+}
+
+export async function getEagleViewImagery(lat: number, lng: number): Promise<{ imageUrl: string; captureDate?: string }> {
+    const res = await api.get("/eagleview/imagery", { params: { lat, lng } });
+    return res.data?.data;
+}
+
 export async function deleteEstimate(id: string): Promise<void> {
     await api.delete(`/roof-estimator/${id}`);
 }

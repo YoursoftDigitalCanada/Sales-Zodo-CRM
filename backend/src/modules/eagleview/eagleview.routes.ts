@@ -14,39 +14,31 @@
 
 import { Router } from 'express';
 import { eagleViewController } from './eagleview.controller';
-import { loadEmployee } from '../../common/middleware/auth.middleware';
-import { requirePermission } from '../../common/middleware/permission.middleware';
-import { PERMISSIONS } from '../../common/constants/permissions';
 
 const router = Router();
 
-// All EagleView routes require authentication (enforced by protectedRouter)
-// and the roof-estimator view permission
-const permission = requirePermission(PERMISSIONS.ROOF_ESTIMATOR_VIEW);
+// EagleView routes are protected by the parent protectedRouter
+// (authenticate + tenantContext + moduleGuard)
 
 // ── Measurement Orders ───────────────────────────────────────────────────
 
 router.post(
     '/orders',
-    permission,
     eagleViewController.createOrder.bind(eagleViewController),
 );
 
 router.get(
     '/orders',
-    permission,
     eagleViewController.listOrders.bind(eagleViewController),
 );
 
 router.get(
     '/orders/:orderId',
-    permission,
     eagleViewController.getOrder.bind(eagleViewController),
 );
 
 router.get(
     '/orders/:orderId/report',
-    permission,
     eagleViewController.downloadReport.bind(eagleViewController),
 );
 
@@ -54,7 +46,6 @@ router.get(
 
 router.get(
     '/imagery',
-    permission,
     eagleViewController.getPropertyImagery.bind(eagleViewController),
 );
 
@@ -62,7 +53,6 @@ router.get(
 
 router.get(
     '/health',
-    permission,
     eagleViewController.healthCheck.bind(eagleViewController),
 );
 

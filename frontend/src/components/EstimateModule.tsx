@@ -581,14 +581,7 @@ export default function EstimateModule(): JSX.Element {
       });
       return;
     }
-    if (!selectedAddressPlaceId) {
-      toast({
-        title: "Suggestion required",
-        description: "Select an autocomplete suggestion before loading satellite imagery.",
-        variant: "destructive",
-      });
-      return;
-    }
+
 
     setLoadingSatellite(true);
     setShowAddressSuggestions(false);
@@ -1015,9 +1008,7 @@ export default function EstimateModule(): JSX.Element {
                       if (event.key === "Enter") {
                         event.preventDefault();
                         setShowAddressSuggestions(false);
-                        if (selectedAddressPlaceId) {
-                          handleLoadSatellite();
-                        }
+                        handleLoadSatellite();
                       }
                     }}
                     className="pl-9"
@@ -1043,7 +1034,7 @@ export default function EstimateModule(): JSX.Element {
                 </div>
               </div>
 
-              <Button type="button" variant="outline" className="mt-auto" onClick={handleLoadSatellite} disabled={loadingSatellite || !selectedAddressPlaceId}>
+              <Button type="button" variant="outline" className="mt-auto" onClick={handleLoadSatellite} disabled={loadingSatellite}>
                 {loadingSatellite ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Satellite className="mr-2 h-4 w-4" />}
                 Load Satellite
               </Button>

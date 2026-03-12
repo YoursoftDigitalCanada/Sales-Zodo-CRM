@@ -68,6 +68,8 @@ import permissionsRoutes from '../modules/permissions/permissions.routes';
 // AI modules
 import roofEstimatorRoutes from '../modules/roof-estimator/roof-estimator.routes';
 import copilotRoutes from '../modules/copilot/copilot.routes';
+import eagleViewRoutes from '../modules/eagleview/eagleview.routes';
+import { eagleViewWebhookRouter } from '../modules/eagleview/eagleview.routes';
 
 // Timeline module
 import timelineRoutes from '../modules/timeline/timeline.routes';
@@ -102,6 +104,7 @@ export function registerRoutes(app: Application): void {
   apiRouter.use('/public', quotesPublicRoutes);
   apiRouter.use('/public', proposalsPublicRoutes);
   apiRouter.use('/webhooks/leads', leadSourceWebhooksRoutes);
+  apiRouter.use('/webhooks', eagleViewWebhookRouter);
 
   // =========================================================================
   // SUPER ADMIN ROUTES (separate auth — NOT behind CRM middleware)
@@ -188,6 +191,7 @@ export function registerRoutes(app: Application): void {
   // AI Modules
   protectedRouter.use('/roof-estimator', roofEstimatorRoutes);
   protectedRouter.use('/copilot', copilotRoutes);
+  protectedRouter.use('/eagleview', eagleViewRoutes);
 
   // Timeline
   protectedRouter.use('/timeline', timelineRoutes);
@@ -263,6 +267,7 @@ export function registerRoutes(app: Application): void {
         // AI Modules
         roofEstimator: `${apiPrefix}/roof-estimator`,
         copilot: `${apiPrefix}/copilot`,
+        eagleview: `${apiPrefix}/eagleview`,
         contracts: `${apiPrefix}/contracts`,
         proposals: `${apiPrefix}/proposals`,
       },

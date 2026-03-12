@@ -70,6 +70,13 @@ const envSchema = z.object({
   NEARMAP_API_KEY: z.string().optional(),
   ATTOM_API_KEY: z.string().optional(),
 
+  // EagleView integration
+  EAGLEVIEW_CLIENT_ID: z.string().optional(),
+  EAGLEVIEW_CLIENT_SECRET: z.string().optional(),
+  EAGLEVIEW_BASE_URL: z.string().default('https://webservices-integrations.eagleview.com'),
+  EAGLEVIEW_TOKEN_URL: z.string().default('https://apicenter.eagleview.com/oauth2/v1/token'),
+  EAGLEVIEW_WEBHOOK_SECRET: z.string().optional(),
+
   // Super Admin
   ADMIN_JWT_SECRET: z.string().min(32).optional(),
   ADMIN_JWT_EXPIRY: z.string().default('4h'),
@@ -157,6 +164,13 @@ export const config = {
     samServiceUrl: parsed.data.SAM_SERVICE_URL,
     nearmapApiKey: parsed.data.NEARMAP_API_KEY,
     attomApiKey: parsed.data.ATTOM_API_KEY,
+    eagleview: {
+      clientId: parsed.data.EAGLEVIEW_CLIENT_ID,
+      clientSecret: parsed.data.EAGLEVIEW_CLIENT_SECRET,
+      baseUrl: parsed.data.EAGLEVIEW_BASE_URL,
+      tokenUrl: parsed.data.EAGLEVIEW_TOKEN_URL,
+      webhookSecret: parsed.data.EAGLEVIEW_WEBHOOK_SECRET,
+    },
   },
   admin: {
     jwtSecret: parsed.data.ADMIN_JWT_SECRET || parsed.data.JWT_ACCESS_SECRET,

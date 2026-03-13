@@ -122,7 +122,7 @@ export class RoofEstimatorService {
 
     private buildGoogleComponentsForAddress(address: string): string {
         const parsed = this.buildGeocodeInput(address);
-        const components: string[] = ['country:CA'];
+        const components: string[] = ['country:ca|country:us'];
         if (parsed.postalCode) {
             components.push(`postal_code:${parsed.postalCode}`);
         }
@@ -287,7 +287,7 @@ export class RoofEstimatorService {
             )
         ).map((q, idx) => ({
             q,
-            countrycodes: idx < 2 ? 'ca' : undefined,
+            countrycodes: idx < 2 ? 'ca,us' : undefined,
         }));
 
         const collectedResults: NominatimResult[] = [];
@@ -374,7 +374,7 @@ export class RoofEstimatorService {
                     format: 'json',
                     limit: 6,
                     addressdetails: 1,
-                    countrycodes: 'ca',
+                    countrycodes: 'ca,us',
                 },
                 headers: {
                     'User-Agent': 'ZODO-CRM-RoofEstimator/1.0 (support@zodo.ca)',
@@ -416,7 +416,7 @@ export class RoofEstimatorService {
                     input,
                     key: apiKey,
                     types: 'address',
-                    components: 'country:ca',
+                    components: 'country:ca|country:us',
                     language: 'en',
                 },
                 timeout: 5000,
@@ -432,7 +432,7 @@ export class RoofEstimatorService {
             }
             const predictions = (response.data.predictions || []).map((p: any) => ({
                 description: p.description,
-                placeId: p.place_id,
+                placeId: p.place_id || '',
             }));
             if (predictions.length > 0) {
                 return predictions;

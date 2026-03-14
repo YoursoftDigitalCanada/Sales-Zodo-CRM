@@ -17,11 +17,11 @@ interface StatCardProps {
 }
 
 const colorMap = {
-  cyan: { icon: "#0891B2", bg: "rgba(8,145,178,0.06)" },
-  green: { icon: "#16A34A", bg: "rgba(22,163,74,0.06)" },
-  orange: { icon: "#EA580C", bg: "rgba(234,88,12,0.06)" },
+  cyan: { icon: "#6637F4", bg: "rgba(102,55,244,0.06)" },
+  green: { icon: "#01C44A", bg: "rgba(1,196,74,0.06)" },
+  orange: { icon: "#FF7B36", bg: "rgba(255,123,54,0.06)" },
   yellow: { icon: "#D97706", bg: "rgba(217,119,6,0.06)" },
-  purple: { icon: "#7C3AED", bg: "rgba(124,58,237,0.06)" },
+  purple: { icon: "#6637F4", bg: "rgba(102,55,244,0.06)" },
 };
 
 export function StatCard({
@@ -41,7 +41,7 @@ export function StatCard({
   const cm = colorMap[color];
 
   return (
-    <div className="rounded-lg bg-white p-4 card-interactive"
+    <div className="rounded-2xl bg-white p-4 card-interactive"
       style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.04), 0 6px 16px rgba(15,23,42,0.06)' }}>
       {/* Header: Title + Trend */}
       <div className="flex items-center justify-between mb-3">
@@ -116,8 +116,8 @@ export function StatCard({
       {/* AI Insight */}
       {aiInsight && (
         <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-[rgba(15,23,42,0.04)] ai-insight-enter">
-          <Sparkles size={10} className="text-[#0891B2] flex-shrink-0" />
-          <span className="text-[10px] text-[#0891B2] font-medium">{aiInsight}</span>
+          <Sparkles size={10} className="text-[#6637F4] flex-shrink-0" />
+          <span className="text-[10px] text-[#6637F4] font-medium">{aiInsight}</span>
         </div>
       )}
     </div>

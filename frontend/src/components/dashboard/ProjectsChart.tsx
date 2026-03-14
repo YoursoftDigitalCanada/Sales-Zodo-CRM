@@ -74,7 +74,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         animate={{ opacity: 1, y: 0 }}
         className="bg-[#1a1a2e] border border-[rgba(15,23,42,0.06)] rounded-md p-4 card-shadow"
       >
-        <p className="text-[#0891B2] font-semibold mb-3 text-sm">{label} {new Date().getFullYear()}</p>
+        <p className="text-[#6637F4] font-semibold mb-3 text-sm">{label} {new Date().getFullYear()}</p>
         <div className="space-y-2">
           {payload.map((entry: any, index: number) => (
             <div key={index} className="flex items-center justify-between gap-6">
@@ -187,9 +187,9 @@ export function ProjectsChart() {
   ];
 
   const chartColors = {
-    projects: '#22D3EE',
-    completed: '#FBBF24',
-    pending: '#1a1a2e',
+    projects: '#6637F4',
+    completed: '#01C44A',
+    pending: '#FF7B36',
   };
 
   const renderChart = () => {
@@ -286,20 +286,20 @@ export function ProjectsChart() {
             </div>
 
             <div className="relative">
-              <select value={selectedPeriod} onChange={(e) => setSelectedPeriod(e.target.value)} className="appearance-none bg-white/5 border-none rounded-md px-4 py-2.5 pr-8 text-xs font-medium text-[#0F172A] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#22D3EE]/20">
+              <select value={selectedPeriod} onChange={(e) => setSelectedPeriod(e.target.value)} className="appearance-none bg-white/5 border-none rounded-lg px-4 py-2.5 pr-8 text-xs font-medium text-[#0F172A] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#6637F4]/20">
                 {periods.map((period) => (<option key={period.id} value={period.id}>{period.label}</option>))}
               </select>
               <Calendar size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#475569] pointer-events-none" />
             </div>
 
             <div className="flex items-center gap-2">
-              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleRefresh} className="p-2.5 rounded-md bg-white/5 text-[#94A3B8] hover:text-[#0891B2] hover:bg-[#0891B2]/10 transition-all">
+              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleRefresh} className="p-2.5 rounded-md bg-white/5 text-[#94A3B8] hover:text-[#6637F4] hover:bg-[#6637F4]/10 transition-all">
                 <RefreshCw size={16} className={cn(isRefreshing && "animate-spin")} />
               </motion.button>
-              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="p-2.5 rounded-md bg-white/5 text-[#94A3B8] hover:text-[#0891B2] hover:bg-[#0891B2]/10 transition-all">
+              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="p-2.5 rounded-md bg-white/5 text-[#94A3B8] hover:text-[#6637F4] hover:bg-[#6637F4]/10 transition-all">
                 <Download size={16} />
               </motion.button>
-              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="p-2.5 rounded-md bg-white/5 text-[#94A3B8] hover:text-[#0891B2] hover:bg-[#0891B2]/10 transition-all">
+              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="p-2.5 rounded-md bg-white/5 text-[#94A3B8] hover:text-[#6637F4] hover:bg-[#6637F4]/10 transition-all">
                 <MoreHorizontal size={16} />
               </motion.button>
             </div>
@@ -309,10 +309,10 @@ export function ProjectsChart() {
         {/* Summary Stats */}
         <div className="grid grid-cols-3 gap-4 mt-6">
           {summaryStats.map((stat, index) => (
-            <motion.div key={index} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }} className={cn("p-4 rounded-md border transition-all hover:shadow-md", stat.color === 'teal' && "bg-[#0891B2]/5 border-[#22D3EE]/20", stat.color === 'gold' && "bg-[#D97706]/5 border-[#FBBF24]/20", stat.color === 'navy' && "bg-[#1a1a2e]/5 border-[#1a1a2e]/20")}>
+            <motion.div key={index} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }} className={cn("p-4 rounded-lg border transition-all hover:shadow-md", stat.color === 'teal' && "bg-[#6637F4]/5 border-[#6637F4]/20", stat.color === 'gold' && "bg-[#D97706]/5 border-[#FBBF24]/20", stat.color === 'navy' && "bg-[#FF7B36]/5 border-[#FF7B36]/20")}>
               <p className="text-xs text-[#94A3B8] mb-1">{stat.label}</p>
               <div className="flex items-center justify-between">
-                <span className={cn("text-xl font-bold", stat.color === 'teal' && "text-[#0891B2]", stat.color === 'gold' && "text-[#D97706]", stat.color === 'navy' && "text-[#0F172A]")}>{stat.value}</span>
+                <span className={cn("text-xl font-bold", stat.color === 'teal' && "text-[#6637F4]", stat.color === 'gold' && "text-[#D97706]", stat.color === 'navy' && "text-[#FF7B36]")}>{stat.value}</span>
               </div>
             </motion.div>
           ))}
@@ -343,7 +343,7 @@ export function ProjectsChart() {
             Last updated: <span className="text-[#475569] font-medium">{lastUpdated}</span>
           </p>
           <div className="flex items-center gap-4">
-            <button className="text-xs text-[#0891B2] font-medium hover:underline flex items-center gap-1">
+            <button className="text-xs text-[#6637F4] font-medium hover:underline flex items-center gap-1">
               View Detailed Report
               <ArrowUpRight size={12} />
             </button>

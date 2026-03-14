@@ -62,10 +62,10 @@ function toDisplay(p: ProjectApi): ProjectDisplay {
 }
 
 const statusStyles: Record<string, string> = {
-  teal: "bg-[#0891B2]/10 text-[#0891B2] border border-[#22D3EE]/20",
+  teal: "bg-[#6637F4]/10 text-[#6637F4] border border-[#6637F4]/20",
   gold: "bg-[#D97706]/10 text-[#D97706] border border-[#FBBF24]/20",
   green: "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20",
-  navy: "bg-[#1a1a2e]/10 text-[#0F172A] border border-[#1a1a2e]/20",
+  navy: "bg-[#FF7B36]/10 text-[#FF7B36] border border-[#FF7B36]/20",
 };
 
 const avatarGradients = [
@@ -97,20 +97,20 @@ export function ProjectsTable() {
   }, []);
 
   return (
-    <div className="bg-white/5 rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden">
+    <div className="bg-white/5 rounded-2xl border border-[rgba(15,23,42,0.06)] overflow-hidden">
       {/* Header */}
       <div className="p-6 border-b border-[rgba(15,23,42,0.06)]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-md bg-[#0891B2]/10 flex items-center justify-center">
-              <FolderKanban size={18} className="text-[#0891B2]" />
+            <div className="w-10 h-10 rounded-lg bg-[#6637F4]/10 flex items-center justify-center">
+              <FolderKanban size={18} className="text-[#6637F4]" />
             </div>
             <div>
               <h3 className="font-semibold text-[#0F172A]">Projects Status</h3>
               <p className="text-xs text-[#475569]">Track your ongoing work</p>
             </div>
           </div>
-          <button onClick={() => navigate("/projects")} className="flex items-center gap-1 text-sm text-[#0891B2] font-medium hover:underline group">
+          <button onClick={() => navigate("/projects")} className="flex items-center gap-1 text-sm text-[#6637F4] font-medium hover:underline group">
             View All
             <ArrowUpRight size={14} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
           </button>
@@ -151,7 +151,7 @@ export function ProjectsTable() {
                   onClick={() => navigate(`/projects/${project.id}`)}
                 >
                   <td className="py-4 px-6">
-                    <span className="font-medium text-[#0F172A] group-hover:text-[#0891B2] transition-colors">{project.name}</span>
+                    <span className="font-medium text-[#0F172A] group-hover:text-[#6637F4] transition-colors">{project.name}</span>
                   </td>
                   <td className="py-4 px-6">
                     <div className="flex items-center">

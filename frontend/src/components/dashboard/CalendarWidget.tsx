@@ -148,9 +148,9 @@ export function CalendarWidget() {
 
   const getColorClasses = (color: string, variant: 'bg' | 'text' | 'border' | 'gradient') => {
     const colors: Record<string, Record<string, string>> = {
-      teal: { bg: 'bg-[#0891B2]', text: 'text-[#0891B2]', border: 'border-[#22D3EE]', gradient: 'from-[#22D3EE]/70' },
+      teal: { bg: 'bg-[#6637F4]', text: 'text-[#6637F4]', border: 'border-[#6637F4]', gradient: 'from-[#6637F4]/70' },
       gold: { bg: 'bg-[#D97706]', text: 'text-[#D97706]', border: 'border-[#FBBF24]', gradient: 'from-[#FBBF24]/70' },
-      navy: { bg: 'bg-[#1a1a2e]', text: 'text-[#0F172A]', border: 'border-[#1a1a2e]', gradient: 'from-[#1a1a2e]/70' }
+      navy: { bg: 'bg-[#FF7B36]', text: 'text-[#FF7B36]', border: 'border-[#FF7B36]', gradient: 'from-[#FF7B36]/70' }
     };
     return colors[color]?.[variant] || colors.teal[variant];
   };
@@ -159,13 +159,13 @@ export function CalendarWidget() {
     <Card className="overflow-hidden border-none card-shadow bg-white/5">
       {/* Header */}
       <div className="bg-[#F1F5F9]/90 p-6 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-[#0891B2]/10 rounded-full blur-3xl" />
+        <div className="absolute top-0 right-0 w-32 h-32 bg-[#6637F4]/10 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 w-24 h-24 bg-[#D97706]/10 rounded-full blur-2xl" />
 
         <div className="relative flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <motion.div whileHover={{ rotate: 10 }} className="h-10 w-10 rounded-md bg-[#0891B2]/20 flex items-center justify-center">
-              <CalendarDays className="h-5 w-5 text-[#0891B2]" />
+            <motion.div whileHover={{ rotate: 10 }} className="h-10 w-10 rounded-lg bg-[#6637F4]/20 flex items-center justify-center">
+              <CalendarDays className="h-5 w-5 text-[#6637F4]" />
             </motion.div>
             <div>
               <h3 className="text-lg font-bold text-[#0F172A]">Calendar</h3>
@@ -176,7 +176,7 @@ export function CalendarWidget() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => navigate("/bookings/new")}
-            className="flex items-center gap-2 px-3 py-1.5 bg-[#0891B2] text-white text-xs font-medium rounded-md hover:bg-[#0891B2]/90 transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 bg-[#6637F4] text-white text-xs font-medium rounded-lg hover:bg-[#6637F4]/90 transition-colors"
           >
             <Plus size={14} />
             Add Event
@@ -190,7 +190,7 @@ export function CalendarWidget() {
           </motion.button>
           <motion.div key={currentDate.getMonth()} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="text-center">
             <span className="text-xl font-bold text-[#0F172A]">{monthNames[currentDate.getMonth()]}</span>
-            <span className="text-xl font-light text-[#0891B2] ml-2">{currentDate.getFullYear()}</span>
+            <span className="text-xl font-light text-[#6637F4] ml-2">{currentDate.getFullYear()}</span>
           </motion.div>
           <motion.button whileHover={{ scale: 1.1, x: 2 }} whileTap={{ scale: 0.9 }} onClick={nextMonth} className="p-2 rounded-md bg-white/5/10 hover:bg-white/5/20 text-[#0F172A] transition-colors">
             <ChevronRight size={18} />
@@ -220,11 +220,11 @@ export function CalendarWidget() {
               const hasMeeting = eventDays.has(date);
 
               return (
-                <motion.button key={date} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }} onClick={() => setSelectedDate(date)} className={cn("h-10 w-full flex flex-col items-center justify-center rounded-md text-sm font-medium transition-all relative", isSelected ? "bg-[#0891B2] text-white" : isToday ? "bg-[#1a1a2e] text-[#0F172A]" : "text-[#475569] hover:bg-white/5")}>
+                <motion.button key={date} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }} onClick={() => setSelectedDate(date)} className={cn("h-10 w-full flex flex-col items-center justify-center rounded-lg text-sm font-medium transition-all relative", isSelected ? "bg-[#6637F4] text-white" : isToday ? "bg-[#6637F4]/10 text-[#0F172A]" : "text-[#475569] hover:bg-white/5")}>
                   {date}
                   {hasMeeting && !isSelected && (
                     <div className="absolute bottom-1.5 flex gap-0.5">
-                      <div className="w-1 h-1 rounded-full bg-[#0891B2]" />
+                      <div className="w-1 h-1 rounded-full bg-[#6637F4]" />
                     </div>
                   )}
                 </motion.button>
@@ -270,7 +270,7 @@ export function CalendarWidget() {
                     </motion.div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between mb-2">
-                        <h4 className="font-semibold text-[#0F172A] group-hover:text-[#0891B2] transition-colors">{meeting.title}</h4>
+                        <h4 className="font-semibold text-[#0F172A] group-hover:text-[#6637F4] transition-colors">{meeting.title}</h4>
                         <motion.button whileHover={{ scale: 1.1 }} className="p-1 rounded-md hover:bg-white/5 text-[#475569] opacity-0 group-hover:opacity-100 transition-all">
                           <MoreHorizontal size={16} />
                         </motion.button>
@@ -283,7 +283,7 @@ export function CalendarWidget() {
                           <span className="font-medium">{meeting.endTime}</span>
                         </div>
                         <div className="w-1 h-1 rounded-full bg-slate-300" />
-                        <div className={cn("flex items-center gap-1.5 px-2 py-0.5 rounded-full", meeting.type === 'video' && "bg-[#0891B2]/10 text-[#0891B2]", meeting.type === 'phone' && "bg-[#D97706]/10 text-[#D97706]", meeting.type === 'in-person' && "bg-[#1a1a2e]/10 text-[#0F172A]")}>
+                        <div className={cn("flex items-center gap-1.5 px-2 py-0.5 rounded-full", meeting.type === 'video' && "bg-[#6637F4]/10 text-[#6637F4]", meeting.type === 'phone' && "bg-[#D97706]/10 text-[#D97706]", meeting.type === 'in-person' && "bg-[#FF7B36]/10 text-[#FF7B36]")}>
                           <MeetingIcon size={12} />
                           <span className="font-medium capitalize">{meeting.type.replace('-', ' ')}</span>
                         </div>
@@ -307,7 +307,7 @@ export function CalendarWidget() {
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => navigate("/bookings")}
-          className="w-full mt-4 py-3 rounded-md border-2 border-dashed border-[rgba(15,23,42,0.06)] text-[#94A3B8] text-sm font-medium hover:border-[#22D3EE] hover:text-[#0891B2] hover:bg-[#0891B2]/5 transition-all flex items-center justify-center gap-2"
+          className="w-full mt-4 py-3 rounded-lg border-2 border-dashed border-[rgba(15,23,42,0.06)] text-[#94A3B8] text-sm font-medium hover:border-[#6637F4] hover:text-[#6637F4] hover:bg-[#6637F4]/5 transition-all flex items-center justify-center gap-2"
         >
           View All Meetings
           <ArrowRight size={14} />

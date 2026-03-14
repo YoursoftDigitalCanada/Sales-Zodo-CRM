@@ -16,6 +16,7 @@ import {
   type EagleViewOrderAddress,
 } from "@/features/roof-estimator/services/roof-estimator-service";
 import { useToast } from "@/hooks/use-toast";
+import { generateEstimatePDF, downloadPDFBlob } from "@/features/roof-estimator/utils/generate-estimate-pdf";
 
 interface OtherMaterial { name: string; cost: number; }
 
@@ -457,17 +458,88 @@ export default function RoofEstimatorWizard() {
     setSaving(true);
     try {
       const payload = { ...buildPayload(), status: "completed", currentStep: 6 };
+      let savedId = estimateId;
       if (estimateId) {
         await updateEstimate(estimateId, payload);
       } else {
-        await saveEstimate(payload);
+        const result = await saveEstimate(payload);
+        savedId = result.id;
+        setEstimateId(result.id);
       }
-      toast({ title: "Estimate Completed", description: "Your estimate has been finalized" });
+
+      // Generate PDF
+      toast({ title: "Generating Report…", description: "Building your estimate PDF" });
+      const pdfBlob = await generateEstimatePDF({
+        address: data.address,
+        roofAreaSqft: data.roofAreaSqft,
+        pitch: data.pitch,
+        roofType: data.roofType,
+        stories: data.stories,
+        layers: data.layers,
+        wastePercent: data.wastePercent,
+        measurementSource: data.measurementSource,
+        tearOffRequired: data.tearOffRequired,
+        confidence: data.confidence,
+        satelliteImageUrl: data.satelliteImageUrl,
+        shingleType: data.shingleType,
+        shinglePricePerSq: data.shinglePricePerSq,
+        underlaymentCost: data.underlaymentCost,
+        iceWaterShieldCost: data.iceWaterShieldCost,
+        ridgeCapCost: data.ridgeCapCost,
+        starterStripCost: data.starterStripCost,
+        flashingCostWizard: data.flashingCostWizard,
+        ventCostWizard: data.ventCostWizard,
+        nailsAccessoriesCost: data.nailsAccessoriesCost,
+        totalMaterialCost,
+        otherMaterials: data.otherMaterials,
+        numberOfLaborers: data.numberOfLaborers,
+        daysRequired: data.daysRequired,
+        laborRatePerWorker: data.laborRatePerWorker,
+        totalLaborCost,
+        dumpsterCost: data.dumpsterCost,
+        permitCost: data.permitCost,
+        deliveryFee: data.deliveryFee,
+        equipmentRentalCost: data.equipmentRentalCost,
+        disposalFee: data.disposalFee,
+        totalEquipmentCost,
+        overheadPercent: data.overheadPercent,
+        profitMarginPercent: data.profitMarginPercent,
+        taxPercent: data.taxPercent,
+        overheadAmount,
+        profitAmount,
+        taxAmount,
+        finalEstimatePrice: finalPrice,
+        estimateId: savedId || "NEW",
+        clientName: "",
+        createdAt: new Date().toISOString(),
+      });
+
+      // Download PDF locally
+      const safeName = data.address.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 40);
+      downloadPDFBlob(pdfBlob, `Roof_Estimate_${safeName}.pdf`);
+
+      // Upload PDF to server and save URL
+      try {
+        const formData = new FormData();
+        formData.append("file", pdfBlob, `estimate_${savedId}.pdf`);
+        const { default: api } = await import("@/lib/api");
+        const uploadRes = await api.post("/files/upload", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        const pdfUrl = uploadRes.data?.data?.url || uploadRes.data?.url;
+        if (pdfUrl && savedId) {
+          await updateEstimate(savedId, { pdfUrl } as any);
+        }
+      } catch {
+        // PDF upload failed silently — user already has the download
+      }
+
+      toast({ title: "Estimate Completed", description: "Report generated and downloaded" });
       navigate("/roof-estimator");
     } catch (e: any) {
       toast({ title: "Error", description: e?.message || "Could not complete estimate", variant: "destructive" });
     } finally { setSaving(false); }
-  }, [buildPayload, estimateId, toast, navigate]);
+  }, [buildPayload, estimateId, data, toast, navigate, totalMaterialCost, totalLaborCost, totalEquipmentCost, overheadAmount, profitAmount, taxAmount, finalPrice]);
 
   const goNext = () => { if (step < 6) setStep(step + 1); };
   const goBack = () => { if (step > 1) setStep(step - 1); };

@@ -45,6 +45,7 @@ export interface RoofEstimate {
     correctionFactor?: number | null;
     confidenceScore?: number | null;
     flaggedForReview?: boolean;
+    pdfUrl?: string | null;
     // Wizard workflow fields
     status: string;
     currentStep: number;

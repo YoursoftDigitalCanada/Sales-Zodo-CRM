@@ -3,70 +3,78 @@
 @tailwind utilities;
 
 /* =============================================
-   ZODO CRM — Premium AI-First Enterprise Theme
-   Soft Intelligent Light · Layered Depth · Minimal Accent
+   ZODO CRM — Modern SaaS Dashboard Theme
+   Urbanist · Purple Primary · Light & Rounded
    ============================================= */
 
 @layer base {
   :root {
-    /* === STRICT Surface Hierarchy === */
-    --background: 210 40% 98%;
-    /* #F8FAFC — App canvas */
-    --foreground: 222 47% 11%;
-    /* #0F172A — Primary text */
+    /* === Surface Hierarchy === */
+    --background: 240 33% 97%;
+    /* #F7F7FB — App canvas */
+    --foreground: 0 0% 0%;
+    /* #000000 — Primary text */
 
     --card: 0 0% 100%;
     /* #FFFFFF — Elevated cards */
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 0 0% 0%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 0 0% 0%;
 
-    /* === Brand Accent === */
-    --primary: 187 92% 53%;
-    /* #22D3EE */
+    /* === Brand Primary === */
+    --primary: 256 89% 58%;
+    /* #6637F4 */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96%;
-    /* #F1F5F9 — Section container */
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 240 33% 97%;
+    /* #F7F7FB — Section container */
+    --secondary-foreground: 0 0% 0%;
 
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-    /* #64748B */
+    --muted: 240 33% 97%;
+    --muted-foreground: 264 3% 42%;
+    /* #6B6972 */
 
     /* === Semantic === */
-    --success: 142 69% 58%;
+    --success: 142 100% 39%;
+    /* #01C44A */
     --warning: 43 96% 56%;
-    --accent: 24 95% 53%;
-    --destructive: 0 84% 60%;
+    --accent: 20 100% 61%;
+    /* #FF7B36 */
+    --destructive: 1 100% 59%;
+    /* #FF2E2D */
     --success-foreground: 0 0% 100%;
     --warning-foreground: 0 0% 10%;
     --accent-foreground: 0 0% 100%;
     --destructive-foreground: 0 0% 100%;
 
     /* === Borders === */
-    --border: 210 14% 89%;
-    --input: 210 14% 89%;
-    --ring: 187 92% 53%;
-    --radius: 0.5rem;
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 256 89% 58%;
+    --radius: 1rem;
 
     /* === Sidebar === */
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 215 25% 27%;
-    --sidebar-primary: 187 92% 53%;
+    --sidebar-foreground: 264 3% 42%;
+    --sidebar-primary: 256 89% 58%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 40% 96%;
-    --sidebar-accent-foreground: 222 47% 11%;
-    --sidebar-border: 210 14% 89%;
-    --sidebar-ring: 187 92% 53%;
+    --sidebar-accent: 256 89% 96%;
+    --sidebar-accent-foreground: 0 0% 0%;
+    --sidebar-border: 240 6% 90%;
+    --sidebar-ring: 256 89% 58%;
 
     /* === Chart === */
-    --chart-1: 187 92% 53%;
-    --chart-2: 142 69% 58%;
-    --chart-3: 24 95% 53%;
-    --chart-4: 43 96% 56%;
-    --chart-5: 262 83% 58%;
+    --chart-1: 256 89% 58%;
+    /* Purple #6637F4 */
+    --chart-2: 142 100% 39%;
+    /* Green #01C44A */
+    --chart-3: 20 100% 61%;
+    /* Orange #FF7B36 */
+    --chart-4: 1 100% 59%;
+    /* Red #FF2E2D */
+    --chart-5: 43 96% 56%;
+    /* Yellow/Warning */
   }
 }
 
@@ -76,17 +84,18 @@
   }
 
   html {
-    font-size: 13.5px;
+    font-size: 16px;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    font-family: 'Urbanist', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
     letter-spacing: -0.01em;
     min-height: 100vh;
+    font-weight: 400;
+    line-height: 1.5;
   }
 }
 
@@ -94,28 +103,28 @@
    ELEVATION SYSTEM (Single source of truth)
    ============================================= */
 .elevation-1 {
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 .elevation-2 {
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 16px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
 .elevation-3 {
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06), 0 12px 28px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.06);
 }
 
-/* Card default = elevation-2 */
+/* Card default = soft shadow */
 .card-shadow {
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 16px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
 /* =============================================
    AI ACCENT SYSTEM
    ============================================= */
 .ai-highlight {
-  border-left: 2px solid #0891B2;
-  background: rgba(8, 145, 178, 0.03);
+  border-left: 2px solid #6637F4;
+  background: rgba(102, 55, 244, 0.03);
 }
 
 .ai-tag {
@@ -128,37 +137,39 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  background: rgba(8, 145, 178, 0.06);
-  color: #0891B2;
-  border: 1px solid rgba(8, 145, 178, 0.1);
+  background: rgba(102, 55, 244, 0.06);
+  color: #6637F4;
+  border: 1px solid rgba(102, 55, 244, 0.1);
 }
 
 /* =============================================
    TYPOGRAPHY UTILITIES
    ============================================= */
 .metric-value {
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-size: 1.625rem;
+  /* 26px */
+  font-weight: 600;
   letter-spacing: -0.025em;
   line-height: 1.2;
-  color: #0F172A;
+  color: #000000;
   font-variant-numeric: tabular-nums;
 }
 
 .metric-label {
-  font-size: 0.6875rem;
-  /* 11px at 16px base */
+  font-size: 0.75rem;
   font-weight: 500;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #64748B;
+  color: #6B6972;
 }
 
 .section-title {
-  font-size: 0.8125rem;
-  font-weight: 600;
+  font-size: 1.25rem;
+  /* 20px */
+  font-weight: 500;
   letter-spacing: -0.01em;
-  color: #0F172A;
+  line-height: 1.3;
+  color: #000000;
 }
 
 /* =============================================
@@ -166,7 +177,7 @@
    ============================================= */
 .scrollbar-thin {
   scrollbar-width: thin;
-  scrollbar-color: rgba(15, 23, 42, 0.06) transparent;
+  scrollbar-color: rgba(0, 0, 0, 0.06) transparent;
 }
 
 .scrollbar-thin::-webkit-scrollbar {
@@ -179,12 +190,12 @@
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background-color: rgba(15, 23, 42, 0.08);
+  background-color: rgba(0, 0, 0, 0.08);
   border-radius: 2px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(15, 23, 42, 0.14);
+  background-color: rgba(0, 0, 0, 0.14);
 }
 
 /* =============================================
@@ -196,7 +207,7 @@ body::before {
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.015;
+  opacity: 0.012;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-repeat: repeat;
   background-size: 256px 256px;
@@ -210,16 +221,16 @@ body::before {
   0%,
   100% {
     box-shadow:
-      0 1px 2px rgba(15, 23, 42, 0.04),
-      0 8px 20px rgba(15, 23, 42, 0.05),
-      0 0 0 0 rgba(34, 211, 238, 0);
+      0 1px 2px rgba(0, 0, 0, 0.04),
+      0 8px 20px rgba(0, 0, 0, 0.05),
+      0 0 0 0 rgba(102, 55, 244, 0);
   }
 
   50% {
     box-shadow:
-      0 1px 2px rgba(15, 23, 42, 0.04),
-      0 8px 20px rgba(15, 23, 42, 0.05),
-      0 0 0 1px rgba(34, 211, 238, 0.03);
+      0 1px 2px rgba(0, 0, 0, 0.04),
+      0 8px 20px rgba(0, 0, 0, 0.05),
+      0 0 0 1px rgba(102, 55, 244, 0.03);
   }
 }
 
@@ -236,7 +247,7 @@ body::before {
 }
 
 .card-interactive:hover {
-  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.06);
   transform: translateY(-1px);
 }
 
@@ -318,33 +329,33 @@ body::before {
 }
 
 .ai-badge-cyan {
-  background: rgba(8, 145, 178, 0.08);
-  color: #0891B2;
-  border: 1px solid rgba(8, 145, 178, 0.12);
+  background: rgba(102, 55, 244, 0.08);
+  color: #6637F4;
+  border: 1px solid rgba(102, 55, 244, 0.12);
 }
 
 .ai-badge-amber {
-  background: rgba(217, 119, 6, 0.08);
-  color: #B45309;
-  border: 1px solid rgba(217, 119, 6, 0.12);
+  background: rgba(255, 123, 54, 0.08);
+  color: #E06520;
+  border: 1px solid rgba(255, 123, 54, 0.12);
 }
 
 .ai-badge-red {
-  background: rgba(220, 38, 38, 0.08);
-  color: #DC2626;
-  border: 1px solid rgba(220, 38, 38, 0.12);
+  background: rgba(255, 46, 45, 0.08);
+  color: #FF2E2D;
+  border: 1px solid rgba(255, 46, 45, 0.12);
 }
 
 .ai-badge-green {
-  background: rgba(22, 163, 74, 0.08);
-  color: #16A34A;
-  border: 1px solid rgba(22, 163, 74, 0.12);
+  background: rgba(1, 196, 74, 0.08);
+  color: #01C44A;
+  border: 1px solid rgba(1, 196, 74, 0.12);
 }
 
 .ai-badge-neutral {
-  background: rgba(100, 116, 139, 0.08);
-  color: #475569;
-  border: 1px solid rgba(100, 116, 139, 0.12);
+  background: rgba(107, 105, 114, 0.08);
+  color: #6B6972;
+  border: 1px solid rgba(107, 105, 114, 0.12);
 }
 
 /* =============================================
@@ -385,7 +396,7 @@ body::before {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #0891B2;
+  background: #6637F4;
   animation: ai-live-dot 2s ease-in-out infinite;
 }
 
@@ -401,8 +412,8 @@ body::before {
   max-width: 100vw;
   z-index: 50;
   background: #FFFFFF;
-  border-left: 1px solid rgba(15, 23, 42, 0.08);
-  box-shadow: -8px 0 32px rgba(15, 23, 42, 0.08);
+  border-left: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.06);
   display: flex;
   flex-direction: column;
 }
@@ -411,7 +422,7 @@ body::before {
   position: fixed;
   inset: 0;
   z-index: 49;
-  background: rgba(15, 23, 42, 0.12);
+  background: rgba(0, 0, 0, 0.12);
   backdrop-filter: blur(2px);
 }
 
@@ -428,12 +439,12 @@ body::before {
 .ai-sparkline-bar {
   width: 3px;
   border-radius: 1px;
-  background: rgba(8, 145, 178, 0.3);
+  background: rgba(102, 55, 244, 0.3);
   transition: height 600ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .ai-sparkline-bar:last-child {
-  background: #0891B2;
+  background: #6637F4;
 }
 
 /* =============================================
@@ -441,15 +452,15 @@ body::before {
    ============================================= */
 @keyframes ai-count-flash {
   0% {
-    color: #0F172A;
+    color: #000000;
   }
 
   50% {
-    color: #0891B2;
+    color: #6637F4;
   }
 
   100% {
-    color: #0F172A;
+    color: #000000;
   }
 }
 
@@ -464,13 +475,13 @@ body::before {
 /* ── Mobile font scaling ── */
 @media (max-width: 480px) {
   html {
-    font-size: 13px;
+    font-size: 15px;
   }
 }
 
 @media (min-width: 481px) and (max-width: 768px) {
   html {
-    font-size: 13.25px;
+    font-size: 15.5px;
   }
 }
 
@@ -485,7 +496,7 @@ body::before {
   background: rgba(255, 255, 255, 0.97);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -497,7 +508,7 @@ body::before {
   position: fixed;
   inset: 0;
   z-index: 45;
-  background: rgba(15, 23, 42, 0.3);
+  background: rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
 }
@@ -544,7 +555,7 @@ body::before {
 }
 
 .responsive-table::-webkit-scrollbar-thumb {
-  background-color: rgba(15, 23, 42, 0.1);
+  background-color: rgba(0, 0, 0, 0.1);
   border-radius: 2px;
 }
 
@@ -553,7 +564,7 @@ body::before {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: #F8FAFC;
+  background: #F7F7FB;
 }
 
 /* ── Mobile content area offset ── */

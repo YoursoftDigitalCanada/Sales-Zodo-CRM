@@ -497,10 +497,10 @@ const Badge = ({
   size?: "xs" | "sm";
 }) => {
   const colorClasses = {
-    teal: "bg-[#23D3EE] text-[#0F172A]",
+    teal: "bg-[#6637F4] text-white",
     gold: "bg-[#FBBF23] text-[#0F172A]",
-    red: "bg-red-500 text-[#0F172A]",
-    blue: "bg-blue-500 text-[#0F172A]",
+    red: "bg-red-500 text-white",
+    blue: "bg-blue-500 text-white",
   };
 
   const sizeClasses = {
@@ -718,7 +718,7 @@ export function Sidebar({
             whileTap={{ scale: 0.95 }}
             onClick={() => setCollapsed(!collapsed)}
             className={cn(
-              "p-2 rounded-md hover:bg-[#F1F5F9]/20 text-[#475569] hover:text-[#0891B2] transition-all",
+              "p-2 rounded-md hover:bg-[#F1F5F9]/20 text-[#475569] hover:text-[#6637F4] transition-all",
               collapsed && "mx-auto"
             )}
           >
@@ -737,7 +737,7 @@ export function Sidebar({
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md text-sm font-medium transition-colors"
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-lg text-sm font-medium transition-colors"
               >
                 <Zap size={14} />
                 Quick Add
@@ -788,21 +788,21 @@ export function Sidebar({
                     whileHover={{ x: collapsed ? 0 : 4 }}
                     onClick={() => !collapsed && toggleSubmenu(item.title)}
                     className={cn(
-                      "flex items-center justify-between w-full gap-3 px-3 py-2 rounded-md transition-all group relative",
+                      "flex items-center justify-between w-full gap-3 px-3 py-2 rounded-lg transition-all group relative",
                       hasActiveChild
-                        ? "bg-[#F0FDFA] text-[#0891B2]"
+                        ? "bg-[#F0EEFF] text-[#6637F4]"
                         : "text-[#475569] hover:bg-[#F1F5F9] hover:text-[#0F172A]",
                       collapsed && "justify-center px-3"
                     )}
                   >
                     {/* Left accent bar for active parent */}
                     {hasActiveChild && !collapsed && (
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-[#0891B2] rounded-r-full" />
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-[#6637F4] rounded-r-full" />
                     )}
                     <div className="flex items-center gap-3">
                       <div className={cn(
                         "transition-colors",
-                        hasActiveChild ? "text-[#0891B2]" : "text-[#94A3B8] group-hover:text-[#475569]"
+                        hasActiveChild ? "text-[#6637F4]" : "text-[#94A3B8] group-hover:text-[#475569]"
                       )}>
                         {Icon && <Icon size={18} strokeWidth={1.75} />}
                       </div>
@@ -877,9 +877,9 @@ export function Sidebar({
                                 <Link
                                   to={subItem.path}
                                   className={cn(
-                                    "flex items-center justify-between gap-2 px-3 py-2 rounded-md text-sm transition-all group/sub",
+                                    "flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-sm transition-all group/sub",
                                     isActive(subItem.path)
-                                      ? "bg-[#0891B2]/10 text-[#0891B2] font-medium"
+                                      ? "bg-[#6637F4]/10 text-[#6637F4] font-medium"
                                       : "text-[#475569] hover:bg-[#F1F5F9] hover:text-[#0F172A]"
                                   )}
                                 >
@@ -888,8 +888,8 @@ export function Sidebar({
                                       className={cn(
                                         "h-1.5 w-1.5 transition-all",
                                         isActive(subItem.path)
-                                          ? "fill-[#22D3EE] scale-125"
-                                          : "fill-[#64748B] group-hover/sub:fill-[#22D3EE]"
+                                          ? "fill-[#6637F4] scale-125"
+                                          : "fill-[#64748B] group-hover/sub:fill-[#6637F4]"
                                       )}
                                     />
                                     <span>{subItem.title}</span>
@@ -955,9 +955,9 @@ export function Sidebar({
                   <Link
                     to={item.path || "#"}
                     className={cn(
-                      "flex items-center justify-between gap-3 px-3 py-2 rounded-md transition-all group relative",
+                      "flex items-center justify-between gap-3 px-3 py-2 rounded-lg transition-all group relative",
                       isActive(item.path!)
-                        ? "bg-[#F0FDFA] text-[#0891B2]"
+                        ? "bg-[#F0EEFF] text-[#6637F4]"
                         : "text-[#475569] hover:bg-[#F1F5F9] hover:text-[#0F172A]",
                       collapsed && "justify-center px-3"
                     )}
@@ -966,14 +966,14 @@ export function Sidebar({
                     {isActive(item.path!) && (
                       <motion.div
                         layoutId="activeIndicator"
-                        className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 bg-[#0891B2] rounded-r-full"
+                        className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 bg-[#6637F4] rounded-r-full"
                       />
                     )}
 
                     <div className="flex items-center gap-3">
                       <div className={cn(
                         "transition-colors",
-                        isActive(item.path!) ? "text-[#0891B2]" : "text-[#94A3B8] group-hover:text-[#475569]"
+                        isActive(item.path!) ? "text-[#6637F4]" : "text-[#94A3B8] group-hover:text-[#475569]"
                       )}>
                         {Icon && <Icon size={18} strokeWidth={1.75} />}
                         {collapsed && item.badge && (
@@ -1024,14 +1024,14 @@ export function Sidebar({
           >
             <div className="rounded-md bg-white border border-[rgba(15,23,42,0.06)] p-4">
               <div className="flex items-center gap-2 mb-2">
-                <Award size={16} className="text-[#EA580C]" />
+                <Award size={16} className="text-[#FF7B36]" />
                 <span className="text-sm font-semibold text-[#0F172A]">Upgrade to Pro</span>
               </div>
               <p className="text-xs text-[#475569] mb-3">
                 Unlock advanced analytics, custom reports, and more.
               </p>
               <button
-                className="w-full py-2 bg-[#EA580C] hover:bg-[#EA580C]/90 text-white text-xs font-semibold rounded-md transition-colors"
+                className="w-full py-2 bg-[#FF7B36] hover:bg-[#FF7B36]/90 text-white text-xs font-semibold rounded-lg transition-colors"
               >
                 Upgrade Now
               </button>
@@ -1055,13 +1055,13 @@ export function Sidebar({
                   className="w-full flex items-center gap-3 p-3 rounded-md bg-white hover:bg-[#F1F5F9] transition-colors group"
                 >
                   <div className="relative">
-                    <div className="h-9 w-9 rounded-md bg-[#0891B2] flex items-center justify-center text-white font-bold text-sm">
+                    <div className="h-9 w-9 rounded-md bg-[#6637F4] flex items-center justify-center text-white font-bold text-sm">
                       {getInitials()}
                     </div>
                     <motion.div
                       animate={{ scale: [1, 1.2, 1] }}
                       transition={{ repeat: Infinity, duration: 2, delay: 1 }}
-                      className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-[#16A34A] rounded-full border-2 border-[#F8FAFC]"
+                      className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-[#01C44A] rounded-full border-2 border-[#F7F7FB]"
                     />
                   </div>
                   <div className="flex-1 min-w-0 text-left">
@@ -1142,10 +1142,10 @@ export function Sidebar({
                   className="relative cursor-pointer group"
                   onClick={() => setCollapsed(false)}
                 >
-                  <div className="h-9 w-9 rounded-md bg-[#0891B2] flex items-center justify-center text-white font-bold text-sm">
+                  <div className="h-9 w-9 rounded-md bg-[#6637F4] flex items-center justify-center text-white font-bold text-sm">
                     {getInitials()}
                   </div>
-                  <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-[#16A34A] rounded-full border-2 border-[#F8FAFC]" />
+                  <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-[#01C44A] rounded-full border-2 border-[#F7F7FB]" />
 
                   {/* Tooltip */}
                   <div className="absolute left-full ml-2 px-3 py-2 bg-white border border-[rgba(15,23,42,0.06)] rounded-md text-[#0F172A] text-sm font-medium opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 card-shadow">
@@ -1166,7 +1166,7 @@ export function Sidebar({
                 <span className="text-[10px] text-[#94A3B8]">Version</span>
                 <div className="flex items-center gap-1.5">
                   <span className="text-[10px] font-medium text-[#475569]">v2.1.0</span>
-                  <span className="w-1.5 h-1.5 bg-[#16A34A] rounded-full" />
+                  <span className="w-1.5 h-1.5 bg-[#01C44A] rounded-full" />
                 </div>
               </div>
             </div>

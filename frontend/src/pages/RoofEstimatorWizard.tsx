@@ -522,7 +522,7 @@ export default function RoofEstimatorWizard() {
       try {
         const formData = new FormData();
         formData.append("file", pdfBlob, `estimate_${savedId}.pdf`);
-        const { default: api } = await import("@/lib/api");
+        const { default: api } = await import("@/lib/axios");
         const uploadRes = await api.post("/files/upload", formData, {
           headers: { "Content-Type": "multipart/form-data" },
         });

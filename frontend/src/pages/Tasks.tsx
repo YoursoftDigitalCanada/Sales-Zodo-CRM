@@ -344,7 +344,7 @@ const StatCard = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
       whileHover={{ y: -4 }}
-      className="relative bg-white rounded-md p-5 border border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg  transition-all overflow-hidden group"
+      className="relative bg-white rounded-md p-5 border border-[rgba(15,23,42,0.06)] hover:border-[#6637F4]/30 hover:shadow-lg  transition-all overflow-hidden group"
     >
       <div
         className="absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-10 group-hover:opacity-20 transition-all"
@@ -418,7 +418,7 @@ const TaskListItem = ({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      whileHover={{ backgroundColor: "#F8FAFC" }}
+      whileHover={{ backgroundColor: "#F7F7FB" }}
       className={cn(
         "group flex items-start gap-4 p-4 border-b border-[rgba(15,23,42,0.06)] cursor-pointer transition-all",
         task.status === "completed" && "opacity-60"
@@ -433,7 +433,7 @@ const TaskListItem = ({
             "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
             task.status === "completed"
               ? "bg-green-500 border-green-500 text-[#0F172A]"
-              : "border-slate-300 hover:border-[#22D3EE]"
+              : "border-slate-300 hover:border-[#6637F4]"
           )}
         >
           {task.status === "completed" && <Check size={12} />}
@@ -663,7 +663,7 @@ const TaskCard = ({
         "relative bg-white rounded-md border overflow-hidden transition-all group cursor-pointer",
         task.status === "completed"
           ? "border-[rgba(15,23,42,0.06)] opacity-70"
-          : "border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg "
+          : "border-[rgba(15,23,42,0.06)] hover:border-[#6637F4]/30 hover:shadow-lg "
       )}
       onClick={onClick}
     >
@@ -746,7 +746,7 @@ const TaskCard = ({
               "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0 mt-0.5",
               task.status === "completed"
                 ? "bg-green-500 border-green-500 text-[#0F172A]"
-                : "border-slate-300 hover:border-[#22D3EE]"
+                : "border-slate-300 hover:border-[#6637F4]"
             )}
           >
             {task.status === "completed" && <Check size={12} />}
@@ -919,7 +919,7 @@ const KanbanColumn = ({
       <div
         className={cn(
           "min-h-[400px] max-h-[calc(100vh-350px)] overflow-y-auto p-3 space-y-3 rounded-b-xl border border-t-0 transition-all duration-200",
-          isDragOver ? "bg-[#0891B2]/5 ring-2 ring-[#22D3EE] ring-inset" : "bg-[#F8FAFC]/50"
+          isDragOver ? "bg-[#6637F4]/5 ring-2 ring-[#6637F4] ring-inset" : "bg-[#F7F7FB]/50"
         )}
         style={{ borderColor: `${status.color}20` }}
         onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setIsDragOver(true); }}
@@ -974,7 +974,7 @@ const KanbanColumn = ({
                         "w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0 mt-0.5",
                         task.status === "completed"
                           ? "bg-green-500 border-green-500 text-[#0F172A]"
-                          : "border-slate-300 hover:border-[#22D3EE]"
+                          : "border-slate-300 hover:border-[#6637F4]"
                       )}
                     >
                       {task.status === "completed" && <Check size={10} />}
@@ -1098,8 +1098,8 @@ const KanbanColumn = ({
 
         {/* Drop indicator */}
         {isDragOver && (
-          <div className="border-2 border-dashed border-[#22D3EE] rounded-lg p-3 flex items-center justify-center">
-            <p className="text-xs text-[#0891B2] font-medium">Drop to move to {status.name}</p>
+          <div className="border-2 border-dashed border-[#6637F4] rounded-lg p-3 flex items-center justify-center">
+            <p className="text-xs text-[#6637F4] font-medium">Drop to move to {status.name}</p>
           </div>
         )}
       </div>
@@ -1255,7 +1255,7 @@ const TaskFormDialog = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px] p-0 rounded-md overflow-hidden max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-[rgba(15,23,42,0.06)] bg-[#F0FDFA] sticky top-0 bg-white z-10">
+        <div className="p-6 border-b border-[rgba(15,23,42,0.06)] bg-[#F0EEFF] sticky top-0 bg-white z-10">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-[#0F172A]">
               {task ? "Edit Task" : "Create Task"}
@@ -1441,7 +1441,7 @@ const TaskFormDialog = ({
                   {selectedAssignees.map((assignee) => (
                     <div
                       key={assignee.id}
-                      className="flex items-center gap-2 px-2 py-1 bg-[#0891B2]/10 rounded-md"
+                      className="flex items-center gap-2 px-2 py-1 bg-[#6637F4]/10 rounded-md"
                     >
                       <Avatar className="h-5 w-5">
                         <AvatarImage src={assignee.avatar} />
@@ -1470,7 +1470,7 @@ const TaskFormDialog = ({
                   value={assigneeSearch}
                   onChange={(e) => setAssigneeSearch(e.target.value)}
                   placeholder="Search team members..."
-                  className="w-full h-8 pl-8 pr-3 rounded-md bg-[#F8FAFC] border border-[rgba(15,23,42,0.06)] text-xs text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-1 focus:ring-[#0891B2]/30 transition-colors"
+                  className="w-full h-8 pl-8 pr-3 rounded-md bg-[#F7F7FB] border border-[rgba(15,23,42,0.06)] text-xs text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-1 focus:ring-[#6637F4]/30 transition-colors"
                 />
               </div>
 
@@ -1504,8 +1504,8 @@ const TaskFormDialog = ({
                         className={cn(
                           "flex items-center gap-3 w-full px-2.5 py-2 rounded-md text-left transition-colors",
                           isSelected
-                            ? "bg-[#0891B2]/8 border border-[#22D3EE]/20"
-                            : "hover:bg-[#F8FAFC] border border-transparent"
+                            ? "bg-[#6637F4]/8 border border-[#6637F4]/20"
+                            : "hover:bg-[#F7F7FB] border border-transparent"
                         )}
                       >
                         <Avatar className="h-7 w-7">
@@ -1519,7 +1519,7 @@ const TaskFormDialog = ({
                           <p className="text-[10px] text-[#94A3B8] truncate">{user.email}</p>
                         </div>
                         {isSelected && (
-                          <CheckCircle2 size={16} className="text-[#0891B2] flex-shrink-0" />
+                          <CheckCircle2 size={16} className="text-[#6637F4] flex-shrink-0" />
                         )}
                       </button>
                     );
@@ -1539,7 +1539,7 @@ const TaskFormDialog = ({
                   {subtasks.map((subtask) => (
                     <div
                       key={subtask.id}
-                      className="flex items-center gap-3 p-2 bg-[#F8FAFC] rounded-md"
+                      className="flex items-center gap-3 p-2 bg-[#F7F7FB] rounded-md"
                     >
                       <button
                         type="button"
@@ -1615,7 +1615,7 @@ const TaskFormDialog = ({
           </div>
 
           {/* Recurring Toggle */}
-          <div className="flex items-center justify-between p-3 bg-[#F8FAFC] rounded-md">
+          <div className="flex items-center justify-between p-3 bg-[#F7F7FB] rounded-md">
             <div className="flex items-center gap-3">
               <Repeat size={18} className="text-[#94A3B8]" />
               <div>
@@ -1626,7 +1626,7 @@ const TaskFormDialog = ({
             <Switch
               checked={formData.isRecurring}
               onCheckedChange={(checked) => setFormData({ ...formData, isRecurring: checked })}
-              className="data-[state=checked]:bg-[#0891B2]"
+              className="data-[state=checked]:bg-[#6637F4]"
             />
           </div>
 
@@ -1637,7 +1637,7 @@ const TaskFormDialog = ({
             <Button
               type="submit"
               disabled={!formData.title.trim()}
-              className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
+              className="bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-md"
             >
               {task ? (
                 <>
@@ -1693,7 +1693,7 @@ const TaskDetailsDialog = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px] p-0 rounded-md overflow-hidden max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="p-6 border-b border-[rgba(15,23,42,0.06)] bg-[#F0FDFA]">
+        <div className="p-6 border-b border-[rgba(15,23,42,0.06)] bg-[#F0EEFF]">
           <div className="flex items-start justify-between">
             <div className="flex items-start gap-4">
               <button
@@ -1702,7 +1702,7 @@ const TaskDetailsDialog = ({
                   "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all mt-1",
                   task.status === "completed"
                     ? "bg-green-500 border-green-500 text-[#0F172A]"
-                    : "border-slate-300 hover:border-[#22D3EE]"
+                    : "border-slate-300 hover:border-[#6637F4]"
                 )}
               >
                 {task.status === "completed" && <Check size={14} />}
@@ -1760,7 +1760,7 @@ const TaskDetailsDialog = ({
           <div className="grid grid-cols-2 gap-4">
             {/* Project */}
             {task.project && (
-              <div className="p-4 bg-[#F8FAFC] rounded-md">
+              <div className="p-4 bg-[#F7F7FB] rounded-md">
                 <p className="text-xs text-[#475569] mb-1">Project</p>
                 <div className="flex items-center gap-2">
                   <div
@@ -1773,7 +1773,7 @@ const TaskDetailsDialog = ({
             )}
 
             {/* Category */}
-            <div className="p-4 bg-[#F8FAFC] rounded-md">
+            <div className="p-4 bg-[#F7F7FB] rounded-md">
               <p className="text-xs text-[#475569] mb-1">Category</p>
               <div className="flex items-center gap-2">
                 <CategoryIcon size={16} style={{ color: categoryInfo.color }} />
@@ -1786,7 +1786,7 @@ const TaskDetailsDialog = ({
               <div
                 className={cn(
                   "p-4 rounded-md",
-                  overdue ? "bg-red-50 border border-red-100" : "bg-[#F8FAFC]"
+                  overdue ? "bg-red-50 border border-red-100" : "bg-[#F7F7FB]"
                 )}
               >
                 <p className={cn("text-xs mb-1", overdue ? "text-red-500" : "text-[#475569]")}>
@@ -1804,7 +1804,7 @@ const TaskDetailsDialog = ({
 
             {/* Estimated Time */}
             {task.estimatedTime && (
-              <div className="p-4 bg-[#F8FAFC] rounded-md">
+              <div className="p-4 bg-[#F7F7FB] rounded-md">
                 <p className="text-xs text-[#475569] mb-1">Estimated Time</p>
                 <div className="flex items-center gap-2">
                   <Clock size={16} className="text-[#94A3B8]" />
@@ -1831,7 +1831,7 @@ const TaskDetailsDialog = ({
                 {task.assignees.map((assignee) => (
                   <div
                     key={assignee.id}
-                    className="flex items-center gap-2 px-3 py-2 bg-[#F8FAFC] rounded-md"
+                    className="flex items-center gap-2 px-3 py-2 bg-[#F7F7FB] rounded-md"
                   >
                     <Avatar className="h-7 w-7">
                       <AvatarImage src={assignee.avatar} />
@@ -1856,7 +1856,7 @@ const TaskDetailsDialog = ({
                 <h3 className="text-sm font-semibold text-[#0F172A]">
                   Subtasks ({task.subtasks.filter((st) => st.completed).length}/{task.subtasks.length})
                 </h3>
-                <span className="text-sm text-[#0891B2] font-medium">{subtaskProgress}%</span>
+                <span className="text-sm text-[#6637F4] font-medium">{subtaskProgress}%</span>
               </div>
               <Progress value={subtaskProgress} className="h-2 mb-3" />
               <div className="space-y-2">
@@ -1864,7 +1864,7 @@ const TaskDetailsDialog = ({
                   <div
                     key={subtask.id}
                     onClick={() => onToggleSubtask(subtask.id)}
-                    className="flex items-center gap-3 p-3 bg-[#F8FAFC] rounded-md cursor-pointer hover:bg-white/10 transition-colors"
+                    className="flex items-center gap-3 p-3 bg-[#F7F7FB] rounded-md cursor-pointer hover:bg-white/10 transition-colors"
                   >
                     <div
                       className={cn(
@@ -1898,7 +1898,7 @@ const TaskDetailsDialog = ({
                 {task.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="px-3 py-1 bg-[#0891B2]/10 text-[#0891B2] rounded-md text-sm font-medium"
+                    className="px-3 py-1 bg-[#6637F4]/10 text-[#6637F4] rounded-md text-sm font-medium"
                   >
                     #{tag}
                   </span>
@@ -1932,7 +1932,7 @@ const TaskDetailsDialog = ({
           </Button>
           <Button
             onClick={onEdit}
-            className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
+            className="bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-md"
           >
             <Pencil size={16} className="mr-2" />
             Edit Task
@@ -1996,8 +1996,8 @@ const TaskSidebar = ({
             className={cn(
               "w-full flex items-center justify-between px-3 py-2 rounded-md transition-colors",
               !selectedProject && !selectedCategory && !quickFilter && !showStarredOnly
-                ? "bg-[#0891B2]/10 text-[#0891B2]"
-                : "hover:bg-[#F8FAFC] text-[#475569]"
+                ? "bg-[#6637F4]/10 text-[#6637F4]"
+                : "hover:bg-[#F7F7FB] text-[#475569]"
             )}
           >
             <div className="flex items-center gap-2">
@@ -2012,7 +2012,7 @@ const TaskSidebar = ({
               "w-full flex items-center justify-between px-3 py-2 rounded-md transition-colors",
               showStarredOnly
                 ? "bg-yellow-50 text-yellow-600"
-                : "hover:bg-[#F8FAFC] text-[#475569]"
+                : "hover:bg-[#F7F7FB] text-[#475569]"
             )}
           >
             <div className="flex items-center gap-2">
@@ -2026,8 +2026,8 @@ const TaskSidebar = ({
             className={cn(
               "w-full flex items-center justify-between px-3 py-2 rounded-md transition-colors",
               quickFilter === "today"
-                ? "bg-[#0891B2]/10 text-[#0891B2]"
-                : "hover:bg-[#F8FAFC] text-[#475569]"
+                ? "bg-[#6637F4]/10 text-[#6637F4]"
+                : "hover:bg-[#F7F7FB] text-[#475569]"
             )}
           >
             <div className="flex items-center gap-2">
@@ -2041,8 +2041,8 @@ const TaskSidebar = ({
             className={cn(
               "w-full flex items-center justify-between px-3 py-2 rounded-md transition-colors",
               quickFilter === "upcoming"
-                ? "bg-[#0891B2]/10 text-[#0891B2]"
-                : "hover:bg-[#F8FAFC] text-[#475569]"
+                ? "bg-[#6637F4]/10 text-[#6637F4]"
+                : "hover:bg-[#F7F7FB] text-[#475569]"
             )}
           >
             <div className="flex items-center gap-2">
@@ -2085,8 +2085,8 @@ const TaskSidebar = ({
               className={cn(
                 "w-full flex items-center justify-between px-3 py-2 rounded-md transition-colors",
                 selectedProject === project.id
-                  ? "bg-[#0891B2]/10 text-[#0891B2]"
-                  : "hover:bg-[#F8FAFC] text-[#475569]"
+                  ? "bg-[#6637F4]/10 text-[#6637F4]"
+                  : "hover:bg-[#F7F7FB] text-[#475569]"
               )}
             >
               <div className="flex items-center gap-2">
@@ -2113,8 +2113,8 @@ const TaskSidebar = ({
               className={cn(
                 "w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors",
                 selectedCategory === category.id
-                  ? "bg-[#0891B2]/10 text-[#0891B2]"
-                  : "hover:bg-[#F8FAFC] text-[#475569]"
+                  ? "bg-[#6637F4]/10 text-[#6637F4]"
+                  : "hover:bg-[#F7F7FB] text-[#475569]"
               )}
             >
               <category.icon size={16} style={{ color: category.color }} />
@@ -2133,7 +2133,7 @@ const TaskSidebar = ({
             <Switch
               checked={showCompleted}
               onCheckedChange={onToggleShowCompleted}
-              className="data-[state=checked]:bg-[#0891B2]"
+              className="data-[state=checked]:bg-[#6637F4]"
             />
           </div>
         </div>
@@ -2586,7 +2586,7 @@ const TasksPage = () => {
   const completedCount = tasks.filter((t) => t.status === "completed").length;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-[#F7F7FB]">
 
       <main className="flex-1">
         {/* Header */}
@@ -2646,7 +2646,7 @@ const TasksPage = () => {
                     setCurrentTask(null);
                     setIsFormOpen(true);
                   }}
-                  className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md gap-1 sm:gap-2"
+                  className="bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-md gap-1 sm:gap-2"
                   size="sm"
                 >
                   <Plus size={18} />
@@ -2665,7 +2665,7 @@ const TasksPage = () => {
               value={tasks.length}
               subtitle={`${taskCounts.completed} completed`}
               icon={ListTodo}
-              color="#22D3EE"
+              color="#6637F4"
             />
             <StatCard
               title="To Do"

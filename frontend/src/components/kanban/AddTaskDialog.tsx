@@ -67,8 +67,8 @@ const statusOptions = [
     value: "todo",
     label: "To Do",
     icon: Circle,
-    color: "text-[#0891B2]",
-    bg: "bg-[#0891B2]/10",
+    color: "text-[#6637F4]",
+    bg: "bg-[#6637F4]/10",
   },
   {
     value: "in-progress",
@@ -158,7 +158,7 @@ const StyledInput = ({
       <Input
         {...props}
         className={cn(
-          "h-11 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all",
+          "h-11 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#6637F4] focus:ring-2 focus:ring-[#6637F4]/20 transition-all",
           Icon && "pl-10",
           props.className
         )}
@@ -294,12 +294,12 @@ export const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
         {/* ============================================ */}
         <div className="relative p-6 border-b border-[rgba(15,23,42,0.06)] /10/5 to-transparent">
           {/* Background Decoration */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-[#0891B2]/5 rounded-full blur-2xl" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[#6637F4]/5 rounded-full blur-2xl" />
 
           <DialogHeader className="relative">
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-md bg-[#0891B2]/20 flex items-center justify-center">
-                <Sparkles size={18} className="text-[#0891B2]" />
+              <div className="w-10 h-10 rounded-md bg-[#6637F4]/20 flex items-center justify-center">
+                <Sparkles size={18} className="text-[#6637F4]" />
               </div>
               <div>
                 <DialogTitle className="text-xl font-bold text-[#0F172A]">
@@ -353,7 +353,7 @@ export const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
                 onChange={(e) => handleChange("title", e.target.value)}
                 placeholder="Enter task title..."
                 className={cn(
-                  "h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all",
+                  "h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#6637F4] focus:ring-2 focus:ring-[#6637F4]/20 transition-all",
                   errors.title && "border-red-300 focus:border-red-400 focus:ring-red-200"
                 )}
               />
@@ -369,7 +369,7 @@ export const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
               value={formData.description}
               onChange={(e) => handleChange("description", e.target.value)}
               placeholder="Add a description..."
-              className="min-h-[100px] rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 resize-none transition-all"
+              className="min-h-[100px] rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#6637F4] focus:ring-2 focus:ring-[#6637F4]/20 resize-none transition-all"
             />
           </div>
 
@@ -382,7 +382,7 @@ export const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
                 value={formData.status}
                 onValueChange={(val) => handleChange("status", val)}
               >
-                <SelectTrigger className="h-11 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20">
+                <SelectTrigger className="h-11 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#6637F4] focus:ring-2 focus:ring-[#6637F4]/20">
                   <SelectValue>
                     {selectedStatus && (
                       <div className="flex items-center gap-2">
@@ -400,7 +400,7 @@ export const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
                     <SelectItem
                       key={option.value}
                       value={option.value}
-                      className="rounded-md focus:bg-[#0891B2]/10"
+                      className="rounded-md focus:bg-[#6637F4]/10"
                     >
                       <div className="flex items-center gap-2">
                         <div
@@ -428,7 +428,7 @@ export const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
                   handleChange("priority", val)
                 }
               >
-                <SelectTrigger className="h-11 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20">
+                <SelectTrigger className="h-11 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#6637F4] focus:ring-2 focus:ring-[#6637F4]/20">
                   <SelectValue>
                     {selectedPriority && (
                       <div className="flex items-center gap-2">
@@ -445,7 +445,7 @@ export const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
                     <SelectItem
                       key={option.value}
                       value={option.value}
-                      className="rounded-md focus:bg-[#0891B2]/10"
+                      className="rounded-md focus:bg-[#6637F4]/10"
                     >
                       <div className="flex items-center gap-2">
                         <div
@@ -488,7 +488,7 @@ export const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
                   type="date"
                   value={formData.dueDate}
                   onChange={(e) => handleChange("dueDate", e.target.value)}
-                  className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all"
+                  className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#6637F4] focus:ring-2 focus:ring-[#6637F4]/20 transition-all"
                 />
               </div>
             </div>
@@ -509,7 +509,7 @@ export const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
                 value={formData.tags}
                 onChange={(e) => handleChange("tags", e.target.value)}
                 placeholder="design, frontend, bug..."
-                className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all"
+                className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#6637F4] focus:ring-2 focus:ring-[#6637F4]/20 transition-all"
               />
             </div>
 
@@ -533,7 +533,7 @@ export const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
                         initial={{ opacity: 0, scale: 0.8 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: index * 0.05 }}
-                        className="px-2.5 py-1 rounded-md bg-[#0891B2]/10 text-[#0891B2] text-xs font-medium"
+                        className="px-2.5 py-1 rounded-md bg-[#6637F4]/10 text-[#6637F4] text-xs font-medium"
                       >
                         #{tag}
                       </motion.span>
@@ -565,7 +565,7 @@ export const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
               <Button
                 type="submit"
                 disabled={isLoading || !formData.title.trim()}
-                className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md  min-w-[120px]"
+                className="bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-md  min-w-[120px]"
               >
                 {isLoading ? (
                   <>

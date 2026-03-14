@@ -735,6 +735,7 @@ model Tenant {
   jobCompletions        JobCompletion[]
   proposals             Proposal[]
   signedContracts       SignedContract[]
+  constructionEstimates ConstructionEstimate[]
 
   @@index([status])
   @@index([slug])
@@ -4739,4 +4740,256 @@ model AdminAuditLog {
   @@index([adminId])
   @@index([action])
   @@index([createdAt])
+}
+
+// ============================================================================
+// CONSTRUCTION COST ESTIMATOR
+// ============================================================================
+
+enum EstimateStatus {
+  DRAFT
+  ACTIVE
+  SENT
+  ACCEPTED
+  REJECTED
+  INVOICED
+}
+
+enum EstimateProjectType {
+  RESIDENTIAL
+  COMMERCIAL
+  ROOFING
+  RENOVATION
+  NEW_CONSTRUCTION
+  REPAIR
+}
+
+enum MaterialUnit {
+  KG
+  M
+  PCS
+  SQFT
+  BAG
+  TON
+  LF
+  ROLL
+  BOX
+  BUNDLE
+  GAL
+  SHEET
+}
+
+enum LabourType {
+  MASON
+  ELECTRICIAN
+  CARPENTER
+  ROOFER
+  HELPER
+  PLUMBER
+  PAINTER
+  HVAC
+  GENERAL
+}
+
+enum EquipmentMode {
+  RENTAL
+  PURCHASE
+}
+
+model ConstructionEstimate {
+  id                  String              @id @default(uuid())
+
+  // ── Project Details ──
+  projectName         String
+  projectType         EstimateProjectType @default(RESIDENTIAL)
+  status              EstimateStatus      @default(DRAFT)
+  currency            Currency            @default(CAD)
+  paymentTerms        String?             // e.g. "Net 30", "50% upfront"
+  startDate           DateTime?
+  endDate             DateTime?
+
+  // ── Address & Geo ──
+  address             String
+  formattedAddress    String?
+  placeId             String?             // Google place_id
+  latitude            Float?
+  longitude           Float?
+  city                String?
+  postalCode          String?
+  country             String?             @default("CA")
+  satelliteImageUrl   String?
+
+  // ── Summary Totals (auto-calculated) ──
+  totalMaterialCost   Float               @default(0)
+  totalLabourCost     Float               @default(0)
+  totalEquipmentCost  Float               @default(0)
+  totalTransportCost  Float               @default(0)
+  subtotal            Float               @default(0)
+
+  // ── Additional Costs ──
+  taxPercent          Float               @default(13)    // GST/HST %
+  taxAmount           Float               @default(0)
+  overheadPercent     Float               @default(10)
+  overheadCost        Float               @default(0)
+  profitPercent       Float               @default(15)
+  profitMargin        Float               @default(0)
+  miscellaneousCost   Float               @default(0)
+  safetyEquipmentCost Float               @default(0)
+  wastagePercent      Float               @default(5)
+  contingencyBudget   Float               @default(0)
+
+  grandTotal          Float               @default(0)
+
+  // ── Notes ──
+  clientNotes         String?             @db.Text
+  internalNotes       String?             @db.Text
+  termsAndConditions  String?             @db.Text
+
+  // ── Relations ──
+  tenantId            String
+  tenant              Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  clientId            String?
+  leadId              String?
+  createdBy           String              // employeeId
+
+  // ── Child records ──
+  measurements        EstimateMeasurement?
+  materials           EstimateMaterial[]
+  labour              EstimateLabour[]
+  equipment           EstimateEquipment[]
+  transport           EstimateTransport[]
+
+  // ── Timestamps ──
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([createdBy])
+  @@index([createdAt])
+}
+
+model EstimateMeasurement {
+  id                  String              @id @default(uuid())
+
+  // ── EagleView Data ──
+  roofArea            Float?              // sq ft
+  ridgeLength         Float?              // ft
+  valleyLength        Float?              // ft
+  hipLength           Float?              // ft
+  eaveLength          Float?              // ft
+  rakeLength          Float?              // ft
+  pitch               String?             // e.g. "6/12"
+  facets              Int?
+  roofPlanes          Int?
+  totalPerimeter      Float?
+  slopeChange         Float?
+  stepFlashing        Float?
+  headwallFlashing    Float?
+
+  // ── Source ──
+  source              String?             @default("manual") // eagleview, manual
+  eagleViewOrderId    String?
+  eagleViewReportId   String?
+
+  // ── Relation ──
+  estimateId          String              @unique
+  estimate            ConstructionEstimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  @@index([estimateId])
+}
+
+model EstimateMaterial {
+  id                  String              @id @default(uuid())
+  sortOrder           Int                 @default(0)
+
+  materialName        String
+  materialCategory    String?             // freeform category
+  quantity            Float               @default(0)
+  unit                MaterialUnit        @default(PCS)
+  ratePerUnit         Float               @default(0)
+  totalCost           Float               @default(0)      // quantity × rate
+  supplierName        String?
+  notes               String?
+
+  // ── Relation ──
+  estimateId          String
+  estimate            ConstructionEstimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  @@index([estimateId])
+}
+
+model EstimateLabour {
+  id                  String              @id @default(uuid())
+  sortOrder           Int                 @default(0)
+
+  labourType          LabourType          @default(GENERAL)
+  description         String?
+  numberOfWorkers     Int                 @default(1)
+  workingDays         Int                 @default(1)
+  hoursPerDay         Float               @default(8)
+  ratePerDay          Float               @default(0)
+  overtimeHours       Float               @default(0)
+  overtimeRate        Float               @default(0)
+
+  baseCost            Float               @default(0)      // workers × days × rate
+  overtimeCost        Float               @default(0)      // workers × otHours × otRate
+  totalCost           Float               @default(0)      // base + overtime
+
+  // ── Relation ──
+  estimateId          String
+  estimate            ConstructionEstimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  @@index([estimateId])
+}
+
+model EstimateEquipment {
+  id                  String              @id @default(uuid())
+  sortOrder           Int                 @default(0)
+
+  equipmentName       String
+  mode                EquipmentMode       @default(RENTAL)
+  numberOfUnits       Int                 @default(1)
+  durationDays        Int                 @default(1)
+  costPerDay          Float               @default(0)
+  totalCost           Float               @default(0)      // units × days × costPerDay
+
+  // ── Relation ──
+  estimateId          String
+  estimate            ConstructionEstimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  @@index([estimateId])
+}
+
+model EstimateTransport {
+  id                  String              @id @default(uuid())
+  sortOrder           Int                 @default(0)
+
+  transportType       String
+  distance            Float?              // km or miles
+  numberOfTrips       Int                 @default(1)
+  costPerTrip         Float               @default(0)
+  totalCost           Float               @default(0)      // trips × costPerTrip
+
+  // ── Relation ──
+  estimateId          String
+  estimate            ConstructionEstimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  @@index([estimateId])
 }

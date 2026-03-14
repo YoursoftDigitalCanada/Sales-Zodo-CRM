@@ -70,6 +70,7 @@ import roofEstimatorRoutes from '../modules/roof-estimator/roof-estimator.routes
 import copilotRoutes from '../modules/copilot/copilot.routes';
 import eagleViewRoutes from '../modules/eagleview/eagleview.routes';
 import { eagleViewWebhookRouter } from '../modules/eagleview/eagleview.routes';
+import constructionEstimatorRoutes from '../modules/construction-estimator/construction-estimator.routes';
 
 // Timeline module
 import timelineRoutes from '../modules/timeline/timeline.routes';
@@ -192,6 +193,7 @@ export function registerRoutes(app: Application): void {
   protectedRouter.use('/roof-estimator', roofEstimatorRoutes);
   protectedRouter.use('/copilot', copilotRoutes);
   protectedRouter.use('/eagleview', eagleViewRoutes);
+  protectedRouter.use('/construction-estimator', constructionEstimatorRoutes);
 
   // Timeline
   protectedRouter.use('/timeline', timelineRoutes);

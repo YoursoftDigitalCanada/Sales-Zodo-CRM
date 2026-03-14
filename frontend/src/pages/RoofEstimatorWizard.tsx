@@ -20,7 +20,7 @@ import { generateEstimatePDF, downloadPDFBlob } from "@/features/roof-estimator/
 import { getClients, type ClientEntity } from "@/features/clients/services/clients-service";
 import { getLeads, type LeadEntity } from "@/features/leads/services/leads-service";
 
-interface OtherMaterial { name: string; cost: number; }
+interface OtherMaterial { name: string; qty: number; cost: number; }
 
 /* ─── Constants ──────────────────────────────────────────── */
 
@@ -66,15 +66,23 @@ interface WizardData {
   wastePercent: number;
   measurementSource: string;
   tearOffRequired: boolean;
-  // Step 2
+  // Step 3: Materials
   shingleType: string;
+  shingleQty: number;
   shinglePricePerSq: number;
+  underlaymentQty: number;
   underlaymentCost: number;
+  iceWaterShieldQty: number;
   iceWaterShieldCost: number;
+  ridgeCapQty: number;
   ridgeCapCost: number;
+  starterStripQty: number;
   starterStripCost: number;
+  flashingQty: number;
   flashingCostWizard: number;
+  ventQty: number;
   ventCostWizard: number;
+  nailsAccessoriesQty: number;
   nailsAccessoriesCost: number;
   // Step 3
   laborCostPerSquare: number;
@@ -105,9 +113,15 @@ const DEFAULT_DATA: WizardData = {
   roofAreaSqft: 0, confidence: 0, processingTimeSec: 0, aiModel: "yolov8n-seg-cpu",
   pitch: "6/12", roofType: "gable", stories: 1, layers: 1, wastePercent: 10,
   measurementSource: "", tearOffRequired: false,
-  shingleType: "Architectural Shingles", shinglePricePerSq: 0, underlaymentCost: 0,
-  iceWaterShieldCost: 0, ridgeCapCost: 0, starterStripCost: 0,
-  flashingCostWizard: 0, ventCostWizard: 0, nailsAccessoriesCost: 0,
+  shingleType: "Architectural Shingles",
+  shingleQty: 1, shinglePricePerSq: 0,
+  underlaymentQty: 1, underlaymentCost: 0,
+  iceWaterShieldQty: 1, iceWaterShieldCost: 0,
+  ridgeCapQty: 1, ridgeCapCost: 0,
+  starterStripQty: 1, starterStripCost: 0,
+  flashingQty: 1, flashingCostWizard: 0,
+  ventQty: 1, ventCostWizard: 0,
+  nailsAccessoriesQty: 1, nailsAccessoriesCost: 0,
   laborCostPerSquare: 0, numberOfLaborers: 3, daysRequired: 2, laborRatePerWorker: 350,
   dumpsterCost: 0, permitCost: 0, deliveryFee: 0, equipmentRentalCost: 0, disposalFee: 0,
   overheadPercent: 10, profitMarginPercent: 20, taxPercent: 13,
@@ -254,14 +268,14 @@ export default function RoofEstimatorWizard() {
             wastePercent: est.wastePercent ?? 10, measurementSource: est.measurementSource || "",
             tearOffRequired: est.tearOffRequired || false,
             shingleType: est.shingleType || "Architectural Shingles",
-            shinglePricePerSq: est.shinglePricePerSq || 0,
-            underlaymentCost: est.underlaymentCost || 0,
-            iceWaterShieldCost: est.iceWaterShieldCost || 0,
-            ridgeCapCost: est.ridgeCapCost || 0,
-            starterStripCost: est.starterStripCost || 0,
-            flashingCostWizard: est.flashingCostWizard || 0,
-            ventCostWizard: est.ventCostWizard || 0,
-            nailsAccessoriesCost: est.nailsAccessoriesCost || 0,
+            shingleQty: 1, shinglePricePerSq: est.shinglePricePerSq || 0,
+            underlaymentQty: 1, underlaymentCost: est.underlaymentCost || 0,
+            iceWaterShieldQty: 1, iceWaterShieldCost: est.iceWaterShieldCost || 0,
+            ridgeCapQty: 1, ridgeCapCost: est.ridgeCapCost || 0,
+            starterStripQty: 1, starterStripCost: est.starterStripCost || 0,
+            flashingQty: 1, flashingCostWizard: est.flashingCostWizard || 0,
+            ventQty: 1, ventCostWizard: est.ventCostWizard || 0,
+            nailsAccessoriesQty: 1, nailsAccessoriesCost: est.nailsAccessoriesCost || 0,
             laborCostPerSquare: est.laborCostPerSquare || 0,
             numberOfLaborers: est.numberOfLaborers || 3,
             daysRequired: est.daysRequired || 2,
@@ -288,12 +302,18 @@ export default function RoofEstimatorWizard() {
   /* ── Computed totals ──────────────────────────── */
 
   const otherMaterialsTotal = useMemo(() =>
-    data.otherMaterials.reduce((s, m) => s + (m.cost || 0), 0), [data.otherMaterials]);
+    data.otherMaterials.reduce((s, m) => s + ((m.qty || 1) * (m.cost || 0)), 0), [data.otherMaterials]);
 
   const totalMaterialCost = useMemo(() =>
-    data.shinglePricePerSq + data.underlaymentCost + data.iceWaterShieldCost +
-    data.ridgeCapCost + data.starterStripCost + data.flashingCostWizard +
-    data.ventCostWizard + data.nailsAccessoriesCost + otherMaterialsTotal, [data, otherMaterialsTotal]);
+    (data.shingleQty * data.shinglePricePerSq) +
+    (data.underlaymentQty * data.underlaymentCost) +
+    (data.iceWaterShieldQty * data.iceWaterShieldCost) +
+    (data.ridgeCapQty * data.ridgeCapCost) +
+    (data.starterStripQty * data.starterStripCost) +
+    (data.flashingQty * data.flashingCostWizard) +
+    (data.ventQty * data.ventCostWizard) +
+    (data.nailsAccessoriesQty * data.nailsAccessoriesCost) +
+    otherMaterialsTotal, [data, otherMaterialsTotal]);
 
   const totalLaborCost = useMemo(() =>
     data.numberOfLaborers * data.daysRequired * data.laborRatePerWorker, [data]);
@@ -1050,7 +1070,7 @@ function Step3Materials({ data, up, total, otherMaterials, onOtherMaterialsChang
   otherMaterials: OtherMaterial[];
   onOtherMaterialsChange: (mats: OtherMaterial[]) => void;
 }) {
-  const addMaterial = () => onOtherMaterialsChange([...otherMaterials, { name: "", cost: 0 }]);
+  const addMaterial = () => onOtherMaterialsChange([...otherMaterials, { name: "", qty: 1, cost: 0 }]);
   const removeMaterial = (idx: number) => onOtherMaterialsChange(otherMaterials.filter((_, i) => i !== idx));
   const updateMaterial = (idx: number, field: keyof OtherMaterial, val: string | number) => {
     const copy = [...otherMaterials];
@@ -1058,25 +1078,53 @@ function Step3Materials({ data, up, total, otherMaterials, onOtherMaterialsChang
     onOtherMaterialsChange(copy);
   };
 
+  const materials: { label: string; qtyKey: keyof WizardData; priceKey: keyof WizardData }[] = [
+    { label: "Shingles (per sq)", qtyKey: "shingleQty", priceKey: "shinglePricePerSq" },
+    { label: "Underlayment", qtyKey: "underlaymentQty", priceKey: "underlaymentCost" },
+    { label: "Ice & Water Shield", qtyKey: "iceWaterShieldQty", priceKey: "iceWaterShieldCost" },
+    { label: "Ridge Cap", qtyKey: "ridgeCapQty", priceKey: "ridgeCapCost" },
+    { label: "Starter Strip", qtyKey: "starterStripQty", priceKey: "starterStripCost" },
+    { label: "Flashing", qtyKey: "flashingQty", priceKey: "flashingCostWizard" },
+    { label: "Vents", qtyKey: "ventQty", priceKey: "ventCostWizard" },
+    { label: "Nails & Accessories", qtyKey: "nailsAccessoriesQty", priceKey: "nailsAccessoriesCost" },
+  ];
+
+  const fmtLine = (q: number, p: number) => {
+    const t = q * p;
+    return `$${t.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
   return (
     <div>
       <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A", marginBottom: 4 }}>🧱 Material Pricing</h2>
-      <p style={{ fontSize: 13, color: "#64748B", marginBottom: 20 }}>Enter the cost for each material. All costs auto-calculate the total.</p>
+      <p style={{ fontSize: 13, color: "#64748B", marginBottom: 20 }}>Enter quantity and unit price for each material. Line totals auto-calculate.</p>
 
       <Field label="Shingle Type">
         <input value={data.shingleType} onChange={(e) => up("shingleType", e.target.value)} style={inputStyle} placeholder="e.g. Architectural Shingles" />
       </Field>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <Field label="Shingles (per sq)"><NumberInput value={data.shinglePricePerSq} onChange={(v) => up("shinglePricePerSq", v)} prefix="$" /></Field>
-        <Field label="Underlayment"><NumberInput value={data.underlaymentCost} onChange={(v) => up("underlaymentCost", v)} prefix="$" /></Field>
-        <Field label="Ice & Water Shield"><NumberInput value={data.iceWaterShieldCost} onChange={(v) => up("iceWaterShieldCost", v)} prefix="$" /></Field>
-        <Field label="Ridge Cap"><NumberInput value={data.ridgeCapCost} onChange={(v) => up("ridgeCapCost", v)} prefix="$" /></Field>
-        <Field label="Starter Strip"><NumberInput value={data.starterStripCost} onChange={(v) => up("starterStripCost", v)} prefix="$" /></Field>
-        <Field label="Flashing"><NumberInput value={data.flashingCostWizard} onChange={(v) => up("flashingCostWizard", v)} prefix="$" /></Field>
-        <Field label="Vents"><NumberInput value={data.ventCostWizard} onChange={(v) => up("ventCostWizard", v)} prefix="$" /></Field>
-        <Field label="Nails & Accessories"><NumberInput value={data.nailsAccessoriesCost} onChange={(v) => up("nailsAccessoriesCost", v)} prefix="$" /></Field>
+      {/* Material table header */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 120px 100px", gap: 8, marginBottom: 6, padding: "0 2px" }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase" }}>Material</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase" }}>Qty</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase" }}>Unit Price</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase", textAlign: "right" }}>Line Total</span>
       </div>
+
+      {materials.map((mat) => (
+        <div key={mat.label} style={{
+          display: "grid", gridTemplateColumns: "1fr 80px 120px 100px", gap: 8,
+          alignItems: "center", padding: "6px 2px",
+          borderBottom: "1px solid #F1F5F9",
+        }}>
+          <span style={{ fontSize: 13, color: "#0F172A", fontWeight: 500 }}>{mat.label}</span>
+          <NumberInput value={data[mat.qtyKey] as number} onChange={(v) => up(mat.qtyKey, v as any)} />
+          <NumberInput value={data[mat.priceKey] as number} onChange={(v) => up(mat.priceKey, v as any)} prefix="$" />
+          <span style={{ fontSize: 13, fontWeight: 600, color: "#475569", textAlign: "right" }}>
+            {fmtLine(data[mat.qtyKey] as number, data[mat.priceKey] as number)}
+          </span>
+        </div>
+      ))}
 
       {/* Other Materials — dynamic rows */}
       <div style={{ marginTop: 20, borderTop: "1px solid #E2E8F0", paddingTop: 16 }}>
@@ -1094,19 +1142,26 @@ function Step3Materials({ data, up, total, otherMaterials, onOtherMaterialsChang
         {otherMaterials.length === 0 && (
           <div style={{ fontSize: 12, color: "#94A3B8", padding: "10px 0" }}>No additional materials added yet.</div>
         )}
+        {otherMaterials.length > 0 && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 120px 100px 36px", gap: 8, marginBottom: 6 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase" }}>Name</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase" }}>Qty</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase" }}>Unit Price</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase", textAlign: "right" }}>Total</span>
+            <span />
+          </div>
+        )}
         {otherMaterials.map((m, idx) => (
-          <div key={idx} style={{ display: "flex", gap: 8, alignItems: "flex-end", marginBottom: 8 }}>
-            <div style={{ flex: 1 }}>
-              {idx === 0 && <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#64748B", marginBottom: 4 }}>Material Name</label>}
-              <input value={m.name} onChange={(e) => updateMaterial(idx, "name", e.target.value)}
-                placeholder="e.g. Drip Edge" style={inputStyle} />
-            </div>
-            <div style={{ width: 140 }}>
-              {idx === 0 && <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#64748B", marginBottom: 4 }}>Cost</label>}
-              <NumberInput value={m.cost} onChange={(v) => updateMaterial(idx, "cost", v)} prefix="$" />
-            </div>
+          <div key={idx} style={{ display: "grid", gridTemplateColumns: "1fr 80px 120px 100px 36px", gap: 8, alignItems: "center", marginBottom: 6 }}>
+            <input value={m.name} onChange={(e) => updateMaterial(idx, "name", e.target.value)}
+              placeholder="e.g. Drip Edge" style={inputStyle} />
+            <NumberInput value={m.qty} onChange={(v) => updateMaterial(idx, "qty", v)} />
+            <NumberInput value={m.cost} onChange={(v) => updateMaterial(idx, "cost", v)} prefix="$" />
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#475569", textAlign: "right" }}>
+              {fmtLine(m.qty || 1, m.cost || 0)}
+            </span>
             <button onClick={() => removeMaterial(idx)} title="Remove" style={{
-              width: 32, height: 38, display: "flex", alignItems: "center", justifyContent: "center",
+              width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center",
               borderRadius: 6, border: "1px solid #FEE2E2", background: "#FFF5F5",
               color: "#EF4444", cursor: "pointer", flexShrink: 0,
             }}>

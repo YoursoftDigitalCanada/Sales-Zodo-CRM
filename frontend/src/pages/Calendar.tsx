@@ -193,7 +193,7 @@ const eventColors = [
   { id: "yellow", color: "#F59E0B", name: "Yellow" },
   { id: "red", color: "#EF4444", name: "Red" },
   { id: "pink", color: "#EC4899", name: "Pink" },
-  { id: "teal", color: "#22D3EE", name: "Teal" },
+  { id: "teal", color: "#6637F4", name: "Teal" },
   { id: "orange", color: "#F97316", name: "Orange" },
 ];
 
@@ -383,14 +383,14 @@ const MiniCalendar = ({
                 "relative h-8 w-8 rounded-full text-sm font-medium transition-all duration-150",
                 !isCurrentMonth && "text-[#CBD5E1]",
                 isCurrentMonth && !isSelected && !isTodayDate && "text-[#475569] hover:bg-gray-100",
-                isTodayDate && !isSelected && "bg-[#0891B2] text-white font-bold",
-                isSelected && !isTodayDate && "bg-[#0891B2]/15 text-[#0891B2] font-bold",
-                isSelected && isTodayDate && "bg-[#0891B2] text-white font-bold ring-2 ring-[#0891B2]/30 ring-offset-1"
+                isTodayDate && !isSelected && "bg-[#6637F4] text-white font-bold",
+                isSelected && !isTodayDate && "bg-[#6637F4]/15 text-[#6637F4] font-bold",
+                isSelected && isTodayDate && "bg-[#6637F4] text-white font-bold ring-2 ring-[#6637F4]/30 ring-offset-1"
               )}
             >
               {day}
               {hasEvent && !isSelected && !isTodayDate && (
-                <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#0891B2]" />
+                <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#6637F4]" />
               )}
               {hasEvent && isTodayDate && !isSelected && (
                 <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-white" />
@@ -404,7 +404,7 @@ const MiniCalendar = ({
       <div className="mt-4 pt-4 border-t border-[rgba(15,23,42,0.06)]">
         <Button
           variant="ghost"
-          className="w-full justify-start text-sm text-[#475569] hover:text-[#0891B2] rounded-md transition-colors duration-150"
+          className="w-full justify-start text-sm text-[#475569] hover:text-[#6637F4] rounded-md transition-colors duration-150"
           onClick={() => onDateSelect(new Date())}
         >
           <CalendarIcon size={14} className="mr-2" />
@@ -436,15 +436,15 @@ const UpcomingEvents = ({
       <h3 className="font-semibold text-[#0F172A] mb-4">Upcoming Events</h3>
 
       {upcomingEvents.length === 0 ? (
-        <div className="text-center py-8 px-4 bg-gradient-to-b from-[#F0FDFA] to-white rounded-xl">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[#0891B2]/10 flex items-center justify-center">
-            <CalendarIcon size={32} className="text-[#0891B2]" />
+        <div className="text-center py-8 px-4 bg-gradient-to-b from-[#F0EEFF] to-white rounded-xl">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[#6637F4]/10 flex items-center justify-center">
+            <CalendarIcon size={32} className="text-[#6637F4]" />
           </div>
           <p className="text-sm font-semibold text-[#0F172A] mb-1">No upcoming events</p>
           <p className="text-xs text-[#94A3B8] mb-4">Your schedule is clear!</p>
           <button
             onClick={() => onEventClick({} as CalendarEvent)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0891B2] hover:bg-[#0891B2]/90 text-white text-sm font-medium rounded-lg transition-colors duration-150"
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#6637F4] hover:bg-[#6637F4]/90 text-white text-sm font-medium rounded-lg transition-colors duration-150"
           >
             <Plus size={14} />
             Schedule Event
@@ -461,7 +461,7 @@ const UpcomingEvents = ({
                 key={event.id}
                 whileHover={{ x: 4 }}
                 onClick={() => onEventClick(event)}
-                className="flex items-start gap-3 p-3 rounded-md hover:bg-[#F8FAFC] cursor-pointer transition-colors"
+                className="flex items-start gap-3 p-3 rounded-md hover:bg-[#F7F7FB] cursor-pointer transition-colors"
               >
                 <div
                   className="w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0"
@@ -526,7 +526,7 @@ const CategoryFilter = ({
                 "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-all duration-150",
                 isSelected
                   ? "bg-white/5"
-                  : "hover:bg-[#F8FAFC] opacity-60 hover:opacity-100"
+                  : "hover:bg-[#F7F7FB] opacity-60 hover:opacity-100"
               )}
             >
               <div
@@ -537,7 +537,7 @@ const CategoryFilter = ({
               <span className="text-sm font-medium text-[#0F172A] flex-1 text-left">
                 {category.name}
               </span>
-              {isSelected && <Check size={14} className="text-[#0891B2]" />}
+              {isSelected && <Check size={14} className="text-[#6637F4]" />}
             </button>
           );
         })}
@@ -696,7 +696,7 @@ const MonthView = ({
           <div
             key={day}
             className={cn(
-              "px-4 py-3 text-sm font-semibold text-[#475569] text-center bg-[#F8FAFC]",
+              "px-4 py-3 text-sm font-semibold text-[#475569] text-center bg-[#F7F7FB]",
               (idx === 0 || idx === 6) && "bg-gray-100/80"
             )}
           >
@@ -719,10 +719,10 @@ const MonthView = ({
               onClick={() => onDateClick(date)}
               className={cn(
                 "group min-h-[120px] p-2 border-b border-r border-[rgba(15,23,42,0.06)] cursor-pointer transition-all duration-150",
-                !isCurrentMonth && "bg-[#F8FAFC]/50",
+                !isCurrentMonth && "bg-[#F7F7FB]/50",
                 isCurrentMonth && "hover:bg-gray-50",
                 isWeekend && isCurrentMonth && "bg-gray-50/50",
-                isTodayDate && "border-l-2 border-l-[#0891B2]/40 bg-[#0891B2]/[0.03]",
+                isTodayDate && "border-l-2 border-l-[#6637F4]/40 bg-[#6637F4]/[0.03]",
                 isPast && "opacity-60"
               )}
             >
@@ -733,7 +733,7 @@ const MonthView = ({
                     "w-7 h-7 flex items-center justify-center rounded-full text-sm font-medium transition-colors duration-150",
                     !isCurrentMonth && "text-[#CBD5E1]",
                     isCurrentMonth && "text-[#0F172A]",
-                    isTodayDate && "bg-[#0891B2] text-white"
+                    isTodayDate && "bg-[#6637F4] text-white"
                   )}
                 >
                   {day}
@@ -747,7 +747,7 @@ const MonthView = ({
                   {isCurrentMonth && onAddEvent && (
                     <button
                       onClick={(e) => { e.stopPropagation(); onAddEvent(date); }}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 w-6 h-6 rounded-md bg-[#0891B2]/10 hover:bg-[#0891B2]/20 flex items-center justify-center text-[#0891B2]"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 w-6 h-6 rounded-md bg-[#6637F4]/10 hover:bg-[#6637F4]/20 flex items-center justify-center text-[#6637F4]"
                       aria-label={`Add event on ${date.toDateString()}`}
                     >
                       <Plus size={12} />
@@ -825,13 +825,13 @@ const WeekView = ({
     <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden">
       {/* Header */}
       <div className="grid grid-cols-8 border-b border-[rgba(15,23,42,0.06)]">
-        <div className="p-3 bg-[#F8FAFC]" />
+        <div className="p-3 bg-[#F7F7FB]" />
         {weekDays.map((date, index) => (
           <div
             key={index}
             className={cn(
               "p-3 text-center border-l border-[rgba(15,23,42,0.06)]",
-              isToday(date) && "bg-[#0891B2]/5"
+              isToday(date) && "bg-[#6637F4]/5"
             )}
           >
             <p className="text-xs text-[#94A3B8]">
@@ -840,7 +840,7 @@ const WeekView = ({
             <p
               className={cn(
                 "text-lg font-semibold",
-                isToday(date) ? "text-[#0891B2]" : "text-[#0F172A]"
+                isToday(date) ? "text-[#6637F4]" : "text-[#0F172A]"
               )}
             >
               {date.getDate()}
@@ -851,7 +851,7 @@ const WeekView = ({
 
       {/* All Day Events Row */}
       <div className="grid grid-cols-8 border-b border-[rgba(15,23,42,0.06)]">
-        <div className="p-2 bg-[#F8FAFC] text-xs text-[#94A3B8] text-center">
+        <div className="p-2 bg-[#F7F7FB] text-xs text-[#94A3B8] text-center">
           All Day
         </div>
         {weekDays.map((date, index) => {
@@ -880,7 +880,7 @@ const WeekView = ({
       <div className="max-h-[600px] overflow-y-auto">
         {hours.map((hour) => (
           <div key={hour} className="grid grid-cols-8 border-b border-[rgba(15,23,42,0.06)]">
-            <div className="p-2 bg-[#F8FAFC] text-xs text-[#94A3B8] text-right pr-3">
+            <div className="p-2 bg-[#F7F7FB] text-xs text-[#94A3B8] text-right pr-3">
               {hour === 0
                 ? "12 AM"
                 : hour < 12
@@ -896,7 +896,7 @@ const WeekView = ({
                   key={index}
                   className={cn(
                     "p-1 border-l border-[rgba(15,23,42,0.06)] min-h-[50px]",
-                    isToday(date) && "bg-[#0891B2]/5"
+                    isToday(date) && "bg-[#6637F4]/5"
                   )}
                 >
                   {hourEvents.map((event) => (
@@ -951,13 +951,13 @@ const DayView = ({
   return (
     <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]">
+      <div className="p-4 border-b border-[rgba(15,23,42,0.06)] bg-[#F7F7FB]">
         <div className="flex items-center justify-center gap-3">
           <span
             className={cn(
               "w-12 h-12 flex items-center justify-center rounded-md text-xl sm:text-2xl font-bold",
               isToday(currentDate)
-                ? "bg-[#0891B2] text-white"
+                ? "bg-[#6637F4] text-white"
                 : "bg-slate-200 text-[#0F172A]"
             )}
           >
@@ -976,7 +976,7 @@ const DayView = ({
 
       {/* All Day Events */}
       {allDayEvents.length > 0 && (
-        <div className="p-3 border-b border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]/50">
+        <div className="p-3 border-b border-[rgba(15,23,42,0.06)] bg-[#F7F7FB]/50">
           <p className="text-xs text-[#94A3B8] mb-2">All Day</p>
           <div className="space-y-2">
             {allDayEvents.map((event) => (
@@ -1000,7 +1000,7 @@ const DayView = ({
               key={hour}
               className="flex border-b border-[rgba(15,23,42,0.06)] min-h-[60px]"
             >
-              <div className="w-20 p-3 bg-[#F8FAFC] text-sm text-[#94A3B8] text-right flex-shrink-0">
+              <div className="w-20 p-3 bg-[#F7F7FB] text-sm text-[#94A3B8] text-right flex-shrink-0">
                 {hour === 0
                   ? "12 AM"
                   : hour < 12
@@ -1079,8 +1079,8 @@ const AgendaView = ({
                 {/* Date Header */}
                 <div
                   className={cn(
-                    "sticky top-0 px-4 py-3 bg-[#F8FAFC] border-b border-[rgba(15,23,42,0.06)]",
-                    isToday(date) && "bg-[#0891B2]/10"
+                    "sticky top-0 px-4 py-3 bg-[#F7F7FB] border-b border-[rgba(15,23,42,0.06)]",
+                    isToday(date) && "bg-[#6637F4]/10"
                   )}
                 >
                   <div className="flex items-center gap-3">
@@ -1088,7 +1088,7 @@ const AgendaView = ({
                       className={cn(
                         "w-10 h-10 flex items-center justify-center rounded-md font-bold",
                         isToday(date)
-                          ? "bg-[#0891B2] text-white"
+                          ? "bg-[#6637F4] text-white"
                           : "bg-white text-[#0F172A] border border-[rgba(15,23,42,0.06)]"
                       )}
                     >
@@ -1098,7 +1098,7 @@ const AgendaView = ({
                       <p
                         className={cn(
                           "font-semibold",
-                          isToday(date) ? "text-[#0891B2]" : "text-[#0F172A]"
+                          isToday(date) ? "text-[#6637F4]" : "text-[#0F172A]"
                         )}
                       >
                         {isToday(date)
@@ -1130,7 +1130,7 @@ const AgendaView = ({
                         key={event.id}
                         whileHover={{ x: 4 }}
                         onClick={() => onEventClick(event)}
-                        className="flex items-start gap-4 p-4 rounded-md hover:bg-[#F8FAFC] cursor-pointer transition-colors group"
+                        className="flex items-start gap-4 p-4 rounded-md hover:bg-[#F7F7FB] cursor-pointer transition-colors group"
                       >
                         {/* Time */}
                         <div className="w-20 flex-shrink-0 text-right">
@@ -1158,7 +1158,7 @@ const AgendaView = ({
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between">
                             <div>
-                              <h4 className="font-semibold text-[#0F172A] group-hover:text-[#0891B2] transition-colors">
+                              <h4 className="font-semibold text-[#0F172A] group-hover:text-[#6637F4] transition-colors">
                                 {event.title}
                               </h4>
                               {event.description && (
@@ -1376,7 +1376,7 @@ const EventFormDialog = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px] p-0 rounded-md overflow-hidden max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-[rgba(15,23,42,0.06)] bg-[#F0FDFA] sticky top-0 bg-white z-10">
+        <div className="p-6 border-b border-[rgba(15,23,42,0.06)] bg-[#F0EEFF] sticky top-0 bg-white z-10">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-[#0F172A]">
               {event ? "Edit Event" : "Create Event"}
@@ -1415,7 +1415,7 @@ const EventFormDialog = ({
           </div>
 
           {/* All Day Toggle */}
-          <div className="flex items-center justify-between p-3 bg-[#F8FAFC] rounded-md">
+          <div className="flex items-center justify-between p-3 bg-[#F7F7FB] rounded-md">
             <div className="flex items-center gap-3">
               <CalendarDays size={18} className="text-[#94A3B8]" />
               <span className="font-medium text-[#0F172A]">All Day Event</span>
@@ -1423,7 +1423,7 @@ const EventFormDialog = ({
             <Switch
               checked={formData.allDay}
               onCheckedChange={(checked) => setFormData({ ...formData, allDay: checked })}
-              className="data-[state=checked]:bg-[#0891B2]"
+              className="data-[state=checked]:bg-[#6637F4]"
             />
           </div>
 
@@ -1514,7 +1514,7 @@ const EventFormDialog = ({
                     onClick={() => setFormData({ ...formData, color: c.color })}
                     className={cn(
                       "w-7 h-7 rounded-md transition-all",
-                      formData.color === c.color && "ring-2 ring-offset-2 ring-[#22D3EE]"
+                      formData.color === c.color && "ring-2 ring-offset-2 ring-[#6637F4]"
                     )}
                     style={{ backgroundColor: c.color }}
                   />
@@ -1594,7 +1594,7 @@ const EventFormDialog = ({
                   {selectedAttendees.map((attendee) => (
                     <div
                       key={attendee.id}
-                      className="flex items-center gap-2 px-2 py-1 bg-[#0891B2]/10 rounded-md"
+                      className="flex items-center gap-2 px-2 py-1 bg-[#6637F4]/10 rounded-md"
                     >
                       <Avatar className="h-5 w-5">
                         <AvatarImage src={attendee.avatar} />
@@ -1633,7 +1633,7 @@ const EventFormDialog = ({
                       key={member.id}
                       type="button"
                       onClick={() => toggleAttendee(member)}
-                      className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-[#F8FAFC] transition-colors"
+                      className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-[#F7F7FB] transition-colors"
                     >
                       <Avatar className="h-8 w-8">
                         <AvatarImage src={member.avatar} />
@@ -1656,7 +1656,7 @@ const EventFormDialog = ({
           </div>
 
           {/* Private Event */}
-          <div className="flex items-center justify-between p-3 bg-[#F8FAFC] rounded-md">
+          <div className="flex items-center justify-between p-3 bg-[#F7F7FB] rounded-md">
             <div className="flex items-center gap-3">
               <Bell size={18} className="text-[#94A3B8]" />
               <div>
@@ -1667,7 +1667,7 @@ const EventFormDialog = ({
             <Switch
               checked={formData.isPrivate}
               onCheckedChange={(checked) => setFormData({ ...formData, isPrivate: checked })}
-              className="data-[state=checked]:bg-[#0891B2]"
+              className="data-[state=checked]:bg-[#6637F4]"
             />
           </div>
 
@@ -1690,7 +1690,7 @@ const EventFormDialog = ({
             <Button
               type="submit"
               disabled={!formData.title}
-              className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
+              className="bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-md"
             >
               {event ? (
                 <>
@@ -1782,7 +1782,7 @@ const EventDetailsDialog = ({
                 </p>
               )}
               {event.recurrence && (
-                <div className="flex items-center gap-1 text-sm text-[#0891B2] mt-1">
+                <div className="flex items-center gap-1 text-sm text-[#6637F4] mt-1">
                   <Repeat size={14} />
                   <span className="capitalize">
                     Repeats {event.recurrence.frequency}
@@ -1824,7 +1824,7 @@ const EventDetailsDialog = ({
               </div>
               <Button
                 size="sm"
-                className="bg-[#0891B2] hover:bg-[#0891B2] text-white rounded-md"
+                className="bg-[#6637F4] hover:bg-[#6637F4] text-white rounded-md"
               >
                 <Video size={14} className="mr-1" />
                 Join
@@ -1876,7 +1876,7 @@ const EventDetailsDialog = ({
                           attendee.status === "accepted" && "bg-green-100 text-green-600",
                           attendee.status === "pending" && "bg-yellow-100 text-yellow-600",
                           attendee.status === "declined" && "bg-red-100 text-red-600",
-                          attendee.status === "tentative" && "bg-blue-100 text-[#0891B2]"
+                          attendee.status === "tentative" && "bg-blue-100 text-[#6637F4]"
                         )}
                       >
                         {attendee.status}
@@ -1890,7 +1890,7 @@ const EventDetailsDialog = ({
 
           {/* Notes */}
           {event.notes && (
-            <div className="p-4 bg-[#F8FAFC] rounded-md">
+            <div className="p-4 bg-[#F7F7FB] rounded-md">
               <p className="text-xs text-[#475569] mb-1">Notes</p>
               <p className="text-sm text-[#475569]">{event.notes}</p>
             </div>
@@ -1915,7 +1915,7 @@ const EventDetailsDialog = ({
           </Button>
           <Button
             onClick={onEdit}
-            className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
+            className="bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-md"
           >
             <Pencil size={16} className="mr-2" />
             Edit Event
@@ -1948,7 +1948,7 @@ const CalendarSkeleton = () => (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
       <div className="lg:col-span-3 bg-white rounded-lg border border-[rgba(15,23,42,0.06)] overflow-hidden">
         {/* Day headers */}
-        <div className="grid grid-cols-7 border-b border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]">
+        <div className="grid grid-cols-7 border-b border-[rgba(15,23,42,0.06)] bg-[#F7F7FB]">
           {Array.from({ length: 7 }).map((_, i) => (
             <div key={i} className="px-4 py-3 flex justify-center"><div className="h-4 w-16 bg-gray-200 rounded" /></div>
           ))}
@@ -2256,7 +2256,7 @@ const CalendarPage = () => {
   if (aiSuggestions.length === 0) aiSuggestions.push({ icon: CheckCircle2, text: "Schedule looks balanced. No action needed.", action: "" });
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-[#F7F7FB]">
 
       <main className="flex-1">
         {/* Header */}
@@ -2284,7 +2284,7 @@ const CalendarPage = () => {
                         className={cn(
                           "flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium rounded-full transition-all duration-200",
                           viewMode === mode
-                            ? "bg-[#0891B2] text-white shadow-sm"
+                            ? "bg-[#6637F4] text-white shadow-sm"
                             : "text-gray-500 hover:text-gray-700"
                         )}
                       >
@@ -2302,7 +2302,7 @@ const CalendarPage = () => {
                 {/* Add Event Dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md gap-2"><Plus size={18} />Add Event<ChevronRight size={14} className="rotate-90 ml-0.5" /></Button>
+                    <Button className="bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-md gap-2"><Plus size={18} />Add Event<ChevronRight size={14} className="rotate-90 ml-0.5" /></Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="rounded-lg w-48">
                     <DropdownMenuItem onClick={() => { setCurrentEvent(null); setIsFormOpen(true); }} className="gap-2 cursor-pointer"><CalendarIcon size={15} className="text-[#3B82F6]" />Add Event</DropdownMenuItem>
@@ -2319,45 +2319,45 @@ const CalendarPage = () => {
         <div className="p-6 space-y-5 page-enter">
 
           {/* ===== AI SCHEDULING INTELLIGENCE BAR ===== */}
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-lg border-l-[3px] border-l-[#0891B2] overflow-hidden" style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.04), 0 8px 20px rgba(15,23,42,0.05)' }}>
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-lg border-l-[3px] border-l-[#6637F4] overflow-hidden" style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.04), 0 8px 20px rgba(15,23,42,0.05)' }}>
             <div className="flex items-center justify-between px-5 pt-3.5 pb-2">
               <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-md bg-[#0891B2]/8 flex items-center justify-center"><Sparkles size={14} className="text-[#0891B2]" /></div>
+                <div className="w-7 h-7 rounded-md bg-[#6637F4]/8 flex items-center justify-center"><Sparkles size={14} className="text-[#6637F4]" /></div>
                 <span className="text-xs font-semibold text-[#0F172A]">AI Schedule Intelligence</span>
                 <span className="ai-tag">AI</span>
               </div>
               <span className="text-[10px] text-[#94A3B8]">Updated just now</span>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 divide-x divide-[rgba(15,23,42,0.06)]">
-              <div className="px-4 py-3 border-l-[3px] border-l-[#3B82F6] cursor-pointer hover:bg-[#F8FAFC] transition-all duration-150 rounded-r-md">
+              <div className="px-4 py-3 border-l-[3px] border-l-[#3B82F6] cursor-pointer hover:bg-[#F7F7FB] transition-all duration-150 rounded-r-md">
                 <div className="flex items-center gap-1 mb-1"><CalendarDays size={11} className="text-[#94A3B8]" /><span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-medium">Today</span></div>
                 <span className="text-lg font-bold text-[#0F172A]" style={{ fontVariantNumeric: 'tabular-nums' }}>{todayCount}</span>
                 <span className="text-[10px] text-[#94A3B8] ml-1">events</span>
               </div>
-              <div className="px-4 py-3 border-l-[3px] border-l-[#8B5CF6] cursor-pointer hover:bg-[#F8FAFC] transition-all duration-150 rounded-r-md">
+              <div className="px-4 py-3 border-l-[3px] border-l-[#8B5CF6] cursor-pointer hover:bg-[#F7F7FB] transition-all duration-150 rounded-r-md">
                 <div className="flex items-center gap-1 mb-1"><Users size={11} className="text-[#94A3B8]" /><span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-medium">Meetings</span></div>
                 <span className="text-lg font-bold text-[#8B5CF6]" style={{ fontVariantNumeric: 'tabular-nums' }}>{meetingCount}</span>
                 <span className="text-[10px] text-[#94A3B8] ml-1">({totalMeetingHours.toFixed(1)}h)</span>
               </div>
-              <div className="px-4 py-3 border-l-[3px] border-l-[#16A34A] cursor-pointer hover:bg-[#F8FAFC] transition-all duration-150 rounded-r-md">
+              <div className="px-4 py-3 border-l-[3px] border-l-[#01C44A] cursor-pointer hover:bg-[#F7F7FB] transition-all duration-150 rounded-r-md">
                 <div className="flex items-center gap-1 mb-1"><Target size={11} className="text-[#94A3B8]" /><span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-medium">Focus Time</span></div>
-                <span className={cn("text-lg font-bold", focusHours >= 3 ? "text-[#16A34A]" : focusHours >= 1 ? "text-[#D97706]" : "text-[#DC2626]")} style={{ fontVariantNumeric: 'tabular-nums' }}>{focusHours.toFixed(1)}h</span>
+                <span className={cn("text-lg font-bold", focusHours >= 3 ? "text-[#01C44A]" : focusHours >= 1 ? "text-[#D97706]" : "text-[#FF2E2D]")} style={{ fontVariantNumeric: 'tabular-nums' }}>{focusHours.toFixed(1)}h</span>
                 <span className="text-[10px] text-[#94A3B8] ml-1">available</span>
-                <div className="mt-1.5 w-full h-1.5 bg-gray-100 rounded-full overflow-hidden"><div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, (focusHours / 8) * 100)}%`, backgroundColor: focusHours >= 3 ? '#16A34A' : focusHours >= 1 ? '#D97706' : '#DC2626' }} /></div>
+                <div className="mt-1.5 w-full h-1.5 bg-gray-100 rounded-full overflow-hidden"><div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, (focusHours / 8) * 100)}%`, backgroundColor: focusHours >= 3 ? '#01C44A' : focusHours >= 1 ? '#D97706' : '#FF2E2D' }} /></div>
               </div>
-              <div className="px-4 py-3 border-l-[3px] border-l-[#F97316] cursor-pointer hover:bg-[#F8FAFC] transition-all duration-150 rounded-r-md">
+              <div className="px-4 py-3 border-l-[3px] border-l-[#F97316] cursor-pointer hover:bg-[#F7F7FB] transition-all duration-150 rounded-r-md">
                 <div className="flex items-center gap-1 mb-1"><CalendarRange size={11} className="text-[#94A3B8]" /><span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-medium">This Week</span></div>
                 <span className="text-lg font-bold text-[#0F172A]" style={{ fontVariantNumeric: 'tabular-nums' }}>{thisWeekCount}</span>
                 <span className="text-[10px] text-[#94A3B8] ml-1">events</span>
               </div>
-              <div className="px-4 py-3 border-l-[3px] border-l-[#DC2626] cursor-pointer hover:bg-[#F8FAFC] transition-all duration-150 rounded-r-md">
+              <div className="px-4 py-3 border-l-[3px] border-l-[#FF2E2D] cursor-pointer hover:bg-[#F7F7FB] transition-all duration-150 rounded-r-md">
                 <div className="flex items-center gap-1 mb-1"><AlertCircle size={11} className="text-[#94A3B8]" /><span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-medium">High Priority</span></div>
-                <span className={cn("text-lg font-bold", highPriorityCount > 0 ? "text-[#DC2626]" : "text-[#16A34A]")} style={{ fontVariantNumeric: 'tabular-nums' }}>{highPriorityCount}</span>
+                <span className={cn("text-lg font-bold", highPriorityCount > 0 ? "text-[#FF2E2D]" : "text-[#01C44A]")} style={{ fontVariantNumeric: 'tabular-nums' }}>{highPriorityCount}</span>
                 <span className="text-[10px] text-[#94A3B8] ml-1">upcoming</span>
               </div>
-              <div className="px-4 py-3 border-l-[3px] border-l-[#0891B2] cursor-pointer hover:bg-[#F8FAFC] transition-all duration-150 rounded-r-md">
+              <div className="px-4 py-3 border-l-[3px] border-l-[#6637F4] cursor-pointer hover:bg-[#F7F7FB] transition-all duration-150 rounded-r-md">
                 <div className="flex items-center gap-1 mb-1"><Clock size={11} className="text-[#94A3B8]" /><span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-medium">Next Free</span></div>
-                <span className="text-sm font-bold text-[#0891B2]">{getNextFreeSlot()}</span>
+                <span className="text-sm font-bold text-[#6637F4]">{getNextFreeSlot()}</span>
               </div>
             </div>
           </motion.div>
@@ -2366,8 +2366,8 @@ const CalendarPage = () => {
           {visibleAlerts.length > 0 && (
             <div className="space-y-2">
               {visibleAlerts.map((alert) => (
-                <motion.div key={alert.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className={cn("flex items-center gap-3 px-4 py-2 rounded-lg border", alert.type === "danger" ? "bg-[#DC2626]/5 border-[#DC2626]/15" : alert.type === "warning" ? "bg-[#D97706]/5 border-[#D97706]/15" : "bg-[#0891B2]/5 border-[#0891B2]/15")}>
-                  <AlertCircle size={14} className={alert.type === "danger" ? "text-[#DC2626]" : alert.type === "warning" ? "text-[#D97706]" : "text-[#0891B2]"} />
+                <motion.div key={alert.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className={cn("flex items-center gap-3 px-4 py-2 rounded-lg border", alert.type === "danger" ? "bg-[#FF2E2D]/5 border-[#FF2E2D]/15" : alert.type === "warning" ? "bg-[#D97706]/5 border-[#D97706]/15" : "bg-[#6637F4]/5 border-[#6637F4]/15")}>
+                  <AlertCircle size={14} className={alert.type === "danger" ? "text-[#FF2E2D]" : alert.type === "warning" ? "text-[#D97706]" : "text-[#6637F4]"} />
                   <span className="text-xs font-semibold text-[#0F172A]">{alert.title}</span>
                   <span className="text-xs text-[#475569] flex-1">{alert.message}</span>
                   <button onClick={() => setDismissedAlerts((p) => [...p, alert.id])} className="text-[#94A3B8] hover:text-[#475569]"><X size={14} /></button>
@@ -2411,7 +2411,7 @@ const CalendarPage = () => {
               <div className="xl:hidden fixed bottom-6 right-6 z-40">
                 <button
                   onClick={() => setSidebarOpen(!sidebarOpen)}
-                  className="w-12 h-12 rounded-full bg-[#0891B2] text-white shadow-lg hover:bg-[#0891B2]/90 flex items-center justify-center transition-all duration-200 hover:scale-105"
+                  className="w-12 h-12 rounded-full bg-[#6637F4] text-white shadow-lg hover:bg-[#6637F4]/90 flex items-center justify-center transition-all duration-200 hover:scale-105"
                   aria-label="Toggle sidebar"
                 >
                   <PanelRight size={20} />
@@ -2434,7 +2434,7 @@ const CalendarPage = () => {
               {/* Right Sidebar */}
               <div className={cn(
                 "col-span-full xl:col-span-1 space-y-5",
-                "max-xl:fixed max-xl:right-0 max-xl:top-0 max-xl:bottom-0 max-xl:w-80 max-xl:z-50 max-xl:bg-[#F8FAFC] max-xl:p-5 max-xl:overflow-y-auto max-xl:shadow-2xl",
+                "max-xl:fixed max-xl:right-0 max-xl:top-0 max-xl:bottom-0 max-xl:w-80 max-xl:z-50 max-xl:bg-[#F7F7FB] max-xl:p-5 max-xl:overflow-y-auto max-xl:shadow-2xl",
                 "max-xl:transition-transform max-xl:duration-300 max-xl:ease-in-out",
                 sidebarOpen ? "max-xl:translate-x-0" : "max-xl:translate-x-full"
               )}>
@@ -2456,16 +2456,16 @@ const CalendarPage = () => {
                       <p className="text-xl font-bold text-[#3B82F6] cursor-pointer hover:underline" style={{ fontVariantNumeric: 'tabular-nums' }}>{todayCount}</p>
                       <p className="text-[10px] text-[#94A3B8] font-medium">Today</p>
                     </div>
-                    <div className="p-3 bg-[#0891B2]/8 rounded-lg text-center border-l-4 border-l-[#0891B2] hover:shadow-md hover:scale-[1.02] transition-all duration-150 cursor-pointer">
-                      <p className="text-xl font-bold text-[#0891B2] cursor-pointer hover:underline" style={{ fontVariantNumeric: 'tabular-nums' }}>{thisWeekCount}</p>
+                    <div className="p-3 bg-[#6637F4]/8 rounded-lg text-center border-l-4 border-l-[#6637F4] hover:shadow-md hover:scale-[1.02] transition-all duration-150 cursor-pointer">
+                      <p className="text-xl font-bold text-[#6637F4] cursor-pointer hover:underline" style={{ fontVariantNumeric: 'tabular-nums' }}>{thisWeekCount}</p>
                       <p className="text-[10px] text-[#94A3B8] font-medium">This Week</p>
                     </div>
                     <div className="p-3 bg-[#D97706]/8 rounded-lg text-center border-l-4 border-l-[#F97316] hover:shadow-md hover:scale-[1.02] transition-all duration-150 cursor-pointer">
                       <p className="text-xl font-bold text-[#D97706] cursor-pointer hover:underline" style={{ fontVariantNumeric: 'tabular-nums' }}>{upcomingCount}</p>
                       <p className="text-[10px] text-[#94A3B8] font-medium">Upcoming</p>
                     </div>
-                    <div className="p-3 bg-[#DC2626]/8 rounded-lg text-center border-l-4 border-l-[#DC2626] hover:shadow-md hover:scale-[1.02] transition-all duration-150 cursor-pointer">
-                      <p className="text-xl font-bold text-[#DC2626] cursor-pointer hover:underline" style={{ fontVariantNumeric: 'tabular-nums' }}>{highPriorityCount}</p>
+                    <div className="p-3 bg-[#FF2E2D]/8 rounded-lg text-center border-l-4 border-l-[#FF2E2D] hover:shadow-md hover:scale-[1.02] transition-all duration-150 cursor-pointer">
+                      <p className="text-xl font-bold text-[#FF2E2D] cursor-pointer hover:underline" style={{ fontVariantNumeric: 'tabular-nums' }}>{highPriorityCount}</p>
                       <p className="text-[10px] text-[#94A3B8] font-medium">High Priority</p>
                     </div>
                   </div>
@@ -2474,17 +2474,17 @@ const CalendarPage = () => {
                 {/* AI Scheduling Suggestions */}
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-white rounded-lg border border-[rgba(15,23,42,0.06)] overflow-hidden" style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.04), 0 4px 12px rgba(15,23,42,0.04)' }}>
                   <div className="px-4 py-3 border-b border-[rgba(15,23,42,0.06)]">
-                    <div className="flex items-center gap-2"><Sparkles size={13} className="text-[#0891B2]" /><span className="text-xs font-semibold text-[#0F172A]">AI Suggestions</span><span className="ai-tag">AI</span></div>
+                    <div className="flex items-center gap-2"><Sparkles size={13} className="text-[#6637F4]" /><span className="text-xs font-semibold text-[#0F172A]">AI Suggestions</span><span className="ai-tag">AI</span></div>
                   </div>
                   <div className="divide-y divide-[rgba(15,23,42,0.04)]">
                     {aiSuggestions.slice(0, 3).map((suggestion, i) => (
-                      <div key={i} className="px-4 py-2.5 flex items-start gap-2.5 hover:bg-[#F8FAFC] transition-all duration-150 border-l-[3px] border-l-[#0891B2]">
-                        <suggestion.icon size={13} className="text-[#0891B2] mt-0.5 flex-shrink-0" />
+                      <div key={i} className="px-4 py-2.5 flex items-start gap-2.5 hover:bg-[#F7F7FB] transition-all duration-150 border-l-[3px] border-l-[#6637F4]">
+                        <suggestion.icon size={13} className="text-[#6637F4] mt-0.5 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
                           <p className="text-[11px] text-[#475569] leading-relaxed">{suggestion.text}</p>
                           {suggestion.action && (
                             <div className="flex items-center gap-2 mt-1.5">
-                              <button onClick={() => { setCurrentEvent(null); setIsFormOpen(true); toast({ title: "Accepted", description: suggestion.text }); }} className="text-[10px] font-medium text-white bg-[#0891B2] hover:bg-[#0891B2]/90 px-2.5 py-1 rounded-md transition-colors duration-150">Accept</button>
+                              <button onClick={() => { setCurrentEvent(null); setIsFormOpen(true); toast({ title: "Accepted", description: suggestion.text }); }} className="text-[10px] font-medium text-white bg-[#6637F4] hover:bg-[#6637F4]/90 px-2.5 py-1 rounded-md transition-colors duration-150">Accept</button>
                               <button onClick={() => { toast({ title: "Reschedule", description: "Opening reschedule options..." }); }} className="text-[10px] font-medium text-[#475569] hover:text-[#0F172A] bg-gray-100 hover:bg-gray-200 px-2.5 py-1 rounded-md transition-colors duration-150">Reschedule</button>
                             </div>
                           )}
@@ -2495,7 +2495,7 @@ const CalendarPage = () => {
                   </div>
                   {aiSuggestions.length > 3 && (
                     <div className="px-4 py-2.5 border-t border-[rgba(15,23,42,0.06)]">
-                      <button className="text-[11px] font-medium text-[#0891B2] hover:underline">See {aiSuggestions.length - 3} more suggestions →</button>
+                      <button className="text-[11px] font-medium text-[#6637F4] hover:underline">See {aiSuggestions.length - 3} more suggestions →</button>
                     </div>
                   )}
                 </motion.div>

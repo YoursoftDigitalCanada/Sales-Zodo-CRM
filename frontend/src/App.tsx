@@ -68,6 +68,7 @@ import LeaveRequestsPage from "./pages/employees/LeaveRequests";
 
 // AI Modules
 import RoofEstimator from "./pages/RoofEstimator";
+import RoofEstimatorWizard from "./pages/RoofEstimatorWizard";
 import RoofEstimatorPolygonEditor from "./pages/RoofEstimatorPolygonEditor";
 import ConstructionEstimator from "./pages/ConstructionEstimator";
 
@@ -551,6 +552,8 @@ const AppRoutes = () => {
 
         {/* ========== AI MODULES ========== */}
         <Route path="/roof-estimator" element={<RoofEstimator />} />
+        <Route path="/roof-estimator/new" element={<RoofEstimatorWizard />} />
+        <Route path="/roof-estimator/:id/edit" element={<RoofEstimatorWizard />} />
         <Route
           path="/roof-estimator/editor"
           element={

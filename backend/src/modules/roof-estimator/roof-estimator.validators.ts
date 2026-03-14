@@ -26,6 +26,41 @@ export const detectRoofSchema = z.object({
     }),
 });
 
+// Shared wizard field validations
+const wizardFieldsSchema = {
+    status: z.enum(['draft', 'completed', 'sent']).optional(),
+    currentStep: z.number().int().min(1).max(6).optional(),
+    wastePercent: z.number().min(0).max(100).optional(),
+    shingleType: z.string().max(200).optional(),
+    shinglePricePerSq: z.number().min(0).optional(),
+    underlaymentCost: z.number().min(0).optional(),
+    iceWaterShieldCost: z.number().min(0).optional(),
+    ridgeCapCost: z.number().min(0).optional(),
+    starterStripCost: z.number().min(0).optional(),
+    flashingCostWizard: z.number().min(0).optional(),
+    ventCostWizard: z.number().min(0).optional(),
+    nailsAccessoriesCost: z.number().min(0).optional(),
+    totalMaterialCost: z.number().min(0).optional(),
+    laborCostPerSquare: z.number().min(0).optional(),
+    numberOfLaborers: z.number().int().min(0).optional(),
+    daysRequired: z.number().int().min(0).optional(),
+    laborRatePerWorker: z.number().min(0).optional(),
+    totalLaborCost: z.number().min(0).optional(),
+    dumpsterCost: z.number().min(0).optional(),
+    permitCost: z.number().min(0).optional(),
+    deliveryFee: z.number().min(0).optional(),
+    equipmentRentalCost: z.number().min(0).optional(),
+    disposalFee: z.number().min(0).optional(),
+    totalEquipmentCost: z.number().min(0).optional(),
+    overheadPercent: z.number().min(0).max(100).optional(),
+    profitMarginPercent: z.number().min(0).max(100).optional(),
+    taxPercent: z.number().min(0).max(100).optional(),
+    overheadAmount: z.number().min(0).optional(),
+    profitAmount: z.number().min(0).optional(),
+    taxAmount: z.number().min(0).optional(),
+    finalEstimatePrice: z.number().min(0).optional(),
+};
+
 export const createEstimateSchema = z.object({
     body: z.object({
         address: z.string().min(5),
@@ -52,14 +87,24 @@ export const createEstimateSchema = z.object({
         valleyLengthFt: z.number().min(0).optional(),
         eaveLengthFt: z.number().min(0).optional(),
         rakeLengthFt: z.number().min(0).optional(),
-        measurementSource: z.enum(['ai_satellite', 'ai_photo', 'eagleview', 'manual']).optional(),
+        measurementSource: z.enum(['ai_satellite', 'ai_photo', 'eagleview', 'manual', 'ai_segmented']).optional(),
         tearOffRequired: z.boolean().optional(),
         photoUrls: z.array(z.string().url()).max(10).optional(),
+        // Wizard fields
+        ...wizardFieldsSchema,
     }),
 });
 
 export const updateEstimateSchema = z.object({
     body: z.object({
+        address: z.string().min(5).optional(),
+        latitude: z.number().optional(),
+        longitude: z.number().optional(),
+        satelliteImageUrl: z.string().optional(),
+        roofAreaSqft: z.number().positive().optional(),
+        confidence: z.number().min(0).max(100).optional(),
+        processingTimeSec: z.number().optional(),
+        aiModel: z.string().optional(),
         pricePerSqft: z.number().min(0).optional(),
         manualAdjustment: z.number().min(-50).max(100).optional(),
         totalEstimate: z.number().min(0).optional(),
@@ -77,6 +122,9 @@ export const updateEstimateSchema = z.object({
         eaveLengthFt: z.number().min(0).optional(),
         rakeLengthFt: z.number().min(0).optional(),
         tearOffRequired: z.boolean().optional(),
+        measurementSource: z.enum(['ai_satellite', 'ai_photo', 'eagleview', 'manual', 'ai_segmented']).optional(),
+        // Wizard fields
+        ...wizardFieldsSchema,
     }),
 });
 

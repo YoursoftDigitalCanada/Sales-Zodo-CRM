@@ -1,1698 +1,376 @@
-// src/pages/RoofEstimator.tsx
+// src/pages/RoofEstimator.tsx — Estimates Landing Page (redesigned)
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-    getEstimates as fetchEstimatesApi,
-    getEstimateSettings,
-    getEstimateStatistics,
-    checkAiHealth as checkAiHealthApi,
-    fetchSatelliteImage,
-    detectRoof as detectRoofApi,
-    saveEstimate as saveEstimateApi,
-    deleteEstimate as deleteEstimateApi,
-    updateEstimateSettings,
-    generateEstimate as generateEstimateApi,
-    autocompleteAddress as autocompleteAddressApi,
-    detectSegmented as detectSegmentedApi,
+  getEstimates,
+  getEstimateStatistics,
+  checkAiHealth,
+  deleteEstimate,
+  type RoofEstimate,
+  type EstimateStatistics,
 } from "@/features/roof-estimator/services/roof-estimator-service";
-import type {
-    GeneratedEstimate,
-    SegmentedDetectionResult,
-} from "@/features/roof-estimator/services/roof-estimator-service";
-import { getClients } from "@/features/clients/services/clients-service";
-import {
-    buildRoofProposalPdf,
-    downloadRoofProposalPdfBlob,
-    type RoofProposalPdfInput,
-} from "@/features/roof-estimator/utils/generate-roof-proposal-pdf";
-import {
-    denormalizePolygonPoints,
-    parseEstimateNotes,
-} from "@/features/roof-estimator/utils/proposal-note-metadata";
-import {
-    parseStaticMapSize,
-    parseStaticMapZoom,
-} from "@/features/roof-estimator/utils/static-map";
-// import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
-import TakeoffPricingPanel from "@/features/roof-estimator/components/TakeoffPricingPanel";
-import ManualEntryPanel from "@/features/roof-estimator/components/ManualEntryPanel";
-import MaterialsLaborPanel from "@/features/roof-estimator/components/MaterialsLaborPanel";
-import { motion, AnimatePresence } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/components/ui/use-toast";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
-import {
-    MapPin,
-    Satellite,
-    Brain,
-    DollarSign,
-    Save,
-    Trash2,
-    Loader2,
-    CheckCircle2,
-    Snowflake,
-    Ruler,
-    Clock,
-    TrendingUp,
-    Activity,
-    BarChart3,
-    RefreshCw,
-    Settings,
-    FileText,
-    Zap,
-    Eye,
-    Download,
-    MoreVertical,
-    ArrowUpRight,
-    Search,
-    Sparkles,
-    Hammer,
-    Shield,
-    AlertTriangle,
-    type LucideIcon,
-} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
-// ============================================
-// TYPES
-// ============================================
+/* ─── Helpers ──────────────────────────────────────────────── */
 
-interface RoofEstimate {
-    id: string;
-    address: string;
-    latitude: number;
-    longitude: number;
-    satelliteImageUrl: string | null;
-    roofAreaSqft: number;
-    confidence: number;
-    processingTimeSec: number;
-    aiModel: string;
-    pricePerSqft: number;
-    manualAdjustment: number;
-    totalEstimate: number;
-    snowMode: boolean;
-    notes: string | null;
-    clientId: string | null;
-    createdAt: string;
-    client?: { id: string; clientName: string; companyName: string | null } | null;
-    // New fields
-    pitch: string | null;
-    pitchDegrees: number | null;
-    stories: number | null;
-    roofType: string | null;
-    layers: number | null;
-    ridgeLengthFt: number | null;
-    hipLengthFt: number | null;
-    valleyLengthFt: number | null;
-    eaveLengthFt: number | null;
-    rakeLengthFt: number | null;
-    trueSurfaceAreaSqft: number | null;
-    measurementSource: string | null;
-    tearOffRequired: boolean;
-    damageReport: any;
-    photoUrls: string[] | null;
-    publicToken: string | null;
-    takeoffs?: any[];
-}
+const fmt = (n: number | null | undefined) =>
+  n != null ? `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—";
+const fmtArea = (n: number | null | undefined) =>
+  n != null ? `${n.toLocaleString("en-US", { maximumFractionDigits: 0 })} sq ft` : "—";
+const fmtPct = (n: number | null | undefined) =>
+  n != null ? `${n.toFixed(1)}%` : "—";
+const short = (id: string) => id.slice(0, 8).toUpperCase();
+const fmtDate = (d: string) =>
+  new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
-interface EstimateSettings {
-    defaultPricePerSqft: number;
-    currency: string;
-    snowModeDefault: boolean;
-    companyName: string | null;
-}
-
-interface ClientOption {
-    id: string;
-    clientName: string;
-    companyName: string | null;
-}
-
-interface DetectionResult {
-    roofAreaSqft: number;
-    confidence: number;
-    processingTimeSec: number;
-    aiModel: string;
-}
-
-interface SatelliteResult {
-    latitude: number;
-    longitude: number;
-    formattedAddress: string;
-    satelliteImageUrl: string;
-    locationType: string;
-    placeId?: string;
-}
-
-interface Statistics {
-    totalEstimates: number;
-    totalRevenue: number;
-    avgRoofArea: number;
-    avgConfidence: number;
-}
-
-// ============================================
-// STAT CARD
-// ============================================
-
-const StatCard = ({
-    title,
-    value,
-    icon: Icon,
-    color,
-    delay = 0,
-}: {
-    title: string;
-    value: string | number;
-    icon: LucideIcon;
-    color: "teal" | "gold" | "purple" | "green";
-    delay?: number;
-}) => {
-    const colorClasses = {
-        teal: { light: "bg-[#0891B2]/10", text: "text-[#0891B2]", bg: "bg-[#0891B2]" },
-        gold: { light: "bg-[#D97706]/10", text: "text-[#D97706]", bg: "bg-[#D97706]" },
-        purple: { light: "bg-purple-500/10", text: "text-purple-500", bg: "bg-purple-500" },
-        green: { light: "bg-green-500/10", text: "text-green-500", bg: "bg-green-500" },
-    };
-    const colors = colorClasses[color];
-
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay }}
-            whileHover={{ y: -4 }}
-            className="relative bg-white rounded-md p-5 border border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg transition-all overflow-hidden group"
-        >
-            <div className={cn("absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-10 group-hover:opacity-20 transition-all", colors.bg)} />
-            <div className="relative flex items-start justify-between">
-                <div>
-                    <p className="text-sm text-[#94A3B8] mb-1">{title}</p>
-                    <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">
-                        {typeof value === "number" ? value.toLocaleString() : value}
-                    </p>
-                </div>
-                <div className={cn("w-12 h-12 rounded-md flex items-center justify-center", colors.light)}>
-                    <Icon size={22} className={colors.text} />
-                </div>
-            </div>
-        </motion.div>
-    );
+const STATUS_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
+  draft: { bg: "rgba(245,158,11,.12)", text: "#B45309", dot: "#F59E0B" },
+  completed: { bg: "rgba(16,185,129,.12)", text: "#047857", dot: "#10B981" },
+  sent: { bg: "rgba(59,130,246,.12)", text: "#1D4ED8", dot: "#3B82F6" },
 };
 
-// ============================================
-// MAIN COMPONENT
-// ============================================
-
-const RoofEstimator: React.FC = () => {
-    const { toast } = useToast();
-    const navigate = useNavigate();
-
-    // ---- State ----
-    const [address, setAddress] = useState("");
-    const [satellite, setSatellite] = useState<SatelliteResult | null>(null);
-    const [detection, setDetection] = useState<DetectionResult | null>(null);
-    const [pricePerSqft, setPricePerSqft] = useState(5.5);
-    const [manualAdjustment, setManualAdjustment] = useState(0);
-    const [snowMode, setSnowMode] = useState(true);
-    const [notes, setNotes] = useState("");
-    const [selectedClientId, setSelectedClientId] = useState<string>("");
-
-    // Loading
-    const [loadingSatellite, setLoadingSatellite] = useState(false);
-    const [loadingDetection, setLoadingDetection] = useState(false);
-    const [savingEstimate, setSavingEstimate] = useState(false);
-    const [generatingEstimate, setGeneratingEstimate] = useState(false);
-
-    // AI Estimate
-    const [aiEstimate, setAiEstimate] = useState<GeneratedEstimate | null>(null);
-    const [segmentedResult, setSegmentedResult] = useState<SegmentedDetectionResult | null>(null);
-    const [roofType, setRoofType] = useState("Gable");
-    const [material, setMaterial] = useState("Asphalt Shingles");
-    const [stories, setStories] = useState(1);
-    const [pitch, setPitch] = useState("Standard (4/12 to 6/12)");
-    const [currentCondition, setCurrentCondition] = useState("Fair");
-
-    // Data
-    const [estimates, setEstimates] = useState<RoofEstimate[]>([]);
-    const [clients, setClients] = useState<ClientOption[]>([]);
-    const [statistics, setStatistics] = useState<Statistics | null>(null);
-    const [settings, setSettings] = useState<EstimateSettings | null>(null);
-    const [aiHealthy, setAiHealthy] = useState<boolean | null>(null);
-
-    // Autocomplete
-    const [suggestions, setSuggestions] = useState<Array<{ description: string; placeId: string }>>([]);
-    const [showSuggestions, setShowSuggestions] = useState(false);
-    const [selectedPlaceId, setSelectedPlaceId] = useState<string>("");
-    const autocompleteRef = useRef<HTMLDivElement>(null);
-    const debounceTimer = useRef<NodeJS.Timeout | null>(null);
-
-    // UI
-    const [activeTab, setActiveTab] = useState<"estimator" | "history" | "manual" | "materials" | "settings">("history");
-    const [viewEstimate, setViewEstimate] = useState<RoofEstimate | null>(null);
-    const [viewEstimatePdfUrl, setViewEstimatePdfUrl] = useState<string | null>(null);
-    const [loadingViewEstimatePdf, setLoadingViewEstimatePdf] = useState(false);
-    const [downloadingViewEstimatePdf, setDownloadingViewEstimatePdf] = useState(false);
-
-    // Computed
-    const adjustedArea = detection
-        ? Math.round(detection.roofAreaSqft * (1 + manualAdjustment / 100))
-        : 0;
-    const totalEstimate = adjustedArea * pricePerSqft;
-
-    // ---- Effects ----
-    useEffect(() => {
-        fetchEstimates();
-        fetchClients();
-        fetchSettings();
-        fetchStatistics();
-        checkAiHealth();
-    }, []);
-
-    useEffect(() => {
-        if (settings) {
-            setPricePerSqft(settings.defaultPricePerSqft);
-            setSnowMode(settings.snowModeDefault);
-        }
-    }, [settings]);
-
-    // Close autocomplete on outside click
-    useEffect(() => {
-        const handleClickOutside = (e: MouseEvent) => {
-            if (autocompleteRef.current && !autocompleteRef.current.contains(e.target as Node)) {
-                setShowSuggestions(false);
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
-    // Debounced autocomplete
-    const handleAddressChange = useCallback((value: string) => {
-        setAddress(value);
-        setSelectedPlaceId("");
-        if (debounceTimer.current) clearTimeout(debounceTimer.current);
-        if (value.length < 3) {
-            setSuggestions([]);
-            setShowSuggestions(false);
-            return;
-        }
-        debounceTimer.current = setTimeout(async () => {
-            try {
-                const results = await autocompleteAddressApi(value);
-                setSuggestions(results);
-                setShowSuggestions(results.length > 0);
-            } catch {
-                setSuggestions([]);
-                setShowSuggestions(false);
-            }
-        }, 300);
-    }, []);
-
-    const selectSuggestion = (description: string, placeId: string) => {
-        setAddress(description);
-        setSelectedPlaceId(placeId || "");
-        setSuggestions([]);
-        setShowSuggestions(false);
-    };
-
-    // ---- API ----
-    const fetchEstimates = async () => {
-        try {
-            const data = await fetchEstimatesApi();
-            setEstimates(data);
-        } catch { /* ignore */ }
-    };
-
-    const fetchClients = async () => {
-        try {
-            const data = await getClients();
-            setClients(
-                (data || []).map((c: any) => ({
-                    id: c.id,
-                    clientName: c.clientName,
-                    companyName: c.companyName,
-                }))
-            );
-        } catch { /* ignore */ }
-    };
-
-    const fetchSettings = async () => {
-        try {
-            const data = await getEstimateSettings();
-            setSettings(data);
-        } catch { /* ignore */ }
-    };
-
-    const fetchStatistics = async () => {
-        try {
-            const data = await getEstimateStatistics();
-            setStatistics(data);
-        } catch { /* ignore */ }
-    };
-
-    const checkAiHealth = async () => {
-        try {
-            const healthy = await checkAiHealthApi();
-            setAiHealthy(healthy);
-        } catch {
-            setAiHealthy(false);
-        }
-    };
-
-    // ---- Workflow ----
-    const handleLoadSatellite = async () => {
-        if (!address.trim()) {
-            toast({ title: "Enter an address", description: "Please type a valid Canadian address", variant: "destructive" });
-            return;
-        }
-        if (!selectedPlaceId && address.trim().length < 5) {
-            toast({
-                title: "Suggestion required",
-                description: "Select an autocomplete suggestion or enter a full address.",
-                variant: "destructive",
-            });
-            return;
-        }
-        setLoadingSatellite(true);
-        setSatellite(null);
-        setDetection(null);
-        try {
-            const data = await fetchSatelliteImage(address.trim(), selectedPlaceId);
-            if (data.locationType !== "ROOFTOP" && data.locationType !== "NOMINATIM") {
-                toast({
-                    title: "Rooftop precision required",
-                    description: `Selected address resolved as ${data.locationType.replace(/_/g, " ")}. Pick a more specific house suggestion.`,
-                    variant: "destructive",
-                });
-                return;
-            }
-            setSatellite(data);
-            toast({ title: "Satellite image loaded", description: data?.formattedAddress });
-        } catch (err: any) {
-            toast({ title: "Failed to load satellite", description: err.response?.data?.message || err.message, variant: "destructive" });
-        } finally {
-            setLoadingSatellite(false);
-        }
-    };
-
-    const handleDetectRoof = async () => {
-        if (!satellite) return;
-        setLoadingDetection(true);
-        setDetection(null);
-        setSegmentedResult(null);
-        try {
-            // Try upgraded segmentation pipeline first
-            const segResult = await detectSegmentedApi({
-                latitude: satellite.latitude,
-                longitude: satellite.longitude,
-                address: satellite.formattedAddress,
-                roofType: roofType?.toLowerCase(),
-            });
-            setSegmentedResult(segResult);
-            // Map segmented result to legacy DetectionResult shape for backward compat
-            setDetection({
-                roofAreaSqft: segResult.measurements.trueSurfaceAreaSqft || segResult.measurements.roofAreaSqft,
-                confidence: Math.round(segResult.measurements.confidenceScore * 100),
-                processingTimeSec: segResult.processingTimeSec,
-                aiModel: segResult.aiModel,
-            });
-            const validationLabel = segResult.validation
-                ? segResult.validation.action === 'accept' ? 'Validated ✓'
-                    : segResult.validation.action === 'correct' ? 'Corrected'
-                        : 'Needs Review'
-                : '';
-            toast({
-                title: "Roof detected!",
-                description: `${segResult.measurements.roofAreaSqft} sq ft · ${segResult.measurements.planes.length} plane(s) · ${validationLabel}`,
-            });
-        } catch {
-            // Fallback to legacy detection
-            try {
-                const data = await detectRoofApi({
-                    satelliteImageUrl: satellite.satelliteImageUrl,
-                    latitude: satellite.latitude,
-                    longitude: satellite.longitude,
-                });
-                setDetection(data);
-                toast({ title: "Roof detected!", description: `${data?.roofAreaSqft} sq ft at ${data?.confidence}% confidence` });
-            } catch (err: any) {
-                toast({ title: "Detection failed", description: err.response?.data?.message || err.message, variant: "destructive" });
-            }
-        } finally {
-            setLoadingDetection(false);
-        }
-    };
-
-    const handleSaveEstimate = async () => {
-        if (!satellite || !detection) return;
-        setSavingEstimate(true);
-        try {
-            await saveEstimateApi({
-                address: satellite.formattedAddress,
-                latitude: satellite.latitude,
-                longitude: satellite.longitude,
-                satelliteImageUrl: satellite.satelliteImageUrl,
-                roofAreaSqft: adjustedArea,
-                confidence: detection.confidence,
-                processingTimeSec: detection.processingTimeSec,
-                aiModel: detection.aiModel,
-                pricePerSqft,
-                manualAdjustment,
-                totalEstimate,
-                snowMode,
-                notes: notes || undefined,
-                clientId: selectedClientId || undefined,
-                // Segmentation fields (when available)
-                ...(segmentedResult ? {
-                    ridgeLengthFt: segmentedResult.measurements.ridgeLengthFt,
-                    valleyLengthFt: segmentedResult.measurements.valleyLengthFt,
-                    hipLengthFt: segmentedResult.measurements.hipLengthFt,
-                    eaveLengthFt: segmentedResult.measurements.eaveLengthFt,
-                    rakeLengthFt: segmentedResult.measurements.rakeLengthFt,
-                    measurementSource: 'ai_segmented',
-                } : {}),
-            });
-            toast({ title: "Estimate saved!", description: `$${totalEstimate.toLocaleString()} estimate saved.` });
-            fetchEstimates();
-            fetchStatistics();
-            setAddress(""); setSelectedPlaceId(""); setSatellite(null); setDetection(null); setSegmentedResult(null);
-            setManualAdjustment(0); setNotes(""); setSelectedClientId("");
-        } catch (err: any) {
-            toast({ title: "Save failed", description: err.response?.data?.message || err.message, variant: "destructive" });
-        } finally {
-            setSavingEstimate(false);
-        }
-    };
-
-    const handleDeleteEstimate = async (id: string) => {
-        try {
-            await deleteEstimateApi(id);
-            toast({ title: "Estimate deleted" });
-            fetchEstimates();
-            fetchStatistics();
-        } catch {
-            toast({ title: "Delete failed", variant: "destructive" });
-        }
-    };
-
-    const handleGenerateEstimate = async () => {
-        if (!detection) return;
-        setGeneratingEstimate(true);
-        setAiEstimate(null);
-        try {
-            const result = await generateEstimateApi({
-                roofAreaSqft: adjustedArea,
-                roofType,
-                material,
-                location: satellite?.formattedAddress,
-                stories,
-                pitch,
-                currentCondition,
-            });
-            setAiEstimate(result);
-            toast({ title: "AI Estimate Generated!", description: `Total: $${result.totalEstimate?.toLocaleString()} CAD` });
-        } catch (err: any) {
-            toast({ title: "Estimate generation failed", description: err.response?.data?.message || err.message, variant: "destructive" });
-        } finally {
-            setGeneratingEstimate(false);
-        }
-    };
-
-    // Helpers
-    const formatCurrency = (amount: number) =>
-        new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" }).format(amount);
-
-    const formatDate = (dateString: string) =>
-        new Date(dateString).toLocaleDateString("en-CA", { year: "numeric", month: "short", day: "numeric" });
-
-    const getConfidenceBadge = (confidence: number) => {
-        if (confidence >= 70) return { label: "High Confidence", bg: "bg-green-50", text: "text-green-600", dot: "bg-green-500" };
-        if (confidence >= 40) return { label: "Moderate Confidence", bg: "bg-yellow-50", text: "text-yellow-600", dot: "bg-yellow-500" };
-        return { label: "Low Confidence", bg: "bg-red-50", text: "text-red-600", dot: "bg-red-500" };
-    };
-
-    const createFallbackPolygon = (width: number, height: number) => ([
-        { x: width * 0.28, y: height * 0.3 },
-        { x: width * 0.72, y: height * 0.34 },
-        { x: width * 0.76, y: height * 0.64 },
-        { x: width * 0.58, y: height * 0.75 },
-        { x: width * 0.3, y: height * 0.7 },
-        { x: width * 0.24, y: height * 0.48 },
-    ]);
-
-    const toIsoDate = (date: Date): string => date.toISOString().slice(0, 10);
-
-    const buildProposalPdfInputFromEstimate = useCallback((estimate: RoofEstimate): RoofProposalPdfInput => {
-        const parsedNotes = parseEstimateNotes(estimate.notes);
-        const hasSatelliteUrl = Boolean(estimate.satelliteImageUrl);
-        const staticMapSize = hasSatelliteUrl
-            ? parseStaticMapSize(estimate.satelliteImageUrl as string, { width: 640, height: 640 })
-            : { width: 640, height: 640 };
-        const staticMapZoom = hasSatelliteUrl
-            ? parseStaticMapZoom(estimate.satelliteImageUrl as string, 20)
-            : 20;
-
-        const polygonPoints = parsedNotes.polygonNormalized.length >= 3
-            ? denormalizePolygonPoints(
-                parsedNotes.polygonNormalized,
-                staticMapSize.width,
-                staticMapSize.height)
-            : createFallbackPolygon(staticMapSize.width, staticMapSize.height);
-
-        const createdAtDate = new Date(estimate.createdAt);
-        const safeIssueDate = Number.isFinite(createdAtDate.getTime()) ? createdAtDate : new Date();
-        const safeValidUntil = new Date(safeIssueDate);
-        safeValidUntil.setDate(safeValidUntil.getDate() + 15);
-        const meta = parsedNotes.proposalMeta;
-
-        return {
-            proposalNumber: meta?.proposalNumber || `RFQ-${estimate.id.slice(0, 8).toUpperCase()}`,
-            proposalTitle: meta?.proposalTitle || "Roof Replacement Proposal",
-            issueDate: meta?.issueDate || toIsoDate(safeIssueDate),
-            validUntil: meta?.validUntil || toIsoDate(safeValidUntil),
-            companyName: meta?.companyName || settings?.companyName || "Zodo Roofing",
-            recipient: {
-                type: meta?.recipientType || (estimate.clientId ? "client" : "lead"),
-                name: meta?.recipientName || estimate.client?.clientName || "Client",
-                company: meta?.recipientCompany || estimate.client?.companyName || undefined,
-                email: meta?.recipientEmail || undefined,
-                phone: meta?.recipientPhone || undefined,
-            },
-            property: {
-                address: estimate.address,
-                latitude: estimate.latitude,
-                longitude: estimate.longitude,
-            },
-            satelliteImageUrl: estimate.satelliteImageUrl || undefined,
-            metrics: {
-                roofAreaSqft: estimate.roofAreaSqft,
-                pixelArea: 0,
-                pricePerSqft: estimate.pricePerSqft,
-                totalEstimate: estimate.totalEstimate,
-                confidence: estimate.confidence,
-                aiModel: estimate.aiModel,
-                processingTimeSec: estimate.processingTimeSec,
-                zoom: staticMapZoom,
-                imageWidth: staticMapSize.width,
-                imageHeight: staticMapSize.height,
-            },
-            polygonPoints,
-            scopeOfWork: meta?.scopeOfWork
-                || "Install full roofing system based on measured roof area. Includes material supply, labor, and site cleanup.",
-            internalNotes: parsedNotes.plainNotes || undefined,
-            termsAndConditions: meta?.termsAndConditions
-                || "Estimate is valid for the period shown above. Final invoice may change if site conditions differ from satellite analysis.",
-        };
-    }, [settings?.companyName]);
-
-    const openEstimateDetails = useCallback((estimate: RoofEstimate) => {
-        setViewEstimate(estimate);
-    }, []);
-
-    const closeEstimateDetails = useCallback(() => {
-        setViewEstimate(null);
-        setLoadingViewEstimatePdf(false);
-        setDownloadingViewEstimatePdf(false);
-        setViewEstimatePdfUrl((previous) => {
-            if (previous) URL.revokeObjectURL(previous);
-            return null;
-        });
-    }, []);
-
-    useEffect(() => {
-        let cancelled = false;
-        if (!viewEstimate) return undefined;
-
-        setLoadingViewEstimatePdf(true);
-        setViewEstimatePdfUrl((previous) => {
-            if (previous) URL.revokeObjectURL(previous);
-            return null;
-        });
-
-        const loadPdf = async () => {
-            try {
-                const input = buildProposalPdfInputFromEstimate(viewEstimate);
-                const result = await buildRoofProposalPdf(input);
-                if (cancelled) return;
-                const blobUrl = URL.createObjectURL(result.blob);
-                if (cancelled) {
-                    URL.revokeObjectURL(blobUrl);
-                    return;
-                }
-                setViewEstimatePdfUrl(blobUrl);
-            } catch (error: any) {
-                if (cancelled) return;
-                toast({
-                    title: "PDF preview failed",
-                    description: error?.message || "Unable to build proposal PDF preview.",
-                    variant: "destructive",
-                });
-            } finally {
-                if (!cancelled) setLoadingViewEstimatePdf(false);
-            }
-        };
-
-        loadPdf();
-        return () => {
-            cancelled = true;
-        };
-    }, [buildProposalPdfInputFromEstimate, toast, viewEstimate]);
-
-    useEffect(() => () => {
-        if (viewEstimatePdfUrl) {
-            URL.revokeObjectURL(viewEstimatePdfUrl);
-        }
-    }, [viewEstimatePdfUrl]);
-
-    const handleDownloadViewEstimatePdf = useCallback(async () => {
-        if (!viewEstimate) return;
-        setDownloadingViewEstimatePdf(true);
-        try {
-            const input = buildProposalPdfInputFromEstimate(viewEstimate);
-            const result = await buildRoofProposalPdf(input);
-            downloadRoofProposalPdfBlob(result);
-            toast({
-                title: "Proposal downloaded",
-                description: `${result.fileName} downloaded successfully.`,
-            });
-        } catch (error: any) {
-            toast({
-                title: "Download failed",
-                description: error?.message || "Unable to download proposal PDF.",
-                variant: "destructive",
-            });
-        } finally {
-            setDownloadingViewEstimatePdf(false);
-        }
-    }, [buildProposalPdfInputFromEstimate, toast, viewEstimate]);
-
-    const viewEstimatePlainNotes = viewEstimate
-        ? parseEstimateNotes(viewEstimate.notes).plainNotes
-        : "";
-
-    // ============================================
-    // RENDER
-    // ============================================
-
-    return (
-        <div className="flex h-screen overflow-hidden bg-[#F8FAFC]">
-            <main className="flex-1 overflow-y-auto">
-                {/* Header */}
-                <div className="sticky top-0 z-30 bg-white border-b border-[rgba(15,23,42,0.06)]">
-                    <div className="px-8 py-5 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-md bg-[#0891B2]/10 flex items-center justify-center">
-                                <Brain className="w-5 h-5 text-[#0891B2]" />
-                            </div>
-                            <div>
-                                <h1 className="text-xl font-semibold text-[#0F172A] tracking-tight">AI Roof Estimator</h1>
-                                <p className="text-xs text-[#94A3B8] mt-0.5">Satellite imagery × AI-powered roof area estimation</p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                            {/* AI Health */}
-                            <div className={cn(
-                                "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium",
-                                aiHealthy === null ? "bg-[#F8FAFC] text-[#94A3B8]" :
-                                    aiHealthy ? "bg-green-50 text-green-600" :
-                                        "bg-red-50 text-red-600"
-                            )}>
-                                <span className={cn(
-                                    "w-1.5 h-1.5 rounded-full",
-                                    aiHealthy === null ? "bg-[#94A3B8]" : aiHealthy ? "bg-green-500" : "bg-red-500"
-                                )} />
-                                {aiHealthy === null ? "Checking AI..." : aiHealthy ? "AI Online" : "AI Offline"}
-                            </div>
-
-                            <Button
-                                type="button"
-                                onClick={() => navigate("/roof-estimator/editor")}
-                                className="h-9 bg-[#0891B2] px-4 text-xs font-semibold text-white hover:bg-[#0891B2]/90"
-                            >
-                                <Sparkles className="mr-2 h-3.5 w-3.5" />
-                                Create AI Estimate
-                            </Button>
-
-                            {/* Tabs */}
-                            <div className="flex bg-[#F8FAFC] rounded-md border border-[rgba(15,23,42,0.06)] p-0.5">
-                                {(["history", "manual", "materials", "settings"] as const).map((tab) => {
-                                    const labels: Record<string, string> = {
-                                        history: "History",
-                                        manual: "Manual Entry",
-                                        materials: "Materials & Pricing",
-                                        settings: "Settings",
-                                    };
-                                    return (
-                                        <button
-                                            key={tab}
-                                            onClick={() => setActiveTab(tab)}
-                                            className={cn(
-                                                "px-3 py-1.5 rounded-md text-xs font-medium transition-all",
-                                                activeTab === tab
-                                                    ? "bg-white text-[#0891B2] shadow-sm border border-[rgba(15,23,42,0.06)]"
-                                                    : "text-[#94A3B8] hover:text-[#475569]"
-                                            )}
-                                        >
-                                            {labels[tab]}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="p-4 sm:p-6 lg:p-8">
-                    <AnimatePresence mode="wait">
-                        {/* ============================================ */}
-                        {/* ESTIMATOR TAB */}
-                        {/* ============================================ */}
-                        {activeTab === "estimator" && (
-                            <motion.div key="estimator" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                                {/* Stats */}
-                                {statistics && (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
-                                        <StatCard title="Total Estimates" value={statistics.totalEstimates} icon={BarChart3} color="teal" delay={0} />
-                                        <StatCard title="Total Revenue" value={formatCurrency(statistics.totalRevenue)} icon={DollarSign} color="green" delay={0.05} />
-                                        <StatCard title="Avg Roof Area" value={`${statistics.avgRoofArea.toLocaleString()} sqft`} icon={Ruler} color="gold" delay={0.1} />
-                                        <StatCard title="Avg Confidence" value={`${statistics.avgConfidence}%`} icon={Activity} color="purple" delay={0.15} />
-                                    </div>
-                                )}
-
-                                <div className="grid grid-cols-12 gap-6">
-                                    {/* LEFT — Address + Satellite */}
-                                    <div className="col-span-5 space-y-5">
-                                        {/* Address Card */}
-                                        <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-5">
-                                            <div className="flex items-center gap-2 mb-4">
-                                                <MapPin className="w-4 h-4 text-[#0891B2]" />
-                                                <h3 className="text-sm font-semibold text-[#0F172A]">Property Address</h3>
-                                            </div>
-                                            <div className="space-y-3">
-                                                <Label className="text-xs text-[#94A3B8]">Street Address</Label>
-                                                <div className="relative" ref={autocompleteRef}>
-                                                    <div className="relative">
-                                                        <Search className="w-4 h-4 text-[#94A3B8] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                                        <Input
-                                                            placeholder="e.g. 123 Main St, Toronto, ON"
-                                                            value={address}
-                                                            onChange={(e) => handleAddressChange(e.target.value)}
-                                                            onKeyDown={(e) => {
-                                                                if (e.key === "Enter") {
-                                                                    setShowSuggestions(false);
-                                                                    if (selectedPlaceId) {
-                                                                        handleLoadSatellite();
-                                                                    }
-                                                                }
-                                                            }}
-                                                            onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-                                                            className="pl-9 border-[rgba(15,23,42,0.1)] focus:border-[#22D3EE] focus:ring-[#22D3EE]/20"
-                                                            autoComplete="off"
-                                                        />
-                                                    </div>
-                                                    {/* Autocomplete dropdown */}
-                                                    {showSuggestions && suggestions.length > 0 && (
-                                                        <div className="absolute z-50 w-full mt-1 bg-white rounded-md border border-[rgba(15,23,42,0.1)] shadow-lg max-h-[240px] overflow-y-auto">
-                                                            {suggestions.map((s, i) => (
-                                                                <button
-                                                                    key={s.placeId || i}
-                                                                    type="button"
-                                                                    onClick={() => selectSuggestion(s.description, s.placeId)}
-                                                                    className="w-full text-left px-3 py-2.5 text-sm text-[#0F172A] hover:bg-[#F0FDFA] flex items-center gap-2.5 transition-colors border-b border-[rgba(15,23,42,0.04)] last:border-b-0"
-                                                                >
-                                                                    <MapPin className="w-3.5 h-3.5 text-[#0891B2] flex-shrink-0" />
-                                                                    <span className="truncate">{s.description}</span>
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <Button
-                                                    onClick={handleLoadSatellite}
-                                                    disabled={loadingSatellite || !selectedPlaceId}
-                                                    className="w-full bg-[#0891B2] hover:bg-[#0891B2]/90 text-white font-medium"
-                                                >
-                                                    {loadingSatellite ? (
-                                                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Loading...</>
-                                                    ) : (
-                                                        <><Satellite className="w-4 h-4 mr-2" /> Load Satellite Image</>
-                                                    )}
-                                                </Button>
-                                                <p className="text-[11px] text-[#94A3B8]">
-                                                    {selectedPlaceId
-                                                        ? "Exact suggestion selected."
-                                                        : "Select an autocomplete suggestion to lock rooftop coordinates."}
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        {/* Satellite Preview */}
-                                        <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden">
-                                            <div className="p-4 border-b border-[rgba(15,23,42,0.06)] flex items-center gap-2">
-                                                <Satellite className="w-4 h-4 text-[#0891B2]" />
-                                                <h3 className="text-sm font-semibold text-[#0F172A]">Satellite Preview</h3>
-                                                {satellite && (
-                                                    <span className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-green-50 text-green-600">
-                                                        <CheckCircle2 className="w-3 h-3" /> Loaded
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <div className="aspect-square bg-[#F8FAFC] flex items-center justify-center">
-                                                {loadingSatellite ? (
-                                                    <div className="flex flex-col items-center gap-3">
-                                                        <div className="relative">
-                                                            <div className="w-16 h-16 rounded-full border-2 border-[#0891B2]/20 border-t-[#0891B2] animate-spin" />
-                                                            <Satellite className="w-6 h-6 text-[#0891B2] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                                                        </div>
-                                                        <span className="text-xs text-[#94A3B8]">Fetching satellite imagery...</span>
-                                                    </div>
-                                                ) : satellite ? (
-                                                    <img
-                                                        src={satellite.satelliteImageUrl}
-                                                        alt="Satellite view"
-                                                        className="w-full h-full object-cover"
-                                                    />
-                                                ) : (
-                                                    <div className="flex flex-col items-center gap-3 text-[#CBD5E1]">
-                                                        <Satellite className="w-12 h-12" />
-                                                        <span className="text-xs">Enter an address to load satellite imagery</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                            {satellite && (
-                                                <div className="px-4 py-2.5 border-t border-[rgba(15,23,42,0.06)] flex items-center gap-2 text-[11px] text-[#94A3B8]">
-                                                    <MapPin className="w-3 h-3" />
-                                                    {satellite.formattedAddress}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* RIGHT — AI Detection + Results */}
-                                    <div className="col-span-7 space-y-5">
-                                        {/* Detect CTA */}
-                                        <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-5">
-                                            <div className="flex items-center gap-2 mb-4">
-                                                <Brain className="w-4 h-4 text-purple-500" />
-                                                <h3 className="text-sm font-semibold text-[#0F172A]">AI Roof Detection</h3>
-                                                {detection && (
-                                                    <span className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-green-50 text-green-600">
-                                                        <CheckCircle2 className="w-3 h-3" /> Complete
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <Button
-                                                size="lg"
-                                                onClick={handleDetectRoof}
-                                                disabled={!satellite || loadingDetection}
-                                                className="w-full h-14 bg-gradient-to-r from-[#0891B2] to-[#6366F1] hover:from-[#0891B2]/90 hover:to-[#6366F1]/90 text-white font-semibold text-base shadow-md disabled:opacity-30"
-                                            >
-                                                {loadingDetection ? (
-                                                    <div className="flex items-center gap-3">
-                                                        <Loader2 className="w-5 h-5 animate-spin" />
-                                                        <span>Analyzing roof structure...</span>
-                                                    </div>
-                                                ) : (
-                                                    <><Zap className="w-5 h-5 mr-2" /> Detect Roof Area (AI)</>
-                                                )}
-                                            </Button>
-                                            {!satellite && (
-                                                <p className="text-[11px] text-[#CBD5E1] mt-2 text-center">Load a satellite image first</p>
-                                            )}
-                                        </div>
-
-                                        {/* Detection Results */}
-                                        <AnimatePresence>
-                                            {detection && (
-                                                <motion.div
-                                                    initial={{ opacity: 0, y: 20, scale: 0.98 }}
-                                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                                    exit={{ opacity: 0 }}
-                                                    className="space-y-5"
-                                                >
-                                                    {/* Results Grid */}
-                                                    <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-5">
-                                                        <div className="flex items-center gap-2 mb-4">
-                                                            <Activity className="w-4 h-4 text-[#0891B2]" />
-                                                            <h3 className="text-sm font-semibold text-[#0F172A]">Detection Results</h3>
-                                                        </div>
-                                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                                                            {[
-                                                                { label: "Roof Area (sq ft)", value: detection.roofAreaSqft.toLocaleString(), icon: Ruler, color: "#0891B2" },
-                                                                { label: "Confidence", value: `${detection.confidence}%`, icon: TrendingUp, color: "#22C55E" },
-                                                                { label: "Processing Time", value: `${detection.processingTimeSec}s`, icon: Clock, color: "#6366F1" },
-                                                            ].map((item) => (
-                                                                <div key={item.label} className="bg-[#F8FAFC] rounded-md border border-[rgba(15,23,42,0.06)] p-4 text-center">
-                                                                    <item.icon className="w-5 h-5 mx-auto mb-2" style={{ color: item.color }} />
-                                                                    <div className="text-xl sm:text-2xl font-bold text-[#0F172A]">{item.value}</div>
-                                                                    <div className="text-[10px] text-[#94A3B8] mt-1">{item.label}</div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                        {/* Confidence badge */}
-                                                        {(() => {
-                                                            const badge = getConfidenceBadge(detection.confidence);
-                                                            return (
-                                                                <div className="flex items-center gap-2 mt-3">
-                                                                    <span className={cn("inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md font-medium", badge.bg, badge.text)}>
-                                                                        <span className={cn("w-1.5 h-1.5 rounded-full", badge.dot)} />
-                                                                        {badge.label}
-                                                                    </span>
-                                                                    <span className="text-[10px] text-[#94A3B8]">Model: {detection.aiModel}</span>
-                                                                </div>
-                                                            );
-                                                        })()}
-                                                    </div>
-
-                                                    {/* Geometry Measurements (from segmentation) */}
-                                                    {segmentedResult && (
-                                                        <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-5">
-                                                            <div className="flex items-center gap-2 mb-4">
-                                                                <Ruler className="w-4 h-4 text-[#D97706]" />
-                                                                <h3 className="text-sm font-semibold text-[#0F172A]">Roof Geometry</h3>
-                                                                {segmentedResult.validation && (
-                                                                    <span className={cn(
-                                                                        "ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium",
-                                                                        segmentedResult.validation.action === 'accept'
-                                                                            ? "bg-green-50 text-green-600"
-                                                                            : segmentedResult.validation.action === 'correct'
-                                                                                ? "bg-yellow-50 text-yellow-600"
-                                                                                : "bg-red-50 text-red-600"
-                                                                    )}>
-                                                                        {segmentedResult.validation.action === 'accept' ? (
-                                                                            <><Shield className="w-3 h-3" /> Area Validated</>
-                                                                        ) : segmentedResult.validation.action === 'correct' ? (
-                                                                            <><Shield className="w-3 h-3" /> Area Corrected ({Math.round(segmentedResult.validation.errorPercent * 100)}% diff)</>
-                                                                        ) : (
-                                                                            <><AlertTriangle className="w-3 h-3" /> Needs Review ({Math.round(segmentedResult.validation.errorPercent * 100)}% diff)</>
-                                                                        )}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            {/* Measurements grid */}
-                                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                                                {[
-                                                                    { label: "True Area", value: `${segmentedResult.measurements.trueSurfaceAreaSqft.toLocaleString()} sqft`, highlight: true },
-                                                                    { label: "Roof Squares", value: segmentedResult.measurements.roofSquares.toFixed(1) },
-                                                                    { label: "Planes", value: segmentedResult.measurements.planes.length },
-                                                                    { label: "Ridge", value: `${segmentedResult.measurements.ridgeLengthFt.toFixed(0)} ft` },
-                                                                    { label: "Valley", value: `${segmentedResult.measurements.valleyLengthFt.toFixed(0)} ft` },
-                                                                    { label: "Hip", value: `${segmentedResult.measurements.hipLengthFt.toFixed(0)} ft` },
-                                                                    { label: "Eave", value: `${segmentedResult.measurements.eaveLengthFt.toFixed(0)} ft` },
-                                                                    { label: "Rake", value: `${segmentedResult.measurements.rakeLengthFt.toFixed(0)} ft` },
-                                                                    { label: "Perimeter", value: `${segmentedResult.measurements.perimeterFt.toFixed(0)} ft` },
-                                                                ].map((item) => (
-                                                                    <div
-                                                                        key={item.label}
-                                                                        className={cn(
-                                                                            "rounded-md border px-3 py-2",
-                                                                            (item as any).highlight
-                                                                                ? "bg-[#0891B2]/5 border-[#0891B2]/20"
-                                                                                : "bg-[#F8FAFC] border-[rgba(15,23,42,0.06)]"
-                                                                        )}
-                                                                    >
-                                                                        <div className="text-[10px] text-[#94A3B8]">{item.label}</div>
-                                                                        <div className={cn(
-                                                                            "text-sm font-semibold",
-                                                                            (item as any).highlight ? "text-[#0891B2]" : "text-[#0F172A]"
-                                                                        )}>{item.value}</div>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                            {/* Flagged for review warning */}
-                                                            {segmentedResult.measurements.flaggedForReview && (
-                                                                <div className="mt-3 flex items-center gap-2 px-3 py-2 rounded-md bg-amber-50 border border-amber-200">
-                                                                    <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                                                                    <p className="text-xs text-amber-700">
-                                                                        Low confidence ({Math.round(segmentedResult.measurements.confidenceScore * 100)}%) — measurements should be manually reviewed before generating a proposal.
-                                                                    </p>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    )}
-
-                                                    {/* Adjustments */}
-                                                    <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-5">
-                                                        <div className="flex items-center justify-between mb-4">
-                                                            <div className="flex items-center gap-2">
-                                                                <Settings className="w-4 h-4 text-[#D97706]" />
-                                                                <h3 className="text-sm font-semibold text-[#0F172A]">Adjustments</h3>
-                                                            </div>
-                                                            <div className="flex items-center gap-2">
-                                                                <Snowflake className={cn("w-4 h-4", snowMode ? "text-[#0891B2]" : "text-[#CBD5E1]")} />
-                                                                <span className="text-xs text-[#94A3B8]">Snow Mode</span>
-                                                                <Switch checked={snowMode} onCheckedChange={setSnowMode} />
-                                                            </div>
-                                                        </div>
-                                                        <div className="space-y-4">
-                                                            <div>
-                                                                <div className="flex justify-between items-center mb-2">
-                                                                    <Label className="text-xs text-[#94A3B8]">Area Adjustment</Label>
-                                                                    <span className="text-xs font-mono text-[#0891B2] font-semibold">
-                                                                        {manualAdjustment > 0 ? "+" : ""}{manualAdjustment}%
-                                                                    </span>
-                                                                </div>
-                                                                <Slider
-                                                                    value={[manualAdjustment]}
-                                                                    onValueChange={(v) => setManualAdjustment(v[0])}
-                                                                    min={-30} max={50} step={1}
-                                                                    className="w-full"
-                                                                />
-                                                                <div className="flex justify-between text-[10px] text-[#CBD5E1] mt-1">
-                                                                    <span>-30%</span>
-                                                                    <span>Adjusted: {adjustedArea.toLocaleString()} sqft</span>
-                                                                    <span>+50%</span>
-                                                                </div>
-                                                            </div>
-                                                            <div>
-                                                                <Label className="text-xs text-[#94A3B8]">Price per sq ft (CAD)</Label>
-                                                                <div className="relative mt-1">
-                                                                    <DollarSign className="w-4 h-4 text-[#94A3B8] absolute left-3 top-1/2 -translate-y-1/2" />
-                                                                    <Input
-                                                                        type="number" step="0.25" min="0"
-                                                                        value={pricePerSqft}
-                                                                        onChange={(e) => setPricePerSqft(parseFloat(e.target.value) || 0)}
-                                                                        className="pl-9 border-[rgba(15,23,42,0.1)] focus:border-[#22D3EE]"
-                                                                    />
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Total Estimate */}
-                                                    <div className="bg-white rounded-md border-2 border-[#22D3EE]/30 p-6">
-                                                        <div className="flex items-center justify-between">
-                                                            <div>
-                                                                <div className="text-xs text-[#94A3B8] mb-1">Quick Estimate</div>
-                                                                <div className="text-4xl font-bold text-[#0F172A]">
-                                                                    {formatCurrency(totalEstimate)}
-                                                                </div>
-                                                                <div className="text-xs text-[#94A3B8] mt-1">
-                                                                    {adjustedArea.toLocaleString()} sqft × ${pricePerSqft.toFixed(2)}/sqft
-                                                                </div>
-                                                            </div>
-                                                            <div className="text-right space-y-2">
-                                                                <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-[#0891B2]/10 text-[#0891B2]">CAD</span>
-                                                                {snowMode && (
-                                                                    <span className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-600">
-                                                                        <Snowflake className="w-3 h-3" /> Snow Mode
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* ── AI-Powered Estimate Generation ── */}
-                                                    <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-5">
-                                                        <div className="flex items-center gap-2 mb-4">
-                                                            <Sparkles className="w-4 h-4 text-amber-500" />
-                                                            <h3 className="text-sm font-semibold text-[#0F172A]">AI Cost Estimate (OpenAI)</h3>
-                                                            {aiEstimate && (
-                                                                <span className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-amber-50 text-amber-600">
-                                                                    <CheckCircle2 className="w-3 h-3" /> Generated
-                                                                </span>
-                                                            )}
-                                                        </div>
-
-                                                        {/* Materials & Config Form */}
-                                                        <div className="grid grid-cols-2 gap-3 mb-4">
-                                                            <div>
-                                                                <Label className="text-xs text-[#94A3B8]">Roof Type</Label>
-                                                                <Select value={roofType} onValueChange={setRoofType}>
-                                                                    <SelectTrigger className="mt-1 border-[rgba(15,23,42,0.1)]">
-                                                                        <SelectValue />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent>
-                                                                        {["Gable", "Hip", "Flat", "Mansard", "Gambrel", "Shed", "Butterfly", "Dormer"].map(t => (
-                                                                            <SelectItem key={t} value={t}>{t}</SelectItem>
-                                                                        ))}
-                                                                    </SelectContent>
-                                                                </Select>
-                                                            </div>
-                                                            <div>
-                                                                <Label className="text-xs text-[#94A3B8]">Material</Label>
-                                                                <Select value={material} onValueChange={setMaterial}>
-                                                                    <SelectTrigger className="mt-1 border-[rgba(15,23,42,0.1)]">
-                                                                        <SelectValue />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent>
-                                                                        {["Asphalt Shingles", "Metal Roofing", "Cedar Shakes", "Slate", "Clay Tiles", "TPO Membrane", "EPDM Rubber", "Standing Seam Metal"].map(m => (
-                                                                            <SelectItem key={m} value={m}>{m}</SelectItem>
-                                                                        ))}
-                                                                    </SelectContent>
-                                                                </Select>
-                                                            </div>
-                                                            <div>
-                                                                <Label className="text-xs text-[#94A3B8]">Pitch</Label>
-                                                                <Select value={pitch} onValueChange={setPitch}>
-                                                                    <SelectTrigger className="mt-1 border-[rgba(15,23,42,0.1)]">
-                                                                        <SelectValue />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent>
-                                                                        {["Low (2/12 to 3/12)", "Standard (4/12 to 6/12)", "Moderate (7/12 to 9/12)", "Steep (10/12 to 12/12)", "Flat"].map(p => (
-                                                                            <SelectItem key={p} value={p}>{p}</SelectItem>
-                                                                        ))}
-                                                                    </SelectContent>
-                                                                </Select>
-                                                            </div>
-                                                            <div>
-                                                                <Label className="text-xs text-[#94A3B8]">Condition</Label>
-                                                                <Select value={currentCondition} onValueChange={setCurrentCondition}>
-                                                                    <SelectTrigger className="mt-1 border-[rgba(15,23,42,0.1)]">
-                                                                        <SelectValue />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent>
-                                                                        {["New", "Good", "Fair", "Poor", "Damaged", "Leaking"].map(c => (
-                                                                            <SelectItem key={c} value={c}>{c}</SelectItem>
-                                                                        ))}
-                                                                    </SelectContent>
-                                                                </Select>
-                                                            </div>
-                                                        </div>
-
-                                                        <Button
-                                                            onClick={handleGenerateEstimate}
-                                                            disabled={generatingEstimate || !detection}
-                                                            className="w-full h-12 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold shadow-md"
-                                                        >
-                                                            {generatingEstimate ? (
-                                                                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating AI estimate...</>
-                                                            ) : (
-                                                                <><Sparkles className="w-4 h-4 mr-2" /> Generate Detailed AI Estimate</>
-                                                            )}
-                                                        </Button>
-                                                    </div>
-
-                                                    {/* AI Estimate Results */}
-                                                    <AnimatePresence>
-                                                        {aiEstimate && (
-                                                            <motion.div
-                                                                initial={{ opacity: 0, y: 20 }}
-                                                                animate={{ opacity: 1, y: 0 }}
-                                                                exit={{ opacity: 0 }}
-                                                                className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-md border-2 border-amber-200 p-6 space-y-5"
-                                                            >
-                                                                <div className="flex items-center gap-2">
-                                                                    <Sparkles className="w-5 h-5 text-amber-500" />
-                                                                    <h3 className="text-base font-bold text-[#0F172A]">AI-Generated Estimate</h3>
-                                                                </div>
-
-                                                                <p className="text-sm text-[#475569]">{aiEstimate.summary}</p>
-
-                                                                {/* Cost Summary */}
-                                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                                                    {[
-                                                                        { label: "Labor", value: aiEstimate.laborCost, icon: Hammer, color: "#6366F1" },
-                                                                        { label: "Materials", value: aiEstimate.materialCost, icon: Ruler, color: "#0891B2" },
-                                                                        { label: "Total", value: aiEstimate.totalEstimate, icon: DollarSign, color: "#16A34A" },
-                                                                    ].map(item => (
-                                                                        <div key={item.label} className="bg-white rounded-md border border-amber-100 p-4 text-center">
-                                                                            <item.icon className="w-5 h-5 mx-auto mb-2" style={{ color: item.color }} />
-                                                                            <div className="text-xl font-bold text-[#0F172A]">{formatCurrency(item.value)}</div>
-                                                                            <div className="text-[10px] text-[#94A3B8] mt-1">{item.label}</div>
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-
-                                                                {/* Breakdown Table */}
-                                                                {aiEstimate.breakdown?.length > 0 && (
-                                                                    <div className="bg-white rounded-md border border-amber-100 overflow-hidden">
-                                                                        <Table>
-                                                                            <TableHeader>
-                                                                                <TableRow className="hover:bg-transparent">
-                                                                                    <TableHead className="text-[#94A3B8] text-xs">Item</TableHead>
-                                                                                    <TableHead className="text-[#94A3B8] text-xs">Qty</TableHead>
-                                                                                    <TableHead className="text-[#94A3B8] text-xs">Unit Price</TableHead>
-                                                                                    <TableHead className="text-[#94A3B8] text-xs text-right">Total</TableHead>
-                                                                                </TableRow>
-                                                                            </TableHeader>
-                                                                            <TableBody>
-                                                                                {aiEstimate.breakdown.map((row, i) => (
-                                                                                    <TableRow key={i} className="hover:bg-amber-50/50">
-                                                                                        <TableCell className="text-sm font-medium text-[#0F172A]">{row.item}</TableCell>
-                                                                                        <TableCell className="text-sm text-[#94A3B8]">{row.quantity || "—"}</TableCell>
-                                                                                        <TableCell className="text-sm text-[#94A3B8]">{row.unitPrice ? formatCurrency(row.unitPrice) : "—"}</TableCell>
-                                                                                        <TableCell className="text-sm font-semibold text-[#0F172A] text-right">{formatCurrency(row.total)}</TableCell>
-                                                                                    </TableRow>
-                                                                                ))}
-                                                                            </TableBody>
-                                                                        </Table>
-                                                                    </div>
-                                                                )}
-
-                                                                {/* Timeline & Notes */}
-                                                                <div className="grid grid-cols-2 gap-4">
-                                                                    <div className="bg-white rounded-md border border-amber-100 p-4">
-                                                                        <div className="flex items-center gap-2 mb-2">
-                                                                            <Clock className="w-4 h-4 text-[#6366F1]" />
-                                                                            <span className="text-xs font-semibold text-[#0F172A]">Timeline</span>
-                                                                        </div>
-                                                                        <p className="text-sm text-[#475569]">{aiEstimate.timeline}</p>
-                                                                    </div>
-                                                                    {aiEstimate.notes?.length > 0 && (
-                                                                        <div className="bg-white rounded-md border border-amber-100 p-4">
-                                                                            <div className="flex items-center gap-2 mb-2">
-                                                                                <FileText className="w-4 h-4 text-amber-500" />
-                                                                                <span className="text-xs font-semibold text-[#0F172A]">Important Notes</span>
-                                                                            </div>
-                                                                            <ul className="space-y-1">
-                                                                                {aiEstimate.notes.map((note, i) => (
-                                                                                    <li key={i} className="text-xs text-[#475569] flex items-start gap-1.5">
-                                                                                        <span className="w-1 h-1 rounded-full bg-amber-400 mt-1.5 flex-shrink-0" />
-                                                                                        {note}
-                                                                                    </li>
-                                                                                ))}
-                                                                            </ul>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            </motion.div>
-                                                        )}
-                                                    </AnimatePresence>
-
-                                                    {/* Save */}
-                                                    <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-5 space-y-3">
-                                                        <div>
-                                                            <Label className="text-xs text-[#94A3B8]">Assign to Client (Optional)</Label>
-                                                            <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-                                                                <SelectTrigger className="mt-1 border-[rgba(15,23,42,0.1)]">
-                                                                    <SelectValue placeholder="Select a client..." />
-                                                                </SelectTrigger>
-                                                                <SelectContent>
-                                                                    <SelectItem value="none">No client</SelectItem>
-                                                                    {clients.map((c) => (
-                                                                        <SelectItem key={c.id} value={c.id}>
-                                                                            {c.clientName}{c.companyName ? ` — ${c.companyName}` : ""}
-                                                                        </SelectItem>
-                                                                    ))}
-                                                                </SelectContent>
-                                                            </Select>
-                                                        </div>
-                                                        <div>
-                                                            <Label className="text-xs text-[#94A3B8]">Notes</Label>
-                                                            <textarea
-                                                                placeholder="Add notes about this estimate..."
-                                                                value={notes}
-                                                                onChange={(e) => setNotes(e.target.value)}
-                                                                rows={2}
-                                                                className="w-full mt-1 px-3 py-2 rounded-md border border-[rgba(15,23,42,0.1)] text-sm placeholder:text-[#CBD5E1] focus:border-[#22D3EE] focus:outline-none focus:ring-1 focus:ring-[#22D3EE]/20 resize-none"
-                                                            />
-                                                        </div>
-                                                        <Button
-                                                            onClick={handleSaveEstimate}
-                                                            disabled={savingEstimate}
-                                                            className="w-full bg-green-600 hover:bg-green-500 text-white font-medium"
-                                                        >
-                                                            {savingEstimate ? (
-                                                                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</>
-                                                            ) : (
-                                                                <><Save className="w-4 h-4 mr-2" /> Save Estimate</>
-                                                            )}
-                                                        </Button>
-                                                    </div>
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        )}
-
-                        {/* ============================================ */}
-                        {/* HISTORY TAB */}
-                        {/* ============================================ */}
-                        {activeTab === "history" && (
-                            <motion.div key="history" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                                <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden">
-                                    <div className="p-5 border-b border-[rgba(15,23,42,0.06)] flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <FileText className="w-4 h-4 text-[#0891B2]" />
-                                            <h3 className="text-sm font-semibold text-[#0F172A]">Estimate History</h3>
-                                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-[#F8FAFC] text-[#94A3B8] border border-[rgba(15,23,42,0.06)]">{estimates.length}</span>
-                                        </div>
-                                        <Button variant="ghost" size="sm" onClick={fetchEstimates} className="text-[#94A3B8] hover:text-[#0F172A]">
-                                            <RefreshCw className="w-3.5 h-3.5" />
-                                        </Button>
-                                    </div>
-
-                                    {estimates.length === 0 ? (
-                                        <div className="p-16 text-center text-[#CBD5E1]">
-                                            <FileText className="w-10 h-10 mx-auto mb-3 opacity-40" />
-                                            <p className="text-sm text-[#94A3B8]">No estimates yet</p>
-                                            <p className="text-xs text-[#CBD5E1] mt-1">Create your first estimate to get started</p>
-                                        </div>
-                                    ) : (
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow className="hover:bg-transparent">
-                                                    <TableHead className="text-[#94A3B8]">Address</TableHead>
-                                                    <TableHead className="text-[#94A3B8]">Client</TableHead>
-                                                    <TableHead className="text-[#94A3B8]">Roof Area</TableHead>
-                                                    <TableHead className="text-[#94A3B8]">Confidence</TableHead>
-                                                    <TableHead className="text-[#94A3B8]">Total</TableHead>
-                                                    <TableHead className="text-[#94A3B8]">Date</TableHead>
-                                                    <TableHead className="text-[#94A3B8] text-right">Actions</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {estimates.map((est, i) => {
-                                                    const confBadge = getConfidenceBadge(est.confidence);
-                                                    return (
-                                                        <TableRow key={est.id} className="group hover:bg-[#F8FAFC]">
-                                                            <TableCell>
-                                                                <div className="flex items-center gap-3">
-                                                                    <div className="w-9 h-9 rounded-md overflow-hidden bg-[#F8FAFC] flex-shrink-0 border border-[rgba(15,23,42,0.06)]">
-                                                                        {est.satelliteImageUrl ? (
-                                                                            <img src={est.satelliteImageUrl} alt="" className="w-full h-full object-cover" />
-                                                                        ) : (
-                                                                            <Satellite className="w-4 h-4 m-auto text-[#CBD5E1] mt-2.5" />
-                                                                        )}
-                                                                    </div>
-                                                                    <span className="text-sm font-medium text-[#0F172A] truncate max-w-[200px] group-hover:text-[#0891B2] transition-colors">
-                                                                        {est.address}
-                                                                    </span>
-                                                                </div>
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <span className="text-sm text-[#94A3B8]">
-                                                                    {est.client?.clientName || "—"}
-                                                                </span>
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <div>
-                                                                    <span className="text-sm font-medium text-[#0F172A]">{est.roofAreaSqft.toLocaleString()} sqft</span>
-                                                                    {est.measurementSource && (
-                                                                        <span className={cn(
-                                                                            "block text-[9px] mt-0.5 font-medium",
-                                                                            est.measurementSource === 'ai_segmented' ? "text-purple-500"
-                                                                                : est.measurementSource === 'manual' ? "text-[#94A3B8]"
-                                                                                    : "text-[#0891B2]"
-                                                                        )}>
-                                                                            {est.measurementSource === 'ai_segmented' ? '⚡ AI Segmented'
-                                                                                : est.measurementSource === 'manual' ? '✏️ Manual'
-                                                                                    : est.measurementSource === 'ai_satellite' ? '🛰️ AI Satellite'
-                                                                                        : est.measurementSource}
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <span className={cn("inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium", confBadge.bg, confBadge.text)}>
-                                                                    <span className={cn("w-1.5 h-1.5 rounded-full", confBadge.dot)} />
-                                                                    {est.confidence}%
-                                                                </span>
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <span className="text-sm font-semibold text-[#0F172A]">{formatCurrency(est.totalEstimate)}</span>
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <span className="text-sm text-[#94A3B8]">{formatDate(est.createdAt)}</span>
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                    <TooltipProvider>
-                                                                        <Tooltip>
-                                                                            <TooltipTrigger asChild>
-                                                                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" onClick={() => openEstimateDetails(est)}>
-                                                                                    <Eye size={16} className="text-[#475569]" />
-                                                                                </Button>
-                                                                            </TooltipTrigger>
-                                                                            <TooltipContent>View Details</TooltipContent>
-                                                                        </Tooltip>
-                                                                        <Tooltip>
-                                                                            <TooltipTrigger asChild>
-                                                                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" onClick={() => handleDeleteEstimate(est.id)}>
-                                                                                    <Trash2 size={16} className="text-[#475569]" />
-                                                                                </Button>
-                                                                            </TooltipTrigger>
-                                                                            <TooltipContent>Delete</TooltipContent>
-                                                                        </Tooltip>
-                                                                    </TooltipProvider>
-                                                                </div>
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    );
-                                                })}
-                                            </TableBody>
-                                        </Table>
-                                    )}
-                                </div>
-                            </motion.div>
-                        )}
-
-                        {/* ============================================ */}
-                        {/* MANUAL ENTRY TAB */}
-                        {/* ============================================ */}
-                        {activeTab === "manual" && (
-                            <ManualEntryPanel
-                                clients={clients}
-                                onSaved={() => {
-                                    fetchEstimates();
-                                    fetchStatistics();
-                                }}
-                            />
-                        )}
-
-                        {/* ============================================ */}
-                        {/* MATERIALS & PRICING TAB */}
-                        {/* ============================================ */}
-                        {activeTab === "materials" && (
-                            <motion.div key="materials" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                                <MaterialsLaborPanel />
-                            </motion.div>
-                        )}
-
-                        {/* ============================================ */}
-                        {/* SETTINGS TAB */}
-                        {/* ============================================ */}
-                        {activeTab === "settings" && (
-                            <motion.div key="settings" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                                <SettingsPanel
-                                    settings={settings}
-                                    onSave={async (data) => {
-                                        try {
-                                            await updateEstimateSettings(data);
-                                            toast({ title: "Settings saved" });
-                                            fetchSettings();
-                                        } catch {
-                                            toast({ title: "Save failed", variant: "destructive" });
-                                        }
-                                    }}
-                                />
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
-
-                {/* View Estimate Dialog */}
-                <Dialog open={!!viewEstimate} onOpenChange={(open) => !open && closeEstimateDetails()}>
-                    <DialogContent className="max-w-[90vw] max-h-[90vh] overflow-y-auto">
-                        <DialogHeader>
-                            <DialogTitle className="text-lg text-[#0F172A]">Estimate Details</DialogTitle>
-                        </DialogHeader>
-                        {viewEstimate && (
-                            <div className="space-y-4">
-                                <div className="grid grid-cols-1 gap-4 xl:grid-cols-[280px_380px_1fr]">
-                                    {/* Column 1: Satellite + Info */}
-                                    <div className="space-y-4">
-                                        {viewEstimate.satelliteImageUrl && (
-                                            <img src={viewEstimate.satelliteImageUrl} alt="" className="w-full rounded-md border border-[rgba(15,23,42,0.08)]" />
-                                        )}
-                                        <div className="grid grid-cols-2 gap-2 text-sm">
-                                            {[
-                                                { label: "Address", value: viewEstimate.address },
-                                                { label: "Total Estimate", value: formatCurrency(viewEstimate.totalEstimate), bold: true },
-                                                { label: "Roof Area", value: `${viewEstimate.roofAreaSqft.toLocaleString()} sqft` },
-                                                { label: "Confidence", value: `${viewEstimate.confidence}%` },
-                                                { label: "Price/sqft", value: `$${viewEstimate.pricePerSqft}` },
-                                                { label: "Adjustment", value: `${viewEstimate.manualAdjustment}%` },
-                                                ...(viewEstimate.pitch ? [{ label: "Pitch", value: viewEstimate.pitch }] : []),
-                                                ...(viewEstimate.roofType ? [{ label: "Roof Type", value: viewEstimate.roofType }] : []),
-                                                ...(viewEstimate.trueSurfaceAreaSqft ? [{ label: "True Surface", value: `${viewEstimate.trueSurfaceAreaSqft.toLocaleString()} sqft`, bold: true }] : []),
-                                            ].map((item) => (
-                                                <div key={item.label} className="bg-[#F8FAFC] rounded-md p-2.5">
-                                                    <div className="text-[10px] text-[#94A3B8]">{item.label}</div>
-                                                    <div className={cn("text-[#0F172A] mt-0.5 text-xs", (item as any).bold && "font-bold")}>{item.value}</div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        {viewEstimatePlainNotes && (
-                                            <div className="bg-[#F8FAFC] rounded-md p-3 text-sm">
-                                                <div className="text-[10px] text-[#94A3B8] mb-1">Notes</div>
-                                                <div className="text-[#475569] whitespace-pre-wrap text-xs">{viewEstimatePlainNotes}</div>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Column 2: Takeoff & Pricing Panel */}
-                                    <div className="bg-white rounded-md border border-[rgba(15,23,42,0.08)] p-4 overflow-y-auto max-h-[70vh]">
-                                        <TakeoffPricingPanel estimate={viewEstimate as any} onUpdate={fetchEstimates} />
-                                    </div>
-
-                                    {/* Column 3: PDF Preview */}
-                                    <div className="rounded-md border border-[rgba(15,23,42,0.08)] bg-white overflow-hidden">
-                                        <div className="px-3 py-2 border-b border-[rgba(15,23,42,0.08)] flex items-center justify-between">
-                                            <span className="text-xs font-semibold text-[#0F172A]">Proposal PDF</span>
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                onClick={handleDownloadViewEstimatePdf}
-                                                disabled={loadingViewEstimatePdf || downloadingViewEstimatePdf}
-                                                className="h-8 px-3 text-xs"
-                                            >
-                                                {downloadingViewEstimatePdf ? (
-                                                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                                                ) : (
-                                                    <Download className="mr-2 h-3.5 w-3.5" />
-                                                )}
-                                                Download PDF
-                                            </Button>
-                                        </div>
-
-                                        {loadingViewEstimatePdf ? (
-                                            <div className="h-[580px] flex items-center justify-center text-sm text-[#94A3B8]">
-                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                Building PDF preview...
-                                            </div>
-                                        ) : viewEstimatePdfUrl ? (
-                                            <iframe
-                                                title="Roof estimate proposal preview"
-                                                src={viewEstimatePdfUrl}
-                                                className="h-[580px] w-full"
-                                            />
-                                        ) : (
-                                            <div className="h-[580px] flex items-center justify-center text-sm text-[#94A3B8]">
-                                                Unable to render PDF preview.
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </DialogContent>
-                </Dialog>
-            </main>
+/* ─── Stat Card ────────────────────────────────────────────── */
+
+function StatCard({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) {
+  return (
+    <div style={{
+      background: "#fff", borderRadius: 14, padding: "20px 22px", flex: "1 1 200px",
+      boxShadow: "0 1px 4px rgba(0,0,0,.06)", display: "flex", alignItems: "center", gap: 16,
+      border: "1px solid #E2E8F0",
+    }}>
+      <div style={{
+        width: 44, height: 44, borderRadius: 12, display: "flex", alignItems: "center",
+        justifyContent: "center", background: "linear-gradient(135deg,#0891B2,#06B6D4)",
+        color: "#fff", flexShrink: 0,
+      }}>
+        {icon}
+      </div>
+      <div>
+        <div style={{ fontSize: 22, fontWeight: 700, color: "#0F172A", lineHeight: 1.2 }}>{value}</div>
+        <div style={{ fontSize: 12, color: "#64748B", marginTop: 2 }}>{label}</div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Status Badge ─────────────────────────────────────────── */
+
+function StatusBadge({ status }: { status: string }) {
+  const c = STATUS_COLORS[status] || STATUS_COLORS.draft;
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 10px",
+      borderRadius: 20, background: c.bg, color: c.text, fontSize: 12, fontWeight: 600,
+      textTransform: "capitalize",
+    }}>
+      <span style={{ width: 6, height: 6, borderRadius: "50%", background: c.dot }} />
+      {status}
+    </span>
+  );
+}
+
+/* ─── Delete Confirm Dialog ─────────────────────────────────── */
+
+function DeleteDialog({ open, onClose, onConfirm, loading }: {
+  open: boolean; onClose: () => void; onConfirm: () => void; loading: boolean;
+}) {
+  if (!open) return null;
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 9999, display: "flex", alignItems: "center",
+      justifyContent: "center", background: "rgba(0,0,0,.45)",
+    }} onClick={onClose}>
+      <div style={{
+        background: "#fff", borderRadius: 16, padding: "28px 32px", maxWidth: 400, width: "90%",
+        boxShadow: "0 20px 60px rgba(0,0,0,.18)",
+      }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ fontSize: 18, fontWeight: 700, color: "#0F172A", marginBottom: 8 }}>
+          Delete Estimate
         </div>
-    );
-};
-
-// ============================================
-// SETTINGS PANEL
-// ============================================
-
-const SettingsPanel: React.FC<{
-    settings: EstimateSettings | null;
-    onSave: (data: any) => Promise<void>;
-}> = ({ settings, onSave }) => {
-    const [form, setForm] = useState({
-        defaultPricePerSqft: settings?.defaultPricePerSqft || 5.5,
-        currency: settings?.currency || "CAD",
-        snowModeDefault: settings?.snowModeDefault ?? true,
-        companyName: settings?.companyName || "",
-    });
-    const [saving, setSaving] = useState(false);
-
-    useEffect(() => {
-        if (settings) {
-            setForm({
-                defaultPricePerSqft: settings.defaultPricePerSqft,
-                currency: settings.currency,
-                snowModeDefault: settings.snowModeDefault,
-                companyName: settings.companyName || "",
-            });
-        }
-    }, [settings]);
-
-    const handleSave = async () => {
-        setSaving(true);
-        await onSave(form);
-        setSaving(false);
-    };
-
-    return (
-        <div className="max-w-xl">
-            <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-6 space-y-5">
-                <div className="flex items-center gap-2 mb-2">
-                    <Settings className="w-4 h-4 text-[#0891B2]" />
-                    <h3 className="text-sm font-semibold text-[#0F172A]">Estimator Settings</h3>
-                </div>
-
-                <div>
-                    <Label className="text-xs text-[#94A3B8]">Default Price per sq ft (CAD)</Label>
-                    <Input
-                        type="number" step="0.25"
-                        value={form.defaultPricePerSqft}
-                        onChange={(e) => setForm({ ...form, defaultPricePerSqft: parseFloat(e.target.value) || 0 })}
-                        className="mt-1 border-[rgba(15,23,42,0.1)]"
-                    />
-                </div>
-
-                <div>
-                    <Label className="text-xs text-[#94A3B8]">Company Name (for PDF)</Label>
-                    <Input
-                        value={form.companyName}
-                        onChange={(e) => setForm({ ...form, companyName: e.target.value })}
-                        placeholder="Your Roofing Company Inc."
-                        className="mt-1 border-[rgba(15,23,42,0.1)]"
-                    />
-                </div>
-
-                <div className="flex items-center justify-between">
-                    <div>
-                        <Label className="text-xs text-[#94A3B8]">Snow Mode Default</Label>
-                        <p className="text-[10px] text-[#CBD5E1] mt-0.5">Enable snow mode by default for new estimates</p>
-                    </div>
-                    <Switch checked={form.snowModeDefault} onCheckedChange={(v) => setForm({ ...form, snowModeDefault: v })} />
-                </div>
-
-                <Button onClick={handleSave} disabled={saving} className="w-full bg-[#0891B2] hover:bg-[#0891B2]/90 text-white">
-                    {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                    Save Settings
-                </Button>
-            </div>
+        <p style={{ color: "#64748B", fontSize: 14, marginBottom: 24, lineHeight: 1.6 }}>
+          Are you sure you want to delete this estimate? This action cannot be undone.
+        </p>
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+          <button onClick={onClose} disabled={loading} style={{
+            padding: "9px 18px", borderRadius: 8, border: "1px solid #CBD5E1",
+            background: "#fff", color: "#475569", fontSize: 13, fontWeight: 600, cursor: "pointer",
+          }}>Cancel</button>
+          <button onClick={onConfirm} disabled={loading} style={{
+            padding: "9px 18px", borderRadius: 8, border: "none",
+            background: "#EF4444", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer",
+            opacity: loading ? 0.7 : 1,
+          }}>{loading ? "Deleting..." : "Delete"}</button>
         </div>
-    );
-};
+      </div>
+    </div>
+  );
+}
 
-export default RoofEstimator;
+/* ─── Main Component ──────────────────────────────────────── */
+
+export default function RoofEstimator() {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const [estimates, setEstimates] = useState<RoofEstimate[]>([]);
+  const [stats, setStats] = useState<EstimateStatistics | null>(null);
+  const [aiOnline, setAiOnline] = useState<boolean | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+
+  // Delete dialog
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  // Load data
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        const [est, st, health] = await Promise.all([
+          getEstimates(),
+          getEstimateStatistics(),
+          checkAiHealth(),
+        ]);
+        setEstimates(est);
+        setStats(st);
+        setAiOnline(health);
+      } catch (e: any) {
+        toast({ title: "Error", description: e?.message || "Failed to load estimates", variant: "destructive" });
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Filtered list
+  const filtered = useMemo(() => {
+    let list = estimates;
+    if (filterStatus !== "all") list = list.filter((e) => e.status === filterStatus);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(
+        (e) =>
+          e.address.toLowerCase().includes(q) ||
+          e.client?.clientName?.toLowerCase().includes(q) ||
+          e.id.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [estimates, filterStatus, search]);
+
+  // Delete handler
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    setDeleting(true);
+    try {
+      await deleteEstimate(deleteId);
+      setEstimates((prev) => prev.filter((e) => e.id !== deleteId));
+      toast({ title: "Deleted", description: "Estimate removed successfully" });
+    } catch {
+      toast({ title: "Error", description: "Failed to delete estimate", variant: "destructive" });
+    } finally {
+      setDeleting(false);
+      setDeleteId(null);
+    }
+  };
+
+  /* counts */
+  const draftCount = estimates.filter((e) => e.status === "draft").length;
+  const completedCount = estimates.filter((e) => e.status === "completed").length;
+  const sentCount = estimates.filter((e) => e.status === "sent").length;
+
+  return (
+    <div style={{ padding: "28px 32px", maxWidth: 1320, margin: "0 auto", fontFamily: "'Inter',sans-serif" }}>
+      {/* ── Header ────────────────────────────────────── */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 24 }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <h1 style={{ fontSize: 26, fontWeight: 800, color: "#0F172A", margin: 0 }}>AI Roof Estimator</h1>
+            {aiOnline !== null && (
+              <span style={{
+                display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 10px",
+                borderRadius: 20, fontSize: 11, fontWeight: 600,
+                background: aiOnline ? "rgba(16,185,129,.12)" : "rgba(239,68,68,.12)",
+                color: aiOnline ? "#047857" : "#B91C1C",
+              }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: aiOnline ? "#10B981" : "#EF4444" }} />
+                {aiOnline ? "AI Online" : "AI Offline"}
+              </span>
+            )}
+          </div>
+          <p style={{ color: "#64748B", fontSize: 14, marginTop: 4 }}>
+            Manage roof estimates, create new AI-powered estimates, and track project pricing.
+          </p>
+        </div>
+        <button onClick={() => navigate("/roof-estimator/new")} style={{
+          padding: "11px 22px", borderRadius: 10, border: "none", cursor: "pointer",
+          background: "linear-gradient(135deg,#0891B2,#0E7490)", color: "#fff",
+          fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", gap: 8,
+          boxShadow: "0 2px 8px rgba(8,145,178,.25)", transition: "transform .15s",
+        }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Create AI Estimate
+        </button>
+      </div>
+
+      {/* ── Stats ─────────────────────────────────────── */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 16, marginBottom: 24 }}>
+        <StatCard label="Total Estimates" value={stats ? String(stats.totalEstimates) : "—"} icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>} />
+        <StatCard label="Total Revenue" value={stats ? fmt(stats.totalRevenue) : "—"} icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>} />
+        <StatCard label="Avg Roof Area" value={stats ? fmtArea(stats.avgRoofArea) : "—"} icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="3 21 12 3 21 21"/></svg>} />
+        <StatCard label="Avg Confidence" value={stats ? fmtPct(stats.avgConfidence) : "—"} icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>} />
+      </div>
+
+      {/* ── Toolbar ────────────────────────────────────── */}
+      <div style={{
+        display: "flex", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 16,
+      }}>
+        {/* Search */}
+        <div style={{ position: "relative", flex: "1 1 260px", maxWidth: 360 }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }}>
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input
+            placeholder="Search by address, client, or ID…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{
+              width: "100%", padding: "9px 12px 9px 36px", borderRadius: 8,
+              border: "1px solid #CBD5E1", fontSize: 13, outline: "none",
+              background: "#fff", color: "#0F172A",
+            }}
+          />
+        </div>
+        {/* Status filter tabs */}
+        <div style={{ display: "flex", gap: 4, background: "#F1F5F9", borderRadius: 8, padding: 3 }}>
+          {[
+            { label: "All", val: "all", count: estimates.length },
+            { label: "Draft", val: "draft", count: draftCount },
+            { label: "Completed", val: "completed", count: completedCount },
+            { label: "Sent", val: "sent", count: sentCount },
+          ].map((t) => (
+            <button
+              key={t.val}
+              onClick={() => setFilterStatus(t.val)}
+              style={{
+                padding: "6px 14px", borderRadius: 6, border: "none", cursor: "pointer",
+                fontSize: 12, fontWeight: 600,
+                background: filterStatus === t.val ? "#fff" : "transparent",
+                color: filterStatus === t.val ? "#0891B2" : "#64748B",
+                boxShadow: filterStatus === t.val ? "0 1px 3px rgba(0,0,0,.08)" : "none",
+                transition: "all .15s",
+              }}
+            >
+              {t.label} <span style={{ opacity: 0.7 }}>({t.count})</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Estimates Table ─────────────────────────────── */}
+      <div style={{
+        background: "#fff", borderRadius: 14, border: "1px solid #E2E8F0",
+        boxShadow: "0 1px 4px rgba(0,0,0,.06)", overflow: "hidden",
+      }}>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: "#F8FAFC" }}>
+                {["Estimate ID", "Client", "Address", "Roof Area", "Price", "Status", "Created", "Actions"].map((h) => (
+                  <th key={h} style={{
+                    textAlign: "left", padding: "12px 16px", fontWeight: 600,
+                    color: "#64748B", borderBottom: "1px solid #E2E8F0", whiteSpace: "nowrap",
+                  }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={8} style={{ padding: 48, textAlign: "center", color: "#94A3B8" }}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+                    <div style={{
+                      width: 32, height: 32, border: "3px solid #E2E8F0", borderTopColor: "#0891B2",
+                      borderRadius: "50%", animation: "spin 1s linear infinite",
+                    }} />
+                    Loading estimates…
+                  </div>
+                </td></tr>
+              ) : filtered.length === 0 ? (
+                <tr><td colSpan={8} style={{ padding: 48, textAlign: "center", color: "#94A3B8" }}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" strokeWidth="1.5"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
+                    <span>No estimates found</span>
+                    <button onClick={() => navigate("/roof-estimator/new")} style={{
+                      marginTop: 8, padding: "8px 18px", borderRadius: 8, border: "none",
+                      background: "#0891B2", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer",
+                    }}>Create your first estimate</button>
+                  </div>
+                </td></tr>
+              ) : (
+                filtered.map((est) => (
+                  <tr key={est.id} style={{
+                    borderBottom: "1px solid #F1F5F9", transition: "background .1s",
+                  }} onMouseEnter={(e) => (e.currentTarget.style.background = "#F8FAFC")}
+                     onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                    <td style={{ padding: "12px 16px", fontFamily: "monospace", color: "#475569", fontWeight: 500 }}>
+                      {short(est.id)}
+                    </td>
+                    <td style={{ padding: "12px 16px", color: "#0F172A", fontWeight: 500 }}>
+                      {est.client?.clientName || "—"}
+                    </td>
+                    <td style={{ padding: "12px 16px", color: "#475569", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {est.address}
+                    </td>
+                    <td style={{ padding: "12px 16px", color: "#475569" }}>
+                      {fmtArea(est.roofAreaSqft)}
+                    </td>
+                    <td style={{ padding: "12px 16px", color: "#0F172A", fontWeight: 600 }}>
+                      {fmt(est.finalEstimatePrice ?? est.totalEstimate)}
+                    </td>
+                    <td style={{ padding: "12px 16px" }}>
+                      <StatusBadge status={est.status || "draft"} />
+                    </td>
+                    <td style={{ padding: "12px 16px", color: "#64748B", whiteSpace: "nowrap" }}>
+                      {fmtDate(est.createdAt)}
+                    </td>
+                    <td style={{ padding: "12px 16px" }}>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button title="Edit" onClick={() => navigate(`/roof-estimator/${est.id}/edit`)} style={{
+                          width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center",
+                          borderRadius: 6, border: "1px solid #E2E8F0", background: "#fff", cursor: "pointer",
+                          color: "#475569", transition: "all .15s",
+                        }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                          </svg>
+                        </button>
+                        <button title="Delete" onClick={() => setDeleteId(est.id)} style={{
+                          width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center",
+                          borderRadius: 6, border: "1px solid #FEE2E2", background: "#FFF5F5", cursor: "pointer",
+                          color: "#EF4444", transition: "all .15s",
+                        }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Delete confirm */}
+      <DeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} loading={deleting} />
+
+      {/* Spinner animation */}
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
+}

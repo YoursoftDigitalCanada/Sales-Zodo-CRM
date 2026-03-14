@@ -45,6 +45,38 @@ export interface RoofEstimate {
     correctionFactor?: number | null;
     confidenceScore?: number | null;
     flaggedForReview?: boolean;
+    // Wizard workflow fields
+    status: string;
+    currentStep: number;
+    wastePercent: number | null;
+    shingleType: string | null;
+    shinglePricePerSq: number | null;
+    underlaymentCost: number | null;
+    iceWaterShieldCost: number | null;
+    ridgeCapCost: number | null;
+    starterStripCost: number | null;
+    flashingCostWizard: number | null;
+    ventCostWizard: number | null;
+    nailsAccessoriesCost: number | null;
+    totalMaterialCost: number | null;
+    laborCostPerSquare: number | null;
+    numberOfLaborers: number | null;
+    daysRequired: number | null;
+    laborRatePerWorker: number | null;
+    totalLaborCost: number | null;
+    dumpsterCost: number | null;
+    permitCost: number | null;
+    deliveryFee: number | null;
+    equipmentRentalCost: number | null;
+    disposalFee: number | null;
+    totalEquipmentCost: number | null;
+    overheadPercent: number | null;
+    profitMarginPercent: number | null;
+    taxPercent: number | null;
+    overheadAmount: number | null;
+    profitAmount: number | null;
+    taxAmount: number | null;
+    finalEstimatePrice: number | null;
 }
 
 export interface EstimateSettings {
@@ -138,6 +170,38 @@ export interface SaveEstimatePayload {
     measurementSource?: string;
     tearOffRequired?: boolean;
     photoUrls?: string[];
+    // Wizard workflow fields
+    status?: string;
+    currentStep?: number;
+    wastePercent?: number;
+    shingleType?: string;
+    shinglePricePerSq?: number;
+    underlaymentCost?: number;
+    iceWaterShieldCost?: number;
+    ridgeCapCost?: number;
+    starterStripCost?: number;
+    flashingCostWizard?: number;
+    ventCostWizard?: number;
+    nailsAccessoriesCost?: number;
+    totalMaterialCost?: number;
+    laborCostPerSquare?: number;
+    numberOfLaborers?: number;
+    daysRequired?: number;
+    laborRatePerWorker?: number;
+    totalLaborCost?: number;
+    dumpsterCost?: number;
+    permitCost?: number;
+    deliveryFee?: number;
+    equipmentRentalCost?: number;
+    disposalFee?: number;
+    totalEquipmentCost?: number;
+    overheadPercent?: number;
+    profitMarginPercent?: number;
+    taxPercent?: number;
+    overheadAmount?: number;
+    profitAmount?: number;
+    taxAmount?: number;
+    finalEstimatePrice?: number;
 }
 
 export interface EstimateBreakdownItem {
@@ -350,6 +414,11 @@ export async function segmentRoof(satelliteImageUrl: string): Promise<Segmentati
 
 export async function saveEstimate(payload: SaveEstimatePayload): Promise<RoofEstimate> {
     const res = await api.post("/roof-estimator", payload);
+    return res.data?.data;
+}
+
+export async function updateEstimate(id: string, payload: Partial<SaveEstimatePayload>): Promise<RoofEstimate> {
+    const res = await api.put(`/roof-estimator/${id}`, payload);
     return res.data?.data;
 }
 

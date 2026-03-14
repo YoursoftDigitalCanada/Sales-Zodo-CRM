@@ -4167,6 +4167,49 @@ model RoofEstimate {
   confidenceScore     Float?              // composite 0-1 confidence
   flaggedForReview    Boolean   @default(false) // confidence < 0.75
 
+  // Wizard Workflow
+  status              String    @default("draft")   // draft, completed, sent
+  currentStep         Int       @default(1)         // wizard step 1-6
+  wastePercent        Float?    @default(10)        // waste % for materials
+
+  // Step 2: Material Pricing
+  shingleType         String?
+  shinglePricePerSq   Float?
+  underlaymentCost    Float?
+  iceWaterShieldCost  Float?
+  ridgeCapCost        Float?
+  starterStripCost    Float?
+  flashingCostWizard  Float?
+  ventCostWizard      Float?
+  nailsAccessoriesCost Float?
+  totalMaterialCost   Float?
+
+  // Step 3: Labor
+  laborCostPerSquare  Float?
+  numberOfLaborers    Int?
+  daysRequired        Int?
+  laborRatePerWorker  Float?
+  totalLaborCost      Float?
+
+  // Step 4: Equipment / Extras
+  dumpsterCost        Float?
+  permitCost          Float?
+  deliveryFee         Float?
+  equipmentRentalCost Float?
+  disposalFee         Float?
+  totalEquipmentCost  Float?
+
+  // Step 5: Profit & Overhead
+  overheadPercent     Float?
+  profitMarginPercent Float?
+  taxPercent          Float?
+
+  // Step 6: Final calculations
+  overheadAmount      Float?
+  profitAmount        Float?
+  taxAmount           Float?
+  finalEstimatePrice  Float?
+
   // Relations
   tenantId            String
   tenant              Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)

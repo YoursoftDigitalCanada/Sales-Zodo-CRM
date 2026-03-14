@@ -68,6 +68,38 @@ export interface CreateEstimateDto {
     preferredManufacturer?: string;
     qualityTier?: string;
     additionalPhotoUrls?: string[];
+    // Wizard workflow fields
+    status?: string;
+    currentStep?: number;
+    wastePercent?: number;
+    shingleType?: string;
+    shinglePricePerSq?: number;
+    underlaymentCost?: number;
+    iceWaterShieldCost?: number;
+    ridgeCapCost?: number;
+    starterStripCost?: number;
+    flashingCostWizard?: number;
+    ventCostWizard?: number;
+    nailsAccessoriesCost?: number;
+    totalMaterialCost?: number;
+    laborCostPerSquare?: number;
+    numberOfLaborers?: number;
+    daysRequired?: number;
+    laborRatePerWorker?: number;
+    totalLaborCost?: number;
+    dumpsterCost?: number;
+    permitCost?: number;
+    deliveryFee?: number;
+    equipmentRentalCost?: number;
+    disposalFee?: number;
+    totalEquipmentCost?: number;
+    overheadPercent?: number;
+    profitMarginPercent?: number;
+    taxPercent?: number;
+    overheadAmount?: number;
+    profitAmount?: number;
+    taxAmount?: number;
+    finalEstimatePrice?: number;
 }
 
 export interface UpdateEstimateDto {
@@ -88,6 +120,47 @@ export interface UpdateEstimateDto {
     eaveLengthFt?: number;
     rakeLengthFt?: number;
     tearOffRequired?: boolean;
+    // Wizard workflow fields
+    status?: string;
+    currentStep?: number;
+    wastePercent?: number;
+    shingleType?: string;
+    shinglePricePerSq?: number;
+    underlaymentCost?: number;
+    iceWaterShieldCost?: number;
+    ridgeCapCost?: number;
+    starterStripCost?: number;
+    flashingCostWizard?: number;
+    ventCostWizard?: number;
+    nailsAccessoriesCost?: number;
+    totalMaterialCost?: number;
+    laborCostPerSquare?: number;
+    numberOfLaborers?: number;
+    daysRequired?: number;
+    laborRatePerWorker?: number;
+    totalLaborCost?: number;
+    dumpsterCost?: number;
+    permitCost?: number;
+    deliveryFee?: number;
+    equipmentRentalCost?: number;
+    disposalFee?: number;
+    totalEquipmentCost?: number;
+    overheadPercent?: number;
+    profitMarginPercent?: number;
+    taxPercent?: number;
+    overheadAmount?: number;
+    profitAmount?: number;
+    taxAmount?: number;
+    finalEstimatePrice?: number;
+    address?: string;
+    latitude?: number;
+    longitude?: number;
+    satelliteImageUrl?: string;
+    roofAreaSqft?: number;
+    confidence?: number;
+    processingTimeSec?: number;
+    aiModel?: string;
+    measurementSource?: string;
 }
 
 export interface EstimateQueryDto {

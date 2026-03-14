@@ -9,10 +9,15 @@ import {
   saveEstimate,
   updateEstimate,
   getEstimateById,
+  createEagleViewOrder,
+  getEagleViewReport,
   type RoofEstimate,
   type SaveEstimatePayload,
+  type EagleViewOrderAddress,
 } from "@/features/roof-estimator/services/roof-estimator-service";
 import { useToast } from "@/hooks/use-toast";
+
+interface OtherMaterial { name: string; cost: number; }
 
 /* ─── Constants ──────────────────────────────────────────── */
 
@@ -78,6 +83,8 @@ interface WizardData {
   // Notes
   notes: string;
   clientId: string;
+  // Dynamic materials
+  otherMaterials: OtherMaterial[];
 }
 
 const DEFAULT_DATA: WizardData = {
@@ -92,6 +99,7 @@ const DEFAULT_DATA: WizardData = {
   dumpsterCost: 0, permitCost: 0, deliveryFee: 0, equipmentRentalCost: 0, disposalFee: 0,
   overheadPercent: 10, profitMarginPercent: 20, taxPercent: 13,
   notes: "", clientId: "",
+  otherMaterials: [],
 };
 
 /* ─── Styled Input ───────────────────────────────────────── */
@@ -189,6 +197,8 @@ export default function RoofEstimatorWizard() {
   const [addressLoading, setAddressLoading] = useState(false);
   const [detecting, setDetecting] = useState(false);
   const [satelliteLoading, setSatelliteLoading] = useState(false);
+  const [eagleViewLoading, setEagleViewLoading] = useState(false);
+  const [eagleViewStatus, setEagleViewStatus] = useState<string>("");
 
   // Update helper
   const up = useCallback(<K extends keyof WizardData>(key: K, val: WizardData[K]) => {
@@ -234,6 +244,7 @@ export default function RoofEstimatorWizard() {
             profitMarginPercent: est.profitMarginPercent ?? 20,
             taxPercent: est.taxPercent ?? 13,
             notes: est.notes || "", clientId: est.clientId || "",
+            otherMaterials: [],
           });
         } catch {
           toast({ title: "Error", description: "Failed to load estimate", variant: "destructive" });
@@ -245,10 +256,13 @@ export default function RoofEstimatorWizard() {
 
   /* ── Computed totals ──────────────────────────── */
 
+  const otherMaterialsTotal = useMemo(() =>
+    data.otherMaterials.reduce((s, m) => s + (m.cost || 0), 0), [data.otherMaterials]);
+
   const totalMaterialCost = useMemo(() =>
     data.shinglePricePerSq + data.underlaymentCost + data.iceWaterShieldCost +
     data.ridgeCapCost + data.starterStripCost + data.flashingCostWizard +
-    data.ventCostWizard + data.nailsAccessoriesCost, [data]);
+    data.ventCostWizard + data.nailsAccessoriesCost + otherMaterialsTotal, [data, otherMaterialsTotal]);
 
   const totalLaborCost = useMemo(() =>
     data.numberOfLaborers * data.daysRequired * data.laborRatePerWorker, [data]);
@@ -279,20 +293,98 @@ export default function RoofEstimatorWizard() {
     finally { setAddressLoading(false); }
   }, [up]);
 
+  /* ── Parse address into EagleView parts ──── */
+  const parseAddressForEagleView = (addr: string): EagleViewOrderAddress | null => {
+    try {
+      const parts = addr.split(",").map(s => s.trim());
+      if (parts.length < 3) return null;
+      const addressLine1 = parts[0];
+      const city = parts[1];
+      const stateZip = parts[2].split(" ").filter(Boolean);
+      const state = stateZip[0] || "";
+      const postalCode = stateZip[1] || "";
+      const country = parts[3] || "CA";
+      return { addressLine1, city, state, postalCode, country };
+    } catch { return null; }
+  };
+
   const selectAddress = useCallback(async (desc: string, placeId: string) => {
     up("address", desc);
     up("placeId", placeId);
     setAddressSuggestions([]);
-    // Fetch satellite image
+
+    // 1. Fetch satellite image
     setSatelliteLoading(true);
+    let satLat = 0, satLng = 0, satUrl = "";
     try {
       const sat = await fetchSatelliteImage(desc, placeId);
-      up("latitude", sat.latitude);
-      up("longitude", sat.longitude);
-      up("satelliteImageUrl", sat.satelliteImageUrl);
+      satLat = sat.latitude; satLng = sat.longitude; satUrl = sat.satelliteImageUrl;
+      up("latitude", satLat);
+      up("longitude", satLng);
+      up("satelliteImageUrl", satUrl);
     } catch {
       toast({ title: "Warning", description: "Could not load satellite image" });
     } finally { setSatelliteLoading(false); }
+
+    if (!satUrl) return;
+
+    // 2. Run AI detection + EagleView in parallel
+    setDetecting(true);
+    setEagleViewLoading(true);
+    setEagleViewStatus("Fetching measurements…");
+
+    const aiPromise = detectRoof({ satelliteImageUrl: satUrl, latitude: satLat, longitude: satLng })
+      .then((result) => {
+        up("roofAreaSqft", result.roofAreaSqft);
+        up("confidence", result.confidence);
+        up("processingTimeSec", result.processingTimeSec);
+        up("aiModel", result.aiModel);
+        up("measurementSource", "ai_satellite");
+        toast({ title: "AI Detection Complete", description: `${result.roofAreaSqft.toFixed(0)} sq ft — ${result.confidence.toFixed(0)}% confidence` });
+      })
+      .catch(() => { toast({ title: "AI Detection", description: "AI detection could not complete", variant: "destructive" }); })
+      .finally(() => setDetecting(false));
+
+    const evPromise = (async () => {
+      try {
+        const evAddr = parseAddressForEagleView(desc);
+        if (!evAddr || !evAddr.postalCode) { setEagleViewStatus(""); return; }
+        const order = await createEagleViewOrder(evAddr, `wizard-${Date.now()}`);
+        if (order.reportIds?.[0]) {
+          setEagleViewStatus("EagleView order placed, checking report…");
+          // Poll for report (max 3 tries)
+          for (let i = 0; i < 3; i++) {
+            await new Promise(r => setTimeout(r, 3000));
+            try {
+              const report = await getEagleViewReport(order.reportIds[0]);
+              if (report.area) {
+                const evArea = parseFloat(report.area);
+                if (evArea > 0) up("roofAreaSqft", evArea);
+              }
+              if (report.pitch) up("pitch", report.pitch.includes("/") ? report.pitch : report.pitch + "/12");
+              if (report.lengthRidge) up("ridgeLengthFt" as any, parseFloat(report.lengthRidge) || 0);
+              if (report.lengthValley) up("valleyLengthFt" as any, parseFloat(report.lengthValley) || 0);
+              if (report.lengthEave) up("eaveLengthFt" as any, parseFloat(report.lengthEave) || 0);
+              if (report.lengthRake) up("rakeLengthFt" as any, parseFloat(report.lengthRake) || 0);
+              if (report.lengthHip) up("hipLengthFt" as any, parseFloat(report.lengthHip) || 0);
+              if (report.status === "Completed" || report.area) {
+                up("measurementSource", "eagleview");
+                up("confidence", 95);
+                toast({ title: "EagleView Data Loaded", description: `Roof area: ${report.area || "N/A"} sq ft` });
+                break;
+              }
+            } catch { /* continue polling */ }
+          }
+        }
+      } catch {
+        // EagleView not available — silent, AI already provides data
+      } finally {
+        setEagleViewLoading(false);
+        setEagleViewStatus("");
+      }
+    })();
+
+    await Promise.allSettled([aiPromise, evPromise]);
   }, [up, toast]);
 
   const runAiDetection = useCallback(async () => {
@@ -387,8 +479,11 @@ export default function RoofEstimatorWizard() {
       case 1: return <Step1Address data={data} up={up}
         suggestions={addressSuggestions} addressLoading={addressLoading}
         onAddressInput={handleAddressInput} onSelectAddress={selectAddress}
-        onDetect={runAiDetection} detecting={detecting} satelliteLoading={satelliteLoading} />;
-      case 2: return <Step2Materials data={data} up={up} total={totalMaterialCost} />;
+        onDetect={runAiDetection} detecting={detecting} satelliteLoading={satelliteLoading}
+        eagleViewLoading={eagleViewLoading} eagleViewStatus={eagleViewStatus} />;
+      case 2: return <Step2Materials data={data} up={up} total={totalMaterialCost}
+        otherMaterials={data.otherMaterials}
+        onOtherMaterialsChange={(mats) => up("otherMaterials", mats)} />;
       case 3: return <Step3Labor data={data} up={up} total={totalLaborCost} />;
       case 4: return <Step4Extras data={data} up={up} total={totalEquipmentCost} />;
       case 5: return <Step5Profit data={data} up={up} subtotal={subtotal}
@@ -560,7 +655,7 @@ function MiniStat({ label, value }: { label: string; value: string }) {
 
 /* ─── Step 1: Address & Roof Measurement ─────────────────── */
 
-function Step1Address({ data, up, suggestions, addressLoading, onAddressInput, onSelectAddress, onDetect, detecting, satelliteLoading }: {
+function Step1Address({ data, up, suggestions, addressLoading, onAddressInput, onSelectAddress, onDetect, detecting, satelliteLoading, eagleViewLoading, eagleViewStatus }: {
   data: WizardData;
   up: <K extends keyof WizardData>(key: K, val: WizardData[K]) => void;
   suggestions: { description: string; placeId: string }[];
@@ -570,6 +665,8 @@ function Step1Address({ data, up, suggestions, addressLoading, onAddressInput, o
   onDetect: () => void;
   detecting: boolean;
   satelliteLoading: boolean;
+  eagleViewLoading: boolean;
+  eagleViewStatus: string;
 }) {
   return (
     <div>
@@ -608,26 +705,44 @@ function Step1Address({ data, up, suggestions, addressLoading, onAddressInput, o
         </div>
       </Field>
 
-      {/* AI Detection button */}
-      {data.satelliteImageUrl && !data.roofAreaSqft && (
-        <button onClick={onDetect} disabled={detecting || satelliteLoading} style={{
+      {/* Status indicators */}
+      {(detecting || satelliteLoading || eagleViewLoading) && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 10, padding: "12px 16px",
+          background: "rgba(8,145,178,.06)", borderRadius: 10, marginBottom: 16,
+          border: "1px solid rgba(8,145,178,.15)",
+        }}>
+          <div style={{ width: 16, height: 16, border: "2px solid #CBD5E1", borderTopColor: "#0891B2", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+          <div style={{ fontSize: 13, color: "#0891B2", fontWeight: 500 }}>
+            {satelliteLoading ? "Loading satellite image…" : detecting ? "AI detecting roof…" : eagleViewStatus || "Loading EagleView data…"}
+          </div>
+        </div>
+      )}
+
+      {/* Manual re-detect button (only show if satellite loaded but no area yet and not auto-detecting) */}
+      {data.satelliteImageUrl && !data.roofAreaSqft && !detecting && !satelliteLoading && (
+        <button onClick={onDetect} disabled={detecting} style={{
           padding: "10px 20px", borderRadius: 8, border: "none",
           background: "linear-gradient(135deg,#0891B2,#0E7490)", color: "#fff",
           fontSize: 13, fontWeight: 700, cursor: "pointer", marginBottom: 20,
-          opacity: detecting ? 0.7 : 1, display: "flex", alignItems: "center", gap: 8,
+          display: "flex", alignItems: "center", gap: 8,
         }}>
-          {detecting ? (
-            <>
-              <div style={{ width: 14, height: 14, border: "2px solid rgba(255,255,255,.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
-              Detecting Roof…
-            </>
-          ) : (
-            <>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
-              Run AI Detection
-            </>
-          )}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          Re-run AI Detection
         </button>
+      )}
+
+      {/* Measurement source badge */}
+      {data.measurementSource && (
+        <div style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{
+            padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600,
+            background: data.measurementSource === "eagleview" ? "rgba(59,130,246,.12)" : "rgba(16,185,129,.12)",
+            color: data.measurementSource === "eagleview" ? "#1D4ED8" : "#047857",
+          }}>
+            {data.measurementSource === "eagleview" ? "📡 EagleView Measurement" : "🤖 AI Satellite Detection"}
+          </span>
+        </div>
       )}
 
       {/* Measurement fields */}
@@ -674,11 +789,21 @@ function Step1Address({ data, up, suggestions, addressLoading, onAddressInput, o
 
 /* ─── Step 2: Material Pricing ───────────────────────────── */
 
-function Step2Materials({ data, up, total }: {
+function Step2Materials({ data, up, total, otherMaterials, onOtherMaterialsChange }: {
   data: WizardData;
   up: <K extends keyof WizardData>(key: K, val: WizardData[K]) => void;
   total: number;
+  otherMaterials: OtherMaterial[];
+  onOtherMaterialsChange: (mats: OtherMaterial[]) => void;
 }) {
+  const addMaterial = () => onOtherMaterialsChange([...otherMaterials, { name: "", cost: 0 }]);
+  const removeMaterial = (idx: number) => onOtherMaterialsChange(otherMaterials.filter((_, i) => i !== idx));
+  const updateMaterial = (idx: number, field: keyof OtherMaterial, val: string | number) => {
+    const copy = [...otherMaterials];
+    (copy[idx] as any)[field] = val;
+    onOtherMaterialsChange(copy);
+  };
+
   return (
     <div>
       <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A", marginBottom: 4 }}>🧱 Material Pricing</h2>
@@ -699,10 +824,50 @@ function Step2Materials({ data, up, total }: {
         <Field label="Nails & Accessories"><NumberInput value={data.nailsAccessoriesCost} onChange={(v) => up("nailsAccessoriesCost", v)} prefix="$" /></Field>
       </div>
 
+      {/* Other Materials — dynamic rows */}
+      <div style={{ marginTop: 20, borderTop: "1px solid #E2E8F0", paddingTop: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "#0F172A" }}>Other Materials</span>
+          <button onClick={addMaterial} style={{
+            padding: "6px 14px", borderRadius: 6, border: "1px solid #0891B2",
+            background: "rgba(8,145,178,.06)", color: "#0891B2", fontSize: 12,
+            fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4,
+          }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Material
+          </button>
+        </div>
+        {otherMaterials.length === 0 && (
+          <div style={{ fontSize: 12, color: "#94A3B8", padding: "10px 0" }}>No additional materials added yet.</div>
+        )}
+        {otherMaterials.map((m, idx) => (
+          <div key={idx} style={{ display: "flex", gap: 8, alignItems: "flex-end", marginBottom: 8 }}>
+            <div style={{ flex: 1 }}>
+              {idx === 0 && <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#64748B", marginBottom: 4 }}>Material Name</label>}
+              <input value={m.name} onChange={(e) => updateMaterial(idx, "name", e.target.value)}
+                placeholder="e.g. Drip Edge" style={inputStyle} />
+            </div>
+            <div style={{ width: 140 }}>
+              {idx === 0 && <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#64748B", marginBottom: 4 }}>Cost</label>}
+              <NumberInput value={m.cost} onChange={(v) => updateMaterial(idx, "cost", v)} prefix="$" />
+            </div>
+            <button onClick={() => removeMaterial(idx)} title="Remove" style={{
+              width: 32, height: 38, display: "flex", alignItems: "center", justifyContent: "center",
+              borderRadius: 6, border: "1px solid #FEE2E2", background: "#FFF5F5",
+              color: "#EF4444", cursor: "pointer", flexShrink: 0,
+            }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              </svg>
+            </button>
+          </div>
+        ))}
+      </div>
+
       <div style={{
         display: "flex", justifyContent: "space-between", alignItems: "center",
         padding: "14px 18px", background: "rgba(8,145,178,.06)", borderRadius: 10,
-        marginTop: 8,
+        marginTop: 12,
       }}>
         <span style={{ fontSize: 14, fontWeight: 600, color: "#475569" }}>Total Material Cost</span>
         <span style={{ fontSize: 20, fontWeight: 800, color: "#0891B2" }}>{fmt(total)}</span>

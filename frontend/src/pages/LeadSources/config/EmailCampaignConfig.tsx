@@ -30,7 +30,7 @@ const EmailCampaignConfig = ({ formData, setFormData }: SourceConfigProps) => {
                             className={cn(
                                 "flex flex-col items-center gap-2 p-4 rounded-xl border-2 cursor-pointer transition-all text-center",
                                 platform === p.value
-                                    ? "border-[#0891B2] bg-[#F0FDFA]"
+                                    ? "border-[#6637F4] bg-[#F0EEFF]"
                                     : "border-[rgba(15,23,42,0.06)] hover:border-[#CBD5E1]"
                             )}
                         >
@@ -44,7 +44,7 @@ const EmailCampaignConfig = ({ formData, setFormData }: SourceConfigProps) => {
 
             {/* Connection Method */}
             {platform !== "other" && (
-                <div className="p-4 rounded-xl bg-[#F8FAFC] border border-[rgba(15,23,42,0.06)] space-y-3">
+                <div className="p-4 rounded-xl bg-[#F7F7FB] border border-[rgba(15,23,42,0.06)] space-y-3">
                     <h4 className="font-semibold text-sm text-[#0F172A]">
                         Connect Your {emailPlatformOptions.find(p => p.value === platform)?.label} Account
                     </h4>
@@ -95,7 +95,7 @@ const EmailCampaignConfig = ({ formData, setFormData }: SourceConfigProps) => {
                                 key={t.value}
                                 className={cn(
                                     "flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all",
-                                    checked ? "bg-indigo-50 border-indigo-200" : "border-[rgba(15,23,42,0.06)] hover:bg-[#F8FAFC]"
+                                    checked ? "bg-indigo-50 border-indigo-200" : "border-[rgba(15,23,42,0.06)] hover:bg-[#F7F7FB]"
                                 )}
                             >
                                 <Checkbox
@@ -125,9 +125,9 @@ const EmailCampaignConfig = ({ formData, setFormData }: SourceConfigProps) => {
             </div>
 
             {/* Campaign Tracking */}
-            <div className="flex items-center justify-between p-4 bg-[#F8FAFC] rounded-xl">
+            <div className="flex items-center justify-between p-4 bg-[#F7F7FB] rounded-xl">
                 <div className="flex items-center gap-3">
-                    <Tag size={16} className="text-[#0891B2]" />
+                    <Tag size={16} className="text-[#6637F4]" />
                     <div>
                         <p className="text-sm font-medium text-[#0F172A]">Track Campaign Source</p>
                         <p className="text-xs text-[#94A3B8]">Automatically tag leads with the campaign name</p>
@@ -136,7 +136,7 @@ const EmailCampaignConfig = ({ formData, setFormData }: SourceConfigProps) => {
                 <Checkbox
                     checked={cfg.track_campaigns !== false}
                     onCheckedChange={(c) => update("track_campaigns", c)}
-                    className="border-slate-300 data-[state=checked]:bg-[#0891B2]"
+                    className="border-slate-300 data-[state=checked]:bg-[#6637F4]"
                 />
             </div>
         </div>

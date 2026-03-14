@@ -291,7 +291,7 @@ const leadStatuses = [
   { id: LeadStatus.NEW, name: "New", color: "#3B82F6", bgColor: "#EFF6FF", icon: Sparkles },
   { id: LeadStatus.CONTACTED, name: "Contacted", color: "#8B5CF6", bgColor: "#F5F3FF", icon: Phone },
   { id: LeadStatus.QUALIFIED, name: "Qualified", color: "#F59E0B", bgColor: "#FFFBEB", icon: UserCheck },
-  { id: LeadStatus.PROPOSAL, name: "Proposal", color: "#22D3EE", bgColor: "#F0FDFA", icon: Send },
+  { id: LeadStatus.PROPOSAL, name: "Proposal", color: "#6637F4", bgColor: "#F0EEFF", icon: Send },
   { id: LeadStatus.NEGOTIATION, name: "Negotiation", color: "#F97316", bgColor: "#FFF7ED", icon: Clock },
   { id: LeadStatus.WON, name: "Won", color: "#10B981", bgColor: "#ECFDF5", icon: CheckCircle2 },
   { id: LeadStatus.LOST, name: "Lost", color: "#EF4444", bgColor: "#FEF2F2", icon: AlertCircle },
@@ -299,8 +299,8 @@ const leadStatuses = [
   { id: LeadStatus.DUPLICATE, name: "Duplicate", color: "#64748B", bgColor: "#F1F5F9", icon: Copy },
   { id: LeadStatus.UNQUALIFIED, name: "Unqualified", color: "#475569", bgColor: "#F1F5F9", icon: Ban },
   { id: LeadStatus.NO_RESPONSE, name: "No Response", color: "#D97706", bgColor: "#FFFBEB", icon: PhoneOff },
-  { id: LeadStatus.OUT_OF_SERVICE_AREA, name: "Out of Area", color: "#EA580C", bgColor: "#FFF7ED", icon: MapPinOff },
-  { id: LeadStatus.FUTURE_FOLLOW_UP, name: "Future Follow-Up", color: "#0891B2", bgColor: "#ECFEFF", icon: CalendarClock },
+  { id: LeadStatus.OUT_OF_SERVICE_AREA, name: "Out of Area", color: "#FF7B36", bgColor: "#FFF7ED", icon: MapPinOff },
+  { id: LeadStatus.FUTURE_FOLLOW_UP, name: "Future Follow-Up", color: "#6637F4", bgColor: "#ECFEFF", icon: CalendarClock },
   { id: LeadStatus.DORMANT_PROPOSAL, name: "Dormant Proposal", color: "#7C3AED", bgColor: "#F5F3FF", icon: FileX2 },
 ];
 
@@ -423,7 +423,7 @@ const StatCard = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
       whileHover={{ y: -4 }}
-      className="relative bg-white rounded-md p-5 border border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg  transition-all overflow-hidden group"
+      className="relative bg-white rounded-md p-5 border border-[rgba(15,23,42,0.06)] hover:border-[#6637F4]/30 hover:shadow-lg  transition-all overflow-hidden group"
     >
       <div
         className="absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-10 group-hover:opacity-20 transition-all"
@@ -533,8 +533,8 @@ const LeadCard = ({
       className={cn(
         "relative bg-white rounded-md border overflow-hidden transition-all group cursor-pointer",
         isSelected
-          ? "border-[#22D3EE] ring-2 ring-[#22D3EE]/20"
-          : "border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg "
+          ? "border-[#6637F4] ring-2 ring-[#6637F4]/20"
+          : "border-[rgba(15,23,42,0.06)] hover:border-[#6637F4]/30 hover:shadow-lg "
       )}
       onClick={onView}
     >
@@ -546,7 +546,7 @@ const LeadCard = ({
             onSelect();
           }}
           onClick={(e) => e.stopPropagation()}
-          className="data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE] bg-white"
+          className="data-[state=checked]:bg-[#6637F4] data-[state=checked]:border-[#6637F4] bg-white"
         />
       </div>
 
@@ -614,7 +614,7 @@ const LeadCard = ({
               <SourceIcon size={12} className="text-[#0F172A]" />
             </div>
           </div>
-          <h3 className="font-semibold text-[#0F172A] group-hover:text-[#0891B2] transition-colors">
+          <h3 className="font-semibold text-[#0F172A] group-hover:text-[#6637F4] transition-colors">
             {lead.firstName} {lead.lastName}
           </h3>
           <p className="text-sm text-[#94A3B8]">{lead.jobTitle}</p>
@@ -749,12 +749,12 @@ const LeadRow = ({
   const SourceIcon = sourceInfo.icon;
 
   return (
-    <TableRow className="group hover:bg-[#F0FDFA] transition-colors cursor-pointer border-l-2 border-l-transparent hover:border-l-[#0891B2]">
+    <TableRow className="group hover:bg-[#F0EEFF] transition-colors cursor-pointer border-l-2 border-l-transparent hover:border-l-[#6637F4]">
       <TableCell>
         <Checkbox
           checked={isSelected}
           onCheckedChange={onSelect}
-          className="data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
+          className="data-[state=checked]:bg-[#6637F4] data-[state=checked]:border-[#6637F4]"
         />
       </TableCell>
       <TableCell>
@@ -774,7 +774,7 @@ const LeadRow = ({
             </div>
           </div>
           <div>
-            <p className="font-medium text-[#0F172A] group-hover:text-[#0891B2] transition-colors">
+            <p className="font-medium text-[#0F172A] group-hover:text-[#6637F4] transition-colors">
               {lead.firstName} {lead.lastName}
             </p>
             <p className="text-sm text-[#94A3B8]">{lead.email}</p>
@@ -789,7 +789,7 @@ const LeadRow = ({
       </TableCell>
       <TableCell>
         {lead.phone ? (
-          <a href={`tel:${lead.phone}`} className="text-sm text-[#475569] hover:text-[#0891B2] transition-colors">
+          <a href={`tel:${lead.phone}`} className="text-sm text-[#475569] hover:text-[#6637F4] transition-colors">
             {lead.phone}
           </a>
         ) : (
@@ -1178,7 +1178,7 @@ const LeadFormDialog = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[780px] p-0 rounded-md overflow-hidden max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-[rgba(15,23,42,0.06)] bg-[#F0FDFA] sticky top-0 bg-white z-10">
+        <div className="p-6 border-b border-[rgba(15,23,42,0.06)] bg-[#F0EEFF] sticky top-0 bg-white z-10">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-[#0F172A]">
               {lead ? "Edit Lead" : "Add New Lead"}
@@ -1527,11 +1527,11 @@ const LeadFormDialog = ({
                     { key: "confirmedEmail" as const, label: "Email Confirmed" },
                     { key: "confirmedAddress" as const, label: "Address Confirmed" },
                   ].map((item) => (
-                    <label key={item.key} className="flex items-center gap-2 p-2 rounded-md hover:bg-[#F8FAFC] cursor-pointer">
+                    <label key={item.key} className="flex items-center gap-2 p-2 rounded-md hover:bg-[#F7F7FB] cursor-pointer">
                       <Checkbox
                         checked={formData[item.key]}
                         onCheckedChange={(checked) => setFormData({ ...formData, [item.key]: !!checked })}
-                        className="data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
+                        className="data-[state=checked]:bg-[#6637F4] data-[state=checked]:border-[#6637F4]"
                       />
                       <span className="text-sm text-[#475569]">{item.label}</span>
                     </label>
@@ -1638,13 +1638,13 @@ const LeadFormDialog = ({
                   <div className="flex flex-wrap gap-2">
                     {["Leak", "Missing Shingles", "Storm Damage", "Hail Damage", "Wind Damage", "Age/Wear", "Sagging/Structural", "Unknown"].map((dtype) => (
                       <label key={dtype} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs cursor-pointer border transition-colors ${formData.knownDamageType.includes(dtype)
-                        ? "bg-[#0891B2]/10 border-[#0891B2] text-[#0891B2]"
-                        : "bg-[#F8FAFC] border-[#E2E8F0] text-[#475569] hover:border-[#94A3B8]"
+                        ? "bg-[#6637F4]/10 border-[#6637F4] text-[#6637F4]"
+                        : "bg-[#F7F7FB] border-[#E2E8F0] text-[#475569] hover:border-[#94A3B8]"
                         }`}>
                         <Checkbox
                           checked={formData.knownDamageType.includes(dtype)}
                           onCheckedChange={() => toggleDamageType(dtype)}
-                          className="h-3.5 w-3.5 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
+                          className="h-3.5 w-3.5 data-[state=checked]:bg-[#6637F4] data-[state=checked]:border-[#6637F4]"
                         />
                         {dtype}
                       </label>
@@ -2125,7 +2125,7 @@ const LeadFormDialog = ({
             <Button
               type="submit"
               disabled={saving || !formData.firstName || !formData.lastName}
-              className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
+              className="bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-md"
             >
               {saving ? (
                 <>
@@ -2220,7 +2220,7 @@ const LeadDetailsDialog = ({
         <div className="p-4 md:p-6 space-y-4 md:space-y-6">
           {/* Score & Value */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 bg-[#F8FAFC] rounded-md">
+            <div className="p-4 bg-[#F7F7FB] rounded-md">
               <p className="text-xs text-[#475569] mb-2">Lead Score</p>
               <div className="flex items-center gap-3">
                 <span
@@ -2242,7 +2242,7 @@ const LeadDetailsDialog = ({
                 </div>
               </div>
             </div>
-            <div className="p-4 bg-[#F8FAFC] rounded-md">
+            <div className="p-4 bg-[#F7F7FB] rounded-md">
               <p className="text-xs text-[#475569] mb-2">Potential Value</p>
               <span className="text-3xl font-bold text-[#0F172A]">
                 {formatCurrency(lead.potentialValue, lead.currency)}
@@ -2256,10 +2256,10 @@ const LeadDetailsDialog = ({
             <div className="grid grid-cols-2 gap-3">
               <a
                 href={`mailto:${lead.email}`}
-                className="flex items-center gap-3 p-3 bg-[#F8FAFC] rounded-md hover:bg-white/10 transition-colors"
+                className="flex items-center gap-3 p-3 bg-[#F7F7FB] rounded-md hover:bg-white/10 transition-colors"
               >
                 <div className="w-10 h-10 rounded-md bg-blue-100 flex items-center justify-center">
-                  <Mail size={18} className="text-[#0891B2]" />
+                  <Mail size={18} className="text-[#6637F4]" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-[#475569]">Email</p>
@@ -2268,7 +2268,7 @@ const LeadDetailsDialog = ({
               </a>
               <a
                 href={`tel:${lead.phone}`}
-                className="flex items-center gap-3 p-3 bg-[#F8FAFC] rounded-md hover:bg-white/10 transition-colors"
+                className="flex items-center gap-3 p-3 bg-[#F7F7FB] rounded-md hover:bg-white/10 transition-colors"
               >
                 <div className="w-10 h-10 rounded-md bg-green-100 flex items-center justify-center">
                   <Phone size={18} className="text-green-600" />
@@ -2278,7 +2278,7 @@ const LeadDetailsDialog = ({
                   <p className="text-sm font-medium text-[#0F172A] truncate">{lead.phone}</p>
                 </div>
               </a>
-              <div className="flex items-center gap-3 p-3 bg-[#F8FAFC] rounded-md">
+              <div className="flex items-center gap-3 p-3 bg-[#F7F7FB] rounded-md">
                 <div className="w-10 h-10 rounded-md bg-purple-100 flex items-center justify-center">
                   <MapPin size={18} className="text-purple-600" />
                 </div>
@@ -2292,10 +2292,10 @@ const LeadDetailsDialog = ({
                   href={lead.website}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-3 bg-[#F8FAFC] rounded-md hover:bg-white/10 transition-colors"
+                  className="flex items-center gap-3 p-3 bg-[#F7F7FB] rounded-md hover:bg-white/10 transition-colors"
                 >
-                  <div className="w-10 h-10 rounded-md bg-[#0891B2]/10 flex items-center justify-center">
-                    <Globe size={18} className="text-[#0891B2]" />
+                  <div className="w-10 h-10 rounded-md bg-[#6637F4]/10 flex items-center justify-center">
+                    <Globe size={18} className="text-[#6637F4]" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs text-[#475569]">Website</p>
@@ -2348,14 +2348,14 @@ const LeadDetailsDialog = ({
 
           {/* Lead Details */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 bg-[#F8FAFC] rounded-md">
+            <div className="p-4 bg-[#F7F7FB] rounded-md">
               <p className="text-xs text-[#475569] mb-1">Lead Source</p>
               <div className="flex items-center gap-2">
                 <SourceIcon size={16} style={{ color: sourceInfo.color }} />
                 <span className="font-medium text-[#0F172A]">{sourceInfo.name}</span>
               </div>
             </div>
-            <div className="p-4 bg-[#F8FAFC] rounded-md">
+            <div className="p-4 bg-[#F7F7FB] rounded-md">
               <p className="text-xs text-[#475569] mb-1">Assigned To</p>
               <div className="flex items-center gap-2">
                 {lead.assignedTo ? (
@@ -2376,7 +2376,7 @@ const LeadDetailsDialog = ({
           {(lead.lastContact || lead.nextFollowUp) && (
             <div className="grid grid-cols-2 gap-4">
               {lead.lastContact && (
-                <div className="p-4 bg-[#F8FAFC] rounded-md">
+                <div className="p-4 bg-[#F7F7FB] rounded-md">
                   <p className="text-xs text-[#475569] mb-1">Last Contact</p>
                   <div className="flex items-center gap-2">
                     <Calendar size={16} className="text-[#94A3B8]" />
@@ -2385,10 +2385,10 @@ const LeadDetailsDialog = ({
                 </div>
               )}
               {lead.nextFollowUp && (
-                <div className="p-4 bg-[#0891B2]/10 rounded-md border border-[#22D3EE]/20">
-                  <p className="text-xs text-[#0891B2] mb-1">Next Follow-up</p>
+                <div className="p-4 bg-[#6637F4]/10 rounded-md border border-[#6637F4]/20">
+                  <p className="text-xs text-[#6637F4] mb-1">Next Follow-up</p>
                   <div className="flex items-center gap-2">
-                    <CalendarDays size={16} className="text-[#0891B2]" />
+                    <CalendarDays size={16} className="text-[#6637F4]" />
                     <span className="font-medium text-[#0F172A]">{formatDate(lead.nextFollowUp)}</span>
                   </div>
                 </div>
@@ -2404,7 +2404,7 @@ const LeadDetailsDialog = ({
                 {lead.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="px-3 py-1 bg-[#0891B2]/10 text-[#0891B2] rounded-md text-sm font-medium"
+                    className="px-3 py-1 bg-[#6637F4]/10 text-[#6637F4] rounded-md text-sm font-medium"
                   >
                     {tag}
                   </span>
@@ -2417,7 +2417,7 @@ const LeadDetailsDialog = ({
           {lead.notes && (
             <div>
               <h3 className="text-sm font-semibold text-[#0F172A] mb-3">Notes</h3>
-              <div className="p-4 bg-[#F8FAFC] rounded-md">
+              <div className="p-4 bg-[#F7F7FB] rounded-md">
                 <p className="text-sm text-[#475569]">{lead.notes}</p>
               </div>
             </div>
@@ -2429,11 +2429,11 @@ const LeadDetailsDialog = ({
             return insights.length > 0 ? (
               <div className="ai-insight-enter">
                 <div className="flex items-center gap-2 mb-2">
-                  <Sparkles size={14} className="text-[#0891B2]" />
+                  <Sparkles size={14} className="text-[#6637F4]" />
                   <h3 className="text-sm font-semibold text-[#0F172A]">AI Insights</h3>
                   <span className="ai-tag">AI</span>
                 </div>
-                <div className="p-4 bg-[#F0FDFA] rounded-md border border-[#22D3EE]/15 space-y-2">
+                <div className="p-4 bg-[#F0EEFF] rounded-md border border-[#6637F4]/15 space-y-2">
                   <div className="flex flex-wrap gap-1.5">
                     {insights.map((type) => (
                       <AiInsightBadge key={type} type={type} size="md" />
@@ -2456,8 +2456,8 @@ const LeadDetailsDialog = ({
             <h3 className="text-sm font-semibold text-[#0F172A] mb-3">Activity</h3>
             <div className="space-y-3">
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-[#0891B2]/10 flex items-center justify-center flex-shrink-0">
-                  <Plus size={14} className="text-[#0891B2]" />
+                <div className="w-8 h-8 rounded-full bg-[#6637F4]/10 flex items-center justify-center flex-shrink-0">
+                  <Plus size={14} className="text-[#6637F4]" />
                 </div>
                 <div>
                   <p className="text-sm text-[#0F172A]">Lead created</p>
@@ -2467,7 +2467,7 @@ const LeadDetailsDialog = ({
               {lead.lastContact && (
                 <div className="flex items-start gap-3">
                   <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                    <MessageSquare size={14} className="text-[#0891B2]" />
+                    <MessageSquare size={14} className="text-[#6637F4]" />
                   </div>
                   <div>
                     <p className="text-sm text-[#0F172A]">Last contacted</p>
@@ -2488,7 +2488,7 @@ const LeadDetailsDialog = ({
             <Phone size={16} />
             Call
           </Button>
-          <Button onClick={onEdit} className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md gap-2">
+          <Button onClick={onEdit} className="bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-md gap-2">
             <Pencil size={16} />
             Edit Lead
           </Button>
@@ -2616,7 +2616,7 @@ const ScheduleMeetingDialog = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[520px] rounded-xl p-0 overflow-hidden">
-        <div className="bg-gradient-to-r from-[#0891B2] to-[#06B6D4] p-6 text-white">
+        <div className="bg-gradient-to-r from-[#6637F4] to-[#06B6D4] p-6 text-white">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
               <CalendarDays size={22} />
@@ -2638,20 +2638,20 @@ const ScheduleMeetingDialog = ({
                 type="button"
                 onClick={() => setMeetingType("online")}
                 className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 ${meetingType === "online"
-                  ? "border-[#0891B2] bg-[#0891B2]/5 shadow-sm"
+                  ? "border-[#6637F4] bg-[#6637F4]/5 shadow-sm"
                   : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
                   }`}
               >
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${meetingType === "online" ? "bg-[#0891B2]/10" : "bg-gray-100"
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${meetingType === "online" ? "bg-[#6637F4]/10" : "bg-gray-100"
                   }`}>
-                  <Video size={24} className={meetingType === "online" ? "text-[#0891B2]" : "text-gray-400"} />
+                  <Video size={24} className={meetingType === "online" ? "text-[#6637F4]" : "text-gray-400"} />
                 </div>
-                <span className={`font-semibold text-sm ${meetingType === "online" ? "text-[#0891B2]" : "text-gray-600"
+                <span className={`font-semibold text-sm ${meetingType === "online" ? "text-[#6637F4]" : "text-gray-600"
                   }`}>Online Meeting</span>
                 <span className="text-xs text-gray-400">Video call / Google Meet</span>
                 {meetingType === "online" && (
                   <div className="absolute top-2 right-2">
-                    <Check size={16} className="text-[#0891B2]" />
+                    <Check size={16} className="text-[#6637F4]" />
                   </div>
                 )}
               </button>
@@ -2739,7 +2739,7 @@ const ScheduleMeetingDialog = ({
             <div>
               <Label htmlFor="meetingLink" className="text-sm font-medium text-[#475569]">Meeting Link</Label>
               <div className="relative mt-1.5">
-                <Video size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#0891B2]" />
+                <Video size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6637F4]" />
                 <Input
                   id="meetingLink"
                   value={meetingLink}
@@ -2808,7 +2808,7 @@ const ScheduleMeetingDialog = ({
               type="submit"
               disabled={isSubmitting}
               className={`rounded-lg gap-2 text-white ${meetingType === "online"
-                ? "bg-[#0891B2] hover:bg-[#0891B2]/90"
+                ? "bg-[#6637F4] hover:bg-[#6637F4]/90"
                 : "bg-[#F59E0B] hover:bg-[#F59E0B]/90"
                 }`}
             >
@@ -3439,7 +3439,7 @@ const AllLeads = () => {
   const totalValue = leads.reduce((acc, l) => acc + l.potentialValue, 0);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-[#F7F7FB]">
 
       <main className="flex-1">
         {/* Header */}
@@ -3448,7 +3448,7 @@ const AllLeads = () => {
             <div className="flex items-center justify-between">
               <div>
                 <div className="hidden sm:flex items-center gap-2 text-sm text-[#94A3B8] mb-1">
-                  <Link to="/dashboard" className="hover:text-[#0891B2]">
+                  <Link to="/dashboard" className="hover:text-[#6637F4]">
                     Dashboard
                   </Link>
                   <ChevronRight size={14} />
@@ -3482,7 +3482,7 @@ const AllLeads = () => {
                     setCurrentLead(null);
                     setIsFormOpen(true);
                   }}
-                  className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md gap-2"
+                  className="bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-md gap-2"
                   size="sm"
                 >
                   <UserPlus size={16} />
@@ -3503,7 +3503,7 @@ const AllLeads = () => {
               change={12.5}
               changeLabel="vs last month"
               icon={Target}
-              color="#22D3EE"
+              color="#6637F4"
               sparklineData={[3, 5, 4, 7, 6, 8, leads.length || 10]}
             />
             <StatCard
@@ -3687,7 +3687,7 @@ const AllLeads = () => {
                         >
                           <Calendar size={14} className="mr-2" />
                           Date Added
-                          {sortBy === "date" && <Check size={14} className="ml-auto text-[#0891B2]" />}
+                          {sortBy === "date" && <Check size={14} className="ml-auto text-[#6637F4]" />}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => {
@@ -3698,7 +3698,7 @@ const AllLeads = () => {
                         >
                           <Target size={14} className="mr-2" />
                           Lead Score
-                          {sortBy === "score" && <Check size={14} className="ml-auto text-[#0891B2]" />}
+                          {sortBy === "score" && <Check size={14} className="ml-auto text-[#6637F4]" />}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => {
@@ -3709,7 +3709,7 @@ const AllLeads = () => {
                         >
                           <DollarSign size={14} className="mr-2" />
                           Value
-                          {sortBy === "value" && <Check size={14} className="ml-auto text-[#0891B2]" />}
+                          {sortBy === "value" && <Check size={14} className="ml-auto text-[#6637F4]" />}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => {
@@ -3720,7 +3720,7 @@ const AllLeads = () => {
                         >
                           <User size={14} className="mr-2" />
                           Name
-                          {sortBy === "name" && <Check size={14} className="ml-auto text-[#0891B2]" />}
+                          {sortBy === "name" && <Check size={14} className="ml-auto text-[#6637F4]" />}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -3778,7 +3778,7 @@ const AllLeads = () => {
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex flex-wrap items-center gap-2 sm:gap-3 mt-3 sm:mt-4 p-2 sm:p-3 bg-[#0891B2]/10 rounded-md"
+                    className="flex flex-wrap items-center gap-2 sm:gap-3 mt-3 sm:mt-4 p-2 sm:p-3 bg-[#6637F4]/10 rounded-md"
                   >
                     <span className="text-sm font-medium text-[#0F172A]">
                       {selectedLeads.size} selected
@@ -3898,7 +3898,7 @@ const AllLeads = () => {
                               selectedLeads.size === filteredLeads.length && filteredLeads.length > 0
                             }
                             onCheckedChange={toggleSelectAll}
-                            className="data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
+                            className="data-[state=checked]:bg-[#6637F4] data-[state=checked]:border-[#6637F4]"
                           />
                         </TableHead>
                         <TableHead>Lead</TableHead>
@@ -4160,13 +4160,13 @@ const AllLeads = () => {
                       {lead.email && (
                         <div className="flex items-center gap-2 text-sm">
                           <Mail size={14} className="text-[#94A3B8]" />
-                          <a href={`mailto:${lead.email}`} className="text-[#475569] hover:text-[#0891B2]">{lead.email}</a>
+                          <a href={`mailto:${lead.email}`} className="text-[#475569] hover:text-[#6637F4]">{lead.email}</a>
                         </div>
                       )}
                       {lead.phone && (
                         <div className="flex items-center gap-2 text-sm">
                           <Phone size={14} className="text-[#94A3B8]" />
-                          <a href={`tel:${lead.phone}`} className="text-[#475569] hover:text-[#0891B2]">{lead.phone}</a>
+                          <a href={`tel:${lead.phone}`} className="text-[#475569] hover:text-[#6637F4]">{lead.phone}</a>
                         </div>
                       )}
                       {lead.location && (
@@ -4186,14 +4186,14 @@ const AllLeads = () => {
 
                   {/* Value */}
                   {lead.potentialValue > 0 && (
-                    <div className="p-3 bg-[#F8FAFC] rounded-md">
+                    <div className="p-3 bg-[#F7F7FB] rounded-md">
                       <p className="text-xs text-[#94A3B8] mb-1">Potential Value</p>
                       <p className="text-lg font-bold text-[#0F172A]">{formatCurrency(lead.potentialValue)}</p>
                     </div>
                   )}
 
                   {/* Assigned To */}
-                  <div className="p-3 bg-[#F8FAFC] rounded-md">
+                  <div className="p-3 bg-[#F7F7FB] rounded-md">
                     <p className="text-xs text-[#94A3B8] mb-1">Assigned To</p>
                     {lead.assignedTo ? (
                       <div className="flex items-center gap-2">
@@ -4255,7 +4255,7 @@ const AllLeads = () => {
                       Full Details
                     </Button>
                     <Button
-                      className="flex-1 rounded-md bg-[#0891B2] hover:bg-[#0891B2]/90 text-white"
+                      className="flex-1 rounded-md bg-[#6637F4] hover:bg-[#6637F4]/90 text-white"
                       onClick={() => {
                         setIsSidePanelOpen(false);
                         setCurrentLead(lead);

@@ -195,12 +195,12 @@ const PipelineProgress = ({ currentStatus }: { currentStatus: string }) => {
                     const cfg = STATUS_CONFIG[stage];
                     return (
                         <div key={stage} className="flex items-center flex-1">
-                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${active ? "bg-[#0891B2] text-white shadow-sm" : "bg-gray-100 text-gray-400"
+                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${active ? "bg-[#6637F4] text-white shadow-sm" : "bg-gray-100 text-gray-400"
                                 }`}>
                                 {i + 1}
                             </div>
                             {i < PIPELINE_STAGES.length - 1 && (
-                                <div className={`flex-1 h-0.5 mx-1 ${active && i < idx ? "bg-[#0891B2]" : "bg-gray-200"}`} />
+                                <div className={`flex-1 h-0.5 mx-1 ${active && i < idx ? "bg-[#6637F4]" : "bg-gray-200"}`} />
                             )}
                         </div>
                     );
@@ -257,7 +257,7 @@ const ConvertLeadDialog = ({ open, onClose, lead, onSuccess }: ConvertDialogProp
             <DialogContent className="sm:max-w-[480px]">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2 text-lg">
-                        <ArrowRightLeft className="h-5 w-5 text-[#0891B2]" />
+                        <ArrowRightLeft className="h-5 w-5 text-[#6637F4]" />
                         Convert Lead to Client
                     </DialogTitle>
                     <DialogDescription>
@@ -276,24 +276,24 @@ const ConvertLeadDialog = ({ open, onClose, lead, onSuccess }: ConvertDialogProp
                                 type="button"
                                 onClick={() => setClientType("INDIVIDUAL")}
                                 className={`p-4 rounded-lg border-2 text-center transition-all ${clientType === "INDIVIDUAL"
-                                    ? "border-[#0891B2] bg-[#0891B2]/5 shadow-sm"
+                                    ? "border-[#6637F4] bg-[#6637F4]/5 shadow-sm"
                                     : "border-gray-200 hover:border-gray-300"
                                     }`}
                             >
-                                <User className={`h-6 w-6 mx-auto mb-2 ${clientType === "INDIVIDUAL" ? "text-[#0891B2]" : "text-gray-400"}`} />
-                                <p className={`text-sm font-medium ${clientType === "INDIVIDUAL" ? "text-[#0891B2]" : "text-gray-600"}`}>Individual</p>
+                                <User className={`h-6 w-6 mx-auto mb-2 ${clientType === "INDIVIDUAL" ? "text-[#6637F4]" : "text-gray-400"}`} />
+                                <p className={`text-sm font-medium ${clientType === "INDIVIDUAL" ? "text-[#6637F4]" : "text-gray-600"}`}>Individual</p>
                                 <p className="text-xs text-gray-400 mt-1">Person / Freelancer</p>
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setClientType("COMPANY")}
                                 className={`p-4 rounded-lg border-2 text-center transition-all ${clientType === "COMPANY"
-                                    ? "border-[#0891B2] bg-[#0891B2]/5 shadow-sm"
+                                    ? "border-[#6637F4] bg-[#6637F4]/5 shadow-sm"
                                     : "border-gray-200 hover:border-gray-300"
                                     }`}
                             >
-                                <Building2 className={`h-6 w-6 mx-auto mb-2 ${clientType === "COMPANY" ? "text-[#0891B2]" : "text-gray-400"}`} />
-                                <p className={`text-sm font-medium ${clientType === "COMPANY" ? "text-[#0891B2]" : "text-gray-600"}`}>Company</p>
+                                <Building2 className={`h-6 w-6 mx-auto mb-2 ${clientType === "COMPANY" ? "text-[#6637F4]" : "text-gray-400"}`} />
+                                <p className={`text-sm font-medium ${clientType === "COMPANY" ? "text-[#6637F4]" : "text-gray-600"}`}>Company</p>
                                 <p className="text-xs text-gray-400 mt-1">Business / Organization</p>
                             </button>
                         </div>
@@ -301,7 +301,7 @@ const ConvertLeadDialog = ({ open, onClose, lead, onSuccess }: ConvertDialogProp
 
                     {/* Create Contact Toggle */}
                     {clientType === "COMPANY" && (
-                        <div className="flex items-center justify-between p-4 rounded-lg bg-[#F8FAFC] border">
+                        <div className="flex items-center justify-between p-4 rounded-lg bg-[#F7F7FB] border">
                             <div>
                                 <Label className="text-sm font-medium text-[#0F172A]">Create Primary Contact</Label>
                                 <p className="text-xs text-gray-500 mt-0.5">
@@ -651,7 +651,7 @@ const LeadDetailPage = () => {
                             ))}
                         </div>
                         {lead.issueDescription && <div className="mt-3 pt-3 border-t border-[#F1F5F9]"><p className="text-[10px] text-[#9CA3AF] uppercase tracking-wider font-medium mb-1">Issue Description</p><p className="text-sm text-[#111827] bg-[#F9FAFB] p-3 rounded-lg">{lead.issueDescription}</p></div>}
-                        {lead.knownDamageType && lead.knownDamageType.length > 0 && <div className="mt-3 flex flex-wrap gap-1.5">{lead.knownDamageType.map(d => <span key={d} className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#FEE2E2] text-[#DC2626] flex items-center gap-0.5"><AlertTriangle size={10} />{d}</span>)}</div>}
+                        {lead.knownDamageType && lead.knownDamageType.length > 0 && <div className="mt-3 flex flex-wrap gap-1.5">{lead.knownDamageType.map(d => <span key={d} className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#FEE2E2] text-[#FF2E2D] flex items-center gap-0.5"><AlertTriangle size={10} />{d}</span>)}</div>}
                     </div>
 
                     {/* CARD 3: Qualification & Budget */}
@@ -703,14 +703,14 @@ const LeadDetailPage = () => {
                                 </div>
                             ))}
                         </div>
-                        {lead.disqualifiedReason && <div className="mt-3 p-2 rounded-lg bg-[#FEE2E2] text-xs text-[#DC2626] font-medium">⚠️ Disqualified: {lead.disqualifiedReason}</div>}
+                        {lead.disqualifiedReason && <div className="mt-3 p-2 rounded-lg bg-[#FEE2E2] text-xs text-[#FF2E2D] font-medium">⚠️ Disqualified: {lead.disqualifiedReason}</div>}
                         {lead.qualificationCallNotes && <div className="mt-3 pt-3 border-t border-[#F1F5F9]"><p className="text-[10px] text-[#9CA3AF] uppercase tracking-wider font-medium mb-1">Qualification Notes</p><p className="text-sm text-[#111827] bg-[#F9FAFB] p-3 rounded-lg whitespace-pre-wrap">{lead.qualificationCallNotes}</p></div>}
                     </div>
 
                     {/* CARD 5: Inspections */}
                     <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 520ms both' }}>
                         <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#F1F5F9]">
-                            <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#FFF7ED] flex items-center justify-center"><ClipboardList size={14} className="text-[#EA580C]" /></div><h3 className="text-sm font-semibold text-[#111827]">Inspections</h3><span className="text-xs bg-[#F1F5F9] text-[#6B7280] px-2 py-0.5 rounded-full font-medium">{inspections.length}</span></div>
+                            <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#FFF7ED] flex items-center justify-center"><ClipboardList size={14} className="text-[#FF7B36]" /></div><h3 className="text-sm font-semibold text-[#111827]">Inspections</h3><span className="text-xs bg-[#F1F5F9] text-[#6B7280] px-2 py-0.5 rounded-full font-medium">{inspections.length}</span></div>
                             <button onClick={() => { setEditingInspection(null); setShowInspectionDialog(true); }} className="text-xs font-medium text-[#14B8A6] hover:text-[#0D9488]">+ New</button>
                         </div>
                         {inspectionsLoading ? <div className="flex justify-center py-8"><Loader2 className="animate-spin text-[#14B8A6]" size={20} /></div> :
@@ -905,7 +905,7 @@ const InspectionFormDialog = ({ open, onClose, onSave, inspection }: InspectionF
                             variant={activeTab === tab.id ? 'default' : 'outline'}
                             size="sm"
                             onClick={() => setActiveTab(tab.id)}
-                            className={activeTab === tab.id ? 'bg-[#0891B2] text-white' : ''}
+                            className={activeTab === tab.id ? 'bg-[#6637F4] text-white' : ''}
                         >
                             {tab.label}
                         </Button>
@@ -1029,7 +1029,7 @@ const InspectionFormDialog = ({ open, onClose, onSave, inspection }: InspectionF
                     <Button
                         onClick={handleSubmit}
                         disabled={saving}
-                        className="bg-[#0891B2] hover:bg-[#0891B2]/80 text-white gap-2"
+                        className="bg-[#6637F4] hover:bg-[#6637F4]/80 text-white gap-2"
                     >
                         {saving && <Loader2 className="h-4 w-4 animate-spin" />}
                         {inspection ? 'Update' : 'Create'} Inspection
@@ -1140,7 +1140,7 @@ const InsuranceClaimFormDialog = ({ open, onClose, onSave, claim }: InsuranceCla
 
                 <DialogFooter className="mt-4 gap-2">
                     <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
-                    <Button onClick={handleSubmit} disabled={saving} className="bg-[#0891B2] hover:bg-[#0891B2]/80 text-white gap-2">
+                    <Button onClick={handleSubmit} disabled={saving} className="bg-[#6637F4] hover:bg-[#6637F4]/80 text-white gap-2">
                         {saving && <Loader2 className="h-4 w-4 animate-spin" />}
                         {claim ? 'Update' : 'Create'} Claim
                     </Button>

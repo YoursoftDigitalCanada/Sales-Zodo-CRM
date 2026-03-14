@@ -66,7 +66,7 @@ const SocialMediaConfig = ({ formData, setFormData }: SourceConfigProps) => {
                             <input type="radio" name="social_method" checked={method === "webhook"} onChange={() => update("connection_method", "webhook")} className="mt-1 accent-cyan-600" />
                             <div className="flex-1">
                                 <div className="flex items-center gap-2">
-                                    <Webhook size={18} className="text-[#0891B2]" />
+                                    <Webhook size={18} className="text-[#6637F4]" />
                                     <span className="font-semibold text-sm text-[#0F172A]">Use Webhook URL</span>
                                 </div>
                                 <p className="text-xs text-[#475569] mt-1">Receive leads via webhook using Zapier. Works with Facebook Lead Ads.</p>
@@ -100,7 +100,7 @@ const SocialMediaConfig = ({ formData, setFormData }: SourceConfigProps) => {
 
             {/* Zapier Instructions */}
             {method === "webhook" && (
-                <div className="p-4 bg-[#F8FAFC] rounded-xl border border-[rgba(15,23,42,0.06)] space-y-3">
+                <div className="p-4 bg-[#F7F7FB] rounded-xl border border-[rgba(15,23,42,0.06)] space-y-3">
                     <div className="flex items-center gap-2">
                         <Zap size={16} className="text-[#FF4A00]" />
                         <h4 className="font-semibold text-sm text-[#0F172A]">Zapier Setup — Facebook Lead Ads</h4>
@@ -128,7 +128,7 @@ const SocialMediaConfig = ({ formData, setFormData }: SourceConfigProps) => {
                         {socialPlatformOptions.map((p) => {
                             const checked = platforms.includes(p.value);
                             return (
-                                <label key={p.value} className={cn("flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer text-sm transition-all", checked ? "bg-blue-50 border-blue-200" : "border-[rgba(15,23,42,0.06)] hover:bg-[#F8FAFC]")}>
+                                <label key={p.value} className={cn("flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer text-sm transition-all", checked ? "bg-blue-50 border-blue-200" : "border-[rgba(15,23,42,0.06)] hover:bg-[#F7F7FB]")}>
                                     <Checkbox checked={checked} onCheckedChange={() => togglePlatform(p.value)} className="border-slate-300 data-[state=checked]:bg-[#3B82F6]" />
                                     {p.label}
                                 </label>
@@ -145,7 +145,7 @@ const SocialMediaConfig = ({ formData, setFormData }: SourceConfigProps) => {
                         <DollarSign size={16} className="text-[#10B981]" />
                         <h4 className="font-semibold text-sm text-[#0F172A]">Cost Tracking</h4>
                     </div>
-                    <Checkbox checked={cfg.cost_tracking_enabled !== false} onCheckedChange={(c) => update("cost_tracking_enabled", c)} className="border-slate-300 data-[state=checked]:bg-[#0891B2]" />
+                    <Checkbox checked={cfg.cost_tracking_enabled !== false} onCheckedChange={(c) => update("cost_tracking_enabled", c)} className="border-slate-300 data-[state=checked]:bg-[#6637F4]" />
                 </div>
                 {cfg.cost_tracking_enabled !== false && (
                     <div className="grid grid-cols-2 gap-3 pl-4 border-l-2 border-green-200">

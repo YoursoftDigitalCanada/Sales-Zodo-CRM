@@ -133,7 +133,7 @@ const AddSourceDialog = ({ isOpen, onClose, onCreated }: Props) => {
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-[720px] p-0 rounded-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
                 {/* Header */}
-                <div className="p-6 pb-4 border-b border-[rgba(15,23,42,0.06)] bg-gradient-to-r from-[#F0FDFA] to-white sticky top-0 z-10">
+                <div className="p-6 pb-4 border-b border-[rgba(15,23,42,0.06)] bg-gradient-to-r from-[#F0EEFF] to-white sticky top-0 z-10">
                     <DialogHeader>
                         <DialogTitle className="text-xl font-bold text-[#0F172A]">Add Lead Source</DialogTitle>
                         <DialogDescription className="text-[#94A3B8]">
@@ -142,7 +142,7 @@ const AddSourceDialog = ({ isOpen, onClose, onCreated }: Props) => {
                     </DialogHeader>
                     <div className="flex gap-1.5 mt-4">
                         {Array.from({ length: totalSteps }).map((_, i) => (
-                            <div key={i} className={cn("h-1.5 rounded-full flex-1 transition-colors duration-300", i < step ? "bg-[#0891B2]" : "bg-[#E2E8F0]")} />
+                            <div key={i} className={cn("h-1.5 rounded-full flex-1 transition-colors duration-300", i < step ? "bg-[#6637F4]" : "bg-[#E2E8F0]")} />
                         ))}
                     </div>
                 </div>
@@ -165,16 +165,16 @@ const AddSourceDialog = ({ isOpen, onClose, onCreated }: Props) => {
                                                     const isSelected = selectedType?.type === type.type;
                                                     return (
                                                         <motion.button key={type.type} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => handleSelectType(type)}
-                                                            className={cn("flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all", isSelected ? "border-[#0891B2] bg-[#F0FDFA] shadow-sm" : "border-[rgba(15,23,42,0.06)] hover:border-[#CBD5E1] bg-white")}>
+                                                            className={cn("flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all", isSelected ? "border-[#6637F4] bg-[#F0EEFF] shadow-sm" : "border-[rgba(15,23,42,0.06)] hover:border-[#CBD5E1] bg-white")}>
                                                             <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${type.color}15` }}>
                                                                 <Icon size={18} style={{ color: type.color }} />
                                                             </div>
                                                             <div className="flex-1 min-w-0">
                                                                 <p className="font-semibold text-sm text-[#0F172A]">{type.name}</p>
                                                                 <p className="text-[11px] text-[#94A3B8] mt-0.5 line-clamp-2">{type.description}</p>
-                                                                <p className="text-[10px] text-[#0891B2] mt-1 font-medium">{type.method}</p>
+                                                                <p className="text-[10px] text-[#6637F4] mt-1 font-medium">{type.method}</p>
                                                             </div>
-                                                            {isSelected && <Check size={18} className="text-[#0891B2] flex-shrink-0 mt-0.5" />}
+                                                            {isSelected && <Check size={18} className="text-[#6637F4] flex-shrink-0 mt-0.5" />}
                                                         </motion.button>
                                                     );
                                                 })}
@@ -189,7 +189,7 @@ const AddSourceDialog = ({ isOpen, onClose, onCreated }: Props) => {
                         {step === 2 && selectedType && (
                             <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-5">
                                 {/* Selected type badge */}
-                                <div className="flex items-center gap-3 p-4 rounded-xl bg-[#F8FAFC] border border-[rgba(15,23,42,0.06)]">
+                                <div className="flex items-center gap-3 p-4 rounded-xl bg-[#F7F7FB] border border-[rgba(15,23,42,0.06)]">
                                     {(() => { const Icon = iconMap[selectedType.icon] || Globe; return <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${selectedType.color}15` }}><Icon size={22} style={{ color: selectedType.color }} /></div>; })()}
                                     <div><p className="font-semibold text-[#0F172A]">{selectedType.name}</p><p className="text-xs text-[#94A3B8]">{selectedType.method}</p></div>
                                 </div>
@@ -224,13 +224,13 @@ const AddSourceDialog = ({ isOpen, onClose, onCreated }: Props) => {
                         {/* ── STEP 3: Assignment ─────────────────────── */}
                         {step === 3 && (
                             <motion.div key="s3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
-                                <div><h3 className="font-semibold text-[#0F172A] mb-1 flex items-center gap-2"><Users size={16} className="text-[#0891B2]" />Lead Assignment</h3><p className="text-sm text-[#475569] mb-4">How should new leads be assigned?</p></div>
-                                <div className="flex items-center justify-between p-4 bg-[#F8FAFC] rounded-xl mb-3">
+                                <div><h3 className="font-semibold text-[#0F172A] mb-1 flex items-center gap-2"><Users size={16} className="text-[#6637F4]" />Lead Assignment</h3><p className="text-sm text-[#475569] mb-4">How should new leads be assigned?</p></div>
+                                <div className="flex items-center justify-between p-4 bg-[#F7F7FB] rounded-xl mb-3">
                                     <div><p className="font-medium text-sm text-[#0F172A]">Auto-Assign Leads</p><p className="text-xs text-[#94A3B8]">Automatically assign leads when they arrive</p></div>
-                                    <Checkbox checked={formData.autoAssign} onCheckedChange={(c: any) => setFormData({ ...formData, autoAssign: c as boolean })} className="border-slate-300 data-[state=checked]:bg-[#0891B2]" />
+                                    <Checkbox checked={formData.autoAssign} onCheckedChange={(c: any) => setFormData({ ...formData, autoAssign: c as boolean })} className="border-slate-300 data-[state=checked]:bg-[#6637F4]" />
                                 </div>
                                 {formData.autoAssign && (
-                                    <div className="space-y-3 pl-4 border-l-2 border-[#0891B2]/20">
+                                    <div className="space-y-3 pl-4 border-l-2 border-[#6637F4]/20">
                                         <div className="space-y-2"><Label className="text-sm text-[#475569]">Method</Label>
                                             <Select value={formData.assignmentMethod} onValueChange={(val: string) => setFormData({ ...formData, assignmentMethod: val })}>
                                                 <SelectTrigger className="h-10 rounded-xl"><SelectValue /></SelectTrigger>
@@ -263,9 +263,9 @@ const AddSourceDialog = ({ isOpen, onClose, onCreated }: Props) => {
                                     { key: "createFollowupTask", icon: Shield, label: "Create Follow-Up Task", desc: `Schedule a follow-up after ${formData.followupDelayMinutes} min` },
                                     { key: "notifyAssignee", icon: Zap, label: "Notify Assigned Rep", desc: "Send notifications via email & in-app" },
                                 ].map(({ key, icon: Ic, label, desc }) => (
-                                    <div key={key} className="flex items-center justify-between p-3 bg-[#F8FAFC] rounded-xl">
+                                    <div key={key} className="flex items-center justify-between p-3 bg-[#F7F7FB] rounded-xl">
                                         <div className="flex items-center gap-3"><Ic size={16} className="text-[#475569]" /><div><p className="text-sm font-medium text-[#0F172A]">{label}</p><p className="text-xs text-[#94A3B8]">{desc}</p></div></div>
-                                        <Checkbox checked={(formData as any)[key]} onCheckedChange={(c: any) => setFormData({ ...formData, [key]: c as boolean })} className="border-slate-300 data-[state=checked]:bg-[#0891B2]" />
+                                        <Checkbox checked={(formData as any)[key]} onCheckedChange={(c: any) => setFormData({ ...formData, [key]: c as boolean })} className="border-slate-300 data-[state=checked]:bg-[#6637F4]" />
                                     </div>
                                 ))}
                             </motion.div>
@@ -300,11 +300,11 @@ const AddSourceDialog = ({ isOpen, onClose, onCreated }: Props) => {
                             {step > 1 ? <><ArrowLeft size={14} className="mr-1.5" /> Back</> : "Cancel"}
                         </Button>
                         {step < totalSteps ? (
-                            <Button onClick={() => setStep(step + 1)} disabled={!canProceed()} className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-xl">
+                            <Button onClick={() => setStep(step + 1)} disabled={!canProceed()} className="bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-xl">
                                 Next <ArrowRight size={14} className="ml-1.5" />
                             </Button>
                         ) : (
-                            <Button onClick={handleSubmit} disabled={saving} className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-xl min-w-[140px]">
+                            <Button onClick={handleSubmit} disabled={saving} className="bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-xl min-w-[140px]">
                                 {saving ? <><Loader2 size={14} className="mr-2 animate-spin" /> Creating...</> : <><Check size={14} className="mr-2" /> Create Source</>}
                             </Button>
                         )}

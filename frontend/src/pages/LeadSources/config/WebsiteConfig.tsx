@@ -97,7 +97,7 @@ const WebsiteConfig = ({ formData, setFormData }: SourceConfigProps) => {
                         <TabsTrigger value="zapier" className="rounded-lg text-xs px-3 py-1.5 data-[state=active]:bg-white">Zapier</TabsTrigger>
                     </TabsList>
 
-                    <TabsContent value="wordpress" className="mt-3 p-4 bg-[#F8FAFC] rounded-xl text-xs text-[#475569] space-y-3">
+                    <TabsContent value="wordpress" className="mt-3 p-4 bg-[#F7F7FB] rounded-xl text-xs text-[#475569] space-y-3">
                         <p className="font-semibold text-[#0F172A]">WordPress Integration</p>
                         <div className="space-y-2">
                             <p className="font-medium text-[#0F172A]">Option A: Contact Form 7</p>
@@ -126,7 +126,7 @@ const WebsiteConfig = ({ formData, setFormData }: SourceConfigProps) => {
                         </div>
                     </TabsContent>
 
-                    <TabsContent value="webflow" className="mt-3 p-4 bg-[#F8FAFC] rounded-xl text-xs text-[#475569] space-y-2">
+                    <TabsContent value="webflow" className="mt-3 p-4 bg-[#F7F7FB] rounded-xl text-xs text-[#475569] space-y-2">
                         <p className="font-semibold text-[#0F172A]">Webflow Integration</p>
                         <ol className="list-decimal pl-4 space-y-1">
                             <li>In Webflow, go to your form settings</li>
@@ -136,7 +136,7 @@ const WebsiteConfig = ({ formData, setFormData }: SourceConfigProps) => {
                         </ol>
                     </TabsContent>
 
-                    <TabsContent value="squarespace" className="mt-3 p-4 bg-[#F8FAFC] rounded-xl text-xs text-[#475569] space-y-2">
+                    <TabsContent value="squarespace" className="mt-3 p-4 bg-[#F7F7FB] rounded-xl text-xs text-[#475569] space-y-2">
                         <p className="font-semibold text-[#0F172A]">Squarespace Integration</p>
                         <p>Squarespace requires Zapier for webhook integration:</p>
                         <ol className="list-decimal pl-4 space-y-1">
@@ -147,7 +147,7 @@ const WebsiteConfig = ({ formData, setFormData }: SourceConfigProps) => {
                         </ol>
                     </TabsContent>
 
-                    <TabsContent value="html" className="mt-3 p-4 bg-[#F8FAFC] rounded-xl text-xs text-[#475569] space-y-2">
+                    <TabsContent value="html" className="mt-3 p-4 bg-[#F7F7FB] rounded-xl text-xs text-[#475569] space-y-2">
                         <p className="font-semibold text-[#0F172A]">Custom HTML Form</p>
                         <p>Use this JavaScript snippet (replace placeholders after source is created):</p>
                         <pre className="bg-[#1E293B] text-green-400 p-3 rounded-lg overflow-x-auto text-[11px] mt-2">
@@ -169,7 +169,7 @@ const WebsiteConfig = ({ formData, setFormData }: SourceConfigProps) => {
                         </pre>
                     </TabsContent>
 
-                    <TabsContent value="zapier" className="mt-3 p-4 bg-[#F8FAFC] rounded-xl text-xs text-[#475569] space-y-2">
+                    <TabsContent value="zapier" className="mt-3 p-4 bg-[#F7F7FB] rounded-xl text-xs text-[#475569] space-y-2">
                         <p className="font-semibold text-[#0F172A]">Zapier Integration</p>
                         <ol className="list-decimal pl-4 space-y-1">
                             <li>Create a new Zap</li>
@@ -184,7 +184,7 @@ const WebsiteConfig = ({ formData, setFormData }: SourceConfigProps) => {
 
             {/* Expected Payload */}
             <div>
-                <button onClick={() => setShowPayload(!showPayload)} className="flex items-center gap-2 text-sm font-semibold text-[#0F172A] hover:text-[#0891B2] transition-colors">
+                <button onClick={() => setShowPayload(!showPayload)} className="flex items-center gap-2 text-sm font-semibold text-[#0F172A] hover:text-[#6637F4] transition-colors">
                     {showPayload ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                     Expected Payload Format
                 </button>
@@ -198,7 +198,7 @@ const WebsiteConfig = ({ formData, setFormData }: SourceConfigProps) => {
             {/* Field Mapping */}
             <div>
                 <div className="flex items-center gap-2 mb-3">
-                    <Globe size={16} className="text-[#0891B2]" />
+                    <Globe size={16} className="text-[#6637F4]" />
                     <h4 className="font-semibold text-sm text-[#0F172A]">Field Mapping</h4>
                 </div>
                 <p className="text-xs text-[#94A3B8] mb-3">Map your form fields to CRM lead fields</p>

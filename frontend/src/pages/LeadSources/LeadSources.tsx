@@ -129,7 +129,7 @@ const sourceTypeColors: Record<string, string> = {
     SOCIAL_MEDIA: "#3B82F6",
     TRADE_SHOW: "#F59E0B",
     WALK_IN: "#8B5CF6",
-    WEBSITE: "#0891B2",
+    WEBSITE: "#6637F4",
 };
 
 const sourceTypeLabels: Record<string, string> = {
@@ -183,7 +183,7 @@ const StatCard = ({
             >
                 <Icon size={20} style={{ color }} />
             </div>
-            <ArrowUpRight size={16} className="text-[#94A3B8] group-hover:text-[#0891B2] transition-colors" />
+            <ArrowUpRight size={16} className="text-[#94A3B8] group-hover:text-[#6637F4] transition-colors" />
         </div>
         <p className="text-2xl font-bold text-[#0F172A] mb-1">{value}</p>
         <p className="text-sm text-[#475569]">{title}</p>
@@ -233,7 +233,7 @@ const SourceCard = ({
     onView: () => void;
 }) => {
     const Icon = sourceTypeIcons[source.sourceType] || Globe;
-    const color = source.color || sourceTypeColors[source.sourceType] || "#0891B2";
+    const color = source.color || sourceTypeColors[source.sourceType] || "#6637F4";
     const conversionRate = source.totalLeads > 0
         ? Math.round((source.convertedLeads / source.totalLeads) * 100)
         : 0;
@@ -465,24 +465,24 @@ const LeadSourcesPage = () => {
 
     // ── RENDER ─────────────────────────────────────────────────────
     return (
-        <div className="min-h-screen bg-[#F8FAFC]">
+        <div className="min-h-screen bg-[#F7F7FB]">
             <main className="flex-1 transition-all duration-300">
                 {/* Header */}
                 <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-[rgba(15,23,42,0.06)]">
                     <div className="flex h-16 items-center justify-between px-6">
                         <div className="flex items-center gap-2 text-sm">
-                            <button onClick={() => navigate("/dashboard")} className="text-[#475569] hover:text-[#0891B2] transition-colors">
+                            <button onClick={() => navigate("/dashboard")} className="text-[#475569] hover:text-[#6637F4] transition-colors">
                                 Dashboard
                             </button>
                             <ChevronRight size={14} className="text-[#475569]" />
-                            <span className="font-semibold text-[#0891B2]">Lead Sources</span>
+                            <span className="font-semibold text-[#6637F4]">Lead Sources</span>
                         </div>
                         <div className="flex items-center gap-3">
                             <motion.button
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => setAddDialogOpen(true)}
-                                className="flex items-center gap-2 px-4 py-2.5 bg-[#0891B2] text-white text-sm font-medium rounded-xl hover:bg-[#0891B2]/90 transition-colors shadow-sm shadow-[#0891B2]/25"
+                                className="flex items-center gap-2 px-4 py-2.5 bg-[#6637F4] text-white text-sm font-medium rounded-xl hover:bg-[#6637F4]/90 transition-colors shadow-sm shadow-[#6637F4]/25"
                             >
                                 <Plus size={16} />
                                 Add Source
@@ -496,9 +496,9 @@ const LeadSourcesPage = () => {
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#F0FDFA] to-[#F1F5F9] p-8"
+                        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#F0EEFF] to-[#F1F5F9] p-8"
                     >
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-[#0891B2]/10 rounded-full blur-3xl" />
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-[#6637F4]/10 rounded-full blur-3xl" />
                         <div className="absolute bottom-0 left-1/2 w-48 h-48 bg-[#D97706]/10 rounded-full blur-3xl" />
 
                         <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
@@ -513,11 +513,11 @@ const LeadSourcesPage = () => {
                                     <span className="text-[#D97706] text-sm font-medium">Lead Source Management</span>
                                 </motion.div>
                                 <h1 className="text-3xl lg:text-4xl font-bold text-[#0F172A] mb-2">
-                                    Lead <span className="text-[#0891B2]">Sources</span>
+                                    Lead <span className="text-[#6637F4]">Sources</span>
                                 </h1>
                                 <p className="text-[#475569] text-lg max-w-xl">
                                     Connect and manage your lead channels. Track performance across{" "}
-                                    <span className="text-[#0891B2] font-semibold">{stats?.totalSources || 0} sources</span>.
+                                    <span className="text-[#6637F4] font-semibold">{stats?.totalSources || 0} sources</span>.
                                 </p>
                             </div>
                         </div>
@@ -526,7 +526,7 @@ const LeadSourcesPage = () => {
                     {/* Stats Cards */}
                     {stats && (
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                            <StatCard title="Total Sources" value={stats.totalSources} subtitle="All channels" icon={Target} color="#0891B2" delay={0} />
+                            <StatCard title="Total Sources" value={stats.totalSources} subtitle="All channels" icon={Target} color="#6637F4" delay={0} />
                             <StatCard title="Active Sources" value={stats.activeSources} subtitle="Receiving leads" icon={Activity} color="#10B981" delay={0.05} />
                             <StatCard title="Total Leads" value={stats.totalLeads} subtitle="All time" icon={Users} color="#6366F1" delay={0.1} />
                             <StatCard title="Converted" value={stats.totalConverted} subtitle="Won leads" icon={TrendingUp} color="#F59E0B" delay={0.15} />
@@ -548,12 +548,12 @@ const LeadSourcesPage = () => {
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 placeholder="Search sources..."
-                                className="h-10 pl-10 rounded-xl border-[rgba(15,23,42,0.08)] focus:border-[#0891B2] focus:ring-1 focus:ring-[#0891B2]/20 bg-[#F8FAFC]"
+                                className="h-10 pl-10 rounded-xl border-[rgba(15,23,42,0.08)] focus:border-[#6637F4] focus:ring-1 focus:ring-[#6637F4]/20 bg-[#F7F7FB]"
                             />
                         </div>
 
                         <Select value={filterType} onValueChange={setFilterType}>
-                            <SelectTrigger className="h-10 w-[160px] rounded-xl border-[rgba(15,23,42,0.08)] bg-[#F8FAFC]">
+                            <SelectTrigger className="h-10 w-[160px] rounded-xl border-[rgba(15,23,42,0.08)] bg-[#F7F7FB]">
                                 <Filter size={14} className="mr-2 text-[#94A3B8]" />
                                 <SelectValue placeholder="Type" />
                             </SelectTrigger>
@@ -566,7 +566,7 @@ const LeadSourcesPage = () => {
                         </Select>
 
                         <Select value={filterStatus} onValueChange={setFilterStatus}>
-                            <SelectTrigger className="h-10 w-[140px] rounded-xl border-[rgba(15,23,42,0.08)] bg-[#F8FAFC]">
+                            <SelectTrigger className="h-10 w-[140px] rounded-xl border-[rgba(15,23,42,0.08)] bg-[#F7F7FB]">
                                 <SelectValue placeholder="Status" />
                             </SelectTrigger>
                             <SelectContent className="rounded-xl">
@@ -581,7 +581,7 @@ const LeadSourcesPage = () => {
                     {/* Source Cards Grid */}
                     {isLoading ? (
                         <div className="flex items-center justify-center py-20">
-                            <Loader2 size={32} className="animate-spin text-[#0891B2]" />
+                            <Loader2 size={32} className="animate-spin text-[#6637F4]" />
                         </div>
                     ) : filteredSources.length === 0 ? (
                         <motion.div
@@ -601,7 +601,7 @@ const LeadSourcesPage = () => {
                             {sources.length === 0 && (
                                 <Button
                                     onClick={() => setAddDialogOpen(true)}
-                                    className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-xl"
+                                    className="bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-xl"
                                 >
                                     <Plus size={16} className="mr-2" />
                                     Add Your First Source

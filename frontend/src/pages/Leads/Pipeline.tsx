@@ -112,7 +112,7 @@ const pipelineStageConfig: Omit<PipelineStage, "leads">[] = [
   { id: "new", name: "New Leads", color: "#3B82F6", bgColor: "#EFF6FF", icon: Sparkles },
   { id: "contacted", name: "Contacted", color: "#8B5CF6", bgColor: "#F5F3FF", icon: Mail },
   { id: "qualified", name: "Qualified", color: "#F59E0B", bgColor: "#FFFBEB", icon: Target },
-  { id: "proposal", name: "Proposal Sent", color: "#22D3EE", bgColor: "#F0FDFA", icon: Clock },
+  { id: "proposal", name: "Proposal Sent", color: "#6637F4", bgColor: "#F0EEFF", icon: Clock },
   { id: "negotiation", name: "Negotiation", color: "#EC4899", bgColor: "#FDF2F8", icon: TrendingUp },
   { id: "won", name: "Won", color: "#10B981", bgColor: "#ECFDF5", icon: CheckCircle2 },
   { id: "lost", name: "Lost", color: "#EF4444", bgColor: "#FEF2F2", icon: XCircle },
@@ -236,7 +236,7 @@ const PipelineLeadCard = ({
             </AvatarFallback>
           </Avatar>
           <div>
-            <h4 className="font-semibold text-[#0F172A] text-sm group-hover:text-[#0891B2] transition-colors">
+            <h4 className="font-semibold text-[#0F172A] text-sm group-hover:text-[#6637F4] transition-colors">
               {lead.firstName} {lead.lastName}
             </h4>
             <p className="text-xs text-[#94A3B8]">{lead.company}</p>
@@ -392,7 +392,7 @@ const PipelineColumn = ({
           "min-h-[500px] max-h-[calc(100vh-350px)] overflow-y-auto p-3 space-y-3 rounded-b-xl border border-t-0 transition-all duration-200",
           isDragOver
             ? "bg-blue-50/80 border-blue-300 ring-2 ring-blue-200 ring-inset"
-            : "bg-[#F8FAFC]/50"
+            : "bg-[#F7F7FB]/50"
         )}
         style={{ borderColor: isDragOver ? undefined : `${stage.color} 20` }}
         onDragOver={handleDragOver}
@@ -400,7 +400,7 @@ const PipelineColumn = ({
         onDrop={handleDrop}
       >
         {isDragOver && (
-          <div className="flex items-center justify-center py-3 px-4 bg-blue-100/60 rounded-md border-2 border-dashed border-blue-300 text-[#0891B2] text-sm font-medium">
+          <div className="flex items-center justify-center py-3 px-4 bg-blue-100/60 rounded-md border-2 border-dashed border-blue-300 text-[#6637F4] text-sm font-medium">
             Drop here to move to {stage.name}
           </div>
         )}
@@ -495,8 +495,8 @@ const LeadDetailPanel = ({ lead, onClose, stageColor }: { lead: Lead; onClose: (
           </div>
           <div className="r from-blue-50 to-indigo-50 rounded-md p-4 border border-blue-100">
             <div className="flex items-center gap-2 mb-1">
-              <Target size={14} className="text-[#0891B2]" />
-              <span className="text-xs text-[#0891B2] font-medium">Lead Score</span>
+              <Target size={14} className="text-[#6637F4]" />
+              <span className="text-xs text-[#6637F4] font-medium">Lead Score</span>
             </div>
             <p className="text-xl font-bold" style={{ color: getScoreColor(lead.score) }}>{lead.score}%</p>
           </div>
@@ -507,16 +507,16 @@ const LeadDetailPanel = ({ lead, onClose, stageColor }: { lead: Lead; onClose: (
           <h4 className="text-sm font-semibold text-[#0F172A] mb-3">Contact Information</h4>
           <div className="space-y-3">
             {lead.email && (
-              <div className="flex items-center gap-3 p-3 bg-[#F8FAFC] rounded-md">
+              <div className="flex items-center gap-3 p-3 bg-[#F7F7FB] rounded-md">
                 <Mail size={16} className="text-[#475569] flex-shrink-0" />
                 <div>
                   <p className="text-xs text-[#475569]">Email</p>
-                  <a href={`mailto:${lead.email} `} className="text-sm text-[#0891B2] hover:underline">{lead.email}</a>
+                  <a href={`mailto:${lead.email} `} className="text-sm text-[#6637F4] hover:underline">{lead.email}</a>
                 </div>
               </div>
             )}
             {lead.phone && (
-              <div className="flex items-center gap-3 p-3 bg-[#F8FAFC] rounded-md">
+              <div className="flex items-center gap-3 p-3 bg-[#F7F7FB] rounded-md">
                 <Phone size={16} className="text-[#475569] flex-shrink-0" />
                 <div>
                   <p className="text-xs text-[#475569]">Phone</p>
@@ -525,7 +525,7 @@ const LeadDetailPanel = ({ lead, onClose, stageColor }: { lead: Lead; onClose: (
               </div>
             )}
             {lead.company && (
-              <div className="flex items-center gap-3 p-3 bg-[#F8FAFC] rounded-md">
+              <div className="flex items-center gap-3 p-3 bg-[#F7F7FB] rounded-md">
                 <Building2 size={16} className="text-[#475569] flex-shrink-0" />
                 <div>
                   <p className="text-xs text-[#475569]">Company</p>
@@ -534,7 +534,7 @@ const LeadDetailPanel = ({ lead, onClose, stageColor }: { lead: Lead; onClose: (
               </div>
             )}
             {lead.jobTitle && (
-              <div className="flex items-center gap-3 p-3 bg-[#F8FAFC] rounded-md">
+              <div className="flex items-center gap-3 p-3 bg-[#F7F7FB] rounded-md">
                 <Briefcase size={16} className="text-[#475569] flex-shrink-0" />
                 <div>
                   <p className="text-xs text-[#475569]">Job Title</p>
@@ -550,7 +550,7 @@ const LeadDetailPanel = ({ lead, onClose, stageColor }: { lead: Lead; onClose: (
           <h4 className="text-sm font-semibold text-[#0F172A] mb-3">Details</h4>
           <div className="space-y-3">
             {lead.source && (
-              <div className="flex items-center gap-3 p-3 bg-[#F8FAFC] rounded-md">
+              <div className="flex items-center gap-3 p-3 bg-[#F7F7FB] rounded-md">
                 <Globe size={16} className="text-[#475569] flex-shrink-0" />
                 <div>
                   <p className="text-xs text-[#475569]">Lead Source</p>
@@ -558,21 +558,21 @@ const LeadDetailPanel = ({ lead, onClose, stageColor }: { lead: Lead; onClose: (
                 </div>
               </div>
             )}
-            <div className="flex items-center gap-3 p-3 bg-[#F8FAFC] rounded-md">
+            <div className="flex items-center gap-3 p-3 bg-[#F7F7FB] rounded-md">
               <User size={16} className="text-[#475569] flex-shrink-0" />
               <div>
                 <p className="text-xs text-[#475569]">Assigned To</p>
                 <p className="text-sm text-[#0F172A]">{lead.assignedTo}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 p-3 bg-[#F8FAFC] rounded-md">
+            <div className="flex items-center gap-3 p-3 bg-[#F7F7FB] rounded-md">
               <Calendar size={16} className="text-[#475569] flex-shrink-0" />
               <div>
                 <p className="text-xs text-[#475569]">Created</p>
                 <p className="text-sm text-[#0F172A]">{formatDate(lead.createdAt)}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 p-3 bg-[#F8FAFC] rounded-md">
+            <div className="flex items-center gap-3 p-3 bg-[#F7F7FB] rounded-md">
               <Clock size={16} className="text-[#475569] flex-shrink-0" />
               <div>
                 <p className="text-xs text-[#475569]">Days in Stage</p>
@@ -585,7 +585,7 @@ const LeadDetailPanel = ({ lead, onClose, stageColor }: { lead: Lead; onClose: (
 
       {/* Footer Actions */}
       <div className="p-4 border-t border-[rgba(15,23,42,0.06)] flex gap-3">
-        <Button className="flex-1 bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md gap-2">
+        <Button className="flex-1 bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-md gap-2">
           <Mail size={16} /> Send Email
         </Button>
         <Button variant="outline" className="flex-1 rounded-md gap-2">
@@ -702,8 +702,8 @@ const Pipeline = () => {
 
   // Find the stage color for the selected lead
   const selectedLeadStageColor = selectedLead
-    ? pipeline.find((s) => s.leads.some((l) => l.id === selectedLead.id))?.color || "#22D3EE"
-    : "#22D3EE";
+    ? pipeline.find((s) => s.leads.some((l) => l.id === selectedLead.id))?.color || "#6637F4"
+    : "#6637F4";
 
   const handleLeadView = (lead: Lead) => {
     navigate(`/leads/${lead.id}`);
@@ -948,7 +948,7 @@ const Pipeline = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] overflow-x-hidden">
+    <div className="min-h-screen bg-[#F7F7FB] overflow-x-hidden">
 
       <main className="flex-1">
         {/* Header */}
@@ -957,15 +957,15 @@ const Pipeline = () => {
             <div className="flex items-center justify-between">
               <div>
                 <div className="hidden sm:flex items-center gap-2 text-sm text-[#94A3B8] mb-1">
-                  <Link to="/dashboard" className="hover:text-[#0891B2]">Dashboard</Link>
+                  <Link to="/dashboard" className="hover:text-[#6637F4]">Dashboard</Link>
                   <ChevronRight size={14} />
-                  <Link to="/leads" className="hover:text-[#0891B2]">Leads</Link>
+                  <Link to="/leads" className="hover:text-[#6637F4]">Leads</Link>
                   <ChevronRight size={14} />
                   <span className="text-[#0F172A] font-medium">Pipeline</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Sales Pipeline</h1>
-                  <span className="px-2 py-1 bg-[#0891B2]/10 text-[#0891B2] text-xs font-bold rounded-md">LIVE</span>
+                  <span className="px-2 py-1 bg-[#6637F4]/10 text-[#6637F4] text-xs font-bold rounded-md">LIVE</span>
                 </div>
               </div>
 
@@ -978,7 +978,7 @@ const Pipeline = () => {
                   <div className="w-px h-8 bg-slate-200" />
                   <div className="text-center">
                     <p className="text-xs text-[#94A3B8]">Pipeline Value</p>
-                    <p className="text-lg font-bold text-[#0891B2]">{formatCurrency(totalValue)}</p>
+                    <p className="text-lg font-bold text-[#6637F4]">{formatCurrency(totalValue)}</p>
                   </div>
                   <div className="w-px h-8 bg-slate-200" />
                   <div className="text-center">
@@ -1002,7 +1002,7 @@ const Pipeline = () => {
                   Filter
                 </Button>
 
-                <Button className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md gap-2">
+                <Button className="bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-md gap-2">
                   <Plus size={18} />
                   Add Lead
                 </Button>
@@ -1076,7 +1076,7 @@ const Pipeline = () => {
         <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg">
-              <ArrowRightLeft className="h-5 w-5 text-[#0891B2]" />
+              <ArrowRightLeft className="h-5 w-5 text-[#6637F4]" />
               Convert Lead to Client
             </DialogTitle>
             <DialogDescription>
@@ -1095,24 +1095,24 @@ const Pipeline = () => {
                   type="button"
                   onClick={() => setConvertClientType("INDIVIDUAL")}
                   className={`p-4 rounded-lg border-2 text-center transition-all ${convertClientType === "INDIVIDUAL"
-                    ? "border-[#0891B2] bg-[#0891B2]/5 shadow-sm"
+                    ? "border-[#6637F4] bg-[#6637F4]/5 shadow-sm"
                     : "border-gray-200 hover:border-gray-300"
                     }`}
                 >
-                  <User size={24} className={`mx-auto mb-2 ${convertClientType === "INDIVIDUAL" ? "text-[#0891B2]" : "text-gray-400"}`} />
-                  <p className={`text-sm font-medium ${convertClientType === "INDIVIDUAL" ? "text-[#0891B2]" : "text-gray-600"}`}>Individual</p>
+                  <User size={24} className={`mx-auto mb-2 ${convertClientType === "INDIVIDUAL" ? "text-[#6637F4]" : "text-gray-400"}`} />
+                  <p className={`text-sm font-medium ${convertClientType === "INDIVIDUAL" ? "text-[#6637F4]" : "text-gray-600"}`}>Individual</p>
                   <p className="text-xs text-gray-400 mt-1">Person / Freelancer</p>
                 </button>
                 <button
                   type="button"
                   onClick={() => setConvertClientType("COMPANY")}
                   className={`p-4 rounded-lg border-2 text-center transition-all ${convertClientType === "COMPANY"
-                    ? "border-[#0891B2] bg-[#0891B2]/5 shadow-sm"
+                    ? "border-[#6637F4] bg-[#6637F4]/5 shadow-sm"
                     : "border-gray-200 hover:border-gray-300"
                     }`}
                 >
-                  <Building2 size={24} className={`mx-auto mb-2 ${convertClientType === "COMPANY" ? "text-[#0891B2]" : "text-gray-400"}`} />
-                  <p className={`text-sm font-medium ${convertClientType === "COMPANY" ? "text-[#0891B2]" : "text-gray-600"}`}>Company</p>
+                  <Building2 size={24} className={`mx-auto mb-2 ${convertClientType === "COMPANY" ? "text-[#6637F4]" : "text-gray-400"}`} />
+                  <p className={`text-sm font-medium ${convertClientType === "COMPANY" ? "text-[#6637F4]" : "text-gray-600"}`}>Company</p>
                   <p className="text-xs text-gray-400 mt-1">Business / Organization</p>
                 </button>
               </div>
@@ -1120,7 +1120,7 @@ const Pipeline = () => {
 
             {/* Create Contact Toggle */}
             {convertClientType === "COMPANY" && (
-              <div className="flex items-center justify-between p-4 rounded-lg bg-[#F8FAFC] border">
+              <div className="flex items-center justify-between p-4 rounded-lg bg-[#F7F7FB] border">
                 <div>
                   <Label className="text-sm font-medium text-[#0F172A]">Create Primary Contact</Label>
                   <p className="text-xs text-gray-500 mt-0.5">
@@ -1174,7 +1174,7 @@ const Pipeline = () => {
       {/* Schedule Meeting Dialog (Qualified Prompt) */}
       <Dialog open={meetingDialogOpen} onOpenChange={(open) => { if (!open) handleMeetingCancel(); }}>
         <DialogContent className="sm:max-w-[520px] rounded-xl p-0 overflow-hidden">
-          <div className="bg-gradient-to-r from-[#0891B2] to-[#06B6D4] p-6 text-white">
+          <div className="bg-gradient-to-r from-[#6637F4] to-[#06B6D4] p-6 text-white">
             <DialogHeader>
               <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
                 <CalendarDays size={22} />
@@ -1196,20 +1196,20 @@ const Pipeline = () => {
                   type="button"
                   onClick={() => setMeetingType("online")}
                   className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 ${meetingType === "online"
-                    ? "border-[#0891B2] bg-[#0891B2]/5 shadow-sm"
+                    ? "border-[#6637F4] bg-[#6637F4]/5 shadow-sm"
                     : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
                     }`}
                 >
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${meetingType === "online" ? "bg-[#0891B2]/10" : "bg-gray-100"
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${meetingType === "online" ? "bg-[#6637F4]/10" : "bg-gray-100"
                     }`}>
-                    <Video size={24} className={meetingType === "online" ? "text-[#0891B2]" : "text-gray-400"} />
+                    <Video size={24} className={meetingType === "online" ? "text-[#6637F4]" : "text-gray-400"} />
                   </div>
-                  <span className={`font-semibold text-sm ${meetingType === "online" ? "text-[#0891B2]" : "text-gray-600"
+                  <span className={`font-semibold text-sm ${meetingType === "online" ? "text-[#6637F4]" : "text-gray-600"
                     }`}>Online Meeting</span>
                   <span className="text-xs text-gray-400">Video call / Google Meet</span>
                   {meetingType === "online" && (
                     <div className="absolute top-2 right-2">
-                      <CheckCircle2 size={16} className="text-[#0891B2]" />
+                      <CheckCircle2 size={16} className="text-[#6637F4]" />
                     </div>
                   )}
                 </button>
@@ -1278,7 +1278,7 @@ const Pipeline = () => {
               <div>
                 <Label htmlFor="pipeMeetingLink" className="text-sm font-medium text-[#475569]">Meeting Link</Label>
                 <div className="relative mt-1.5">
-                  <Video size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#0891B2]" />
+                  <Video size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6637F4]" />
                   <Input id="pipeMeetingLink" value={meetingLink} onChange={(e) => setMeetingLink(e.target.value)} placeholder="https://meet.google.com/... (auto if empty)" className="pl-9 rounded-lg" />
                 </div>
               </div>
@@ -1328,7 +1328,7 @@ const Pipeline = () => {
               <Button
                 type="submit"
                 disabled={meetingSubmitting}
-                className={`rounded-lg gap-2 text-white ${meetingType === "online" ? "bg-[#0891B2] hover:bg-[#0891B2]/90" : "bg-[#F59E0B] hover:bg-[#F59E0B]/90"
+                className={`rounded-lg gap-2 text-white ${meetingType === "online" ? "bg-[#6637F4] hover:bg-[#6637F4]/90" : "bg-[#F59E0B] hover:bg-[#F59E0B]/90"
                   }`}
               >
                 {meetingSubmitting ? <RefreshCw size={16} className="animate-spin" /> : meetingType === "online" ? <Video size={16} /> : <MapPin size={16} />}

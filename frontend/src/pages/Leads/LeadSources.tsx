@@ -290,7 +290,7 @@ const StatCard = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
       whileHover={{ y: -4 }}
-      className="relative bg-white rounded-md p-5 border border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg  transition-all overflow-hidden group"
+      className="relative bg-white rounded-md p-5 border border-[rgba(15,23,42,0.06)] hover:border-[#6637F4]/30 hover:shadow-lg  transition-all overflow-hidden group"
     >
       <div
         className="absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-10 group-hover:opacity-20 transition-all"
@@ -366,7 +366,7 @@ const SourceCard = ({
       className={cn(
         "relative bg-white rounded-md border overflow-hidden transition-all group cursor-pointer",
         source.isActive
-          ? "border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg "
+          ? "border-[rgba(15,23,42,0.06)] hover:border-[#6637F4]/30 hover:shadow-lg "
           : "border-[rgba(15,23,42,0.06)] opacity-60"
       )}
       onClick={onView}
@@ -396,7 +396,7 @@ const SourceCard = ({
             <SourceIcon size={28} style={{ color: source.color }} />
           </div>
           <div>
-            <h3 className="font-semibold text-[#0F172A] group-hover:text-[#0891B2] transition-colors">
+            <h3 className="font-semibold text-[#0F172A] group-hover:text-[#6637F4] transition-colors">
               {source.name}
             </h3>
             <span
@@ -410,19 +410,19 @@ const SourceCard = ({
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="p-3 bg-[#F8FAFC] rounded-md">
+          <div className="p-3 bg-[#F7F7FB] rounded-md">
             <p className="text-xs text-[#475569] mb-1">Total Leads</p>
             <p className="text-lg font-bold text-[#0F172A]">{source.totalLeads}</p>
           </div>
-          <div className="p-3 bg-[#F8FAFC] rounded-md">
+          <div className="p-3 bg-[#F7F7FB] rounded-md">
             <p className="text-xs text-[#475569] mb-1">Conversion</p>
-            <p className="text-lg font-bold text-[#0891B2]">{formatPercent(source.conversionRate)}</p>
+            <p className="text-lg font-bold text-[#6637F4]">{formatPercent(source.conversionRate)}</p>
           </div>
-          <div className="p-3 bg-[#F8FAFC] rounded-md">
+          <div className="p-3 bg-[#F7F7FB] rounded-md">
             <p className="text-xs text-[#475569] mb-1">Revenue</p>
             <p className="text-lg font-bold text-[#0F172A]">{formatCurrency(source.totalRevenue)}</p>
           </div>
-          <div className="p-3 bg-[#F8FAFC] rounded-md">
+          <div className="p-3 bg-[#F7F7FB] rounded-md">
             <p className="text-xs text-[#475569] mb-1">ROI</p>
             <p className="text-lg font-bold text-green-500">
               {source.roi === Infinity ? "∞" : `${formatNumber(source.roi)}%`}
@@ -516,7 +516,7 @@ const SourceRow = ({
   const typeColor = getTypeColor(source.type);
 
   return (
-    <TableRow className={cn("group hover:bg-[#F8FAFC]", !source.isActive && "opacity-60")}>
+    <TableRow className={cn("group hover:bg-[#F7F7FB]", !source.isActive && "opacity-60")}>
       <TableCell>
         <div className="flex items-center gap-3 cursor-pointer" onClick={onView}>
           <div
@@ -526,7 +526,7 @@ const SourceRow = ({
             <SourceIcon size={20} style={{ color: source.color }} />
           </div>
           <div>
-            <p className="font-medium text-[#0F172A] group-hover:text-[#0891B2] transition-colors">
+            <p className="font-medium text-[#0F172A] group-hover:text-[#6637F4] transition-colors">
               {source.name}
             </p>
             <p className="text-xs text-[#94A3B8]">{source.description}</p>
@@ -609,7 +609,7 @@ const SourceRow = ({
         <Switch
           checked={source.isActive}
           onCheckedChange={onToggle}
-          className="data-[state=checked]:bg-[#0891B2]"
+          className="data-[state=checked]:bg-[#6637F4]"
         />
       </TableCell>
       <TableCell>
@@ -733,7 +733,7 @@ const SourceFormDialog = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px] p-0 rounded-md overflow-hidden">
-        <div className="p-6 border-b border-[rgba(15,23,42,0.06)] bg-[#F0FDFA]">
+        <div className="p-6 border-b border-[rgba(15,23,42,0.06)] bg-[#F0EEFF]">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-[#0F172A]">
               {source ? "Edit Lead Source" : "Add Lead Source"}
@@ -817,7 +817,7 @@ const SourceFormDialog = ({
                   onClick={() => setFormData({ ...formData, color })}
                   className={cn(
                     "w-8 h-8 rounded-md transition-all",
-                    formData.color === color && "ring-2 ring-offset-2 ring-[#22D3EE]"
+                    formData.color === color && "ring-2 ring-offset-2 ring-[#6637F4]"
                   )}
                   style={{ backgroundColor: color }}
                 />
@@ -866,7 +866,7 @@ const SourceFormDialog = ({
           </div>
 
           {/* Active Toggle */}
-          <div className="flex items-center justify-between p-4 bg-[#F8FAFC] rounded-md">
+          <div className="flex items-center justify-between p-4 bg-[#F7F7FB] rounded-md">
             <div>
               <p className="font-medium text-[#0F172A]">Active Source</p>
               <p className="text-sm text-[#94A3B8]">Enable lead tracking for this source</p>
@@ -874,7 +874,7 @@ const SourceFormDialog = ({
             <Switch
               checked={formData.isActive}
               onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
-              className="data-[state=checked]:bg-[#0891B2]"
+              className="data-[state=checked]:bg-[#6637F4]"
             />
           </div>
 
@@ -885,7 +885,7 @@ const SourceFormDialog = ({
             <Button
               type="submit"
               disabled={!formData.name}
-              className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
+              className="bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-md"
             >
               {source ? (
                 <>
@@ -1051,7 +1051,7 @@ const LeadSources = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-[#F7F7FB]">
 
       <main className="flex-1">
         {/* Header */}
@@ -1060,11 +1060,11 @@ const LeadSources = () => {
             <div className="flex items-center justify-between">
               <div>
                 <div className="hidden sm:flex items-center gap-2 text-sm text-[#94A3B8] mb-1">
-                  <Link to="/dashboard" className="hover:text-[#0891B2]">
+                  <Link to="/dashboard" className="hover:text-[#6637F4]">
                     Dashboard
                   </Link>
                   <ChevronRight size={14} />
-                  <Link to="/leads" className="hover:text-[#0891B2]">
+                  <Link to="/leads" className="hover:text-[#6637F4]">
                     Leads
                   </Link>
                   <ChevronRight size={14} />
@@ -1090,7 +1090,7 @@ const LeadSources = () => {
                     setCurrentSource(null);
                     setIsFormOpen(true);
                   }}
-                  className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md gap-2"
+                  className="bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-md gap-2"
                 >
                   <Plus size={18} />
                   Add Source
@@ -1107,7 +1107,7 @@ const LeadSources = () => {
               title="Total Sources"
               value={stats.totalSources}
               icon={Target}
-              color="#22D3EE"
+              color="#6637F4"
             />
             <StatCard
               title="Active Sources"
@@ -1175,12 +1175,12 @@ const LeadSources = () => {
                     </SelectContent>
                   </Select>
 
-                  <div className="flex items-center gap-2 px-3 py-2 bg-[#F8FAFC] rounded-md">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-[#F7F7FB] rounded-md">
                     <Switch
                       id="active-only"
                       checked={showActiveOnly}
                       onCheckedChange={setShowActiveOnly}
-                      className="data-[state=checked]:bg-[#0891B2]"
+                      className="data-[state=checked]:bg-[#6637F4]"
                     />
                     <Label htmlFor="active-only" className="text-sm text-[#475569] cursor-pointer">
                       Active only
@@ -1330,7 +1330,7 @@ const LeadSources = () => {
             </div>
 
             {/* Chart Placeholder */}
-            <div className="h-64 bg-[#F8FAFC] rounded-md flex items-center justify-center">
+            <div className="h-64 bg-[#F7F7FB] rounded-md flex items-center justify-center">
               <div className="text-center">
                 <BarChart3 size={48} className="text-[#475569] mx-auto mb-3" />
                 <p className="text-[#94A3B8] font-medium">Performance Chart</p>
@@ -1345,7 +1345,7 @@ const LeadSources = () => {
                 return (
                   <div
                     key={source.id}
-                    className="p-4 bg-[#F8FAFC] rounded-md flex items-center gap-3"
+                    className="p-4 bg-[#F7F7FB] rounded-md flex items-center gap-3"
                   >
                     <div
                       className="w-10 h-10 rounded-md flex items-center justify-center"

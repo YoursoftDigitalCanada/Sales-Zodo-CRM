@@ -88,7 +88,7 @@ const TradeShowConfig = ({ formData, setFormData }: SourceConfigProps) => {
             {/* Collection Method */}
             <div>
                 <div className="flex items-center gap-2 mb-3">
-                    <ClipboardList size={16} className="text-[#0891B2]" />
+                    <ClipboardList size={16} className="text-[#6637F4]" />
                     <h4 className="font-semibold text-sm text-[#0F172A]">Lead Collection Method</h4>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -104,7 +104,7 @@ const TradeShowConfig = ({ formData, setFormData }: SourceConfigProps) => {
                                 "flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition-all",
                                 cfg.collection_method === opt.value
                                     ? "bg-cyan-50 border-cyan-200"
-                                    : "border-[rgba(15,23,42,0.06)] hover:bg-[#F8FAFC]"
+                                    : "border-[rgba(15,23,42,0.06)] hover:bg-[#F7F7FB]"
                             )}
                         >
                             <input type="radio" name="collection" checked={cfg.collection_method === opt.value} onChange={() => update("collection_method", opt.value)} className="mt-1 accent-cyan-600" />
@@ -140,7 +140,7 @@ const TradeShowConfig = ({ formData, setFormData }: SourceConfigProps) => {
                     <Checkbox
                         checked={cfg.track_budget || false}
                         onCheckedChange={(c) => update("track_budget", c)}
-                        className="border-slate-300 data-[state=checked]:bg-[#0891B2]"
+                        className="border-slate-300 data-[state=checked]:bg-[#6637F4]"
                     />
                 </div>
 

@@ -41,7 +41,7 @@ const ReferralConfig = ({ formData, setFormData }: SourceConfigProps) => {
                                 key={opt.value}
                                 className={cn(
                                     "flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all",
-                                    checked ? "bg-green-50 border-green-200" : "border-[rgba(15,23,42,0.06)] hover:bg-[#F8FAFC]"
+                                    checked ? "bg-green-50 border-green-200" : "border-[rgba(15,23,42,0.06)] hover:bg-[#F7F7FB]"
                                 )}
                             >
                                 <Checkbox
@@ -69,7 +69,7 @@ const ReferralConfig = ({ formData, setFormData }: SourceConfigProps) => {
                     <Checkbox
                         checked={cfg.rewards_enabled || false}
                         onCheckedChange={(c) => update("rewards_enabled", c)}
-                        className="border-slate-300 data-[state=checked]:bg-[#0891B2]"
+                        className="border-slate-300 data-[state=checked]:bg-[#6637F4]"
                     />
                 </div>
 
@@ -91,7 +91,7 @@ const ReferralConfig = ({ formData, setFormData }: SourceConfigProps) => {
                                             "flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer text-sm transition-all",
                                             cfg.reward_type === opt.value
                                                 ? "bg-amber-50 border-amber-200 text-amber-800"
-                                                : "border-[rgba(15,23,42,0.06)] hover:bg-[#F8FAFC]"
+                                                : "border-[rgba(15,23,42,0.06)] hover:bg-[#F7F7FB]"
                                         )}
                                     >
                                         <input
@@ -176,18 +176,18 @@ const ReferralConfig = ({ formData, setFormData }: SourceConfigProps) => {
             <div>
                 <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
-                        <Link2 size={16} className="text-[#0891B2]" />
+                        <Link2 size={16} className="text-[#6637F4]" />
                         <h4 className="font-semibold text-sm text-[#0F172A]">Referral Links</h4>
                     </div>
                     <Checkbox
                         checked={cfg.referral_links_enabled !== false}
                         onCheckedChange={(c) => update("referral_links_enabled", c)}
-                        className="border-slate-300 data-[state=checked]:bg-[#0891B2]"
+                        className="border-slate-300 data-[state=checked]:bg-[#6637F4]"
                     />
                 </div>
                 {cfg.referral_links_enabled !== false && (
-                    <div className="pl-4 border-l-2 border-[#0891B2]/20 space-y-3">
-                        <div className="p-3 bg-[#F0FDFA] rounded-xl text-xs text-[#0891B2] font-mono">
+                    <div className="pl-4 border-l-2 border-[#6637F4]/20 space-y-3">
+                        <div className="p-3 bg-[#F0EEFF] rounded-xl text-xs text-[#6637F4] font-mono">
                             https://yourcompany.com/refer/&#123;customer-name&#125;-&#123;code&#125;
                         </div>
                         <div className="space-y-1">

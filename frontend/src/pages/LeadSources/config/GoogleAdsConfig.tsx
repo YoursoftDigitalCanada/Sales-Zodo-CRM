@@ -57,7 +57,7 @@ const GoogleAdsConfig = ({ formData, setFormData }: SourceConfigProps) => {
                             <input type="radio" name="gads_method" checked={method === "webhook"} onChange={() => update("connection_method", "webhook")} className="mt-1 accent-cyan-600" />
                             <div className="flex-1">
                                 <div className="flex items-center gap-2">
-                                    <Webhook size={18} className="text-[#0891B2]" />
+                                    <Webhook size={18} className="text-[#6637F4]" />
                                     <span className="font-semibold text-sm text-[#0F172A]">Use Webhook URL</span>
                                 </div>
                                 <p className="text-xs text-[#475569] mt-1">Receive leads via webhook using Zapier or direct setup. Works with any Google Ads configuration.</p>
@@ -96,7 +96,7 @@ const GoogleAdsConfig = ({ formData, setFormData }: SourceConfigProps) => {
 
             {/* Zapier Instructions for Webhook */}
             {method === "webhook" && (
-                <div className="p-4 bg-[#F8FAFC] rounded-xl border border-[rgba(15,23,42,0.06)] space-y-3">
+                <div className="p-4 bg-[#F7F7FB] rounded-xl border border-[rgba(15,23,42,0.06)] space-y-3">
                     <div className="flex items-center gap-2">
                         <Zap size={16} className="text-[#FF4A00]" />
                         <h4 className="font-semibold text-sm text-[#0F172A]">Zapier Setup Instructions</h4>
@@ -128,7 +128,7 @@ const GoogleAdsConfig = ({ formData, setFormData }: SourceConfigProps) => {
                     <Checkbox
                         checked={cfg.cost_tracking_enabled !== false}
                         onCheckedChange={(c) => update("cost_tracking_enabled", c)}
-                        className="border-slate-300 data-[state=checked]:bg-[#0891B2]"
+                        className="border-slate-300 data-[state=checked]:bg-[#6637F4]"
                     />
                 </div>
 

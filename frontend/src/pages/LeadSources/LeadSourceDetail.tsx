@@ -66,7 +66,7 @@ const sourceTypeIcons: Record<string, React.ElementType> = {
 };
 const sourceTypeColors: Record<string, string> = {
     COLD_CALL: "#6366F1", EMAIL_CAMPAIGN: "#EC4899", GOOGLE_ADS: "#4285F4", REFERRAL: "#10B981",
-    SOCIAL_MEDIA: "#3B82F6", TRADE_SHOW: "#F59E0B", WALK_IN: "#8B5CF6", WEBSITE: "#0891B2",
+    SOCIAL_MEDIA: "#3B82F6", TRADE_SHOW: "#F59E0B", WALK_IN: "#8B5CF6", WEBSITE: "#6637F4",
 };
 const sourceTypeLabels: Record<string, string> = {
     COLD_CALL: "Cold Call", EMAIL_CAMPAIGN: "Email Campaign", GOOGLE_ADS: "Google Ads",
@@ -241,7 +241,7 @@ const LeadSourceDetail = () => {
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
-                <Loader2 size={32} className="animate-spin text-[#0891B2]" />
+                <Loader2 size={32} className="animate-spin text-[#6637F4]" />
             </div>
         );
     }
@@ -256,23 +256,23 @@ const LeadSourceDetail = () => {
     }
 
     const Icon = sourceTypeIcons[source.sourceType] || Globe;
-    const color = source.color || sourceTypeColors[source.sourceType] || "#0891B2";
+    const color = source.color || sourceTypeColors[source.sourceType] || "#6637F4";
     const conn = connectionConfig[source.integrationStatus] || connectionConfig.DISCONNECTED;
     const ConnIcon = conn.icon;
     const conversionRate = source.totalLeads > 0 ? Math.round((source.convertedLeads / source.totalLeads) * 100) : 0;
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC]">
+        <div className="min-h-screen bg-[#F7F7FB]">
             {/* Breadcrumb Header */}
             <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-[rgba(15,23,42,0.06)]">
                 <div className="flex h-16 items-center justify-between px-6">
                     <div className="flex items-center gap-2 text-sm">
-                        <button onClick={() => navigate("/leads/sources")} className="text-[#475569] hover:text-[#0891B2] transition-colors flex items-center gap-1">
+                        <button onClick={() => navigate("/leads/sources")} className="text-[#475569] hover:text-[#6637F4] transition-colors flex items-center gap-1">
                             <ArrowLeft size={14} />
                             Lead Sources
                         </button>
                         <ChevronRight size={14} className="text-[#CBD5E1]" />
-                        <span className="font-semibold text-[#0891B2] truncate max-w-[200px]">{source.name}</span>
+                        <span className="font-semibold text-[#6637F4] truncate max-w-[200px]">{source.name}</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <Button variant="outline" size="sm" onClick={() => handleAction("test")} className="rounded-xl text-xs">
@@ -351,7 +351,7 @@ const LeadSourceDetail = () => {
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
-                            <Clock size={18} className="text-[#0891B2]" />
+                            <Clock size={18} className="text-[#6637F4]" />
                             <div>
                                 <p className="text-sm font-bold text-[#0F172A]">
                                     {source.lastLeadAt ? new Date(source.lastLeadAt).toLocaleDateString() : "—"}
@@ -365,13 +365,13 @@ const LeadSourceDetail = () => {
                 {/* Tabs */}
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
                     <TabsList className="bg-white rounded-xl border border-[rgba(15,23,42,0.06)] p-1 h-auto">
-                        <TabsTrigger value="overview" className="rounded-lg px-4 py-2 text-sm data-[state=active]:bg-[#0891B2] data-[state=active]:text-white">
+                        <TabsTrigger value="overview" className="rounded-lg px-4 py-2 text-sm data-[state=active]:bg-[#6637F4] data-[state=active]:text-white">
                             <Settings size={14} className="mr-1.5" /> Settings
                         </TabsTrigger>
-                        <TabsTrigger value="connection" className="rounded-lg px-4 py-2 text-sm data-[state=active]:bg-[#0891B2] data-[state=active]:text-white">
+                        <TabsTrigger value="connection" className="rounded-lg px-4 py-2 text-sm data-[state=active]:bg-[#6637F4] data-[state=active]:text-white">
                             <Zap size={14} className="mr-1.5" /> Connection
                         </TabsTrigger>
-                        <TabsTrigger value="logs" className="rounded-lg px-4 py-2 text-sm data-[state=active]:bg-[#0891B2] data-[state=active]:text-white">
+                        <TabsTrigger value="logs" className="rounded-lg px-4 py-2 text-sm data-[state=active]:bg-[#6637F4] data-[state=active]:text-white">
                             <FileText size={14} className="mr-1.5" /> Logs ({logs.length})
                         </TabsTrigger>
                     </TabsList>
@@ -409,31 +409,31 @@ const LeadSourceDetail = () => {
 
                             <div className="pt-4 border-t border-[rgba(15,23,42,0.06)] space-y-3">
                                 <h4 className="font-medium text-sm text-[#0F172A]">Assignment</h4>
-                                <div className="flex items-center justify-between p-3 bg-[#F8FAFC] rounded-xl">
+                                <div className="flex items-center justify-between p-3 bg-[#F7F7FB] rounded-xl">
                                     <span className="text-sm text-[#475569]">Auto-Assign Leads</span>
-                                    <Checkbox checked={editAutoAssign} onCheckedChange={(c) => setEditAutoAssign(c as boolean)} className="border-slate-300 data-[state=checked]:bg-[#0891B2]" />
+                                    <Checkbox checked={editAutoAssign} onCheckedChange={(c) => setEditAutoAssign(c as boolean)} className="border-slate-300 data-[state=checked]:bg-[#6637F4]" />
                                 </div>
                             </div>
 
                             <div className="pt-4 border-t border-[rgba(15,23,42,0.06)] space-y-3">
                                 <h4 className="font-medium text-sm text-[#0F172A]">Automation</h4>
                                 <div className="space-y-2">
-                                    <div className="flex items-center justify-between p-3 bg-[#F8FAFC] rounded-xl">
+                                    <div className="flex items-center justify-between p-3 bg-[#F7F7FB] rounded-xl">
                                         <span className="text-sm text-[#475569]">Send Welcome Email</span>
-                                        <Checkbox checked={editSendWelcomeEmail} onCheckedChange={(c) => setEditSendWelcomeEmail(c as boolean)} className="border-slate-300 data-[state=checked]:bg-[#0891B2]" />
+                                        <Checkbox checked={editSendWelcomeEmail} onCheckedChange={(c) => setEditSendWelcomeEmail(c as boolean)} className="border-slate-300 data-[state=checked]:bg-[#6637F4]" />
                                     </div>
-                                    <div className="flex items-center justify-between p-3 bg-[#F8FAFC] rounded-xl">
+                                    <div className="flex items-center justify-between p-3 bg-[#F7F7FB] rounded-xl">
                                         <span className="text-sm text-[#475569]">Create Follow-Up Task</span>
-                                        <Checkbox checked={editCreateFollowupTask} onCheckedChange={(c) => setEditCreateFollowupTask(c as boolean)} className="border-slate-300 data-[state=checked]:bg-[#0891B2]" />
+                                        <Checkbox checked={editCreateFollowupTask} onCheckedChange={(c) => setEditCreateFollowupTask(c as boolean)} className="border-slate-300 data-[state=checked]:bg-[#6637F4]" />
                                     </div>
-                                    <div className="flex items-center justify-between p-3 bg-[#F8FAFC] rounded-xl">
+                                    <div className="flex items-center justify-between p-3 bg-[#F7F7FB] rounded-xl">
                                         <span className="text-sm text-[#475569]">Notify Assigned Rep</span>
-                                        <Checkbox checked={editNotifyAssignee} onCheckedChange={(c) => setEditNotifyAssignee(c as boolean)} className="border-slate-300 data-[state=checked]:bg-[#0891B2]" />
+                                        <Checkbox checked={editNotifyAssignee} onCheckedChange={(c) => setEditNotifyAssignee(c as boolean)} className="border-slate-300 data-[state=checked]:bg-[#6637F4]" />
                                     </div>
                                 </div>
                             </div>
 
-                            <Button onClick={handleSave} disabled={saving} className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-xl">
+                            <Button onClick={handleSave} disabled={saving} className="bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-xl">
                                 {saving ? <Loader2 size={14} className="mr-2 animate-spin" /> : <Save size={14} className="mr-2" />}
                                 Save Changes
                             </Button>
@@ -464,7 +464,7 @@ const LeadSourceDetail = () => {
                                 <div className="space-y-2">
                                     <Label className="text-sm text-[#475569]">Webhook URL</Label>
                                     <div className="flex items-center gap-2">
-                                        <Input value={source.webhookUrl} readOnly className="h-10 rounded-xl bg-[#F8FAFC] font-mono text-xs" />
+                                        <Input value={source.webhookUrl} readOnly className="h-10 rounded-xl bg-[#F7F7FB] font-mono text-xs" />
                                         <Button
                                             variant="outline"
                                             size="sm"
@@ -521,7 +521,7 @@ const LeadSourceDetail = () => {
                                     {logs.map((log) => (
                                         <div
                                             key={log.id}
-                                            className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#F8FAFC] transition-colors"
+                                            className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#F7F7FB] transition-colors"
                                         >
                                             <div className={cn(
                                                 "w-2 h-2 rounded-full flex-shrink-0",

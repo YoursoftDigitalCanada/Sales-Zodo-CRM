@@ -72,7 +72,7 @@ export function rateLimiter(options: Partial<Options> = {}) {
  */
 export const strictRateLimiter = rateLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 15, // 15 attempts per IP
+  max: 30, // 30 attempts per IP
 });
 
 /**
@@ -80,7 +80,7 @@ export const strictRateLimiter = rateLimiter({
  */
 export const apiRateLimiter = rateLimiter({
   windowMs: 60 * 1000, // 1 minute
-  max: 100, // 100 requests per minute
+  max: 300, // 300 requests per minute
 });
 
 /**

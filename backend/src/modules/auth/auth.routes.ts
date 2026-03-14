@@ -18,12 +18,12 @@ const router = Router();
 
 const loginRateLimiter = rateLimiter({
   windowMs: 15 * 60 * 1000,
-  max: config.app.isDevelopment ? 50 : 5,
+  max: config.app.isDevelopment ? 100 : 20,
 });
 
 const registerRateLimiter = rateLimiter({
   windowMs: 60 * 60 * 1000,
-  max: config.app.isDevelopment ? 20 : 3,
+  max: config.app.isDevelopment ? 50 : 10,
 });
 
 /**
@@ -83,7 +83,7 @@ router.post(
  */
 router.post(
   '/refresh',
-  rateLimiter({ windowMs: 15 * 60 * 1000, max: 30 }),
+  rateLimiter({ windowMs: 15 * 60 * 1000, max: 60 }),
   validate(refreshTokenSchema),
   authController.refresh.bind(authController)
 );

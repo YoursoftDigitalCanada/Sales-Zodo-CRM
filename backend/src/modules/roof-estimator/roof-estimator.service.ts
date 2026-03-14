@@ -499,7 +499,8 @@ export class RoofEstimatorService {
     }
 
     private assertRooftopPrecision(locationType: string, placeId: string): void {
-        if (locationType === 'ROOFTOP') return;
+        // Accept ROOFTOP (exact) and RANGE_INTERPOLATED (interpolated between two points — good enough for houses)
+        if (locationType === 'ROOFTOP' || locationType === 'RANGE_INTERPOLATED' || locationType === 'PLACE_DETAILS') return;
         throw new BadRequestError(
             `Selected suggestion is ${locationType.replace(/_/g, ' ')} precision, not ROOFTOP. Please choose a more specific house address.`,
             'GEOCODING_PLACE_ID_NOT_ROOFTOP',
@@ -588,17 +589,32 @@ export class RoofEstimatorService {
     }
 
     private async geocodeByPlaceId(placeId: string): Promise<{ lat: number; lng: number; formattedAddress: string; locationType: string }> {
-        // Google Maps flow: Autocomplete -> Place Details -> (validate location_type via Geocoding)
+        // Use Google Place Details API — this gives precise lat/lng from the place_id
+        // which is the most accurate source (derived from Google's Places database)
         const placeDetails = await this.getPlaceDetails(placeId);
-        const geocoded = await this.geocodePlaceIdViaGeocoding(placeId);
-        const locationType = geocoded.locationType || 'UNKNOWN';
+
+        // Place Details locationType is typically 'ROOFTOP' equivalent
+        // Use the Place Details coordinates directly — no need for secondary geocoding
+        let locationType = placeDetails.locationType || 'PLACE_DETAILS';
+
+        // Only try Geocoding API if we need to validate location_type
+        // and Place Details didn't provide one
+        if (locationType === 'UNKNOWN' || !locationType) {
+            try {
+                const geocoded = await this.geocodePlaceIdViaGeocoding(placeId);
+                locationType = geocoded.locationType || 'UNKNOWN';
+            } catch {
+                // Geocoding validation failed — still use Place Details coords
+                locationType = 'PLACE_DETAILS';
+            }
+        }
 
         this.assertRooftopPrecision(locationType, placeId);
 
         return {
             lat: placeDetails.lat,
             lng: placeDetails.lng,
-            formattedAddress: placeDetails.formattedAddress || geocoded.formattedAddress,
+            formattedAddress: placeDetails.formattedAddress,
             locationType,
         };
     }

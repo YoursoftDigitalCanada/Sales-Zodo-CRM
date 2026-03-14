@@ -17,18 +17,21 @@ import {
 } from "@/features/roof-estimator/services/roof-estimator-service";
 import { useToast } from "@/hooks/use-toast";
 import { generateEstimatePDF, downloadPDFBlob } from "@/features/roof-estimator/utils/generate-estimate-pdf";
+import { getClients, type ClientEntity } from "@/features/clients/services/clients-service";
+import { getLeads, type LeadEntity } from "@/features/leads/services/leads-service";
 
 interface OtherMaterial { name: string; cost: number; }
 
 /* ─── Constants ──────────────────────────────────────────── */
 
 const STEPS = [
-  { num: 1, label: "Address", icon: "📍" },
-  { num: 2, label: "Materials", icon: "🧱" },
-  { num: 3, label: "Labor", icon: "👷" },
-  { num: 4, label: "Extras", icon: "🔧" },
-  { num: 5, label: "Profit", icon: "💰" },
-  { num: 6, label: "Final", icon: "📄" },
+  { num: 1, label: "Client", icon: "👤" },
+  { num: 2, label: "Address", icon: "📍" },
+  { num: 3, label: "Materials", icon: "🧱" },
+  { num: 4, label: "Labor", icon: "👷" },
+  { num: 5, label: "Extras", icon: "🔧" },
+  { num: 6, label: "Profit", icon: "💰" },
+  { num: 7, label: "Final", icon: "📄" },
 ];
 
 /* ─── Helpers ────────────────────────────────────────────── */
@@ -39,7 +42,14 @@ const fmt = (n: number | null | undefined) =>
 /* ─── WizardData type ────────────────────────────────────── */
 
 interface WizardData {
-  // Step 1
+  // Step 1: Client Info
+  clientName: string;
+  clientEmail: string;
+  clientPhone: string;
+  clientCompany: string;
+  sourceType: "client" | "lead" | "manual";
+  leadId: string;
+  // Step 2: Address
   address: string;
   placeId: string;
   latitude: number;
@@ -89,6 +99,8 @@ interface WizardData {
 }
 
 const DEFAULT_DATA: WizardData = {
+  clientName: "", clientEmail: "", clientPhone: "", clientCompany: "",
+  sourceType: "manual", leadId: "",
   address: "", placeId: "", latitude: 0, longitude: 0, satelliteImageUrl: "",
   roofAreaSqft: 0, confidence: 0, processingTimeSec: 0, aiModel: "yolov8n-seg-cpu",
   pitch: "6/12", roofType: "gable", stories: 1, layers: 1, wastePercent: 10,
@@ -193,7 +205,12 @@ export default function RoofEstimatorWizard() {
   const [saving, setSaving] = useState(false);
   const [estimateId, setEstimateId] = useState<string | null>(id || null);
 
-  // Step 1 specific
+  // Step 1: Client/Lead
+  const [clients, setClients] = useState<ClientEntity[]>([]);
+  const [leads, setLeads] = useState<LeadEntity[]>([]);
+  const [clientSearchQ, setClientSearchQ] = useState("");
+
+  // Step 2 specific
   const [addressSuggestions, setAddressSuggestions] = useState<{ description: string; placeId: string }[]>([]);
   const [addressLoading, setAddressLoading] = useState(false);
   const [detecting, setDetecting] = useState(false);
@@ -206,6 +223,17 @@ export default function RoofEstimatorWizard() {
     setData((prev) => ({ ...prev, [key]: val }));
   }, []);
 
+  // Load clients + leads on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const [c, l] = await Promise.all([getClients(), getLeads()]);
+        setClients(c);
+        setLeads(l);
+      } catch { /* silent */ }
+    })();
+  }, []);
+
   // Load existing estimate when editing
   useEffect(() => {
     if (id) {
@@ -215,7 +243,9 @@ export default function RoofEstimatorWizard() {
           setEstimateId(est.id);
           setStep(est.currentStep || 1);
           setData({
-            address: est.address || "", placeId: "", latitude: est.latitude || 0,
+            clientName: est.client?.clientName || "", clientEmail: "", clientPhone: "",
+            clientCompany: est.client?.companyName || "", sourceType: est.clientId ? "client" : "manual",
+            leadId: "", address: est.address || "", placeId: "", latitude: est.latitude || 0,
             longitude: est.longitude || 0, satelliteImageUrl: est.satelliteImageUrl || "",
             roofAreaSqft: est.roofAreaSqft || 0, confidence: est.confidence || 0,
             processingTimeSec: est.processingTimeSec || 0, aiModel: est.aiModel || "yolov8n-seg-cpu",
@@ -457,7 +487,7 @@ export default function RoofEstimatorWizard() {
   const handleComplete = useCallback(async () => {
     setSaving(true);
     try {
-      const payload = { ...buildPayload(), status: "completed", currentStep: 6 };
+      const payload = { ...buildPayload(), status: "completed", currentStep: 7 };
       let savedId = estimateId;
       if (estimateId) {
         await updateEstimate(estimateId, payload);
@@ -541,26 +571,29 @@ export default function RoofEstimatorWizard() {
     } finally { setSaving(false); }
   }, [buildPayload, estimateId, data, toast, navigate, totalMaterialCost, totalLaborCost, totalEquipmentCost, overheadAmount, profitAmount, taxAmount, finalPrice]);
 
-  const goNext = () => { if (step < 6) setStep(step + 1); };
+  const goNext = () => { if (step < 7) setStep(step + 1); };
   const goBack = () => { if (step > 1) setStep(step - 1); };
 
   /* ─── Render Steps ─────────────────────────────── */
 
   const renderStep = () => {
     switch (step) {
-      case 1: return <Step1Address data={data} up={up}
+      case 1: return <Step1ClientInfo data={data} up={up}
+        clients={clients} leads={leads}
+        clientSearchQ={clientSearchQ} setClientSearchQ={setClientSearchQ} />;
+      case 2: return <Step2Address data={data} up={up}
         suggestions={addressSuggestions} addressLoading={addressLoading}
         onAddressInput={handleAddressInput} onSelectAddress={selectAddress}
         onDetect={runAiDetection} detecting={detecting} satelliteLoading={satelliteLoading}
         eagleViewLoading={eagleViewLoading} eagleViewStatus={eagleViewStatus} />;
-      case 2: return <Step2Materials data={data} up={up} total={totalMaterialCost}
+      case 3: return <Step3Materials data={data} up={up} total={totalMaterialCost}
         otherMaterials={data.otherMaterials}
         onOtherMaterialsChange={(mats) => up("otherMaterials", mats)} />;
-      case 3: return <Step3Labor data={data} up={up} total={totalLaborCost} />;
-      case 4: return <Step4Extras data={data} up={up} total={totalEquipmentCost} />;
-      case 5: return <Step5Profit data={data} up={up} subtotal={subtotal}
+      case 4: return <Step4Labor data={data} up={up} total={totalLaborCost} />;
+      case 5: return <Step5Extras data={data} up={up} total={totalEquipmentCost} />;
+      case 6: return <Step6Profit data={data} up={up} subtotal={subtotal}
         overheadAmount={overheadAmount} profitAmount={profitAmount} taxAmount={taxAmount} finalPrice={finalPrice} />;
-      case 6: return <Step6Final data={data}
+      case 7: return <Step7Final data={data}
         totalMaterialCost={totalMaterialCost} totalLaborCost={totalLaborCost}
         totalEquipmentCost={totalEquipmentCost} overheadAmount={overheadAmount}
         profitAmount={profitAmount} taxAmount={taxAmount} finalPrice={finalPrice}
@@ -681,7 +714,7 @@ export default function RoofEstimatorWizard() {
                 {saving ? "Saving…" : "Save Draft"}
               </button>
 
-              {step < 6 ? (
+              {step < 7 ? (
                 <button onClick={goNext} style={{
                   padding: "10px 22px", borderRadius: 8, border: "none",
                   background: "linear-gradient(135deg,#0891B2,#0E7490)", color: "#fff",
@@ -725,9 +758,158 @@ function MiniStat({ label, value }: { label: string; value: string }) {
   );
 }
 
-/* ─── Step 1: Address & Roof Measurement ─────────────────── */
+/* ─── Step 1: Client / Lead Selection ────────────────────── */
 
-function Step1Address({ data, up, suggestions, addressLoading, onAddressInput, onSelectAddress, onDetect, detecting, satelliteLoading, eagleViewLoading, eagleViewStatus }: {
+function Step1ClientInfo({ data, up, clients, leads, clientSearchQ, setClientSearchQ }: {
+  data: WizardData;
+  up: <K extends keyof WizardData>(key: K, val: WizardData[K]) => void;
+  clients: ClientEntity[];
+  leads: LeadEntity[];
+  clientSearchQ: string;
+  setClientSearchQ: (q: string) => void;
+}) {
+  const q = clientSearchQ.toLowerCase();
+
+  const filteredClients = q
+    ? clients.filter((c) => {
+        const name = c.clientName || c.ClientName || c.name || "";
+        const email = c.primaryEmail || c.contactEmail || "";
+        return name.toLowerCase().includes(q) || email.toLowerCase().includes(q);
+      })
+    : clients;
+
+  const filteredLeads = q
+    ? leads.filter((l) => {
+        const name = String(l.fullName || l.firstName || l.name || "");
+        const email = String(l.email || "");
+        return name.toLowerCase().includes(q) || email.toLowerCase().includes(q);
+      })
+    : leads;
+
+  const selectClient = (c: ClientEntity) => {
+    up("sourceType", "client");
+    up("clientId", String(c.id || c.Id || ""));
+    up("clientName", c.clientName || c.ClientName || c.name || c.Name || "");
+    up("clientEmail", c.primaryEmail || c.contactEmail || c.ContactEmail || c.email || "");
+    up("clientPhone", c.primaryContactPhone || c.contactNo || c.ContactNo || c.phone || "");
+    up("clientCompany", c.clientName || c.ClientName || "");
+    setClientSearchQ("");
+  };
+
+  const selectLead = (l: LeadEntity) => {
+    up("sourceType", "lead");
+    up("leadId", String(l.id));
+    up("clientName", String(l.fullName || l.firstName || l.name || ""));
+    up("clientEmail", String(l.email || ""));
+    up("clientPhone", String(l.phone || l.mobile || ""));
+    up("clientCompany", String(l.companyName || l.company || ""));
+    if (l.propertyAddress || l.address) {
+      up("address", String(l.propertyAddress || l.address || ""));
+    }
+    setClientSearchQ("");
+  };
+
+  return (
+    <div>
+      <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A", marginBottom: 4 }}>👤 Client / Lead Information</h2>
+      <p style={{ fontSize: 13, color: "#64748B", marginBottom: 20 }}>Select an existing client or lead, or enter details manually.</p>
+
+      {/* Search */}
+      <Field label="Search Client or Lead">
+        <div style={{ position: "relative" }}>
+          <input
+            placeholder="Type a name or email to search…"
+            value={clientSearchQ}
+            onChange={(e) => setClientSearchQ(e.target.value)}
+            style={inputStyle}
+          />
+          {clientSearchQ && (filteredClients.length > 0 || filteredLeads.length > 0) && (
+            <div style={{
+              position: "absolute", top: "100%", left: 0, right: 0, zIndex: 50,
+              background: "#fff", border: "1px solid #E2E8F0", borderRadius: 8,
+              boxShadow: "0 8px 24px rgba(0,0,0,.12)", maxHeight: 260, overflow: "auto",
+            }}>
+              {filteredClients.length > 0 && (
+                <>
+                  <div style={{ padding: "6px 14px", fontSize: 10, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", background: "#F8FAFC" }}>
+                    Clients ({filteredClients.length})
+                  </div>
+                  {filteredClients.slice(0, 8).map((c, i) => (
+                    <button key={`c-${i}`} onClick={() => selectClient(c)} style={{
+                      display: "block", width: "100%", textAlign: "left", padding: "10px 14px",
+                      border: "none", background: "transparent", fontSize: 13, color: "#0F172A",
+                      cursor: "pointer", borderBottom: "1px solid #F1F5F9",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#F0FDFA")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                      <div style={{ fontWeight: 600 }}>{c.clientName || c.ClientName || c.name || "Unnamed"}</div>
+                      <div style={{ fontSize: 11, color: "#64748B" }}>{c.primaryEmail || c.contactEmail || ""}</div>
+                    </button>
+                  ))}
+                </>
+              )}
+              {filteredLeads.length > 0 && (
+                <>
+                  <div style={{ padding: "6px 14px", fontSize: 10, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", background: "#F8FAFC" }}>
+                    Leads ({filteredLeads.length})
+                  </div>
+                  {filteredLeads.slice(0, 8).map((l, i) => (
+                    <button key={`l-${i}`} onClick={() => selectLead(l)} style={{
+                      display: "block", width: "100%", textAlign: "left", padding: "10px 14px",
+                      border: "none", background: "transparent", fontSize: 13, color: "#0F172A",
+                      cursor: "pointer", borderBottom: "1px solid #F1F5F9",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#FFF7ED")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                      <div style={{ fontWeight: 600 }}>{String(l.fullName || l.firstName || l.name || "Unnamed Lead")}</div>
+                      <div style={{ fontSize: 11, color: "#64748B" }}>{String(l.email || "")}</div>
+                    </button>
+                  ))}
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      </Field>
+
+      {/* Source badge */}
+      {data.sourceType !== "manual" && (
+        <div style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{
+            padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600,
+            background: data.sourceType === "client" ? "rgba(8,145,178,.1)" : "rgba(234,88,12,.1)",
+            color: data.sourceType === "client" ? "#0891B2" : "#EA580C",
+          }}>
+            {data.sourceType === "client" ? "✓ Client Selected" : "✓ Lead Selected"}
+          </span>
+          <button onClick={() => { up("sourceType", "manual"); up("clientName", ""); up("clientEmail", ""); up("clientPhone", ""); up("clientCompany", ""); up("clientId", ""); up("leadId", ""); }} style={{
+            fontSize: 11, color: "#94A3B8", background: "none", border: "none", cursor: "pointer", textDecoration: "underline",
+          }}>Clear</button>
+        </div>
+      )}
+
+      {/* Editable fields */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <Field label="Client / Contact Name">
+          <input value={data.clientName} onChange={(e) => up("clientName", e.target.value)} style={inputStyle} placeholder="Full name" />
+        </Field>
+        <Field label="Company">
+          <input value={data.clientCompany} onChange={(e) => up("clientCompany", e.target.value)} style={inputStyle} placeholder="Company name" />
+        </Field>
+        <Field label="Email">
+          <input value={data.clientEmail} onChange={(e) => up("clientEmail", e.target.value)} style={inputStyle} placeholder="email@example.com" type="email" />
+        </Field>
+        <Field label="Phone">
+          <input value={data.clientPhone} onChange={(e) => up("clientPhone", e.target.value)} style={inputStyle} placeholder="(555) 000-0000" type="tel" />
+        </Field>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Step 2: Address & Roof Measurement ─────────────────── */
+
+function Step2Address({ data, up, suggestions, addressLoading, onAddressInput, onSelectAddress, onDetect, detecting, satelliteLoading, eagleViewLoading, eagleViewStatus }: {
   data: WizardData;
   up: <K extends keyof WizardData>(key: K, val: WizardData[K]) => void;
   suggestions: { description: string; placeId: string }[];
@@ -861,7 +1043,7 @@ function Step1Address({ data, up, suggestions, addressLoading, onAddressInput, o
 
 /* ─── Step 2: Material Pricing ───────────────────────────── */
 
-function Step2Materials({ data, up, total, otherMaterials, onOtherMaterialsChange }: {
+function Step3Materials({ data, up, total, otherMaterials, onOtherMaterialsChange }: {
   data: WizardData;
   up: <K extends keyof WizardData>(key: K, val: WizardData[K]) => void;
   total: number;
@@ -950,7 +1132,7 @@ function Step2Materials({ data, up, total, otherMaterials, onOtherMaterialsChang
 
 /* ─── Step 3: Labor Inputs ───────────────────────────────── */
 
-function Step3Labor({ data, up, total }: {
+function Step4Labor({ data, up, total }: {
   data: WizardData;
   up: <K extends keyof WizardData>(key: K, val: WizardData[K]) => void;
   total: number;
@@ -985,7 +1167,7 @@ function Step3Labor({ data, up, total }: {
 
 /* ─── Step 4: Equipment & Extras ─────────────────────────── */
 
-function Step4Extras({ data, up, total }: {
+function Step5Extras({ data, up, total }: {
   data: WizardData;
   up: <K extends keyof WizardData>(key: K, val: WizardData[K]) => void;
   total: number;
@@ -1017,7 +1199,7 @@ function Step4Extras({ data, up, total }: {
 
 /* ─── Step 5: Profit & Overhead ──────────────────────────── */
 
-function Step5Profit({ data, up, subtotal, overheadAmount, profitAmount, taxAmount, finalPrice }: {
+function Step6Profit({ data, up, subtotal, overheadAmount, profitAmount, taxAmount, finalPrice }: {
   data: WizardData;
   up: <K extends keyof WizardData>(key: K, val: WizardData[K]) => void;
   subtotal: number; overheadAmount: number; profitAmount: number; taxAmount: number; finalPrice: number;
@@ -1067,7 +1249,7 @@ function Step5Profit({ data, up, subtotal, overheadAmount, profitAmount, taxAmou
 
 /* ─── Step 6: Final Summary ──────────────────────────────── */
 
-function Step6Final({ data, totalMaterialCost, totalLaborCost, totalEquipmentCost,
+function Step7Final({ data, totalMaterialCost, totalLaborCost, totalEquipmentCost,
   overheadAmount, profitAmount, taxAmount, finalPrice, roofSquares, pricePerSquare }: {
   data: WizardData;
   totalMaterialCost: number; totalLaborCost: number; totalEquipmentCost: number;

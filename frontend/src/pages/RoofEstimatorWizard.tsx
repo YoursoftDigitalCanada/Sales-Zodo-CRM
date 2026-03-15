@@ -472,7 +472,7 @@ export default function RoofEstimatorWizard() {
     snowMode: false, notes: data.notes || undefined,
     clientId: data.clientId || undefined,
     pitch: data.pitch, roofType: data.roofType, stories: data.stories, layers: data.layers,
-    measurementSource: data.measurementSource, tearOffRequired: data.tearOffRequired,
+    measurementSource: data.measurementSource || undefined, tearOffRequired: data.tearOffRequired,
     wastePercent: data.wastePercent,
     shingleType: data.shingleType, shinglePricePerSq: data.shinglePricePerSq,
     underlaymentCost: data.underlaymentCost, iceWaterShieldCost: data.iceWaterShieldCost,

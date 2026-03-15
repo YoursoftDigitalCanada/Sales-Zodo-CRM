@@ -29,7 +29,7 @@ export const detectRoofSchema = z.object({
 // Shared wizard field validations
 const wizardFieldsSchema = {
     status: z.enum(['draft', 'completed', 'sent']).optional(),
-    currentStep: z.number().int().min(1).max(6).optional(),
+    currentStep: z.number().int().min(1).max(7).optional(),
     wastePercent: z.number().min(0).max(100).optional(),
     shingleType: z.string().max(200).optional(),
     shinglePricePerSq: z.number().min(0).optional(),
@@ -87,7 +87,7 @@ export const createEstimateSchema = z.object({
         valleyLengthFt: z.number().min(0).optional(),
         eaveLengthFt: z.number().min(0).optional(),
         rakeLengthFt: z.number().min(0).optional(),
-        measurementSource: z.enum(['ai_satellite', 'ai_photo', 'eagleview', 'manual', 'ai_segmented']).optional(),
+        measurementSource: z.union([z.enum(['ai_satellite', 'ai_photo', 'eagleview', 'manual', 'ai_segmented']), z.literal('')]).optional().transform(v => v === '' ? undefined : v),
         tearOffRequired: z.boolean().optional(),
         photoUrls: z.array(z.string().url()).max(10).optional(),
         // Wizard fields
@@ -122,7 +122,7 @@ export const updateEstimateSchema = z.object({
         eaveLengthFt: z.number().min(0).optional(),
         rakeLengthFt: z.number().min(0).optional(),
         tearOffRequired: z.boolean().optional(),
-        measurementSource: z.enum(['ai_satellite', 'ai_photo', 'eagleview', 'manual', 'ai_segmented']).optional(),
+        measurementSource: z.union([z.enum(['ai_satellite', 'ai_photo', 'eagleview', 'manual', 'ai_segmented']), z.literal('')]).optional().transform(v => v === '' ? undefined : v),
         // Wizard fields
         ...wizardFieldsSchema,
     }),

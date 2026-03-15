@@ -27,6 +27,8 @@ import {
   Eye, Send, ExternalLink, MoreHorizontal, RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import useIsMobile from "@/hooks/useIsMobile";
+import logo from "../Images/Logo/logo.png";
 
 // ============================================
 // TYPES
@@ -80,7 +82,7 @@ const quickActions: QuickAction[] = [
   { title: "New Project", icon: FolderKanban, color: "teal", path: "/projects/add", description: "Create a new project" },
   { title: "Add Client", icon: Users, color: "gold", path: "/clients/new", description: "Add a new client" },
   { title: "Create Invoice", icon: DollarSign, color: "navy", path: "/invoices/new", description: "Generate invoice" },
-  { title: "Schedule Meeting", icon: Calendar, color: "purple", path: "/bookings/new", description: "Book a meeting" },
+  { title: "Ask Experts", icon: Sparkles, color: "purple", path: "/dashboard", description: "AI assistant" },
 ];
 
 // Map API notification type → icon & color for the bell dropdown
@@ -201,6 +203,7 @@ function buildAlerts(leads: LeadItem[], invoices: InvoiceItem[], projects: Proje
 // ============================================
 const Index = () => {
   const navigate = useNavigate();
+  const { isMobile } = useIsMobile();
   const { toast } = useToast();
 
   // Existing state
@@ -337,80 +340,126 @@ const Index = () => {
   return (
     <div className={cn("min-h-screen w-full bg-[#F7F7FB]")}>
       <main>
-        {/* ============= HEADER ============= */}
-        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-[rgba(15,23,42,0.06)] pt-[7px] md:pt-0">
-          <div className="flex h-12 items-center justify-between px-3 md:px-5">
-            <div className="flex items-center gap-2 md:gap-6 flex-1 min-w-0">
-              <div className="relative flex-1 max-w-[140px] sm:max-w-xs md:max-w-none md:flex-none md:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#475569]" />
-                <input type="text" placeholder="Search anything..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onClick={() => setShowSearchModal(true)} className="w-full h-8 pl-9 pr-4 md:pr-14 rounded-lg bg-white border border-[rgba(15,23,42,0.06)] text-xs text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-1 focus:ring-[#6637F4]/30 transition-colors" />
-                <kbd className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-0.5 rounded bg-[#F1F5F9] text-[10px] text-[#475569] border border-[rgba(15,23,42,0.06)] font-mono hidden md:flex items-center gap-1"><Command size={10} />K</kbd>
+        {/* ============= MOBILE HEADER ============= */}
+        <header className={cn(
+          "sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-[rgba(15,23,42,0.06)]",
+          isMobile ? "pt-[env(safe-area-inset-top,7px)]" : "pt-0"
+        )}>
+          {isMobile ? (
+            /* ---- MOBILE TOP BAR ---- */
+            <div className="flex h-12 items-center justify-between px-4">
+              <div className="flex items-center gap-2">
+                <img src={logo} alt="ZODO" className="h-8 w-auto object-contain" />
+                <span className="text-sm font-bold text-[#0F172A] tracking-tight">ZODO CRM</span>
               </div>
-            </div>
-            <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 flex-shrink-0">
-              <button onClick={() => setShowCopilot(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#6637F4]/8 text-[#6637F4] text-xs font-medium rounded-lg hover:bg-[#6637F4]/14 transition-colors border border-[#6637F4]/15">
-                <Sparkles size={14} /><span className="hidden sm:inline">Ask Experts</span>
-              </button>
-              <button onClick={() => navigate("/projects/add")} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#6637F4] text-white text-xs font-medium rounded-lg hover:bg-[#6637F4]/90 transition-colors">
-                <Plus size={14} /><span className="hidden sm:inline">New</span>
-              </button>
-              <button onClick={toggleDarkMode} className="p-2 rounded-md bg-white border border-[rgba(15,23,42,0.06)] text-[#94A3B8] hover:text-[#475569] transition-colors">
-                {isDarkMode ? <Sun size={15} /> : <Moon size={15} />}
-              </button>
-              <div ref={notificationRef} className="relative">
-                <button onClick={() => setShowNotifications(!showNotifications)} className="relative overflow-visible p-2 rounded-md bg-white border border-[rgba(15,23,42,0.06)] text-[#94A3B8] hover:text-[#475569] transition-colors">
-                  <Bell size={15} />
-                  {unreadNotificationsCount > 0 && <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-[#FF7B36] text-white text-[9px] font-bold rounded-full flex items-center justify-center border-2 border-white z-10">{unreadNotificationsCount}</span>}
+              <div className="flex items-center gap-2">
+                <button onClick={() => navigate("/settings/profile")} className="p-1.5 rounded-full text-[#475569]">
+                  <div className="h-7 w-7 rounded-full bg-[#6637F4] flex items-center justify-center text-white text-[10px] font-bold">{user ? (user.firstName[0] + user.lastName[0]).toUpperCase() : "GU"}</div>
                 </button>
-                <AnimatePresence>
-                  {showNotifications && (
-                    <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} transition={{ duration: 0.15 }} className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-80 max-w-80 bg-white border border-[rgba(15,23,42,0.06)] card-shadow rounded-2xl overflow-hidden z-50">
-                      <div className="p-4 border-b border-[rgba(15,23,42,0.06)]"><div className="flex items-center justify-between"><h4 className="font-semibold text-[#0F172A]">Notifications</h4><button onClick={handleMarkAllAsRead} className="text-xs text-[#6637F4] font-medium cursor-pointer hover:underline">Mark all as read</button></div></div>
-                      <div className="max-h-80 overflow-y-auto">
-                        {notifications.map((notification) => {
-                          const colors = getColorClasses(notification.color); return (
-                            <div key={notification.id} className={cn("p-4 hover:bg-white transition-colors cursor-pointer border-b border-[rgba(15,23,42,0.06)] last:border-0", !notification.read && "bg-[#6637F4]/5")}>
-                              <div className="flex gap-3">
-                                <div className={cn("w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0", colors.light)}><notification.icon size={18} className={colors.text} /></div>
-                                <div className="flex-1 min-w-0"><p className="text-sm font-medium text-[#0F172A]">{notification.title}</p><p className="text-sm text-[#475569]">{notification.message}</p><p className="text-xs text-[#475569] mt-1">{notification.time}</p></div>
-                                {!notification.read && <div className="w-2 h-2 rounded-full bg-[#6637F4] flex-shrink-0 mt-2" />}
+                <div ref={notificationRef} className="relative">
+                  <button onClick={() => setShowNotifications(!showNotifications)} className="relative p-1.5 rounded-full text-[#475569]">
+                    <Bell size={20} />
+                    {unreadNotificationsCount > 0 && <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] bg-[#FF7B36] text-white text-[8px] font-bold rounded-full flex items-center justify-center border-2 border-white z-10">{unreadNotificationsCount}</span>}
+                  </button>
+                  <AnimatePresence>
+                    {showNotifications && (
+                      <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} transition={{ duration: 0.15 }} className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-80 bg-white border border-[rgba(15,23,42,0.06)] card-shadow rounded-2xl overflow-hidden z-50">
+                        <div className="p-4 border-b border-[rgba(15,23,42,0.06)]"><div className="flex items-center justify-between"><h4 className="font-semibold text-[#0F172A]">Notifications</h4><button onClick={handleMarkAllAsRead} className="text-xs text-[#6637F4] font-medium cursor-pointer hover:underline">Mark all as read</button></div></div>
+                        <div className="max-h-80 overflow-y-auto">
+                          {notifications.map((notification) => {
+                            const colors = getColorClasses(notification.color); return (
+                              <div key={notification.id} className={cn("p-3 hover:bg-white transition-colors cursor-pointer border-b border-[rgba(15,23,42,0.06)] last:border-0", !notification.read && "bg-[#6637F4]/5")}>
+                                <div className="flex gap-3">
+                                  <div className={cn("w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0", colors.light)}><notification.icon size={16} className={colors.text} /></div>
+                                  <div className="flex-1 min-w-0"><p className="text-xs font-medium text-[#0F172A]">{notification.title}</p><p className="text-[11px] text-[#475569] line-clamp-2">{notification.message}</p><p className="text-[10px] text-[#94A3B8] mt-0.5">{notification.time}</p></div>
+                                  {!notification.read && <div className="w-1.5 h-1.5 rounded-full bg-[#6637F4] flex-shrink-0 mt-2" />}
+                                </div>
                               </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <div className="p-3 bg-white text-center border-t border-[rgba(15,23,42,0.06)]"><button onClick={() => navigate("/notifications")} className="text-sm text-[#6637F4] font-medium hover:underline">View All Notifications</button></div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-              <div ref={profileRef} className="relative flex items-center gap-3 pl-3 ml-3 border-l border-[rgba(15,23,42,0.06)] hidden md:flex">
-                <div className="text-right hidden sm:block"><p className="text-sm font-semibold text-[#0F172A]">{user ? `${user.firstName} ${user.lastName}` : "Guest User"}</p><p className="text-xs text-[#94A3B8]">{user?.role || "Administrator"}</p></div>
-                <motion.button whileHover={{ scale: 1.05 }} onClick={() => setShowProfileMenu(!showProfileMenu)} className="relative cursor-pointer flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-lg bg-[#6637F4] flex items-center justify-center text-white text-xs font-bold">{user ? (user.firstName[0] + user.lastName[0]).toUpperCase() : "GU"}</div>
-                  <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-[#01C44A] rounded-full border-2 border-[#F7F7FB]" />
-                </motion.button>
-                <ChevronDown size={16} className={cn("text-[#475569] transition-transform", showProfileMenu && "rotate-180")} />
-                <AnimatePresence>
-                  {showProfileMenu && (
-                    <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} transition={{ duration: 0.15 }} className="absolute right-0 top-full mt-2 w-56 bg-white border border-[rgba(15,23,42,0.06)] card-shadow rounded-md overflow-hidden z-50">
-                      <div className="p-4 border-b border-[rgba(15,23,42,0.06)]"><p className="font-semibold text-[#0F172A]">{user ? `${user.firstName} ${user.lastName}` : "Guest User"}</p><p className="text-xs text-[#475569] truncate">{user?.email || "guest@yoursoft.ca"}</p></div>
-                      <div className="p-2">
-                        <button onClick={() => navigate("/settings/profile")} className="w-full px-3 py-2 text-left text-sm text-[#475569] hover:bg-white hover:text-[#0F172A] rounded-md transition-colors">Profile Settings</button>
-                        <button onClick={() => navigate("/settings")} className="w-full px-3 py-2 text-left text-sm text-[#475569] hover:bg-white hover:text-[#0F172A] rounded-md transition-colors">Account Settings</button>
-                        <button onClick={() => navigate("/help")} className="w-full px-3 py-2 text-left text-sm text-[#475569] hover:bg-white hover:text-[#0F172A] rounded-md transition-colors">Help & Support</button>
-                      </div>
-                      <div className="p-2 border-t border-[rgba(15,23,42,0.06)]"><button onClick={handleLogout} className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 rounded-md transition-colors">Sign Out</button></div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                            );
+                          })}
+                        </div>
+                        <div className="p-2.5 bg-white text-center border-t border-[rgba(15,23,42,0.06)]"><button onClick={() => navigate("/notifications")} className="text-xs text-[#6637F4] font-medium hover:underline">View All Notifications</button></div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            /* ---- DESKTOP TOP BAR ---- */
+            <div className="flex h-12 items-center justify-between px-3 md:px-5">
+              <div className="flex items-center gap-2 md:gap-6 flex-1 min-w-0">
+                <div className="relative flex-1 max-w-[140px] sm:max-w-xs md:max-w-none md:flex-none md:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#475569]" />
+                  <input type="text" placeholder="Search anything..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onClick={() => setShowSearchModal(true)} className="w-full h-8 pl-9 pr-4 md:pr-14 rounded-lg bg-white border border-[rgba(15,23,42,0.06)] text-xs text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-1 focus:ring-[#6637F4]/30 transition-colors" />
+                  <kbd className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-0.5 rounded bg-[#F1F5F9] text-[10px] text-[#475569] border border-[rgba(15,23,42,0.06)] font-mono hidden md:flex items-center gap-1"><Command size={10} />K</kbd>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 flex-shrink-0">
+                <button onClick={() => setShowCopilot(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#6637F4]/8 text-[#6637F4] text-xs font-medium rounded-lg hover:bg-[#6637F4]/14 transition-colors border border-[#6637F4]/15">
+                  <Sparkles size={14} /><span className="hidden sm:inline">Ask Experts</span>
+                </button>
+                <button onClick={() => navigate("/projects/add")} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#6637F4] text-white text-xs font-medium rounded-lg hover:bg-[#6637F4]/90 transition-colors">
+                  <Plus size={14} /><span className="hidden sm:inline">New</span>
+                </button>
+                <button onClick={toggleDarkMode} className="p-2 rounded-md bg-white border border-[rgba(15,23,42,0.06)] text-[#94A3B8] hover:text-[#475569] transition-colors">
+                  {isDarkMode ? <Sun size={15} /> : <Moon size={15} />}
+                </button>
+                <div ref={notificationRef} className="relative">
+                  <button onClick={() => setShowNotifications(!showNotifications)} className="relative overflow-visible p-2 rounded-md bg-white border border-[rgba(15,23,42,0.06)] text-[#94A3B8] hover:text-[#475569] transition-colors">
+                    <Bell size={15} />
+                    {unreadNotificationsCount > 0 && <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-[#FF7B36] text-white text-[9px] font-bold rounded-full flex items-center justify-center border-2 border-white z-10">{unreadNotificationsCount}</span>}
+                  </button>
+                  <AnimatePresence>
+                    {showNotifications && (
+                      <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} transition={{ duration: 0.15 }} className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-80 max-w-80 bg-white border border-[rgba(15,23,42,0.06)] card-shadow rounded-2xl overflow-hidden z-50">
+                        <div className="p-4 border-b border-[rgba(15,23,42,0.06)]"><div className="flex items-center justify-between"><h4 className="font-semibold text-[#0F172A]">Notifications</h4><button onClick={handleMarkAllAsRead} className="text-xs text-[#6637F4] font-medium cursor-pointer hover:underline">Mark all as read</button></div></div>
+                        <div className="max-h-80 overflow-y-auto">
+                          {notifications.map((notification) => {
+                            const colors = getColorClasses(notification.color); return (
+                              <div key={notification.id} className={cn("p-4 hover:bg-white transition-colors cursor-pointer border-b border-[rgba(15,23,42,0.06)] last:border-0", !notification.read && "bg-[#6637F4]/5")}>
+                                <div className="flex gap-3">
+                                  <div className={cn("w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0", colors.light)}><notification.icon size={18} className={colors.text} /></div>
+                                  <div className="flex-1 min-w-0"><p className="text-sm font-medium text-[#0F172A]">{notification.title}</p><p className="text-sm text-[#475569]">{notification.message}</p><p className="text-xs text-[#475569] mt-1">{notification.time}</p></div>
+                                  {!notification.read && <div className="w-2 h-2 rounded-full bg-[#6637F4] flex-shrink-0 mt-2" />}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="p-3 bg-white text-center border-t border-[rgba(15,23,42,0.06)]"><button onClick={() => navigate("/notifications")} className="text-sm text-[#6637F4] font-medium hover:underline">View All Notifications</button></div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+                <div ref={profileRef} className="relative flex items-center gap-3 pl-3 ml-3 border-l border-[rgba(15,23,42,0.06)] hidden md:flex">
+                  <div className="text-right hidden sm:block"><p className="text-sm font-semibold text-[#0F172A]">{user ? `${user.firstName} ${user.lastName}` : "Guest User"}</p><p className="text-xs text-[#94A3B8]">{user?.role || "Administrator"}</p></div>
+                  <motion.button whileHover={{ scale: 1.05 }} onClick={() => setShowProfileMenu(!showProfileMenu)} className="relative cursor-pointer flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-lg bg-[#6637F4] flex items-center justify-center text-white text-xs font-bold">{user ? (user.firstName[0] + user.lastName[0]).toUpperCase() : "GU"}</div>
+                    <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-[#01C44A] rounded-full border-2 border-[#F7F7FB]" />
+                  </motion.button>
+                  <ChevronDown size={16} className={cn("text-[#475569] transition-transform", showProfileMenu && "rotate-180")} />
+                  <AnimatePresence>
+                    {showProfileMenu && (
+                      <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} transition={{ duration: 0.15 }} className="absolute right-0 top-full mt-2 w-56 bg-white border border-[rgba(15,23,42,0.06)] card-shadow rounded-md overflow-hidden z-50">
+                        <div className="p-4 border-b border-[rgba(15,23,42,0.06)]"><p className="font-semibold text-[#0F172A]">{user ? `${user.firstName} ${user.lastName}` : "Guest User"}</p><p className="text-xs text-[#475569] truncate">{user?.email || "guest@yoursoft.ca"}</p></div>
+                        <div className="p-2">
+                          <button onClick={() => navigate("/settings/profile")} className="w-full px-3 py-2 text-left text-sm text-[#475569] hover:bg-white hover:text-[#0F172A] rounded-md transition-colors">Profile Settings</button>
+                          <button onClick={() => navigate("/settings")} className="w-full px-3 py-2 text-left text-sm text-[#475569] hover:bg-white hover:text-[#0F172A] rounded-md transition-colors">Account Settings</button>
+                          <button onClick={() => navigate("/help")} className="w-full px-3 py-2 text-left text-sm text-[#475569] hover:bg-white hover:text-[#0F172A] rounded-md transition-colors">Help & Support</button>
+                        </div>
+                        <div className="p-2 border-t border-[rgba(15,23,42,0.06)]"><button onClick={handleLogout} className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 rounded-md transition-colors">Sign Out</button></div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+            </div>
+          )}
         </header>
 
         {/* ============= MAIN CONTENT ============= */}
-        <div className="p-4 md:p-6 space-y-4 md:space-y-6 page-enter">
+        <div className={cn("space-y-4 md:space-y-6 page-enter", isMobile ? "p-3" : "p-4 md:p-6")}>
 
           {/* ===== GREETING + AI OVERVIEW ===== */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -455,7 +504,7 @@ const Index = () => {
                 <span className="ai-tag">AI</span>
               </div>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 divide-x divide-y md:divide-y-0 divide-[rgba(15,23,42,0.06)]">
+            <div className={cn("grid divide-x divide-y md:divide-y-0 divide-[rgba(15,23,42,0.06)]", isMobile ? "grid-cols-3" : "grid-cols-2 md:grid-cols-3 lg:grid-cols-5")}>
               <div className="px-5 py-4">
                 <div className="flex items-center gap-1.5 mb-2"><Activity size={12} className="text-[#94A3B8]" /><span className="metric-label">Pipeline Health</span></div>
                 <div className="flex items-center gap-2 mb-1"><span className="text-lg font-bold text-[#0F172A] tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>{stalledLeads.length > 0 ? "Medium Risk" : "Healthy"}</span></div>
@@ -501,25 +550,58 @@ const Index = () => {
           </div>
 
           {/* ===== QUICK ACTIONS ===== */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-            {quickActions.map((action, index) => {
-              const colors = getColorClasses(action.color); return (
-                <motion.button key={index} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 * index }} whileHover={{ scale: 1.01, y: -2 }} whileTap={{ scale: 0.99 }} onClick={() => handleQuickAction(action.path)} className="flex items-center gap-4 p-4 bg-white rounded-2xl card-shadow hover:shadow-md transition-all group">
-                  <div className="w-10 h-10 rounded-md bg-[#F1F5F9] flex items-center justify-center"><action.icon size={20} className="text-[#475569]" /></div>
-                  <div className="text-left"><p className="font-semibold text-[#0F172A] group-hover:text-[#6637F4] transition-colors">{action.title}</p><p className="text-xs text-[#475569]">{action.description}</p></div>
-                  <ArrowUpRight size={16} className="ml-auto text-[#94A3B8] group-hover:text-[#6637F4] transition-colors" />
+          {isMobile ? (
+            /* Mobile: compact icon grid matching screenshot */
+            <div className="grid grid-cols-4 gap-2">
+              {quickActions.map((action, index) => (
+                <motion.button key={index} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 * index }} whileTap={{ scale: 0.95 }} onClick={() => handleQuickAction(action.path)} className="flex flex-col items-center gap-1.5 py-3 bg-white rounded-xl border border-[rgba(15,23,42,0.06)] active:bg-[#F1F5F9] transition-colors">
+                  <div className="w-9 h-9 rounded-lg bg-[#F1F5F9] flex items-center justify-center"><action.icon size={18} className="text-[#475569]" /></div>
+                  <span className="text-[10px] font-medium text-[#475569] leading-tight text-center px-1">{action.title}</span>
                 </motion.button>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          ) : (
+            /* Desktop: full cards */
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+              {quickActions.map((action, index) => {
+                const colors = getColorClasses(action.color); return (
+                  <motion.button key={index} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 * index }} whileHover={{ scale: 1.01, y: -2 }} whileTap={{ scale: 0.99 }} onClick={() => handleQuickAction(action.path)} className="flex items-center gap-4 p-4 bg-white rounded-2xl card-shadow hover:shadow-md transition-all group">
+                    <div className="w-10 h-10 rounded-md bg-[#F1F5F9] flex items-center justify-center"><action.icon size={20} className="text-[#475569]" /></div>
+                    <div className="text-left"><p className="font-semibold text-[#0F172A] group-hover:text-[#6637F4] transition-colors">{action.title}</p><p className="text-xs text-[#475569]">{action.description}</p></div>
+                    <ArrowUpRight size={16} className="ml-auto text-[#94A3B8] group-hover:text-[#6637F4] transition-colors" />
+                  </motion.button>
+                );
+              })}
+            </div>
+          )}
 
           {/* ===== STAT CARDS ===== */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 stagger-enter">
-            <StatCard title="Active Projects" value={stats.projectsCount} subtitle="Total projects" trend={0} comparison="Current" icon={FolderKanban} color="cyan" isLoading={isLoading} lastUpdated="Updated just now" aiInsight={stats.projectsCount > 0 ? "Delivery pace on track" : undefined} />
-            <StatCard title="Total Earnings" value={`$${stats.earnings.toLocaleString()}`} subtitle="Paid invoices" trend={0} comparison="Current" icon={DollarSign} color="orange" isLoading={isLoading} lastUpdated="Updated just now" aiInsight={stats.earnings > 0 ? "From paid invoices" : undefined} />
-            <StatCard title="Total Clients" value={stats.clientsCount} subtitle="Active clients" trend={0} comparison="Current" icon={Users} color="green" isLoading={isLoading} lastUpdated="Updated just now" aiInsight={stats.clientsCount > 0 ? `${stats.clientsCount} active` : undefined} />
-            <StatCard title="Pending Tasks" value={stats.pendingTasks} subtitle="Needs action" trend={0} comparison="Current" icon={Clock} color="purple" isLoading={isLoading} lastUpdated="Updated just now" aiInsight={stats.pendingTasks > 5 ? "Prioritize overdue items" : "On track"} />
-          </div>
+          {isMobile ? (
+            /* Mobile: list-style stat rows with chevrons */
+            <div className="bg-white rounded-2xl card-shadow divide-y divide-[rgba(15,23,42,0.04)] overflow-hidden">
+              {[
+                { icon: FolderKanban, color: "#6637F4", bg: "#6637F4/10", title: "Active Projects", value: `${stats.projectsCount}`, sub: stats.projectsCount > 0 ? `${stats.projectsCount}, on track` : "none", path: "/projects" },
+                { icon: DollarSign, color: "#01C44A", bg: "#01C44A/10", title: "Total Earnings", value: `$${stats.earnings.toLocaleString()}`, sub: "paid invoices", path: "/invoice" },
+                { icon: Clock, color: "#FF7B36", bg: "#FF7B36/10", title: "Pending Tasks", value: `${stats.pendingTasks}`, sub: stats.pendingTasks > 0 ? `${stats.pendingTasks}, needs action` : "all done", path: "/tasks" },
+              ].map((s, i) => (
+                <button key={i} onClick={() => navigate(s.path)} className="flex items-center gap-3 px-4 py-3 w-full text-left active:bg-[#F7F7FB] transition-colors">
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${s.color}15` }}><s.icon size={18} style={{ color: s.color }} /></div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-[#0F172A]">{s.title}</p>
+                    <p className="text-[11px] text-[#94A3B8]">{s.sub}</p>
+                  </div>
+                  <ChevronDown size={16} className="text-[#94A3B8] -rotate-90 flex-shrink-0" />
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 stagger-enter">
+              <StatCard title="Active Projects" value={stats.projectsCount} subtitle="Total projects" trend={0} comparison="Current" icon={FolderKanban} color="cyan" isLoading={isLoading} lastUpdated="Updated just now" aiInsight={stats.projectsCount > 0 ? "Delivery pace on track" : undefined} />
+              <StatCard title="Total Earnings" value={`$${stats.earnings.toLocaleString()}`} subtitle="Paid invoices" trend={0} comparison="Current" icon={DollarSign} color="orange" isLoading={isLoading} lastUpdated="Updated just now" aiInsight={stats.earnings > 0 ? "From paid invoices" : undefined} />
+              <StatCard title="Total Clients" value={stats.clientsCount} subtitle="Active clients" trend={0} comparison="Current" icon={Users} color="green" isLoading={isLoading} lastUpdated="Updated just now" aiInsight={stats.clientsCount > 0 ? `${stats.clientsCount} active` : undefined} />
+              <StatCard title="Pending Tasks" value={stats.pendingTasks} subtitle="Needs action" trend={0} comparison="Current" icon={Clock} color="purple" isLoading={isLoading} lastUpdated="Updated just now" aiInsight={stats.pendingTasks > 5 ? "Prioritize overdue items" : "On track"} />
+            </div>
+          )}
 
           {/* ===== LEADS & INVOICES ROW ===== */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
@@ -675,13 +757,17 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Footer */}
-        <footer className="px-6 py-4 bg-[#F7F7FB] border-b border-[rgba(15,23,42,0.06)]">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 md:gap-4 text-xs md:text-sm text-[#94A3B8]">
-            <div className="flex items-center gap-2"><span>© {new Date().getFullYear()}</span><span className="font-semibold text-[#0F172A]">ZODO</span><span className="text-[#6637F4] font-semibold">CRM</span><span>• All rights reserved</span></div>
-            <div className="flex items-center gap-4"><a href="#" className="hover:text-[#6637F4] transition-colors">Privacy</a><a href="#" className="hover:text-[#6637F4] transition-colors">Terms</a><a href="#" className="hover:text-[#6637F4] transition-colors">Support</a></div>
-          </div>
-        </footer>
+        {/* Footer — hidden on mobile (bottom tab bar takes over) */}
+        {!isMobile && (
+          <footer className="px-6 py-4 bg-[#F7F7FB] border-b border-[rgba(15,23,42,0.06)]">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 md:gap-4 text-xs md:text-sm text-[#94A3B8]">
+              <div className="flex items-center gap-2"><span>© {new Date().getFullYear()}</span><span className="font-semibold text-[#0F172A]">ZODO</span><span className="text-[#6637F4] font-semibold">CRM</span><span>• All rights reserved</span></div>
+              <div className="flex items-center gap-4"><a href="#" className="hover:text-[#6637F4] transition-colors">Privacy</a><a href="#" className="hover:text-[#6637F4] transition-colors">Terms</a><a href="#" className="hover:text-[#6637F4] transition-colors">Support</a></div>
+            </div>
+          </footer>
+        )}
+        {/* Bottom spacer for mobile tab bar */}
+        {isMobile && <div className="h-20" />}
       </main>
 
       {/* Search Modal */}

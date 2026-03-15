@@ -1184,6 +1184,36 @@ export function Sidebar({
         />
       )}
 
+      {/* ─── Mobile Bottom Tab Bar ─── */}
+      {isMobile && (
+        <nav className="fixed bottom-0 left-0 right-0 z-[60] bg-white/98 backdrop-blur-lg border-t border-[rgba(15,23,42,0.08)]" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+          <div className="flex items-center justify-around h-14">
+            {[
+              { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
+              { icon: Target, label: "Pipeline", path: "/leads/pipeline" },
+              { icon: Briefcase, label: "Projects", path: "/projects" },
+              { icon: Receipt, label: "Finance", path: "/invoice" },
+              { icon: MessageSquare, label: "Chats", path: "/chats" },
+            ].map((tab) => {
+              const active = location.pathname === tab.path || location.pathname.startsWith(tab.path + "/");
+              return (
+                <Link
+                  key={tab.path}
+                  to={tab.path}
+                  className={cn(
+                    "flex flex-col items-center gap-0.5 min-w-0 px-2 py-1 transition-colors",
+                    active ? "text-[#6637F4]" : "text-[#94A3B8]"
+                  )}
+                >
+                  <tab.icon size={20} strokeWidth={active ? 2.2 : 1.5} />
+                  <span className={cn("text-[10px] leading-tight", active ? "font-semibold" : "font-medium")}>{tab.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+      )}
+
       {/* Custom Scrollbar Styles */}
       <style>{`
         .custom-scrollbar::-webkit-scrollbar {

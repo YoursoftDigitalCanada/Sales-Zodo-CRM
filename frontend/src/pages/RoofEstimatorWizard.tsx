@@ -520,6 +520,13 @@ export default function RoofEstimatorWizard() {
       // Generate PDF
       toast({ title: "Generating Report…", description: "Building your estimate PDF" });
       const pdfBlob = await generateEstimatePDF({
+        // Client / Lead
+        clientName: data.clientName,
+        clientEmail: data.clientEmail,
+        clientPhone: data.clientPhone,
+        clientCompany: data.clientCompany,
+        sourceType: data.sourceType,
+        // Property
         address: data.address,
         roofAreaSqft: data.roofAreaSqft,
         pitch: data.pitch,
@@ -531,27 +538,40 @@ export default function RoofEstimatorWizard() {
         tearOffRequired: data.tearOffRequired,
         confidence: data.confidence,
         satelliteImageUrl: data.satelliteImageUrl,
+        // Materials (qty × unit price)
         shingleType: data.shingleType,
+        shingleQty: data.shingleQty,
         shinglePricePerSq: data.shinglePricePerSq,
+        underlaymentQty: data.underlaymentQty,
         underlaymentCost: data.underlaymentCost,
+        iceWaterShieldQty: data.iceWaterShieldQty,
         iceWaterShieldCost: data.iceWaterShieldCost,
+        ridgeCapQty: data.ridgeCapQty,
         ridgeCapCost: data.ridgeCapCost,
+        starterStripQty: data.starterStripQty,
         starterStripCost: data.starterStripCost,
+        flashingQty: data.flashingQty,
         flashingCostWizard: data.flashingCostWizard,
+        ventQty: data.ventQty,
         ventCostWizard: data.ventCostWizard,
+        nailsAccessoriesQty: data.nailsAccessoriesQty,
         nailsAccessoriesCost: data.nailsAccessoriesCost,
         totalMaterialCost,
         otherMaterials: data.otherMaterials,
+        // Labor
+        laborCostPerSquare: data.laborCostPerSquare,
         numberOfLaborers: data.numberOfLaborers,
         daysRequired: data.daysRequired,
         laborRatePerWorker: data.laborRatePerWorker,
         totalLaborCost,
+        // Equipment
         dumpsterCost: data.dumpsterCost,
         permitCost: data.permitCost,
         deliveryFee: data.deliveryFee,
         equipmentRentalCost: data.equipmentRentalCost,
         disposalFee: data.disposalFee,
         totalEquipmentCost,
+        // Profit / Overhead / Tax
         overheadPercent: data.overheadPercent,
         profitMarginPercent: data.profitMarginPercent,
         taxPercent: data.taxPercent,
@@ -559,9 +579,10 @@ export default function RoofEstimatorWizard() {
         profitAmount,
         taxAmount,
         finalEstimatePrice: finalPrice,
+        // Meta
         estimateId: savedId || "NEW",
-        clientName: "",
         createdAt: new Date().toISOString(),
+        notes: data.notes || undefined,
       });
 
       // Download PDF locally

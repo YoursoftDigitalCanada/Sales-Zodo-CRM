@@ -4,7 +4,20 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+interface OtherMaterialPdf {
+  name: string;
+  qty: number;
+  cost: number;
+}
+
 interface ReportData {
+  // Client / Lead
+  clientName?: string;
+  clientEmail?: string;
+  clientPhone?: string;
+  clientCompany?: string;
+  sourceType?: "client" | "lead" | "manual";
+
   // Property
   address: string;
   roofAreaSqft: number;
@@ -17,23 +30,35 @@ interface ReportData {
   tearOffRequired: boolean;
   confidence: number;
   satelliteImageUrl: string;
-  // Materials
+
+  // Materials (qty × unit price)
   shingleType: string;
+  shingleQty: number;
   shinglePricePerSq: number;
+  underlaymentQty: number;
   underlaymentCost: number;
+  iceWaterShieldQty: number;
   iceWaterShieldCost: number;
+  ridgeCapQty: number;
   ridgeCapCost: number;
+  starterStripQty: number;
   starterStripCost: number;
+  flashingQty: number;
   flashingCostWizard: number;
+  ventQty: number;
   ventCostWizard: number;
+  nailsAccessoriesQty: number;
   nailsAccessoriesCost: number;
   totalMaterialCost: number;
-  otherMaterials?: { name: string; cost: number }[];
+  otherMaterials?: OtherMaterialPdf[];
+
   // Labor
+  laborCostPerSquare: number;
   numberOfLaborers: number;
   daysRequired: number;
   laborRatePerWorker: number;
   totalLaborCost: number;
+
   // Equipment
   dumpsterCost: number;
   permitCost: number;
@@ -41,7 +66,8 @@ interface ReportData {
   equipmentRentalCost: number;
   disposalFee: number;
   totalEquipmentCost: number;
-  // Profit
+
+  // Profit / Overhead / Tax
   overheadPercent: number;
   profitMarginPercent: number;
   taxPercent: number;
@@ -49,10 +75,11 @@ interface ReportData {
   profitAmount: number;
   taxAmount: number;
   finalEstimatePrice: number;
+
   // Meta
   estimateId: string;
-  clientName?: string;
   createdAt: string;
+  notes?: string;
 }
 
 const fmt = (n: number) =>
@@ -77,6 +104,7 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
 export async function generateEstimatePDF(data: ReportData): Promise<Blob> {
   const doc = new jsPDF("p", "mm", "letter");
   const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
   const margin = 18;
   const contentW = pageW - margin * 2;
   let y = 15;
@@ -86,6 +114,14 @@ export async function generateEstimatePDF(data: ReportData): Promise<Blob> {
   const dark = [15, 23, 42] as [number, number, number];
   const gray = [100, 116, 139] as [number, number, number];
   const lightBg = [248, 250, 252] as [number, number, number];
+
+  // Helper: check if we need a new page
+  const ensureSpace = (needed: number) => {
+    if (y + needed > pageH - 20) {
+      doc.addPage();
+      y = 15;
+    }
+  };
 
   // ── Logo ────────────────────────────────────────
   try {
@@ -119,25 +155,89 @@ export async function generateEstimatePDF(data: ReportData): Promise<Blob> {
     : new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
   doc.text(`Estimate ID: ${data.estimateId.slice(0, 8).toUpperCase()}`, margin, y);
   doc.text(`Date: ${dateStr}`, pageW - margin, y, { align: "right" });
-  y += 5;
-  if (data.clientName) {
-    doc.text(`Client: ${data.clientName}`, margin, y);
-    y += 5;
-  }
-  doc.text(`Address: ${data.address}`, margin, y);
-  y += 8;
+  y += 7;
 
-  // ── Satellite image ─────────────────────────────
+  // ── Client / Lead Information ───────────────────
+  const hasClientInfo = data.clientName || data.clientEmail || data.clientPhone || data.clientCompany;
+  if (hasClientInfo) {
+    doc.setFillColor(...lightBg);
+    doc.roundedRect(margin, y, contentW, 24, 2, 2, "F");
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(margin, y, contentW, 24, 2, 2, "S");
+
+    doc.setFontSize(10);
+    doc.setTextColor(...dark);
+    doc.setFont("helvetica", "bold");
+    const sourceLabel = data.sourceType === "lead" ? "Lead" : data.sourceType === "client" ? "Client" : "Contact";
+    doc.text(`${sourceLabel} Information`, margin + 4, y + 6);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+
+    // Left column
+    let infoY = y + 12;
+    if (data.clientName) {
+      doc.setTextColor(...gray);
+      doc.text("Name:", margin + 4, infoY);
+      doc.setTextColor(...dark);
+      doc.setFont("helvetica", "bold");
+      doc.text(data.clientName, margin + 20, infoY);
+      doc.setFont("helvetica", "normal");
+    }
+    if (data.clientCompany) {
+      doc.setTextColor(...gray);
+      doc.text("Company:", margin + 4, infoY + 5);
+      doc.setTextColor(...dark);
+      doc.text(data.clientCompany, margin + 26, infoY + 5);
+    }
+
+    // Right column
+    const rightX = margin + contentW / 2;
+    if (data.clientEmail) {
+      doc.setTextColor(...gray);
+      doc.text("Email:", rightX, infoY);
+      doc.setTextColor(...dark);
+      doc.text(data.clientEmail, rightX + 16, infoY);
+    }
+    if (data.clientPhone) {
+      doc.setTextColor(...gray);
+      doc.text("Phone:", rightX, infoY + 5);
+      doc.setTextColor(...dark);
+      doc.text(data.clientPhone, rightX + 16, infoY + 5);
+    }
+
+    y += 28;
+  }
+
+  // ── Address ─────────────────────────────────────
+  doc.setFontSize(9);
+  doc.setTextColor(...gray);
+  doc.text(`Property Address: `, margin, y);
+  doc.setTextColor(...dark);
+  doc.setFont("helvetica", "bold");
+  doc.text(data.address, margin + 32, y);
+  doc.setFont("helvetica", "normal");
+  y += 6;
+
+  // ── Satellite / House Photo ─────────────────────
   if (data.satelliteImageUrl) {
     try {
       const satImg = await loadImageAsBase64(data.satelliteImageUrl);
       if (satImg) {
         const imgW = contentW;
-        const imgH = 55;
+        const imgH = 70;   // larger image for better visibility
         doc.setFillColor(...lightBg);
         doc.roundedRect(margin, y, imgW, imgH, 2, 2, "F");
         doc.addImage(satImg, "JPEG", margin + 1, y + 1, imgW - 2, imgH - 2);
         y += imgH + 4;
+
+        // Caption
+        doc.setFontSize(7);
+        doc.setTextColor(...gray);
+        const srcLabel = data.measurementSource === "eagleview" ? "EagleView" :
+          data.measurementSource === "ai_satellite" ? "AI Satellite" :
+          data.measurementSource === "ai_segmented" ? "AI Segmented" : "Satellite";
+        doc.text(`Source: ${srcLabel} | Confidence: ${data.confidence ? `${data.confidence.toFixed(0)}%` : "N/A"}`, margin, y);
+        y += 5;
       }
     } catch { /* skip satellite */ }
   }
@@ -160,8 +260,8 @@ export async function generateEstimatePDF(data: ReportData): Promise<Blob> {
     ["Roof Type", data.roofType?.charAt(0).toUpperCase() + data.roofType?.slice(1)],
     ["Stories", String(data.stories)],
     ["Layers", String(data.layers)],
-    ["Waste", `${data.wastePercent}%`],
-    ["Confidence", data.confidence ? `${data.confidence.toFixed(0)}%` : "N/A"],
+    ["Waste Factor", `${data.wastePercent}%`],
+    ["Tear-Off", data.tearOffRequired ? "Yes" : "No"],
   ];
 
   const colW = contentW / 4;
@@ -179,39 +279,64 @@ export async function generateEstimatePDF(data: ReportData): Promise<Blob> {
   });
   y += 32;
 
-  // ── Materials Table ─────────────────────────────
-  const matRows: (string | number)[][] = [
-    ["Shingles (" + data.shingleType + ")", fmt(data.shinglePricePerSq)],
-    ["Underlayment", fmt(data.underlaymentCost)],
-    ["Ice & Water Shield", fmt(data.iceWaterShieldCost)],
-    ["Ridge Cap", fmt(data.ridgeCapCost)],
-    ["Starter Strip", fmt(data.starterStripCost)],
-    ["Flashing", fmt(data.flashingCostWizard)],
-    ["Vents", fmt(data.ventCostWizard)],
-    ["Nails & Accessories", fmt(data.nailsAccessoriesCost)],
-  ];
+  // ── Materials Table (Qty × Unit Price = Line Total) ──
+  ensureSpace(60);
+
+  type MatRow = [string, string, string, string];
+  const matRows: MatRow[] = [];
+
+  const addMatRow = (name: string, qty: number, unitPrice: number) => {
+    const line = qty * unitPrice;
+    if (unitPrice > 0 || qty > 1) {
+      matRows.push([name, String(qty), fmt(unitPrice), fmt(line)]);
+    }
+  };
+
+  addMatRow(`Shingles (${data.shingleType})`, data.shingleQty || 1, data.shinglePricePerSq);
+  addMatRow("Underlayment", data.underlaymentQty || 1, data.underlaymentCost);
+  addMatRow("Ice & Water Shield", data.iceWaterShieldQty || 1, data.iceWaterShieldCost);
+  addMatRow("Ridge Cap", data.ridgeCapQty || 1, data.ridgeCapCost);
+  addMatRow("Starter Strip", data.starterStripQty || 1, data.starterStripCost);
+  addMatRow("Flashing", data.flashingQty || 1, data.flashingCostWizard);
+  addMatRow("Vents", data.ventQty || 1, data.ventCostWizard);
+  addMatRow("Nails & Accessories", data.nailsAccessoriesQty || 1, data.nailsAccessoriesCost);
+
   if (data.otherMaterials?.length) {
     data.otherMaterials.forEach((m) => {
-      if (m.name && m.cost) matRows.push([m.name, fmt(m.cost)]);
+      if (m.name && (m.cost > 0 || m.qty > 1)) {
+        matRows.push([m.name, String(m.qty || 1), fmt(m.cost), fmt((m.qty || 1) * m.cost)]);
+      }
     });
+  }
+
+  // If all prices are 0, show at least the header
+  if (matRows.length === 0) {
+    matRows.push(["No materials entered", "-", "-", "$0.00"]);
   }
 
   autoTable(doc, {
     startY: y,
     margin: { left: margin, right: margin },
-    head: [["Material", "Cost"]],
+    head: [["Material", "Qty", "Unit Price", "Line Total"]],
     body: matRows,
-    foot: [["Total Materials", fmt(data.totalMaterialCost)]],
+    foot: [["Total Materials", "", "", fmt(data.totalMaterialCost)]],
     headStyles: { fillColor: teal, fontSize: 9, fontStyle: "bold" },
     footStyles: { fillColor: [230, 247, 250], textColor: teal, fontSize: 9, fontStyle: "bold" },
     bodyStyles: { fontSize: 8 },
     alternateRowStyles: { fillColor: [248, 250, 252] },
+    columnStyles: {
+      0: { cellWidth: 80 },
+      1: { cellWidth: 20, halign: "center" },
+      2: { cellWidth: 35, halign: "right" },
+      3: { cellWidth: 35, halign: "right", fontStyle: "bold" },
+    },
     theme: "grid",
     styles: { cellPadding: 3 },
   });
   y = (doc as any).lastAutoTable.finalY + 6;
 
   // ── Labor Table ─────────────────────────────────
+  ensureSpace(40);
   autoTable(doc, {
     startY: y,
     margin: { left: margin, right: margin },
@@ -220,6 +345,7 @@ export async function generateEstimatePDF(data: ReportData): Promise<Blob> {
       ["Number of Workers", String(data.numberOfLaborers)],
       ["Days Required", String(data.daysRequired)],
       ["Rate per Worker / Day", fmt(data.laborRatePerWorker)],
+      ...(data.laborCostPerSquare > 0 ? [["Cost per Square", fmt(data.laborCostPerSquare)]] : []),
     ],
     foot: [["Total Labor", fmt(data.totalLaborCost)]],
     headStyles: { fillColor: teal, fontSize: 9, fontStyle: "bold" },
@@ -241,6 +367,7 @@ export async function generateEstimatePDF(data: ReportData): Promise<Blob> {
   ].filter((r) => parseFloat(String(r[1]).replace(/[$,]/g, "")) > 0);
 
   if (equipRows.length > 0) {
+    ensureSpace(40);
     autoTable(doc, {
       startY: y,
       margin: { left: margin, right: margin },
@@ -257,13 +384,8 @@ export async function generateEstimatePDF(data: ReportData): Promise<Blob> {
     y = (doc as any).lastAutoTable.finalY + 6;
   }
 
-  // Check if we need a new page for the summary
-  if (y > 200) {
-    doc.addPage();
-    y = 20;
-  }
-
   // ── Final Summary Box ───────────────────────────
+  ensureSpace(65);
   const subtotal = data.totalMaterialCost + data.totalLaborCost + data.totalEquipmentCost;
 
   doc.setFillColor(...lightBg);
@@ -313,20 +435,45 @@ export async function generateEstimatePDF(data: ReportData): Promise<Blob> {
   doc.text(`Price per square: ${fmt(pricePer)} | ${roofSq.toFixed(1)} roof squares`, margin + 6, y);
   y += 10;
 
+  // ── Notes ───────────────────────────────────────
+  if (data.notes && data.notes.trim()) {
+    ensureSpace(25);
+    doc.setDrawColor(226, 232, 240);
+    doc.line(margin, y, pageW - margin, y);
+    y += 6;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(...dark);
+    doc.text("Notes", margin, y);
+    y += 5;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(...gray);
+    const noteLines = doc.splitTextToSize(data.notes, contentW - 8);
+    doc.text(noteLines, margin + 2, y);
+    y += noteLines.length * 4 + 6;
+  }
+
   // ── Footer ──────────────────────────────────────
-  const pageH = doc.internal.pageSize.getHeight();
-  doc.setFontSize(7);
-  doc.setTextColor(...gray);
-  doc.text(
-    "This estimate is valid for 30 days from the date of issue. Prices may vary based on material availability and site conditions.",
-    pageW / 2, pageH - 12,
-    { align: "center" }
-  );
-  doc.text(
-    `Generated by ZODO CRM • crm.zodo.ca • ${dateStr}`,
-    pageW / 2, pageH - 7,
-    { align: "center" }
-  );
+  // Add footer on all pages
+  const totalPages = doc.getNumberOfPages();
+  for (let p = 1; p <= totalPages; p++) {
+    doc.setPage(p);
+    doc.setFontSize(7);
+    doc.setTextColor(...gray);
+    doc.text(
+      "This estimate is valid for 30 days from the date of issue. Prices may vary based on material availability and site conditions.",
+      pageW / 2, pageH - 12,
+      { align: "center" }
+    );
+    doc.text(
+      `Generated by ZODO CRM • crm.zodo.ca • ${dateStr}`,
+      pageW / 2, pageH - 7,
+      { align: "center" }
+    );
+  }
 
   return doc.output("blob");
 }

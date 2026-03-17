@@ -185,15 +185,17 @@ const TaskCard = ({
       animate={{ opacity: isDragging ? 0.5 : 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.9 }}
       whileHover={{ y: -2 }}
-      draggable
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-      className={cn(
-        "group bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4 cursor-grab active:cursor-grabbing",
-        "hover:border-[#22D3EE]/30 hover:shadow-lg  transition-all",
-        isDragging && "shadow-lg rotate-2"
-      )}
     >
+      <div
+        draggable
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        className={cn(
+          "group bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4 cursor-grab active:cursor-grabbing",
+          "hover:border-[#22D3EE]/30 hover:shadow-lg  transition-all",
+          isDragging && "shadow-lg rotate-2"
+        )}
+      >
       {/* Drag Handle */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
@@ -339,6 +341,7 @@ const TaskCard = ({
           </div>
         )}
       </div>
+      </div>
     </motion.div>
   );
 };
@@ -363,21 +366,62 @@ const KanbanColumnComponent = ({
   onDrop: (taskId: string, targetColumn: string) => void;
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const autoScrollRef = useRef<number | null>(null);
   const colors = columnColors[column.color];
   const Icon = column.icon;
 
+  // Auto-scroll when dragging near edges
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(true);
+
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const rect = container.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const edgeThreshold = 60; // px from edge to trigger scroll
+    const scrollSpeed = 8;
+
+    if (autoScrollRef.current) cancelAnimationFrame(autoScrollRef.current);
+
+    if (y < edgeThreshold) {
+      // Near top — scroll up
+      const doScroll = () => {
+        if (container.scrollTop > 0) {
+          container.scrollTop -= scrollSpeed;
+          autoScrollRef.current = requestAnimationFrame(doScroll);
+        }
+      };
+      autoScrollRef.current = requestAnimationFrame(doScroll);
+    } else if (y > rect.height - edgeThreshold) {
+      // Near bottom — scroll down
+      const doScroll = () => {
+        if (container.scrollTop < container.scrollHeight - container.clientHeight) {
+          container.scrollTop += scrollSpeed;
+          autoScrollRef.current = requestAnimationFrame(doScroll);
+        }
+      };
+      autoScrollRef.current = requestAnimationFrame(doScroll);
+    }
   };
 
   const handleDragLeave = () => {
     setIsDragOver(false);
+    if (autoScrollRef.current) {
+      cancelAnimationFrame(autoScrollRef.current);
+      autoScrollRef.current = null;
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
+    if (autoScrollRef.current) {
+      cancelAnimationFrame(autoScrollRef.current);
+      autoScrollRef.current = null;
+    }
     const taskId = e.dataTransfer.getData("taskId");
     const sourceColumn = e.dataTransfer.getData("sourceColumn");
     if (taskId && sourceColumn !== column.id) {
@@ -390,19 +434,19 @@ const KanbanColumnComponent = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
-        "flex flex-col bg-[#F8FAFC]/50 rounded-md border-2 border-dashed transition-all min-h-[600px]",
+        "flex flex-col bg-[#F8FAFC]/50 rounded-md border-2 border-dashed transition-all h-full",
         isDragOver
-          ? `${colors.border} ${colors.bg}`
+          ? `${colors.border} ${colors.bg} scale-[1.01] shadow-lg`
           : "border-transparent"
       )}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {/* Column Header */}
+      {/* Column Header — sticky so it stays visible while scrolling */}
       <div
         className={cn(
-          "p-4 rounded-t-2xl ",
+          "p-4 rounded-t-2xl sticky top-0 z-10 bg-[#F8FAFC] backdrop-blur-sm",
           colors.header
         )}
       >
@@ -439,8 +483,11 @@ const KanbanColumnComponent = ({
         </div>
       </div>
 
-      {/* Tasks Container */}
-      <div className="flex-1 p-3 space-y-3 overflow-y-auto custom-scrollbar">
+      {/* Tasks Container — scrollable within fixed column height */}
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 p-3 space-y-3 overflow-y-auto custom-scrollbar"
+      >
         <AnimatePresence mode="popLayout">
           {column.tasks.map((task) => (
             <TaskCard
@@ -454,8 +501,18 @@ const KanbanColumnComponent = ({
           ))}
         </AnimatePresence>
 
+        {/* Drop zone hint when dragging */}
+        {isDragOver && column.tasks.length > 0 && (
+          <div className={cn(
+            "border-2 border-dashed rounded-lg p-4 text-center text-sm font-medium transition-all",
+            colors.border, colors.text
+          )}>
+            Drop here to move to {column.title}
+          </div>
+        )}
+
         {/* Empty State */}
-        {column.tasks.length === 0 && (
+        {column.tasks.length === 0 && !isDragOver && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -482,6 +539,16 @@ const KanbanColumnComponent = ({
               Add a task
             </button>
           </motion.div>
+        )}
+
+        {/* Empty drop zone */}
+        {column.tasks.length === 0 && isDragOver && (
+          <div className={cn(
+            "border-2 border-dashed rounded-lg p-8 text-center text-sm font-medium",
+            colors.border, colors.text
+          )}>
+            Drop here to add to {column.title}
+          </div>
         )}
       </div>
     </motion.div>
@@ -1183,14 +1250,15 @@ const KanbanPage: React.FC = () => {
             </div>
           </motion.div>
 
-          {/* Kanban Columns */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Kanban Columns — viewport-height constrained so all columns are equal */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" style={{ height: 'calc(100vh - 320px)', minHeight: '400px' }}>
             {getFilteredColumns().map((column, index) => (
               <motion.div
                 key={column.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 * index }}
+                className="h-full"
               >
                 <KanbanColumnComponent
                   column={column}

@@ -130,6 +130,8 @@ import {
   isPreviewable,
   getPreviewType,
   getPreviewUrl,
+  fetchFileBlob,
+  fetchTextContent,
   type FileResponse,
   type FolderResponse,
   type StorageAnalytics as StorageAnalyticsType,
@@ -1432,81 +1434,142 @@ const FilePreviewDialog = ({
   file: FileItem | null;
   onDownload: () => void;
 }) => {
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [textContent, setTextContent] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+
+  const previewType = file ? getPreviewType({ extension: file.fileType, fileType: file.fileType }) : 'unknown';
+
+  useEffect(() => {
+    if (!file || !isOpen) return;
+
+    let cancelled = false;
+    setPreviewLoading(true);
+    setPreviewError(null);
+    setBlobUrl(null);
+    setTextContent(null);
+
+    const load = async () => {
+      try {
+        if (previewType === 'text') {
+          const content = await fetchTextContent(file.id);
+          if (!cancelled) setTextContent(content);
+        } else {
+          const url = await fetchFileBlob(file.id);
+          if (!cancelled) setBlobUrl(url);
+        }
+      } catch (err) {
+        if (!cancelled) setPreviewError('Failed to load preview. The file may not exist on the server.');
+      } finally {
+        if (!cancelled) setPreviewLoading(false);
+      }
+    };
+
+    load();
+
+    return () => {
+      cancelled = true;
+      if (blobUrl) {
+        window.URL.revokeObjectURL(blobUrl);
+      }
+    };
+  }, [file?.id, isOpen]);
+
+  // Cleanup blob on close
+  useEffect(() => {
+    if (!isOpen && blobUrl) {
+      window.URL.revokeObjectURL(blobUrl);
+      setBlobUrl(null);
+      setTextContent(null);
+    }
+  }, [isOpen]);
+
   if (!file) return null;
 
-  const previewType = getPreviewType({ extension: file.fileType, fileType: file.fileType });
-  const previewUrl = getPreviewUrl(file.id);
-  // For office files, use the download URL with Google Docs Viewer
-  const downloadUrl = `${previewUrl}`;
-
   const renderPreview = () => {
+    if (previewLoading) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20 gap-4">
+          <div className="w-12 h-12 border-4 border-[#22D3EE] border-t-transparent rounded-full animate-spin" />
+          <p className="text-[#475569] text-sm">Loading preview...</p>
+        </div>
+      );
+    }
+
+    if (previewError) {
+      return (
+        <div className="flex flex-col items-center justify-center py-16 gap-4">
+          <AlertCircle size={48} className="text-red-400" />
+          <p className="text-[#475569]">{previewError}</p>
+          <Button onClick={onDownload} className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md">
+            <Download size={16} className="mr-2" /> Download Instead
+          </Button>
+        </div>
+      );
+    }
+
     switch (previewType) {
       case 'image':
-        return (
+        return blobUrl ? (
           <div className="flex items-center justify-center bg-black/5 rounded-lg p-4 min-h-[400px]">
             <img
-              src={previewUrl}
+              src={blobUrl}
               alt={file.name}
               className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-lg"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}
             />
           </div>
-        );
+        ) : null;
       case 'video':
-        return (
+        return blobUrl ? (
           <div className="bg-black rounded-lg overflow-hidden">
             <video
-              src={previewUrl}
+              src={blobUrl}
               controls
               autoPlay
               className="w-full max-h-[70vh]"
-              controlsList="nodownload"
             >
               Your browser does not support video playback.
             </video>
           </div>
-        );
+        ) : null;
       case 'audio':
-        return (
+        return blobUrl ? (
           <div className="flex flex-col items-center justify-center py-12 gap-6">
             <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#0891B2] to-[#22D3EE] flex items-center justify-center shadow-xl">
               <Activity size={40} className="text-white" />
             </div>
-            <audio src={previewUrl} controls autoPlay className="w-full max-w-md">
+            <audio src={blobUrl} controls autoPlay className="w-full max-w-md">
               Your browser does not support audio playback.
             </audio>
           </div>
-        );
+        ) : null;
       case 'pdf':
-        return (
+        return blobUrl ? (
           <iframe
-            src={previewUrl}
+            src={blobUrl}
             className="w-full rounded-lg border border-[rgba(15,23,42,0.06)]"
             style={{ height: '75vh' }}
             title={file.name}
           />
-        );
+        ) : null;
       case 'office':
         return (
-          <div className="w-full" style={{ height: '75vh' }}>
-            <iframe
-              src={`https://docs.google.com/gview?url=${encodeURIComponent(downloadUrl)}&embedded=true`}
-              className="w-full h-full rounded-lg border border-[rgba(15,23,42,0.06)]"
-              title={file.name}
-            />
+          <div className="flex flex-col items-center justify-center py-16 gap-4">
+            <FileText size={64} className="text-[#94A3B8]" />
+            <p className="text-[#475569] text-center">Office file preview is not available in the browser.</p>
+            <p className="text-[#94A3B8] text-sm">Click download to view this file.</p>
+            <Button onClick={onDownload} className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md">
+              <Download size={16} className="mr-2" /> Download File
+            </Button>
           </div>
         );
       case 'text':
-        return (
-          <iframe
-            src={previewUrl}
-            className="w-full rounded-lg border border-[rgba(15,23,42,0.06)] bg-white"
-            style={{ height: '75vh' }}
-            title={file.name}
-          />
-        );
+        return textContent !== null ? (
+          <div className="rounded-lg border border-[rgba(15,23,42,0.06)] bg-[#1E293B] text-[#E2E8F0] overflow-auto" style={{ maxHeight: '75vh' }}>
+            <pre className="p-4 text-sm font-mono whitespace-pre-wrap break-words">{textContent}</pre>
+          </div>
+        ) : null;
       default:
         return (
           <div className="flex flex-col items-center justify-center py-16 gap-4">
@@ -1523,6 +1586,10 @@ const FilePreviewDialog = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-5xl w-[95vw] p-0 rounded-xl overflow-hidden max-h-[95vh]">
+        <DialogHeader className="sr-only">
+          <DialogTitle>{file.name}</DialogTitle>
+          <DialogDescription>Preview of {file.name}</DialogDescription>
+        </DialogHeader>
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]">
           <div className="flex items-center gap-3 min-w-0">

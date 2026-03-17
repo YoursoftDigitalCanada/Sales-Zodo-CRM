@@ -249,6 +249,17 @@ export function getPreviewType(file: { extension?: string | null; mimeType?: str
     return 'unknown';
 }
 
+export async function fetchFileBlob(id: string): Promise<string> {
+    const res = await api.get(`/files/${id}/preview`, { responseType: "blob" });
+    const blob = new Blob([res.data], { type: res.headers['content-type'] || 'application/octet-stream' });
+    return window.URL.createObjectURL(blob);
+}
+
+export async function fetchTextContent(id: string): Promise<string> {
+    const res = await api.get(`/files/${id}/preview`, { responseType: "text" });
+    return res.data;
+}
+
 export async function downloadFile(id: string, fileName: string): Promise<void> {
     const res = await api.get(`/files/${id}/download`, { responseType: "blob" });
     const blob = new Blob([res.data]);

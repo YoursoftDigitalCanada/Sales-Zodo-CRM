@@ -3064,6 +3064,9 @@ model Folder {
   parent          Folder?     @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
   children        Folder[]    @relation("FolderHierarchy")
   
+  // Starred
+  isStarred       Boolean     @default(false)
+  
   // Sharing
   isShared        Boolean     @default(false)
   sharedWith      Json?       // Array of employee IDs or "all"
@@ -3118,6 +3121,9 @@ model File {
   
   quoteId         String?
   quote           Quote?      @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  
+  // Starred
+  isStarred       Boolean     @default(false)
   
   // Sharing
   isShared        Boolean     @default(false)

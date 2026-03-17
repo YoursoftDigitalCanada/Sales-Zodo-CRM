@@ -34,6 +34,11 @@ export class FoldersService {
         };
     }
 
+    async getTree(tenantId: string) {
+        const folders = await foldersRepository.getTree(tenantId);
+        return folders.map(toFolderResponseDto);
+    }
+
     async update(id: string, tenantId: string, data: UpdateFolderDto) {
         const existing = await foldersRepository.findById(id, tenantId);
         if (!existing) throw new NotFoundError('Folder not found', ErrorCodes.RESOURCE_NOT_FOUND);
@@ -50,6 +55,11 @@ export class FoldersService {
         return dto;
     }
 
+    async toggleStar(id: string, tenantId: string) {
+        const folder = await foldersRepository.toggleStar(id, tenantId);
+        return toFolderResponseDto(folder);
+    }
+
     async delete(id: string, tenantId: string) {
         const existing = await foldersRepository.findById(id, tenantId);
         if (!existing) throw new NotFoundError('Folder not found', ErrorCodes.RESOURCE_NOT_FOUND);
@@ -60,7 +70,16 @@ export class FoldersService {
             description: `Deleted folder "${(existing as any).name || id}"`,
         });
 
-        await foldersRepository.delete(id, tenantId);
+        await foldersRepository.softDelete(id, tenantId);
+    }
+
+    async restore(id: string, tenantId: string) {
+        const folder = await foldersRepository.restore(id, tenantId);
+        return toFolderResponseDto(folder);
+    }
+
+    async permanentDelete(id: string, tenantId: string) {
+        await foldersRepository.permanentDelete(id, tenantId);
     }
 }
 

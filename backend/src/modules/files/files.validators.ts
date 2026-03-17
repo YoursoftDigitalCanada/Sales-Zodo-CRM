@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const uploadFileSchema = z.object({
     body: z.object({
-        name: z.string().min(1).max(255),
+        name: z.string().min(1).max(255).optional(),
         folderId: z.string().uuid().optional().nullable(),
         description: z.string().max(500).optional().nullable(),
         clientId: z.string().uuid().optional().nullable(),
@@ -18,6 +18,38 @@ export const updateFileSchema = z.object({
     }),
 });
 
+export const moveFileSchema = z.object({
+    body: z.object({
+        folderId: z.string().uuid().nullable(),
+    }),
+});
+
+export const copyFileSchema = z.object({
+    body: z.object({
+        folderId: z.string().uuid().optional().nullable(),
+        name: z.string().min(1).max(255).optional(),
+    }),
+});
+
+export const shareFileSchema = z.object({
+    body: z.object({
+        expiresInHours: z.coerce.number().int().min(1).max(8760).optional(), // max 1 year
+    }),
+});
+
+export const bulkActionSchema = z.object({
+    body: z.object({
+        fileIds: z.array(z.string().uuid()).min(1).max(100),
+    }),
+});
+
+export const bulkMoveSchema = z.object({
+    body: z.object({
+        fileIds: z.array(z.string().uuid()).min(1).max(100),
+        folderId: z.string().uuid().nullable(),
+    }),
+});
+
 export const fileQuerySchema = z.object({
     query: z.object({
         page: z.coerce.number().int().min(1).default(1),
@@ -27,6 +59,7 @@ export const fileQuerySchema = z.object({
         clientId: z.string().uuid().optional(),
         projectId: z.string().uuid().optional(),
         mimeType: z.string().optional(),
+        tag: z.string().optional(),
         sortBy: z.enum(['name', 'createdAt', 'size']).default('createdAt'),
         sortOrder: z.enum(['asc', 'desc']).default('desc'),
     }),

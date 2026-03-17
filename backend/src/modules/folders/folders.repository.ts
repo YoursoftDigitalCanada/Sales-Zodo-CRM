@@ -61,17 +61,48 @@ export class FoldersRepository {
     }
 
     async softDelete(id: string, tenantId: string) {
-        // Tenant-scoped soft delete
         const existing = await prisma.folder.findFirst({ where: { id, tenantId, deletedAt: null } });
         if (!existing) throw new Error('Folder not found or access denied');
         return prisma.folder.update({ where: { id }, data: { deletedAt: new Date() } });
     }
 
     async delete(id: string, tenantId: string) {
-        // Tenant-scoped hard delete
         const existing = await prisma.folder.findFirst({ where: { id, tenantId } });
         if (!existing) throw new Error('Folder not found or access denied');
         return prisma.folder.delete({ where: { id } });
+    }
+
+    async toggleStar(id: string, tenantId: string) {
+        const existing = await prisma.folder.findFirst({ where: { id, tenantId, deletedAt: null } });
+        if (!existing) throw new Error('Folder not found or access denied');
+        return prisma.folder.update({
+            where: { id },
+            data: { isStarred: !existing.isStarred },
+            include: folderInclude,
+        });
+    }
+
+    async restore(id: string, tenantId: string) {
+        const existing = await prisma.folder.findFirst({ where: { id, tenantId, deletedAt: { not: null } } });
+        if (!existing) throw new Error('Folder not found in trash');
+        return prisma.folder.update({ where: { id }, data: { deletedAt: null }, include: folderInclude });
+    }
+
+    async permanentDelete(id: string, tenantId: string) {
+        const existing = await prisma.folder.findFirst({ where: { id, tenantId } });
+        if (!existing) throw new Error('Folder not found or access denied');
+        return prisma.folder.delete({ where: { id } });
+    }
+
+    async getTree(tenantId: string) {
+        return prisma.folder.findMany({
+            where: { tenantId, deletedAt: null },
+            include: {
+                ...folderInclude,
+                children: { where: { deletedAt: null }, include: folderInclude },
+            },
+            orderBy: { name: 'asc' },
+        });
     }
 }
 

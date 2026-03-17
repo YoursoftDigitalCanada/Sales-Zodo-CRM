@@ -1,6 +1,6 @@
 // src/pages/FileManager.tsx
 
-import React, { useRef, useState, useCallback, useMemo } from "react";
+import React, { useRef, useState, useCallback, useMemo, useEffect } from "react";
 // import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -108,6 +108,29 @@ import {
   Activity,
   type LucideIcon,
 } from "lucide-react";
+import {
+  uploadFile as apiUploadFile,
+  getFiles,
+  getFolders,
+  getRecentFiles,
+  getStarredFiles,
+  getTrashedFiles,
+  getStorageAnalytics,
+  toggleFileStar,
+  toggleFolderStar,
+  deleteFile as apiDeleteFile,
+  deleteFolder as apiDeleteFolder,
+  downloadFile as apiDownloadFile,
+  createFolder as apiCreateFolder,
+  renameFile as apiRenameFile,
+  renameFolder as apiRenameFolder,
+  bulkDeleteFiles,
+  restoreFile as apiRestoreFile,
+  createShareLink as apiCreateShareLink,
+  type FileResponse,
+  type FolderResponse,
+  type StorageAnalytics as StorageAnalyticsType,
+} from "@/features/files/services/files-service";
 
 // ============================================
 // TYPES
@@ -1406,10 +1429,13 @@ const FileManagerPage = () => {
   const [sortBy, setSortBy] = useState("modified");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
-  const [folders, setFolders] = useState<FileItem[]>(initialFolders);
-  const [files, setFiles] = useState<FileItem[]>(initialFiles);
+  const [folders, setFolders] = useState<FileItem[]>([]);
+  const [files, setFiles] = useState<FileItem[]>([]);
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  const [storage, setStorage] = useState<StorageAnalyticsType | null>(null);
 
   // Dialogs
   const [showCreateFolder, setShowCreateFolder] = useState(false);
@@ -1418,63 +1444,120 @@ const FileManagerPage = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteItem, setDeleteItem] = useState<FileItem | null>(null);
 
-  // Filtered and sorted items
+  // ── Helper: Convert API response to FileItem ──
+  const fileToItem = (f: FileResponse): FileItem => ({
+    id: f.id,
+    name: f.name,
+    type: "file",
+    fileType: f.extension?.replace('.', '') || f.mimeType.split('/')[0] || 'file',
+    size: f.size,
+    sizeFormatted: formatBytes(f.size),
+    modified: getRelativeTime(new Date(f.updatedAt)),
+    modifiedDate: new Date(f.updatedAt),
+    created: new Date(f.createdAt).toLocaleDateString(),
+    owner: "You",
+    shared: f.isShared,
+    starred: f.isStarred,
+    tags: f.tags?.map(t => t.name) || [],
+    path: f.path,
+  });
+
+  const folderToItem = (f: FolderResponse): FileItem => ({
+    id: f.id,
+    name: f.name,
+    type: "folder",
+    size: 0,
+    sizeFormatted: "—",
+    modified: getRelativeTime(new Date(f.updatedAt)),
+    modifiedDate: new Date(f.updatedAt),
+    created: new Date(f.createdAt).toLocaleDateString(),
+    owner: "You",
+    shared: f.isShared,
+    starred: f.isStarred,
+    tags: [],
+    path: `/${f.name}`,
+    color: "#22D3EE",
+    filesCount: f.filesCount,
+  });
+
+  // ── Load data from API ──
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      let apiFiles: FileResponse[] = [];
+      let apiFolders: FolderResponse[] = [];
+
+      if (activeTab === "recent") {
+        apiFiles = await getRecentFiles();
+      } else if (activeTab === "starred") {
+        apiFiles = await getStarredFiles();
+      } else if (activeTab === "trash") {
+        apiFiles = await getTrashedFiles();
+      } else {
+        const [filesRes, foldersRes] = await Promise.all([
+          getFiles({ folderId: currentFolderId || undefined, search: searchTerm || undefined }),
+          getFolders({ parentId: currentFolderId || undefined, search: searchTerm || undefined }),
+        ]);
+        apiFiles = filesRes;
+        apiFolders = foldersRes;
+      }
+
+      setFiles(apiFiles.map(fileToItem));
+      setFolders(apiFolders.map(folderToItem));
+    } catch (err) {
+      console.error("Failed to load files", err);
+      // Keep existing data on error
+    } finally {
+      setLoading(false);
+    }
+  }, [activeTab, currentFolderId, searchTerm]);
+
+  // Load storage analytics
+  const loadStorage = useCallback(async () => {
+    try {
+      const analytics = await getStorageAnalytics();
+      setStorage(analytics);
+    } catch (err) {
+      console.error("Failed to load storage analytics", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  useEffect(() => {
+    loadStorage();
+  }, [loadStorage]);
+
+  // Filtered and sorted items (client-side filtering on top of server-side)
   const filteredFolders = useMemo(() => {
     let result = [...folders];
-
-    if (searchTerm) {
-      result = result.filter((f) =>
-        f.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    if (activeTab === "starred") {
-      result = result.filter((f) => f.starred);
-    } else if (activeTab === "shared") {
-      result = result.filter((f) => f.shared);
-    }
-
     return result.sort((a, b) => {
       const modifier = sortOrder === "asc" ? 1 : -1;
       if (sortBy === "name") return a.name.localeCompare(b.name) * modifier;
       if (sortBy === "size") return (a.size - b.size) * modifier;
       return (a.modifiedDate.getTime() - b.modifiedDate.getTime()) * modifier;
     });
-  }, [folders, searchTerm, activeTab, sortBy, sortOrder]);
+  }, [folders, sortBy, sortOrder]);
 
   const filteredFiles = useMemo(() => {
     let result = [...files];
-
-    if (searchTerm) {
-      result = result.filter((f) =>
-        f.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    if (activeTab === "starred") {
-      result = result.filter((f) => f.starred);
-    } else if (activeTab === "shared") {
-      result = result.filter((f) => f.shared);
-    } else if (activeTab === "recent") {
-      const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      result = result.filter((f) => f.modifiedDate > oneWeekAgo);
-    }
-
     return result.sort((a, b) => {
       const modifier = sortOrder === "asc" ? 1 : -1;
       if (sortBy === "name") return a.name.localeCompare(b.name) * modifier;
       if (sortBy === "size") return (a.size - b.size) * modifier;
       return (a.modifiedDate.getTime() - b.modifiedDate.getTime()) * modifier;
     });
-  }, [files, searchTerm, activeTab, sortBy, sortOrder]);
+  }, [files, sortBy, sortOrder]);
 
   // Stats
   const stats = useMemo(() => ({
     totalFiles: files.length + folders.length,
-    totalSize: formatBytes(folders.reduce((acc, f) => acc + f.size, 0) + files.reduce((acc, f) => acc + f.size, 0)),
+    totalSize: storage ? formatBytes(storage.totalUsed) : "—",
     sharedItems: folders.filter((f) => f.shared).length + files.filter((f) => f.shared).length,
     starredItems: folders.filter((f) => f.starred).length + files.filter((f) => f.starred).length,
-  }), [folders, files]);
+  }), [folders, files, storage]);
 
   // Handlers
   const handleUploadClick = () => fileInputRef.current?.click();
@@ -1487,40 +1570,50 @@ const FileManagerPage = () => {
     event.target.value = "";
   };
 
-  const handleUpload = (filesToUpload: File[]) => {
+  const handleUpload = async (filesToUpload: File[]) => {
     const newUploadingFiles: UploadingFile[] = filesToUpload.map((file) => ({
       id: Math.random().toString(36).substr(2, 9),
       name: file.name,
       progress: 0,
       size: formatBytes(file.size),
-      status: "uploading",
+      status: "uploading" as const,
     }));
 
     setUploadingFiles((prev) => [...prev, ...newUploadingFiles]);
-
-    // Simulate upload progress
-    newUploadingFiles.forEach((uploadFile) => {
-      const interval = setInterval(() => {
-        setUploadingFiles((prev) =>
-          prev.map((f) => {
-            if (f.id === uploadFile.id && f.status === "uploading") {
-              const newProgress = Math.min(f.progress + Math.random() * 20, 100);
-              if (newProgress >= 100) {
-                clearInterval(interval);
-                return { ...f, progress: 100, status: "completed" };
-              }
-              return { ...f, progress: Math.floor(newProgress) };
-            }
-            return f;
-          })
-        );
-      }, 500);
-    });
 
     toast({
       title: "Upload Started",
       description: `Uploading ${filesToUpload.length} file(s)...`,
     });
+
+    // Upload each file via API
+    for (let i = 0; i < filesToUpload.length; i++) {
+      const file = filesToUpload[i];
+      const uploadId = newUploadingFiles[i].id;
+      try {
+        await apiUploadFile(
+          file,
+          { folderId: currentFolderId || undefined },
+          (pct) => {
+            setUploadingFiles((prev) =>
+              prev.map((f) => f.id === uploadId ? { ...f, progress: pct } : f)
+            );
+          }
+        );
+        setUploadingFiles((prev) =>
+          prev.map((f) => f.id === uploadId ? { ...f, progress: 100, status: "completed" as const } : f)
+        );
+      } catch (err) {
+        console.error("Upload failed", err);
+        setUploadingFiles((prev) =>
+          prev.map((f) => f.id === uploadId ? { ...f, status: "error" as const } : f)
+        );
+      }
+    }
+
+    // Reload file list
+    loadData();
+    loadStorage();
   };
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -1530,7 +1623,7 @@ const FileManagerPage = () => {
     if (droppedFiles.length > 0) {
       handleUpload(droppedFiles);
     }
-  }, []);
+  }, [currentFolderId]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -1542,50 +1635,49 @@ const FileManagerPage = () => {
     setIsDragging(false);
   }, []);
 
-  const handleCreateFolder = (name: string, color: string) => {
-    const newFolder: FileItem = {
-      id: `f${Date.now()}`,
-      name,
-      type: "folder",
-      size: 0,
-      sizeFormatted: "0 KB",
-      modified: "Just now",
-      modifiedDate: new Date(),
-      created: new Date().toLocaleDateString(),
-      owner: "You",
-      shared: false,
-      starred: false,
-      tags: [],
-      path: `/${name}`,
-      color,
-      filesCount: 0,
-    };
-
-    setFolders((prev) => [newFolder, ...prev]);
-    toast({
-      title: "Folder Created",
-      description: `"${name}" has been created successfully.`,
-    });
-  };
-
-  const handleToggleStar = (item: FileItem) => {
-    if (item.type === "folder") {
-      setFolders((prev) =>
-        prev.map((f) => (f.id === item.id ? { ...f, starred: !f.starred } : f))
-      );
-    } else {
-      setFiles((prev) =>
-        prev.map((f) => (f.id === item.id ? { ...f, starred: !f.starred } : f))
-      );
+  const handleCreateFolder = async (name: string, _color: string) => {
+    try {
+      await apiCreateFolder(name, currentFolderId);
+      toast({
+        title: "Folder Created",
+        description: `"${name}" has been created successfully.`,
+      });
+      loadData();
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to create folder.", variant: "destructive" });
     }
-
-    toast({
-      title: item.starred ? "Removed from Starred" : "Added to Starred",
-      description: `"${item.name}" has been ${item.starred ? "removed from" : "added to"} starred items.`,
-    });
   };
 
-  const handleShare = (item: FileItem) => {
+  const handleToggleStar = async (item: FileItem) => {
+    try {
+      if (item.type === "folder") {
+        await toggleFolderStar(item.id);
+        setFolders((prev) =>
+          prev.map((f) => (f.id === item.id ? { ...f, starred: !f.starred } : f))
+        );
+      } else {
+        await toggleFileStar(item.id);
+        setFiles((prev) =>
+          prev.map((f) => (f.id === item.id ? { ...f, starred: !f.starred } : f))
+        );
+      }
+      toast({
+        title: item.starred ? "Removed from Starred" : "Added to Starred",
+        description: `"${item.name}" has been ${item.starred ? "removed from" : "added to"} starred items.`,
+      });
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to toggle star.", variant: "destructive" });
+    }
+  };
+
+  const handleShare = async (item: FileItem) => {
+    if (item.type === "file") {
+      try {
+        await apiCreateShareLink(item.id);
+      } catch (err) {
+        // ignore — sharing dialog handles display
+      }
+    }
     setShareItem(item);
     setShowShareDialog(true);
   };
@@ -1595,20 +1687,24 @@ const FileManagerPage = () => {
     setShowDeleteConfirm(true);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteItem) return;
-
-    if (deleteItem.type === "folder") {
-      setFolders((prev) => prev.filter((f) => f.id !== deleteItem.id));
-    } else {
-      setFiles((prev) => prev.filter((f) => f.id !== deleteItem.id));
+    try {
+      if (deleteItem.type === "folder") {
+        await apiDeleteFolder(deleteItem.id);
+        setFolders((prev) => prev.filter((f) => f.id !== deleteItem.id));
+      } else {
+        await apiDeleteFile(deleteItem.id);
+        setFiles((prev) => prev.filter((f) => f.id !== deleteItem.id));
+      }
+      toast({
+        title: "Deleted",
+        description: `"${deleteItem.name}" has been moved to trash.`,
+      });
+      loadStorage();
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to delete.", variant: "destructive" });
     }
-
-    toast({
-      title: "Deleted",
-      description: `"${deleteItem.name}" has been moved to trash.`,
-    });
-
     setShowDeleteConfirm(false);
     setDeleteItem(null);
   };
@@ -1628,26 +1724,47 @@ const FileManagerPage = () => {
     }
   };
 
-  const handleBulkDelete = () => {
-    setFolders((prev) => prev.filter((f) => !selectedItems.includes(f.id)));
-    setFiles((prev) => prev.filter((f) => !selectedItems.includes(f.id)));
+  const handleBulkDelete = async () => {
+    try {
+      const fileIds = selectedItems.filter(id => files.some(f => f.id === id));
+      if (fileIds.length > 0) {
+        await bulkDeleteFiles(fileIds);
+      }
+      // Also delete selected folders one by one
+      const folderIds = selectedItems.filter(id => folders.some(f => f.id === id));
+      for (const fId of folderIds) {
+        await apiDeleteFolder(fId);
+      }
 
-    toast({
-      title: "Items Deleted",
-      description: `${selectedItems.length} item(s) have been moved to trash.`,
-    });
+      setFolders((prev) => prev.filter((f) => !selectedItems.includes(f.id)));
+      setFiles((prev) => prev.filter((f) => !selectedItems.includes(f.id)));
 
-    setSelectedItems([]);
+      toast({
+        title: "Items Deleted",
+        description: `${selectedItems.length} item(s) have been moved to trash.`,
+      });
+      setSelectedItems([]);
+      loadStorage();
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to delete items.", variant: "destructive" });
+    }
   };
 
-  const handleDownload = (file: FileItem) => {
-    toast({
-      title: "Download Started",
-      description: `Downloading "${file.name}"...`,
-    });
+  const handleDownload = async (file: FileItem) => {
+    try {
+      toast({
+        title: "Download Started",
+        description: `Downloading "${file.name}"...`,
+      });
+      await apiDownloadFile(file.id, file.name);
+    } catch (err) {
+      toast({ title: "Error", description: "Download failed.", variant: "destructive" });
+    }
   };
 
-  const storagePercentage = Math.round((storageInfo.used / storageInfo.total) * 100);
+  const storageUsed = storage?.totalUsed || 0;
+  const storageTotal = storage?.totalLimit || 10737418240;
+  const storagePercentage = Math.round((storageUsed / storageTotal) * 100);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
@@ -1830,17 +1947,17 @@ const FileManagerPage = () => {
               </div>
               <Progress value={storagePercentage} className="h-2 mb-3" />
               <div className="flex items-center justify-between text-sm">
-                <span className="text-[#94A3B8]">{formatBytes(storageInfo.used)} used</span>
-                <span className="text-[#475569]">of {formatBytes(storageInfo.total)}</span>
+                <span className="text-[#94A3B8]">{formatBytes(storageUsed)} used</span>
+                <span className="text-[#475569]">of {formatBytes(storageTotal)}</span>
               </div>
 
               {/* Storage Breakdown */}
               <div className="mt-4 grid grid-cols-2 gap-2">
                 {[
-                  { label: "Documents", value: storageInfo.breakdown.documents, color: "#3B82F6" },
-                  { label: "Images", value: storageInfo.breakdown.images, color: "#8B5CF6" },
-                  { label: "Videos", value: storageInfo.breakdown.videos, color: "#EC4899" },
-                  { label: "Other", value: storageInfo.breakdown.other, color: "#6B7280" },
+                  { label: "Documents", value: storage?.breakdown?.documents || 0, color: "#3B82F6" },
+                  { label: "Images", value: storage?.breakdown?.images || 0, color: "#8B5CF6" },
+                  { label: "Videos", value: storage?.breakdown?.videos || 0, color: "#EC4899" },
+                  { label: "Other", value: storage?.breakdown?.other || 0, color: "#6B7280" },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center gap-2 text-xs text-[#94A3B8]">
                     <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
@@ -2068,7 +2185,7 @@ const FileManagerPage = () => {
                 <StatCard
                   title="Storage Used"
                   value={stats.totalSize}
-                  subtitle={`${storagePercentage}% of ${formatBytes(storageInfo.total)}`}
+                  subtitle={`${storagePercentage}% of ${formatBytes(storageTotal)}`}
                   icon={Cloud}
                   color="gold"
                   delay={0.1}

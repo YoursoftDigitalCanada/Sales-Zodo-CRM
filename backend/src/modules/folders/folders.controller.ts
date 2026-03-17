@@ -18,6 +18,13 @@ export class FoldersController {
         } catch (e) { next(e); }
     }
 
+    async getTree(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const tree = await foldersService.getTree(req.context.tenantId);
+            sendSuccess(res, tree);
+        } catch (e) { next(e); }
+    }
+
     async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const folder = await foldersService.getById(req.params.id, req.context.tenantId);
@@ -32,9 +39,30 @@ export class FoldersController {
         } catch (e) { next(e); }
     }
 
+    async toggleStar(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const folder = await foldersService.toggleStar(req.params.id, req.context.tenantId);
+            sendSuccess(res, folder, folder.isStarred ? 'Folder starred' : 'Folder unstarred');
+        } catch (e) { next(e); }
+    }
+
     async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             await foldersService.delete(req.params.id, req.context.tenantId);
+            sendNoContent(res);
+        } catch (e) { next(e); }
+    }
+
+    async restore(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const folder = await foldersService.restore(req.params.id, req.context.tenantId);
+            sendSuccess(res, folder, 'Folder restored');
+        } catch (e) { next(e); }
+    }
+
+    async permanentDelete(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            await foldersService.permanentDelete(req.params.id, req.context.tenantId);
             sendNoContent(res);
         } catch (e) { next(e); }
     }

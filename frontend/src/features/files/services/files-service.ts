@@ -204,6 +204,51 @@ export function getDownloadUrl(id: string): string {
     return `${api.defaults.baseURL}/files/${id}/download`;
 }
 
+export function getPreviewUrl(id: string): string {
+    return `${api.defaults.baseURL}/files/${id}/preview`;
+}
+
+// File types that can be previewed in-browser
+const PREVIEWABLE_EXTENSIONS = new Set([
+    'pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp',
+    'mp4', 'webm', 'ogg', 'mov',
+    'mp3', 'wav', 'aac',
+    'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+    'txt', 'csv', 'json', 'xml', 'html',
+]);
+
+const PREVIEWABLE_MIMES = new Set([
+    'application/pdf',
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'image/bmp',
+    'video/mp4', 'video/webm', 'video/ogg',
+    'audio/mpeg', 'audio/wav', 'audio/aac', 'audio/ogg',
+    'text/plain', 'text/csv', 'text/html',
+    'application/json', 'application/xml',
+    'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+]);
+
+export function isPreviewable(file: { extension?: string | null; mimeType?: string; fileType?: string }): boolean {
+    const ext = (file.extension || file.fileType || '').replace('.', '').toLowerCase();
+    if (PREVIEWABLE_EXTENSIONS.has(ext)) return true;
+    if (file.mimeType && PREVIEWABLE_MIMES.has(file.mimeType)) return true;
+    return false;
+}
+
+export function getPreviewType(file: { extension?: string | null; mimeType?: string; fileType?: string }): 'image' | 'video' | 'audio' | 'pdf' | 'office' | 'text' | 'unknown' {
+    const ext = (file.extension || file.fileType || '').replace('.', '').toLowerCase();
+    const mime = file.mimeType || '';
+    
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'].includes(ext) || mime.startsWith('image/')) return 'image';
+    if (['mp4', 'webm', 'ogg', 'mov'].includes(ext) || mime.startsWith('video/')) return 'video';
+    if (['mp3', 'wav', 'aac'].includes(ext) || mime.startsWith('audio/')) return 'audio';
+    if (ext === 'pdf' || mime === 'application/pdf') return 'pdf';
+    if (['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(ext) || mime.includes('msword') || mime.includes('officedocument')) return 'office';
+    if (['txt', 'csv', 'json', 'xml', 'html'].includes(ext) || mime.startsWith('text/')) return 'text';
+    return 'unknown';
+}
+
 export async function downloadFile(id: string, fileName: string): Promise<void> {
     const res = await api.get(`/files/${id}/download`, { responseType: "blob" });
     const blob = new Blob([res.data]);

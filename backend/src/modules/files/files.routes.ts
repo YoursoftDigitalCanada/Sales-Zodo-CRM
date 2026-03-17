@@ -35,6 +35,7 @@ router.delete('/:id',       requirePermission(PERMISSIONS.FILES_DELETE), validat
 
 // File actions
 router.get('/:id/download',      requirePermission(PERMISSIONS.FILES_VIEW),   validate(fileIdSchema), filesController.download.bind(filesController));
+router.get('/:id/preview',       requirePermission(PERMISSIONS.FILES_VIEW),   validate(fileIdSchema), filesController.preview.bind(filesController));
 router.put('/:id/star',           requirePermission(PERMISSIONS.FILES_UPDATE), validate(fileIdSchema), filesController.toggleStar.bind(filesController));
 router.put('/:id/move',           requirePermission(PERMISSIONS.FILES_UPDATE), validate(fileIdSchema), validate(moveFileSchema),  filesController.move.bind(filesController));
 router.post('/:id/copy',          requirePermission(PERMISSIONS.FILES_CREATE), validate(fileIdSchema), validate(copyFileSchema),  filesController.copy.bind(filesController));

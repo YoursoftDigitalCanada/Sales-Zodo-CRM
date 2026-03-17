@@ -127,6 +127,9 @@ import {
   bulkDeleteFiles,
   restoreFile as apiRestoreFile,
   createShareLink as apiCreateShareLink,
+  isPreviewable,
+  getPreviewType,
+  getPreviewUrl,
   type FileResponse,
   type FolderResponse,
   type StorageAnalytics as StorageAnalyticsType,
@@ -1415,6 +1418,144 @@ const ShareDialog = ({
 };
 
 // ============================================
+// FILE PREVIEW DIALOG
+// ============================================
+
+const FilePreviewDialog = ({
+  isOpen,
+  onClose,
+  file,
+  onDownload,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  file: FileItem | null;
+  onDownload: () => void;
+}) => {
+  if (!file) return null;
+
+  const previewType = getPreviewType({ extension: file.fileType, fileType: file.fileType });
+  const previewUrl = getPreviewUrl(file.id);
+  // For office files, use the download URL with Google Docs Viewer
+  const downloadUrl = `${previewUrl}`;
+
+  const renderPreview = () => {
+    switch (previewType) {
+      case 'image':
+        return (
+          <div className="flex items-center justify-center bg-black/5 rounded-lg p-4 min-h-[400px]">
+            <img
+              src={previewUrl}
+              alt={file.name}
+              className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-lg"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+            />
+          </div>
+        );
+      case 'video':
+        return (
+          <div className="bg-black rounded-lg overflow-hidden">
+            <video
+              src={previewUrl}
+              controls
+              autoPlay
+              className="w-full max-h-[70vh]"
+              controlsList="nodownload"
+            >
+              Your browser does not support video playback.
+            </video>
+          </div>
+        );
+      case 'audio':
+        return (
+          <div className="flex flex-col items-center justify-center py-12 gap-6">
+            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#0891B2] to-[#22D3EE] flex items-center justify-center shadow-xl">
+              <Activity size={40} className="text-white" />
+            </div>
+            <audio src={previewUrl} controls autoPlay className="w-full max-w-md">
+              Your browser does not support audio playback.
+            </audio>
+          </div>
+        );
+      case 'pdf':
+        return (
+          <iframe
+            src={previewUrl}
+            className="w-full rounded-lg border border-[rgba(15,23,42,0.06)]"
+            style={{ height: '75vh' }}
+            title={file.name}
+          />
+        );
+      case 'office':
+        return (
+          <div className="w-full" style={{ height: '75vh' }}>
+            <iframe
+              src={`https://docs.google.com/gview?url=${encodeURIComponent(downloadUrl)}&embedded=true`}
+              className="w-full h-full rounded-lg border border-[rgba(15,23,42,0.06)]"
+              title={file.name}
+            />
+          </div>
+        );
+      case 'text':
+        return (
+          <iframe
+            src={previewUrl}
+            className="w-full rounded-lg border border-[rgba(15,23,42,0.06)] bg-white"
+            style={{ height: '75vh' }}
+            title={file.name}
+          />
+        );
+      default:
+        return (
+          <div className="flex flex-col items-center justify-center py-16 gap-4">
+            <FileText size={64} className="text-[#94A3B8]" />
+            <p className="text-[#475569]">Preview not available for this file type</p>
+            <Button onClick={onDownload} className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md">
+              <Download size={16} className="mr-2" /> Download File
+            </Button>
+          </div>
+        );
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-5xl w-[95vw] p-0 rounded-xl overflow-hidden max-h-[95vh]">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-lg bg-[#0891B2]/10 flex items-center justify-center flex-shrink-0">
+              <FileText size={20} className="text-[#0891B2]" />
+            </div>
+            <div className="min-w-0">
+              <h3 className="font-semibold text-[#0F172A] truncate">{file.name}</h3>
+              <p className="text-xs text-[#94A3B8]">{file.fileType?.toUpperCase()} • {file.sizeFormatted} • {file.modified}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onDownload}
+              className="rounded-md border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]"
+            >
+              <Download size={14} className="mr-1" /> Download
+            </Button>
+          </div>
+        </div>
+
+        {/* Preview Content */}
+        <div className="p-4 overflow-auto" style={{ maxHeight: 'calc(95vh - 80px)' }}>
+          {renderPreview()}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// ============================================
 // MAIN FILE MANAGER COMPONENT
 // ============================================
 
@@ -1437,6 +1578,8 @@ const FileManagerPage = () => {
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [breadcrumbs, setBreadcrumbs] = useState<{ id: string | null; name: string }[]>([{ id: null, name: "My Files" }]);
   const [storage, setStorage] = useState<StorageAnalyticsType | null>(null);
+  const [previewFile, setPreviewFile] = useState<FileItem | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   // Dialogs
   const [showCreateFolder, setShowCreateFolder] = useState(false);
@@ -1774,6 +1917,15 @@ const FileManagerPage = () => {
     setCurrentFolderId(crumb.id);
     setBreadcrumbs((prev) => prev.slice(0, index + 1));
     setSelectedItems([]);
+  };
+
+  const handleOpenFile = (file: FileItem) => {
+    if (isPreviewable({ extension: file.fileType, fileType: file.fileType })) {
+      setPreviewFile(file);
+      setShowPreview(true);
+    } else {
+      handleDownload(file);
+    }
   };
 
   const storageUsed = storage?.totalUsed || 0;
@@ -2309,7 +2461,7 @@ const FileManagerPage = () => {
                           file={file}
                           isSelected={selectedItems.includes(file.id)}
                           onSelect={() => handleSelectItem(file.id)}
-                          onOpen={() => handleDownload(file)}
+                          onOpen={() => handleOpenFile(file)}
                           onStar={() => handleToggleStar(file)}
                           onShare={() => handleShare(file)}
                           onDownload={() => handleDownload(file)}
@@ -2330,7 +2482,7 @@ const FileManagerPage = () => {
                           file={file}
                           isSelected={selectedItems.includes(file.id)}
                           onSelect={() => handleSelectItem(file.id)}
-                          onOpen={() => handleDownload(file)}
+                          onOpen={() => handleOpenFile(file)}
                           onStar={() => handleToggleStar(file)}
                           onShare={() => handleShare(file)}
                           onDownload={() => handleDownload(file)}
@@ -2417,6 +2569,19 @@ const FileManagerPage = () => {
           setShareItem(null);
         }}
         item={shareItem}
+      />
+
+      {/* File Preview Dialog */}
+      <FilePreviewDialog
+        isOpen={showPreview}
+        onClose={() => {
+          setShowPreview(false);
+          setPreviewFile(null);
+        }}
+        file={previewFile}
+        onDownload={() => {
+          if (previewFile) handleDownload(previewFile);
+        }}
       />
 
       {/* Delete Confirmation */}

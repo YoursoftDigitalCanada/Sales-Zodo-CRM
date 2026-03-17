@@ -67,6 +67,17 @@ export class FilesController {
         } catch (e) { next(e); }
     }
 
+    // ── PREVIEW (inline) ──
+    async preview(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const { filePath, fileName, mimeType } = await filesService.download(req.params.id, req.context.tenantId);
+            res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(fileName)}"`);
+            res.setHeader('Content-Type', mimeType);
+            res.setHeader('Cache-Control', 'private, max-age=3600');
+            res.sendFile(path.resolve(filePath));
+        } catch (e) { next(e); }
+    }
+
     // ── DOWNLOAD BY SHARE LINK (public) ──
     async downloadByShareLink(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {

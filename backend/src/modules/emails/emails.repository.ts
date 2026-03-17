@@ -16,7 +16,7 @@ export class EmailsRepository {
                 subject: data.subject,
                 bodyText: data.bodyText,
                 bodyHtml: data.bodyHtml,
-                fromAddress: '', // Will be set by service with configured sender
+                fromAddress: data.fromAddress || '',
                 toAddresses: data.toAddresses as unknown as Prisma.InputJsonValue,
                 ccAddresses: data.ccAddresses as unknown as Prisma.InputJsonValue,
                 bccAddresses: data.bccAddresses as unknown as Prisma.InputJsonValue,

@@ -1,8 +1,26 @@
 import { TenantSettings, Currency } from '@prisma/client';
 
 // ============================================================================
-// SETTINGS DTOs - Using TenantSettings model (not non-existent "Setting")
+// SETTINGS DTOs - Using TenantSettings model
 // ============================================================================
+
+export interface SmtpSettings {
+    smtpHost?: string;
+    smtpPort?: number;
+    smtpUser?: string;
+    smtpPass?: string;
+    senderName?: string;
+    senderEmail?: string;
+}
+
+export interface CompanyProfile {
+    companyName?: string;
+    companyDomain?: string;
+    companyEmail?: string;
+    companyPhone?: string;
+    companyAddress?: string;
+    taxId?: string;
+}
 
 export interface UpdateSettingsDto {
     timezone?: string;
@@ -17,6 +35,12 @@ export interface UpdateSettingsDto {
     invoiceNotes?: string | null;
     emailSignature?: string | null;
     notificationSettings?: Record<string, unknown>;
+    // SMTP settings (stored inside integrations JSON)
+    smtpSettings?: SmtpSettings;
+    // Company profile (stored inside integrations JSON)
+    companyProfile?: CompanyProfile;
+    // Dark mode preference
+    darkMode?: boolean;
 }
 
 export interface SettingsResponseDto {
@@ -33,10 +57,15 @@ export interface SettingsResponseDto {
     invoiceNotes: string | null;
     emailSignature: string | null;
     notificationSettings: Record<string, unknown>;
+    // Extracted from integrations JSON for convenience
+    smtpSettings: SmtpSettings;
+    companyProfile: CompanyProfile;
+    darkMode: boolean;
     updatedAt: Date;
 }
 
 export function toSettingsResponseDto(s: TenantSettings): SettingsResponseDto {
+    const integrations = (s.integrations as Record<string, any>) || {};
     return {
         id: s.id,
         timezone: s.timezone,
@@ -51,6 +80,23 @@ export function toSettingsResponseDto(s: TenantSettings): SettingsResponseDto {
         invoiceNotes: s.invoiceNotes,
         emailSignature: s.emailSignature,
         notificationSettings: (s.notificationSettings as Record<string, unknown>) || {},
+        smtpSettings: {
+            smtpHost: integrations.smtpHost || '',
+            smtpPort: integrations.smtpPort || 587,
+            smtpUser: integrations.smtpUser || '',
+            smtpPass: integrations.smtpPass ? '••••••••' : '', // Never send raw password
+            senderName: integrations.senderName || '',
+            senderEmail: integrations.senderEmail || '',
+        },
+        companyProfile: {
+            companyName: integrations.companyName || '',
+            companyDomain: integrations.companyDomain || '',
+            companyEmail: integrations.companyEmail || '',
+            companyPhone: integrations.companyPhone || '',
+            companyAddress: integrations.companyAddress || '',
+            taxId: integrations.taxId || '',
+        },
+        darkMode: integrations.darkMode || false,
         updatedAt: s.updatedAt,
     };
 }

@@ -3,6 +3,8 @@ import { SendEmailDto, EmailQueryDto, toEmailResponseDto } from './emails.dto';
 import { NotFoundError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
 import { activityLogger } from '../../common/services/activity-logger.service';
+import { mailerService } from '../../common/services/mailer.service';
+import { settingsRepository } from '../settings/settings.repository';
 
 export class EmailsService {
     async getEmailById(id: string, tenantId: string) {
@@ -21,8 +23,51 @@ export class EmailsService {
     }
 
     async sendEmail(tenantId: string, data: SendEmailDto, sentById?: string) {
-        const email = await emailsRepository.send(tenantId, data, sentById);
+        // 1. Get tenant SMTP config
+        const smtpConfig = await settingsRepository.getSmtpConfig(tenantId);
+
+        // 2. Determine sender address
+        const senderEmail = smtpConfig?.senderEmail || smtpConfig?.user || '';
+        const senderName = smtpConfig?.senderName || 'ZODO CRM';
+
+        // 3. Save the email record in DB
+        const email = await emailsRepository.send(tenantId, {
+            ...data,
+            fromAddress: senderEmail,
+        }, sentById);
         const dto = toEmailResponseDto(email);
+
+        // 4. Actually deliver the email via SMTP
+        const toAddresses = Array.isArray(data.toAddresses)
+            ? data.toAddresses.map((a: any) => typeof a === 'string' ? a : a.email).filter(Boolean)
+            : [];
+
+        if (toAddresses.length > 0) {
+            let sent = false;
+
+            // Try tenant-specific SMTP first
+            if (smtpConfig && smtpConfig.host && smtpConfig.user && smtpConfig.pass) {
+                sent = await mailerService.sendMailWithConfig(
+                    { host: smtpConfig.host, port: smtpConfig.port, user: smtpConfig.user, pass: smtpConfig.pass, senderName, senderEmail },
+                    { to: toAddresses, subject: data.subject, html: data.bodyHtml || data.bodyText || '', text: data.bodyText }
+                );
+            }
+
+            // Fallback to global SMTP (env vars)
+            if (!sent) {
+                sent = await mailerService.sendMail({
+                    to: toAddresses,
+                    subject: data.subject,
+                    html: data.bodyHtml || data.bodyText || '',
+                    text: data.bodyText,
+                });
+            }
+
+            // Update status based on delivery result
+            if (!sent) {
+                console.warn(`⚠️ Email ${dto.id} saved but SMTP delivery failed — no SMTP configured or connection error`);
+            }
+        }
 
         activityLogger.log({
             tenantId, entityType: 'Email', entityId: dto.id,

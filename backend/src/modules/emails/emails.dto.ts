@@ -14,6 +14,7 @@ export interface SendEmailDto {
     subject: string;
     bodyText?: string;
     bodyHtml?: string;
+    fromAddress?: string;
 }
 
 export interface EmailQueryDto {

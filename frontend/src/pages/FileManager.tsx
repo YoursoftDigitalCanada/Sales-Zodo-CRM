@@ -1435,6 +1435,7 @@ const FileManagerPage = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [loading, setLoading] = useState(true);
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  const [breadcrumbs, setBreadcrumbs] = useState<{ id: string | null; name: string }[]>([{ id: null, name: "My Files" }]);
   const [storage, setStorage] = useState<StorageAnalyticsType | null>(null);
 
   // Dialogs
@@ -1762,6 +1763,19 @@ const FileManagerPage = () => {
     }
   };
 
+  const handleOpenFolder = (folder: FileItem) => {
+    setCurrentFolderId(folder.id);
+    setBreadcrumbs((prev) => [...prev, { id: folder.id, name: folder.name }]);
+    setSelectedItems([]);
+  };
+
+  const handleNavigateBreadcrumb = (index: number) => {
+    const crumb = breadcrumbs[index];
+    setCurrentFolderId(crumb.id);
+    setBreadcrumbs((prev) => prev.slice(0, index + 1));
+    setSelectedItems([]);
+  };
+
   const storageUsed = storage?.totalUsed || 0;
   const storageTotal = storage?.totalLimit || 10737418240;
   const storagePercentage = Math.round((storageUsed / storageTotal) * 100);
@@ -1810,9 +1824,26 @@ const FileManagerPage = () => {
                 <div className="hidden sm:flex items-center gap-2 text-sm text-[#94A3B8] mb-1">
                   <span>Dashboard</span>
                   <ChevronRight size={14} />
-                  <span className="text-[#0891B2] font-medium">File Manager</span>
+                  {breadcrumbs.map((crumb, index) => (
+                    <React.Fragment key={crumb.id ?? 'root'}>
+                      {index > 0 && <ChevronRight size={14} />}
+                      <button
+                        onClick={() => handleNavigateBreadcrumb(index)}
+                        className={cn(
+                          "hover:text-[#0891B2] transition-colors",
+                          index === breadcrumbs.length - 1
+                            ? "text-[#0891B2] font-medium"
+                            : "text-[#94A3B8]"
+                        )}
+                      >
+                        {crumb.name}
+                      </button>
+                    </React.Fragment>
+                  ))}
                 </div>
-                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">File Manager</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">
+                  {breadcrumbs.length > 1 ? breadcrumbs[breadcrumbs.length - 1].name : "File Manager"}
+                </h1>
               </div>
 
               {/* Header Actions */}
@@ -1821,6 +1852,7 @@ const FileManagerPage = () => {
                   variant="outline"
                   size="sm"
                   className="rounded-md border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE] hover:text-[#0891B2]"
+                  onClick={() => { loadData(); loadStorage(); }}
                 >
                   <RefreshCw size={16} className="sm:mr-2" />
                   <span className="hidden sm:inline">Sync</span>
@@ -2225,12 +2257,7 @@ const FileManagerPage = () => {
                           folder={folder}
                           isSelected={selectedItems.includes(folder.id)}
                           onSelect={() => handleSelectItem(folder.id)}
-                          onOpen={() => {
-                            toast({
-                              title: "Opening Folder",
-                              description: `Opening "${folder.name}"...`,
-                            });
-                          }}
+                          onOpen={() => handleOpenFolder(folder)}
                           onStar={() => handleToggleStar(folder)}
                           onShare={() => handleShare(folder)}
                           onRename={() => {
@@ -2250,12 +2277,7 @@ const FileManagerPage = () => {
                           folder={folder}
                           isSelected={selectedItems.includes(folder.id)}
                           onSelect={() => handleSelectItem(folder.id)}
-                          onOpen={() => {
-                            toast({
-                              title: "Opening Folder",
-                              description: `Opening "${folder.name}"...`,
-                            });
-                          }}
+                          onOpen={() => handleOpenFolder(folder)}
                           onStar={() => handleToggleStar(folder)}
                           onShare={() => handleShare(folder)}
                           onRename={() => {
@@ -2287,12 +2309,7 @@ const FileManagerPage = () => {
                           file={file}
                           isSelected={selectedItems.includes(file.id)}
                           onSelect={() => handleSelectItem(file.id)}
-                          onOpen={() => {
-                            toast({
-                              title: "Preview",
-                              description: `Opening "${file.name}"...`,
-                            });
-                          }}
+                          onOpen={() => handleDownload(file)}
                           onStar={() => handleToggleStar(file)}
                           onShare={() => handleShare(file)}
                           onDownload={() => handleDownload(file)}
@@ -2313,12 +2330,7 @@ const FileManagerPage = () => {
                           file={file}
                           isSelected={selectedItems.includes(file.id)}
                           onSelect={() => handleSelectItem(file.id)}
-                          onOpen={() => {
-                            toast({
-                              title: "Preview",
-                              description: `Opening "${file.name}"...`,
-                            });
-                          }}
+                          onOpen={() => handleDownload(file)}
                           onStar={() => handleToggleStar(file)}
                           onShare={() => handleShare(file)}
                           onDownload={() => handleDownload(file)}

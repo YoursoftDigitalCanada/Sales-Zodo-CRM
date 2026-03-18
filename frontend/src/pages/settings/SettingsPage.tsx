@@ -20,6 +20,33 @@ import {
 
 import { useLocation } from "react-router-dom";
 
+// ── Reusable UI components (defined outside SettingsPage to prevent re-mount on state change) ──
+
+const Field = ({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) => (
+    <div className="space-y-1.5">
+        <label className="text-sm font-medium text-[#0F172A]">{label}</label>
+        {children}
+        {hint && <p className="text-[11px] text-[#94A3B8]">{hint}</p>}
+    </div>
+);
+
+const Toggle = ({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) => (
+    <button onClick={onToggle} className={cn("relative w-11 h-6 rounded-full transition-colors", enabled ? "bg-[#6637F4]" : "bg-[#CBD5E1]")}>
+        <span className={cn("absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform", enabled ? "left-[22px]" : "left-0.5")} />
+    </button>
+);
+
+const SaveButton = ({ onClick, section, isSaving, label = "Save Changes" }: { onClick: () => void; section: string; isSaving: string | null; label?: string }) => (
+    <button
+        onClick={onClick}
+        disabled={isSaving === section}
+        className="flex items-center gap-2 px-5 py-2.5 bg-[#6637F4] text-white rounded-lg text-sm font-medium hover:bg-[#6637F4]/90 transition-colors disabled:opacity-60"
+    >
+        {isSaving === section ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+        {isSaving === section ? "Saving..." : label}
+    </button>
+);
+
 export default function SettingsPage() {
     
     const [activeTab, setActiveTab] = useState<SettingsTab>("general");
@@ -267,35 +294,10 @@ export default function SettingsPage() {
         toast({ title: "Test Email Sent", description: `A test email will be sent to ${smtpUser || senderEmail || 'configured address'}.` });
     };
 
-    // ── Reusable UI components ──
-
-    const Field = ({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) => (
-        <div className="space-y-1.5">
-            <label className="text-sm font-medium text-[#0F172A]">{label}</label>
-            {children}
-            {hint && <p className="text-[11px] text-[#94A3B8]">{hint}</p>}
-        </div>
-    );
+    // ── Reusable UI constants ──
 
     const inputClass = "w-full h-10 px-4 rounded-lg border border-[rgba(15,23,42,0.12)] bg-[#F8FAFC] text-sm text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#6637F4]/20 focus:border-[#6637F4]/30 transition-all";
     const selectClass = inputClass + " appearance-none cursor-pointer";
-
-    const Toggle = ({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) => (
-        <button onClick={onToggle} className={cn("relative w-11 h-6 rounded-full transition-colors", enabled ? "bg-[#6637F4]" : "bg-[#CBD5E1]")}>
-            <span className={cn("absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform", enabled ? "left-[22px]" : "left-0.5")} />
-        </button>
-    );
-
-    const SaveButton = ({ onClick, section, label = "Save Changes" }: { onClick: () => void; section: string; label?: string }) => (
-        <button
-            onClick={onClick}
-            disabled={isSaving === section}
-            className="flex items-center gap-2 px-5 py-2.5 bg-[#6637F4] text-white rounded-lg text-sm font-medium hover:bg-[#6637F4]/90 transition-colors disabled:opacity-60"
-        >
-            {isSaving === section ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-            {isSaving === section ? "Saving..." : label}
-        </button>
-    );
 
     // ── Loading skeleton ──
     if (isLoading) {
@@ -428,7 +430,7 @@ export default function SettingsPage() {
                                             </Field>
                                         </div>
                                         <div className="flex justify-end mt-6">
-                                            <SaveButton onClick={handleSaveGeneral} section="general" />
+                                            <SaveButton onClick={handleSaveGeneral} section="general" isSaving={isSaving} />
                                         </div>
                                     </div>
 
@@ -453,7 +455,7 @@ export default function SettingsPage() {
                                             ))}
                                         </div>
                                         <div className="flex justify-end mt-4">
-                                            <SaveButton onClick={handleSaveNotifications} section="notifications" />
+                                            <SaveButton onClick={handleSaveNotifications} section="notifications" isSaving={isSaving} />
                                         </div>
                                     </div>
                                 </>
@@ -513,7 +515,7 @@ export default function SettingsPage() {
                                             </Field>
                                         </div>
                                         <div className="flex justify-end mt-6">
-                                            <SaveButton onClick={handleSaveCompany} section="company" />
+                                            <SaveButton onClick={handleSaveCompany} section="company" isSaving={isSaving} />
                                         </div>
                                     </div>
                                 </>
@@ -673,7 +675,7 @@ export default function SettingsPage() {
                                             <button onClick={handleTestEmail} className="flex items-center gap-2 px-4 py-2 bg-white border border-[rgba(15,23,42,0.12)] text-[#0F172A] rounded-lg text-sm font-medium hover:bg-[#F8FAFC]">
                                                 <Mail size={14} /> Send Test Email
                                             </button>
-                                            <SaveButton onClick={handleSaveSmtp} section="smtp" label="Save SMTP" />
+                                            <SaveButton onClick={handleSaveSmtp} section="smtp" label="Save SMTP" isSaving={isSaving} />
                                         </div>
                                     </div>
 
@@ -695,7 +697,7 @@ export default function SettingsPage() {
                                             </Field>
                                         </div>
                                         <div className="flex justify-end mt-5">
-                                            <SaveButton onClick={handleSaveEmailSender} section="emailSender" />
+                                            <SaveButton onClick={handleSaveEmailSender} section="emailSender" isSaving={isSaving} />
                                         </div>
                                     </div>
                                 </>
@@ -725,7 +727,7 @@ export default function SettingsPage() {
                                             </Field>
                                         </div>
                                         <div className="flex justify-end mt-5">
-                                            <SaveButton onClick={handleSaveSecurity} section="security" />
+                                            <SaveButton onClick={handleSaveSecurity} section="security" isSaving={isSaving} />
                                         </div>
                                     </div>
 

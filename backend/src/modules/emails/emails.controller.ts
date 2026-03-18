@@ -41,6 +41,22 @@ export class EmailsController {
         } catch (e) { next(e); }
     }
 
+    async toggleStar(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const { isStarred } = req.body;
+            const email = await emailsService.toggleStar(req.params.id, req.context.tenantId, isStarred);
+            sendSuccess(res, email, isStarred ? 'Email starred' : 'Email unstarred');
+        } catch (e) { next(e); }
+    }
+
+    async moveToFolder(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const { folder } = req.body;
+            const email = await emailsService.moveToFolder(req.params.id, req.context.tenantId, folder);
+            sendSuccess(res, email, `Email moved to ${folder}`);
+        } catch (e) { next(e); }
+    }
+
     async fetchNow(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const result = await imapPoller.fetchForTenant(req.context.tenantId);

@@ -16,6 +16,8 @@ router.post('/send', requirePermission(PERMISSIONS.EMAILS_SEND), validate(sendEm
 router.post('/fetch-now', requirePermission(PERMISSIONS.EMAILS_VIEW), emailsController.fetchNow.bind(emailsController));
 router.get('/:id', requirePermission(PERMISSIONS.EMAILS_VIEW), validate(emailIdSchema), emailsController.getEmailById.bind(emailsController));
 router.patch('/:id/read', requirePermission(PERMISSIONS.EMAILS_VIEW), validate(emailIdSchema), emailsController.markAsRead.bind(emailsController));
+router.patch('/:id/star', requirePermission(PERMISSIONS.EMAILS_VIEW), validate(emailIdSchema), emailsController.toggleStar.bind(emailsController));
+router.patch('/:id/folder', requirePermission(PERMISSIONS.EMAILS_VIEW), validate(emailIdSchema), emailsController.moveToFolder.bind(emailsController));
 router.delete('/:id', requirePermission(PERMISSIONS.EMAILS_DELETE), validate(emailIdSchema), emailsController.deleteEmail.bind(emailsController));
 
 export default router;

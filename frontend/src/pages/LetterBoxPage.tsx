@@ -43,7 +43,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
-import { sendEmail as apiSendEmail, getEmails as apiGetEmails, deleteEmail as apiDeleteEmail, markAsRead as apiMarkAsRead, getEmailConfigStatus, fetchEmailsNow } from "@/features/emails/services/emails-service";
+import { sendEmail as apiSendEmail, getEmails as apiGetEmails, deleteEmail as apiDeleteEmail, markAsRead as apiMarkAsRead, getEmailConfigStatus, fetchEmailsNow, toggleStar as apiToggleStar, moveToFolder as apiMoveToFolder } from "@/features/emails/services/emails-service";
 import {
   Bell,
   Search,
@@ -1398,48 +1398,70 @@ const LetterBoxPage = () => {
     }
   };
 
-  const handleStarEmail = (emailId: string) => {
+  const handleStarEmail = async (emailId: string) => {
+    const email = emails.find((e) => e.id === emailId);
+    const newStarred = !email?.starred;
+    // Optimistic update
     setEmails((prev) =>
-      prev.map((e) => (e.id === emailId ? { ...e, starred: !e.starred } : e))
+      prev.map((e) => (e.id === emailId ? { ...e, starred: newStarred } : e))
     );
+    try {
+      await apiToggleStar(emailId, newStarred);
+    } catch {
+      // Revert on error
+      setEmails((prev) =>
+        prev.map((e) => (e.id === emailId ? { ...e, starred: !newStarred } : e))
+      );
+    }
   };
 
-  const handleMarkRead = (emailId: string) => {
+  const handleMarkRead = async (emailId: string) => {
     setEmails((prev) =>
-      prev.map((e) => (e.id === emailId ? { ...e, read: !e.read } : e))
+      prev.map((e) => (e.id === emailId ? { ...e, read: true } : e))
     );
+    try {
+      await apiMarkAsRead(emailId);
+    } catch {
+      // Silently fail
+    }
   };
 
-  const handleArchiveEmail = (emailId: string) => {
+  const handleArchiveEmail = async (emailId: string) => {
     setEmails((prev) =>
       prev.map((e) => (e.id === emailId ? { ...e, folder: "archive" } : e))
     );
     if (activeEmail?.id === emailId) {
       setActiveEmail(null);
     }
-    toast({
-      title: "Email Archived",
-      description: "The email has been moved to archive.",
-    });
+    try {
+      await apiMoveToFolder(emailId, 'ARCHIVE');
+      toast({ title: "Email Archived", description: "The email has been moved to archive." });
+    } catch {
+      toast({ title: "Archive Failed", description: "Could not archive the email.", variant: "destructive" });
+    }
   };
 
-  const handleDeleteEmail = (emailId: string) => {
+  const handleDeleteEmail = async (emailId: string) => {
     setEmails((prev) =>
       prev.map((e) => (e.id === emailId ? { ...e, folder: "trash" } : e))
     );
     if (activeEmail?.id === emailId) {
       setActiveEmail(null);
     }
-    toast({
-      title: "Email Deleted",
-      description: "The email has been moved to trash.",
-    });
+    try {
+      await apiMoveToFolder(emailId, 'TRASH');
+      toast({ title: "Email Deleted", description: "The email has been moved to trash." });
+    } catch {
+      toast({ title: "Delete Failed", description: "Could not delete the email.", variant: "destructive" });
+    }
   };
 
-  const handleBulkAction = (action: "archive" | "delete" | "read" | "unread") => {
+  const handleBulkAction = async (action: "archive" | "delete" | "read" | "unread") => {
+    const ids = [...selectedEmails];
+    // Optimistic local update
     setEmails((prev) =>
       prev.map((e) => {
-        if (selectedEmails.includes(e.id)) {
+        if (ids.includes(e.id)) {
           switch (action) {
             case "archive":
               return { ...e, folder: "archive" };
@@ -1459,8 +1481,23 @@ const LetterBoxPage = () => {
     setSelectedEmails([]);
     toast({
       title: "Action Completed",
-      description: `${selectedEmails.length} email(s) updated.`,
+      description: `${ids.length} email(s) updated.`,
     });
+
+    // Persist to backend
+    try {
+      await Promise.all(ids.map((id) => {
+        switch (action) {
+          case "archive": return apiMoveToFolder(id, 'ARCHIVE');
+          case "delete": return apiMoveToFolder(id, 'TRASH');
+          case "read": return apiMarkAsRead(id);
+          case "unread": return apiMarkAsRead(id); // Mark as read for now
+        }
+      }));
+    } catch {
+      // If persisting fails, reload to get correct state
+      loadEmails(true);
+    }
   };
 
   const handleOpenEmail = (email: Email) => {

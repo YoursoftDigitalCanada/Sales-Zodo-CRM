@@ -47,6 +47,16 @@ export async function deleteEmail(id: string): Promise<void> {
     await api.delete(`/emails/${id}`);
 }
 
+export async function toggleStar(id: string, isStarred: boolean): Promise<EmailResponse> {
+    const response = await api.patch(`/emails/${id}/star`, { isStarred });
+    return response.data?.data || response.data;
+}
+
+export async function moveToFolder(id: string, folder: string): Promise<EmailResponse> {
+    const response = await api.patch(`/emails/${id}/folder`, { folder });
+    return response.data?.data || response.data;
+}
+
 export async function getEmailConfigStatus(): Promise<{ smtpConfigured: boolean; imapConfigured: boolean }> {
     const response = await api.get("/emails/config-status");
     return response.data?.data || response.data;

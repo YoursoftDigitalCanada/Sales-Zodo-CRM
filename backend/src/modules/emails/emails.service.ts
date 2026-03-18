@@ -1,4 +1,5 @@
 import { emailsRepository } from './emails.repository';
+import { EmailFolder } from '@prisma/client';
 import { SendEmailDto, EmailQueryDto, toEmailResponseDto } from './emails.dto';
 import { NotFoundError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
@@ -84,6 +85,20 @@ export class EmailsService {
         const existing = await emailsRepository.findById(id, tenantId);
         if (!existing) throw new NotFoundError('Email not found', ErrorCodes.RESOURCE_NOT_FOUND);
         const email = await emailsRepository.markAsRead(id, tenantId);
+        return toEmailResponseDto(email);
+    }
+
+    async toggleStar(id: string, tenantId: string, isStarred: boolean) {
+        const existing = await emailsRepository.findById(id, tenantId);
+        if (!existing) throw new NotFoundError('Email not found', ErrorCodes.RESOURCE_NOT_FOUND);
+        const email = await emailsRepository.toggleStar(id, tenantId, isStarred);
+        return toEmailResponseDto(email);
+    }
+
+    async moveToFolder(id: string, tenantId: string, folder: EmailFolder) {
+        const existing = await emailsRepository.findById(id, tenantId);
+        if (!existing) throw new NotFoundError('Email not found', ErrorCodes.RESOURCE_NOT_FOUND);
+        const email = await emailsRepository.moveToFolder(id, tenantId, folder);
         return toEmailResponseDto(email);
     }
 

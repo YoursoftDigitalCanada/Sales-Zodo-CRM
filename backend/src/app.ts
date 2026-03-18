@@ -1,6 +1,7 @@
 import express, { Application, Request, Response } from 'express';
 import helmet from 'helmet';
 import compression from 'compression';
+import path from 'path';
 import { config } from './config';
 
 // Middleware imports
@@ -63,6 +64,9 @@ export function createApp(): Application {
 
   // Compression
   app.use(compression());
+
+  // Static uploads for company logos and other local assets
+  app.use('/uploads', express.static(path.resolve(config.upload.uploadPath)));
 
   // =========================================================================
   // REQUEST TRACKING MIDDLEWARE

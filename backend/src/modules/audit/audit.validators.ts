@@ -1,0 +1,38 @@
+import { z } from 'zod';
+
+export const auditLogQuerySchema = z.object({
+  query: z.object({
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+    sortBy: z.enum(['createdAt', 'module', 'action']).default('createdAt'),
+    sortOrder: z.enum(['asc', 'desc']).default('desc'),
+    action: z.enum([
+      'CREATE',
+      'UPDATE',
+      'DELETE',
+      'VIEW',
+      'EXPORT',
+      'IMPORT',
+      'LOGIN',
+      'LOGOUT',
+      'APPROVE',
+      'REJECT',
+      'ASSIGN',
+      'CONVERT',
+      'SEND',
+      'PAY',
+      'SYNC',
+      'ARCHIVE',
+      'RESTORE',
+      'STATUS_CHANGE',
+      'PERMISSION_CHANGE',
+    ]).optional(),
+    module: z.string().max(100).optional(),
+    entityType: z.string().max(100).optional(),
+    entityId: z.string().optional(),
+    userId: z.string().uuid().optional(),
+    startDate: z.coerce.date().optional(),
+    endDate: z.coerce.date().optional(),
+    search: z.string().max(255).optional(),
+  }),
+});

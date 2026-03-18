@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { imapService } from './imap.service';
+import { settingsRepository } from '../../modules/settings/settings.repository';
 
 const prisma = new PrismaClient();
 
@@ -36,20 +37,20 @@ class ImapPollerService {
         try {
             // Find all tenant settings with IMAP configured
             const allSettings = await prisma.tenantSettings.findMany({
-                select: { tenantId: true, integrations: true },
+                select: { tenantId: true },
             });
 
             for (const settings of allSettings) {
-                const integrations = (settings.integrations as Record<string, any>) || {};
-                const imapHost = integrations.imapHost;
-                const imapUser = integrations.imapUser;
-                const imapPass = integrations.imapPass;
+                const imapConfig = await settingsRepository.getImapConfig(settings.tenantId);
+                const imapHost = imapConfig.host;
+                const imapUser = imapConfig.user;
+                const imapPass = imapConfig.pass;
 
                 if (imapHost && imapUser && imapPass) {
                     try {
                         await imapService.fetchNewEmails(settings.tenantId, {
                             host: imapHost,
-                            port: integrations.imapPort || 993,
+                            port: imapConfig.port || 993,
                             user: imapUser,
                             pass: imapPass,
                         });
@@ -69,17 +70,10 @@ class ImapPollerService {
      * Trigger an immediate fetch for a specific tenant.
      */
     async fetchForTenant(tenantId: string) {
-        const settings = await prisma.tenantSettings.findUnique({
-            where: { tenantId },
-            select: { integrations: true },
-        });
-
-        if (!settings) return { fetched: 0, error: 'No settings found' };
-
-        const integrations = (settings.integrations as Record<string, any>) || {};
-        const imapHost = integrations.imapHost;
-        const imapUser = integrations.imapUser;
-        const imapPass = integrations.imapPass;
+        const imapConfig = await settingsRepository.getImapConfig(tenantId);
+        const imapHost = imapConfig.host;
+        const imapUser = imapConfig.user;
+        const imapPass = imapConfig.pass;
 
         if (!imapHost || !imapUser || !imapPass) {
             return { fetched: 0, error: 'IMAP not configured' };
@@ -88,7 +82,7 @@ class ImapPollerService {
         try {
             const fetched = await imapService.fetchNewEmails(tenantId, {
                 host: imapHost,
-                port: integrations.imapPort || 993,
+                port: imapConfig.port || 993,
                 user: imapUser,
                 pass: imapPass,
             });

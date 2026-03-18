@@ -27,6 +27,7 @@ import { config } from '../../config';
 import { logger } from '../../common/utils/logger';
 import { getModulesForPermissions } from '../../common/constants/modules';
 import { onboardingService } from '../tenants/onboarding.service';
+import { settingsManager } from '../settings/settings.manager';
 
 export class AuthService {
   /**
@@ -94,6 +95,8 @@ export class AuthService {
         ErrorCodes.TENANT_SUSPENDED
       );
     }
+
+    await settingsManager.assertIpAllowed(employee.tenantId, metadata.ipAddress);
 
     // Generate tokens (tenantId + role from DB, not frontend)
     const tokens = await this.generateTokens(
@@ -337,6 +340,8 @@ export class AuthService {
         ErrorCodes.TENANT_ACCESS_DENIED
       );
     }
+
+    await settingsManager.assertIpAllowed(employee.tenantId, metadata.ipAddress);
 
     // Generate new tokens (token rotation — tenantId + role from DB)
     const newTokens = await this.generateTokens(
@@ -700,16 +705,20 @@ export class AuthService {
 
     // Calculate expiry
     const expiresAt = getTokenExpiry(refreshToken);
+    const sessionTimeoutMinutes = await settingsManager.getSessionTimeoutMinutes(tenantId);
 
     if (!expiresAt) {
       throw new Error('Failed to generate token expiry');
     }
 
+    const sessionExpiry = new Date(Date.now() + sessionTimeoutMinutes * 60 * 1000);
+    const effectiveExpiry = expiresAt < sessionExpiry ? expiresAt : sessionExpiry;
+
     // Store refresh token
     await authRepository.createRefreshToken({
       token: refreshToken,
       userId,
-      expiresAt,
+      expiresAt: effectiveExpiry,
       userAgent: metadata.userAgent,
       ipAddress: metadata.ipAddress,
     });

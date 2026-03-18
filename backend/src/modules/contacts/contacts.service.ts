@@ -12,12 +12,14 @@ import {
 import { ErrorCodes } from '../../common/errors/errorCodes';
 import { activityLogger } from '../../common/services/activity-logger.service';
 import { eventBus } from '../../common/events/event-bus';
+import { settingsManager } from '../settings/settings.manager';
 
 export class ContactsService {
     /**
      * Create a new contact
      */
     async create(tenantId: string, data: CreateContactDto): Promise<ContactResponseDto> {
+        await settingsManager.assertUsageWithinPlan(tenantId, 'contacts');
         const contact = await contactsRepository.create(tenantId, data);
         const dto = toContactResponseDto(contact);
 

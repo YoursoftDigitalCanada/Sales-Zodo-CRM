@@ -1,88 +1,202 @@
-import { PrismaClient, Prisma } from '@prisma/client';
-import { CreateUserDto, UpdateUserDto, UserQueryDto } from './users.dto';
 import bcrypt from 'bcryptjs';
+import { Prisma, UserStatus } from '@prisma/client';
+import { prisma } from '../../config/database';
+import { type CreateUserDto, type UpdateUserDto, type UserQueryDto } from './users.dto';
 
-const prisma = new PrismaClient();
+const tenantMembershipInclude = (tenantId: string) => ({
+  employees: {
+    where: { tenantId },
+    select: {
+      id: true,
+      isActive: true,
+      role: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+  },
+});
 
 export class UsersRepository {
-    async create(data: CreateUserDto) {
-        const hashedPassword = await bcrypt.hash(data.password, 10);
+  async findRoleById(roleId: string, tenantId: string) {
+    return prisma.role.findFirst({
+      where: {
+        id: roleId,
+        tenantId,
+      },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+  }
 
-        return prisma.user.create({
-            data: {
-                tenantId: data.tenantId,
-                email: data.email,
-                passwordHash: hashedPassword,
-                firstName: data.firstName,
-                lastName: data.lastName,
-                phone: data.phone,
-            },
-        });
-    }
+  async findDefaultRole(tenantId: string) {
+    return prisma.role.findFirst({
+      where: {
+        tenantId,
+        isDefault: true,
+      },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+  }
 
-    async findById(id: string) {
-        return prisma.user.findUnique({
-            where: { id },
-        });
-    }
+  async createWithMembership(data: CreateUserDto, tenantId: string) {
+    const hashedPassword = await bcrypt.hash(data.password || '', 10);
 
-    async findByEmail(email: string) {
-        return prisma.user.findUnique({
-            where: { email },
-        });
-    }
+    return prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          tenantId,
+          email: data.email.toLowerCase(),
+          passwordHash: hashedPassword,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phone: data.phone || null,
+          status: 'ACTIVE',
+          emailVerified: true,
+          employees: data.roleId
+            ? {
+                create: {
+                  tenantId,
+                  roleId: data.roleId,
+                  isActive: true,
+                },
+              }
+            : undefined,
+          userPreferences: {
+            create: {},
+          },
+        },
+        include: tenantMembershipInclude(tenantId),
+      });
 
-    async findMany(query: UserQueryDto, tenantId?: string) {
-        const { page = 1, limit = 20, search, status, sortBy = 'createdAt', sortOrder = 'desc' } = query;
+      return user;
+    });
+  }
 
-        const where: Prisma.UserWhereInput = {
-            ...(tenantId && { tenantId }),
-            ...(status && { status }),
-            ...(search && {
-                OR: [
-                    { firstName: { contains: search, mode: 'insensitive' as const } },
-                    { lastName: { contains: search, mode: 'insensitive' as const } },
-                    { email: { contains: search, mode: 'insensitive' as const } },
-                ],
-            }),
-        };
+  async findById(id: string, tenantId: string) {
+    return prisma.user.findFirst({
+      where: {
+        id,
+        employees: {
+          some: { tenantId },
+        },
+      },
+      include: tenantMembershipInclude(tenantId),
+    });
+  }
 
-        const [data, total] = await Promise.all([
-            prisma.user.findMany({
-                where,
-                orderBy: { [sortBy]: sortOrder },
-                skip: (page - 1) * limit,
-                take: limit,
-            }),
-            prisma.user.count({ where }),
-        ]);
+  async findByEmail(email: string) {
+    return prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+    });
+  }
 
-        return { data, total };
-    }
+  async findMany(query: UserQueryDto, tenantId: string) {
+    const { page = 1, limit = 20, search, status, sortBy = 'createdAt', sortOrder = 'desc' } = query;
 
-    async update(id: string, data: UpdateUserDto) {
-        return prisma.user.update({
-            where: { id },
-            data: {
-                ...(data.firstName !== undefined && { firstName: data.firstName }),
-                ...(data.lastName !== undefined && { lastName: data.lastName }),
-                ...(data.phone !== undefined && { phone: data.phone }),
-                ...(data.avatar !== undefined && { avatar: data.avatar }),
-                ...(data.status !== undefined && { status: data.status }),
-            },
-        });
-    }
+    const where: Prisma.UserWhereInput = {
+      employees: {
+        some: { tenantId },
+      },
+      ...(status ? { status } : {}),
+      ...(search
+        ? {
+            OR: [
+              { firstName: { contains: search, mode: 'insensitive' } },
+              { lastName: { contains: search, mode: 'insensitive' } },
+              { email: { contains: search, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+    };
 
-    async delete(id: string) {
-        return prisma.user.delete({ where: { id } });
-    }
+    const [data, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        include: tenantMembershipInclude(tenantId),
+        orderBy: { [sortBy]: sortOrder },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.user.count({ where }),
+    ]);
 
-    async updateStatus(id: string, status: string) {
-        return prisma.user.update({
-            where: { id },
-            data: { status: status as any },
-        });
-    }
+    return { data, total };
+  }
+
+  async update(id: string, tenantId: string, data: UpdateUserDto) {
+    await prisma.user.update({
+      where: { id },
+      data: {
+        ...(data.firstName !== undefined ? { firstName: data.firstName } : {}),
+        ...(data.lastName !== undefined ? { lastName: data.lastName } : {}),
+        ...(data.phone !== undefined ? { phone: data.phone } : {}),
+        ...(data.avatar !== undefined ? { avatar: data.avatar } : {}),
+        ...(data.status !== undefined ? { status: data.status } : {}),
+      },
+    });
+
+    return this.findById(id, tenantId);
+  }
+
+  async updateStatus(id: string, tenantId: string, status: UserStatus) {
+    await prisma.user.update({
+      where: { id },
+      data: { status },
+    });
+
+    return this.findById(id, tenantId);
+  }
+
+  async updateRole(id: string, tenantId: string, roleId: string) {
+    await prisma.employee.updateMany({
+      where: {
+        tenantId,
+        userId: id,
+      },
+      data: { roleId },
+    });
+
+    return this.findById(id, tenantId);
+  }
+
+  async deactivateMembership(id: string, tenantId: string) {
+    await prisma.$transaction(async (tx) => {
+      await tx.employee.updateMany({
+        where: {
+          tenantId,
+          userId: id,
+        },
+        data: {
+          isActive: false,
+        },
+      });
+
+      await tx.user.update({
+        where: { id },
+        data: {
+          status: 'INACTIVE',
+        },
+      });
+
+      await tx.refreshToken.updateMany({
+        where: {
+          userId: id,
+          revokedAt: null,
+        },
+        data: {
+          revokedAt: new Date(),
+        },
+      });
+    });
+  }
 }
 
 export const usersRepository = new UsersRepository();

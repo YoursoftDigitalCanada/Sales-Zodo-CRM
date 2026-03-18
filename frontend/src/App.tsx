@@ -548,6 +548,8 @@ const AppRoutes = () => {
         <Route path="/settings/billing" element={<SettingsPage />} />
         <Route path="/settings/email" element={<SettingsPage />} />
         <Route path="/settings/security" element={<SettingsPage />} />
+        <Route path="/settings/notifications" element={<SettingsPage />} />
+        <Route path="/settings/team" element={<SettingsPage />} />
         <Route path="/onboarding" element={<Onboarding />} />
 
         {/* ========== AI MODULES ========== */}

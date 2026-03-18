@@ -42,6 +42,7 @@ const envSchema = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().optional(),
+  SETTINGS_ENCRYPTION_KEY: z.string().min(16).optional(),
 
   // Frontend
   FRONTEND_URL: z.string().default('http://localhost:5173'),
@@ -130,6 +131,9 @@ export const config = {
     user: parsed.data.SMTP_USER,
     pass: parsed.data.SMTP_PASS,
     from: parsed.data.SMTP_FROM,
+  },
+  settings: {
+    encryptionKey: parsed.data.SETTINGS_ENCRYPTION_KEY || parsed.data.JWT_ACCESS_SECRET,
   },
   frontend: {
     url: parsed.data.FRONTEND_URL,

@@ -1,895 +1,1311 @@
-import { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import {
+  AlertTriangle,
+  Bell,
+  Building2,
+  CheckCircle2,
+  Clock3,
+  CreditCard,
+  Download,
+  Globe2,
+  Loader2,
+  Mail,
+  RefreshCw,
+  Save,
+  Settings,
+  Shield,
+  Upload,
+  UserPlus,
+  Users,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import {
-    Save, Upload, Trash2, Plus, X, Check, Copy, Eye, EyeOff,
-    Moon, Sun, Bell, BellOff, CheckCircle2, AlertTriangle,
-    LogOut, Monitor, Smartphone, Globe, Lock, Shield, Mail,
-    ChevronDown, Settings, ExternalLink, RefreshCw, Loader2,
-} from "lucide-react";
-import {
-    settingsTabs, timezones, currencies, dateFormats, languages,
-    billingPlans, teamMembers, auditLogs, sessions,
-    type SettingsTab, type TeamMember,
-} from "./data";
-import {
-    getSettings, updateSettings,
-    type SettingsResponse, type SmtpSettings, type CompanyProfile, type NotificationPrefs,
+  exportAuditLogs,
+  getAuditLogs,
+  getBillingInvoices,
+  getBillingSettings,
+  getCompanyProfile,
+  getEmailSettings,
+  getGeneralSettings,
+  getNotificationSettings,
+  getRoles,
+  getSecuritySettings,
+  getSessions,
+  getTeamMembers,
+  inviteUser,
+  removeUser,
+  revokeSession,
+  sendTestEmail,
+  updateCompanyProfile,
+  updateEmailTemplates,
+  updateGeneralSettings,
+  updateImapSettings,
+  updateNotificationSettings,
+  updateSecuritySettings,
+  updateSmtpSettings,
+  updateUserRole,
+  uploadCompanyLogo,
+  type AuditLogItem,
+  type BillingInvoice,
+  type BillingSettings,
+  type CompanyProfile,
+  type DateFormatValue,
+  type EmailSettings,
+  type EmailTemplateId,
+  type GeneralSettings,
+  type NotificationSettings,
+  type RoleOption,
+  type SecuritySettings,
+  type SessionInfo,
+  type UserTeamMember,
+  type WorkspaceTheme,
 } from "@/features/settings/services/settings-service";
 
-import { useLocation } from "react-router-dom";
+type SettingsTab = "general" | "company" | "billing" | "email" | "security" | "notifications" | "team";
 
-// ── Reusable UI components (defined outside SettingsPage to prevent re-mount on state change) ──
+interface SettingsTabItem {
+  id: SettingsTab;
+  label: string;
+  description: string;
+  icon: typeof Settings;
+}
 
-const Field = ({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) => (
-    <div className="space-y-1.5">
-        <label className="text-sm font-medium text-[#0F172A]">{label}</label>
-        {children}
-        {hint && <p className="text-[11px] text-[#94A3B8]">{hint}</p>}
+const settingsTabs: SettingsTabItem[] = [
+  { id: "general", label: "General", description: "Workspace preferences", icon: Settings },
+  { id: "company", label: "Company Profile", description: "Branding and contact info", icon: Building2 },
+  { id: "billing", label: "Billing & Plans", description: "Plan limits and usage", icon: CreditCard },
+  { id: "email", label: "Email Settings", description: "SMTP, IMAP, and templates", icon: Mail },
+  { id: "security", label: "Security", description: "Sessions, policies, and audit", icon: Shield },
+  { id: "notifications", label: "Notifications", description: "Workspace alerts", icon: Bell },
+  { id: "team", label: "Team Management", description: "Invite and manage workspace members", icon: Users },
+];
+
+const routeMap: Record<string, SettingsTab> = {
+  "/settings": "general",
+  "/settings/general": "general",
+  "/settings/company": "company",
+  "/settings/billing": "billing",
+  "/settings/email": "email",
+  "/settings/security": "security",
+  "/settings/notifications": "notifications",
+  "/settings/team": "team",
+};
+
+const reverseRouteMap: Record<SettingsTab, string> = {
+  general: "/settings/general",
+  company: "/settings/company",
+  billing: "/settings/billing",
+  email: "/settings/email",
+  security: "/settings/security",
+  notifications: "/settings/notifications",
+  team: "/settings/team",
+};
+
+const timezones = [
+  "America/Toronto",
+  "America/New_York",
+  "America/Chicago",
+  "America/Los_Angeles",
+  "Europe/London",
+  "Europe/Berlin",
+  "Asia/Kolkata",
+  "Asia/Tokyo",
+  "UTC",
+];
+
+const languages = [
+  { label: "English", value: "en" },
+  { label: "French", value: "fr" },
+  { label: "Spanish", value: "es" },
+  { label: "German", value: "de" },
+  { label: "Hindi", value: "hi" },
+];
+
+const currencies = ["CAD", "USD", "EUR", "GBP", "INR"];
+const dateFormats: DateFormatValue[] = ["YYYY-MM-DD", "DD-MM-YYYY", "MM-DD-YYYY", "DD/MM/YYYY", "MM/DD/YYYY"];
+const emailEncryptions = ["SSL/TLS", "STARTTLS", "NONE"] as const;
+
+const fieldClass =
+  "w-full rounded-xl border border-[rgba(15,23,42,0.08)] bg-[#F8FAFC] px-4 py-3 text-sm text-[#0F172A] outline-none transition focus:border-[#0F766E] focus:ring-4 focus:ring-[#99F6E4]/40";
+
+const cardClass = "rounded-[28px] border border-[rgba(15,23,42,0.08)] bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)]";
+
+function getErrorMessage(error: unknown): string {
+  const maybeError = error as { response?: { data?: { message?: string } }; message?: string };
+  return maybeError.response?.data?.message || maybeError.message || "Something went wrong.";
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  const units = ["KB", "MB", "GB", "TB"];
+  let value = bytes / 1024;
+  let index = 0;
+  while (value >= 1024 && index < units.length - 1) {
+    value /= 1024;
+    index += 1;
+  }
+  return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[index]}`;
+}
+
+function formatMoney(value: number): string {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
+}
+
+function formatDateTime(value?: string | null): string {
+  if (!value) return "Never";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString();
+}
+
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <label className="space-y-1.5">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm font-medium text-[#0F172A]">{label}</span>
+      </div>
+      {children}
+      {hint ? <p className="text-xs text-[#64748B]">{hint}</p> : null}
+    </label>
+  );
+}
+
+function SectionHeader({ title, description, badge }: { title: string; description: string; badge?: React.ReactNode }) {
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <div>
+        <h2 className="text-lg font-semibold text-[#0F172A]">{title}</h2>
+        <p className="mt-1 text-sm text-[#64748B]">{description}</p>
+      </div>
+      {badge}
     </div>
-);
+  );
+}
 
-const Toggle = ({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) => (
-    <button onClick={onToggle} className={cn("relative w-11 h-6 rounded-full transition-colors", enabled ? "bg-[#6637F4]" : "bg-[#CBD5E1]")}>
-        <span className={cn("absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform", enabled ? "left-[22px]" : "left-0.5")} />
-    </button>
-);
-
-const SaveButton = ({ onClick, section, isSaving, label = "Save Changes" }: { onClick: () => void; section: string; isSaving: string | null; label?: string }) => (
+function SaveButton({
+  onClick,
+  loading,
+  label = "Save changes",
+}: {
+  onClick: () => void;
+  loading: boolean;
+  label?: string;
+}) {
+  return (
     <button
-        onClick={onClick}
-        disabled={isSaving === section}
-        className="flex items-center gap-2 px-5 py-2.5 bg-[#6637F4] text-white rounded-lg text-sm font-medium hover:bg-[#6637F4]/90 transition-colors disabled:opacity-60"
+      onClick={onClick}
+      disabled={loading}
+      className="inline-flex items-center gap-2 rounded-xl bg-[#0F766E] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#115E59] disabled:cursor-not-allowed disabled:opacity-70"
     >
-        {isSaving === section ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-        {isSaving === section ? "Saving..." : label}
+      {loading ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+      {loading ? "Saving..." : label}
     </button>
-);
+  );
+}
+
+function Toggle({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!checked)}
+      className={cn(
+        "relative inline-flex h-7 w-12 items-center rounded-full transition",
+        checked ? "bg-[#0F766E]" : "bg-[#CBD5E1]"
+      )}
+    >
+      <span
+        className={cn(
+          "inline-block h-5 w-5 transform rounded-full bg-white shadow transition",
+          checked ? "translate-x-6" : "translate-x-1"
+        )}
+      />
+    </button>
+  );
+}
+
+function AccessDeniedCard({ label }: { label: string }) {
+  return (
+    <div className={cardClass}>
+      <div className="flex items-start gap-3 rounded-2xl border border-[#FECACA] bg-[#FEF2F2] p-4 text-[#991B1B]">
+        <AlertTriangle size={18} className="mt-0.5 flex-shrink-0" />
+        <div>
+          <p className="font-medium">Access restricted</p>
+          <p className="mt-1 text-sm">You do not have permission to view {label} for this workspace.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function UsageBar({
+  label,
+  used,
+  limit,
+  percent,
+  formatter = (value: number) => String(value),
+}: {
+  label: string;
+  used: number;
+  limit: number | null;
+  percent: number;
+  formatter?: (value: number) => string;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-4 text-sm">
+        <span className="font-medium text-[#0F172A]">{label}</span>
+        <span className="text-[#475569]">
+          {formatter(used)} / {limit === null ? "Unlimited" : formatter(limit)}
+        </span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-[#E2E8F0]">
+        <div className="h-full rounded-full bg-gradient-to-r from-[#14B8A6] to-[#0F766E]" style={{ width: `${Math.min(percent, 100)}%` }} />
+      </div>
+    </div>
+  );
+}
 
 export default function SettingsPage() {
-    
-    const [activeTab, setActiveTab] = useState<SettingsTab>("general");
-    const { toast } = useToast();
-    const location = useLocation();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState<SettingsTab>(routeMap[location.pathname] || "general");
+  const [isLoading, setIsLoading] = useState(true);
+  const [savingSection, setSavingSection] = useState<string | null>(null);
 
-    // ── Loading / saving state ──
-    const [isLoading, setIsLoading] = useState(true);
-    const [isSaving, setIsSaving] = useState<string | null>(null); // section currently saving
+  const [general, setGeneral] = useState<GeneralSettings | null>(null);
+  const [company, setCompany] = useState<CompanyProfile | null>(null);
+  const [billing, setBilling] = useState<BillingSettings | null>(null);
+  const [billingInvoices, setBillingInvoices] = useState<BillingInvoice[]>([]);
+  const [emailSettings, setEmailSettings] = useState<EmailSettings | null>(null);
+  const [security, setSecurity] = useState<SecuritySettings | null>(null);
+  const [notifications, setNotifications] = useState<NotificationSettings | null>(null);
+  const [sessions, setSessions] = useState<SessionInfo[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
+  const [teamMembers, setTeamMembers] = useState<UserTeamMember[]>([]);
+  const [roles, setRoles] = useState<RoleOption[]>([]);
+  const [testEmailAddress, setTestEmailAddress] = useState("");
+  const [selectedTemplateId, setSelectedTemplateId] = useState<EmailTemplateId>("TEAM_INVITE");
+  const [inviteForm, setInviteForm] = useState({
+    email: "",
+    firstName: "",
+    lastName: "",
+    phone: "",
+    roleId: "",
+  });
+  const logoInputRef = useRef<HTMLInputElement | null>(null);
 
-    // Sync tab from URL path
-    useEffect(() => {
-        const path = location.pathname;
-        const tabMap: Record<string, SettingsTab> = {
-            "/settings/general": "general",
-            "/settings/company": "company",
-            "/settings/billing": "billing",
-            "/settings/email": "email",
-            "/settings/security": "security",
-        };
-        if (tabMap[path]) setActiveTab(tabMap[path]);
-    }, [location.pathname]);
+  useEffect(() => {
+    setActiveTab(routeMap[location.pathname] || "general");
+  }, [location.pathname]);
 
-    // General Settings State
-    const [orgName, setOrgName] = useState("");
-    const [timezone, setTimezone] = useState("UTC");
-    const [currency, setCurrency] = useState("USD");
-    const [dateFormat, setDateFormat] = useState("MM/DD/YYYY");
-    const [language, setLanguage] = useState("English");
-    const [darkMode, setDarkMode] = useState(false);
-    const [notifications, setNotifications] = useState<NotificationPrefs>({ email: true, push: true, desktop: true, weekly: true, marketing: false });
+  const selectedTemplate = useMemo(
+    () => emailSettings?.templates.find((template) => template.id === selectedTemplateId) || null,
+    [emailSettings, selectedTemplateId]
+  );
 
-    // Company State
-    const [companyName, setCompanyName] = useState("");
-    const [companyDomain, setCompanyDomain] = useState("");
-    const [companyEmail, setCompanyEmail] = useState("");
-    const [companyPhone, setCompanyPhone] = useState("");
-    const [companyAddress, setCompanyAddress] = useState("");
-    const [taxId, setTaxId] = useState("");
+  const loadSettingsData = useCallback(async () => {
+    setIsLoading(true);
 
-    // Email State
-    const [smtpHost, setSmtpHost] = useState("");
-    const [smtpPort, setSmtpPort] = useState("587");
-    const [smtpUser, setSmtpUser] = useState("");
-    const [smtpPass, setSmtpPass] = useState("");
-    const [showSmtpPass, setShowSmtpPass] = useState(false);
-    const [senderName, setSenderName] = useState("");
-    const [senderEmail, setSenderEmail] = useState("");
-    const [emailSignature, setEmailSignature] = useState("");
+    const [
+      generalResult,
+      companyResult,
+      billingResult,
+      billingInvoicesResult,
+      emailResult,
+      securityResult,
+      notificationResult,
+      sessionsResult,
+      auditResult,
+      teamResult,
+      rolesResult,
+    ] = await Promise.allSettled([
+      getGeneralSettings(),
+      getCompanyProfile(),
+      getBillingSettings(),
+      getBillingInvoices(),
+      getEmailSettings(),
+      getSecuritySettings(),
+      getNotificationSettings(),
+      getSessions(),
+      getAuditLogs({ limit: 20 }),
+      getTeamMembers(),
+      getRoles(),
+    ]);
 
-    // IMAP State
-    const [imapHost, setImapHost] = useState("");
-    const [imapPort, setImapPort] = useState("993");
-    const [imapUser, setImapUser] = useState("");
-    const [imapPass, setImapPass] = useState("");
-    const [showImapPass, setShowImapPass] = useState(false);
-
-    // Security State
-    const [enforce2FA, setEnforce2FA] = useState(true);
-    const [passwordMinLength, setPasswordMinLength] = useState("12");
-    const [sessionTimeout, setSessionTimeout] = useState("30");
-    const [ipWhitelist, setIpWhitelist] = useState("");
-    const [localMembers, setLocalMembers] = useState(teamMembers);
-
-    // Billing State
-    const [localPlans, setLocalPlans] = useState(billingPlans);
-
-    // ============================================
-    // LOAD SETTINGS FROM API
-    // ============================================
-
-    const loadSettings = useCallback(async () => {
-        try {
-            setIsLoading(true);
-            const data = await getSettings();
-
-            // General
-            setTimezone(data.timezone || "UTC");
-            setCurrency(data.currency || "USD");
-            setDateFormat(data.dateFormat || "MM/DD/YYYY");
-            setLanguage(data.language || "en");
-            setDarkMode(data.darkMode || false);
-            if (data.notificationSettings) {
-                setNotifications({
-                    email: data.notificationSettings.email ?? true,
-                    push: data.notificationSettings.push ?? true,
-                    desktop: data.notificationSettings.desktop ?? true,
-                    weekly: data.notificationSettings.weekly ?? true,
-                    marketing: data.notificationSettings.marketing ?? false,
-                });
-            }
-            setEmailSignature(data.emailSignature || "");
-
-            // Company
-            if (data.companyProfile) {
-                setOrgName(data.companyProfile.companyName || "");
-                setCompanyName(data.companyProfile.companyName || "");
-                setCompanyDomain(data.companyProfile.companyDomain || "");
-                setCompanyEmail(data.companyProfile.companyEmail || "");
-                setCompanyPhone(data.companyProfile.companyPhone || "");
-                setCompanyAddress(data.companyProfile.companyAddress || "");
-                setTaxId(data.companyProfile.taxId || "");
-            }
-
-            // SMTP
-            if (data.smtpSettings) {
-                setSmtpHost(data.smtpSettings.smtpHost || "");
-                setSmtpPort(String(data.smtpSettings.smtpPort || 587));
-                setSmtpUser(data.smtpSettings.smtpUser || "");
-                setSmtpPass(data.smtpSettings.smtpPass || "");
-                setSenderName(data.smtpSettings.senderName || "");
-                setSenderEmail(data.smtpSettings.senderEmail || "");
-            }
-
-            // IMAP
-            if (data.imapSettings) {
-                setImapHost(data.imapSettings.imapHost || "");
-                setImapPort(String(data.imapSettings.imapPort || 993));
-                setImapUser(data.imapSettings.imapUser || "");
-                setImapPass(data.imapSettings.imapPass || "");
-            }
-        } catch (err: any) {
-            console.error("Failed to load settings:", err);
-            toast({ title: "Error", description: "Failed to load settings from server.", variant: "destructive" });
-        } finally {
-            setIsLoading(false);
-        }
-    }, [toast]);
-
-    useEffect(() => {
-        loadSettings();
-    }, [loadSettings]);
-
-    // ============================================
-    // SAVE HANDLERS
-    // ============================================
-
-    const handleSaveGeneral = async () => {
-        setIsSaving("general");
-        try {
-            // Map display language to code
-            const langMap: Record<string, string> = {
-                "English": "en", "French": "fr", "Spanish": "es", "German": "de",
-                "Portuguese": "pt", "Japanese": "ja", "Chinese (Simplified)": "zh", "Arabic": "ar", "Hindi": "hi",
-            };
-            await updateSettings({
-                timezone,
-                currency: currency as any,
-                dateFormat,
-                language: langMap[language] || language,
-                darkMode,
-                // Also save org name to company profile
-                companyProfile: { companyName: orgName },
-            });
-            toast({ title: "Settings Saved", description: "Workspace preferences updated successfully." });
-        } catch (err: any) {
-            toast({ title: "Error", description: err.response?.data?.message || "Failed to save settings.", variant: "destructive" });
-        } finally {
-            setIsSaving(null);
-        }
-    };
-
-    const handleSaveNotifications = async () => {
-        setIsSaving("notifications");
-        try {
-            await updateSettings({ notificationSettings: notifications });
-            toast({ title: "Settings Saved", description: "Notification preferences updated." });
-        } catch (err: any) {
-            toast({ title: "Error", description: err.response?.data?.message || "Failed to save.", variant: "destructive" });
-        } finally {
-            setIsSaving(null);
-        }
-    };
-
-    const handleSaveCompany = async () => {
-        setIsSaving("company");
-        try {
-            await updateSettings({
-                companyProfile: { companyName, companyDomain, companyEmail, companyPhone, companyAddress, taxId },
-            });
-            toast({ title: "Settings Saved", description: "Company profile updated." });
-        } catch (err: any) {
-            toast({ title: "Error", description: err.response?.data?.message || "Failed to save.", variant: "destructive" });
-        } finally {
-            setIsSaving(null);
-        }
-    };
-
-    const handleSaveSmtp = async () => {
-        setIsSaving("smtp");
-        try {
-            await updateSettings({
-                smtpSettings: {
-                    smtpHost, smtpPort: parseInt(smtpPort, 10) || 587,
-                    smtpUser, smtpPass, senderName, senderEmail,
-                },
-            });
-            toast({ title: "Settings Saved", description: "SMTP configuration saved. Emails will now be sent using this config." });
-        } catch (err: any) {
-            toast({ title: "Error", description: err.response?.data?.message || "Failed to save SMTP.", variant: "destructive" });
-        } finally {
-            setIsSaving(null);
-        }
-    };
-
-    const handleSaveImap = async () => {
-        setIsSaving("imap");
-        try {
-            await updateSettings({
-                imapSettings: {
-                    imapHost, imapPort: parseInt(imapPort, 10) || 993,
-                    imapUser, imapPass,
-                },
-            });
-            toast({ title: "Settings Saved", description: "IMAP configuration saved. Incoming emails will be fetched automatically." });
-        } catch (err: any) {
-            toast({ title: "Error", description: err.response?.data?.message || "Failed to save IMAP.", variant: "destructive" });
-        } finally {
-            setIsSaving(null);
-        }
-    };
-
-    const handleSaveEmailSender = async () => {
-        setIsSaving("emailSender");
-        try {
-            await updateSettings({
-                emailSignature,
-                smtpSettings: { senderName, senderEmail },
-            });
-            toast({ title: "Settings Saved", description: "Email sender settings saved." });
-        } catch (err: any) {
-            toast({ title: "Error", description: err.response?.data?.message || "Failed to save.", variant: "destructive" });
-        } finally {
-            setIsSaving(null);
-        }
-    };
-
-    // ── Legacy handlers (for billing / security — still local state) ──
-
-    const handleUpgradePlan = (planId: string) => {
-        setLocalPlans((prev) =>
-            prev.map((p) => ({ ...p, current: p.id === planId }))
-        );
-        const plan = localPlans.find((p) => p.id === planId);
-        toast({ title: "Plan Updated", description: `You've switched to the ${plan?.name} plan.` });
-    };
-
-    const handleToggle2FA = (member: TeamMember) => {
-        setLocalMembers((prev) =>
-            prev.map((m) => m.id === member.id ? { ...m, twoFA: !m.twoFA } : m)
-        );
-        toast({ title: "2FA Updated", description: `Two-factor authentication ${member.twoFA ? "disabled" : "enabled"} for ${member.name}.` });
-    };
-
-    const handleSuspendUser = (member: TeamMember) => {
-        setLocalMembers((prev) =>
-            prev.map((m) => m.id === member.id ? { ...m, status: m.status === "suspended" ? "active" as const : "suspended" as const } : m)
-        );
-        toast({ title: member.status === "suspended" ? "User Reactivated" : "User Suspended", description: `${member.name} has been ${member.status === "suspended" ? "reactivated" : "suspended"}.` });
-    };
-
-    const handleRevokeSession = (sessionId: string) => {
-        toast({ title: "Session Revoked", description: "The session has been terminated." });
-    };
-
-    const handleSaveSecurity = async () => {
-        setIsSaving("security");
-        try {
-            // Security settings are not yet in the backend — show toast
-            toast({ title: "Settings Saved", description: "Security settings updated." });
-        } finally {
-            setIsSaving(null);
-        }
-    };
-
-    const handleTestEmail = async () => {
-        toast({ title: "Test Email Sent", description: `A test email will be sent to ${smtpUser || senderEmail || 'configured address'}.` });
-    };
-
-    // ── Reusable UI constants ──
-
-    const inputClass = "w-full h-10 px-4 rounded-lg border border-[rgba(15,23,42,0.12)] bg-[#F8FAFC] text-sm text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#6637F4]/20 focus:border-[#6637F4]/30 transition-all";
-    const selectClass = inputClass + " appearance-none cursor-pointer";
-
-    // ── Loading skeleton ──
-    if (isLoading) {
-        return (
-            <div className="flex h-screen bg-[#F8FAFC]">
-                <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
-                    <header className="bg-white border-b border-[rgba(15,23,42,0.06)] px-6 py-4 flex-shrink-0">
-                        <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-lg bg-[#6637F4]/10 flex items-center justify-center">
-                                <Settings size={20} className="text-[#6637F4]" />
-                            </div>
-                            <div>
-                                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Settings</h1>
-                                <p className="text-sm text-[#475569] mt-0.5">Loading settings...</p>
-                            </div>
-                        </div>
-                    </header>
-                    <div className="flex-1 flex items-center justify-center">
-                        <div className="flex flex-col items-center gap-3">
-                            <Loader2 size={32} className="animate-spin text-[#6637F4]" />
-                            <p className="text-sm text-[#475569]">Loading settings from server...</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
+    if (generalResult.status === "fulfilled") setGeneral(generalResult.value);
+    if (companyResult.status === "fulfilled") setCompany(companyResult.value);
+    if (billingResult.status === "fulfilled") setBilling(billingResult.value);
+    if (billingInvoicesResult.status === "fulfilled") setBillingInvoices(billingInvoicesResult.value);
+    if (emailResult.status === "fulfilled") {
+      setEmailSettings(emailResult.value);
+      if (emailResult.value.smtp.senderEmail) {
+        setTestEmailAddress(emailResult.value.smtp.senderEmail);
+      }
+    }
+    if (securityResult.status === "fulfilled") setSecurity(securityResult.value);
+    if (notificationResult.status === "fulfilled") setNotifications(notificationResult.value);
+    if (sessionsResult.status === "fulfilled") setSessions(sessionsResult.value);
+    if (auditResult.status === "fulfilled") setAuditLogs(auditResult.value);
+    if (teamResult.status === "fulfilled") setTeamMembers(teamResult.value);
+    if (rolesResult.status === "fulfilled") {
+      setRoles(rolesResult.value);
+      setInviteForm((current) => ({
+        ...current,
+        roleId: current.roleId || rolesResult.value.find((role) => role.isDefault)?.id || rolesResult.value[0]?.id || "",
+      }));
     }
 
+    setIsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    void loadSettingsData();
+  }, [loadSettingsData]);
+
+  const navigateToTab = (tabId: SettingsTab) => {
+    setActiveTab(tabId);
+    navigate(reverseRouteMap[tabId]);
+  };
+
+  const handleSaveGeneral = async () => {
+    if (!general) return;
+    setSavingSection("general");
+    try {
+      const next = await updateGeneralSettings(general);
+      setGeneral(next);
+      toast({ title: "General settings updated", description: "Workspace preferences saved successfully." });
+    } catch (error) {
+      toast({ title: "Save failed", description: getErrorMessage(error), variant: "destructive" });
+    } finally {
+      setSavingSection(null);
+    }
+  };
+
+  const handleSaveCompany = async () => {
+    if (!company) return;
+    setSavingSection("company");
+    try {
+      const next = await updateCompanyProfile({
+        companyName: company.companyName,
+        domain: company.domain,
+        email: company.email,
+        phone: company.phone,
+        taxId: company.taxId,
+        address: company.address,
+      });
+      setCompany(next);
+      if (general) {
+        setGeneral({ ...general, organizationName: next.companyName || general.organizationName });
+      }
+      toast({ title: "Company profile updated", description: "Branding and company details were saved." });
+    } catch (error) {
+      toast({ title: "Save failed", description: getErrorMessage(error), variant: "destructive" });
+    } finally {
+      setSavingSection(null);
+    }
+  };
+
+  const handleUploadLogo = async (file: File) => {
+    setSavingSection("logo");
+    try {
+      const next = await uploadCompanyLogo(file);
+      setCompany(next);
+      toast({ title: "Logo uploaded", description: "Your workspace logo was updated." });
+    } catch (error) {
+      toast({ title: "Upload failed", description: getErrorMessage(error), variant: "destructive" });
+    } finally {
+      setSavingSection(null);
+    }
+  };
+
+  const handleSaveNotifications = async () => {
+    if (!notifications) return;
+    setSavingSection("notifications");
+    try {
+      const next = await updateNotificationSettings(notifications);
+      setNotifications(next);
+      toast({ title: "Notifications updated", description: "Your workspace notification preferences were saved." });
+    } catch (error) {
+      toast({ title: "Save failed", description: getErrorMessage(error), variant: "destructive" });
+    } finally {
+      setSavingSection(null);
+    }
+  };
+
+  const handleSaveSecurity = async () => {
+    if (!security) return;
+    setSavingSection("security");
+    try {
+      const next = await updateSecuritySettings(security);
+      setSecurity(next);
+      toast({ title: "Security policy updated", description: "Security settings were saved for this workspace." });
+    } catch (error) {
+      toast({ title: "Save failed", description: getErrorMessage(error), variant: "destructive" });
+    } finally {
+      setSavingSection(null);
+    }
+  };
+
+  const handleSaveSmtp = async () => {
+    if (!emailSettings) return;
+    setSavingSection("smtp");
+    try {
+      const next = await updateSmtpSettings({
+        host: emailSettings.smtp.host,
+        port: emailSettings.smtp.port,
+        username: emailSettings.smtp.username,
+        password: emailSettings.smtp.passwordMasked === "••••••••" ? undefined : emailSettings.smtp.passwordMasked,
+        encryption: emailSettings.smtp.encryption,
+        senderName: emailSettings.smtp.senderName,
+        senderEmail: emailSettings.smtp.senderEmail,
+        signature: emailSettings.smtp.signature,
+      });
+      setEmailSettings(next);
+      toast({ title: "SMTP settings updated", description: "Outgoing email configuration was saved." });
+    } catch (error) {
+      toast({ title: "Save failed", description: getErrorMessage(error), variant: "destructive" });
+    } finally {
+      setSavingSection(null);
+    }
+  };
+
+  const handleSaveImap = async () => {
+    if (!emailSettings) return;
+    setSavingSection("imap");
+    try {
+      const next = await updateImapSettings({
+        host: emailSettings.imap.host,
+        port: emailSettings.imap.port,
+        username: emailSettings.imap.username,
+        password: emailSettings.imap.passwordMasked === "••••••••" ? undefined : emailSettings.imap.passwordMasked,
+        encryption: emailSettings.imap.encryption,
+      });
+      setEmailSettings(next);
+      toast({ title: "IMAP settings updated", description: "Incoming email configuration was saved." });
+    } catch (error) {
+      toast({ title: "Save failed", description: getErrorMessage(error), variant: "destructive" });
+    } finally {
+      setSavingSection(null);
+    }
+  };
+
+  const handleSaveTemplate = async () => {
+    if (!selectedTemplate) return;
+    setSavingSection("template");
+    try {
+      const next = await updateEmailTemplates([selectedTemplate]);
+      setEmailSettings(next);
+      toast({ title: "Template updated", description: "Email template changes were saved." });
+    } catch (error) {
+      toast({ title: "Save failed", description: getErrorMessage(error), variant: "destructive" });
+    } finally {
+      setSavingSection(null);
+    }
+  };
+
+  const handleSendTestEmail = async () => {
+    setSavingSection("test-email");
+    try {
+      await sendTestEmail(testEmailAddress);
+      toast({ title: "Test email sent", description: `A test email was sent to ${testEmailAddress}.` });
+    } catch (error) {
+      toast({ title: "Test failed", description: getErrorMessage(error), variant: "destructive" });
+    } finally {
+      setSavingSection(null);
+    }
+  };
+
+  const handleInviteUser = async () => {
+    setSavingSection("invite");
+    try {
+      const result = await inviteUser({
+        email: inviteForm.email,
+        firstName: inviteForm.firstName || undefined,
+        lastName: inviteForm.lastName || undefined,
+        phone: inviteForm.phone || undefined,
+        roleId: inviteForm.roleId,
+      });
+      setTeamMembers((current) => [result.user, ...current]);
+      setInviteForm({
+        email: "",
+        firstName: "",
+        lastName: "",
+        phone: "",
+        roleId: roles.find((role) => role.isDefault)?.id || roles[0]?.id || "",
+      });
+      toast({
+        title: "User invited",
+        description: result.inviteEmailSent
+          ? `${result.user.email} received an invitation email.`
+          : `No SMTP invite was sent. Temporary password: ${result.temporaryPassword || "Unavailable"}`,
+      });
+    } catch (error) {
+      toast({ title: "Invite failed", description: getErrorMessage(error), variant: "destructive" });
+    } finally {
+      setSavingSection(null);
+    }
+  };
+
+  const handleRoleChange = async (userId: string, roleId: string) => {
+    try {
+      const updated = await updateUserRole(userId, roleId);
+      setTeamMembers((current) => current.map((member) => (member.id === userId ? updated : member)));
+      toast({ title: "Role updated", description: `${updated.fullName}'s role has been updated.` });
+    } catch (error) {
+      toast({ title: "Role update failed", description: getErrorMessage(error), variant: "destructive" });
+    }
+  };
+
+  const handleRemoveUser = async (userId: string) => {
+    try {
+      await removeUser(userId);
+      setTeamMembers((current) => current.filter((member) => member.id !== userId));
+      toast({ title: "User removed", description: "The user was removed from this workspace." });
+    } catch (error) {
+      toast({ title: "Remove failed", description: getErrorMessage(error), variant: "destructive" });
+    }
+  };
+
+  const handleRevokeSession = async (sessionId: string) => {
+    try {
+      await revokeSession(sessionId);
+      setSessions((current) => current.filter((session) => session.id !== sessionId));
+      toast({ title: "Session revoked", description: "The selected session has been revoked." });
+    } catch (error) {
+      toast({ title: "Revoke failed", description: getErrorMessage(error), variant: "destructive" });
+    }
+  };
+
+  const handleExportAudit = async () => {
+    try {
+      const blob = await exportAuditLogs();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      toast({ title: "Export failed", description: getErrorMessage(error), variant: "destructive" });
+    }
+  };
+
+  if (isLoading) {
     return (
-        <div className="flex h-screen bg-[#F8FAFC]">
-
-            <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
-                {/* Header */}
-                <header className="bg-white border-b border-[rgba(15,23,42,0.06)] px-6 py-4 flex-shrink-0">
-                    <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-lg bg-[#6637F4]/10 flex items-center justify-center">
-                            <Settings size={20} className="text-[#6637F4]" />
-                        </div>
-                        <div>
-                            <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Settings</h1>
-                            <p className="text-sm text-[#475569] mt-0.5">Manage your workspace preferences and configuration</p>
-                        </div>
-                    </div>
-                </header>
-
-                <div className="flex-1 flex overflow-hidden">
-                    {/* Settings Sidebar */}
-                    <div className="w-64 bg-white border-r border-[rgba(15,23,42,0.06)] p-4 flex-shrink-0 overflow-auto hidden md:block">
-                        <nav className="space-y-1">
-                            {settingsTabs.map((tab) => (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => setActiveTab(tab.id)}
-                                    className={cn(
-                                        "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-left",
-                                        activeTab === tab.id
-                                            ? "bg-[#6637F4]/10 text-[#6637F4]"
-                                            : "text-[#475569] hover:bg-[#F8FAFC] hover:text-[#0F172A]"
-                                    )}
-                                >
-                                    <tab.icon size={18} />
-                                    <div>
-                                        <span className="block">{tab.label}</span>
-                                        <span className="block text-[10px] text-[#94A3B8] font-normal mt-0.5">{tab.description}</span>
-                                    </div>
-                                </button>
-                            ))}
-                        </nav>
-                    </div>
-
-                    {/* Mobile tab selector */}
-                    <div className="md:hidden bg-white border-b border-[rgba(15,23,42,0.06)] px-4 py-2 overflow-x-auto flex-shrink-0">
-                        <div className="flex gap-1 min-w-max">
-                            {settingsTabs.map((tab) => (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => setActiveTab(tab.id)}
-                                    className={cn(
-                                        "px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap",
-                                        activeTab === tab.id
-                                            ? "bg-[#6637F4]/10 text-[#6637F4]"
-                                            : "text-[#475569] hover:bg-[#F8FAFC]"
-                                    )}
-                                >
-                                    {tab.label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Settings Content */}
-                    <main className="flex-1 p-6 overflow-auto">
-                        <div className="max-w-3xl mx-auto space-y-6 page-enter">
-
-                            {/* ========== GENERAL ========== */}
-                            {activeTab === "general" && (
-                                <>
-                                    {/* Workspace */}
-                                    <div className="bg-white rounded-lg card-shadow p-6">
-                                        <h3 className="font-semibold text-[#0F172A] mb-4">Workspace Preferences</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                            <Field label="Organization Name" hint="Appears in emails, invoices, reports, dashboards">
-                                                <input className={inputClass} value={orgName} onChange={(e) => setOrgName(e.target.value)} />
-                                            </Field>
-                                            <Field label="Language" hint="Controls interface and email template language">
-                                                <select className={selectClass} value={language} onChange={(e) => setLanguage(e.target.value)}>
-                                                    {languages.map((l) => <option key={l}>{l}</option>)}
-                                                </select>
-                                            </Field>
-                                            <Field label="Timezone" hint="Used for lead timestamps, activity logs, automation triggers">
-                                                <select className={selectClass} value={timezone} onChange={(e) => setTimezone(e.target.value)}>
-                                                    {timezones.map((tz) => <option key={tz}>{tz}</option>)}
-                                                </select>
-                                            </Field>
-                                            <Field label="Currency" hint="Used in deals, invoices, revenue tracking, forecasting">
-                                                <select className={selectClass} value={currency} onChange={(e) => setCurrency(e.target.value)}>
-                                                    {currencies.map((c) => <option key={c}>{c}</option>)}
-                                                </select>
-                                            </Field>
-                                            <Field label="Date Format" hint="Affects reports, deal close dates, data exports">
-                                                <select className={selectClass} value={dateFormat} onChange={(e) => setDateFormat(e.target.value)}>
-                                                    {dateFormats.map((f) => <option key={f}>{f}</option>)}
-                                                </select>
-                                            </Field>
-                                            <Field label="Appearance" hint="UI theme preference — no impact on CRM data">
-                                                <div className="flex items-center gap-3">
-                                                    <Toggle enabled={darkMode} onToggle={() => setDarkMode(!darkMode)} />
-                                                    <span className="text-sm text-[#475569]">{darkMode ? "Dark" : "Light"} Mode</span>
-                                                </div>
-                                            </Field>
-                                        </div>
-                                        <div className="flex justify-end mt-6">
-                                            <SaveButton onClick={handleSaveGeneral} section="general" isSaving={isSaving} />
-                                        </div>
-                                    </div>
-
-                                    {/* Notifications */}
-                                    <div className="bg-white rounded-lg card-shadow p-6">
-                                        <h3 className="font-semibold text-[#0F172A] mb-4">Notification Preferences</h3>
-                                        <div className="divide-y divide-[rgba(15,23,42,0.06)]">
-                                            {[
-                                                { key: "email" as const, label: "Email Notifications", desc: "New lead alerts, deal updates, task reminders" },
-                                                { key: "push" as const, label: "Push Notifications", desc: "Instant alerts for lead assignment, activity reminders" },
-                                                { key: "desktop" as const, label: "Desktop Notifications", desc: "Browser desktop alerts for customer replies" },
-                                                { key: "weekly" as const, label: "Weekly Digest", desc: "Summary of new leads, closed deals, team performance" },
-                                                { key: "marketing" as const, label: "Product Updates", desc: "CRM feature announcements and updates" },
-                                            ].map((item) => (
-                                                <div key={item.key} className="flex items-center justify-between py-3">
-                                                    <div>
-                                                        <p className="text-sm font-medium text-[#0F172A]">{item.label}</p>
-                                                        <p className="text-xs text-[#94A3B8]">{item.desc}</p>
-                                                    </div>
-                                                    <Toggle enabled={notifications[item.key] ?? false} onToggle={() => setNotifications((p) => ({ ...p, [item.key]: !p[item.key] }))} />
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <div className="flex justify-end mt-4">
-                                            <SaveButton onClick={handleSaveNotifications} section="notifications" isSaving={isSaving} />
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-
-                            {/* ========== COMPANY PROFILE ========== */}
-                            {activeTab === "company" && (
-                                <>
-                                    {/* Logo & Brand */}
-                                    <div className="bg-white rounded-lg card-shadow p-6">
-                                        <h3 className="font-semibold text-[#0F172A] mb-4">Brand & Logo</h3>
-                                        <p className="text-xs text-[#94A3B8] mb-4">Logo appears in email templates, customer portals, quotes & invoices</p>
-                                        <div className="flex items-center gap-6">
-                                            <div className="w-24 h-24 rounded-xl bg-gradient-to-br from-[#6637F4] to-[#4F1FD4] flex items-center justify-center text-white text-xl sm:text-2xl font-bold shadow-lg">
-                                                {companyName ? companyName.substring(0, 2).toUpperCase() : "ZD"}
-                                            </div>
-                                            <div className="space-y-2">
-                                                <p className="text-sm text-[#475569]">Upload your company logo (PNG, JPG, SVG — max 2MB)</p>
-                                                <div className="flex gap-2">
-                                                    <button onClick={() => toast({ title: "Upload", description: "File picker opened. Select your logo." })}
-                                                        className="flex items-center gap-2 px-4 py-2 bg-[#6637F4] text-white rounded-lg text-sm font-medium hover:bg-[#6637F4]/90">
-                                                        <Upload size={14} /> Upload Logo
-                                                    </button>
-                                                    <button onClick={() => toast({ title: "Removed", description: "Logo has been reset to default." })}
-                                                        className="flex items-center gap-2 px-4 py-2 bg-white border border-[rgba(15,23,42,0.12)] text-[#475569] rounded-lg text-sm font-medium hover:bg-[#F8FAFC]">
-                                                        <Trash2 size={14} /> Remove
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Company Details */}
-                                    <div className="bg-white rounded-lg card-shadow p-6">
-                                        <h3 className="font-semibold text-[#0F172A] mb-2">Company Information</h3>
-                                        <p className="text-xs text-[#94A3B8] mb-4">Used in contracts, billing documents, and automated emails</p>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                            <Field label="Company Name" hint="Appears in all branding and system identification">
-                                                <input className={inputClass} value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
-                                            </Field>
-                                            <Field label="Domain">
-                                                <input className={inputClass} value={companyDomain} onChange={(e) => setCompanyDomain(e.target.value)} />
-                                            </Field>
-                                            <Field label="Email">
-                                                <input className={inputClass} value={companyEmail} onChange={(e) => setCompanyEmail(e.target.value)} />
-                                            </Field>
-                                            <Field label="Phone">
-                                                <input className={inputClass} value={companyPhone} onChange={(e) => setCompanyPhone(e.target.value)} />
-                                            </Field>
-                                            <Field label="Tax ID / Business Number">
-                                                <input className={inputClass} value={taxId} onChange={(e) => setTaxId(e.target.value)} />
-                                            </Field>
-                                        </div>
-                                        <div className="mt-5">
-                                            <Field label="Address">
-                                                <textarea className={inputClass + " h-24 py-3 resize-none"} value={companyAddress} onChange={(e) => setCompanyAddress(e.target.value)} />
-                                            </Field>
-                                        </div>
-                                        <div className="flex justify-end mt-6">
-                                            <SaveButton onClick={handleSaveCompany} section="company" isSaving={isSaving} />
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-
-                            {/* ========== BILLING ========== */}
-                            {activeTab === "billing" && (
-                                <>
-                                    {/* Current Plan */}
-                                    <div className="bg-white rounded-lg card-shadow p-6">
-                                        <h3 className="font-semibold text-[#0F172A] mb-2">Current Plan</h3>
-                                        <p className="text-sm text-[#475569] mb-4">You're on the <span className="font-semibold text-[#6637F4]">{localPlans.find((p) => p.current)?.name}</span> plan</p>
-
-                                        {/* Usage Bar */}
-                                        <div className="bg-[#F8FAFC] rounded-lg p-4 space-y-3">
-                                            {[
-                                                { label: "Users", used: 6, total: 50 },
-                                                { label: "Contacts", used: 8420, total: 25000 },
-                                                { label: "Storage", used: 3.2, total: 10, unit: "GB" },
-                                                { label: "API Calls", used: 45200, total: 100000 },
-                                            ].map((item) => (
-                                                <div key={item.label}>
-                                                    <div className="flex justify-between text-xs mb-1">
-                                                        <span className="text-[#475569]">{item.label}</span>
-                                                        <span className="text-[#0F172A] font-medium">
-                                                            {typeof item.used === "number" && item.used > 999 ? item.used.toLocaleString() : item.used}
-                                                            {item.unit ? ` ${item.unit}` : ""} / {typeof item.total === "number" && item.total > 999 ? item.total.toLocaleString() : item.total}{item.unit ? ` ${item.unit}` : ""}
-                                                        </span>
-                                                    </div>
-                                                    <div className="w-full h-2 bg-[#E2E8F0] rounded-full overflow-hidden">
-                                                        <div
-                                                            className="h-full bg-[#6637F4] rounded-full transition-all"
-                                                            style={{ width: `${Math.min((item.used / item.total) * 100, 100)}%` }}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Plans */}
-                                    <div>
-                                        <h3 className="font-semibold text-[#0F172A] mb-4">Available Plans</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                            {localPlans.map((plan) => (
-                                                <div key={plan.id} className={cn(
-                                                    "bg-white rounded-lg card-shadow p-5 relative",
-                                                    plan.current && "ring-2 ring-[#6637F4]"
-                                                )}>
-                                                    {plan.popular && (
-                                                        <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-[#6637F4] text-white text-[10px] font-bold rounded-full uppercase">Popular</span>
-                                                    )}
-                                                    <h4 className="font-bold text-[#0F172A]">{plan.name}</h4>
-                                                    <div className="flex items-baseline gap-1 mt-2">
-                                                        <span className="text-3xl font-bold text-[#0F172A]">{plan.price}</span>
-                                                        <span className="text-sm text-[#94A3B8]">{plan.period}</span>
-                                                    </div>
-                                                    <p className="text-xs text-[#475569] mt-1 mb-4">{plan.description}</p>
-
-                                                    <div className="space-y-2 mb-5">
-                                                        {plan.features.map((f) => (
-                                                            <div key={f.name} className="flex items-center gap-2 text-xs">
-                                                                {f.included
-                                                                    ? <CheckCircle2 size={14} className="text-[#16A34A] flex-shrink-0" />
-                                                                    : <X size={14} className="text-[#CBD5E1] flex-shrink-0" />}
-                                                                <span className={f.included ? "text-[#0F172A]" : "text-[#94A3B8]"}>{f.name}</span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-
-                                                    {plan.current ? (
-                                                        <div className="w-full py-2.5 text-center bg-[#F8FAFC] border border-[rgba(15,23,42,0.08)] rounded-lg text-sm font-medium text-[#475569]">
-                                                            Current Plan
-                                                        </div>
-                                                    ) : (
-                                                        <button
-                                                            onClick={() => handleUpgradePlan(plan.id)}
-                                                            className="w-full py-2.5 bg-[#6637F4] text-white rounded-lg text-sm font-medium hover:bg-[#6637F4]/90 transition-colors"
-                                                        >
-                                                            {localPlans.findIndex((p) => p.current) < localPlans.findIndex((p) => p.id === plan.id) ? "Upgrade" : "Downgrade"}
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Invoice History */}
-                                    <div className="bg-white rounded-lg card-shadow p-6">
-                                        <h3 className="font-semibold text-[#0F172A] mb-4">Invoice History</h3>
-                                        <div className="divide-y divide-[rgba(15,23,42,0.06)]">
-                                            {[
-                                                { date: "Feb 1, 2026", amount: "$474.00", status: "Paid", id: "INV-2026-002" },
-                                                { date: "Jan 1, 2026", amount: "$474.00", status: "Paid", id: "INV-2026-001" },
-                                                { date: "Dec 1, 2025", amount: "$474.00", status: "Paid", id: "INV-2025-012" },
-                                                { date: "Nov 1, 2025", amount: "$474.00", status: "Paid", id: "INV-2025-011" },
-                                            ].map((inv) => (
-                                                <div key={inv.id} className="flex items-center justify-between py-3">
-                                                    <div className="flex items-center gap-4">
-                                                        <span className="text-sm text-[#0F172A] font-medium">{inv.id}</span>
-                                                        <span className="text-xs text-[#94A3B8]">{inv.date}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-4">
-                                                        <span className="text-sm font-medium text-[#0F172A]">{inv.amount}</span>
-                                                        <span className="px-2 py-0.5 rounded-full bg-[#16A34A]/10 text-[#16A34A] text-[10px] font-semibold uppercase">{inv.status}</span>
-                                                        <button onClick={() => toast({ title: "Download", description: `Downloading ${inv.id}.pdf...` })}
-                                                            className="text-[#6637F4] hover:text-[#6637F4]/80 text-xs font-medium">Download</button>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-
-                            {/* ========== EMAIL SETTINGS ========== */}
-                            {activeTab === "email" && (
-                                <>
-                                    {/* Connection status */}
-                                    <div className={cn(
-                                        "flex items-center gap-3 px-4 py-3 rounded-lg border text-sm",
-                                        smtpHost && smtpUser
-                                            ? "bg-[#16A34A]/5 border-[#16A34A]/20 text-[#16A34A]"
-                                            : "bg-[#FF7B36]/5 border-[#FF7B36]/20 text-[#FF7B36]"
-                                    )}>
-                                        {smtpHost && smtpUser ? (
-                                            <><CheckCircle2 size={16} /> <span>SMTP configured — emails will be sent from <strong>{senderEmail || smtpUser}</strong></span></>
-                                        ) : (
-                                            <><AlertTriangle size={16} /> <span>SMTP not configured — CRM cannot send automated emails, follow-ups, or campaigns</span></>
-                                        )}
-                                    </div>
-
-                                    {/* SMTP */}
-                                    <div className="bg-white rounded-lg card-shadow p-6">
-                                        <h3 className="font-semibold text-[#0F172A] mb-2">SMTP Configuration</h3>
-                                        <p className="text-xs text-[#94A3B8] mb-4">Required for sending emails from CRM — automated follow-ups, marketing campaigns, lead nurturing</p>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                            <Field label="SMTP Host" hint="e.g. smtp.gmail.com, smtp.office365.com">
-                                                <input className={inputClass} value={smtpHost} onChange={(e) => setSmtpHost(e.target.value)} placeholder="smtp.gmail.com" />
-                                            </Field>
-                                            <Field label="SMTP Port" hint="587 (TLS) or 465 (SSL)">
-                                                <input className={inputClass} value={smtpPort} onChange={(e) => setSmtpPort(e.target.value)} placeholder="587" />
-                                            </Field>
-                                            <Field label="Username" hint="Usually your email address">
-                                                <input className={inputClass} value={smtpUser} onChange={(e) => setSmtpUser(e.target.value)} placeholder="noreply@company.com" />
-                                            </Field>
-                                            <Field label="Password" hint="App password recommended for Gmail">
-                                                <div className="relative">
-                                                    <input className={inputClass + " pr-10"} type={showSmtpPass ? "text" : "password"} value={smtpPass} onChange={(e) => setSmtpPass(e.target.value)} />
-                                                    <button onClick={() => setShowSmtpPass(!showSmtpPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#475569]">
-                                                        {showSmtpPass ? <EyeOff size={14} /> : <Eye size={14} />}
-                                                    </button>
-                                                </div>
-                                            </Field>
-                                        </div>
-                                        <div className="flex items-center gap-3 mt-5">
-                                            <button onClick={handleTestEmail} className="flex items-center gap-2 px-4 py-2 bg-white border border-[rgba(15,23,42,0.12)] text-[#0F172A] rounded-lg text-sm font-medium hover:bg-[#F8FAFC]">
-                                                <Mail size={14} /> Send Test Email
-                                            </button>
-                                            <SaveButton onClick={handleSaveSmtp} section="smtp" label="Save SMTP" isSaving={isSaving} />
-                                        </div>
-                                    </div>
-
-                                    {/* IMAP */}
-                                    <div className="bg-white rounded-lg card-shadow p-6">
-                                        <h3 className="font-semibold text-[#0F172A] mb-2">IMAP Configuration</h3>
-                                        <p className="text-xs text-[#94A3B8] mb-4">Required for receiving emails — incoming replies, conversations, and inbox sync</p>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                            <Field label="IMAP Host" hint="e.g. imap.hostinger.com, imap.gmail.com">
-                                                <input className={inputClass} value={imapHost} onChange={(e) => setImapHost(e.target.value)} placeholder="imap.hostinger.com" />
-                                            </Field>
-                                            <Field label="IMAP Port" hint="993 (SSL) or 143 (STARTTLS)">
-                                                <input className={inputClass} value={imapPort} onChange={(e) => setImapPort(e.target.value)} placeholder="993" />
-                                            </Field>
-                                            <Field label="Username" hint="Usually same as SMTP username">
-                                                <input className={inputClass} value={imapUser} onChange={(e) => setImapUser(e.target.value)} placeholder="noreply@company.com" />
-                                            </Field>
-                                            <Field label="Password" hint="Usually same as SMTP password">
-                                                <div className="relative">
-                                                    <input className={inputClass + " pr-10"} type={showImapPass ? "text" : "password"} value={imapPass} onChange={(e) => setImapPass(e.target.value)} />
-                                                    <button onClick={() => setShowImapPass(!showImapPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#475569]">
-                                                        {showImapPass ? <EyeOff size={14} /> : <Eye size={14} />}
-                                                    </button>
-                                                </div>
-                                            </Field>
-                                        </div>
-                                        <div className="flex justify-end mt-5">
-                                            <SaveButton onClick={handleSaveImap} section="imap" label="Save IMAP" isSaving={isSaving} />
-                                        </div>
-                                    </div>
-
-                                    {/* Sender Info */}
-                                    <div className="bg-white rounded-lg card-shadow p-6">
-                                        <h3 className="font-semibold text-[#0F172A] mb-2">Default Sender</h3>
-                                        <p className="text-xs text-[#94A3B8] mb-4">Name and email shown in recipients' inbox for all outgoing CRM emails</p>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                            <Field label="Sender Name" hint="Name shown in recipients' inbox">
-                                                <input className={inputClass} value={senderName} onChange={(e) => setSenderName(e.target.value)} placeholder="ZODO CRM" />
-                                            </Field>
-                                            <Field label="Sender Email" hint="Reply-to address">
-                                                <input className={inputClass} value={senderEmail} onChange={(e) => setSenderEmail(e.target.value)} placeholder="noreply@company.com" />
-                                            </Field>
-                                        </div>
-                                        <div className="mt-5">
-                                            <Field label="Email Signature" hint="Appended to all outgoing emails">
-                                                <textarea className={inputClass + " h-28 py-3 resize-none font-mono text-xs"} value={emailSignature} onChange={(e) => setEmailSignature(e.target.value)} />
-                                            </Field>
-                                        </div>
-                                        <div className="flex justify-end mt-5">
-                                            <SaveButton onClick={handleSaveEmailSender} section="emailSender" isSaving={isSaving} />
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-
-                            {/* ========== SECURITY ========== */}
-                            {activeTab === "security" && (
-                                <>
-                                    {/* Auth Policies */}
-                                    <div className="bg-white rounded-lg card-shadow p-6">
-                                        <h3 className="font-semibold text-[#0F172A] mb-4">Authentication Policies</h3>
-                                        <div className="space-y-4">
-                                            <div className="flex items-center justify-between">
-                                                <div><p className="text-sm font-medium text-[#0F172A]">Enforce Two-Factor Authentication</p><p className="text-xs text-[#94A3B8]">Require all users to enable 2FA</p></div>
-                                                <Toggle enabled={enforce2FA} onToggle={() => setEnforce2FA(!enforce2FA)} />
-                                            </div>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                                <Field label="Minimum Password Length">
-                                                    <input className={inputClass} type="number" value={passwordMinLength} onChange={(e) => setPasswordMinLength(e.target.value)} />
-                                                </Field>
-                                                <Field label="Session Timeout (minutes)">
-                                                    <input className={inputClass} type="number" value={sessionTimeout} onChange={(e) => setSessionTimeout(e.target.value)} />
-                                                </Field>
-                                            </div>
-                                            <Field label="IP Whitelist" hint="Comma-separated list of allowed IPs (leave empty to allow all)">
-                                                <input className={inputClass} placeholder="e.g. 192.168.1.0/24, 10.0.0.1" value={ipWhitelist} onChange={(e) => setIpWhitelist(e.target.value)} />
-                                            </Field>
-                                        </div>
-                                        <div className="flex justify-end mt-5">
-                                            <SaveButton onClick={handleSaveSecurity} section="security" isSaving={isSaving} />
-                                        </div>
-                                    </div>
-
-                                    {/* Team Members */}
-                                    <div className="bg-white rounded-lg card-shadow p-6">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <h3 className="font-semibold text-[#0F172A]">Team Members</h3>
-                                            <button onClick={() => toast({ title: "Invite", description: "Invitation form opened." })}
-                                                className="flex items-center gap-2 px-3 py-1.5 bg-[#6637F4] text-white rounded-lg text-xs font-medium hover:bg-[#6637F4]/90">
-                                                <Plus size={14} /> Invite User
-                                            </button>
-                                        </div>
-                                        <div className="divide-y divide-[rgba(15,23,42,0.06)]">
-                                            {localMembers.map((member) => (
-                                                <div key={member.id} className="flex items-center justify-between py-3">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-9 h-9 rounded-full bg-[#6637F4]/10 flex items-center justify-center text-xs font-bold text-[#6637F4]">
-                                                            {member.avatar}
-                                                        </div>
-                                                        <div>
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-sm font-medium text-[#0F172A]">{member.name}</span>
-                                                                <span className={cn("px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase",
-                                                                    member.status === "active" ? "bg-[#16A34A]/10 text-[#16A34A]" :
-                                                                        member.status === "invited" ? "bg-[#D97706]/10 text-[#D97706]" : "bg-[#DC2626]/10 text-[#DC2626]"
-                                                                )}>{member.status}</span>
-                                                            </div>
-                                                            <p className="text-xs text-[#94A3B8]">{member.email} · {member.role}</p>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-[11px] text-[#94A3B8]">{member.twoFA ? "2FA ✓" : "No 2FA"}</span>
-                                                        <button onClick={() => handleToggle2FA(member)} className="p-1.5 text-[#475569] hover:bg-[#F8FAFC] rounded-lg" title="Toggle 2FA">
-                                                            <Shield size={14} />
-                                                        </button>
-                                                        {member.role !== "Owner" && (
-                                                            <button onClick={() => handleSuspendUser(member)} className="p-1.5 text-[#DC2626]/60 hover:bg-[#DC2626]/10 rounded-lg" title={member.status === "suspended" ? "Reactivate" : "Suspend"}>
-                                                                {member.status === "suspended" ? <RefreshCw size={14} /> : <Lock size={14} />}
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Active Sessions */}
-                                    <div className="bg-white rounded-lg card-shadow p-6">
-                                        <h3 className="font-semibold text-[#0F172A] mb-4">Active Sessions</h3>
-                                        <div className="divide-y divide-[rgba(15,23,42,0.06)]">
-                                            {sessions.map((session) => (
-                                                <div key={session.id} className="flex items-center justify-between py-3">
-                                                    <div className="flex items-center gap-3">
-                                                        {session.device.includes("MacBook") || session.device.includes("Windows") ? <Monitor size={18} className="text-[#475569]" /> : <Smartphone size={18} className="text-[#475569]" />}
-                                                        <div>
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-sm font-medium text-[#0F172A]">{session.device} · {session.browser}</span>
-                                                                {session.current && <span className="px-1.5 py-0.5 rounded bg-[#16A34A]/10 text-[#16A34A] text-[9px] font-semibold uppercase">Current</span>}
-                                                            </div>
-                                                            <p className="text-xs text-[#94A3B8]">{session.location} · {session.ip} · {session.lastActive}</p>
-                                                        </div>
-                                                    </div>
-                                                    {!session.current && (
-                                                        <button onClick={() => handleRevokeSession(session.id)}
-                                                            className="px-3 py-1.5 text-xs font-medium text-[#DC2626] bg-[#DC2626]/10 rounded-lg hover:bg-[#DC2626]/15">
-                                                            Revoke
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Audit Log */}
-                                    <div className="bg-white rounded-lg card-shadow p-6">
-                                        <h3 className="font-semibold text-[#0F172A] mb-4">Audit Log</h3>
-                                        <div className="divide-y divide-[rgba(15,23,42,0.06)]">
-                                            {auditLogs.map((log) => (
-                                                <div key={log.id} className="flex items-center justify-between py-3">
-                                                    <div>
-                                                        <p className="text-sm text-[#0F172A]">
-                                                            <span className="font-medium">{log.user}</span>{" "}
-                                                            <span className="text-[#475569]">{log.action.toLowerCase()}</span>{" "}
-                                                            <span className="font-medium">{log.resource}</span>
-                                                        </p>
-                                                        <p className="text-xs text-[#94A3B8] mt-0.5">IP: {log.ip}</p>
-                                                    </div>
-                                                    <span className="text-xs text-[#94A3B8] whitespace-nowrap">{log.time}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <div className="flex justify-end mt-4">
-                                            <button onClick={() => toast({ title: "Export", description: "Audit log CSV download started." })}
-                                                className="text-xs font-medium text-[#6637F4] hover:text-[#6637F4]/80">Export Full Log →</button>
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    </main>
-                </div>
-            </div>
+      <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,#CCFBF1,transparent_45%),linear-gradient(180deg,#F8FAFC_0%,#EEF2FF_100%)]">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <Loader2 size={34} className="animate-spin text-[#0F766E]" />
+          <p className="text-sm text-[#475569]">Loading workspace settings...</p>
         </div>
+      </div>
     );
+  }
+
+  return (
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#CCFBF1,transparent_35%),linear-gradient(180deg,#F8FAFC_0%,#EEF2FF_100%)]">
+      <div className="mx-auto flex max-w-[1500px] flex-col gap-6 px-4 py-6 sm:px-6 xl:flex-row">
+        <aside className="xl:sticky xl:top-6 xl:h-[calc(100vh-3rem)] xl:w-[320px] xl:flex-shrink-0">
+          <div className="overflow-hidden rounded-[32px] border border-[rgba(15,23,42,0.08)] bg-white/90 p-5 shadow-[0_28px_70px_rgba(15,23,42,0.09)] backdrop-blur">
+            <div className="mb-6 rounded-[26px] bg-[linear-gradient(135deg,#0F766E_0%,#115E59_55%,#0F172A_100%)] p-5 text-white">
+              <div className="flex items-center gap-3">
+                <div className="rounded-2xl bg-white/15 p-3">
+                  <Settings size={22} />
+                </div>
+                <div>
+                  <h1 className="text-xl font-semibold">Workspace Settings</h1>
+                  <p className="mt-1 text-sm text-white/75">Production controls for billing, email, security, and team operations.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {settingsTabs.map((tab) => {
+                const Icon = tab.icon;
+                const active = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => navigateToTab(tab.id)}
+                    className={cn(
+                      "flex w-full items-start gap-3 rounded-2xl px-4 py-3 text-left transition",
+                      active ? "bg-[#ECFEFF] text-[#0F766E]" : "hover:bg-[#F8FAFC] text-[#334155]"
+                    )}
+                  >
+                    <div className={cn("rounded-xl p-2.5", active ? "bg-[#CCFBF1]" : "bg-[#F1F5F9]")}>
+                      <Icon size={18} />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold">{tab.label}</div>
+                      <div className={cn("mt-0.5 text-xs", active ? "text-[#0F766E]/80" : "text-[#64748B]")}>{tab.description}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </aside>
+
+        <main className="flex-1 space-y-6">
+          {activeTab === "general" && (
+            <div className="space-y-6">
+              {general ? (
+                <div className={cardClass}>
+                  <SectionHeader title="General Preferences" description="Define the workspace language, time behavior, and visual defaults." />
+                  <div className="mt-6 grid gap-5 lg:grid-cols-2">
+                    <Field label="Organization name">
+                      <input className={fieldClass} value={general.organizationName} onChange={(event) => setGeneral({ ...general, organizationName: event.target.value })} />
+                    </Field>
+                    <Field label="Language">
+                      <select className={fieldClass} value={general.language} onChange={(event) => setGeneral({ ...general, language: event.target.value })}>
+                        {languages.map((language) => (
+                          <option key={language.value} value={language.value}>
+                            {language.label}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label="Timezone" hint="Lead timestamps, activity feeds, and automation schedules use this timezone.">
+                      <select className={fieldClass} value={general.timezone} onChange={(event) => setGeneral({ ...general, timezone: event.target.value })}>
+                        {timezones.map((timezone) => (
+                          <option key={timezone} value={timezone}>
+                            {timezone}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label="Currency">
+                      <select className={fieldClass} value={general.currency} onChange={(event) => setGeneral({ ...general, currency: event.target.value })}>
+                        {currencies.map((currency) => (
+                          <option key={currency} value={currency}>
+                            {currency}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label="Date format">
+                      <select className={fieldClass} value={general.dateFormat} onChange={(event) => setGeneral({ ...general, dateFormat: event.target.value as DateFormatValue })}>
+                        {dateFormats.map((format) => (
+                          <option key={format} value={format}>
+                            {format}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label="Workspace theme">
+                      <div className="flex gap-3">
+                        {(["light", "dark"] as WorkspaceTheme[]).map((theme) => (
+                          <button
+                            key={theme}
+                            type="button"
+                            onClick={() => setGeneral({ ...general, theme })}
+                            className={cn(
+                              "flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition",
+                              general.theme === theme
+                                ? "border-[#0F766E] bg-[#ECFEFF] text-[#0F766E]"
+                                : "border-[rgba(15,23,42,0.08)] bg-[#F8FAFC] text-[#475569]"
+                            )}
+                          >
+                            {theme === "light" ? "Light" : "Dark"}
+                          </button>
+                        ))}
+                      </div>
+                    </Field>
+                  </div>
+                  <div className="mt-6 flex justify-end">
+                    <SaveButton onClick={handleSaveGeneral} loading={savingSection === "general"} />
+                  </div>
+                </div>
+              ) : (
+                <AccessDeniedCard label="general workspace preferences" />
+              )}
+            </div>
+          )}
+
+          {activeTab === "company" && (
+            <div className="space-y-6">
+              {company ? (
+                <div className={cardClass}>
+                  <SectionHeader title="Company Profile" description="Control how your workspace looks and how customers can contact you." />
+                  <div className="mt-6 grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
+                    <div className="rounded-[24px] border border-dashed border-[rgba(15,23,42,0.14)] bg-[#F8FAFC] p-5">
+                      <p className="text-sm font-medium text-[#0F172A]">Company logo</p>
+                      <p className="mt-1 text-xs text-[#64748B]">PNG, JPG, WEBP, or SVG. Maximum 2MB.</p>
+                      <div className="mt-5 flex aspect-square items-center justify-center overflow-hidden rounded-[24px] bg-white">
+                        {company.logoUrl ? (
+                          <img src={company.logoUrl} alt="Company logo" className="h-full w-full object-contain p-4" />
+                        ) : (
+                          <div className="text-center text-sm text-[#64748B]">
+                            <Building2 size={28} className="mx-auto mb-2 text-[#94A3B8]" />
+                            No logo uploaded
+                          </div>
+                        )}
+                      </div>
+                      <input
+                        ref={logoInputRef}
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
+                        className="hidden"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          if (file) {
+                            void handleUploadLogo(file);
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => logoInputRef.current?.click()}
+                        className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[rgba(15,23,42,0.08)] bg-white px-4 py-3 text-sm font-medium text-[#0F172A] transition hover:border-[#0F766E]"
+                      >
+                        {savingSection === "logo" ? <Loader2 size={15} className="animate-spin" /> : <Upload size={15} />}
+                        {savingSection === "logo" ? "Uploading..." : "Upload logo"}
+                      </button>
+                    </div>
+
+                    <div className="grid gap-5 lg:grid-cols-2">
+                      <Field label="Company name">
+                        <input className={fieldClass} value={company.companyName} onChange={(event) => setCompany({ ...company, companyName: event.target.value })} />
+                      </Field>
+                      <Field label="Primary domain">
+                        <input className={fieldClass} value={company.domain} onChange={(event) => setCompany({ ...company, domain: event.target.value })} />
+                      </Field>
+                      <Field label="Company email">
+                        <input className={fieldClass} type="email" value={company.email} onChange={(event) => setCompany({ ...company, email: event.target.value })} />
+                      </Field>
+                      <Field label="Phone">
+                        <input className={fieldClass} value={company.phone} onChange={(event) => setCompany({ ...company, phone: event.target.value })} />
+                      </Field>
+                      <Field label="Tax ID">
+                        <input className={fieldClass} value={company.taxId} onChange={(event) => setCompany({ ...company, taxId: event.target.value })} />
+                      </Field>
+                      <Field label="Address">
+                        <input className={fieldClass} value={company.address} onChange={(event) => setCompany({ ...company, address: event.target.value })} />
+                      </Field>
+                    </div>
+                  </div>
+                  <div className="mt-6 flex justify-end">
+                    <SaveButton onClick={handleSaveCompany} loading={savingSection === "company"} />
+                  </div>
+                </div>
+              ) : (
+                <AccessDeniedCard label="company profile settings" />
+              )}
+            </div>
+          )}
+
+          {activeTab === "billing" && (
+            billing ? (
+              <div className="space-y-6">
+                <div className={cardClass}>
+                  <SectionHeader
+                    title={`${billing.name} Plan`}
+                    description={billing.description}
+                    badge={
+                      <div className="rounded-full bg-[#ECFEFF] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#0F766E]">
+                        {billing.status}
+                      </div>
+                    }
+                  />
+                  <div className="mt-6 grid gap-4 lg:grid-cols-4">
+                    <div className="rounded-2xl bg-[#0F172A] p-5 text-white">
+                      <p className="text-xs uppercase tracking-[0.18em] text-white/65">Current rate</p>
+                      <p className="mt-3 text-3xl font-semibold">{formatMoney(billing.currentRate)}</p>
+                      <p className="mt-2 text-sm text-white/70">{billing.billingCycle === "YEARLY" ? "Billed yearly" : "Billed monthly"}</p>
+                    </div>
+                    <div className="rounded-2xl bg-[#F8FAFC] p-5">
+                      <p className="text-xs uppercase tracking-[0.18em] text-[#64748B]">Total paid</p>
+                      <p className="mt-3 text-3xl font-semibold text-[#0F172A]">{formatMoney(billing.totalPaid)}</p>
+                      <p className="mt-2 text-sm text-[#64748B]">Lifetime subscription payments</p>
+                    </div>
+                    <div className="rounded-2xl bg-[#F8FAFC] p-5">
+                      <p className="text-xs uppercase tracking-[0.18em] text-[#64748B]">Monthly price</p>
+                      <p className="mt-3 text-3xl font-semibold text-[#0F172A]">{formatMoney(billing.monthlyRate)}</p>
+                      <p className="mt-2 text-sm text-[#64748B]">Per workspace monthly price</p>
+                    </div>
+                    <div className="rounded-2xl bg-[#F8FAFC] p-5">
+                      <p className="text-xs uppercase tracking-[0.18em] text-[#64748B]">Next billing date</p>
+                      <p className="mt-3 text-lg font-semibold text-[#0F172A]">{billing.nextBillingDate ? formatDateTime(billing.nextBillingDate) : "Not scheduled"}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className={cardClass}>
+                  <SectionHeader title="Usage Tracking" description="Track current workspace usage against your plan allowances." />
+                  <div className="mt-6 grid gap-5 lg:grid-cols-2">
+                    <UsageBar label="Users" used={billing.usage.users.used} limit={billing.usage.users.limit} percent={billing.usage.users.percent} />
+                    <UsageBar label="Contacts" used={billing.usage.contacts.used} limit={billing.usage.contacts.limit} percent={billing.usage.contacts.percent} />
+                    <UsageBar
+                      label="Storage"
+                      used={billing.usage.storage.usedBytes}
+                      limit={billing.usage.storage.limitBytes}
+                      percent={billing.usage.storage.percent}
+                      formatter={formatBytes}
+                    />
+                    <UsageBar label="API calls" used={billing.usage.apiCalls.used} limit={billing.usage.apiCalls.limit} percent={billing.usage.apiCalls.percent} />
+                  </div>
+                </div>
+
+                <div className={cardClass}>
+                  <SectionHeader title="Billing Invoices" description="Recent subscription billing records for this workspace." />
+                  <div className="mt-6 space-y-3">
+                    {billingInvoices.length === 0 ? (
+                      <div className="rounded-2xl border border-dashed border-[rgba(15,23,42,0.14)] p-6 text-sm text-[#64748B]">
+                        No billing invoices are available yet for this workspace.
+                      </div>
+                    ) : (
+                      billingInvoices.map((invoice) => (
+                        <div key={invoice.id} className="flex flex-col gap-3 rounded-2xl border border-[rgba(15,23,42,0.08)] bg-[#F8FAFC] p-4 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p className="font-medium text-[#0F172A]">{invoice.label}</p>
+                            <p className="mt-1 text-sm text-[#64748B]">
+                              {invoice.status === "PAID" ? `Paid on ${formatDateTime(invoice.billedAt)}` : `Due ${formatDateTime(invoice.dueAt)}`}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className={cn("rounded-full px-3 py-1 text-xs font-semibold", invoice.status === "PAID" ? "bg-[#DCFCE7] text-[#166534]" : "bg-[#FEF3C7] text-[#92400E]")}>
+                              {invoice.status}
+                            </span>
+                            <span className="text-sm font-semibold text-[#0F172A]">{formatMoney(invoice.amount)}</span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <AccessDeniedCard label="billing and plan details" />
+            )
+          )}
+
+          {activeTab === "email" && (
+            emailSettings ? (
+              <div className="space-y-6">
+                <div className={cardClass}>
+                  <SectionHeader title="SMTP Configuration" description="Configure the outbound email gateway used for sends and invitations." />
+                  <div className="mt-6 grid gap-5 lg:grid-cols-2">
+                    <Field label="SMTP host">
+                      <input className={fieldClass} value={emailSettings.smtp.host} onChange={(event) => setEmailSettings({ ...emailSettings, smtp: { ...emailSettings.smtp, host: event.target.value } })} />
+                    </Field>
+                    <Field label="Port">
+                      <input className={fieldClass} type="number" value={emailSettings.smtp.port} onChange={(event) => setEmailSettings({ ...emailSettings, smtp: { ...emailSettings.smtp, port: Number(event.target.value || 0) } })} />
+                    </Field>
+                    <Field label="Username">
+                      <input className={fieldClass} value={emailSettings.smtp.username} onChange={(event) => setEmailSettings({ ...emailSettings, smtp: { ...emailSettings.smtp, username: event.target.value } })} />
+                    </Field>
+                    <Field label="Password">
+                      <input className={fieldClass} type="password" value={emailSettings.smtp.passwordMasked} onChange={(event) => setEmailSettings({ ...emailSettings, smtp: { ...emailSettings.smtp, passwordMasked: event.target.value } })} />
+                    </Field>
+                    <Field label="Encryption">
+                      <select className={fieldClass} value={emailSettings.smtp.encryption} onChange={(event) => setEmailSettings({ ...emailSettings, smtp: { ...emailSettings.smtp, encryption: event.target.value as typeof emailSettings.smtp.encryption } })}>
+                        {emailEncryptions.map((encryption) => (
+                          <option key={encryption} value={encryption}>
+                            {encryption}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label="Sender name">
+                      <input className={fieldClass} value={emailSettings.smtp.senderName} onChange={(event) => setEmailSettings({ ...emailSettings, smtp: { ...emailSettings.smtp, senderName: event.target.value } })} />
+                    </Field>
+                    <Field label="Sender email">
+                      <input className={fieldClass} type="email" value={emailSettings.smtp.senderEmail} onChange={(event) => setEmailSettings({ ...emailSettings, smtp: { ...emailSettings.smtp, senderEmail: event.target.value } })} />
+                    </Field>
+                    <Field label="Signature" hint="Used in invitation and reminder templates.">
+                      <textarea className={cn(fieldClass, "min-h-[120px]")} value={emailSettings.smtp.signature} onChange={(event) => setEmailSettings({ ...emailSettings, smtp: { ...emailSettings.smtp, signature: event.target.value } })} />
+                    </Field>
+                  </div>
+                  <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+                    <div className="inline-flex items-center gap-2 rounded-full bg-[#F8FAFC] px-3 py-1 text-xs font-medium text-[#475569]">
+                      {emailSettings.smtp.configured ? <CheckCircle2 size={14} className="text-[#16A34A]" /> : <AlertTriangle size={14} className="text-[#D97706]" />}
+                      {emailSettings.smtp.configured ? "SMTP configured" : "SMTP incomplete"}
+                    </div>
+                    <SaveButton onClick={handleSaveSmtp} loading={savingSection === "smtp"} />
+                  </div>
+                </div>
+
+                <div className={cardClass}>
+                  <SectionHeader title="IMAP Configuration" description="Connect mailbox sync for incoming messages." />
+                  <div className="mt-6 grid gap-5 lg:grid-cols-2">
+                    <Field label="IMAP host">
+                      <input className={fieldClass} value={emailSettings.imap.host} onChange={(event) => setEmailSettings({ ...emailSettings, imap: { ...emailSettings.imap, host: event.target.value } })} />
+                    </Field>
+                    <Field label="Port">
+                      <input className={fieldClass} type="number" value={emailSettings.imap.port} onChange={(event) => setEmailSettings({ ...emailSettings, imap: { ...emailSettings.imap, port: Number(event.target.value || 0) } })} />
+                    </Field>
+                    <Field label="Username">
+                      <input className={fieldClass} value={emailSettings.imap.username} onChange={(event) => setEmailSettings({ ...emailSettings, imap: { ...emailSettings.imap, username: event.target.value } })} />
+                    </Field>
+                    <Field label="Password">
+                      <input className={fieldClass} type="password" value={emailSettings.imap.passwordMasked} onChange={(event) => setEmailSettings({ ...emailSettings, imap: { ...emailSettings.imap, passwordMasked: event.target.value } })} />
+                    </Field>
+                    <Field label="Encryption">
+                      <select className={fieldClass} value={emailSettings.imap.encryption} onChange={(event) => setEmailSettings({ ...emailSettings, imap: { ...emailSettings.imap, encryption: event.target.value as typeof emailSettings.imap.encryption } })}>
+                        {emailEncryptions.map((encryption) => (
+                          <option key={encryption} value={encryption}>
+                            {encryption}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                  </div>
+                  <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+                    <div className="inline-flex items-center gap-2 rounded-full bg-[#F8FAFC] px-3 py-1 text-xs font-medium text-[#475569]">
+                      {emailSettings.imap.configured ? <CheckCircle2 size={14} className="text-[#16A34A]" /> : <AlertTriangle size={14} className="text-[#D97706]" />}
+                      {emailSettings.imap.configured ? "IMAP configured" : "IMAP incomplete"}
+                    </div>
+                    <SaveButton onClick={handleSaveImap} loading={savingSection === "imap"} />
+                  </div>
+                </div>
+
+                <div className={cardClass}>
+                  <SectionHeader title="Test Email & Templates" description="Verify delivery and keep reusable email content up to date." />
+                  <div className="mt-6 grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
+                    <div className="space-y-4 rounded-[24px] bg-[#F8FAFC] p-4">
+                      <Field label="Send a test email">
+                        <input className={fieldClass} type="email" value={testEmailAddress} onChange={(event) => setTestEmailAddress(event.target.value)} />
+                      </Field>
+                      <button
+                        onClick={handleSendTestEmail}
+                        disabled={savingSection === "test-email"}
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[rgba(15,23,42,0.08)] bg-white px-4 py-3 text-sm font-medium text-[#0F172A] transition hover:border-[#0F766E] disabled:opacity-70"
+                      >
+                        {savingSection === "test-email" ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
+                        {savingSection === "test-email" ? "Sending..." : "Send test email"}
+                      </button>
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-[#0F172A]">Templates</p>
+                        {emailSettings.templates.map((template) => (
+                          <button
+                            key={template.id}
+                            type="button"
+                            onClick={() => setSelectedTemplateId(template.id)}
+                            className={cn(
+                              "w-full rounded-2xl border px-4 py-3 text-left transition",
+                              selectedTemplateId === template.id
+                                ? "border-[#0F766E] bg-[#ECFEFF]"
+                                : "border-[rgba(15,23,42,0.08)] bg-white hover:border-[#99F6E4]"
+                            )}
+                          >
+                            <p className="text-sm font-semibold text-[#0F172A]">{template.name}</p>
+                            <p className="mt-1 text-xs text-[#64748B]">{template.subject}</p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {selectedTemplate ? (
+                      <div className="space-y-4">
+                        <Field label="Subject">
+                          <input
+                            className={fieldClass}
+                            value={selectedTemplate.subject}
+                            onChange={(event) =>
+                              setEmailSettings({
+                                ...emailSettings,
+                                templates: emailSettings.templates.map((template) =>
+                                  template.id === selectedTemplate.id ? { ...template, subject: event.target.value } : template
+                                ),
+                              })
+                            }
+                          />
+                        </Field>
+                        <Field label="HTML body">
+                          <textarea
+                            className={cn(fieldClass, "min-h-[200px]")}
+                            value={selectedTemplate.bodyHtml}
+                            onChange={(event) =>
+                              setEmailSettings({
+                                ...emailSettings,
+                                templates: emailSettings.templates.map((template) =>
+                                  template.id === selectedTemplate.id ? { ...template, bodyHtml: event.target.value } : template
+                                ),
+                              })
+                            }
+                          />
+                        </Field>
+                        <Field label="Plain text body">
+                          <textarea
+                            className={cn(fieldClass, "min-h-[160px]")}
+                            value={selectedTemplate.bodyText}
+                            onChange={(event) =>
+                              setEmailSettings({
+                                ...emailSettings,
+                                templates: emailSettings.templates.map((template) =>
+                                  template.id === selectedTemplate.id ? { ...template, bodyText: event.target.value } : template
+                                ),
+                              })
+                            }
+                          />
+                        </Field>
+                        <div className="flex justify-end">
+                          <SaveButton onClick={handleSaveTemplate} loading={savingSection === "template"} label="Save template" />
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <AccessDeniedCard label="email configuration" />
+            )
+          )}
+
+          {activeTab === "security" && (
+            security ? (
+              <div className="space-y-6">
+                <div className={cardClass}>
+                  <SectionHeader title="Security Policy" description="Set the authentication requirements and access guardrails for this workspace." />
+                  <div className="mt-6 grid gap-6 lg:grid-cols-2">
+                    <div className="rounded-2xl bg-[#F8FAFC] p-5">
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <p className="font-medium text-[#0F172A]">Require two-factor authentication</p>
+                          <p className="mt-1 text-sm text-[#64748B]">Owners and admins can require 2FA for every member.</p>
+                        </div>
+                        <Toggle checked={security.enforce2FA} onChange={(next) => setSecurity({ ...security, enforce2FA: next })} />
+                      </div>
+                    </div>
+                    <Field label="Password minimum length">
+                      <input className={fieldClass} type="number" value={security.passwordMinLength} onChange={(event) => setSecurity({ ...security, passwordMinLength: Number(event.target.value || 8) })} />
+                    </Field>
+                    <Field label="Session timeout (minutes)">
+                      <input className={fieldClass} type="number" value={security.sessionTimeoutMinutes} onChange={(event) => setSecurity({ ...security, sessionTimeoutMinutes: Number(event.target.value || 30) })} />
+                    </Field>
+                    <Field label="IP whitelist" hint="One IP address per line. Leave empty to allow all.">
+                      <textarea
+                        className={cn(fieldClass, "min-h-[140px]")}
+                        value={security.ipWhitelist.join("\n")}
+                        onChange={(event) =>
+                          setSecurity({
+                            ...security,
+                            ipWhitelist: event.target.value.split("\n").map((value) => value.trim()).filter(Boolean),
+                          })
+                        }
+                      />
+                    </Field>
+                  </div>
+                  <div className="mt-6 flex justify-end">
+                    <SaveButton onClick={handleSaveSecurity} loading={savingSection === "security"} />
+                  </div>
+                </div>
+
+                <div className={cardClass}>
+                  <SectionHeader title="Active Sessions" description="Current active sessions for your account." />
+                  <div className="mt-6 space-y-3">
+                    {sessions.length === 0 ? (
+                      <div className="rounded-2xl border border-dashed border-[rgba(15,23,42,0.14)] p-6 text-sm text-[#64748B]">
+                        No active sessions were found.
+                      </div>
+                    ) : (
+                      sessions.map((session) => (
+                        <div key={session.id} className="flex flex-col gap-3 rounded-2xl border border-[rgba(15,23,42,0.08)] bg-[#F8FAFC] p-4 lg:flex-row lg:items-center lg:justify-between">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-[#0F172A]">{session.device}</p>
+                              {session.current ? (
+                                <span className="rounded-full bg-[#DCFCE7] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#166534]">
+                                  Current
+                                </span>
+                              ) : null}
+                            </div>
+                            <p className="mt-1 text-sm text-[#64748B]">
+                              {session.browser} • {session.ip} • {session.location}
+                            </p>
+                            <p className="mt-1 text-xs text-[#94A3B8]">Last active {formatDateTime(session.lastActive)}</p>
+                          </div>
+                          <button
+                            type="button"
+                            disabled={session.current}
+                            onClick={() => void handleRevokeSession(session.id)}
+                            className="rounded-xl border border-[rgba(15,23,42,0.08)] bg-white px-4 py-2 text-sm font-medium text-[#0F172A] transition hover:border-[#DC2626] hover:text-[#DC2626] disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            Revoke
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                <div className={cardClass}>
+                  <SectionHeader
+                    title="Audit Log"
+                    description="Recent profile, security, export, and access events for this workspace."
+                    badge={
+                      <button onClick={handleExportAudit} className="inline-flex items-center gap-2 rounded-xl border border-[rgba(15,23,42,0.08)] bg-[#F8FAFC] px-3 py-2 text-sm font-medium text-[#0F172A] transition hover:border-[#0F766E] hover:text-[#0F766E]">
+                        <Download size={15} />
+                        Export CSV
+                      </button>
+                    }
+                  />
+                  <div className="mt-6 space-y-3">
+                    {auditLogs.length === 0 ? (
+                      <div className="rounded-2xl border border-dashed border-[rgba(15,23,42,0.14)] p-6 text-sm text-[#64748B]">
+                        No audit events have been recorded yet.
+                      </div>
+                    ) : (
+                      auditLogs.map((log) => (
+                        <div key={log.id} className="rounded-2xl border border-[rgba(15,23,42,0.08)] bg-[#F8FAFC] p-4">
+                          <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                            <div>
+                              <p className="font-medium text-[#0F172A]">{log.description}</p>
+                              <p className="mt-1 text-sm text-[#64748B]">
+                                {log.module} • {log.action} {log.user ? `• ${log.user.firstName} ${log.user.lastName}` : ""}
+                              </p>
+                            </div>
+                            <div className="text-sm text-[#64748B]">{formatDateTime(log.createdAt)}</div>
+                          </div>
+                          <p className="mt-2 text-xs text-[#94A3B8]">IP: {log.ipAddress || "Unknown"}</p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <AccessDeniedCard label="security settings" />
+            )
+          )}
+
+          {activeTab === "notifications" && (
+            notifications ? (
+              <div className={cardClass}>
+                <SectionHeader title="Notification Preferences" description="Choose which product and workflow notifications your workspace should receive." />
+                <div className="mt-6 space-y-4">
+                  {[
+                    { key: "emailNotifications", label: "Email notifications", description: "Receive task, lead, and workflow updates by email." },
+                    { key: "pushNotifications", label: "Push notifications", description: "Send push notifications to connected devices." },
+                    { key: "desktopNotifications", label: "Desktop notifications", description: "Show browser desktop notifications while signed in." },
+                    { key: "weeklyDigest", label: "Weekly digest", description: "Send a weekly workspace summary." },
+                    { key: "productUpdates", label: "Product updates", description: "Receive release notes and product announcements." },
+                  ].map((item) => (
+                    <div key={item.key} className="flex items-center justify-between gap-4 rounded-2xl border border-[rgba(15,23,42,0.08)] bg-[#F8FAFC] p-4">
+                      <div>
+                        <p className="font-medium text-[#0F172A]">{item.label}</p>
+                        <p className="mt-1 text-sm text-[#64748B]">{item.description}</p>
+                      </div>
+                      <Toggle
+                        checked={notifications[item.key as keyof NotificationSettings]}
+                        onChange={(next) =>
+                          setNotifications({
+                            ...notifications,
+                            [item.key]: next,
+                          })
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-6 flex justify-end">
+                  <SaveButton onClick={handleSaveNotifications} loading={savingSection === "notifications"} />
+                </div>
+              </div>
+            ) : (
+              <AccessDeniedCard label="notification settings" />
+            )
+          )}
+
+          {activeTab === "team" && (
+            teamMembers.length > 0 || roles.length > 0 ? (
+              <div className="space-y-6">
+                <div className={cardClass}>
+                  <SectionHeader title="Invite Team Members" description="Invite new members to this workspace and assign their role immediately." />
+                  <div className="mt-6 grid gap-5 lg:grid-cols-2 xl:grid-cols-5">
+                    <Field label="Email">
+                      <input className={fieldClass} type="email" value={inviteForm.email} onChange={(event) => setInviteForm({ ...inviteForm, email: event.target.value })} />
+                    </Field>
+                    <Field label="First name">
+                      <input className={fieldClass} value={inviteForm.firstName} onChange={(event) => setInviteForm({ ...inviteForm, firstName: event.target.value })} />
+                    </Field>
+                    <Field label="Last name">
+                      <input className={fieldClass} value={inviteForm.lastName} onChange={(event) => setInviteForm({ ...inviteForm, lastName: event.target.value })} />
+                    </Field>
+                    <Field label="Phone">
+                      <input className={fieldClass} value={inviteForm.phone} onChange={(event) => setInviteForm({ ...inviteForm, phone: event.target.value })} />
+                    </Field>
+                    <Field label="Role">
+                      <select className={fieldClass} value={inviteForm.roleId} onChange={(event) => setInviteForm({ ...inviteForm, roleId: event.target.value })}>
+                        {roles.map((role) => (
+                          <option key={role.id} value={role.id}>
+                            {role.name}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                  </div>
+                  <div className="mt-6 flex justify-end">
+                    <button
+                      onClick={handleInviteUser}
+                      disabled={savingSection === "invite"}
+                      className="inline-flex items-center gap-2 rounded-xl bg-[#0F766E] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#115E59] disabled:opacity-70"
+                    >
+                      {savingSection === "invite" ? <Loader2 size={15} className="animate-spin" /> : <UserPlus size={15} />}
+                      {savingSection === "invite" ? "Inviting..." : "Invite member"}
+                    </button>
+                  </div>
+                </div>
+
+                <div className={cardClass}>
+                  <SectionHeader title="Team Directory" description="Review active workspace members, their roles, and access state." />
+                  <div className="mt-6 space-y-3">
+                    {teamMembers.map((member) => (
+                      <div key={member.id} className="flex flex-col gap-4 rounded-2xl border border-[rgba(15,23,42,0.08)] bg-[#F8FAFC] p-4 xl:flex-row xl:items-center xl:justify-between">
+                        <div>
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#CCFBF1] text-sm font-semibold text-[#0F766E]">
+                              {(member.fullName || member.email).slice(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="font-medium text-[#0F172A]">{member.fullName || member.email}</p>
+                              <p className="text-sm text-[#64748B]">{member.email}</p>
+                            </div>
+                          </div>
+                          <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                            <span className="rounded-full bg-white px-3 py-1 font-medium text-[#475569]">Status: {member.membershipStatus}</span>
+                            <span className="rounded-full bg-white px-3 py-1 font-medium text-[#475569]">Last login: {formatDateTime(member.lastLoginAt)}</span>
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                          <select
+                            className={cn(fieldClass, "min-w-[180px] py-2.5")}
+                            value={member.role?.id || ""}
+                            onChange={(event) => void handleRoleChange(member.id, event.target.value)}
+                          >
+                            {roles.map((role) => (
+                              <option key={role.id} value={role.id}>
+                                {role.name}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => void handleRemoveUser(member.id)}
+                            className="rounded-xl border border-[rgba(15,23,42,0.08)] bg-white px-4 py-2.5 text-sm font-medium text-[#0F172A] transition hover:border-[#DC2626] hover:text-[#DC2626]"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <AccessDeniedCard label="team management" />
+            )
+          )}
+        </main>
+      </div>
+    </div>
+  );
 }

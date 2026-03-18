@@ -55,6 +55,8 @@ import chatRoutes from '../modules/chat/chat.routes';
 // System modules
 import settingsRoutes from '../modules/settings/settings.routes';
 import analyticsRoutes from '../modules/analytics/analytics.routes';
+import auditRoutes from '../modules/audit/audit.routes';
+import sessionsRoutes from '../modules/sessions/sessions.routes';
 
 // Applications module
 import applicationsRoutes from '../modules/applications/applications.routes';
@@ -175,6 +177,8 @@ export function registerRoutes(app: Application): void {
   // System
   protectedRouter.use('/settings', settingsRoutes);
   protectedRouter.use('/analytics', analyticsRoutes);
+  protectedRouter.use('/audit-logs', auditRoutes);
+  protectedRouter.use('/sessions', sessionsRoutes);
 
   // Tags & Notifications (shared)
   protectedRouter.use('/tags', tagsRoutes);
@@ -258,6 +262,8 @@ export function registerRoutes(app: Application): void {
         // System
         settings: `${apiPrefix}/settings`,
         analytics: `${apiPrefix}/analytics`,
+        auditLogs: `${apiPrefix}/audit-logs`,
+        sessions: `${apiPrefix}/sessions`,
         tags: `${apiPrefix}/tags`,
         notifications: `${apiPrefix}/notifications`,
         // Applications

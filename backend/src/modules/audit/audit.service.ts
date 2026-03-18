@@ -8,6 +8,7 @@ import {
 } from './audit.dto';
 import { logger } from '../../common/utils/logger';
 import { Request } from 'express';
+import { getPaginationMeta } from '../../common/utils/pagination';
 
 export class AuditService {
   /**
@@ -180,12 +181,7 @@ export class AuditService {
 
     return {
       data: data.map((log) => this.toResponseDto(log)),
-      meta: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
+      meta: getPaginationMeta(total, page, limit),
     };
   }
 

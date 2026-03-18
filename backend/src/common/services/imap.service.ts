@@ -3,6 +3,9 @@ const { simpleParser } = require('mailparser');
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
+const INITIAL_SYNC_MAX_MESSAGES = 250;
+const INCREMENTAL_UNSEEN_LOOKBACK_DAYS = 7;
+const INCREMENTAL_SEEN_LOOKBACK_DAYS = 3;
 
 export interface ImapConfig {
     host: string;
@@ -33,45 +36,21 @@ class ImapService {
         let fetched = 0;
 
         try {
+            const existingEmailCount = await prisma.email.count({
+                where: { tenantId, deletedAt: null },
+            });
+
             await client.connect();
             const lock = await client.getMailboxLock('INBOX');
 
             try {
-                // Fetch messages from last 7 days to avoid overwhelming on first sync
-                const since = new Date();
-                since.setDate(since.getDate() - 7);
-
-                // Search for messages since the date
-                const messages = client.fetch(
-                    { since, seen: false },
-                    { source: true, envelope: true, uid: true }
-                );
-
-                for await (const msg of messages) {
-                    try {
-                        const parsed = await simpleParser(msg.source);
-                        fetched += await this._storeEmail(tenantId, parsed, config.user);
-                    } catch (parseErr: any) {
-                        console.error(`⚠️ Failed to parse email UID ${msg.uid}:`, parseErr.message);
-                    }
-                }
-
-                // Also fetch recent seen messages (last 3 days) for completeness
-                const recentSince = new Date();
-                recentSince.setDate(recentSince.getDate() - 3);
-
-                const seenMessages = client.fetch(
-                    { since: recentSince, seen: true },
-                    { source: true, envelope: true, uid: true }
-                );
-
-                for await (const msg of seenMessages) {
-                    try {
-                        const parsed = await simpleParser(msg.source);
-                        fetched += await this._storeEmail(tenantId, parsed, config.user);
-                    } catch (parseErr: any) {
-                        console.error(`⚠️ Failed to parse seen email UID ${msg.uid}:`, parseErr.message);
-                    }
+                // On the first sync, backfill the latest mailbox history instead of only
+                // looking at the last few days. This prevents an apparently empty inbox
+                // when the user connects an existing mailbox that already has older mail.
+                if (existingEmailCount === 0) {
+                    fetched += await this._backfillInitialHistory(client, tenantId, config.user);
+                } else {
+                    fetched += await this._fetchIncrementalHistory(client, tenantId, config.user);
                 }
             } finally {
                 lock.release();
@@ -85,6 +64,68 @@ class ImapService {
 
         if (fetched > 0) {
             console.log(`📬 Fetched ${fetched} new emails for tenant ${tenantId}`);
+        }
+
+        return fetched;
+    }
+
+    private async _backfillInitialHistory(client: ImapFlow, tenantId: string, imapUser: string): Promise<number> {
+        const uidList = await client.search({ all: true }, { uid: true });
+
+        if (!uidList || uidList.length === 0) {
+            return 0;
+        }
+
+        const latestUids = [...uidList].sort((a, b) => a - b).slice(-INITIAL_SYNC_MAX_MESSAGES);
+        let fetched = 0;
+
+        for await (const msg of client.fetch(latestUids, { source: true, envelope: true, uid: true }, { uid: true })) {
+            try {
+                const parsed = await simpleParser(msg.source);
+                fetched += await this._storeEmail(tenantId, parsed, imapUser);
+            } catch (parseErr: any) {
+                console.error(`⚠️ Failed to parse initial-sync email UID ${msg.uid}:`, parseErr.message);
+            }
+        }
+
+        return fetched;
+    }
+
+    private async _fetchIncrementalHistory(client: ImapFlow, tenantId: string, imapUser: string): Promise<number> {
+        let fetched = 0;
+
+        const unseenSince = new Date();
+        unseenSince.setDate(unseenSince.getDate() - INCREMENTAL_UNSEEN_LOOKBACK_DAYS);
+
+        const unseenMessages = client.fetch(
+            { since: unseenSince, seen: false },
+            { source: true, envelope: true, uid: true }
+        );
+
+        for await (const msg of unseenMessages) {
+            try {
+                const parsed = await simpleParser(msg.source);
+                fetched += await this._storeEmail(tenantId, parsed, imapUser);
+            } catch (parseErr: any) {
+                console.error(`⚠️ Failed to parse email UID ${msg.uid}:`, parseErr.message);
+            }
+        }
+
+        const seenSince = new Date();
+        seenSince.setDate(seenSince.getDate() - INCREMENTAL_SEEN_LOOKBACK_DAYS);
+
+        const seenMessages = client.fetch(
+            { since: seenSince, seen: true },
+            { source: true, envelope: true, uid: true }
+        );
+
+        for await (const msg of seenMessages) {
+            try {
+                const parsed = await simpleParser(msg.source);
+                fetched += await this._storeEmail(tenantId, parsed, imapUser);
+            } catch (parseErr: any) {
+                console.error(`⚠️ Failed to parse seen email UID ${msg.uid}:`, parseErr.message);
+            }
         }
 
         return fetched;

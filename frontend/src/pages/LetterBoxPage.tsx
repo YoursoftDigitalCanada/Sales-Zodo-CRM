@@ -1,6 +1,6 @@
 // src/pages/LetterBox.tsx
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 // import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -1239,6 +1239,7 @@ const LetterBoxPage = () => {
   const [emailsLoading, setEmailsLoading] = useState(true);
   const [emailConfigured, setEmailConfigured] = useState<{ smtp: boolean; imap: boolean } | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const autoSyncAttemptedRef = useRef(false);
 
   // Check email config status
   useEffect(() => {
@@ -1250,7 +1251,7 @@ const LetterBoxPage = () => {
   }, []);
 
   // Fetch emails from API
-  const loadEmails = async (silent = false) => {
+  const loadEmails = useCallback(async (silent = false) => {
     try {
       if (!silent) setEmailsLoading(true);
       const data = await apiGetEmails();
@@ -1287,18 +1288,58 @@ const LetterBoxPage = () => {
     } finally {
       setEmailsLoading(false);
     }
-  };
+  }, []);
 
   // Initial load
   useEffect(() => {
-    loadEmails();
-  }, []);
+    void loadEmails();
+  }, [loadEmails]);
 
   // Auto-refresh every 30 seconds (silent — no loading spinner)
   useEffect(() => {
-    const interval = setInterval(() => loadEmails(true), 30000);
+    const interval = setInterval(() => {
+      void loadEmails(true);
+    }, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [loadEmails]);
+
+  // If IMAP is configured but we have no imported emails yet, try one silent sync.
+  useEffect(() => {
+    if (!emailConfigured?.imap || emailsLoading || emails.length > 0 || autoSyncAttemptedRef.current) {
+      return;
+    }
+
+    autoSyncAttemptedRef.current = true;
+    let cancelled = false;
+
+    const syncMailbox = async () => {
+      setIsRefreshing(true);
+      try {
+        const result = await fetchEmailsNow();
+        if (cancelled) return;
+
+        await loadEmails(true);
+        if (cancelled || result.fetched <= 0) return;
+
+        toast({
+          title: "Mailbox Synced",
+          description: `${result.fetched} email(s) imported into Letter Box.`,
+        });
+      } catch (err) {
+        console.error("Initial mailbox sync failed:", err);
+      } finally {
+        if (!cancelled) {
+          setIsRefreshing(false);
+        }
+      }
+    };
+
+    void syncMailbox();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [emailConfigured, emailsLoading, emails.length, loadEmails, toast]);
 
   // Filtered emails
   const filteredEmails = useMemo(() => {

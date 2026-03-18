@@ -1,12 +1,20 @@
 import { z } from 'zod';
 
+const emailAddress = z.object({
+    email: z.string().email(),
+    name: z.string().optional(),
+});
+
 export const sendEmailSchema = z.object({
     body: z.object({
-        to: z.array(z.string().email()).min(1),
-        cc: z.array(z.string().email()).default([]),
-        bcc: z.array(z.string().email()).default([]),
+        toAddresses: z.array(emailAddress).min(1),
+        ccAddresses: z.array(emailAddress).optional().default([]),
+        bccAddresses: z.array(emailAddress).optional().default([]),
         subject: z.string().min(1).max(500),
-        body: z.string().min(1),
+        bodyText: z.string().optional(),
+        bodyHtml: z.string().optional(),
+    }).refine((data) => data.bodyText || data.bodyHtml, {
+        message: 'Either bodyText or bodyHtml must be provided',
     }),
 });
 

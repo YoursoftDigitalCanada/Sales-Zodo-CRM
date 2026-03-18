@@ -32,6 +32,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
@@ -563,6 +564,10 @@ const ComposeEmailDialog = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[700px] p-0 rounded-md overflow-hidden max-h-[90vh]">
+        <DialogHeader className="sr-only">
+          <DialogTitle>{replyTo ? "Reply" : forwardEmail ? "Forward" : "New Message"}</DialogTitle>
+          <DialogDescription>Compose and send an email</DialogDescription>
+        </DialogHeader>
         {/* Header */}
         <div className="flex items-center justify-between p-4 bg-[#F8FAFC] text-[#0F172A]">
           <h2 className="font-semibold">

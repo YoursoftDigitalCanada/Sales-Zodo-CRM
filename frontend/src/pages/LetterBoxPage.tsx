@@ -42,7 +42,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
-import { sendEmail as apiSendEmail } from "@/features/emails/services/emails-service";
+import { sendEmail as apiSendEmail, getEmails as apiGetEmails, deleteEmail as apiDeleteEmail, markAsRead as apiMarkAsRead } from "@/features/emails/services/emails-service";
 import {
   Bell,
   Search,
@@ -1223,7 +1223,7 @@ const LetterBoxPage = () => {
   const { toast } = useToast();
 
   // State
-  const [emails, setEmails] = useState<Email[]>(initialEmails);
+  const [emails, setEmails] = useState<Email[]>([]);
   const [selectedFolder, setSelectedFolder] = useState("inbox");
   const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
   const [activeEmail, setActiveEmail] = useState<Email | null>(null);
@@ -1231,6 +1231,52 @@ const LetterBoxPage = () => {
   const [showCompose, setShowCompose] = useState(false);
   const [replyToEmail, setReplyToEmail] = useState<Email | undefined>(undefined);
   const [forwardEmail, setForwardEmail] = useState<Email | undefined>(undefined);
+  const [emailsLoading, setEmailsLoading] = useState(true);
+
+  // Fetch emails from API
+  const loadEmails = async () => {
+    try {
+      setEmailsLoading(true);
+      const data = await apiGetEmails();
+      const mapped: Email[] = (Array.isArray(data) ? data : []).map((e: any) => {
+        const toArr = Array.isArray(e.toAddresses) ? e.toAddresses : [];
+        const ccArr = Array.isArray(e.ccAddresses) ? e.ccAddresses : [];
+        const created = e.sentAt || e.createdAt;
+        const d = created ? new Date(created) : new Date();
+        const isToday = new Date().toDateString() === d.toDateString();
+        return {
+          id: e.id,
+          from: {
+            name: e.fromName || e.fromAddress || 'Unknown',
+            email: e.fromAddress || '',
+          },
+          to: toArr.map((a: any) => ({ name: a.name || a.email || '', email: a.email || '' })),
+          cc: ccArr.length > 0 ? ccArr.map((a: any) => ({ name: a.name || a.email || '', email: a.email || '' })) : undefined,
+          subject: e.subject || '(No Subject)',
+          preview: e.bodyText ? e.bodyText.slice(0, 120) : (e.bodyHtml ? e.bodyHtml.replace(/<[^>]+>/g, '').slice(0, 120) : ''),
+          body: e.bodyHtml || e.bodyText || '',
+          date: isToday ? 'Today' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          time: d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+          read: e.isRead ?? true,
+          starred: e.isStarred ?? false,
+          important: false,
+          hasAttachments: e.hasAttachments ?? false,
+          labels: [],
+          folder: (e.folder || 'INBOX').toLowerCase(),
+        };
+      });
+      setEmails(mapped);
+    } catch (err) {
+      console.error('Failed to load emails:', err);
+      // Keep empty list on error
+    } finally {
+      setEmailsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadEmails();
+  }, []);
 
   // Filtered emails
   const filteredEmails = useMemo(() => {
@@ -1814,6 +1860,7 @@ const LetterBoxPage = () => {
           setShowCompose(false);
           setReplyToEmail(undefined);
           setForwardEmail(undefined);
+          loadEmails();
         }}
         replyTo={replyToEmail}
         forwardEmail={forwardEmail}

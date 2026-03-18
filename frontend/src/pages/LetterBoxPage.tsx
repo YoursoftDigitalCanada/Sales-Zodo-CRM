@@ -1,6 +1,6 @@
 // src/pages/LetterBox.tsx
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 // import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+import { sendEmail as apiSendEmail } from "@/features/emails/services/emails-service";
 import {
   Bell,
   Search,
@@ -469,9 +470,10 @@ const ComposeEmailDialog = ({
   const [showCc, setShowCc] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
+  const [isSending, setIsSending] = useState(false);
 
-  const handleSend = () => {
-    if (!to || !subject) {
+  const handleSend = async () => {
+    if (!to.trim() || !subject.trim()) {
       toast({
         title: "Missing Fields",
         description: "Please fill in recipient and subject.",
@@ -480,11 +482,34 @@ const ComposeEmailDialog = ({
       return;
     }
 
-    toast({
-      title: "Email Sent",
-      description: `Your email to ${to} has been sent successfully.`,
-    });
-    onClose();
+    setIsSending(true);
+    try {
+      const toAddresses = to.split(/[,;]/).map((email) => email.trim()).filter(Boolean).map((email) => ({ email }));
+      const ccAddresses = cc ? cc.split(/[,;]/).map((email) => email.trim()).filter(Boolean).map((email) => ({ email })) : undefined;
+
+      await apiSendEmail({
+        toAddresses,
+        ccAddresses,
+        subject,
+        bodyHtml: `<div style="white-space:pre-wrap">${body}</div>`,
+        bodyText: body,
+      });
+
+      toast({
+        title: "Email Sent ✅",
+        description: `Your email to ${to} has been sent successfully via SMTP.`,
+      });
+      onClose();
+    } catch (err: any) {
+      const message = err?.response?.data?.message || err?.message || "Failed to send email.";
+      toast({
+        title: "Email Failed",
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleSaveDraft = () => {
@@ -719,16 +744,16 @@ const ComposeEmailDialog = ({
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md">
+                <Button className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md" onClick={handleSend} disabled={isSending}>
                   <Send size={16} className="mr-2" />
-                  Send
+                  {isSending ? "Sending..." : "Send"}
                   <ChevronDown size={14} className="ml-2" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48 rounded-md">
-                <DropdownMenuItem onClick={handleSend} className="rounded-md">
+                <DropdownMenuItem onClick={handleSend} className="rounded-md" disabled={isSending}>
                   <Send size={14} className="mr-2" />
-                  Send Now
+                  {isSending ? "Sending..." : "Send Now"}
                 </DropdownMenuItem>
                 <DropdownMenuItem className="rounded-md">
                   <Clock size={14} className="mr-2" />

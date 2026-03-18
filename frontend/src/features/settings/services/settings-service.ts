@@ -11,6 +11,13 @@ export interface SmtpSettings {
     senderEmail: string;
 }
 
+export interface ImapSettings {
+    imapHost: string;
+    imapPort: number;
+    imapUser: string;
+    imapPass: string;
+}
+
 export interface CompanyProfile {
     companyName: string;
     companyDomain: string;
@@ -43,6 +50,7 @@ export interface SettingsResponse {
     emailSignature: string | null;
     notificationSettings: NotificationPrefs;
     smtpSettings: SmtpSettings;
+    imapSettings: ImapSettings;
     companyProfile: CompanyProfile;
     darkMode: boolean;
     updatedAt: string;
@@ -66,6 +74,7 @@ export async function updateSettings(data: Partial<{
     emailSignature: string | null;
     notificationSettings: NotificationPrefs;
     smtpSettings: Partial<SmtpSettings>;
+    imapSettings: Partial<ImapSettings>;
     companyProfile: Partial<CompanyProfile>;
 }>): Promise<SettingsResponse> {
     const response = await api.put("/settings", data);

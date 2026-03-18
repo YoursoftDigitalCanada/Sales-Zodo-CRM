@@ -13,6 +13,13 @@ export interface SmtpSettings {
     senderEmail?: string;
 }
 
+export interface ImapSettings {
+    imapHost?: string;
+    imapPort?: number;
+    imapUser?: string;
+    imapPass?: string;
+}
+
 export interface CompanyProfile {
     companyName?: string;
     companyDomain?: string;
@@ -37,6 +44,8 @@ export interface UpdateSettingsDto {
     notificationSettings?: Record<string, unknown>;
     // SMTP settings (stored inside integrations JSON)
     smtpSettings?: SmtpSettings;
+    // IMAP settings (stored inside integrations JSON)
+    imapSettings?: ImapSettings;
     // Company profile (stored inside integrations JSON)
     companyProfile?: CompanyProfile;
     // Dark mode preference
@@ -59,6 +68,7 @@ export interface SettingsResponseDto {
     notificationSettings: Record<string, unknown>;
     // Extracted from integrations JSON for convenience
     smtpSettings: SmtpSettings;
+    imapSettings: ImapSettings;
     companyProfile: CompanyProfile;
     darkMode: boolean;
     updatedAt: Date;
@@ -87,6 +97,12 @@ export function toSettingsResponseDto(s: TenantSettings): SettingsResponseDto {
             smtpPass: integrations.smtpPass ? '••••••••' : '', // Never send raw password
             senderName: integrations.senderName || '',
             senderEmail: integrations.senderEmail || '',
+        },
+        imapSettings: {
+            imapHost: integrations.imapHost || '',
+            imapPort: integrations.imapPort || 993,
+            imapUser: integrations.imapUser || '',
+            imapPass: integrations.imapPass ? '••••••••' : '', // Never send raw password
         },
         companyProfile: {
             companyName: integrations.companyName || '',

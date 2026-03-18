@@ -46,3 +46,13 @@ export async function markAsRead(id: string): Promise<EmailResponse> {
 export async function deleteEmail(id: string): Promise<void> {
     await api.delete(`/emails/${id}`);
 }
+
+export async function getEmailConfigStatus(): Promise<{ smtpConfigured: boolean; imapConfigured: boolean }> {
+    const response = await api.get("/emails/config-status");
+    return response.data?.data || response.data;
+}
+
+export async function fetchEmailsNow(): Promise<{ fetched: number; error: string | null }> {
+    const response = await api.post("/emails/fetch-now");
+    return response.data?.data || response.data;
+}

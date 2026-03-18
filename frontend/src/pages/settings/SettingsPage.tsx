@@ -97,6 +97,13 @@ export default function SettingsPage() {
     const [senderEmail, setSenderEmail] = useState("");
     const [emailSignature, setEmailSignature] = useState("");
 
+    // IMAP State
+    const [imapHost, setImapHost] = useState("");
+    const [imapPort, setImapPort] = useState("993");
+    const [imapUser, setImapUser] = useState("");
+    const [imapPass, setImapPass] = useState("");
+    const [showImapPass, setShowImapPass] = useState(false);
+
     // Security State
     const [enforce2FA, setEnforce2FA] = useState(true);
     const [passwordMinLength, setPasswordMinLength] = useState("12");
@@ -152,6 +159,14 @@ export default function SettingsPage() {
                 setSmtpPass(data.smtpSettings.smtpPass || "");
                 setSenderName(data.smtpSettings.senderName || "");
                 setSenderEmail(data.smtpSettings.senderEmail || "");
+            }
+
+            // IMAP
+            if (data.imapSettings) {
+                setImapHost(data.imapSettings.imapHost || "");
+                setImapPort(String(data.imapSettings.imapPort || 993));
+                setImapUser(data.imapSettings.imapUser || "");
+                setImapPass(data.imapSettings.imapPass || "");
             }
         } catch (err: any) {
             console.error("Failed to load settings:", err);
@@ -232,6 +247,23 @@ export default function SettingsPage() {
             toast({ title: "Settings Saved", description: "SMTP configuration saved. Emails will now be sent using this config." });
         } catch (err: any) {
             toast({ title: "Error", description: err.response?.data?.message || "Failed to save SMTP.", variant: "destructive" });
+        } finally {
+            setIsSaving(null);
+        }
+    };
+
+    const handleSaveImap = async () => {
+        setIsSaving("imap");
+        try {
+            await updateSettings({
+                imapSettings: {
+                    imapHost, imapPort: parseInt(imapPort, 10) || 993,
+                    imapUser, imapPass,
+                },
+            });
+            toast({ title: "Settings Saved", description: "IMAP configuration saved. Incoming emails will be fetched automatically." });
+        } catch (err: any) {
+            toast({ title: "Error", description: err.response?.data?.message || "Failed to save IMAP.", variant: "destructive" });
         } finally {
             setIsSaving(null);
         }
@@ -676,6 +708,34 @@ export default function SettingsPage() {
                                                 <Mail size={14} /> Send Test Email
                                             </button>
                                             <SaveButton onClick={handleSaveSmtp} section="smtp" label="Save SMTP" isSaving={isSaving} />
+                                        </div>
+                                    </div>
+
+                                    {/* IMAP */}
+                                    <div className="bg-white rounded-lg card-shadow p-6">
+                                        <h3 className="font-semibold text-[#0F172A] mb-2">IMAP Configuration</h3>
+                                        <p className="text-xs text-[#94A3B8] mb-4">Required for receiving emails — incoming replies, conversations, and inbox sync</p>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                            <Field label="IMAP Host" hint="e.g. imap.hostinger.com, imap.gmail.com">
+                                                <input className={inputClass} value={imapHost} onChange={(e) => setImapHost(e.target.value)} placeholder="imap.hostinger.com" />
+                                            </Field>
+                                            <Field label="IMAP Port" hint="993 (SSL) or 143 (STARTTLS)">
+                                                <input className={inputClass} value={imapPort} onChange={(e) => setImapPort(e.target.value)} placeholder="993" />
+                                            </Field>
+                                            <Field label="Username" hint="Usually same as SMTP username">
+                                                <input className={inputClass} value={imapUser} onChange={(e) => setImapUser(e.target.value)} placeholder="noreply@company.com" />
+                                            </Field>
+                                            <Field label="Password" hint="Usually same as SMTP password">
+                                                <div className="relative">
+                                                    <input className={inputClass + " pr-10"} type={showImapPass ? "text" : "password"} value={imapPass} onChange={(e) => setImapPass(e.target.value)} />
+                                                    <button onClick={() => setShowImapPass(!showImapPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#475569]">
+                                                        {showImapPass ? <EyeOff size={14} /> : <Eye size={14} />}
+                                                    </button>
+                                                </div>
+                                            </Field>
+                                        </div>
+                                        <div className="flex justify-end mt-5">
+                                            <SaveButton onClick={handleSaveImap} section="imap" label="Save IMAP" isSaving={isSaving} />
                                         </div>
                                     </div>
 

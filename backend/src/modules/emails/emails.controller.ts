@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import { emailsService } from './emails.service';
 import { sendSuccess, sendCreated, sendNoContent } from '../../common/utils/responseFormatter';
 import { sanitizeBody } from '../../common/utils/sanitize-body';
+import { imapPoller } from '../../common/services/imap-poller.service';
+import { settingsRepository } from '../settings/settings.repository';
 
 export class EmailsController {
     async getEmails(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -36,6 +38,20 @@ export class EmailsController {
         try {
             await emailsService.deleteEmail(req.params.id, req.context.tenantId);
             sendNoContent(res);
+        } catch (e) { next(e); }
+    }
+
+    async fetchNow(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const result = await imapPoller.fetchForTenant(req.context.tenantId);
+            sendSuccess(res, result, result.error ? 'IMAP fetch completed with errors' : `Fetched ${result.fetched} new emails`);
+        } catch (e) { next(e); }
+    }
+
+    async getConfigStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const status = await settingsRepository.getEmailConfigStatus(req.context.tenantId);
+            sendSuccess(res, status);
         } catch (e) { next(e); }
     }
 }

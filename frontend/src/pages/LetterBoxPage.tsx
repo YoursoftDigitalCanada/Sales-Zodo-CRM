@@ -43,7 +43,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
-import { sendEmail as apiSendEmail, getEmails as apiGetEmails, deleteEmail as apiDeleteEmail, markAsRead as apiMarkAsRead } from "@/features/emails/services/emails-service";
+import { sendEmail as apiSendEmail, getEmails as apiGetEmails, deleteEmail as apiDeleteEmail, markAsRead as apiMarkAsRead, getEmailConfigStatus, fetchEmailsNow } from "@/features/emails/services/emails-service";
 import {
   Bell,
   Search,
@@ -1237,11 +1237,22 @@ const LetterBoxPage = () => {
   const [replyToEmail, setReplyToEmail] = useState<Email | undefined>(undefined);
   const [forwardEmail, setForwardEmail] = useState<Email | undefined>(undefined);
   const [emailsLoading, setEmailsLoading] = useState(true);
+  const [emailConfigured, setEmailConfigured] = useState<{ smtp: boolean; imap: boolean } | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Check email config status
+  useEffect(() => {
+    getEmailConfigStatus().then((status) => {
+      setEmailConfigured({ smtp: status.smtpConfigured, imap: status.imapConfigured });
+    }).catch(() => {
+      setEmailConfigured({ smtp: false, imap: false });
+    });
+  }, []);
 
   // Fetch emails from API
-  const loadEmails = async () => {
+  const loadEmails = async (silent = false) => {
     try {
-      setEmailsLoading(true);
+      if (!silent) setEmailsLoading(true);
       const data = await apiGetEmails();
       const mapped: Email[] = (Array.isArray(data) ? data : []).map((e: any) => {
         const toArr = Array.isArray(e.toAddresses) ? e.toAddresses : [];
@@ -1273,14 +1284,20 @@ const LetterBoxPage = () => {
       setEmails(mapped);
     } catch (err) {
       console.error('Failed to load emails:', err);
-      // Keep empty list on error
     } finally {
       setEmailsLoading(false);
     }
   };
 
+  // Initial load
   useEffect(() => {
     loadEmails();
+  }, []);
+
+  // Auto-refresh every 30 seconds (silent — no loading spinner)
+  useEffect(() => {
+    const interval = setInterval(() => loadEmails(true), 30000);
+    return () => clearInterval(interval);
   }, []);
 
   // Filtered emails
@@ -1428,12 +1445,63 @@ const LetterBoxPage = () => {
     }
   };
 
-  const handleRefresh = () => {
-    toast({
-      title: "Refreshing",
-      description: "Checking for new emails...",
-    });
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    toast({ title: "Refreshing", description: "Fetching new emails from server..." });
+    try {
+      const result = await fetchEmailsNow();
+      await loadEmails(true);
+      if (result.fetched > 0) {
+        toast({ title: "New Emails", description: `${result.fetched} new email(s) received.` });
+      } else {
+        toast({ title: "Up to Date", description: "No new emails found." });
+      }
+    } catch {
+      toast({ title: "Refresh Failed", description: "Could not fetch emails.", variant: "destructive" });
+    } finally {
+      setIsRefreshing(false);
+    }
   };
+
+  // Config guard: show setup prompt if email not configured
+  if (emailConfigured && !emailConfigured.smtp && !emailConfigured.imap) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[#F8FAFC]">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="max-w-md w-full mx-4"
+        >
+          <div className="bg-white rounded-2xl card-shadow p-8 text-center">
+            <div className="w-16 h-16 bg-[#0891B2]/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Settings size={28} className="text-[#0891B2]" />
+            </div>
+            <h2 className="text-xl font-bold text-[#0F172A] mb-2">Configure Email Settings</h2>
+            <p className="text-[#64748B] text-sm mb-6">
+              To use the Letterbox, please configure your SMTP (for sending) and IMAP (for receiving) settings in the Settings page.
+            </p>
+            <div className="space-y-3 text-left mb-6">
+              <div className="flex items-center gap-3 px-4 py-3 bg-[#FF7B36]/5 rounded-lg border border-[#FF7B36]/20 text-sm text-[#FF7B36]">
+                <AlertCircle size={16} className="flex-shrink-0" />
+                <span>SMTP not configured — cannot send emails</span>
+              </div>
+              <div className="flex items-center gap-3 px-4 py-3 bg-[#FF7B36]/5 rounded-lg border border-[#FF7B36]/20 text-sm text-[#FF7B36]">
+                <AlertCircle size={16} className="flex-shrink-0" />
+                <span>IMAP not configured — cannot receive emails</span>
+              </div>
+            </div>
+            <a
+              href="/settings"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-[#0891B2] text-white rounded-xl font-medium text-sm hover:bg-[#0891B2]/90 transition-colors"
+            >
+              <Settings size={16} />
+              Go to Settings
+            </a>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#F8FAFC]">
@@ -1611,9 +1679,10 @@ const LetterBoxPage = () => {
                   variant="ghost"
                   size="icon"
                   onClick={handleRefresh}
+                  disabled={isRefreshing}
                   className="h-9 w-9 rounded-md"
                 >
-                  <RefreshCw size={16} />
+                  <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
                 </Button>
 
                 {selectedEmails.length > 0 && (

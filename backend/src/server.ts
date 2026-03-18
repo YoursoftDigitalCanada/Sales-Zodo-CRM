@@ -3,6 +3,7 @@ import { config } from './config';
 import { connectDatabase, disconnectDatabase } from './config/database';
 import { closeRedisConnection } from './config/redis';
 import { logger } from './common/utils/logger';
+import { imapPoller } from './common/services/imap-poller.service';
 
 // ============================================================================
 // SERVER STARTUP
@@ -26,6 +27,9 @@ async function startServer(): Promise<void> {
         logger.info(`📚 API Documentation: http://localhost:${config.app.port}/api-docs`);
         logger.info(`❤️  Health Check: http://localhost:${config.app.port}/health`);
       }
+
+      // Start IMAP poller (check for incoming emails every 2 minutes)
+      imapPoller.start(2 * 60 * 1000);
     });
 
     // ========================================================================
@@ -34,6 +38,9 @@ async function startServer(): Promise<void> {
 
     const gracefulShutdown = async (signal: string): Promise<void> => {
       logger.info(`${signal} received. Starting graceful shutdown...`);
+
+      // Stop IMAP poller
+      imapPoller.stop();
 
       // Stop accepting new connections
       server.close(async () => {

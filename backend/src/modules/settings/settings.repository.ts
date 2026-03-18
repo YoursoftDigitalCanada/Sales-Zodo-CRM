@@ -27,6 +27,17 @@ export class SettingsRepository {
             if (data.smtpSettings.senderEmail !== undefined) smtpUpdates.senderEmail = data.smtpSettings.senderEmail;
         }
 
+        // Merge IMAP settings
+        const imapUpdates: Record<string, any> = {};
+        if (data.imapSettings) {
+            if (data.imapSettings.imapHost !== undefined) imapUpdates.imapHost = data.imapSettings.imapHost;
+            if (data.imapSettings.imapPort !== undefined) imapUpdates.imapPort = data.imapSettings.imapPort;
+            if (data.imapSettings.imapUser !== undefined) imapUpdates.imapUser = data.imapSettings.imapUser;
+            if (data.imapSettings.imapPass !== undefined && data.imapSettings.imapPass !== '••••••••') {
+                imapUpdates.imapPass = data.imapSettings.imapPass;
+            }
+        }
+
         // Merge company profile
         const companyUpdates: Record<string, any> = {};
         if (data.companyProfile) {
@@ -44,6 +55,7 @@ export class SettingsRepository {
         const mergedIntegrations = {
             ...existingIntegrations,
             ...smtpUpdates,
+            ...imapUpdates,
             ...companyUpdates,
             ...darkModeUpdate,
         };
@@ -94,6 +106,34 @@ export class SettingsRepository {
             pass: integrations.smtpPass || '',
             senderName: integrations.senderName || 'ZODO CRM',
             senderEmail: integrations.senderEmail || '',
+        };
+    }
+
+    /**
+     * Get IMAP credentials for email fetching.
+     */
+    async getImapConfig(tenantId: string) {
+        const settings = await this.findByTenantId(tenantId);
+        if (!settings) return null;
+        const integrations = (settings.integrations as Record<string, any>) || {};
+        return {
+            host: integrations.imapHost || '',
+            port: integrations.imapPort || 993,
+            user: integrations.imapUser || '',
+            pass: integrations.imapPass || '',
+        };
+    }
+
+    /**
+     * Check if email (SMTP/IMAP) is configured for a tenant.
+     */
+    async getEmailConfigStatus(tenantId: string) {
+        const settings = await this.findByTenantId(tenantId);
+        if (!settings) return { smtpConfigured: false, imapConfigured: false };
+        const integrations = (settings.integrations as Record<string, any>) || {};
+        return {
+            smtpConfigured: !!(integrations.smtpHost && integrations.smtpUser && integrations.smtpPass),
+            imapConfigured: !!(integrations.imapHost && integrations.imapUser && integrations.imapPass),
         };
     }
 }

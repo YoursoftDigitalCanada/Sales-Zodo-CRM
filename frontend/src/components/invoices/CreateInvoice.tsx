@@ -194,11 +194,11 @@ const currencyOptions = [
 
 // Mock Products
 const mockProducts: Product[] = [
-  { id: 1, name: "Web Development", description: "Custom website development", rate: 150, unit: "hour", taxable: true },
-  { id: 2, name: "UI/UX Design", description: "User interface design services", rate: 125, unit: "hour", taxable: true },
-  { id: 3, name: "Consulting", description: "Business consulting services", rate: 200, unit: "hour", taxable: true },
-  { id: 4, name: "Hosting (Monthly)", description: "Web hosting services", rate: 49.99, unit: "month", taxable: true },
-  { id: 5, name: "Domain Registration", description: "Annual domain registration", rate: 15, unit: "year", taxable: true },
+  { id: 1, name: "Roof Installation", description: "Complete new roof installation including materials and labour", rate: 85, unit: "sq ft", taxable: true },
+  { id: 2, name: "Roof Repair", description: "Repair of damaged or leaking roof sections", rate: 350, unit: "job", taxable: true },
+  { id: 3, name: "Roof Inspection", description: "Full roof condition assessment and written report", rate: 250, unit: "visit", taxable: true },
+  { id: 4, name: "Gutter Installation", description: "Seamless aluminium gutter supply and install", rate: 12, unit: "lin ft", taxable: true },
+  { id: 5, name: "Emergency Tarp", description: "Emergency tarp-up service for storm damage", rate: 500, unit: "job", taxable: true },
 ];
 
 // ============================================
@@ -1090,7 +1090,7 @@ const CreateInvoicePage = () => {
         },
       ],
       notes: "",
-      terms: "Payment is due within the specified terms. Late payments may be subject to interest charges.",
+      terms: "Payment is due within the specified terms. A deposit of 50% is required before work begins. All materials and workmanship are guaranteed as specified in the roofing warranty. Late payments may be subject to interest charges of 1.5% per month. Any additional work beyond the original scope will be quoted separately.",
       discount: 0,
       discountType: "fixed",
       sendReminder: true,
@@ -1421,7 +1421,7 @@ const CreateInvoicePage = () => {
                     </div>
                     <div>
                       <h1 className="text-lg sm:text-2xl font-bold text-[#0F172A]">Create Invoice</h1>
-                      <p className="text-[#94A3B8]">Fill in the details to generate a new invoice</p>
+                      <p className="text-[#94A3B8]">Fill in the details to generate a new roofing invoice</p>
                     </div>
                   </motion.div>
 
@@ -1639,7 +1639,7 @@ const CreateInvoicePage = () => {
                           <Label className="text-xs text-[#94A3B8]">Notes to Client</Label>
                           <Textarea
                             {...register("notes")}
-                            placeholder="Add any notes for your client (e.g., thank you message, special instructions)..."
+                            placeholder="Add any notes for your client (e.g., project address, material specifications, warranty details, cleanup included)..."
                             rows={3}
                             className="rounded-md border-[rgba(15,23,42,0.06)] text-sm resize-none"
                           />

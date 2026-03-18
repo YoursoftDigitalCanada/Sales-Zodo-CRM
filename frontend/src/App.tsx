@@ -6,7 +6,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { GlobalAiFloatingButton } from "@/components/ai/GlobalAiFloatingButton";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Navigate, Routes, Route, useLocation } from "react-router-dom";
 import { CopilotContextProvider } from "@/contexts/CopilotContext";
 import { Sidebar, SidebarSuppressionContext } from "@/components/Sidebar";
 
@@ -233,14 +233,6 @@ const AppRoutes = () => {
           }
         />
         <Route
-          path="/client-contact-list"
-          element={
-            <FeatureGuard featureId="contacts">
-              <ClientContactListPage />
-            </FeatureGuard>
-          }
-        />
-        <Route
           path="/contacts"
           element={
             <FeatureGuard featureId="contacts">
@@ -248,6 +240,7 @@ const AppRoutes = () => {
             </FeatureGuard>
           }
         />
+        <Route path="/client-contact-list" element={<Navigate to="/contacts" replace />} />
         <Route
           path="/client-list/:id/edit"
           element={

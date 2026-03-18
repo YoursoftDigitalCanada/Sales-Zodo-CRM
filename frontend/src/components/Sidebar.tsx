@@ -147,15 +147,9 @@ const navigationItems: NavigationItem[] = [
     featureId: ["companies", "contacts"],
     submenu: [
       { title: "Client List", path: "/client-list", featureId: "companies" },
-      { title: "Client Contacts", path: "/client-contact-list", featureId: "contacts" },
+      { title: "Client Contacts", path: "/contacts", featureId: "contacts" },
       { title: "Client Groups", path: "/clients/groups", featureId: "companies" },
     ]
-  },
-  {
-    title: "Contacts",
-    icon: Contact,
-    path: "/contacts",
-    featureId: "contacts",
   },
 
   // ===== PROJECT MANAGEMENT =====

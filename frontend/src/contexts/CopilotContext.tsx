@@ -51,7 +51,6 @@ const ROUTE_PATTERNS: RoutePattern[] = [
     { match: /^\/client-list\/([a-f0-9-]+)$/, module: "clients", page: "detail", label: "Client Detail", entityGroup: 1 },
     { match: /^\/client-list\/add$/, module: "clients", page: "add", label: "New Client" },
     { match: /^\/client-list$/, module: "clients", page: "list", label: "Clients" },
-    { match: /^\/client-contact-list$/, module: "clients", page: "contacts", label: "Contacts" },
     { match: /^\/contacts$/, module: "clients", page: "contacts", label: "Contacts" },
     { match: /^\/clients\/groups$/, module: "clients", page: "groups", label: "Client Groups" },
     { match: /^\/crm$/, module: "clients", page: "crm", label: "CRM" },

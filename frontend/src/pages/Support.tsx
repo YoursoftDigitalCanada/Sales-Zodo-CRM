@@ -1,5 +1,5 @@
 // src/pages/Support.tsx
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 // import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
@@ -66,35 +66,43 @@ const now = new Date();
 const hoursAgo = (h: number) => new Date(now.getTime() - h * 3600000).toISOString();
 const daysAgo = (d: number) => new Date(now.getTime() - d * 86400000).toISOString();
 
-const mockTickets: Ticket[] = [
-  { id: "t1", ticketNumber: "TK-001", subject: "Cannot access CRM dashboard", description: "Getting 403 error when trying to access the main dashboard after login.",
-    status: "open", priority: "high", category: "Technical", requester: "John Davis", requesterEmail: "john@company.ca",
-    assignee: "Sarah Chen", createdAt: hoursAgo(2), updatedAt: hoursAgo(1),
-    messages: [{ id: "m1", sender: "John Davis", message: "I keep getting a 403 error on the dashboard.", timestamp: hoursAgo(2), isStaff: false },
-      { id: "m2", sender: "Sarah Chen", message: "I'll look into the permission settings.", timestamp: hoursAgo(1), isStaff: true }],
-    tags: ["access", "dashboard"] },
-  { id: "t2", ticketNumber: "TK-002", subject: "How to export invoice data?", description: "Need help exporting invoices as CSV for our accounting team.",
-    status: "in-progress", priority: "medium", category: "Billing", requester: "Emily Park", requesterEmail: "emily@startup.ca",
-    assignee: "Admin", createdAt: hoursAgo(5), updatedAt: hoursAgo(3),
-    messages: [{ id: "m3", sender: "Emily Park", message: "How can I export all invoices?", timestamp: hoursAgo(5), isStaff: false }],
-    tags: ["export", "invoices"] },
-  { id: "t3", ticketNumber: "TK-003", subject: "Calendar sync not working", description: "Google Calendar sync stopped working after the latest update.",
-    status: "waiting", priority: "medium", category: "Integration", requester: "Marcus Rivera", requesterEmail: "marcus@tech.ca",
-    createdAt: daysAgo(1), updatedAt: hoursAgo(8),
-    messages: [{ id: "m4", sender: "Marcus Rivera", message: "Calendar sync broke after the update.", timestamp: daysAgo(1), isStaff: false }],
-    tags: ["calendar", "sync", "google"] },
-  { id: "t4", ticketNumber: "TK-004", subject: "Feature request: Dark mode", description: "Would love to have a dark mode option in the CRM.",
-    status: "open", priority: "low", category: "Feature Request", requester: "Alex Kim", requesterEmail: "alex@design.ca",
-    createdAt: daysAgo(2), updatedAt: daysAgo(2), messages: [], tags: ["feature", "ui"] },
-  { id: "t5", ticketNumber: "TK-005", subject: "Data import failed", description: "CSV import keeps failing with 'invalid format' error.",
-    status: "resolved", priority: "high", category: "Technical", requester: "Lisa Wang", requesterEmail: "lisa@corp.ca",
-    assignee: "Admin", createdAt: daysAgo(3), updatedAt: daysAgo(1), resolvedAt: daysAgo(1),
-    messages: [], tags: ["import", "csv"] },
-  { id: "t6", ticketNumber: "TK-006", subject: "Billing discrepancy", description: "Invoice total doesn't match the line items sum.",
-    status: "closed", priority: "urgent", category: "Billing", requester: "Tom Brown", requesterEmail: "tom@finance.ca",
-    assignee: "Sarah Chen", createdAt: daysAgo(5), updatedAt: daysAgo(3), resolvedAt: daysAgo(3),
-    messages: [], tags: ["billing", "bug"] },
-];
+import {
+  getTickets as apiGetTickets,
+  createTicket as apiCreateTicket,
+  updateTicketStatus as apiUpdateStatus,
+  addTicketMessage as apiAddMessage,
+  deleteTicket as apiDeleteTicket,
+  getTicketStats as apiGetStats,
+  type SupportTicket as ApiTicket,
+} from "@/services/supportTicketsService";
+
+// Map API ticket to frontend format
+const mapTicket = (t: ApiTicket): Ticket => ({
+  id: t.id,
+  ticketNumber: t.ticketNumber,
+  subject: t.subject,
+  description: t.description,
+  status: t.status.toLowerCase().replace('_', '-') as Ticket["status"],
+  priority: t.priority.toLowerCase() as Ticket["priority"],
+  category: t.category,
+  requester: t.requesterName,
+  requesterEmail: t.requesterEmail,
+  assignee: t.assignee || undefined,
+  createdAt: t.createdAt,
+  updatedAt: t.updatedAt,
+  resolvedAt: t.resolvedAt || undefined,
+  messages: (t.messages || []).map(m => ({
+    id: m.id,
+    sender: m.sender,
+    message: m.message,
+    timestamp: m.createdAt,
+    isStaff: m.isStaff,
+  })),
+  tags: t.tags || [],
+});
+
+// Map frontend status to API status
+const toApiStatus = (s: string) => s.toUpperCase().replace('-', '_') as ApiTicket["status"];
 
 const mockArticles: KBArticle[] = [
   { id: "a1", title: "Getting Started with ZODO CRM", content: "Welcome to ZODO CRM! This guide covers the basics of setting up your account, adding contacts, managing leads, and navigating the dashboard.", category: "Getting Started", views: 1245, helpful: 89, notHelpful: 3, status: "published", createdAt: daysAgo(30), updatedAt: daysAgo(5), author: "Admin", tags: ["setup", "basics"] },
@@ -148,7 +156,8 @@ const SupportPage = () => {
   const { toast } = useToast();
   const initialTab = location.pathname.includes("knowledge-base") ? "kb" : location.pathname.includes("faq") ? "faq" : "tickets";
   const [activeTab, setActiveTab] = useState<"tickets" | "kb" | "faq">(initialTab);
-  const [tickets, setTickets] = useState(mockTickets);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [articles] = useState(mockArticles);
   const [faqs] = useState(mockFAQs);
   const [searchQuery, setSearchQuery] = useState("");
@@ -161,6 +170,23 @@ const SupportPage = () => {
   const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
   // Form state
   const [formData, setFormData] = useState({ subject: "", description: "", priority: "medium" as Ticket["priority"], category: "Technical", requester: "", requesterEmail: "" });
+
+  // Load tickets from API
+  const loadTickets = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const result = await apiGetTickets();
+      setTickets(result.data.map(mapTicket));
+    } catch (err) {
+      console.error('Failed to load tickets:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadTickets();
+  }, [loadTickets]);
 
   // Stats
   const stats = useMemo(() => ({
@@ -207,40 +233,60 @@ const SupportPage = () => {
   }, [faqs, searchQuery]);
 
   // Handlers
-  const handleCreateTicket = () => {
-    const newTicket: Ticket = {
-      id: `t-${Date.now()}`, ticketNumber: `TK-${String(tickets.length + 1).padStart(3, "0")}`,
-      subject: formData.subject, description: formData.description, status: "open",
-      priority: formData.priority, category: formData.category,
-      requester: formData.requester || "Current User", requesterEmail: formData.requesterEmail || "user@company.ca",
-      createdAt: now.toISOString(), updatedAt: now.toISOString(), messages: [], tags: [],
-    };
-    setTickets(prev => [newTicket, ...prev]);
-    setIsFormOpen(false);
-    setFormData({ subject: "", description: "", priority: "medium", category: "Technical", requester: "", requesterEmail: "" });
-    toast({ title: "Ticket Created", description: `${newTicket.ticketNumber} has been created.` });
+  const handleCreateTicket = async () => {
+    try {
+      const result = await apiCreateTicket({
+        subject: formData.subject,
+        description: formData.description,
+        priority: formData.priority.toUpperCase(),
+        category: formData.category,
+        requesterName: formData.requester || "Current User",
+        requesterEmail: formData.requesterEmail || "user@company.ca",
+      });
+      setTickets(prev => [mapTicket(result), ...prev]);
+      setIsFormOpen(false);
+      setFormData({ subject: "", description: "", priority: "medium", category: "Technical", requester: "", requesterEmail: "" });
+      toast({ title: "Ticket Created", description: `${result.ticketNumber} has been created. A notification email has been sent.` });
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to create ticket.", variant: "destructive" });
+    }
   };
 
-  const handleReply = () => {
+  const handleReply = async () => {
     if (!currentTicket || !replyText.trim()) return;
-    const newMsg = { id: `m-${Date.now()}`, sender: "Admin", message: replyText, timestamp: now.toISOString(), isStaff: true };
-    setTickets(prev => prev.map(t => t.id === currentTicket.id ? { ...t, messages: [...t.messages, newMsg], updatedAt: now.toISOString(), status: "in-progress" as const } : t));
-    setCurrentTicket(prev => prev ? { ...prev, messages: [...prev.messages, newMsg] } : null);
-    setReplyText("");
-    toast({ title: "Reply Sent" });
+    try {
+      const msg = await apiAddMessage(currentTicket.id, { sender: "Admin", message: replyText, isStaff: true });
+      const newMsg = { id: msg.id, sender: msg.sender, message: msg.message, timestamp: msg.createdAt, isStaff: msg.isStaff };
+      setTickets(prev => prev.map(t => t.id === currentTicket.id ? { ...t, messages: [...t.messages, newMsg], updatedAt: new Date().toISOString(), status: "in-progress" as const } : t));
+      setCurrentTicket(prev => prev ? { ...prev, messages: [...prev.messages, newMsg] } : null);
+      setReplyText("");
+      toast({ title: "Reply Sent" });
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to send reply.", variant: "destructive" });
+    }
   };
 
-  const updateTicketStatus = (id: string, status: Ticket["status"]) => {
-    setTickets(prev => prev.map(t => t.id === id ? { ...t, status, updatedAt: now.toISOString(), ...(status === "resolved" ? { resolvedAt: now.toISOString() } : {}) } : t));
-    toast({ title: "Status Updated", description: `Ticket status changed to ${status}.` });
+  const updateTicketStatus = async (id: string, status: Ticket["status"]) => {
+    try {
+      await apiUpdateStatus(id, toApiStatus(status));
+      setTickets(prev => prev.map(t => t.id === id ? { ...t, status, updatedAt: new Date().toISOString(), ...(status === "resolved" ? { resolvedAt: new Date().toISOString() } : {}) } : t));
+      toast({ title: "Status Updated", description: `Ticket status changed to ${status}.` });
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to update status.", variant: "destructive" });
+    }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteId) return;
-    setTickets(prev => prev.filter(t => t.id !== deleteId));
-    setDeleteId(null);
-    setIsDetailOpen(false);
-    toast({ title: "Ticket Deleted" });
+    try {
+      await apiDeleteTicket(deleteId);
+      setTickets(prev => prev.filter(t => t.id !== deleteId));
+      setDeleteId(null);
+      setIsDetailOpen(false);
+      toast({ title: "Ticket Deleted" });
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to delete ticket.", variant: "destructive" });
+    }
   };
 
   const tabs = [
@@ -263,8 +309,8 @@ const SupportPage = () => {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Button variant="outline" size="sm" className="rounded-md border-[rgba(15,23,42,0.06)]" onClick={() => toast({ title: "Refreshed" })}>
-                <RefreshCw size={16} className="mr-2" />Refresh
+              <Button variant="outline" size="sm" className="rounded-md border-[rgba(15,23,42,0.06)]" onClick={() => { loadTickets(); toast({ title: "Refreshed" }); }}>
+                <RefreshCw size={16} className={cn("mr-2", isLoading && "animate-spin")} />Refresh
               </Button>
               {activeTab === "tickets" && (
                 <Button size="sm" className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md" onClick={() => setIsFormOpen(true)}>

@@ -84,6 +84,9 @@ import { adminAuthService } from '../modules/super-admin/admin-auth.service';
 // Crew Portal module
 import crewRoutes from '../modules/crew/crew.routes';
 
+// Support Tickets module
+import supportTicketsRoutes from '../modules/support-tickets/support-tickets.routes';
+
 /**
  * Register all API routes
  *
@@ -204,6 +207,9 @@ export function registerRoutes(app: Application): void {
 
   // Crew Portal
   protectedRouter.use('/crew', crewRoutes);
+
+  // Support Tickets
+  protectedRouter.use('/support-tickets', supportTicketsRoutes);
 
   // Mount protected router on the main API router
   apiRouter.use(protectedRouter);

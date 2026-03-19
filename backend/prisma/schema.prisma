@@ -736,6 +736,7 @@ model Tenant {
   proposals             Proposal[]
   signedContracts       SignedContract[]
   constructionEstimates ConstructionEstimate[]
+  supportTickets        SupportTicket[]
 
   @@index([status])
   @@index([slug])
@@ -5041,4 +5042,69 @@ model EstimateTransport {
   updatedAt           DateTime            @updatedAt
 
   @@index([estimateId])
+}
+
+// ============================================================================
+// SUPPORT TICKETS MODULE
+// ============================================================================
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model SupportTicket {
+  id              String         @id @default(uuid())
+  ticketNumber    String
+  subject         String
+  description     String         @db.Text
+  status          TicketStatus   @default(OPEN)
+  priority        TicketPriority @default(MEDIUM)
+  category        String         @default("Technical")
+  requesterName   String
+  requesterEmail  String
+  assignee        String?
+  tags            String[]       @default([])
+
+  // ── Tenant scope ──
+  tenantId        String
+  tenant          Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // ── Messages ──
+  messages        TicketMessage[]
+
+  // ── Timestamps ──
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  resolvedAt      DateTime?
+  deletedAt       DateTime?
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([ticketNumber])
+}
+
+model TicketMessage {
+  id          String        @id @default(uuid())
+  sender      String
+  message     String        @db.Text
+  isStaff     Boolean       @default(false)
+
+  // ── Ticket relation ──
+  ticketId    String
+  ticket      SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime      @default(now())
+
+  @@index([ticketId])
 }

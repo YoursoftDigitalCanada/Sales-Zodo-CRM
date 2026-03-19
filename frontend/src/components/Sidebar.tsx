@@ -134,21 +134,21 @@ const navigationItems: NavigationItem[] = [
   {
     title: "Leads",
     icon: Target,
-    featureId: ["leads", "pipeline"],
+    featureId: "leads",
     submenu: [
       { title: "All Leads", path: "/leads", featureId: "leads" },
-      { title: "Pipeline", path: "/leads/pipeline", featureId: "pipeline", isNew: true },
+      { title: "Pipeline", path: "/leads/pipeline", featureId: "leads", isNew: true },
       { title: "Lead Sources", path: "/leads/sources", featureId: "leads" },
     ]
   },
   {
     title: "Clients",
     icon: Users,
-    featureId: ["companies", "contacts"],
+    featureId: "clients",
     submenu: [
-      { title: "Client List", path: "/client-list", featureId: "companies" },
-      { title: "Client Contacts", path: "/contacts", featureId: "contacts" },
-      { title: "Client Groups", path: "/clients/groups", featureId: "companies" },
+      { title: "Client List", path: "/client-list", featureId: "clients" },
+      { title: "Client Contacts", path: "/contacts", featureId: "clients" },
+      { title: "Client Groups", path: "/clients/groups", featureId: "clients" },
     ]
   },
 
@@ -157,31 +157,31 @@ const navigationItems: NavigationItem[] = [
   {
     title: "All Projects",
     icon: Briefcase,
-    featureId: "tasks",
+    featureId: "projects",
     submenu: [
-      { title: "Active Projects", path: "/projects", featureId: "tasks" },
-      { title: "Archived", path: "javascript:void(0)", featureId: "tasks" },
-      { title: "Templates", path: "javascript:void(0)", featureId: "tasks" },
+      { title: "Active Projects", path: "/projects", featureId: "projects" },
+      { title: "Archived", path: "javascript:void(0)", featureId: "projects" },
+      { title: "Templates", path: "javascript:void(0)", featureId: "projects" },
     ]
   },
   {
     title: "Kanban Board",
     icon: FolderKanban,
     path: "/kanban",
-    featureId: "tasks",
+    featureId: "kanban",
   },
   {
     title: "Time Tracking",
     icon: Clock,
     path: "/time-tracking",
-    featureId: "tasks",
+    featureId: "timeTracking",
     isNew: true,
   },
   {
     title: "File Manager",
     icon: FileText,
     path: "/filemanager",
-    featureId: "documents",
+    featureId: "files",
   },
 
   // ===== FINANCE =====
@@ -189,18 +189,18 @@ const navigationItems: NavigationItem[] = [
   {
     title: "Invoices",
     icon: Receipt,
-    featureId: "invoices",
+    featureId: "finance",
     submenu: [
-      { title: "All Invoices", path: "/invoice", featureId: "invoices" },
-      { title: "Create Invoice", path: "/invoice/create", featureId: "invoices" },
-      { title: "Recurring", path: "javascript:void(0)", featureId: "invoices" },
+      { title: "All Invoices", path: "/invoice", featureId: "finance" },
+      { title: "Create Invoice", path: "/invoice/create", featureId: "finance" },
+      { title: "Recurring", path: "javascript:void(0)", featureId: "finance" },
     ]
   },
   {
     title: "Quotes",
     icon: FileStack,
     path: "/quotes",
-    featureId: "invoices",
+    featureId: "finance",
     isNew: true,
   },
   // DRAFT — re-enable next year
@@ -213,11 +213,11 @@ const navigationItems: NavigationItem[] = [
   {
     title: "Payments",
     icon: CreditCard,
-    featureId: "invoices",
+    featureId: "finance",
     submenu: [
-      { title: "All Payments", path: "javascript:void(0)", featureId: "invoices" },
-      { title: "Payment Methods", path: "javascript:void(0)", featureId: "invoices" },
-      { title: "Transactions", path: "javascript:void(0)", featureId: "invoices" },
+      { title: "All Payments", path: "javascript:void(0)", featureId: "finance" },
+      { title: "Payment Methods", path: "javascript:void(0)", featureId: "finance" },
+      { title: "Transactions", path: "javascript:void(0)", featureId: "finance" },
     ]
   },
 
@@ -252,19 +252,19 @@ const navigationItems: NavigationItem[] = [
   {
     title: "Documents",
     icon: FileStack,
-    featureId: "documents",
+    featureId: "files",
     submenu: [
-      { title: "All Documents", path: "/documents", featureId: "documents" },
-      { title: "Contracts", path: "javascript:void(0)", featureId: "documents" },
-      { title: "Proposals", path: "javascript:void(0)", featureId: "documents" },
-      { title: "Templates", path: "javascript:void(0)", featureId: "documents" },
+      { title: "All Documents", path: "/documents", featureId: "files" },
+      { title: "Contracts", path: "javascript:void(0)", featureId: "files" },
+      { title: "Proposals", path: "javascript:void(0)", featureId: "files" },
+      { title: "Templates", path: "javascript:void(0)", featureId: "files" },
     ]
   },
   {
     title: "AI Roof Estimator",
     icon: Zap,
     path: "/roof-estimator",
-    featureId: "api",
+    featureId: "roofEstimator",
     badge: "AI",
     badgeColor: "teal",
   },
@@ -289,7 +289,7 @@ const navigationItems: NavigationItem[] = [
     title: "Letter Box",
     icon: Mail,
     path: "/letterbox",
-    featureId: "email",
+    featureId: "letterbox",
     badge: 12,
     badgeColor: "teal",
   },
@@ -297,25 +297,25 @@ const navigationItems: NavigationItem[] = [
     title: "Chats",
     icon: MessageSquare,
     path: "/chats",
-    featureId: "email",
+    featureId: "chat",
     badge: "●",
     badgeColor: "teal",
   },
   {
     title: "Support",
     icon: Headphones,
-    featureId: "email",
+    featureId: "support",
     submenu: [
-      { title: "Tickets", path: "/support/tickets", featureId: "email", badge: 4, badgeColor: "red" },
-      { title: "Knowledge Base", path: "/support/knowledge-base", featureId: "email" },
-      { title: "FAQ", path: "/support/faq", featureId: "email" },
+      { title: "Tickets", path: "/support/tickets", featureId: "support", badge: 4, badgeColor: "red" },
+      { title: "Knowledge Base", path: "/support/knowledge-base", featureId: "support" },
+      { title: "FAQ", path: "/support/faq", featureId: "support" },
     ]
   },
   {
     title: "Notifications",
     icon: Bell,
     path: "/notifications",
-    featureId: "email",
+    featureId: "letterbox",
     badge: 7,
     badgeColor: "red",
   },
@@ -323,7 +323,7 @@ const navigationItems: NavigationItem[] = [
     title: "Documents",
     icon: FileText,
     path: "/documents",
-    featureId: "email",
+    featureId: "files",
     isNew: true,
   },
 
@@ -332,25 +332,25 @@ const navigationItems: NavigationItem[] = [
   {
     title: "Employees",
     icon: UserCog,
-    featureId: "api",
+    featureId: "team",
     submenu: [
-      { title: "All Employees", path: "/employees", featureId: "api" },
-      { title: "Departments", path: "/employees/departments", featureId: "api", isNew: true },
-      { title: "Attendance", path: "/employees/attendance", featureId: "api" },
-      { title: "Leave Requests", path: "/employees/leave-requests", featureId: "api", badge: 2, badgeColor: "gold" },
+      { title: "All Employees", path: "/employees", featureId: "team" },
+      { title: "Departments", path: "/employees/departments", featureId: "team", isNew: true },
+      { title: "Attendance", path: "/employees/attendance", featureId: "team" },
+      { title: "Leave Requests", path: "/employees/leave-requests", featureId: "team", badge: 2, badgeColor: "gold" },
     ]
   },
   {
     title: "Users",
     icon: Users,
     path: "/users",
-    featureId: "api",
+    featureId: "team",
   },
   {
     title: "Roles & Permissions",
     icon: Shield,
     path: "/roles",
-    featureId: "api",
+    featureId: "team",
   },
 
   // ===== AI ASSISTANT =====
@@ -359,6 +359,7 @@ const navigationItems: NavigationItem[] = [
     title: "Ask Experts",
     icon: Sparkles,
     path: "/dashboard",
+    featureId: "aiAssistant",
     isNew: true,
     badge: "AI",
     badgeColor: "teal" as const,
@@ -381,7 +382,7 @@ const navigationItems: NavigationItem[] = [
     title: "Analytics",
     icon: TrendingUp,
     path: "/analytics",
-    featureId: "reports",
+    featureId: "analytics",
     isPro: true,
   },
 
@@ -402,7 +403,6 @@ const navigationItems: NavigationItem[] = [
     title: "Integrations",
     icon: Plug,
     path: "/integrations",
-    featureId: "automation",
     isNew: true,
   },
   {

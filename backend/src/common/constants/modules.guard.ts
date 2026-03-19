@@ -14,11 +14,7 @@
 export const CORE_MODULES = [
     'dashboard',
     'auth',
-    'users',
-    'employees',
-    'roles',
     'tenants',
-    'permissions',
     'settings',
     'notifications',
     'tags',
@@ -28,50 +24,68 @@ export const CORE_MODULES = [
  * Optional modules that tenants can enable/disable.
  * Maps route prefix (without leading /) to the module slug.
  */
-export const ROUTE_MODULE_MAP: Record<string, string> = {
+export const ROUTE_MODULE_MAP: Record<string, readonly string[]> = {
     // CRM
-    'leads': 'leads',
-    'lead-sources': 'leads',        // sub-feature of leads
-    'clients': 'clients',
-    'contacts': 'clients',      // sub-feature of clients
-    'groups': 'clients',      // sub-feature of clients
+    'leads': ['leads'],
+    'lead-sources': ['leads'],        // sub-feature of leads
+    'pipeline': ['leads'],
+    'clients': ['clients'],
+    'contacts': ['clients'],      // sub-feature of clients
+    'groups': ['clients'],      // sub-feature of clients
 
     // Operations
-    'projects': 'projects',
-    'tasks': 'tasks',
-    'calendar': 'calendar',
+    'projects': ['projects'],
+    'tasks': ['tasks'],
+    'calendar': ['calendar'],
+    'timeline': ['tasks'],
 
     // Finance
-    'invoices': 'finance',
-    'expenses': 'finance',
-    'bookings': 'bookings',
+    'invoices': ['finance'],
+    'quotes': ['finance'],
+    'contracts': ['finance'],
+    'proposals': ['finance'],
+    'services': ['finance'],
+    'expenses': ['finance'],
+    'bookings': ['finance'],
 
     // File Management
-    'files': 'files',
-    'folders': 'files',        // sub-feature of files
+    'files': ['files'],
+    'folders': ['files'],        // sub-feature of files
 
     // Communication
-    'emails': 'communication',
-    'chat': 'communication',
+    'emails': ['letterbox', 'communication'],
+    'chat': ['chat', 'communication'],
+    'support-tickets': ['support'],
+    'tickets': ['support'],
+
+    // Team
+    'users': ['team'],
+    'employees': ['team'],
+    'roles': ['team'],
+    'permissions': ['team'],
+    'crew': ['team'],
 
     // Analytics
-    'analytics': 'analytics',
+    'analytics': ['analytics'],
 
     // Applications
-    'applications': 'applications',
+    'applications': ['projects'],
 
     // E-commerce
-    'ecommerce': 'ecommerce',
+    'ecommerce': ['finance'],
 
     // AI
-    'roof-estimator': 'roof-estimator',
+    'roof-estimator': ['roof-estimator'],
+    'construction-estimator': ['roof-estimator'],
+    'copilot': ['ai-assistant'],
+    'eagleview': ['roof-estimator'],
 };
 
 /**
  * All optional module slugs (unique values from ROUTE_MODULE_MAP).
  */
 export const ALL_OPTIONAL_MODULES = [
-    ...new Set(Object.values(ROUTE_MODULE_MAP)),
+    ...new Set(Object.values(ROUTE_MODULE_MAP).flat()),
 ] as const;
 
 /**
@@ -85,11 +99,12 @@ export const DEFAULT_ENABLED_MODULES: string[] = [
     'tasks',
     'calendar',
     'finance',
-    'bookings',
     'files',
-    'communication',
+    'letterbox',
+    'chat',
+    'support',
     'analytics',
-    'applications',
-    'ecommerce',
+    'team',
     'roof-estimator',
+    'ai-assistant',
 ];

@@ -159,7 +159,7 @@ const AppRoutes = () => {
         <Route
           path="/leads/pipeline"
           element={
-            <FeatureGuard featureId="pipeline">
+            <FeatureGuard featureId="leads">
               <Pipeline />
             </FeatureGuard>
           }
@@ -211,7 +211,7 @@ const AppRoutes = () => {
         <Route
           path="/client-list"
           element={
-            <FeatureGuard featureId="companies">
+            <FeatureGuard featureId="clients">
               <ClientListPage />
             </FeatureGuard>
           }
@@ -219,7 +219,7 @@ const AppRoutes = () => {
         <Route
           path="/client-list/add"
           element={
-            <FeatureGuard featureId="companies">
+            <FeatureGuard featureId="clients">
               <AddClientPage />
             </FeatureGuard>
           }
@@ -227,7 +227,7 @@ const AppRoutes = () => {
         <Route
           path="/client-list/:id"
           element={
-            <FeatureGuard featureId="companies">
+            <FeatureGuard featureId="clients">
               <ClientDetailPage />
             </FeatureGuard>
           }
@@ -235,7 +235,7 @@ const AppRoutes = () => {
         <Route
           path="/contacts"
           element={
-            <FeatureGuard featureId="contacts">
+            <FeatureGuard featureId="clients">
               <ClientContactListPage />
             </FeatureGuard>
           }
@@ -244,7 +244,7 @@ const AppRoutes = () => {
         <Route
           path="/client-list/:id/edit"
           element={
-            <FeatureGuard featureId="companies">
+            <FeatureGuard featureId="clients">
               <AddClientPage />
             </FeatureGuard>
           }
@@ -252,7 +252,7 @@ const AppRoutes = () => {
         <Route
           path="/clients/groups"
           element={
-            <FeatureGuard featureId="companies">
+            <FeatureGuard featureId="clients">
               <ClientGroupPage />
             </FeatureGuard>
           }
@@ -260,7 +260,7 @@ const AppRoutes = () => {
         <Route
           path="/crm"
           element={
-            <FeatureGuard featureId={["leads", "contacts", "companies"]}>
+            <FeatureGuard featureId={["leads", "clients"]}>
               <CRMPage />
             </FeatureGuard>
           }
@@ -270,7 +270,7 @@ const AppRoutes = () => {
         <Route
           path="/projects"
           element={
-            <FeatureGuard featureId="tasks">
+            <FeatureGuard featureId="projects">
               <ProjectsPage />
             </FeatureGuard>
           }
@@ -278,7 +278,7 @@ const AppRoutes = () => {
         <Route
           path="/projects/add"
           element={
-            <FeatureGuard featureId="tasks">
+            <FeatureGuard featureId="projects">
               <ProjectCreateWizardPage />
             </FeatureGuard>
           }
@@ -286,7 +286,7 @@ const AppRoutes = () => {
         <Route
           path="/projects/:id"
           element={
-            <FeatureGuard featureId="tasks">
+            <FeatureGuard featureId="projects">
               <ProjectDetailPage />
             </FeatureGuard>
           }
@@ -294,7 +294,7 @@ const AppRoutes = () => {
         <Route
           path="/projects/:id/edit"
           element={
-            <FeatureGuard featureId="tasks">
+            <FeatureGuard featureId="projects">
               <AddProjectPage />
             </FeatureGuard>
           }
@@ -302,7 +302,7 @@ const AppRoutes = () => {
         <Route
           path="/kanban"
           element={
-            <FeatureGuard featureId="tasks">
+            <FeatureGuard featureId="kanban">
               <KanbanPage />
             </FeatureGuard>
           }
@@ -312,7 +312,7 @@ const AppRoutes = () => {
         <Route
           path="/time-tracking"
           element={
-            <FeatureGuard featureId="tasks">
+            <FeatureGuard featureId="timeTracking">
               <TimeTrackingPage />
             </FeatureGuard>
           }
@@ -322,7 +322,7 @@ const AppRoutes = () => {
         <Route
           path="/invoice"
           element={
-            <FeatureGuard featureId="invoices">
+            <FeatureGuard featureId="finance">
               <InvoicePage />
             </FeatureGuard>
           }
@@ -341,7 +341,7 @@ const AppRoutes = () => {
         <Route
           path="/quotes"
           element={
-            <FeatureGuard featureId="invoices">
+            <FeatureGuard featureId="finance">
               <QuotesPage />
             </FeatureGuard>
           }
@@ -351,7 +351,7 @@ const AppRoutes = () => {
         <Route
           path="/notifications"
           element={
-            <FeatureGuard featureId="email">
+            <FeatureGuard featureId="letterbox">
               <NotificationsPage />
             </FeatureGuard>
           }
@@ -361,7 +361,7 @@ const AppRoutes = () => {
         <Route
           path="/support/tickets"
           element={
-            <FeatureGuard featureId="email">
+            <FeatureGuard featureId="support">
               <SupportPage />
             </FeatureGuard>
           }
@@ -369,7 +369,7 @@ const AppRoutes = () => {
         <Route
           path="/support/knowledge-base"
           element={
-            <FeatureGuard featureId="email">
+            <FeatureGuard featureId="support">
               <SupportPage />
             </FeatureGuard>
           }
@@ -377,7 +377,7 @@ const AppRoutes = () => {
         <Route
           path="/support/faq"
           element={
-            <FeatureGuard featureId="email">
+            <FeatureGuard featureId="support">
               <SupportPage />
             </FeatureGuard>
           }
@@ -387,7 +387,7 @@ const AppRoutes = () => {
         <Route
           path="/documents"
           element={
-            <FeatureGuard featureId="email">
+            <FeatureGuard featureId="files">
               <DocumentsPage />
             </FeatureGuard>
           }
@@ -398,7 +398,7 @@ const AppRoutes = () => {
           <Route
             path="/invoice/list"
             element={
-              <FeatureGuard featureId="invoices">
+              <FeatureGuard featureId="finance">
                 <InvoiceList />
               </FeatureGuard>
             }
@@ -406,7 +406,7 @@ const AppRoutes = () => {
           <Route
             path="/invoice/create"
             element={
-              <FeatureGuard featureId="invoices">
+              <FeatureGuard featureId="finance">
                 <CreateInvoice />
               </FeatureGuard>
             }
@@ -415,7 +415,7 @@ const AppRoutes = () => {
           <Route
             path="/employees"
             element={
-              <FeatureGuard featureId="api">
+              <FeatureGuard featureId="team">
                 <AllEmployeesPage />
               </FeatureGuard>
             }
@@ -423,7 +423,7 @@ const AppRoutes = () => {
           <Route
             path="/employees/all"
             element={
-              <FeatureGuard featureId="api">
+              <FeatureGuard featureId="team">
                 <AllEmployeesPage />
               </FeatureGuard>
             }
@@ -431,7 +431,7 @@ const AppRoutes = () => {
           <Route
             path="/employees/departments"
             element={
-              <FeatureGuard featureId="api">
+              <FeatureGuard featureId="team">
                 <DepartmentsPage />
               </FeatureGuard>
             }
@@ -439,7 +439,7 @@ const AppRoutes = () => {
           <Route
             path="/employees/attendance"
             element={
-              <FeatureGuard featureId="api">
+              <FeatureGuard featureId="team">
                 <AttendancePage />
               </FeatureGuard>
             }
@@ -447,7 +447,7 @@ const AppRoutes = () => {
           <Route
             path="/employees/leave-requests"
             element={
-              <FeatureGuard featureId="api">
+              <FeatureGuard featureId="team">
                 <LeaveRequestsPage />
               </FeatureGuard>
             }
@@ -491,7 +491,7 @@ const AppRoutes = () => {
         <Route
           path="/users"
           element={
-            <FeatureGuard featureId="api">
+            <FeatureGuard featureId="team">
               <UsersPage />
             </FeatureGuard>
           }
@@ -502,7 +502,7 @@ const AppRoutes = () => {
         <Route
           path="/letterbox"
           element={
-            <FeatureGuard featureId="email">
+            <FeatureGuard featureId="letterbox">
               <LetterBoxPage />
             </FeatureGuard>
           }
@@ -510,7 +510,7 @@ const AppRoutes = () => {
         <Route
           path="/filemanager"
           element={
-            <FeatureGuard featureId="documents">
+            <FeatureGuard featureId="files">
               <FileManagerPage />
             </FeatureGuard>
           }
@@ -528,7 +528,7 @@ const AppRoutes = () => {
         <Route
           path="/chats"
           element={
-            <FeatureGuard featureId="email">
+            <FeatureGuard featureId="chat">
               <ChatPage />
             </FeatureGuard>
           }
@@ -546,19 +546,54 @@ const AppRoutes = () => {
         <Route path="/onboarding" element={<Onboarding />} />
 
         {/* ========== AI MODULES ========== */}
-        <Route path="/roof-estimator" element={<RoofEstimator />} />
-        <Route path="/roof-estimator/new" element={<RoofEstimatorWizard />} />
-        <Route path="/roof-estimator/:id/edit" element={<RoofEstimatorWizard />} />
+        <Route
+          path="/roof-estimator"
+          element={
+            <FeatureGuard featureId="roofEstimator">
+              <RoofEstimator />
+            </FeatureGuard>
+          }
+        />
+        <Route
+          path="/roof-estimator/new"
+          element={
+            <FeatureGuard featureId="roofEstimator">
+              <RoofEstimatorWizard />
+            </FeatureGuard>
+          }
+        />
+        <Route
+          path="/roof-estimator/:id/edit"
+          element={
+            <FeatureGuard featureId="roofEstimator">
+              <RoofEstimatorWizard />
+            </FeatureGuard>
+          }
+        />
         <Route
           path="/roof-estimator/editor"
           element={
-            <FeatureGuard featureId="api">
+            <FeatureGuard featureId="roofEstimator">
               <RoofEstimatorPolygonEditor />
             </FeatureGuard>
           }
         />
-        <Route path="/construction-estimator" element={<ConstructionEstimator />} />
-        <Route path="/construction-estimator/:id" element={<ConstructionEstimator />} />
+        <Route
+          path="/construction-estimator"
+          element={
+            <FeatureGuard featureId="roofEstimator">
+              <ConstructionEstimator />
+            </FeatureGuard>
+          }
+        />
+        <Route
+          path="/construction-estimator/:id"
+          element={
+            <FeatureGuard featureId="roofEstimator">
+              <ConstructionEstimator />
+            </FeatureGuard>
+          }
+        />
 
         {/* ========== HELP CENTER ========== */}
         <Route path="/help" element={<HelpCenterPage />} />
@@ -567,16 +602,58 @@ const AppRoutes = () => {
         <Route path="/integrations" element={<IntegrationsPage />} />
 
         {/* ========== ANALYTICS ========== */}
-        <Route path="/analytics" element={<AnalyticsPage />} />
+        <Route
+          path="/analytics"
+          element={
+            <FeatureGuard featureId="analytics">
+              <AnalyticsPage />
+            </FeatureGuard>
+          }
+        />
 
         {/* ========== REPORTS ========== */}
-        <Route path="/reports/sales" element={<ReportsPage />} />
-        <Route path="/reports/revenue" element={<ReportsPage />} />
-        <Route path="/reports/expenses" element={<ReportsPage />} />
-        <Route path="/reports/custom" element={<ReportsPage />} />
+        <Route
+          path="/reports/sales"
+          element={
+            <FeatureGuard featureId="reports">
+              <ReportsPage />
+            </FeatureGuard>
+          }
+        />
+        <Route
+          path="/reports/revenue"
+          element={
+            <FeatureGuard featureId="reports">
+              <ReportsPage />
+            </FeatureGuard>
+          }
+        />
+        <Route
+          path="/reports/expenses"
+          element={
+            <FeatureGuard featureId="reports">
+              <ReportsPage />
+            </FeatureGuard>
+          }
+        />
+        <Route
+          path="/reports/custom"
+          element={
+            <FeatureGuard featureId="reports">
+              <ReportsPage />
+            </FeatureGuard>
+          }
+        />
 
         {/* ========== ROLES ========== */}
-        <Route path="/roles" element={<RolesPage />} />
+        <Route
+          path="/roles"
+          element={
+            <FeatureGuard featureId="team">
+              <RolesPage />
+            </FeatureGuard>
+          }
+        />
 
         {/* ========== 404 CATCH-ALL ========== */}
         <Route path="*" element={<NotFound />} />

@@ -13,6 +13,29 @@ export interface RegisterPayload {
   password: string;
 }
 
+export type SignupPlan = "basic" | "standard" | "premium";
+
+export interface SignupOtpPayload {
+  email: string;
+  phone?: string;
+  channel: "email" | "phone";
+}
+
+export interface SignupOtpVerifyPayload extends SignupOtpPayload {
+  otp: string;
+}
+
+export interface SignupPayload {
+  name: string;
+  email: string;
+  password: string;
+  companyName: string;
+  companyType: "individual" | "startup" | "sme" | "enterprise";
+  phone: string;
+  country: string;
+  plan: SignupPlan;
+}
+
 export type AuthApiResponse = ApiResponse<AnyRecord>;
 
 interface BackendRegisterPayload {
@@ -71,5 +94,24 @@ export async function register(payload: RegisterPayload): Promise<AuthApiRespons
   };
 
   const response = await api.post<AuthApiResponse>("/auth/register", backendPayload);
+  return response.data;
+}
+
+export async function sendSignupOtp(
+  payload: SignupOtpPayload
+): Promise<AuthApiResponse> {
+  const response = await api.post<AuthApiResponse>("/auth/signup/otp/send", payload);
+  return response.data;
+}
+
+export async function verifySignupOtp(
+  payload: SignupOtpVerifyPayload
+): Promise<AuthApiResponse> {
+  const response = await api.post<AuthApiResponse>("/auth/signup/otp/verify", payload);
+  return response.data;
+}
+
+export async function signup(payload: SignupPayload): Promise<AuthApiResponse> {
+  const response = await api.post<AuthApiResponse>("/auth/signup", payload);
   return response.data;
 }

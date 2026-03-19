@@ -2,7 +2,13 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { login, setAuthSession } from "@/features/auth";
-import { isOnboardingRequired } from "@/lib/enabled-features";
+import {
+  APP_FEATURE_IDS,
+  getFeatureAccessFromTenant,
+  isOnboardingRequired,
+  setAvailableFeatures,
+  setEnabledFeatures,
+} from "@/lib/enabled-features";
 import logo from "../Images/Logo/logo.png";
 
 /* ────── shared css-in-js tokens (mirrors the spec) ───── */
@@ -129,6 +135,9 @@ const LoginPage = () => {
       const accessToken = d?.tokens?.accessToken;
       if (response?.success && accessToken) {
         setAuthSession({ accessToken, refreshToken: d?.tokens?.refreshToken, user: d?.user, employee: d?.employee, tenant: d?.tenant, permissions: d?.permissions });
+        const availableFeatures = getFeatureAccessFromTenant(d?.tenant) ?? [...APP_FEATURE_IDS];
+        setAvailableFeatures(availableFeatures);
+        setEnabledFeatures(availableFeatures);
         setBtnState("success");
         setTimeout(() => navigate(isOnboardingRequired() ? "/onboarding" : "/dashboard"), 1500);
       } else {

@@ -12,6 +12,27 @@ export interface RegisterRequest {
   tenantSlug?: string;
 }
 
+export interface SignupOtpSendRequest {
+  email: string;
+  phone?: string;
+  channel: 'email' | 'phone';
+}
+
+export interface SignupOtpVerifyRequest extends SignupOtpSendRequest {
+  otp: string;
+}
+
+export interface SignupRequest {
+  name: string;
+  email: string;
+  password: string;
+  companyName: string;
+  companyType: 'individual' | 'startup' | 'sme' | 'enterprise';
+  phone: string;
+  country: string;
+  plan: 'basic' | 'standard' | 'premium';
+}
+
 export interface TokenResponse {
   accessToken: string;
   refreshToken: string;
@@ -40,7 +61,13 @@ export interface AuthResponse {
     id: string;
     name: string;
     slug: string;
+    plan?: string;
+    companyType?: string;
+    country?: string;
+    enabledModules?: string[];
+    enabledFeatures?: string[];
   };
+  token?: string;
   tokens: TokenResponse;
   permissions: string[];
   sidebarModules: string[];
@@ -59,6 +86,9 @@ export interface ChangePasswordRequest {
 export type { 
   LoginInput, 
   RegisterInput, 
+  SignupInput,
+  SignupOtpSendInput,
+  SignupOtpVerifyInput,
   RefreshTokenInput, 
   ChangePasswordInput 
 } from './auth.validators';

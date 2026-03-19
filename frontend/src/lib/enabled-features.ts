@@ -1,32 +1,85 @@
-export const ONBOARDING_FEATURE_IDS = [
-  "leads",
-  "pipeline",
-  "contacts",
-  "companies",
-  "tasks",
+export const APP_FEATURE_IDS = [
   "calendar",
-  "email",
-  "invoices",
+  "tasks",
+  "leads",
+  "clients",
+  "finance",
+  "letterbox",
+  "support",
+  "chat",
+  "projects",
+  "kanban",
+  "timeTracking",
+  "files",
+  "team",
+  "roofEstimator",
+  "analytics",
   "reports",
-  "documents",
-  "automation",
-  "api",
+  "aiAssistant",
 ] as const;
 
-export type FeatureId = (typeof ONBOARDING_FEATURE_IDS)[number];
+export type FeatureId = (typeof APP_FEATURE_IDS)[number];
 
-export const DEFAULT_ENABLED_FEATURES: FeatureId[] = [
-  "leads",
-  "contacts",
-  "tasks",
-  "calendar",
-];
+export const PLAN_KEYS = ["basic", "standard", "premium"] as const;
+export type PlanKey = (typeof PLAN_KEYS)[number];
+
+export const PLAN_FEATURE_ACCESS: Record<PlanKey, FeatureId[]> = {
+  basic: [
+    "calendar",
+    "tasks",
+    "leads",
+    "clients",
+    "finance",
+    "letterbox",
+    "support",
+  ],
+  standard: [
+    "calendar",
+    "tasks",
+    "leads",
+    "clients",
+    "finance",
+    "letterbox",
+    "support",
+    "chat",
+    "projects",
+    "kanban",
+    "timeTracking",
+    "files",
+    "team",
+  ],
+  premium: [...APP_FEATURE_IDS],
+};
+
+export const DEFAULT_ENABLED_FEATURES: FeatureId[] = [...PLAN_FEATURE_ACCESS.standard];
 
 const STORAGE_KEYS = {
   enabledFeatures: "enabledFeatures",
+  availableFeatures: "availableFeatures",
   onboardingCompleted: "onboardingCompleted",
   onboardingData: "onboardingData",
 } as const;
+
+const LEGACY_FEATURE_ALIASES: Record<string, FeatureId[]> = {
+  pipeline: ["leads"],
+  contacts: ["clients"],
+  companies: ["clients"],
+  invoices: ["finance"],
+  payments: ["finance"],
+  quotes: ["finance"],
+  email: ["letterbox", "chat", "support"],
+  documents: ["files"],
+  api: ["team", "roofEstimator", "aiAssistant"],
+  automation: ["aiAssistant"],
+};
+
+export function isPlanKey(value: string | null | undefined): value is PlanKey {
+  return !!value && PLAN_KEYS.includes(value as PlanKey);
+}
+
+export function getFeatureAccessForPlan(plan: PlanKey): FeatureId[] {
+  return [...PLAN_FEATURE_ACCESS[plan]];
+}
 
 export function isOnboardingCompleted(): boolean {
   return localStorage.getItem(STORAGE_KEYS.onboardingCompleted) === "true";
@@ -44,28 +97,27 @@ export function setOnboardingCompleted(completed: boolean): void {
   window.dispatchEvent(new Event("enabledFeatures:change"));
 }
 
-export function clearEnabledFeatures(): void {
-  localStorage.removeItem(STORAGE_KEYS.enabledFeatures);
-  window.dispatchEvent(new Event("enabledFeatures:change"));
-}
-
-export function clearOnboardingData(): void {
-  localStorage.removeItem(STORAGE_KEYS.onboardingData);
-}
-
 export function normalizeEnabledFeatures(input: unknown): FeatureId[] {
-  const allowed = new Set<string>(ONBOARDING_FEATURE_IDS);
+  const allowed = new Set<string>(APP_FEATURE_IDS);
   const incoming = Array.isArray(input) ? input : [];
+  const normalized = new Set<FeatureId>();
 
-  const normalized = incoming
-    .map((v) => String(v).trim())
-    .filter((v) => allowed.has(v)) as FeatureId[];
+  incoming.forEach((value) => {
+    const key = String(value).trim();
+    if (!key) return;
 
-  // Basic dependency: pipeline implies leads.
-  const set = new Set<FeatureId>(normalized);
-  if (set.has("pipeline")) set.add("leads");
+    if (allowed.has(key)) {
+      normalized.add(key as FeatureId);
+      return;
+    }
 
-  return Array.from(set);
+    const aliases = LEGACY_FEATURE_ALIASES[key];
+    if (aliases) {
+      aliases.forEach((alias) => normalized.add(alias));
+    }
+  });
+
+  return Array.from(normalized);
 }
 
 export function getStoredEnabledFeatures(): FeatureId[] | null {
@@ -78,27 +130,91 @@ export function getStoredEnabledFeatures(): FeatureId[] | null {
   }
 }
 
+export function getAvailableFeatures(): FeatureId[] | null {
+  const raw = localStorage.getItem(STORAGE_KEYS.availableFeatures);
+  if (!raw) return null;
+  try {
+    return normalizeEnabledFeatures(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+}
+
+export function setAvailableFeatures(features: FeatureId[]): void {
+  const normalized = normalizeEnabledFeatures(features);
+  localStorage.setItem(
+    STORAGE_KEYS.availableFeatures,
+    JSON.stringify(normalized)
+  );
+  window.dispatchEvent(new Event("enabledFeatures:change"));
+}
+
+export function clearEnabledFeatures(): void {
+  localStorage.removeItem(STORAGE_KEYS.enabledFeatures);
+  window.dispatchEvent(new Event("enabledFeatures:change"));
+}
+
+export function clearAvailableFeatures(): void {
+  localStorage.removeItem(STORAGE_KEYS.availableFeatures);
+  window.dispatchEvent(new Event("enabledFeatures:change"));
+}
+
+export function clearOnboardingData(): void {
+  localStorage.removeItem(STORAGE_KEYS.onboardingData);
+}
+
 export function getEnabledFeatures(): FeatureId[] {
-  // Only enforce selected features after onboarding is completed.
-  // Before that (or for users that never did onboarding), default to "everything enabled"
-  // so we don't unexpectedly hide modules.
-  if (!isOnboardingCompleted()) return [...ONBOARDING_FEATURE_IDS];
-  return getStoredEnabledFeatures() ?? DEFAULT_ENABLED_FEATURES;
+  const available = getAvailableFeatures() ?? [...APP_FEATURE_IDS];
+
+  if (!isOnboardingCompleted()) {
+    return available;
+  }
+
+  const stored = getStoredEnabledFeatures();
+  if (!stored) {
+    return available;
+  }
+
+  const availableSet = new Set<FeatureId>(available);
+  return stored.filter((feature) => availableSet.has(feature));
 }
 
 export function setEnabledFeatures(features: FeatureId[]): void {
   const normalized = normalizeEnabledFeatures(features);
+  const available = new Set<FeatureId>(getAvailableFeatures() ?? APP_FEATURE_IDS);
+  const filtered = normalized.filter((feature) => available.has(feature));
+
   localStorage.setItem(
     STORAGE_KEYS.enabledFeatures,
-    JSON.stringify(normalized)
+    JSON.stringify(filtered)
   );
   window.dispatchEvent(new Event("enabledFeatures:change"));
+}
+
+export function getFeatureAccessFromTenant(tenant: unknown): FeatureId[] | null {
+  if (!tenant || typeof tenant !== "object") {
+    return null;
+  }
+
+  const record = tenant as Record<string, unknown>;
+  const explicit = normalizeEnabledFeatures(record.enabledFeatures);
+  if (explicit.length > 0) {
+    return explicit;
+  }
+
+  const plan = String(record.plan || "").trim().toLowerCase();
+  if (isPlanKey(plan)) {
+    return getFeatureAccessForPlan(plan);
+  }
+
+  return null;
 }
 
 export function subscribeEnabledFeatures(callback: () => void): () => void {
   const onStorage = (e: StorageEvent) => {
     if (
       e.key === STORAGE_KEYS.enabledFeatures ||
+      e.key === STORAGE_KEYS.availableFeatures ||
       e.key === STORAGE_KEYS.onboardingCompleted
     ) {
       callback();

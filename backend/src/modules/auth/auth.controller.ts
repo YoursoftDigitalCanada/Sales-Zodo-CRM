@@ -1,7 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
 import { authService } from './auth.service';
 import { sendSuccess, sendCreated, sendNoContent } from '../../common/utils/responseFormatter';
-import { LoginInput, RegisterInput, ChangePasswordInput } from './auth.types';
+import {
+  LoginInput,
+  RegisterInput,
+  SignupInput,
+  SignupOtpSendInput,
+  SignupOtpVerifyInput,
+  ChangePasswordInput,
+} from './auth.types';
 
 export class AuthController {
   /**
@@ -33,6 +40,49 @@ export class AuthController {
       const result = await authService.register(input);
 
       sendCreated(res, result, 'Registration successful');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /auth/signup/otp/send
+   */
+  async sendSignupOtp(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const input: SignupOtpSendInput = req.body;
+      const result = await authService.sendSignupOtp(input);
+
+      sendSuccess(res, result, 'OTP sent successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /auth/signup/otp/verify
+   */
+  async verifySignupOtp(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const input: SignupOtpVerifyInput = req.body;
+      const result = await authService.verifySignupOtp(input);
+
+      sendSuccess(res, result, 'OTP verified successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /auth/signup
+   */
+  async signup(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const input: SignupInput = req.body;
+
+      const result = await authService.signup(input);
+
+      sendCreated(res, result, 'Signup successful');
     } catch (error) {
       next(error);
     }

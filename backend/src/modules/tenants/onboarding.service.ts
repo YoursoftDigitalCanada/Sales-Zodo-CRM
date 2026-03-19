@@ -181,6 +181,12 @@ export interface OnboardingResult {
     settingsCreated: boolean;
 }
 
+export interface SeedTenantOptions {
+    enabledModules?: string[];
+    businessType?: string;
+    settingsOverrides?: Record<string, unknown>;
+}
+
 class OnboardingService {
     /**
      * Seed all default data for a newly created tenant.
@@ -190,7 +196,11 @@ class OnboardingService {
      * @param tenantId - The newly created tenant's ID
      * @returns An `OnboardingResult` with created role IDs and counts
      */
-    async seedTenant(tx: TxPrisma, tenantId: string): Promise<OnboardingResult> {
+    async seedTenant(
+        tx: TxPrisma,
+        tenantId: string,
+        options: SeedTenantOptions = {}
+    ): Promise<OnboardingResult> {
         logger.info(`[Onboarding] Seeding tenant ${tenantId} ...`);
 
         // ── 1. Fetch all permission records from the DB ─────────────────────
@@ -302,8 +312,9 @@ class OnboardingService {
             where: { id: tenantId },
             data: {
                 settings: {
-                    enabledModules: [...DEFAULT_ENABLED_MODULES],
-                    businessType: 'general',
+                    enabledModules: [...(options.enabledModules || DEFAULT_ENABLED_MODULES)],
+                    businessType: options.businessType || 'general',
+                    ...(options.settingsOverrides || {}),
                 },
             },
         });

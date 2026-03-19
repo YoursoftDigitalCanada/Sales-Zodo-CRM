@@ -18,6 +18,9 @@ import { ErrorCodes } from '../../common/errors/errorCodes';
 import {
   LoginInput,
   RegisterInput,
+  SignupInput,
+  SignupOtpSendInput,
+  SignupOtpVerifyInput,
   AuthResponse,
   TokenResponse,
   ChangePasswordInput,
@@ -28,8 +31,40 @@ import { logger } from '../../common/utils/logger';
 import { getModulesForPermissions } from '../../common/constants/modules';
 import { onboardingService } from '../tenants/onboarding.service';
 import { settingsManager } from '../settings/settings.manager';
+import {
+  getFullAccessDefinition,
+  getPlanDefinition,
+  isSignupPlan,
+  normalizeSignupPlan,
+} from './signup-access';
+import { signupOtpService } from './signup-otp.service';
 
 export class AuthService {
+  async sendSignupOtp(input: SignupOtpSendInput): Promise<{
+    channel: 'email' | 'phone';
+    expiresIn: number;
+    destination: string;
+    debugCode?: string;
+  }> {
+    const existingUser = await authRepository.findUserByEmail(input.email.toLowerCase());
+
+    if (existingUser) {
+      throw new ConflictError(
+        'An account with this email already exists',
+        ErrorCodes.USER_ALREADY_EXISTS
+      );
+    }
+
+    return signupOtpService.sendOtp(input);
+  }
+
+  async verifySignupOtp(input: SignupOtpVerifyInput): Promise<{
+    verified: true;
+    expiresIn: number;
+  }> {
+    return signupOtpService.verifyOtp(input);
+  }
+
   /**
    * Login user with email and password
    */
@@ -123,32 +158,13 @@ export class AuthService {
 
     logger.info(`User logged in: ${user.email}`, { userId: user.id, tenantId: employee.tenantId });
 
-    return {
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        avatar: user.avatar || undefined,
-      },
-      employee: {
-        id: employee.id,
-        role: {
-          id: employee.role.id,
-          name: employee.role.name,
-        },
-        department: employee.department || undefined,
-        position: employee.position || undefined,
-      },
-      tenant: {
-        id: employee.tenant.id,
-        name: employee.tenant.name,
-        slug: employee.tenant.slug,
-      },
+    return this.buildAuthResponse({
+      user,
+      employee,
       tokens,
       permissions,
       sidebarModules,
-    };
+    });
   }
 
   /**
@@ -178,6 +194,7 @@ export class AuthService {
           lastName: input.lastName,
           status: 'ACTIVE',
           emailVerified: true,
+          emailVerifiedAt: new Date(),
         },
       });
 
@@ -214,7 +231,11 @@ export class AuthService {
               },
             },
           },
-          tenant: true,
+          tenant: {
+            include: {
+              subscription: true,
+            },
+          },
         },
       });
 
@@ -257,29 +278,148 @@ export class AuthService {
       tenantId: result.tenant.id
     });
 
-    return {
-      user: {
-        id: result.user.id,
-        email: result.user.email,
-        firstName: result.user.firstName,
-        lastName: result.user.lastName,
-      },
-      employee: {
-        id: result.employee.id,
-        role: {
-          id: result.employee.role.id,
-          name: result.employee.role.name,
-        },
-      },
-      tenant: {
-        id: result.tenant.id,
-        name: result.tenant.name,
-        slug: result.tenant.slug,
-      },
+    return this.buildAuthResponse({
+      user: result.user,
+      employee: result.employee,
       tokens,
       permissions,
       sidebarModules,
-    };
+    });
+  }
+
+  async signup(input: SignupInput): Promise<AuthResponse> {
+    const email = input.email.toLowerCase();
+    const phone = input.phone.trim();
+    const plan = normalizeSignupPlan(input.plan);
+    const planDefinition = getPlanDefinition(plan);
+
+    const existingUser = await authRepository.findUserByEmail(email);
+
+    if (existingUser) {
+      throw new ConflictError(
+        'An account with this email already exists',
+        ErrorCodes.USER_ALREADY_EXISTS
+      );
+    }
+
+    signupOtpService.assertVerified(email, phone);
+
+    const { firstName, lastName } = this.splitFullName(input.name);
+    const passwordHash = await hashPassword(input.password);
+
+    const result = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          email,
+          passwordHash,
+          firstName,
+          lastName,
+          phone,
+          status: 'ACTIVE',
+          emailVerified: true,
+          emailVerifiedAt: new Date(),
+        },
+      });
+
+      const tenant = await tx.tenant.create({
+        data: {
+          name: input.companyName.trim(),
+          slug: this.generateSlug(input.companyName),
+          status: 'TRIAL',
+          subscriptionTier: plan,
+        },
+      });
+
+      const onboarding = await onboardingService.seedTenant(tx, tenant.id, {
+        enabledModules: planDefinition.enabledModules,
+        settingsOverrides: {
+          plan,
+          companyType: input.companyType,
+          country: input.country.trim(),
+          phone,
+          uiFeatures: planDefinition.uiFeatures,
+          crmFeatures: planDefinition.crmFeatures,
+        },
+      });
+
+      await tx.subscription.create({
+        data: {
+          tenantId: tenant.id,
+          planType: plan.toUpperCase(),
+          billingCycle: 'MONTHLY',
+          status: 'TRIAL',
+          nextBillingDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+        },
+      });
+
+      const employee = await tx.employee.create({
+        data: {
+          userId: user.id,
+          tenantId: tenant.id,
+          roleId: onboarding.roles.admin,
+          isActive: true,
+        },
+        include: {
+          role: {
+            include: {
+              permissions: {
+                include: {
+                  permission: true,
+                },
+              },
+            },
+          },
+          tenant: {
+            include: {
+              subscription: true,
+            },
+          },
+        },
+      });
+
+      await tx.user.update({
+        where: { id: user.id },
+        data: { tenantId: tenant.id },
+      });
+
+      await tx.userPreferences.create({
+        data: {
+          userId: user.id,
+        },
+      });
+
+      return { user, employee };
+    });
+
+    signupOtpService.consumeVerification(email, phone);
+
+    const tokens = await this.generateTokens(
+      result.user.id,
+      result.user.email,
+      result.employee.tenantId,
+      result.employee.id,
+      result.employee.role.name,
+      {}
+    );
+
+    const permissions = result.employee.role.permissions.map(
+      (rp) => rp.permission.code
+    );
+    const sidebarModules = getModulesForPermissions(permissions);
+
+    logger.info(`New signup completed: ${result.user.email}`, {
+      userId: result.user.id,
+      tenantId: result.employee.tenantId,
+      plan,
+    });
+
+    return this.buildAuthResponse({
+      user: result.user,
+      employee: result.employee,
+      tokens,
+      permissions,
+      sidebarModules,
+    });
   }
 
   /**
@@ -473,9 +613,7 @@ export class AuthService {
         },
       },
       tenant: {
-        id: employee.tenant.id,
-        name: employee.tenant.name,
-        slug: employee.tenant.slug,
+        ...this.buildTenantPayload(employee.tenant),
         logo: employee.tenant.logo,
       },
       permissions,
@@ -567,32 +705,13 @@ export class AuthService {
       userAgent: metadata.userAgent,
     });
 
-    return {
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        avatar: user.avatar || undefined,
-      },
-      employee: {
-        id: employeeWithPermissions.id,
-        role: {
-          id: employeeWithPermissions.role.id,
-          name: employeeWithPermissions.role.name,
-        },
-        department: employeeWithPermissions.department || undefined,
-        position: employeeWithPermissions.position || undefined,
-      },
-      tenant: {
-        id: employeeWithPermissions.tenant.id,
-        name: employeeWithPermissions.tenant.name,
-        slug: employeeWithPermissions.tenant.slug,
-      },
+    return this.buildAuthResponse({
+      user,
+      employee: employeeWithPermissions,
       tokens,
       permissions,
       sidebarModules,
-    };
+    });
   }
 
   /**
@@ -748,6 +867,161 @@ export class AuthService {
       .replace(/[\s_-]+/g, '-')
       .replace(/^-+|-+$/g, '')
       .substring(0, 50) + '-' + uuidv4().substring(0, 8);
+  }
+
+  private splitFullName(name: string): { firstName: string; lastName: string } {
+    const parts = name
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+
+    return {
+      firstName: parts[0] || 'Admin',
+      lastName: parts.slice(1).join(' ') || 'User',
+    };
+  }
+
+  private normalizeStringArray(values: unknown): string[] | undefined {
+    if (!Array.isArray(values)) {
+      return undefined;
+    }
+
+    const normalized = values
+      .map((value) => String(value).trim())
+      .filter(Boolean);
+
+    return normalized.length ? Array.from(new Set(normalized)) : undefined;
+  }
+
+  private resolveTenantAccess(tenant: {
+    subscriptionTier?: string | null;
+    settings?: unknown;
+    subscription?: { planType?: string | null } | null;
+  }): {
+    plan: string;
+    enabledModules: string[];
+    enabledFeatures: string[];
+  } {
+    const settings =
+      tenant.settings && typeof tenant.settings === 'object'
+        ? (tenant.settings as Record<string, unknown>)
+        : {};
+
+    const configuredModules = this.normalizeStringArray(settings.enabledModules);
+    const configuredFeatures = this.normalizeStringArray(settings.uiFeatures);
+    const rawPlan = String(
+      settings.plan
+      || tenant.subscription?.planType
+      || tenant.subscriptionTier
+      || ''
+    )
+      .trim()
+      .toLowerCase();
+
+    if (isSignupPlan(rawPlan)) {
+      const planDefinition = getPlanDefinition(rawPlan);
+      return {
+        plan: rawPlan,
+        enabledModules: configuredModules || [...planDefinition.enabledModules],
+        enabledFeatures: configuredFeatures || [...planDefinition.uiFeatures],
+      };
+    }
+
+    const fullAccess = getFullAccessDefinition();
+    return {
+      plan: rawPlan || 'legacy',
+      enabledModules: configuredModules || [...fullAccess.enabledModules],
+      enabledFeatures: configuredFeatures || [...fullAccess.uiFeatures],
+    };
+  }
+
+  private buildTenantPayload(tenant: {
+    id: string;
+    name: string;
+    slug: string;
+    settings?: unknown;
+    subscriptionTier?: string | null;
+    subscription?: { planType?: string | null } | null;
+  }): {
+    id: string;
+    name: string;
+    slug: string;
+    plan: string;
+    companyType?: string;
+    country?: string;
+    enabledModules: string[];
+    enabledFeatures: string[];
+  } {
+    const settings =
+      tenant.settings && typeof tenant.settings === 'object'
+        ? (tenant.settings as Record<string, unknown>)
+        : {};
+    const access = this.resolveTenantAccess(tenant);
+
+    return {
+      id: tenant.id,
+      name: tenant.name,
+      slug: tenant.slug,
+      plan: access.plan,
+      companyType: typeof settings.companyType === 'string' ? settings.companyType : undefined,
+      country: typeof settings.country === 'string' ? settings.country : undefined,
+      enabledModules: access.enabledModules,
+      enabledFeatures: access.enabledFeatures,
+    };
+  }
+
+  private buildAuthResponse(params: {
+    user: {
+      id: string;
+      email: string;
+      firstName: string;
+      lastName: string;
+      avatar?: string | null;
+    };
+    employee: {
+      id: string;
+      department?: string | null;
+      position?: string | null;
+      role: {
+        id: string;
+        name: string;
+      };
+      tenant: {
+        id: string;
+        name: string;
+        slug: string;
+        settings?: unknown;
+        subscriptionTier?: string | null;
+        subscription?: { planType?: string | null } | null;
+      };
+    };
+    tokens: TokenResponse;
+    permissions: string[];
+    sidebarModules: string[];
+  }): AuthResponse {
+    return {
+      user: {
+        id: params.user.id,
+        email: params.user.email,
+        firstName: params.user.firstName,
+        lastName: params.user.lastName,
+        avatar: params.user.avatar || undefined,
+      },
+      employee: {
+        id: params.employee.id,
+        role: {
+          id: params.employee.role.id,
+          name: params.employee.role.name,
+        },
+        department: params.employee.department || undefined,
+        position: params.employee.position || undefined,
+      },
+      tenant: this.buildTenantPayload(params.employee.tenant),
+      token: params.tokens.accessToken,
+      tokens: params.tokens,
+      permissions: params.permissions,
+      sidebarModules: params.sidebarModules,
+    };
   }
 
   /**

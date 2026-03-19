@@ -8,6 +8,9 @@ import { config } from '../../config';
 import {
   loginSchema,
   registerSchema,
+  signupOtpSendSchema,
+  signupOtpVerifySchema,
+  signupSchema,
   refreshTokenSchema,
   changePasswordSchema,
   forgotPasswordSchema,
@@ -24,6 +27,16 @@ const loginRateLimiter = rateLimiter({
 const registerRateLimiter = rateLimiter({
   windowMs: 60 * 60 * 1000,
   max: config.app.isDevelopment ? 50 : 10,
+});
+
+const signupOtpSendRateLimiter = rateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: config.app.isDevelopment ? 40 : 8,
+});
+
+const signupOtpVerifyRateLimiter = rateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: config.app.isDevelopment ? 80 : 20,
 });
 
 /**
@@ -72,6 +85,27 @@ router.post(
   registerRateLimiter,
   validate(registerSchema),
   authController.register.bind(authController)
+);
+
+router.post(
+  '/signup/otp/send',
+  signupOtpSendRateLimiter,
+  validate(signupOtpSendSchema),
+  authController.sendSignupOtp.bind(authController)
+);
+
+router.post(
+  '/signup/otp/verify',
+  signupOtpVerifyRateLimiter,
+  validate(signupOtpVerifySchema),
+  authController.verifySignupOtp.bind(authController)
+);
+
+router.post(
+  '/signup',
+  registerRateLimiter,
+  validate(signupSchema),
+  authController.signup.bind(authController)
 );
 
 /**

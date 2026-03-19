@@ -32,7 +32,11 @@ apiClient.interceptors.response.use(
     const url = typeof error.config?.url === "string" ? error.config.url : "";
     const normalizedUrl = url ? normalizeApiEndpoint(url) : "";
     const skipRedirect401 =
-      normalizedUrl === "/auth/login" || normalizedUrl === "/auth/register";
+      normalizedUrl === "/auth/login" ||
+      normalizedUrl === "/auth/register" ||
+      normalizedUrl === "/auth/signup" ||
+      normalizedUrl === "/auth/signup/otp/send" ||
+      normalizedUrl === "/auth/signup/otp/verify";
 
     if (error.response?.status === 401 && !skipRedirect401) {
       clearAuthSession();

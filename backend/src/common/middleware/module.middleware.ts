@@ -69,11 +69,11 @@ export function moduleGuard(
         }
 
         // Find the module slug for this route
-        const moduleSlug = ROUTE_MODULE_MAP[routePrefix];
+        const moduleSlugs = ROUTE_MODULE_MAP[routePrefix];
 
         // If the route isn't mapped to any module, let it through
         // (defensive — shouldn't happen in production)
-        if (!moduleSlug) {
+        if (!moduleSlugs || moduleSlugs.length === 0) {
             return next();
         }
 
@@ -89,6 +89,8 @@ export function moduleGuard(
         // Parse enabled modules from tenant settings
         const settings = (req.tenant.settings || {}) as TenantModuleSettings;
         const enabledModules = settings.enabledModules;
+        const isPlanAwareTenant =
+            typeof settings.plan === 'string' || Array.isArray(settings.uiFeatures);
 
         // If enabledModules is not defined, assume all modules are enabled
         // (backward compatibility for tenants created before this feature)
@@ -97,18 +99,29 @@ export function moduleGuard(
         }
 
         // Check if the module is enabled
-        if (!enabledModules.includes(moduleSlug)) {
+        const isEnabled = moduleSlugs.some((moduleSlug) => enabledModules.includes(moduleSlug));
+
+        // Backward compatibility for tenants created before plan-aware gating.
+        if (!isEnabled && !isPlanAwareTenant) {
+            const legacyImplicitModules = new Set(['team', 'ai-assistant']);
+            if (moduleSlugs.some((moduleSlug) => legacyImplicitModules.has(moduleSlug))) {
+                return next();
+            }
+        }
+
+        if (!isEnabled) {
             logger.info('Module access blocked — not enabled for tenant', {
                 tenantId: req.tenant.id,
                 tenantSlug: req.tenant.slug,
-                module: moduleSlug,
+                module: moduleSlugs[0],
+                acceptedModules: moduleSlugs,
                 routePrefix,
                 path: req.originalUrl,
                 userId: req.user?.userId,
             });
 
             throw new ForbiddenError(
-                `The "${moduleSlug}" module is not enabled for your organization. Contact your administrator to enable it.`,
+                `The "${moduleSlugs[0]}" module is not enabled for your organization. Contact your administrator to enable it.`,
                 ErrorCodes.MODULE_DISABLED
             );
         }

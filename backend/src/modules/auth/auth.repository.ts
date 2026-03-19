@@ -9,7 +9,11 @@ export class AuthRepository {
         employees: {
           where: { isActive: true },
           include: {
-            tenant: true,
+            tenant: {
+              include: {
+                subscription: true,
+              },
+            },
             role: {
               include: {
                 permissions: {
@@ -32,7 +36,11 @@ export class AuthRepository {
         employees: {
           where: { isActive: true },
           include: {
-            tenant: true,
+            tenant: {
+              include: {
+                subscription: true,
+              },
+            },
             role: {
               include: {
                 permissions: {
@@ -82,7 +90,11 @@ export class AuthRepository {
             employees: {
               where: { isActive: true },
               include: {
-                tenant: true,
+                tenant: {
+                  include: {
+                    subscription: true,
+                  },
+                },
                 role: {
                   include: {
                     permissions: {
@@ -151,7 +163,11 @@ export class AuthRepository {
             },
           },
         },
-        tenant: true,
+        tenant: {
+          include: {
+            subscription: true,
+          },
+        },
       },
     });
   }

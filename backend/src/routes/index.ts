@@ -210,6 +210,7 @@ export function registerRoutes(app: Application): void {
 
   // Support Tickets
   protectedRouter.use('/support-tickets', supportTicketsRoutes);
+  protectedRouter.use('/tickets', supportTicketsRoutes);
 
   // Mount protected router on the main API router
   apiRouter.use(protectedRouter);
@@ -284,6 +285,8 @@ export function registerRoutes(app: Application): void {
         eagleview: `${apiPrefix}/eagleview`,
         contracts: `${apiPrefix}/contracts`,
         proposals: `${apiPrefix}/proposals`,
+        supportTickets: `${apiPrefix}/support-tickets`,
+        tickets: `${apiPrefix}/tickets`,
       },
     });
   });

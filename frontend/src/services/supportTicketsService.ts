@@ -1,21 +1,14 @@
 import api from "@/lib/axios";
 
-export interface SupportTicket {
-  id: string;
-  ticketNumber: string;
-  subject: string;
-  description: string;
-  status: "OPEN" | "IN_PROGRESS" | "WAITING" | "RESOLVED" | "CLOSED";
-  priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
-  category: string;
-  requesterName: string;
-  requesterEmail: string;
-  assignee?: string;
-  tags: string[];
-  createdAt: string;
-  updatedAt: string;
-  resolvedAt?: string;
-  messages: TicketMessage[];
+export type SupportTicketStatus = "OPEN" | "IN_PROGRESS" | "WAITING" | "RESOLVED" | "CLOSED";
+export type SupportTicketPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+
+export interface TicketAttachment {
+  name: string;
+  url: string;
+  type?: string;
+  size?: string;
+  storedName?: string;
 }
 
 export interface TicketMessage {
@@ -23,16 +16,49 @@ export interface TicketMessage {
   sender: string;
   message: string;
   isStaff: boolean;
+  isInternal: boolean;
   createdAt: string;
+}
+
+export interface TicketActivity {
+  id: string;
+  type: "created" | "reply" | "internal_note";
+  actor: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface SupportTicket {
+  id: string;
+  ticketId: string;
+  ticketNumber: string;
+  subject: string;
+  description: string;
+  status: SupportTicketStatus;
+  priority: SupportTicketPriority;
+  category: string;
+  requesterName: string;
+  requesterEmail: string;
+  userId: string | null;
+  workspaceId: string;
+  assignedTo: string | null;
+  assignedToName: string | null;
+  messagesCount: number;
+  internalNotesCount: number;
+  tags: string[];
+  attachments: TicketAttachment[];
+  messages: TicketMessage[];
+  activity: TicketActivity[];
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt?: string | null;
 }
 
 export interface CreateTicketPayload {
   subject: string;
   description: string;
-  priority?: string;
+  priority?: SupportTicketPriority;
   category?: string;
-  requesterName: string;
-  requesterEmail: string;
 }
 
 export async function getTickets(params?: Record<string, unknown>): Promise<{ data: SupportTicket[]; meta: any }> {
@@ -52,12 +78,12 @@ export async function createTicketWithAttachments(payload: CreateTicketPayload, 
   formData.append("description", payload.description);
   if (payload.priority) formData.append("priority", payload.priority);
   if (payload.category) formData.append("category", payload.category);
-  formData.append("requesterName", payload.requesterName);
-  formData.append("requesterEmail", payload.requesterEmail);
-  files.forEach(file => formData.append("files", file));
+  files.forEach((file) => formData.append("files", file));
+
   const response = await api.post("/support-tickets/with-attachments", formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
+
   return response.data?.data || response.data;
 }
 
@@ -66,12 +92,12 @@ export async function getTicketById(id: string): Promise<SupportTicket> {
   return response.data?.data || response.data;
 }
 
-export async function updateTicketStatus(id: string, status: string): Promise<SupportTicket> {
+export async function updateTicketStatus(id: string, status: SupportTicketStatus): Promise<SupportTicket> {
   const response = await api.patch(`/support-tickets/${id}/status`, { status });
   return response.data?.data || response.data;
 }
 
-export async function addTicketMessage(id: string, data: { sender: string; message: string; isStaff: boolean }): Promise<TicketMessage> {
+export async function addTicketMessage(id: string, data: { message: string }): Promise<SupportTicket> {
   const response = await api.post(`/support-tickets/${id}/messages`, data);
   return response.data?.data || response.data;
 }
@@ -80,7 +106,7 @@ export async function deleteTicket(id: string): Promise<void> {
   await api.delete(`/support-tickets/${id}`);
 }
 
-export async function getTicketStats(): Promise<{ open: number; inProgress: number; resolved: number; total: number }> {
+export async function getTicketStats(): Promise<{ open: number; inProgress: number; waiting: number; resolved: number; total: number }> {
   const response = await api.get("/support-tickets/stats");
   return response.data?.data || response.data;
 }

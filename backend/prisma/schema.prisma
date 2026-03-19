@@ -5071,9 +5071,11 @@ model SupportTicket {
   status          TicketStatus   @default(OPEN)
   priority        TicketPriority @default(MEDIUM)
   category        String         @default("Technical")
+  requesterUserId String?
   requesterName   String
   requesterEmail  String
   assignee        String?
+  messagesCount   Int            @default(0)
   tags            String[]       @default([])
   attachments     Json           @default("[]")
 
@@ -5093,6 +5095,7 @@ model SupportTicket {
   @@index([tenantId])
   @@index([status])
   @@index([ticketNumber])
+  @@index([requesterUserId])
 }
 
 model TicketMessage {
@@ -5100,6 +5103,7 @@ model TicketMessage {
   sender      String
   message     String        @db.Text
   isStaff     Boolean       @default(false)
+  isInternal  Boolean       @default(false)
 
   // ── Ticket relation ──
   ticketId    String

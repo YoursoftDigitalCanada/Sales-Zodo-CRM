@@ -4,6 +4,16 @@ import { adminAuthService } from './admin-auth.service';
 import { adminDashboardService } from './admin-dashboard.service';
 import { adminTenantsService } from './admin-tenants.service';
 import { adminSystemService } from './admin-system.service';
+import { validate } from '../../common/middleware/validate.middleware';
+import { supportTicketsRealtimeService } from '../support-tickets/support-tickets.realtime';
+import { supportTicketsService } from '../support-tickets/support-tickets.service';
+import {
+    addSupportTicketMessageSchema,
+    assignSupportTicketSchema,
+    supportTicketIdSchema,
+    supportTicketQuerySchema,
+    updateSupportTicketStatusSchema,
+} from '../support-tickets/support-tickets.validators';
 import rateLimit from 'express-rate-limit';
 
 const router = Router();
@@ -20,6 +30,94 @@ const adminLoginLimiter = rateLimit({
 // ── Helper ─────────────────────────────────────────────────────────────
 function sendSuccess(res: Response, data: any, message?: string) {
     res.json({ success: true, data, message: message || 'OK' });
+}
+
+async function getAdminActor(adminId: string): Promise<string> {
+    const admin = await adminAuthService.getProfile(adminId);
+    const fullName = `${admin.firstName} ${admin.lastName}`.trim();
+    return fullName || admin.email;
+}
+
+async function streamSupportTickets(req: Request, res: Response, next: NextFunction) {
+    try {
+        const disconnect = supportTicketsRealtimeService.subscribeAdmin(res);
+        req.on('close', disconnect);
+    } catch (error) {
+        next(error);
+    }
+}
+
+async function listSupportTickets(req: Request, res: Response, next: NextFunction) {
+    try {
+        const result = await supportTicketsService.getAdminTickets(req.query as any);
+        sendSuccess(res, result, `Found ${result.meta.total} tickets`);
+    } catch (error) {
+        next(error);
+    }
+}
+
+async function getSupportTicket(req: Request, res: Response, next: NextFunction) {
+    try {
+        const ticket = await supportTicketsService.getAdminTicketById(req.params.id);
+        sendSuccess(res, ticket);
+    } catch (error) {
+        next(error);
+    }
+}
+
+async function updateSupportTicketStatus(req: Request, res: Response, next: NextFunction) {
+    try {
+        const actor = await getAdminActor(req.admin!.adminId);
+        const ticket = await supportTicketsService.updateAdminStatus(req.params.id, req.body.status, actor);
+        await adminAuthService.logAction(req.admin!.adminId, 'SUPPORT_TICKET_STATUS_UPDATED', 'SupportTicket', req.params.id, {
+            status: req.body.status,
+        });
+        sendSuccess(res, ticket, `Ticket status updated to ${req.body.status}`);
+    } catch (error) {
+        next(error);
+    }
+}
+
+async function assignSupportTicket(req: Request, res: Response, next: NextFunction) {
+    try {
+        const actor = await getAdminActor(req.admin!.adminId);
+        const assignee = req.body.assignee?.trim() ? req.body.assignee.trim().toLowerCase() : null;
+        const ticket = await supportTicketsService.assignAdminTicket(req.params.id, assignee, actor);
+        await adminAuthService.logAction(req.admin!.adminId, 'SUPPORT_TICKET_ASSIGNED', 'SupportTicket', req.params.id, {
+            assignee,
+        });
+        sendSuccess(res, ticket, assignee ? `Ticket assigned to ${assignee}` : 'Ticket assignment cleared');
+    } catch (error) {
+        next(error);
+    }
+}
+
+async function addSupportTicketMessage(req: Request, res: Response, next: NextFunction) {
+    try {
+        const actor = await getAdminActor(req.admin!.adminId);
+        const ticket = await supportTicketsService.addAdminMessage(
+            req.params.id,
+            actor,
+            req.body.message,
+            Boolean(req.body.isInternal)
+        );
+        await adminAuthService.logAction(req.admin!.adminId, 'SUPPORT_TICKET_MESSAGE_ADDED', 'SupportTicket', req.params.id, {
+            isInternal: Boolean(req.body.isInternal),
+        });
+        sendSuccess(res, ticket, req.body.isInternal ? 'Internal note added' : 'Reply sent');
+    } catch (error) {
+        next(error);
+    }
+}
+
+async function deleteSupportTicket(req: Request, res: Response, next: NextFunction) {
+    try {
+        await supportTicketsService.deleteAdminTicket(req.params.id);
+        await adminAuthService.logAction(req.admin!.adminId, 'SUPPORT_TICKET_DELETED', 'SupportTicket', req.params.id);
+        sendSuccess(res, null, 'Ticket deleted');
+    } catch (error) {
+        next(error);
+    }
 }
 
 // ========================================================================
@@ -209,5 +307,67 @@ router.get('/audit-logs', async (req: Request, res: Response, next: NextFunction
         next(error);
     }
 });
+
+// ── Support Tickets (cross-tenant) ──────────────────────────────────────
+
+router.get('/support-team', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const team = await supportTicketsService.getSupportTeam();
+        sendSuccess(res, team, 'Support team loaded');
+    } catch (error) {
+        next(error);
+    }
+});
+
+router.get('/support-tickets/stream', streamSupportTickets);
+router.get('/tickets/stream', streamSupportTickets);
+
+router.get('/support-tickets', validate(supportTicketQuerySchema), listSupportTickets);
+router.get('/tickets', validate(supportTicketQuerySchema), listSupportTickets);
+
+router.get('/support-tickets/:id', validate(supportTicketIdSchema), getSupportTicket);
+router.get('/tickets/:id', validate(supportTicketIdSchema), getSupportTicket);
+
+router.patch(
+    '/support-tickets/:id/status',
+    validate(supportTicketIdSchema),
+    validate(updateSupportTicketStatusSchema),
+    updateSupportTicketStatus
+);
+router.patch(
+    '/tickets/:id/status',
+    validate(supportTicketIdSchema),
+    validate(updateSupportTicketStatusSchema),
+    updateSupportTicketStatus
+);
+
+router.patch(
+    '/support-tickets/:id/assign',
+    validate(supportTicketIdSchema),
+    validate(assignSupportTicketSchema),
+    assignSupportTicket
+);
+router.patch(
+    '/tickets/:id/assign',
+    validate(supportTicketIdSchema),
+    validate(assignSupportTicketSchema),
+    assignSupportTicket
+);
+
+router.post(
+    '/support-tickets/:id/messages',
+    validate(supportTicketIdSchema),
+    validate(addSupportTicketMessageSchema),
+    addSupportTicketMessage
+);
+router.post(
+    '/tickets/:id/messages',
+    validate(supportTicketIdSchema),
+    validate(addSupportTicketMessageSchema),
+    addSupportTicketMessage
+);
+
+router.delete('/support-tickets/:id', validate(supportTicketIdSchema), deleteSupportTicket);
+router.delete('/tickets/:id', validate(supportTicketIdSchema), deleteSupportTicket);
 
 export default router;

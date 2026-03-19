@@ -1,100 +1,300 @@
-import { supportTicketsRepository } from './support-tickets.repository';
+import { TicketStatus } from '@prisma/client';
+import { BadRequestError, NotFoundError } from '../../common/errors/HttpErrors';
 import { mailerService } from '../../common/services/mailer.service';
-import { TicketStatus, TicketPriority } from '@prisma/client';
+import { prisma } from '../../config/database';
+import {
+  type CreateSupportTicketDto,
+  type SupportTeamMemberDto,
+  type SupportTicketQueryDto,
+  type SupportTicketRequesterIdentity,
+  toSupportTicketDto,
+} from './support-tickets.dto';
+import { supportTicketsRealtimeService } from './support-tickets.realtime';
+import { supportTicketsRepository } from './support-tickets.repository';
 
 // Hardcoded SMTP config for support email notifications
 const SUPPORT_SMTP = {
-    host: 'smtp.hostinger.com',
-    port: 465,
-    user: 'support@zodo.ca',
-    pass: 'TimnpfSupport@365',
-    senderName: 'ZODO CRM Support',
-    senderEmail: 'support@zodo.ca',
+  host: 'smtp.hostinger.com',
+  port: 465,
+  user: 'support@zodo.ca',
+  pass: 'TimnpfSupport@365',
+  senderName: 'ZODO CRM Support',
+  senderEmail: 'support@zodo.ca',
 };
 
+function toPaginationMeta(page: number, limit: number, total: number) {
+  return {
+    page,
+    limit,
+    total,
+    totalPages: Math.max(1, Math.ceil(total / limit)),
+  };
+}
+
 export class SupportTicketsService {
-    async createTicket(tenantId: string, data: {
-        subject: string;
-        description: string;
-        priority?: TicketPriority;
-        category?: string;
-        requesterName: string;
-        requesterEmail: string;
-        attachments?: any[];
-    }) {
-        const ticket = await supportTicketsRepository.create(tenantId, data);
+  private async getRequesterProfile(
+    requester: SupportTicketRequesterIdentity
+  ): Promise<{ requesterName: string; requesterEmail: string }> {
+    const user = requester.userId
+      ? await prisma.user.findUnique({
+          where: { id: requester.userId },
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        })
+      : null;
 
-        // Send email notification to support@zodo.ca
-        try {
-            await mailerService.sendMailWithConfig(SUPPORT_SMTP, {
-                to: 'support@zodo.ca',
-                subject: `[${ticket.ticketNumber}] New Support Ticket: ${ticket.subject}`,
-                html: `
-                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                        <div style="background: #0891B2; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
-                            <h2 style="margin: 0;">🎫 New Support Ticket</h2>
-                            <p style="margin: 5px 0 0; opacity: 0.9;">${ticket.ticketNumber}</p>
-                        </div>
-                        <div style="border: 1px solid #e2e8f0; border-top: none; padding: 20px; border-radius: 0 0 8px 8px;">
-                            <table style="width: 100%; border-collapse: collapse;">
-                                <tr><td style="padding: 8px 0; color: #64748b; width: 120px;">Subject:</td><td style="padding: 8px 0; font-weight: 600;">${ticket.subject}</td></tr>
-                                <tr><td style="padding: 8px 0; color: #64748b;">Priority:</td><td style="padding: 8px 0;"><span style="background: ${ticket.priority === 'URGENT' ? '#fee2e2' : ticket.priority === 'HIGH' ? '#ffedd5' : '#e0f2fe'}; color: ${ticket.priority === 'URGENT' ? '#dc2626' : ticket.priority === 'HIGH' ? '#ea580c' : '#0284c7'}; padding: 2px 8px; border-radius: 12px; font-size: 12px;">${ticket.priority}</span></td></tr>
-                                <tr><td style="padding: 8px 0; color: #64748b;">Category:</td><td style="padding: 8px 0;">${ticket.category}</td></tr>
-                                <tr><td style="padding: 8px 0; color: #64748b;">From:</td><td style="padding: 8px 0;">${ticket.requesterName} (${ticket.requesterEmail})</td></tr>
-                            </table>
-                            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 16px 0;">
-                            <h3 style="color: #0f172a; margin: 0 0 8px;">Description</h3>
-                            <p style="color: #475569; line-height: 1.6; white-space: pre-wrap;">${ticket.description}</p>
-                            ${(ticket.attachments as any[])?.length > 0 ? `
-                            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 16px 0;">
-                            <h3 style="color: #0f172a; margin: 0 0 8px;">📎 Attachments (${(ticket.attachments as any[]).length})</h3>
-                            <ul style="color: #475569; padding-left: 20px;">
-                                ${(ticket.attachments as any[]).map((a: any) => `<li><a href="${a.url}" style="color: #0891B2;">${a.name}</a> (${a.size})</li>`).join('')}
-                            </ul>` : ''}
-                            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 16px 0;">
-                            <p style="color: #94a3b8; font-size: 12px;">Manage this ticket in <a href="https://crm.zodo.ca/support/tickets" style="color: #0891B2;">ZODO CRM Support Center</a></p>
-                        </div>
-                    </div>
-                `,
-            });
-            console.log(`📧 Support ticket email sent for ${ticket.ticketNumber}`);
-        } catch (err: any) {
-            console.error(`❌ Failed to send support ticket email: ${err.message}`);
-        }
+    const requesterName = [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim() || requester.email || 'Workspace User';
+    const requesterEmail = user?.email || requester.email;
 
-        return ticket;
+    if (!requesterEmail) {
+      throw new BadRequestError('Authenticated requester email is required to create a ticket');
     }
 
-    async getTickets(tenantId: string, query: any) {
-        const { data, total } = await supportTicketsRepository.findMany(tenantId, query);
-        const page = query.page || 1, limit = query.limit || 50;
-        return {
-            data,
-            meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
-        };
+    return {
+      requesterName,
+      requesterEmail,
+    };
+  }
+
+  private async getSupportTeamDirectory(): Promise<Map<string, SupportTeamMemberDto>> {
+    const team = await this.getSupportTeam();
+    return new Map(team.map((member) => [member.email.toLowerCase(), member]));
+  }
+
+  private async emitTicketEvent(
+    event: 'ticket_created' | 'ticket_updated' | 'ticket_deleted',
+    ticket: Awaited<ReturnType<typeof supportTicketsRepository.findByIdForAdmin>>
+  ): Promise<void> {
+    if (!ticket) {
+      return;
     }
 
-    async getTicketById(id: string, tenantId: string) {
-        const ticket = await supportTicketsRepository.findById(id, tenantId);
-        if (!ticket) throw new Error('Ticket not found');
-        return ticket;
+    const supportTeam = await this.getSupportTeamDirectory();
+    supportTicketsRealtimeService.publishTicketEvent(
+      event,
+      {
+        tenantId: ticket.tenantId,
+        requesterUserId: ticket.requesterUserId,
+        requesterEmail: ticket.requesterEmail,
+      },
+      {
+        admin: event === 'ticket_deleted'
+          ? { id: ticket.id }
+          : { ticket: toSupportTicketDto(ticket, { viewer: 'admin', supportTeam }) },
+        requester: event === 'ticket_deleted'
+          ? { id: ticket.id }
+          : { ticket: toSupportTicketDto(ticket, { viewer: 'crm', supportTeam }) },
+      }
+    );
+  }
+
+  async createTicket(
+    tenantId: string,
+    requester: SupportTicketRequesterIdentity,
+    data: CreateSupportTicketDto
+  ) {
+    const requesterProfile = await this.getRequesterProfile(requester);
+    const ticket = await supportTicketsRepository.create(tenantId, {
+      userId: requester.userId,
+      requesterName: requesterProfile.requesterName,
+      requesterEmail: requesterProfile.requesterEmail,
+    }, data);
+
+    try {
+      await mailerService.sendMailWithConfig(SUPPORT_SMTP, {
+        to: 'support@zodo.ca',
+        subject: `[${ticket.ticketNumber}] New Support Ticket: ${ticket.subject}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: #0891B2; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
+              <h2 style="margin: 0;">New Support Ticket</h2>
+              <p style="margin: 6px 0 0; opacity: 0.9;">${ticket.ticketNumber}</p>
+            </div>
+            <div style="border: 1px solid #e2e8f0; border-top: none; padding: 20px; border-radius: 0 0 8px 8px;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr><td style="padding: 8px 0; color: #64748b; width: 120px;">Subject:</td><td style="padding: 8px 0; font-weight: 600;">${ticket.subject}</td></tr>
+                <tr><td style="padding: 8px 0; color: #64748b;">Priority:</td><td style="padding: 8px 0;">${ticket.priority}</td></tr>
+                <tr><td style="padding: 8px 0; color: #64748b;">Category:</td><td style="padding: 8px 0;">${ticket.category}</td></tr>
+                <tr><td style="padding: 8px 0; color: #64748b;">Requester:</td><td style="padding: 8px 0;">${ticket.requesterName} (${ticket.requesterEmail})</td></tr>
+              </table>
+              <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 16px 0;">
+              <h3 style="color: #0f172a; margin: 0 0 8px;">Description</h3>
+              <p style="color: #475569; line-height: 1.6; white-space: pre-wrap;">${ticket.description}</p>
+            </div>
+          </div>
+        `,
+      });
+    } catch (error: any) {
+      console.error(`Failed to send support ticket email: ${error.message}`);
     }
 
-    async updateStatus(id: string, tenantId: string, status: TicketStatus) {
-        return supportTicketsRepository.updateStatus(id, tenantId, status);
+    await this.emitTicketEvent('ticket_created', ticket);
+
+    const supportTeam = await this.getSupportTeamDirectory();
+    return toSupportTicketDto(ticket, { viewer: 'crm', supportTeam });
+  }
+
+  async getRequesterTickets(
+    tenantId: string,
+    requester: SupportTicketRequesterIdentity,
+    query: SupportTicketQueryDto
+  ) {
+    const { data, total } = await supportTicketsRepository.findManyForRequester(tenantId, requester, query);
+    const page = query.page || 1;
+    const limit = query.limit || 50;
+    const supportTeam = await this.getSupportTeamDirectory();
+
+    return {
+      data: data.map((ticket) => toSupportTicketDto(ticket, { viewer: 'crm', supportTeam })),
+      meta: toPaginationMeta(page, limit, total),
+    };
+  }
+
+  async getAdminTickets(query: SupportTicketQueryDto) {
+    const { data, total } = await supportTicketsRepository.findManyForAdmin(query);
+    const page = query.page || 1;
+    const limit = query.limit || 50;
+    const supportTeam = await this.getSupportTeamDirectory();
+
+    return {
+      data: data.map((ticket) => toSupportTicketDto(ticket, { viewer: 'admin', supportTeam })),
+      meta: toPaginationMeta(page, limit, total),
+    };
+  }
+
+  async getRequesterTicketById(
+    id: string,
+    tenantId: string,
+    requester: SupportTicketRequesterIdentity
+  ) {
+    const ticket = await supportTicketsRepository.findByIdForRequester(id, tenantId, requester);
+    if (!ticket) {
+      throw new NotFoundError('Ticket not found');
     }
 
-    async addMessage(id: string, tenantId: string, data: { sender: string; message: string; isStaff: boolean }) {
-        return supportTicketsRepository.addMessage(id, tenantId, data);
+    const supportTeam = await this.getSupportTeamDirectory();
+    return toSupportTicketDto(ticket, { viewer: 'crm', supportTeam });
+  }
+
+  async getAdminTicketById(id: string) {
+    const ticket = await supportTicketsRepository.findByIdForAdmin(id);
+    if (!ticket) {
+      throw new NotFoundError('Ticket not found');
     }
 
-    async deleteTicket(id: string, tenantId: string) {
-        return supportTicketsRepository.delete(id, tenantId);
-    }
+    const supportTeam = await this.getSupportTeamDirectory();
+    return toSupportTicketDto(ticket, { viewer: 'admin', supportTeam });
+  }
 
-    async getStats(tenantId: string) {
-        return supportTicketsRepository.getStats(tenantId);
-    }
+  async updateRequesterStatus(
+    id: string,
+    tenantId: string,
+    requester: SupportTicketRequesterIdentity,
+    status: TicketStatus,
+    actor: string
+  ) {
+    const ticket = await supportTicketsRepository.updateStatusForRequester(id, tenantId, requester, status, actor);
+    await this.emitTicketEvent('ticket_updated', ticket);
+
+    const supportTeam = await this.getSupportTeamDirectory();
+    return toSupportTicketDto(ticket, { viewer: 'crm', supportTeam });
+  }
+
+  async updateAdminStatus(id: string, status: TicketStatus, actor: string) {
+    const ticket = await supportTicketsRepository.updateStatusForAdmin(id, status, actor);
+    await this.emitTicketEvent('ticket_updated', ticket);
+
+    const supportTeam = await this.getSupportTeamDirectory();
+    return toSupportTicketDto(ticket, { viewer: 'admin', supportTeam });
+  }
+
+  async assignAdminTicket(id: string, assignee: string | null, actor: string) {
+    const normalizedAssignee = assignee?.trim().toLowerCase() || null;
+    const ticket = await supportTicketsRepository.assign(id, normalizedAssignee, actor);
+    await this.emitTicketEvent('ticket_updated', ticket);
+
+    const supportTeam = await this.getSupportTeamDirectory();
+    return toSupportTicketDto(ticket, { viewer: 'admin', supportTeam });
+  }
+
+  async addRequesterMessage(
+    id: string,
+    tenantId: string,
+    requester: SupportTicketRequesterIdentity,
+    sender: string,
+    message: string
+  ) {
+    const ticket = await supportTicketsRepository.addMessageForRequester(id, tenantId, requester, {
+      sender,
+      message,
+      isStaff: false,
+      isInternal: false,
+    });
+    await this.emitTicketEvent('ticket_updated', ticket);
+
+    const supportTeam = await this.getSupportTeamDirectory();
+    return toSupportTicketDto(ticket, { viewer: 'crm', supportTeam });
+  }
+
+  async addAdminMessage(
+    id: string,
+    sender: string,
+    message: string,
+    isInternal: boolean
+  ) {
+    const ticket = await supportTicketsRepository.addMessageForAdmin(id, {
+      sender,
+      message,
+      isStaff: true,
+      isInternal,
+    });
+    await this.emitTicketEvent('ticket_updated', ticket);
+
+    const supportTeam = await this.getSupportTeamDirectory();
+    return toSupportTicketDto(ticket, { viewer: 'admin', supportTeam });
+  }
+
+  async deleteRequesterTicket(
+    id: string,
+    tenantId: string,
+    requester: SupportTicketRequesterIdentity
+  ) {
+    const deleted = await supportTicketsRepository.deleteForRequester(id, tenantId, requester);
+    await this.emitTicketEvent('ticket_deleted', deleted);
+  }
+
+  async deleteAdminTicket(id: string) {
+    const deleted = await supportTicketsRepository.deleteForAdmin(id);
+    await this.emitTicketEvent('ticket_deleted', deleted);
+  }
+
+  async getRequesterStats(tenantId: string, requester: SupportTicketRequesterIdentity) {
+    return supportTicketsRepository.getStatsForRequester(tenantId, requester);
+  }
+
+  async getSupportTeam(): Promise<SupportTeamMemberDto[]> {
+    const admins = await prisma.superAdmin.findMany({
+      where: { isActive: true },
+      orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        role: true,
+      },
+    });
+
+    return admins.map((admin) => ({
+      id: admin.id,
+      name: `${admin.firstName} ${admin.lastName}`.trim(),
+      email: admin.email.toLowerCase(),
+      role: admin.role,
+    }));
+  }
 }
 
 export const supportTicketsService = new SupportTicketsService();

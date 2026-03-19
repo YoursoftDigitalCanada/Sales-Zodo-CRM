@@ -43,6 +43,7 @@ interface Ticket {
   status: "open" | "in-progress" | "waiting" | "resolved" | "closed";
   priority: "low" | "medium" | "high" | "urgent";
   category: string; requester: string; requesterEmail: string; assignee?: string;
+  messagesCount: number; internalNotesCount: number;
   createdAt: string; updatedAt: string; resolvedAt?: string;
   messages: { id: string; sender: string; message: string; timestamp: string; isStaff: boolean }[];
   tags: string[];
@@ -74,9 +75,9 @@ import {
   updateTicketStatus as apiUpdateStatus,
   addTicketMessage as apiAddMessage,
   deleteTicket as apiDeleteTicket,
-  getTicketStats as apiGetStats,
   type SupportTicket as ApiTicket,
 } from "@/services/supportTicketsService";
+import { createSupportTicketsRealtimeStream } from "@/services/supportTicketsRealtime";
 
 // Map API ticket to frontend format
 const mapTicket = (t: ApiTicket): Ticket => ({
@@ -89,7 +90,9 @@ const mapTicket = (t: ApiTicket): Ticket => ({
   category: t.category,
   requester: t.requesterName,
   requesterEmail: t.requesterEmail,
-  assignee: t.assignee || undefined,
+  assignee: t.assignedToName || t.assignedTo || undefined,
+  messagesCount: t.messagesCount,
+  internalNotesCount: t.internalNotesCount,
   createdAt: t.createdAt,
   updatedAt: t.updatedAt,
   resolvedAt: t.resolvedAt || undefined,
@@ -102,6 +105,30 @@ const mapTicket = (t: ApiTicket): Ticket => ({
   })),
   tags: t.tags || [],
 });
+
+const upsertTicket = (items: Ticket[], nextTicket: Ticket): Ticket[] => {
+  const nextItems = [...items];
+  const existingIndex = nextItems.findIndex(ticket => ticket.id === nextTicket.id);
+
+  if (existingIndex === -1) {
+    nextItems.unshift(nextTicket);
+  } else {
+    nextItems[existingIndex] = nextTicket;
+  }
+
+  return nextItems.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+};
+
+const getCurrentRequester = () => {
+  try {
+    const raw = JSON.parse(localStorage.getItem("user") || "{}");
+    const name = [raw.firstName, raw.lastName].filter(Boolean).join(" ").trim() || raw.name || "Workspace User";
+    const email = typeof raw.email === "string" ? raw.email : "";
+    return { name, email };
+  } catch {
+    return { name: "Workspace User", email: "" };
+  }
+};
 
 // Map frontend status to API status
 const toApiStatus = (s: string) => s.toUpperCase().replace('-', '_') as ApiTicket["status"];
@@ -144,7 +171,7 @@ const priorityConfig: Record<string, { color: string; bg: string }> = {
 const getInitials = (name: string) => name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
 const formatDate = (d: string) => new Date(d).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" });
 const timeAgo = (d: string) => {
-  const diff = (now.getTime() - new Date(d).getTime()) / 1000;
+  const diff = (Date.now() - new Date(d).getTime()) / 1000;
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
   return `${Math.floor(diff / 86400)}d ago`;
@@ -172,8 +199,10 @@ const SupportPage = () => {
   const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "pipeline">("pipeline");
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+  const [streamState, setStreamState] = useState<"connecting" | "live" | "reconnecting">("connecting");
   // Form state
-  const [formData, setFormData] = useState({ subject: "", description: "", priority: "medium" as Ticket["priority"], category: "Technical", requester: "", requesterEmail: "" });
+  const currentRequester = useMemo(() => getCurrentRequester(), []);
+  const [formData, setFormData] = useState({ subject: "", description: "", priority: "medium" as Ticket["priority"], category: "Technical" });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -194,6 +223,36 @@ const SupportPage = () => {
     loadTickets();
   }, [loadTickets]);
 
+  useEffect(() => {
+    const stopRealtime = createSupportTicketsRealtimeStream({
+      onConnected: () => setStreamState("live"),
+      onDisconnected: () => setStreamState("reconnecting"),
+      onEvent: (event, payload) => {
+        const data = payload as { ticket?: ApiTicket; id?: string };
+
+        if ((event === "ticket_created" || event === "ticket_updated") && data.ticket) {
+          const nextTicket = mapTicket(data.ticket);
+          setTickets(prev => upsertTicket(prev, nextTicket));
+          setCurrentTicket(prev => (prev?.id === nextTicket.id ? nextTicket : prev));
+        }
+
+        if (event === "ticket_deleted" && data.id) {
+          setTickets(prev => prev.filter(ticket => ticket.id !== data.id));
+          setCurrentTicket(prev => (prev?.id === data.id ? null : prev));
+        }
+      },
+    });
+
+    const pollInterval = window.setInterval(() => {
+      loadTickets();
+    }, 30000);
+
+    return () => {
+      stopRealtime();
+      window.clearInterval(pollInterval);
+    };
+  }, [loadTickets]);
+
   // Stats
   const stats = useMemo(() => ({
     open: tickets.filter(t => t.status === "open").length,
@@ -209,7 +268,7 @@ const SupportPage = () => {
     const insights: { icon: LucideIcon; text: string; type: string }[] = [];
     const urgentOpen = tickets.filter(t => t.status === "open" && (t.priority === "urgent" || t.priority === "high")).length;
     if (urgentOpen > 0) insights.push({ icon: AlertTriangle, text: `${urgentOpen} high/urgent ticket${urgentOpen > 1 ? "s" : ""} need immediate attention.`, type: "danger" });
-    const waitingLong = tickets.filter(t => t.status === "waiting" && (now.getTime() - new Date(t.updatedAt).getTime()) > 86400000).length;
+    const waitingLong = tickets.filter(t => t.status === "waiting" && (Date.now() - new Date(t.updatedAt).getTime()) > 86400000).length;
     if (waitingLong > 0) insights.push({ icon: Clock, text: `${waitingLong} ticket${waitingLong > 1 ? "s" : ""} waiting for response > 24h.`, type: "warning" });
     if (stats.resolved > stats.open) insights.push({ icon: TrendingUp, text: "Resolution rate is above target — great work!", type: "success" });
     return insights;
@@ -247,8 +306,6 @@ const SupportPage = () => {
         description: formData.description,
         priority: formData.priority.toUpperCase(),
         category: formData.category,
-        requesterName: formData.requester || "Current User",
-        requesterEmail: formData.requesterEmail || "user@company.ca",
       };
 
       let result;
@@ -257,9 +314,9 @@ const SupportPage = () => {
       } else {
         result = await apiCreateTicket(payload);
       }
-      setTickets(prev => [mapTicket(result), ...prev]);
+      setTickets(prev => upsertTicket(prev, mapTicket(result)));
       setIsFormOpen(false);
-      setFormData({ subject: "", description: "", priority: "medium", category: "Technical", requester: "", requesterEmail: "" });
+      setFormData({ subject: "", description: "", priority: "medium", category: "Technical" });
       setSelectedFiles([]);
       toast({ title: "Ticket Created", description: `${result.ticketNumber} has been created. A notification email has been sent.` });
     } catch (err) {
@@ -272,10 +329,10 @@ const SupportPage = () => {
   const handleReply = async () => {
     if (!currentTicket || !replyText.trim()) return;
     try {
-      const msg = await apiAddMessage(currentTicket.id, { sender: "Admin", message: replyText, isStaff: true });
-      const newMsg = { id: msg.id, sender: msg.sender, message: msg.message, timestamp: msg.createdAt, isStaff: msg.isStaff };
-      setTickets(prev => prev.map(t => t.id === currentTicket.id ? { ...t, messages: [...t.messages, newMsg], updatedAt: new Date().toISOString(), status: "in-progress" as const } : t));
-      setCurrentTicket(prev => prev ? { ...prev, messages: [...prev.messages, newMsg] } : null);
+      const updated = await apiAddMessage(currentTicket.id, { message: replyText });
+      const nextTicket = mapTicket(updated);
+      setTickets(prev => upsertTicket(prev, nextTicket));
+      setCurrentTicket(nextTicket);
       setReplyText("");
       toast({ title: "Reply Sent" });
     } catch (err) {
@@ -285,8 +342,10 @@ const SupportPage = () => {
 
   const updateTicketStatus = async (id: string, status: Ticket["status"]) => {
     try {
-      await apiUpdateStatus(id, toApiStatus(status));
-      setTickets(prev => prev.map(t => t.id === id ? { ...t, status, updatedAt: new Date().toISOString(), ...(status === "resolved" ? { resolvedAt: new Date().toISOString() } : {}) } : t));
+      const updated = await apiUpdateStatus(id, toApiStatus(status));
+      const nextTicket = mapTicket(updated);
+      setTickets(prev => upsertTicket(prev, nextTicket));
+      setCurrentTicket(prev => (prev?.id === id ? nextTicket : prev));
       toast({ title: "Status Updated", description: `Ticket status changed to ${status}.` });
     } catch (err) {
       toast({ title: "Error", description: "Failed to update status.", variant: "destructive" });
@@ -329,6 +388,16 @@ const SupportPage = () => {
               <Button variant="outline" size="sm" className="rounded-md border-[rgba(15,23,42,0.06)]" onClick={() => { loadTickets(); toast({ title: "Refreshed" }); }}>
                 <RefreshCw size={16} className={cn("mr-2", isLoading && "animate-spin")} />Refresh
               </Button>
+              {activeTab === "tickets" && (
+                <div className={cn(
+                  "px-2.5 py-1 rounded-full text-xs font-semibold border",
+                  streamState === "live"
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                    : "bg-amber-50 text-amber-700 border-amber-200"
+                )}>
+                  {streamState === "live" ? "Live Sync" : "Reconnecting..."}
+                </div>
+              )}
               {activeTab === "tickets" && (
                 <Button size="sm" className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md" onClick={() => setIsFormOpen(true)}>
                   <Plus size={16} className="mr-2" />New Ticket
@@ -432,7 +501,7 @@ const SupportPage = () => {
                   {(["open", "in-progress", "waiting", "resolved", "closed"] as Ticket["status"][]).map(colStatus => {
                     const sc = statusConfig[colStatus];
                     const StatusIcon = sc.icon;
-                    const colTickets = tickets.filter(t => t.status === colStatus);
+                    const colTickets = filteredTickets.filter(t => t.status === colStatus);
                     return (
                       <div key={colStatus} className="flex-1 min-w-[260px] max-w-[320px] flex flex-col">
                         {/* Column header */}
@@ -493,7 +562,7 @@ const SupportPage = () => {
                                     <span className="text-[10px] text-[#475569]">{ticket.requester.split(' ')[0]}</span>
                                   </div>
                                   <div className="flex items-center gap-2">
-                                    {ticket.messages.length > 0 && <span className="text-[10px] text-[#94A3B8] flex items-center gap-0.5"><MessageSquare size={10} />{ticket.messages.length}</span>}
+                                    {ticket.messagesCount > 0 && <span className="text-[10px] text-[#94A3B8] flex items-center gap-0.5"><MessageSquare size={10} />{ticket.messagesCount}</span>}
                                     <span className="text-[10px] text-[#94A3B8]">{timeAgo(ticket.updatedAt)}</span>
                                   </div>
                                 </div>
@@ -543,7 +612,7 @@ const SupportPage = () => {
                             <div className="flex items-center gap-4 mt-2">
                               <span className="text-xs text-[#475569] flex items-center gap-1"><User size={12} />{ticket.requester}</span>
                               <span className="text-xs text-[#475569] flex items-center gap-1"><Clock size={12} />{timeAgo(ticket.updatedAt)}</span>
-                              {ticket.messages.length > 0 && <span className="text-xs text-[#475569] flex items-center gap-1"><MessageSquare size={12} />{ticket.messages.length}</span>}
+                              {ticket.messagesCount > 0 && <span className="text-xs text-[#475569] flex items-center gap-1"><MessageSquare size={12} />{ticket.messagesCount}</span>}
                               {ticket.assignee && <span className="text-xs text-[#0891B2] flex items-center gap-1"><Users size={12} />{ticket.assignee}</span>}
                             </div>
                           </div>
@@ -670,11 +739,10 @@ const SupportPage = () => {
                   <SelectContent><SelectItem value="Technical">Technical</SelectItem><SelectItem value="Billing">Billing</SelectItem><SelectItem value="Feature Request">Feature Request</SelectItem><SelectItem value="Integration">Integration</SelectItem><SelectItem value="Other">Other</SelectItem></SelectContent>
                 </Select></div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div><Label className="text-xs text-[#475569]">Your Name</Label>
-                <Input value={formData.requester} onChange={e => setFormData(p => ({ ...p, requester: e.target.value }))} placeholder="Your name" className="mt-1 rounded-md" /></div>
-              <div><Label className="text-xs text-[#475569]">Email</Label>
-                <Input value={formData.requesterEmail} onChange={e => setFormData(p => ({ ...p, requesterEmail: e.target.value }))} placeholder="your@email.com" type="email" className="mt-1 rounded-md" /></div>
+            <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-3">
+              <p className="text-xs font-medium text-[#475569]">Submitting as</p>
+              <p className="text-sm font-semibold text-[#0F172A] mt-1">{currentRequester.name}</p>
+              <p className="text-xs text-[#94A3B8]">{currentRequester.email || "Authenticated workspace user"}</p>
             </div>
             {/* Attachments Section */}
             <div>

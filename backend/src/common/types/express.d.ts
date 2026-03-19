@@ -1,4 +1,4 @@
-import { Employee, Tenant } from '@prisma/client';
+import { Employee, Tenant, User } from '@prisma/client';
 import { RequestContext, AuthContext, TenantContext } from './request-context';
 
 declare global {
@@ -17,6 +17,7 @@ declare global {
        * Full employee record with role & permissions — set by `loadEmployee` middleware.
        */
       employee?: Employee & {
+        user?: User | null;
         role: {
           id: string;
           name: string;

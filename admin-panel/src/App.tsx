@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, NavLink, useNavigate } from 're
 import { type ReactNode, useState } from 'react';
 import {
   LayoutDashboard, Building2, DollarSign, CreditCard,
-  Server, LogOut, Shield, ChevronLeft, Menu
+  Server, LogOut, Shield, ChevronLeft, Menu, Headphones
 } from 'lucide-react';
 import './index.css';
 
@@ -12,6 +12,7 @@ import TenantsPage from './Tenants';
 import RevenuePage from './Revenue';
 import SubscriptionsPage from './Subscriptions';
 import SystemHealthPage from './SystemHealth';
+import SupportTicketsPage from './SupportTickets';
 
 /* ── Auth Guard ───────────────────────────────────────────────────── */
 function ProtectedRoute({ children }: { children: ReactNode }) {
@@ -26,6 +27,7 @@ const NAV = [
   { to: '/tenants', label: 'Tenants', icon: Building2 },
   { to: '/revenue', label: 'Revenue', icon: DollarSign },
   { to: '/subscriptions', label: 'Subscriptions', icon: CreditCard },
+  { to: '/support/tickets', label: 'Support', icon: Headphones },
   { to: '/system', label: 'System Health', icon: Server },
 ];
 
@@ -131,6 +133,7 @@ export default function App() {
         <Route path="/tenants" element={<ProtectedRoute><Layout><TenantsPage /></Layout></ProtectedRoute>} />
         <Route path="/revenue" element={<ProtectedRoute><Layout><RevenuePage /></Layout></ProtectedRoute>} />
         <Route path="/subscriptions" element={<ProtectedRoute><Layout><SubscriptionsPage /></Layout></ProtectedRoute>} />
+        <Route path="/support/tickets" element={<ProtectedRoute><Layout><SupportTicketsPage /></Layout></ProtectedRoute>} />
         <Route path="/system" element={<ProtectedRoute><Layout><SystemHealthPage /></Layout></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

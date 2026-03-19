@@ -68,3 +68,25 @@ export const getSystemHealth = () => api.get('/system-health');
 // ── Audit Logs ─────────────────────────────────────────────────────────
 export const getAuditLogs = (params?: Record<string, any>) =>
     api.get('/audit-logs', { params });
+
+// ── Support Tickets ────────────────────────────────────────────────────
+export const getSupportTickets = (params?: Record<string, any>) =>
+    api.get('/support-tickets', { params }).then((response) => response.data?.data || { data: [], meta: {} });
+
+export const getSupportTicketById = (id: string) =>
+    api.get(`/support-tickets/${id}`).then((response) => response.data?.data || response.data);
+
+export const updateTicketStatus = (id: string, status: string) =>
+    api.patch(`/support-tickets/${id}/status`, { status }).then((response) => response.data?.data || response.data);
+
+export const assignTicket = (id: string, assignee: string | null) =>
+    api.patch(`/support-tickets/${id}/assign`, { assignee }).then((response) => response.data?.data || response.data);
+
+export const addTicketMessage = (id: string, data: { message: string; isInternal?: boolean }) =>
+    api.post(`/support-tickets/${id}/messages`, data).then((response) => response.data?.data || response.data);
+
+export const getSupportTeam = () =>
+    api.get('/support-team').then((response) => response.data?.data || []);
+
+export const deleteTicket = (id: string) =>
+    api.delete(`/support-tickets/${id}`);

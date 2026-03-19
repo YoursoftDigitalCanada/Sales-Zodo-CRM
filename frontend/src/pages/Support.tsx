@@ -170,6 +170,8 @@ const SupportPage = () => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
   const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"list" | "pipeline">("pipeline");
+  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   // Form state
   const [formData, setFormData] = useState({ subject: "", description: "", priority: "medium" as Ticket["priority"], category: "Technical", requester: "", requesterEmail: "" });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -406,16 +408,108 @@ const SupportPage = () => {
           {/* TICKETS TAB */}
           {activeTab === "tickets" && (
             <div className="space-y-3">
-              {/* Status filter pills */}
-              <div className="flex items-center gap-2 mb-4">
-                {["all", "open", "in-progress", "waiting", "resolved", "closed"].map(s => (
-                  <button key={s} onClick={() => setStatusFilter(s)}
-                    className={cn("px-3 py-1.5 rounded-full text-xs font-medium transition-colors capitalize",
-                      statusFilter === s ? "bg-[#0891B2] text-white" : "bg-white border border-[rgba(15,23,42,0.06)] text-[#475569] hover:bg-[#F8FAFC]")}>
-                    {s === "all" ? "All" : s.replace("-", " ")}
-                  </button>
-                ))}
+              {/* Toolbar: Status filter pills + View toggle */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  {viewMode === "list" && ["all", "open", "in-progress", "waiting", "resolved", "closed"].map(s => (
+                    <button key={s} onClick={() => setStatusFilter(s)}
+                      className={cn("px-3 py-1.5 rounded-full text-xs font-medium transition-colors capitalize",
+                        statusFilter === s ? "bg-[#0891B2] text-white" : "bg-white border border-[rgba(15,23,42,0.06)] text-[#475569] hover:bg-[#F8FAFC]")}>
+                      {s === "all" ? "All" : s.replace("-", " ")}
+                    </button>
+                  ))}
+                  {viewMode === "pipeline" && <span className="text-sm text-[#475569] font-medium">Drag tickets between columns to update status</span>}
+                </div>
+                <div className="flex items-center gap-1 bg-white border border-[rgba(15,23,42,0.06)] rounded-md p-0.5">
+                  <button onClick={() => setViewMode("list")} className={cn("p-1.5 rounded transition-all", viewMode === "list" ? "bg-[#0891B2] text-white shadow-sm" : "text-[#475569] hover:bg-[#F8FAFC]")} title="List View"><List size={16} /></button>
+                  <button onClick={() => setViewMode("pipeline")} className={cn("p-1.5 rounded transition-all", viewMode === "pipeline" ? "bg-[#0891B2] text-white shadow-sm" : "text-[#475569] hover:bg-[#F8FAFC]")} title="Pipeline View"><LayoutGrid size={16} /></button>
+                </div>
               </div>
+
+              {/* PIPELINE / KANBAN VIEW */}
+              {viewMode === "pipeline" && (
+                <div className="flex gap-4 overflow-x-auto pb-4" style={{ minHeight: 'calc(100vh - 380px)' }}>
+                  {(["open", "in-progress", "waiting", "resolved", "closed"] as Ticket["status"][]).map(colStatus => {
+                    const sc = statusConfig[colStatus];
+                    const StatusIcon = sc.icon;
+                    const colTickets = tickets.filter(t => t.status === colStatus);
+                    return (
+                      <div key={colStatus} className="flex-1 min-w-[260px] max-w-[320px] flex flex-col">
+                        {/* Column header */}
+                        <div className={cn("flex items-center gap-2 p-3 rounded-t-lg border border-b-2", sc.bg, `border-b-current`)} style={{ borderBottomColor: sc.color.replace('text-', '').includes('#') ? sc.color.replace('text-[', '').replace(']', '') : undefined }}>
+                          <StatusIcon size={16} className={sc.color} />
+                          <span className={cn("text-sm font-semibold capitalize", sc.color)}>{sc.label}</span>
+                          <span className={cn("ml-auto px-2 py-0.5 rounded-full text-[10px] font-bold", sc.bg, sc.color)}>{colTickets.length}</span>
+                        </div>
+                        {/* Drop zone */}
+                        <div
+                          className={cn(
+                            "flex-1 p-2 space-y-2 rounded-b-lg border border-t-0 border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]/50 transition-all overflow-y-auto",
+                            dragOverColumn === colStatus && "bg-[#0891B2]/5 border-[#0891B2]/30 ring-2 ring-[#0891B2]/20"
+                          )}
+                          onDragOver={(e) => { e.preventDefault(); setDragOverColumn(colStatus); }}
+                          onDragLeave={() => setDragOverColumn(null)}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            setDragOverColumn(null);
+                            const ticketId = e.dataTransfer.getData('ticketId');
+                            const fromStatus = e.dataTransfer.getData('fromStatus');
+                            if (ticketId && fromStatus !== colStatus) {
+                              updateTicketStatus(ticketId, colStatus);
+                            }
+                          }}
+                        >
+                          {colTickets.length === 0 ? (
+                            <div className="flex items-center justify-center h-24 text-xs text-[#CBD5E1] border-2 border-dashed border-[rgba(15,23,42,0.06)] rounded-md">
+                              Drop tickets here
+                            </div>
+                          ) : colTickets.map(ticket => {
+                            const pc = priorityConfig[ticket.priority];
+                            return (
+                              <motion.div
+                                key={ticket.id}
+                                draggable
+                                onDragStart={(e: any) => {
+                                  e.dataTransfer.setData('ticketId', ticket.id);
+                                  e.dataTransfer.setData('fromStatus', ticket.status);
+                                }}
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                whileHover={{ y: -2, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+                                className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-3 cursor-grab active:cursor-grabbing hover:border-[#22D3EE]/30 transition-all group"
+                                onClick={() => { setCurrentTicket(ticket); setIsDetailOpen(true); }}
+                              >
+                                <div className="flex items-center gap-2 mb-1.5">
+                                  <span className="text-[10px] font-mono text-[#94A3B8]">{ticket.ticketNumber}</span>
+                                  <span className={cn("px-1.5 py-0.5 rounded-full text-[9px] font-semibold capitalize", pc.bg, pc.color)}>{ticket.priority}</span>
+                                </div>
+                                <h4 className="text-sm font-medium text-[#0F172A] line-clamp-2 group-hover:text-[#0891B2] transition-colors">{ticket.subject}</h4>
+                                <p className="text-[11px] text-[#94A3B8] mt-1 line-clamp-1">{ticket.description}</p>
+                                <div className="flex items-center justify-between mt-2 pt-2 border-t border-[rgba(15,23,42,0.04)]">
+                                  <div className="flex items-center gap-1">
+                                    <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[#0891B2] to-[#06B6D4] flex items-center justify-center">
+                                      <span className="text-[8px] font-bold text-white">{getInitials(ticket.requester)}</span>
+                                    </div>
+                                    <span className="text-[10px] text-[#475569]">{ticket.requester.split(' ')[0]}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    {ticket.messages.length > 0 && <span className="text-[10px] text-[#94A3B8] flex items-center gap-0.5"><MessageSquare size={10} />{ticket.messages.length}</span>}
+                                    <span className="text-[10px] text-[#94A3B8]">{timeAgo(ticket.updatedAt)}</span>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* LIST VIEW */}
+              {viewMode === "list" && (
+                <>
               {filteredTickets.length === 0 ? (
                 <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-16 text-center">
                   <Headphones size={48} className="text-[#94A3B8] mx-auto mb-4" />
@@ -472,6 +566,8 @@ const SupportPage = () => {
                     );
                   })}
                 </AnimatePresence>
+              )}
+                </>
               )}
             </div>
           )}

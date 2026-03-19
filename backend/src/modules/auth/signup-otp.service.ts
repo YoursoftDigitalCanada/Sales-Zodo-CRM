@@ -1,5 +1,10 @@
-import { BadRequestError, ForbiddenError } from '../../common/errors/HttpErrors';
+import {
+  BadRequestError,
+  ForbiddenError,
+  ServiceUnavailableError,
+} from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
+import { mailerService } from '../../common/services/mailer.service';
 import { logger } from '../../common/utils/logger';
 import { config } from '../../config';
 
@@ -59,16 +64,16 @@ function generateOtp(): string {
 class SignupOtpService {
   private readonly records = new Map<string, SignupOtpRecord>();
 
-  sendOtp(params: {
+  async sendOtp(params: {
     email: string;
     phone?: string;
     channel: SignupOtpChannel;
-  }): {
+  }): Promise<{
     channel: SignupOtpChannel;
     expiresIn: number;
     destination: string;
     debugCode?: string;
-  } {
+  }> {
     this.cleanupExpiredRecords();
 
     const email = normalizeEmail(params.email);
@@ -108,9 +113,27 @@ class SignupOtpService {
     this.records.set(key, record);
 
     if (params.channel === 'email') {
-      logger.info('[Signup OTP] Simulated email OTP generated', {
+      const sent = await mailerService.sendMail({
+        to: email,
+        subject: 'Your Zodo CRM verification code',
+        html: this.buildEmailTemplate(otp),
+        text: `Your Zodo CRM verification code is ${otp}. It expires in 5 minutes.`,
+      });
+
+      if (!sent) {
+        this.records.delete(key);
+        logger.error('[Signup OTP] Failed to send email OTP', {
+          email,
+          smtpHost: config.email.host,
+          smtpUser: config.email.user,
+        });
+        throw new ServiceUnavailableError(
+          'OTP email could not be sent right now. Please check SMTP settings and try again.'
+        );
+      }
+
+      logger.info('[Signup OTP] Email OTP delivered', {
         email,
-        otp,
         expiresInSeconds: Math.ceil(OTP_TTL_MS / 1000),
       });
     } else {
@@ -237,6 +260,30 @@ class SignupOtpService {
         this.records.delete(key);
       }
     }
+  }
+
+  private buildEmailTemplate(otp: string): string {
+    return `
+      <div style="font-family: Arial, sans-serif; background: #f8fafc; padding: 32px;">
+        <div style="max-width: 520px; margin: 0 auto; background: #ffffff; border-radius: 20px; padding: 32px; border: 1px solid #e2e8f0;">
+          <p style="margin: 0; font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: #64748b;">
+            Zodo CRM Signup
+          </p>
+          <h1 style="margin: 16px 0 12px; font-size: 28px; color: #0f172a;">
+            Verify your email
+          </h1>
+          <p style="margin: 0 0 24px; font-size: 15px; line-height: 1.7; color: #475569;">
+            Use the verification code below to continue creating your workspace. This code expires in 5 minutes.
+          </p>
+          <div style="margin: 0 0 24px; padding: 18px 20px; border-radius: 16px; background: #0f172a; color: #ffffff; font-size: 32px; font-weight: 700; letter-spacing: 0.35em; text-align: center;">
+            ${otp}
+          </div>
+          <p style="margin: 0; font-size: 14px; line-height: 1.7; color: #64748b;">
+            If you did not request this code, you can safely ignore this email.
+          </p>
+        </div>
+      </div>
+    `;
   }
 }
 

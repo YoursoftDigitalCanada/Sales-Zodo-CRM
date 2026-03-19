@@ -27,7 +27,7 @@ const NAV = [
   { to: '/tenants', label: 'Tenants', icon: Building2 },
   { to: '/revenue', label: 'Revenue', icon: DollarSign },
   { to: '/subscriptions', label: 'Subscriptions', icon: CreditCard },
-  { to: '/support/tickets', label: 'Support', icon: Headphones },
+  { to: '/support-tickets', label: 'Support Tickets', icon: Headphones },
   { to: '/system', label: 'System Health', icon: Server },
 ];
 
@@ -133,7 +133,7 @@ export default function App() {
         <Route path="/tenants" element={<ProtectedRoute><Layout><TenantsPage /></Layout></ProtectedRoute>} />
         <Route path="/revenue" element={<ProtectedRoute><Layout><RevenuePage /></Layout></ProtectedRoute>} />
         <Route path="/subscriptions" element={<ProtectedRoute><Layout><SubscriptionsPage /></Layout></ProtectedRoute>} />
-        <Route path="/support/tickets" element={<ProtectedRoute><Layout><SupportTicketsPage /></Layout></ProtectedRoute>} />
+        <Route path="/support-tickets" element={<ProtectedRoute><Layout><SupportTicketsPage /></Layout></ProtectedRoute>} />
         <Route path="/system" element={<ProtectedRoute><Layout><SystemHealthPage /></Layout></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

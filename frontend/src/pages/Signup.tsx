@@ -8,7 +8,10 @@ import {
   Check,
   CheckCircle2,
   ChevronRight,
+  Eye,
+  EyeOff,
   Globe2,
+  Loader2,
   Lock,
   Mail,
   Phone,
@@ -100,11 +103,11 @@ const COUNTRIES: CountryOption[] = [
   { code: "KR", name: "South Korea", dialCode: "+82" },
 ];
 
-const COMPANY_TYPES: Array<{ value: CompanyType; label: string }> = [
-  { value: "individual", label: "Individual" },
-  { value: "startup", label: "Startup" },
-  { value: "sme", label: "SME" },
-  { value: "enterprise", label: "Enterprise" },
+const COMPANY_TYPES: Array<{ value: CompanyType; label: string; desc: string; icon: string }> = [
+  { value: "individual", label: "Individual", desc: "Solo freelancer or contractor", icon: "👤" },
+  { value: "startup", label: "Startup", desc: "Early-stage team (2–20)", icon: "🚀" },
+  { value: "sme", label: "SME", desc: "Small-to-mid business (20–200)", icon: "🏢" },
+  { value: "enterprise", label: "Enterprise", desc: "Large organization (200+)", icon: "🏛️" },
 ];
 
 const PLAN_CARDS: Array<{
@@ -260,6 +263,8 @@ const SignUpPage = () => {
   const [otpDebugCode, setOtpDebugCode] = useState<string | null>(null);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [hasSentOtp, setHasSentOtp] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const selectedCountry = useMemo(
     () =>
@@ -477,7 +482,7 @@ const SignUpPage = () => {
 
       toast({
         title: "Welcome to Zodo CRM",
-        description: "Your workspace is ready. Let’s finish your onboarding.",
+        description: "Your workspace is ready. Let's finish your onboarding.",
       });
 
       navigate("/onboarding", {
@@ -506,16 +511,32 @@ const SignUpPage = () => {
     }
   };
 
+  /* ─── step title ─── */
+  const stepTitle: Record<SignupStep, string> = {
+    1: "Create your account",
+    2: "Tell us about your company",
+    3: "Where should we reach you?",
+    4: "Pick the right plan",
+    5: "Verify and launch",
+  };
+
   return (
-    <div className="min-h-screen overflow-hidden bg-[#f5f7fb] text-slate-950">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(43,108,176,0.16),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(15,23,42,0.08),_transparent_30%)]" />
+    <div className="min-h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-white to-sky-50/40 text-slate-950">
+      {/* Subtle background pattern */}
+      <div className="pointer-events-none fixed inset-0">
+        <div className="absolute -top-32 -left-32 h-[500px] w-[500px] rounded-full bg-cyan-400/[0.06] blur-[100px]" />
+        <div className="absolute -bottom-48 -right-48 h-[600px] w-[600px] rounded-full bg-violet-400/[0.05] blur-[120px]" />
+      </div>
+
       <div className="relative mx-auto grid min-h-screen max-w-[1440px] lg:grid-cols-[1.1fr_0.9fr]">
+        {/* =============== LEFT PANEL =============== */}
         <section className="relative overflow-hidden bg-[#0f172a] px-6 py-8 text-white sm:px-10 lg:px-14 lg:py-12">
-          <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(47,84,235,0.22),rgba(15,23,42,0.1)_45%,rgba(16,185,129,0.12))]" />
+          <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(6,182,212,0.15),rgba(15,23,42,0.1)_45%,rgba(16,185,129,0.10))]" />
           <div className="absolute -right-16 top-16 h-56 w-56 rounded-full bg-cyan-400/10 blur-3xl" />
-          <div className="absolute bottom-0 left-0 h-64 w-64 rounded-full bg-emerald-400/10 blur-3xl" />
+          <div className="absolute bottom-0 left-0 h-64 w-64 rounded-full bg-emerald-400/8 blur-3xl" />
 
           <div className="relative z-10 flex h-full flex-col">
+            {/* Logo */}
             <div className="flex items-center justify-between">
               <Link to="/" className="inline-flex items-center gap-3">
                 <img src={logo} alt="Zodo CRM" className="h-11 w-auto" />
@@ -523,15 +544,16 @@ const SignUpPage = () => {
                   SaaS CRM for modern service teams
                 </span>
               </Link>
-              <div className="hidden rounded-full border border-white/15 bg-white/8 px-4 py-2 text-xs text-slate-200 lg:flex lg:items-center lg:gap-2">
+              <div className="hidden rounded-[5px] border border-white/15 bg-white/8 px-4 py-2 text-xs text-slate-200 lg:flex lg:items-center lg:gap-2">
                 <Sparkles className="h-3.5 w-3.5 text-cyan-300" />
                 14-day free trial
               </div>
             </div>
 
+            {/* Hero */}
             <div className="mt-10 flex-1 lg:mt-16">
               <div className="max-w-xl">
-                <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-xs font-medium text-cyan-100">
+                <div className="inline-flex items-center gap-2 rounded-[5px] border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-xs font-medium text-cyan-100">
                   <Star className="h-3.5 w-3.5 text-cyan-300" />
                   Built for multi-tenant CRM growth
                 </div>
@@ -539,12 +561,13 @@ const SignUpPage = () => {
                   Launch your Zodo CRM workspace with the right plan from day one.
                 </h1>
                 <p className="mt-5 max-w-lg text-base leading-7 text-slate-300">
-                  Start with just your name, email, and password. We’ll collect
+                  Start with just your name, email, and password. We'll collect
                   company details, plan access, and OTP verification only when
                   they become relevant.
                 </p>
               </div>
 
+              {/* Feature cards */}
               <div className="mt-10 grid gap-4 sm:grid-cols-3">
                 {[
                   {
@@ -560,12 +583,12 @@ const SignUpPage = () => {
                   {
                     icon: Sparkles,
                     title: "Upgrade anytime",
-                    body: "Start on Standard by default and unlock more modules whenever you’re ready.",
+                    body: "Start on Standard by default and unlock more modules whenever you're ready.",
                   },
                 ].map((item) => (
                   <div
                     key={item.title}
-                    className="rounded-3xl border border-white/10 bg-white/6 p-5 backdrop-blur"
+                    className="rounded-[5px] border border-white/10 bg-white/[0.04] p-5 backdrop-blur transition-all hover:bg-white/[0.08] hover:border-white/15"
                   >
                     <item.icon className="h-5 w-5 text-cyan-300" />
                     <p className="mt-4 text-sm font-semibold">{item.title}</p>
@@ -577,7 +600,8 @@ const SignUpPage = () => {
               </div>
             </div>
 
-            <div className="mt-10 rounded-[28px] border border-white/10 bg-white/8 p-5 backdrop-blur-xl">
+            {/* Plan preview */}
+            <div className="mt-10 rounded-[5px] border border-white/10 bg-white/[0.05] p-5 backdrop-blur-xl">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
@@ -587,7 +611,7 @@ const SignUpPage = () => {
                     {PLAN_CARDS.find((plan) => plan.key === form.plan)?.name} plan
                   </h2>
                 </div>
-                <span className="rounded-full bg-white/12 px-3 py-1 text-xs text-slate-200">
+                <span className="rounded-[5px] bg-white/12 px-3 py-1 text-xs text-slate-200">
                   Upgrade anytime
                 </span>
               </div>
@@ -597,7 +621,7 @@ const SignUpPage = () => {
                   .map((feature) => (
                     <div
                       key={feature}
-                      className="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/6 px-4 py-3 text-sm text-slate-100"
+                      className="flex items-center gap-3 rounded-[5px] border border-white/8 bg-white/[0.04] px-4 py-3 text-sm text-slate-100"
                     >
                       <CheckCircle2 className="h-4 w-4 text-emerald-300" />
                       <span>{feature}</span>
@@ -608,31 +632,38 @@ const SignUpPage = () => {
           </div>
         </section>
 
+        {/* =============== RIGHT PANEL =============== */}
         <section className="relative flex items-center px-4 py-6 sm:px-8 lg:px-10">
           <div className="mx-auto w-full max-w-[560px]">
-            <div className="rounded-[32px] border border-white/70 bg-white/90 p-5 shadow-[0_30px_80px_rgba(15,23,42,0.12)] backdrop-blur-xl sm:p-8">
+            <div className="rounded-[5px] border border-slate-200/80 bg-white p-5 shadow-[0_20px_60px_rgba(15,23,42,0.08)] sm:p-8">
+              {/* Step header */}
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-sm font-medium text-slate-500">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-cyan-600">
                     {STEPS[step - 1].eyebrow}
                   </p>
-                  <h2 className="mt-1 text-2xl font-semibold tracking-[-0.02em] text-slate-950">
-                    {step === 1 && "Create your account"}
-                    {step === 2 && "Tell us about your company"}
-                    {step === 3 && "Where should we reach you?"}
-                    {step === 4 && "Pick the right plan"}
-                    {step === 5 && "Verify and launch"}
+                  <h2 className="mt-1 text-xl font-bold tracking-[-0.02em] text-slate-900 sm:text-2xl">
+                    {stepTitle[step]}
                   </h2>
                 </div>
-                <div className="hidden text-right text-sm text-slate-500 sm:block">
-                  <p>{step} of {STEPS.length}</p>
-                  <p className="mt-1">Multi-step signup</p>
+                <div className="hidden text-right text-sm text-slate-400 sm:block">
+                  <p className="font-medium">{step} of {STEPS.length}</p>
                 </div>
               </div>
 
-              <div className="mt-6 space-y-4">
-                <Progress value={progress} className="h-2 bg-slate-100" />
-                <div className="grid grid-cols-5 gap-2">
+              {/* Progress bar */}
+              <div className="mt-5 space-y-3">
+                <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+                  <motion.div
+                    className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-teal-400"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progress}%` }}
+                    transition={{ duration: 0.4, ease: "easeOut" }}
+                  />
+                </div>
+
+                {/* Step indicators */}
+                <div className="flex gap-2">
                   {STEPS.map((item) => {
                     const isActive = item.id === step;
                     const isCompleted = item.id < step;
@@ -641,18 +672,18 @@ const SignUpPage = () => {
                       <div
                         key={item.id}
                         className={cn(
-                          "rounded-2xl border px-3 py-3 text-center transition-all",
+                          "flex-1 rounded-[5px] border py-2.5 text-center transition-all duration-200",
                           isActive
-                            ? "border-slate-900 bg-slate-900 text-white shadow-lg shadow-slate-900/15"
+                            ? "border-cyan-500 bg-gradient-to-b from-cyan-50 to-white text-cyan-700 shadow-sm shadow-cyan-100"
                             : isCompleted
-                              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                              : "border-slate-200 bg-slate-50 text-slate-400"
+                              ? "border-emerald-200 bg-emerald-50/60 text-emerald-600"
+                              : "border-slate-100 bg-slate-50/50 text-slate-300"
                         )}
                       >
-                        <div className="text-xs font-semibold uppercase tracking-[0.2em]">
-                          {item.id}
+                        <div className="text-[10px] font-bold uppercase tracking-[0.2em]">
+                          {isCompleted ? <Check className="inline h-3 w-3" /> : item.id}
                         </div>
-                        <div className="mt-1 text-[11px] font-medium sm:text-xs">
+                        <div className="mt-0.5 text-[10px] font-medium sm:text-[11px]">
                           {item.label}
                         </div>
                       </div>
@@ -661,17 +692,19 @@ const SignUpPage = () => {
                 </div>
               </div>
 
-              <div className="mt-8">
+              {/* Form content */}
+              <div className="mt-7">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={step}
                     initial={{ opacity: 0, x: 18 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -18 }}
-                    transition={{ duration: 0.24, ease: "easeOut" }}
+                    transition={{ duration: 0.22, ease: "easeOut" }}
                   >
+                    {/* ── Step 1: User Info ── */}
                     {step === 1 && (
-                      <div className="space-y-5">
+                      <div className="space-y-4">
                         <Field
                           label="Full Name"
                           value={form.name}
@@ -699,21 +732,39 @@ const SignUpPage = () => {
                           placeholder="Minimum 6 characters"
                           icon={Lock}
                           error={fieldError("password")}
-                          type="password"
+                          type={showPassword ? "text" : "password"}
+                          suffix={
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword(!showPassword)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
+                              tabIndex={-1}
+                            >
+                              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
+                          }
                         />
-                        <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="font-medium text-slate-700">
+                        {/* Password strength */}
+                        <div className="rounded-[5px] border border-slate-100 bg-slate-50/80 px-4 py-3">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-medium text-slate-600">
                               Password strength
                             </span>
-                            <span className="text-slate-500">
+                            <span className={cn(
+                              "font-semibold",
+                              passwordStrength.label === "Weak" && "text-rose-500",
+                              passwordStrength.label === "Good" && "text-amber-500",
+                              passwordStrength.label === "Strong" && "text-emerald-500",
+                            )}>
                               {passwordStrength.label}
                             </span>
                           </div>
-                          <div className="h-2 overflow-hidden rounded-full bg-slate-200">
-                            <div
+                          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
+                            <motion.div
                               className={cn("h-full rounded-full transition-all", passwordStrength.tone)}
-                              style={{ width: `${Math.max(passwordStrength.value, 8)}%` }}
+                              initial={{ width: 0 }}
+                              animate={{ width: `${Math.max(passwordStrength.value, 8)}%` }}
+                              transition={{ duration: 0.3 }}
                             />
                           </div>
                         </div>
@@ -725,78 +776,103 @@ const SignUpPage = () => {
                           placeholder="Re-enter your password"
                           icon={Lock}
                           error={fieldError("confirmPassword")}
-                          type="password"
+                          type={showConfirmPassword ? "text" : "password"}
+                          suffix={
+                            <button
+                              type="button"
+                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
+                              tabIndex={-1}
+                            >
+                              {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
+                          }
                         />
                       </div>
                     )}
 
+                    {/* ── Step 2: Company ── */}
                     {step === 2 && (
-                      <div className="space-y-5">
+                      <div className="space-y-4">
                         <Field
                           label="Company Name"
                           value={form.companyName}
                           onChange={(value) => setField("companyName", value)}
                           onBlur={() => markTouched(["companyName"])}
-                          placeholder="Zodo CRM"
+                          placeholder="Acme Corp"
                           icon={Building2}
                           error={fieldError("companyName")}
                         />
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium text-slate-700">
+                          <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                             Company Type
                           </Label>
-                          <Select
-                            value={form.companyType}
-                            onValueChange={(value) =>
-                              setField("companyType", value as CompanyType)
-                            }
-                          >
-                            <SelectTrigger className="h-12 rounded-2xl border-slate-200 bg-white">
-                              <SelectValue placeholder="Choose a company type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {COMPANY_TYPES.map((companyType) => (
-                                <SelectItem key={companyType.value} value={companyType.value}>
-                                  {companyType.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <div className="grid grid-cols-2 gap-2">
+                            {COMPANY_TYPES.map((ct) => (
+                              <button
+                                key={ct.value}
+                                type="button"
+                                onClick={() => setField("companyType", ct.value)}
+                                className={cn(
+                                  "flex items-start gap-3 rounded-[5px] border p-3.5 text-left transition-all duration-200",
+                                  form.companyType === ct.value
+                                    ? "border-cyan-400 bg-gradient-to-b from-cyan-50 to-white shadow-sm shadow-cyan-100 ring-1 ring-cyan-200"
+                                    : "border-slate-150 bg-white hover:border-slate-300 hover:shadow-sm"
+                                )}
+                              >
+                                <span className="text-lg">{ct.icon}</span>
+                                <div>
+                                  <div className={cn(
+                                    "text-sm font-semibold",
+                                    form.companyType === ct.value ? "text-cyan-700" : "text-slate-700"
+                                  )}>{ct.label}</div>
+                                  <div className="text-[11px] text-slate-400 mt-0.5">{ct.desc}</div>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     )}
 
+                    {/* ── Step 3: Contact ── */}
                     {step === 3 && (
-                      <div className="space-y-5">
+                      <div className="space-y-4">
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium text-slate-700">
+                          <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                             Country
                           </Label>
                           <Select
                             value={form.countryCode}
                             onValueChange={(value) => setField("countryCode", value)}
                           >
-                            <SelectTrigger className="h-12 rounded-2xl border-slate-200 bg-white">
-                              <SelectValue placeholder="Select a country" />
+                            <SelectTrigger className="h-11 rounded-[5px] border-slate-200 bg-white hover:border-slate-300 transition-colors">
+                              <div className="flex items-center gap-2">
+                                <Globe2 className="h-4 w-4 text-slate-400" />
+                                <SelectValue placeholder="Select a country" />
+                              </div>
                             </SelectTrigger>
-                            <SelectContent className="max-h-72">
+                            <SelectContent className="max-h-72 rounded-[5px]">
                               {COUNTRIES.map((country) => (
-                                <SelectItem key={country.code} value={country.code}>
-                                  {country.name}
+                                <SelectItem key={country.code} value={country.code} className="rounded-[5px]">
+                                  {country.name} ({country.dialCode})
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                           {fieldError("countryCode") && (
-                            <p className="text-sm text-rose-500">{fieldError("countryCode")}</p>
+                            <p className="text-xs text-rose-500 flex items-center gap-1 mt-1">
+                              <span className="inline-block h-1 w-1 rounded-full bg-rose-500" />
+                              {fieldError("countryCode")}
+                            </p>
                           )}
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium text-slate-700">
+                          <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                             Phone Number
                           </Label>
-                          <div className="flex items-center overflow-hidden rounded-2xl border border-slate-200 bg-white">
-                            <div className="flex h-12 items-center gap-2 border-r border-slate-200 px-4 text-sm font-medium text-slate-600">
+                          <div className="flex items-center overflow-hidden rounded-[5px] border border-slate-200 bg-white hover:border-slate-300 transition-colors focus-within:border-cyan-400 focus-within:ring-1 focus-within:ring-cyan-100">
+                            <div className="flex h-11 items-center gap-2 border-r border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-600">
                               <Phone className="h-4 w-4 text-slate-400" />
                               {selectedCountry.dialCode}
                             </div>
@@ -805,22 +881,27 @@ const SignUpPage = () => {
                               onChange={(event) => setField("phone", event.target.value)}
                               onBlur={() => markTouched(["phone"])}
                               placeholder="555 010 2200"
-                              className="h-12 border-0 bg-transparent shadow-none focus-visible:ring-0"
+                              className="h-11 border-0 bg-transparent shadow-none focus-visible:ring-0"
                             />
                           </div>
                           {fieldError("phone") && (
-                            <p className="text-sm text-rose-500">{fieldError("phone")}</p>
+                            <p className="text-xs text-rose-500 flex items-center gap-1 mt-1">
+                              <span className="inline-block h-1 w-1 rounded-full bg-rose-500" />
+                              {fieldError("phone")}
+                            </p>
                           )}
                         </div>
-                        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                        <div className="rounded-[5px] border border-sky-100 bg-sky-50/60 px-4 py-3 text-xs text-sky-700 flex items-center gap-2">
+                          <Globe2 className="h-3.5 w-3.5" />
                           Auto-detected from your locale. You can change the country any time.
                         </div>
                       </div>
                     )}
 
+                    {/* ── Step 4: Plan ── */}
                     {step === 4 && (
-                      <div className="space-y-5">
-                        <div className="grid gap-4 xl:grid-cols-3">
+                      <div className="space-y-4">
+                        <div className="grid gap-3 xl:grid-cols-3">
                           {PLAN_CARDS.map((plan) => {
                             const selected = form.plan === plan.key;
 
@@ -830,72 +911,73 @@ const SignUpPage = () => {
                                 type="button"
                                 onClick={() => setField("plan", plan.key)}
                                 className={cn(
-                                  "relative rounded-[28px] border p-5 text-left transition-all",
+                                  "relative rounded-[5px] border p-4 text-left transition-all duration-200",
                                   selected
-                                    ? "border-slate-950 bg-slate-950 text-white shadow-[0_24px_50px_rgba(15,23,42,0.18)]"
-                                    : "border-slate-200 bg-slate-50 text-slate-900 hover:-translate-y-0.5 hover:border-slate-300"
+                                    ? "border-cyan-400 bg-gradient-to-b from-cyan-50 to-white shadow-md shadow-cyan-100/50 ring-1 ring-cyan-200"
+                                    : "border-slate-150 bg-white hover:border-slate-300 hover:shadow-sm"
                                 )}
                               >
                                 {plan.badge && (
                                   <span className={cn(
-                                    "absolute right-4 top-4 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]",
+                                    "absolute right-3 top-3 rounded-[5px] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
                                     selected
-                                      ? "bg-cyan-300 text-slate-950"
+                                      ? "bg-cyan-500 text-white"
                                       : "bg-slate-900 text-white"
                                   )}>
                                     {plan.badge}
                                   </span>
                                 )}
-                                <div className="pr-20">
+                                <div className="pr-16">
                                   <p className={cn(
-                                    "text-sm font-medium",
-                                    selected ? "text-slate-300" : "text-slate-500"
+                                    "text-xs font-medium uppercase tracking-wider",
+                                    selected ? "text-cyan-600" : "text-slate-400"
                                   )}>
                                     {plan.name}
                                   </p>
-                                  <div className="mt-2 flex items-end gap-2">
-                                    <span className="text-3xl font-semibold">{plan.price}</span>
-                                    <span className={cn(
-                                      "pb-1 text-sm",
-                                      selected ? "text-slate-300" : "text-slate-500"
-                                    )}>
-                                      /month
-                                    </span>
+                                  <div className="mt-2 flex items-end gap-1">
+                                    <span className={cn("text-2xl font-bold", selected ? "text-slate-900" : "text-slate-700")}>{plan.price}</span>
+                                    <span className="pb-0.5 text-xs text-slate-400">/mo</span>
                                   </div>
                                   <p className={cn(
-                                    "mt-3 text-sm leading-6",
-                                    selected ? "text-slate-300" : "text-slate-600"
+                                    "mt-2 text-xs leading-5",
+                                    selected ? "text-slate-600" : "text-slate-400"
                                   )}>
                                     {plan.description}
                                   </p>
                                 </div>
-                                <div className="mt-5 space-y-2">
+                                <div className="mt-4 space-y-1.5">
                                   {plan.features.map((feature) => (
                                     <div
                                       key={feature}
                                       className={cn(
-                                        "flex items-center gap-2 text-sm",
-                                        selected ? "text-slate-100" : "text-slate-700"
+                                        "flex items-center gap-2 text-xs",
+                                        selected ? "text-slate-700" : "text-slate-500"
                                       )}
                                     >
-                                      <Check className="h-4 w-4 text-emerald-400" />
+                                      <Check className={cn("h-3.5 w-3.5 shrink-0", selected ? "text-cyan-500" : "text-slate-300")} />
                                       <span>{feature}</span>
                                     </div>
                                   ))}
                                 </div>
+                                {selected && (
+                                  <div className="mt-3 flex items-center justify-center gap-1.5 rounded-[5px] bg-cyan-500 py-1.5 text-[11px] font-semibold text-white">
+                                    <CheckCircle2 className="h-3.5 w-3.5" /> Selected
+                                  </div>
+                                )}
                               </button>
                             );
                           })}
                         </div>
-                        <div className="flex items-center gap-2 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                          <CheckCircle2 className="h-4 w-4" />
+                        <div className="flex items-center gap-2 rounded-[5px] border border-emerald-100 bg-emerald-50/60 px-4 py-3 text-xs text-emerald-700">
+                          <CheckCircle2 className="h-4 w-4 shrink-0" />
                           Upgrade anytime without losing data or tenant settings.
                         </div>
                       </div>
                     )}
 
+                    {/* ── Step 5: Verify ── */}
                     {step === 5 && (
-                      <div className="space-y-5">
+                      <div className="space-y-4">
                         <div className="grid gap-3 sm:grid-cols-2">
                           {([
                             {
@@ -924,20 +1006,20 @@ const SignUpPage = () => {
                                   setOtpSentTo("");
                                 }}
                                 className={cn(
-                                  "rounded-3xl border px-5 py-4 text-left transition-all",
+                                  "rounded-[5px] border px-4 py-4 text-left transition-all duration-200",
                                   selected
-                                    ? "border-slate-950 bg-slate-950 text-white"
-                                    : "border-slate-200 bg-slate-50 text-slate-900"
+                                    ? "border-cyan-400 bg-gradient-to-b from-cyan-50 to-white shadow-sm ring-1 ring-cyan-200"
+                                    : "border-slate-150 bg-white hover:border-slate-300"
                                 )}
                               >
                                 <option.icon className={cn(
                                   "h-5 w-5",
-                                  selected ? "text-cyan-300" : "text-slate-500"
+                                  selected ? "text-cyan-500" : "text-slate-400"
                                 )} />
-                                <p className="mt-4 font-semibold">{option.title}</p>
+                                <p className="mt-3 text-sm font-semibold text-slate-800">{option.title}</p>
                                 <p className={cn(
-                                  "mt-2 text-sm leading-6",
-                                  selected ? "text-slate-300" : "text-slate-600"
+                                  "mt-1 text-xs leading-5",
+                                  selected ? "text-slate-500" : "text-slate-400"
                                 )}>
                                   {option.body}
                                 </p>
@@ -946,13 +1028,13 @@ const SignUpPage = () => {
                           })}
                         </div>
 
-                        <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-                          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="rounded-[5px] border border-slate-200 bg-slate-50/60 p-4">
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div>
-                              <p className="text-sm font-semibold text-slate-900">
+                              <p className="text-sm font-semibold text-slate-800">
                                 {hasSentOtp ? "Verification code sent" : "Request verification code"}
                               </p>
-                              <p className="mt-1 text-sm text-slate-600">
+                              <p className="mt-1 text-xs text-slate-500">
                                 {hasSentOtp && otpSentTo
                                   ? `Sent to ${otpSentTo}. Expires in ${formatTimer(otpExpiresIn)}.`
                                   : otpChannel === "email"
@@ -963,23 +1045,25 @@ const SignUpPage = () => {
                             <Button
                               type="button"
                               variant="outline"
-                              className="h-11 rounded-full border-slate-300 px-5"
+                              className="h-9 rounded-[5px] border-slate-200 px-4 text-xs font-medium hover:bg-slate-100 transition-colors"
                               onClick={() => void requestOtp(otpChannel)}
                               disabled={isSendingOtp}
                             >
-                              {isSendingOtp ? "Sending..." : hasSentOtp ? "Resend OTP" : "Send OTP"}
+                              {isSendingOtp ? (
+                                <><Loader2 className="mr-1.5 h-3 w-3 animate-spin" />Sending...</>
+                              ) : hasSentOtp ? "Resend OTP" : "Send OTP"}
                             </Button>
                           </div>
 
                           {otpDebugCode && (
-                            <div className="mt-4 rounded-2xl border border-cyan-100 bg-cyan-50 px-4 py-3 text-sm text-cyan-800">
-                              Demo email OTP: <span className="font-semibold">{otpDebugCode}</span>
+                            <div className="mt-3 rounded-[5px] border border-cyan-100 bg-cyan-50 px-3 py-2 text-xs text-cyan-800">
+                              Demo email OTP: <span className="font-bold tracking-wider">{otpDebugCode}</span>
                             </div>
                           )}
                         </div>
 
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium text-slate-700">
+                          <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                             Enter OTP
                           </Label>
                           <Input
@@ -989,7 +1073,7 @@ const SignUpPage = () => {
                             }
                             inputMode="numeric"
                             placeholder="6-digit code"
-                            className="h-14 rounded-2xl border-slate-200 text-lg tracking-[0.3em]"
+                            className="h-12 rounded-[5px] border-slate-200 bg-white text-lg font-semibold tracking-[0.35em] text-center focus-visible:ring-1 focus-visible:ring-cyan-300 focus-visible:border-cyan-400"
                           />
                         </div>
                       </div>
@@ -998,24 +1082,25 @@ const SignUpPage = () => {
                 </AnimatePresence>
               </div>
 
+              {/* Footer actions */}
               <div className="mt-8 flex flex-col gap-3 border-t border-slate-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
-                <div className="text-sm text-slate-500">
+                <div className="text-sm text-slate-400">
                   Already have an account?{" "}
-                  <Link to="/login" className="font-medium text-slate-900 hover:text-slate-700">
+                  <Link to="/login" className="font-semibold text-cyan-600 hover:text-cyan-700 transition-colors">
                     Sign in
                   </Link>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   {step > 1 && (
                     <Button
                       type="button"
                       variant="ghost"
-                      className="h-12 rounded-full px-5 text-slate-600"
+                      className="h-10 rounded-[5px] px-4 text-slate-500 hover:text-slate-700 hover:bg-slate-100"
                       onClick={goBack}
                       disabled={isSubmitting}
                     >
-                      <ArrowLeft className="mr-2 h-4 w-4" />
+                      <ArrowLeft className="mr-1.5 h-4 w-4" />
                       Back
                     </Button>
                   )}
@@ -1023,22 +1108,25 @@ const SignUpPage = () => {
                   {step < 5 ? (
                     <Button
                       type="button"
-                      className="h-12 rounded-full bg-slate-950 px-6 text-white hover:bg-slate-800 disabled:opacity-50"
+                      className="h-10 rounded-[5px] bg-gradient-to-r from-cyan-600 to-teal-500 px-6 text-sm font-semibold text-white shadow-md shadow-cyan-200/40 hover:shadow-lg hover:shadow-cyan-200/50 hover:from-cyan-700 hover:to-teal-600 transition-all duration-200 disabled:opacity-50"
                       onClick={goNext}
                       disabled={!stepValidations[step]}
                     >
                       {step === 1 ? "Start Free Trial" : "Continue"}
-                      <ArrowRight className="ml-2 h-4 w-4" />
+                      <ArrowRight className="ml-1.5 h-4 w-4" />
                     </Button>
                   ) : (
                     <Button
                       type="button"
-                      className="h-12 rounded-full bg-slate-950 px-6 text-white hover:bg-slate-800 disabled:opacity-50"
+                      className="h-10 rounded-[5px] bg-gradient-to-r from-cyan-600 to-teal-500 px-6 text-sm font-semibold text-white shadow-md shadow-cyan-200/40 hover:shadow-lg hover:shadow-cyan-200/50 hover:from-cyan-700 hover:to-teal-600 transition-all duration-200 disabled:opacity-50"
                       onClick={() => void handleVerifyAndSignup()}
                       disabled={!stepValidations[5] || isSubmitting}
                     >
-                      {isSubmitting ? "Creating workspace..." : "Verify & Create Account"}
-                      <ChevronRight className="ml-2 h-4 w-4" />
+                      {isSubmitting ? (
+                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating workspace...</>
+                      ) : (
+                        <>Verify & Create Account<ChevronRight className="ml-1.5 h-4 w-4" /></>
+                      )}
                     </Button>
                   )}
                 </div>
@@ -1051,6 +1139,7 @@ const SignUpPage = () => {
   );
 };
 
+/* ── Reusable Field component ────────────────────────────────────────── */
 function Field({
   label,
   value,
@@ -1060,6 +1149,7 @@ function Field({
   icon: Icon,
   error,
   type = "text",
+  suffix,
 }: {
   label: string;
   value: string;
@@ -1069,12 +1159,13 @@ function Field({
   icon: typeof User2;
   error?: string | null;
   type?: string;
+  suffix?: React.ReactNode;
 }) {
   return (
-    <div className="space-y-2">
-      <Label className="text-sm font-medium text-slate-700">{label}</Label>
-      <div className="relative">
-        <Icon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+    <div className="space-y-1.5">
+      <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500">{label}</Label>
+      <div className="relative group">
+        <Icon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 group-focus-within:text-cyan-500 transition-colors" />
         <Input
           type={type}
           value={value}
@@ -1082,12 +1173,20 @@ function Field({
           onBlur={onBlur}
           placeholder={placeholder}
           className={cn(
-            "h-12 rounded-2xl border-slate-200 bg-white pl-11 shadow-none focus-visible:ring-1 focus-visible:ring-slate-300",
-            error && "border-rose-300 focus-visible:ring-rose-300"
+            "h-11 rounded-[5px] border-slate-200 bg-white pl-10 pr-10 text-sm shadow-none",
+            "hover:border-slate-300 transition-all duration-200",
+            "focus-visible:ring-1 focus-visible:ring-cyan-200 focus-visible:border-cyan-400",
+            error && "border-rose-300 focus-visible:ring-rose-200 focus-visible:border-rose-400"
           )}
         />
+        {suffix}
       </div>
-      {error && <p className="text-sm text-rose-500">{error}</p>}
+      {error && (
+        <p className="text-xs text-rose-500 flex items-center gap-1.5 mt-1">
+          <span className="inline-block h-1 w-1 rounded-full bg-rose-400" />
+          {error}
+        </p>
+      )}
     </div>
   );
 }

@@ -1,3 +1,5 @@
+import fs from 'fs/promises';
+import path from 'path';
 import { TicketStatus } from '@prisma/client';
 import { BadRequestError, NotFoundError } from '../../common/errors/HttpErrors';
 import { mailerService } from '../../common/services/mailer.service';
@@ -29,6 +31,17 @@ function toPaginationMeta(page: number, limit: number, total: number) {
     total,
     totalPages: Math.max(1, Math.ceil(total / limit)),
   };
+}
+
+interface SupportTicketAttachmentMetadata {
+  name?: string;
+  url?: string;
+  type?: string;
+  storedName?: string;
+}
+
+function isSupportTicketAttachmentMetadata(value: unknown): value is SupportTicketAttachmentMetadata {
+  return typeof value === 'object' && value !== null;
 }
 
 export class SupportTicketsService {
@@ -91,6 +104,34 @@ export class SupportTicketsService {
     );
   }
 
+  private async buildSupportEmailAttachments(
+    tenantId: string,
+    attachments: unknown[]
+  ): Promise<Array<{ filename: string; content: Buffer; contentType?: string }>> {
+    const emailAttachments: Array<{ filename: string; content: Buffer; contentType?: string }> = [];
+
+    for (const attachment of attachments) {
+      if (!isSupportTicketAttachmentMetadata(attachment) || !attachment.storedName || !attachment.name) {
+        continue;
+      }
+
+      try {
+        const filePath = path.join(process.cwd(), 'uploads', tenantId, attachment.storedName);
+        const content = await fs.readFile(filePath);
+
+        emailAttachments.push({
+          filename: attachment.name,
+          content,
+          contentType: attachment.type || 'application/octet-stream',
+        });
+      } catch (error: any) {
+        console.warn(`Failed to attach support ticket file ${attachment.storedName}: ${error.message}`);
+      }
+    }
+
+    return emailAttachments;
+  }
+
   async createTicket(
     tenantId: string,
     requester: SupportTicketRequesterIdentity,
@@ -104,6 +145,11 @@ export class SupportTicketsService {
     }, data);
 
     try {
+      const emailAttachments = await this.buildSupportEmailAttachments(
+        tenantId,
+        Array.isArray(ticket.attachments) ? ticket.attachments : []
+      );
+
       await mailerService.sendMailWithConfig(SUPPORT_SMTP, {
         to: 'support@zodo.ca',
         subject: `[${ticket.ticketNumber}] New Support Ticket: ${ticket.subject}`,
@@ -119,6 +165,7 @@ export class SupportTicketsService {
                 <tr><td style="padding: 8px 0; color: #64748b;">Priority:</td><td style="padding: 8px 0;">${ticket.priority}</td></tr>
                 <tr><td style="padding: 8px 0; color: #64748b;">Category:</td><td style="padding: 8px 0;">${ticket.category}</td></tr>
                 <tr><td style="padding: 8px 0; color: #64748b;">Requester:</td><td style="padding: 8px 0;">${ticket.requesterName} (${ticket.requesterEmail})</td></tr>
+                <tr><td style="padding: 8px 0; color: #64748b;">Attachments:</td><td style="padding: 8px 0;">${emailAttachments.length > 0 ? `${emailAttachments.length} file(s)` : 'None'}</td></tr>
               </table>
               <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 16px 0;">
               <h3 style="color: #0f172a; margin: 0 0 8px;">Description</h3>
@@ -126,6 +173,7 @@ export class SupportTicketsService {
             </div>
           </div>
         `,
+        attachments: emailAttachments.length > 0 ? emailAttachments : undefined,
       });
     } catch (error: any) {
       console.error(`Failed to send support ticket email: ${error.message}`);

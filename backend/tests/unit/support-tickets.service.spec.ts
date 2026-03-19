@@ -1,3 +1,7 @@
+jest.mock('fs/promises', () => ({
+  readFile: jest.fn(),
+}));
+
 jest.mock('../../src/modules/support-tickets/support-tickets.repository', () => ({
   supportTicketsRepository: {
     create: jest.fn(),
@@ -32,10 +36,12 @@ import { prisma } from '../../src/config/database';
 import { supportTicketsRealtimeService } from '../../src/modules/support-tickets/support-tickets.realtime';
 import { supportTicketsRepository } from '../../src/modules/support-tickets/support-tickets.repository';
 import { supportTicketsService } from '../../src/modules/support-tickets/support-tickets.service';
+import fs from 'fs/promises';
 
 const mockedRepository = supportTicketsRepository as jest.Mocked<typeof supportTicketsRepository>;
 const mockedMailerService = mailerService as jest.Mocked<typeof mailerService>;
 const mockedRealtimeService = supportTicketsRealtimeService as jest.Mocked<typeof supportTicketsRealtimeService>;
+const mockedFs = fs as jest.Mocked<typeof fs>;
 const mockedPrisma = prisma as unknown as {
   user: { findUnique: jest.Mock };
   superAdmin: { findMany: jest.Mock };
@@ -48,6 +54,7 @@ describe('SupportTicketsService', () => {
     mockedRealtimeService.publishTicketEvent.mockReset();
     mockedPrisma.user.findUnique.mockReset();
     mockedPrisma.superAdmin.findMany.mockReset();
+    mockedFs.readFile.mockReset();
   });
 
   it('creates a requester ticket, emails support, and emits realtime updates', async () => {
@@ -66,7 +73,14 @@ describe('SupportTicketsService', () => {
       assignee: null,
       messagesCount: 0,
       tags: [],
-      attachments: [],
+      attachments: [
+        {
+          name: 'screenshot.png',
+          storedName: 'ticket-upload-1.png',
+          type: 'image/png',
+          url: 'https://crm.zodo.ca/uploads/tenant-1/ticket-upload-1.png',
+        },
+      ],
       tenantId: 'tenant-1',
       tenant: {
         id: 'tenant-1',
@@ -96,6 +110,7 @@ describe('SupportTicketsService', () => {
     ]);
     mockedRepository.create.mockResolvedValue(ticket as any);
     mockedMailerService.sendMailWithConfig.mockResolvedValue(true);
+    mockedFs.readFile.mockResolvedValue(Buffer.from('image-binary'));
 
     const result = await supportTicketsService.createTicket(
       'tenant-1',
@@ -128,6 +143,12 @@ describe('SupportTicketsService', () => {
       expect.objectContaining({
         to: 'support@zodo.ca',
         subject: expect.stringContaining('TK-0001'),
+        attachments: [
+          expect.objectContaining({
+            filename: 'screenshot.png',
+            contentType: 'image/png',
+          }),
+        ],
       })
     );
     expect(mockedRealtimeService.publishTicketEvent).toHaveBeenCalledWith(

@@ -29,7 +29,7 @@ import {
   Sparkles, CheckCircle2, Clock, AlertTriangle, XCircle, MessageSquare,
   User, Users, Calendar, Mail, Send, ChevronRight, ChevronDown,
   BookOpen, HelpCircle, FileText, FolderOpen, Star, Zap,
-  TrendingUp, ArrowUp, ArrowDown, Filter, LayoutGrid, List, Tag,
+  TrendingUp, ArrowUp, ArrowDown, Filter, Tag,
   ThumbsUp, ThumbsDown, ExternalLink, Copy, Lightbulb,
   Paperclip, Image, FileText as FileIcon, Film,
   type LucideIcon,
@@ -130,6 +130,29 @@ const getCurrentRequester = () => {
   }
 };
 
+const getApiErrorMessage = (error: unknown, fallback: string) => {
+  const payload = (error as {
+    response?: {
+      data?: {
+        message?: string;
+        details?: {
+          errors?: Record<string, string[]>;
+        };
+      };
+    };
+  })?.response?.data;
+
+  const fieldErrors = payload?.details?.errors
+    ? Object.values(payload.details.errors).flat().filter(Boolean)
+    : [];
+
+  if (fieldErrors.length > 0) {
+    return fieldErrors[0];
+  }
+
+  return payload?.message || fallback;
+};
+
 // Map frontend status to API status
 const toApiStatus = (s: string) => s.toUpperCase().replace('-', '_') as ApiTicket["status"];
 
@@ -197,14 +220,15 @@ const SupportPage = () => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
   const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"list" | "pipeline">("pipeline");
-  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const [streamState, setStreamState] = useState<"connecting" | "live" | "reconnecting">("connecting");
   // Form state
   const currentRequester = useMemo(() => getCurrentRequester(), []);
   const [formData, setFormData] = useState({ subject: "", description: "", priority: "medium" as Ticket["priority"], category: "Technical" });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const trimmedSubject = formData.subject.trim();
+  const trimmedDescription = formData.description.trim();
+  const canSubmitTicket = trimmedSubject.length >= 3 && trimmedDescription.length >= 10;
 
   // Load tickets from API
   const loadTickets = useCallback(async () => {
@@ -299,11 +323,20 @@ const SupportPage = () => {
 
   // Handlers
   const handleCreateTicket = async () => {
+    if (!canSubmitTicket) {
+      toast({
+        title: "Validation Error",
+        description: trimmedSubject.length < 3 ? "Subject must be at least 3 characters." : "Description must be at least 10 characters.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       const payload = {
-        subject: formData.subject,
-        description: formData.description,
+        subject: trimmedSubject,
+        description: trimmedDescription,
         priority: formData.priority.toUpperCase(),
         category: formData.category,
       };
@@ -320,7 +353,11 @@ const SupportPage = () => {
       setSelectedFiles([]);
       toast({ title: "Ticket Created", description: `${result.ticketNumber} has been created. A notification email has been sent.` });
     } catch (err) {
-      toast({ title: "Error", description: "Failed to create ticket.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: getApiErrorMessage(err, "Failed to create ticket."),
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -477,108 +514,22 @@ const SupportPage = () => {
           {/* TICKETS TAB */}
           {activeTab === "tickets" && (
             <div className="space-y-3">
-              {/* Toolbar: Status filter pills + View toggle */}
+              {/* Toolbar: Status filter pills */}
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  {viewMode === "list" && ["all", "open", "in-progress", "waiting", "resolved", "closed"].map(s => (
+                  {["all", "open", "in-progress", "waiting", "resolved", "closed"].map(s => (
                     <button key={s} onClick={() => setStatusFilter(s)}
                       className={cn("px-3 py-1.5 rounded-full text-xs font-medium transition-colors capitalize",
                         statusFilter === s ? "bg-[#0891B2] text-white" : "bg-white border border-[rgba(15,23,42,0.06)] text-[#475569] hover:bg-[#F8FAFC]")}>
                       {s === "all" ? "All" : s.replace("-", " ")}
                     </button>
                   ))}
-                  {viewMode === "pipeline" && <span className="text-sm text-[#475569] font-medium">Drag tickets between columns to update status</span>}
                 </div>
-                <div className="flex items-center gap-1 bg-white border border-[rgba(15,23,42,0.06)] rounded-md p-0.5">
-                  <button onClick={() => setViewMode("list")} className={cn("p-1.5 rounded transition-all", viewMode === "list" ? "bg-[#0891B2] text-white shadow-sm" : "text-[#475569] hover:bg-[#F8FAFC]")} title="List View"><List size={16} /></button>
-                  <button onClick={() => setViewMode("pipeline")} className={cn("p-1.5 rounded transition-all", viewMode === "pipeline" ? "bg-[#0891B2] text-white shadow-sm" : "text-[#475569] hover:bg-[#F8FAFC]")} title="Pipeline View"><LayoutGrid size={16} /></button>
-                </div>
+                <span className="text-sm text-[#94A3B8]">List view</span>
               </div>
 
-              {/* PIPELINE / KANBAN VIEW */}
-              {viewMode === "pipeline" && (
-                <div className="flex gap-4 overflow-x-auto pb-4" style={{ minHeight: 'calc(100vh - 380px)' }}>
-                  {(["open", "in-progress", "waiting", "resolved", "closed"] as Ticket["status"][]).map(colStatus => {
-                    const sc = statusConfig[colStatus];
-                    const StatusIcon = sc.icon;
-                    const colTickets = filteredTickets.filter(t => t.status === colStatus);
-                    return (
-                      <div key={colStatus} className="flex-1 min-w-[260px] max-w-[320px] flex flex-col">
-                        {/* Column header */}
-                        <div className={cn("flex items-center gap-2 p-3 rounded-t-lg border border-b-2", sc.bg, `border-b-current`)} style={{ borderBottomColor: sc.color.replace('text-', '').includes('#') ? sc.color.replace('text-[', '').replace(']', '') : undefined }}>
-                          <StatusIcon size={16} className={sc.color} />
-                          <span className={cn("text-sm font-semibold capitalize", sc.color)}>{sc.label}</span>
-                          <span className={cn("ml-auto px-2 py-0.5 rounded-full text-[10px] font-bold", sc.bg, sc.color)}>{colTickets.length}</span>
-                        </div>
-                        {/* Drop zone */}
-                        <div
-                          className={cn(
-                            "flex-1 p-2 space-y-2 rounded-b-lg border border-t-0 border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]/50 transition-all overflow-y-auto",
-                            dragOverColumn === colStatus && "bg-[#0891B2]/5 border-[#0891B2]/30 ring-2 ring-[#0891B2]/20"
-                          )}
-                          onDragOver={(e) => { e.preventDefault(); setDragOverColumn(colStatus); }}
-                          onDragLeave={() => setDragOverColumn(null)}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            setDragOverColumn(null);
-                            const ticketId = e.dataTransfer.getData('ticketId');
-                            const fromStatus = e.dataTransfer.getData('fromStatus');
-                            if (ticketId && fromStatus !== colStatus) {
-                              updateTicketStatus(ticketId, colStatus);
-                            }
-                          }}
-                        >
-                          {colTickets.length === 0 ? (
-                            <div className="flex items-center justify-center h-24 text-xs text-[#CBD5E1] border-2 border-dashed border-[rgba(15,23,42,0.06)] rounded-md">
-                              Drop tickets here
-                            </div>
-                          ) : colTickets.map(ticket => {
-                            const pc = priorityConfig[ticket.priority];
-                            return (
-                              <motion.div
-                                key={ticket.id}
-                                draggable
-                                onDragStart={(e: any) => {
-                                  e.dataTransfer.setData('ticketId', ticket.id);
-                                  e.dataTransfer.setData('fromStatus', ticket.status);
-                                }}
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                whileHover={{ y: -2, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
-                                className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-3 cursor-grab active:cursor-grabbing hover:border-[#22D3EE]/30 transition-all group"
-                                onClick={() => { setCurrentTicket(ticket); setIsDetailOpen(true); }}
-                              >
-                                <div className="flex items-center gap-2 mb-1.5">
-                                  <span className="text-[10px] font-mono text-[#94A3B8]">{ticket.ticketNumber}</span>
-                                  <span className={cn("px-1.5 py-0.5 rounded-full text-[9px] font-semibold capitalize", pc.bg, pc.color)}>{ticket.priority}</span>
-                                </div>
-                                <h4 className="text-sm font-medium text-[#0F172A] line-clamp-2 group-hover:text-[#0891B2] transition-colors">{ticket.subject}</h4>
-                                <p className="text-[11px] text-[#94A3B8] mt-1 line-clamp-1">{ticket.description}</p>
-                                <div className="flex items-center justify-between mt-2 pt-2 border-t border-[rgba(15,23,42,0.04)]">
-                                  <div className="flex items-center gap-1">
-                                    <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[#0891B2] to-[#06B6D4] flex items-center justify-center">
-                                      <span className="text-[8px] font-bold text-white">{getInitials(ticket.requester)}</span>
-                                    </div>
-                                    <span className="text-[10px] text-[#475569]">{ticket.requester.split(' ')[0]}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    {ticket.messagesCount > 0 && <span className="text-[10px] text-[#94A3B8] flex items-center gap-0.5"><MessageSquare size={10} />{ticket.messagesCount}</span>}
-                                    <span className="text-[10px] text-[#94A3B8]">{timeAgo(ticket.updatedAt)}</span>
-                                  </div>
-                                </div>
-                              </motion.div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
               {/* LIST VIEW */}
-              {viewMode === "list" && (
-                <>
+              <>
               {filteredTickets.length === 0 ? (
                 <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-16 text-center">
                   <Headphones size={48} className="text-[#94A3B8] mx-auto mb-4" />
@@ -636,8 +587,7 @@ const SupportPage = () => {
                   })}
                 </AnimatePresence>
               )}
-                </>
-              )}
+              </>
             </div>
           )}
 
@@ -725,8 +675,14 @@ const SupportPage = () => {
           <div className="p-6 space-y-4">
             <div><Label className="text-xs text-[#475569]">Subject *</Label>
               <Input value={formData.subject} onChange={e => setFormData(p => ({ ...p, subject: e.target.value }))} placeholder="Brief description of the issue" className="mt-1 rounded-md" required /></div>
+            {formData.subject.length > 0 && trimmedSubject.length < 3 && (
+              <p className="text-xs text-red-600">Subject must be at least 3 characters.</p>
+            )}
             <div><Label className="text-xs text-[#475569]">Description *</Label>
               <Textarea value={formData.description} onChange={e => setFormData(p => ({ ...p, description: e.target.value }))} placeholder="Provide details about the issue..." className="mt-1 rounded-md h-24" required /></div>
+            {formData.description.length > 0 && trimmedDescription.length < 10 && (
+              <p className="text-xs text-red-600">Description must be at least 10 characters.</p>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div><Label className="text-xs text-[#475569]">Priority</Label>
                 <Select value={formData.priority} onValueChange={v => setFormData(p => ({ ...p, priority: v as Ticket["priority"] }))}>
@@ -799,7 +755,7 @@ const SupportPage = () => {
           </div>
           <DialogFooter className="p-6 pt-0 gap-3">
             <Button variant="outline" onClick={() => { setIsFormOpen(false); setSelectedFiles([]); }} className="rounded-md">Cancel</Button>
-            <Button onClick={handleCreateTicket} disabled={!formData.subject || !formData.description || isSubmitting} className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md">
+            <Button onClick={handleCreateTicket} disabled={!canSubmitTicket || isSubmitting} className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md">
               {isSubmitting ? <><RefreshCw size={16} className="mr-2 animate-spin" />Creating...</> : <><Plus size={16} className="mr-2" />Create Ticket</>}
             </Button>
           </DialogFooter>

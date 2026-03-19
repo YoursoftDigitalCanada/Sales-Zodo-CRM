@@ -31,6 +31,7 @@ import {
   BookOpen, HelpCircle, FileText, FolderOpen, Star, Zap,
   TrendingUp, ArrowUp, ArrowDown, Filter, LayoutGrid, List, Tag,
   ThumbsUp, ThumbsDown, ExternalLink, Copy, Lightbulb,
+  Paperclip, Image, FileText as FileIcon, Film,
   type LucideIcon,
 } from "lucide-react";
 
@@ -69,6 +70,7 @@ const daysAgo = (d: number) => new Date(now.getTime() - d * 86400000).toISOStrin
 import {
   getTickets as apiGetTickets,
   createTicket as apiCreateTicket,
+  createTicketWithAttachments as apiCreateTicketWithAttachments,
   updateTicketStatus as apiUpdateStatus,
   addTicketMessage as apiAddMessage,
   deleteTicket as apiDeleteTicket,
@@ -170,6 +172,8 @@ const SupportPage = () => {
   const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
   // Form state
   const [formData, setFormData] = useState({ subject: "", description: "", priority: "medium" as Ticket["priority"], category: "Technical", requester: "", requesterEmail: "" });
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Load tickets from API
   const loadTickets = useCallback(async () => {
@@ -235,20 +239,31 @@ const SupportPage = () => {
   // Handlers
   const handleCreateTicket = async () => {
     try {
-      const result = await apiCreateTicket({
+      setIsSubmitting(true);
+      const payload = {
         subject: formData.subject,
         description: formData.description,
         priority: formData.priority.toUpperCase(),
         category: formData.category,
         requesterName: formData.requester || "Current User",
         requesterEmail: formData.requesterEmail || "user@company.ca",
-      });
+      };
+
+      let result;
+      if (selectedFiles.length > 0) {
+        result = await apiCreateTicketWithAttachments(payload, selectedFiles);
+      } else {
+        result = await apiCreateTicket(payload);
+      }
       setTickets(prev => [mapTicket(result), ...prev]);
       setIsFormOpen(false);
       setFormData({ subject: "", description: "", priority: "medium", category: "Technical", requester: "", requesterEmail: "" });
+      setSelectedFiles([]);
       toast({ title: "Ticket Created", description: `${result.ticketNumber} has been created. A notification email has been sent.` });
     } catch (err) {
       toast({ title: "Error", description: "Failed to create ticket.", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -565,11 +580,63 @@ const SupportPage = () => {
               <div><Label className="text-xs text-[#475569]">Email</Label>
                 <Input value={formData.requesterEmail} onChange={e => setFormData(p => ({ ...p, requesterEmail: e.target.value }))} placeholder="your@email.com" type="email" className="mt-1 rounded-md" /></div>
             </div>
+            {/* Attachments Section */}
+            <div>
+              <Label className="text-xs text-[#475569]">Attachments</Label>
+              <div
+                className="mt-1 border-2 border-dashed border-[rgba(15,23,42,0.1)] rounded-md p-4 text-center cursor-pointer hover:border-[#0891B2]/40 hover:bg-[#0891B2]/5 transition-all"
+                onClick={() => document.getElementById('ticket-file-input')?.click()}
+                onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('border-[#0891B2]', 'bg-[#0891B2]/5'); }}
+                onDragLeave={(e) => { e.preventDefault(); e.currentTarget.classList.remove('border-[#0891B2]', 'bg-[#0891B2]/5'); }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.currentTarget.classList.remove('border-[#0891B2]', 'bg-[#0891B2]/5');
+                  const files = Array.from(e.dataTransfer.files);
+                  setSelectedFiles(prev => [...prev, ...files]);
+                }}
+              >
+                <Paperclip size={20} className="text-[#94A3B8] mx-auto mb-2" />
+                <p className="text-xs text-[#94A3B8]">Drag & drop files here or <span className="text-[#0891B2] font-medium">click to browse</span></p>
+                <p className="text-[10px] text-[#CBD5E1] mt-1">Screenshots, videos, PDFs — up to 50MB each, max 10 files</p>
+              </div>
+              <input
+                id="ticket-file-input"
+                type="file"
+                multiple
+                accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip"
+                className="hidden"
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || []);
+                  setSelectedFiles(prev => [...prev, ...files]);
+                  e.target.value = '';
+                }}
+              />
+              {selectedFiles.length > 0 && (
+                <div className="mt-2 space-y-1.5">
+                  {selectedFiles.map((file, idx) => {
+                    const isImage = file.type.startsWith('image/');
+                    const isVideo = file.type.startsWith('video/');
+                    const FileTypeIcon = isImage ? Image : isVideo ? Film : FileIcon;
+                    const sizeStr = file.size < 1024 * 1024 ? `${(file.size / 1024).toFixed(0)} KB` : `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
+                    return (
+                      <div key={`${file.name}-${idx}`} className="flex items-center gap-2 p-2 bg-[#F8FAFC] rounded-md border border-[rgba(15,23,42,0.06)]">
+                        <div className="w-7 h-7 rounded bg-[#0891B2]/10 flex items-center justify-center shrink-0"><FileTypeIcon size={14} className="text-[#0891B2]" /></div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-[#0F172A] truncate">{file.name}</p>
+                          <p className="text-[10px] text-[#94A3B8]">{sizeStr}</p>
+                        </div>
+                        <button onClick={() => setSelectedFiles(prev => prev.filter((_, i) => i !== idx))} className="p-1 rounded hover:bg-red-50 text-[#94A3B8] hover:text-red-500 transition-colors"><X size={14} /></button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
           <DialogFooter className="p-6 pt-0 gap-3">
-            <Button variant="outline" onClick={() => setIsFormOpen(false)} className="rounded-md">Cancel</Button>
-            <Button onClick={handleCreateTicket} disabled={!formData.subject || !formData.description} className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md">
-              <Plus size={16} className="mr-2" />Create Ticket
+            <Button variant="outline" onClick={() => { setIsFormOpen(false); setSelectedFiles([]); }} className="rounded-md">Cancel</Button>
+            <Button onClick={handleCreateTicket} disabled={!formData.subject || !formData.description || isSubmitting} className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md">
+              {isSubmitting ? <><RefreshCw size={16} className="mr-2 animate-spin" />Creating...</> : <><Plus size={16} className="mr-2" />Create Ticket</>}
             </Button>
           </DialogFooter>
         </DialogContent>

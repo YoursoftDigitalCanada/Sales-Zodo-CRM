@@ -5075,6 +5075,7 @@ model SupportTicket {
   requesterEmail  String
   assignee        String?
   tags            String[]       @default([])
+  attachments     Json           @default("[]")
 
   // ── Tenant scope ──
   tenantId        String

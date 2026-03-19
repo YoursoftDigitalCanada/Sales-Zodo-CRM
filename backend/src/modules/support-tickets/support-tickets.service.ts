@@ -20,6 +20,7 @@ export class SupportTicketsService {
         category?: string;
         requesterName: string;
         requesterEmail: string;
+        attachments?: any[];
     }) {
         const ticket = await supportTicketsRepository.create(tenantId, data);
 
@@ -44,6 +45,12 @@ export class SupportTicketsService {
                             <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 16px 0;">
                             <h3 style="color: #0f172a; margin: 0 0 8px;">Description</h3>
                             <p style="color: #475569; line-height: 1.6; white-space: pre-wrap;">${ticket.description}</p>
+                            ${(ticket.attachments as any[])?.length > 0 ? `
+                            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 16px 0;">
+                            <h3 style="color: #0f172a; margin: 0 0 8px;">📎 Attachments (${(ticket.attachments as any[]).length})</h3>
+                            <ul style="color: #475569; padding-left: 20px;">
+                                ${(ticket.attachments as any[]).map((a: any) => `<li><a href="${a.url}" style="color: #0891B2;">${a.name}</a> (${a.size})</li>`).join('')}
+                            </ul>` : ''}
                             <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 16px 0;">
                             <p style="color: #94a3b8; font-size: 12px;">Manage this ticket in <a href="https://crm.zodo.ca/support/tickets" style="color: #0891B2;">ZODO CRM Support Center</a></p>
                         </div>

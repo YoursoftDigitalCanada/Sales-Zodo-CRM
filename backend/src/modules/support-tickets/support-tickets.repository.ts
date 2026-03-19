@@ -14,6 +14,7 @@ export class SupportTicketsRepository {
         category?: string;
         requesterName: string;
         requesterEmail: string;
+        attachments?: any[];
     }) {
         // Generate ticket number: TK-001, TK-002, etc.
         const count = await prisma.supportTicket.count({ where: { tenantId } });
@@ -30,6 +31,7 @@ export class SupportTicketsRepository {
                 requesterName: data.requesterName,
                 requesterEmail: data.requesterEmail,
                 status: 'OPEN',
+                attachments: data.attachments || [],
             },
             include: ticketInclude,
         });

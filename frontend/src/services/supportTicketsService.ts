@@ -46,6 +46,21 @@ export async function createTicket(payload: CreateTicketPayload): Promise<Suppor
   return response.data?.data || response.data;
 }
 
+export async function createTicketWithAttachments(payload: CreateTicketPayload, files: File[]): Promise<SupportTicket> {
+  const formData = new FormData();
+  formData.append("subject", payload.subject);
+  formData.append("description", payload.description);
+  if (payload.priority) formData.append("priority", payload.priority);
+  if (payload.category) formData.append("category", payload.category);
+  formData.append("requesterName", payload.requesterName);
+  formData.append("requesterEmail", payload.requesterEmail);
+  files.forEach(file => formData.append("files", file));
+  const response = await api.post("/support-tickets/with-attachments", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return response.data?.data || response.data;
+}
+
 export async function getTicketById(id: string): Promise<SupportTicket> {
   const response = await api.get(`/support-tickets/${id}`);
   return response.data?.data || response.data;

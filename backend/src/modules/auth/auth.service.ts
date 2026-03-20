@@ -899,6 +899,8 @@ export class AuthService {
     subscription?: { planType?: string | null } | null;
   }): {
     plan: string;
+    availableModules: string[];
+    availableFeatures: string[];
     enabledModules: string[];
     enabledFeatures: string[];
   } {
@@ -922,6 +924,8 @@ export class AuthService {
       const planDefinition = getPlanDefinition(rawPlan);
       return {
         plan: rawPlan,
+        availableModules: [...planDefinition.enabledModules],
+        availableFeatures: [...planDefinition.uiFeatures],
         enabledModules: configuredModules || [...planDefinition.enabledModules],
         enabledFeatures: configuredFeatures || [...planDefinition.uiFeatures],
       };
@@ -930,6 +934,8 @@ export class AuthService {
     const fullAccess = getFullAccessDefinition();
     return {
       plan: rawPlan || 'legacy',
+      availableModules: [...fullAccess.enabledModules],
+      availableFeatures: [...fullAccess.uiFeatures],
       enabledModules: configuredModules || [...fullAccess.enabledModules],
       enabledFeatures: configuredFeatures || [...fullAccess.uiFeatures],
     };
@@ -941,6 +947,7 @@ export class AuthService {
     slug: string;
     settings?: unknown;
     subscriptionTier?: string | null;
+    onboardingCompleted?: boolean;
     subscription?: { planType?: string | null } | null;
   }): {
     id: string;
@@ -949,6 +956,9 @@ export class AuthService {
     plan: string;
     companyType?: string;
     country?: string;
+    onboardingCompleted: boolean;
+    availableModules: string[];
+    availableFeatures: string[];
     enabledModules: string[];
     enabledFeatures: string[];
   } {
@@ -965,6 +975,11 @@ export class AuthService {
       plan: access.plan,
       companyType: typeof settings.companyType === 'string' ? settings.companyType : undefined,
       country: typeof settings.country === 'string' ? settings.country : undefined,
+      onboardingCompleted:
+        tenant.onboardingCompleted === true ||
+        settings.onboardingCompleted === true,
+      availableModules: access.availableModules,
+      availableFeatures: access.availableFeatures,
       enabledModules: access.enabledModules,
       enabledFeatures: access.enabledFeatures,
     };
@@ -992,6 +1007,7 @@ export class AuthService {
         slug: string;
         settings?: unknown;
         subscriptionTier?: string | null;
+        onboardingCompleted?: boolean;
         subscription?: { planType?: string | null } | null;
       };
     };

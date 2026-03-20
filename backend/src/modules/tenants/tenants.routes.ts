@@ -4,7 +4,7 @@ import { authenticate, loadEmployee } from '../../common/middleware/auth.middlew
 import { requirePermission, requireAdmin } from '../../common/middleware/permission.middleware';
 import { validate } from '../../common/middleware/validate.middleware';
 import { PERMISSIONS } from '../../common/constants/permissions';
-import { createTenantSchema, updateTenantSchema, tenantQuerySchema, tenantIdSchema } from './tenants.validators';
+import { createTenantSchema, updateTenantSchema, tenantOnboardingSchema, tenantQuerySchema, tenantIdSchema } from './tenants.validators';
 
 const router = Router();
 router.use(authenticate);
@@ -12,6 +12,8 @@ router.use(loadEmployee);
 
 // Business type update — restricted to Owner/Admin roles (affects AI strategy)
 router.patch('/business-type', requireAdmin(), tenantsController.updateBusinessType.bind(tenantsController));
+router.get('/onboarding', requireAdmin(), tenantsController.getOnboarding.bind(tenantsController));
+router.put('/onboarding', requireAdmin(), validate(tenantOnboardingSchema), tenantsController.completeOnboarding.bind(tenantsController));
 
 router.get('/', requirePermission(PERMISSIONS.TENANTS_VIEW), validate(tenantQuerySchema), tenantsController.getMany.bind(tenantsController));
 router.post('/', requirePermission(PERMISSIONS.TENANTS_VIEW), validate(createTenantSchema), tenantsController.create.bind(tenantsController));

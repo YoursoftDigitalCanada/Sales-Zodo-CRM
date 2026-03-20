@@ -6,8 +6,10 @@ import {
   APP_FEATURE_IDS,
   getFeatureAccessFromTenant,
   isOnboardingRequired,
+  normalizeEnabledFeatures,
   setAvailableFeatures,
   setEnabledFeatures,
+  setOnboardingCompleted,
 } from "@/lib/enabled-features";
 import logo from "../Images/Logo/logo.png";
 
@@ -136,8 +138,10 @@ const LoginPage = () => {
       if (response?.success && accessToken) {
         setAuthSession({ accessToken, refreshToken: d?.tokens?.refreshToken, user: d?.user, employee: d?.employee, tenant: d?.tenant, permissions: d?.permissions });
         const availableFeatures = getFeatureAccessFromTenant(d?.tenant) ?? [...APP_FEATURE_IDS];
+        const enabledFeatures = normalizeEnabledFeatures((d?.tenant as any)?.enabledFeatures);
         setAvailableFeatures(availableFeatures);
-        setEnabledFeatures(availableFeatures);
+        setEnabledFeatures(enabledFeatures.length > 0 ? enabledFeatures : availableFeatures);
+        setOnboardingCompleted((d?.tenant as any)?.onboardingCompleted === true);
         setBtnState("success");
         setTimeout(() => navigate(isOnboardingRequired() ? "/onboarding" : "/dashboard"), 1500);
       } else {

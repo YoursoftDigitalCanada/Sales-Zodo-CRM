@@ -197,6 +197,11 @@ export function getFeatureAccessFromTenant(tenant: unknown): FeatureId[] | null 
   }
 
   const record = tenant as Record<string, unknown>;
+  const available = normalizeEnabledFeatures(record.availableFeatures);
+  if (available.length > 0) {
+    return available;
+  }
+
   const explicit = normalizeEnabledFeatures(record.enabledFeatures);
   if (explicit.length > 0) {
     return explicit;

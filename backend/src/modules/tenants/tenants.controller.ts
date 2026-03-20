@@ -60,6 +60,32 @@ export class TenantsController {
             sendSuccess(res, result, 'Business type updated');
         } catch (e) { next(e); }
     }
+
+    async getOnboarding(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const tenantId = req.user?.tenantId;
+            if (!tenantId) {
+                res.status(400).json({ success: false, message: 'Tenant context not found' });
+                return;
+            }
+
+            const result = await tenantsService.getOnboarding(tenantId);
+            sendSuccess(res, result);
+        } catch (e) { next(e); }
+    }
+
+    async completeOnboarding(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const tenantId = req.user?.tenantId;
+            if (!tenantId) {
+                res.status(400).json({ success: false, message: 'Tenant context not found' });
+                return;
+            }
+
+            const result = await tenantsService.completeOnboarding(tenantId, sanitizeBody(req.body));
+            sendSuccess(res, result, 'Onboarding completed');
+        } catch (e) { next(e); }
+    }
 }
 
 export const tenantsController = new TenantsController();

@@ -9,6 +9,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Routes, Route, useLocation } from "react-router-dom";
 import { CopilotContextProvider } from "@/contexts/CopilotContext";
 import { Sidebar, SidebarSuppressionContext } from "@/components/Sidebar";
+import { getAccessToken } from "@/features/auth/lib/auth-storage";
+import { isOnboardingRequired } from "@/lib/enabled-features";
 
 // Layout
 import Layout from "./components/Layout";
@@ -122,10 +124,18 @@ const AppRoutes = () => {
   const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const onboardingLocked =
+    Boolean(getAccessToken()) &&
+    isOnboardingRequired() &&
+    !isPublicPath(location.pathname);
   const showPersistentSidebar = useMemo(
     () => !isPublicPath(location.pathname),
     [location.pathname],
   );
+
+  if (onboardingLocked) {
+    return <Navigate to="/onboarding" replace />;
+  }
 
   const routesContent = (
     <SidebarSuppressionContext.Provider value={showPersistentSidebar}>

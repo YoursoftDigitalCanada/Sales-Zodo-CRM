@@ -1,16 +1,29 @@
-// src/pages/Onboarding.tsx
-// ============================================================================
-// DYNAMIC PLAN-ADAPTIVE ONBOARDING WIZARD
-// Steps adapt based on tenant plan: Basic (4), Standard (5), Premium (6)
-// ============================================================================
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  ArrowLeft,
+  ArrowRight,
+  BarChart3,
+  Bot,
+  Check,
+  CheckCircle2,
+  FolderKanban,
+  Layers3,
+  Loader2,
+  Rocket,
+  Settings2,
+  Sparkles,
+  Users2,
+} from "lucide-react";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -18,950 +31,1243 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
-import { cn } from "@/lib/utils";
+import { AUTH_STORAGE_KEYS, getAccessToken } from "@/features/auth/lib/auth-storage";
 import {
+  clearOnboardingData,
+  normalizeEnabledFeatures,
+  setAvailableFeatures,
   setEnabledFeatures,
   setOnboardingCompleted,
-  PLAN_FEATURE_ACCESS,
-  type FeatureId,
   type PlanKey,
 } from "@/lib/enabled-features";
-import { useNavigate, useLocation } from "react-router-dom";
-import apiClient from "@/services/api/http-client";
-import Confetti from "react-confetti";
 import {
-  ArrowRight,
-  ArrowLeft,
-  Check,
-  CheckCircle2,
-  Loader2,
-  Sparkles,
-  Rocket,
-  Settings,
-  Users,
-  UserPlus,
-  FolderKanban,
-  Brain,
-  PartyPopper,
-  Calendar,
-  ClipboardList,
-  BarChart3,
-  MessageSquare,
-  FileText,
-  Headphones,
-  KanbanSquare,
-  Clock,
-  FolderOpen,
-  Shield,
-  PieChart,
-  BookOpen,
-  Bot,
-  Cpu,
-  DollarSign,
-  Globe,
-  Mail,
-  Trash2,
-  Plus,
-  type LucideIcon,
-} from "lucide-react";
+  AI_BUSINESS_TYPE_OPTIONS,
+  ANALYTICS_METRIC_OPTIONS,
+  CURRENCY_OPTIONS,
+  DATE_FORMAT_OPTIONS,
+  ONBOARDING_MODULES,
+  PROJECT_STATUS_OPTIONS,
+  TASK_STATUS_OPTIONS,
+  TEAM_ROLE_OPTIONS,
+  getAllowedOnboardingModules,
+  getDefaultOnboardingPayload,
+  resolveEnabledFeaturePreview,
+  type OnboardingModuleId,
+  type OnboardingPayload,
+  type TenantAccessPayload,
+  type TenantOnboardingApiResponse,
+} from "@/lib/onboarding-config";
+import { cn } from "@/lib/utils";
+import {
+  completeTenantOnboarding,
+  getTenantOnboarding,
+} from "@/features/onboarding/services/onboarding-service";
+import logo from "../Images/Logo/logo.png";
 
-// ============================================================================
-// TYPES
-// ============================================================================
+type StepId = "modules" | "settings" | "team" | "projects" | "ai" | "analytics" | "complete";
 
-type StepId = "modules" | "settings" | "team" | "projects" | "ai" | "complete";
-
-interface StepConfig {
+interface WizardStep {
   id: StepId;
   title: string;
   subtitle: string;
-  icon: LucideIcon;
-  plans: PlanKey[]; // which plans see this step
+  icon: typeof Layers3;
   optional?: boolean;
 }
 
-interface ModuleDef {
-  id: FeatureId;
-  label: string;
-  description: string;
-  icon: LucideIcon;
-  isAI?: boolean;
-  planMin: PlanKey; // minimum plan needed
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const STEP_META: Record<Exclude<StepId, "complete">, WizardStep> = {
+  modules: {
+    id: "modules",
+    title: "Module Setup",
+    subtitle: "Turn on the tools this workspace should launch with.",
+    icon: Layers3,
+  },
+  settings: {
+    id: "settings",
+    title: "Basic Settings",
+    subtitle: "Set the defaults your team will see everywhere.",
+    icon: Settings2,
+  },
+  team: {
+    id: "team",
+    title: "Team Setup",
+    subtitle: "Invite teammates now or skip and do it later.",
+    icon: Users2,
+    optional: true,
+  },
+  projects: {
+    id: "projects",
+    title: "Project Workflow",
+    subtitle: "Configure your default delivery cadence.",
+    icon: FolderKanban,
+  },
+  ai: {
+    id: "ai",
+    title: "AI Setup",
+    subtitle: "Tune your AI estimator for the way you work.",
+    icon: Bot,
+  },
+  analytics: {
+    id: "analytics",
+    title: "Analytics Setup",
+    subtitle: "Choose the numbers that matter most to your team.",
+    icon: BarChart3,
+  },
+};
+
+const PLAN_ACCENTS: Record<PlanKey, { badge: string; tone: string; highlight: string }> = {
+  basic: {
+    badge: "Basic Plan",
+    tone: "text-cyan-700",
+    highlight: "from-cyan-500/15 via-sky-500/10 to-white",
+  },
+  standard: {
+    badge: "Standard Plan",
+    tone: "text-emerald-700",
+    highlight: "from-emerald-500/15 via-cyan-500/10 to-white",
+  },
+  premium: {
+    badge: "Premium Plan",
+    tone: "text-fuchsia-700",
+    highlight: "from-fuchsia-500/15 via-cyan-500/10 to-white",
+  },
+};
+
+function detectLocaleSettings(): OnboardingPayload["settings"] {
+  const timezone =
+    Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  const locale = typeof navigator !== "undefined"
+    ? navigator.languages?.find(Boolean) || navigator.language || "en-US"
+    : "en-US";
+  const country = locale.split("-").pop()?.toUpperCase() || "US";
+
+  const currencyByCountry: Record<string, OnboardingPayload["settings"]["currency"]> = {
+    US: "USD",
+    CA: "CAD",
+    GB: "GBP",
+    AU: "AUD",
+    IN: "INR",
+    JP: "JPY",
+    CN: "CNY",
+    DE: "EUR",
+    FR: "EUR",
+    IT: "EUR",
+    ES: "EUR",
+    NL: "EUR",
+  };
+
+  const dateFormat = country === "US"
+    ? "MM/DD/YYYY"
+    : country === "JP" || country === "CN"
+      ? "YYYY-MM-DD"
+      : "DD/MM/YYYY";
+
+  return {
+    currency: currencyByCountry[country] || "USD",
+    timezone,
+    dateFormat,
+  };
 }
 
-interface TeamMember {
-  id: string;
-  email: string;
-  role: "admin" | "manager" | "employee";
+function sanitizePayload(plan: PlanKey, payload: OnboardingPayload): OnboardingPayload {
+  const modules = Array.from(
+    new Set(
+      payload.modules.filter((moduleId): moduleId is OnboardingModuleId =>
+        getAllowedOnboardingModules(plan).includes(moduleId)
+      )
+    )
+  );
+
+  const teamInvites = payload.teamInvites
+    .map((invite) => ({
+      email: invite.email.trim().toLowerCase(),
+      role: invite.role,
+    }))
+    .filter((invite) => invite.email.length > 0);
+
+  return {
+    modules,
+    settings: {
+      currency: payload.settings.currency,
+      timezone: payload.settings.timezone.trim(),
+      dateFormat: payload.settings.dateFormat,
+    },
+    teamInvites,
+    ...(plan !== "basic"
+      ? {
+          projectSettings: {
+            defaultProjectStatus:
+              payload.projectSettings?.defaultProjectStatus || "not_started",
+            taskStatuses:
+              payload.projectSettings?.taskStatuses || ["pending", "in_progress", "done"],
+          },
+        }
+      : {}),
+    ...(plan === "premium"
+      ? {
+          aiSettings: {
+            businessType: payload.aiSettings?.businessType || "roofing",
+            ...(payload.aiSettings?.materialType?.trim()
+              ? { materialType: payload.aiSettings.materialType.trim() }
+              : {}),
+            ...(payload.aiSettings?.costingMethod?.trim()
+              ? { costingMethod: payload.aiSettings.costingMethod.trim() }
+              : {}),
+          },
+          analyticsSettings: {
+            metrics: payload.analyticsSettings?.metrics || ["revenue", "leads", "projects", "performance"],
+          },
+        }
+      : {}),
+  };
 }
 
-interface OnboardingState {
-  enabledModules: FeatureId[];
-  currency: string;
-  timezone: string;
-  dateFormat: string;
-  team: TeamMember[];
-  projectStatuses: string[];
-  taskStatuses: string[];
-  businessType: string;
-  materialType: string;
-  costingMethod: string;
+function buildSteps(plan: PlanKey): WizardStep[] {
+  return [
+    STEP_META.modules,
+    STEP_META.settings,
+    STEP_META.team,
+    ...(plan !== "basic" ? [STEP_META.projects] : []),
+    ...(plan === "premium" ? [STEP_META.ai, STEP_META.analytics] : []),
+    {
+      id: "complete",
+      title: "Workspace Ready",
+      subtitle: "Your workspace is configured and ready to use.",
+      icon: CheckCircle2,
+    },
+  ];
 }
 
-// ============================================================================
-// CONSTANTS
-// ============================================================================
+function mergeIncomingPayload(plan: PlanKey, incoming?: OnboardingPayload): OnboardingPayload {
+  const defaults = getDefaultOnboardingPayload(plan);
+  const localeDefaults = detectLocaleSettings();
 
-const ALL_STEPS: StepConfig[] = [
-  { id: "modules", title: "Module Setup", subtitle: "Choose the tools for your workspace", icon: Settings, plans: ["basic", "standard", "premium"] },
-  { id: "settings", title: "Basic Settings", subtitle: "Configure your workspace defaults", icon: Globe, plans: ["basic", "standard", "premium"] },
-  { id: "team", title: "Team Setup", subtitle: "Invite your team members", icon: Users, plans: ["basic", "standard", "premium"], optional: true },
-  { id: "projects", title: "Project & Workflow", subtitle: "Set up project and task statuses", icon: FolderKanban, plans: ["standard", "premium"] },
-  { id: "ai", title: "AI Configuration", subtitle: "Configure AI-powered tools", icon: Brain, plans: ["premium"] },
-  { id: "complete", title: "All Set!", subtitle: "Your workspace is ready", icon: PartyPopper, plans: ["basic", "standard", "premium"] },
-];
+  return {
+    ...defaults,
+    ...(incoming || {}),
+    modules: incoming?.modules?.length ? incoming.modules : defaults.modules,
+    settings: {
+      ...localeDefaults,
+      ...defaults.settings,
+      ...(incoming?.settings || {}),
+    },
+    teamInvites:
+      incoming?.teamInvites?.length
+        ? incoming.teamInvites
+        : defaults.teamInvites,
+    ...(plan !== "basic"
+      ? {
+          projectSettings: {
+            ...defaults.projectSettings,
+            ...(incoming?.projectSettings || {}),
+            taskStatuses:
+              incoming?.projectSettings?.taskStatuses?.length
+                ? incoming.projectSettings.taskStatuses
+                : defaults.projectSettings?.taskStatuses || [],
+          },
+        }
+      : {}),
+    ...(plan === "premium"
+      ? {
+          aiSettings: {
+            ...defaults.aiSettings,
+            ...(incoming?.aiSettings || {}),
+          },
+          analyticsSettings: {
+            ...defaults.analyticsSettings,
+            ...(incoming?.analyticsSettings || {}),
+            metrics:
+              incoming?.analyticsSettings?.metrics?.length
+                ? incoming.analyticsSettings.metrics
+                : defaults.analyticsSettings?.metrics || [],
+          },
+        }
+      : {}),
+  };
+}
 
-const MODULES: ModuleDef[] = [
-  { id: "calendar", label: "Calendar", description: "Schedule events and appointments", icon: Calendar, planMin: "basic" },
-  { id: "tasks", label: "Tasks", description: "Track to-dos and assignments", icon: ClipboardList, planMin: "basic" },
-  { id: "leads", label: "Leads", description: "Capture and manage prospects", icon: BarChart3, planMin: "basic" },
-  { id: "clients", label: "Clients", description: "Manage customer relationships", icon: Users, planMin: "basic" },
-  { id: "finance", label: "Invoices & Payments", description: "Billing, invoices, and payment tracking", icon: DollarSign, planMin: "basic" },
-  { id: "letterbox", label: "Letter Box", description: "Internal messaging and emails", icon: Mail, planMin: "basic" },
-  { id: "support", label: "Support", description: "Ticket-based support system", icon: Headphones, planMin: "basic" },
-  { id: "chat", label: "Chat", description: "Real-time team communication", icon: MessageSquare, planMin: "standard" },
-  { id: "projects", label: "Projects", description: "Full project management suite", icon: FolderKanban, planMin: "standard" },
-  { id: "kanban", label: "Kanban Board", description: "Visual task and workflow boards", icon: KanbanSquare, planMin: "standard" },
-  { id: "timeTracking", label: "Time Tracking", description: "Log hours and track productivity", icon: Clock, planMin: "standard" },
-  { id: "files", label: "File Manager", description: "Store and organize documents", icon: FolderOpen, planMin: "standard" },
-  { id: "team", label: "Team Management", description: "Employees, users, roles & permissions", icon: Shield, planMin: "standard" },
-  { id: "roofEstimator", label: "AI Roof Estimator", description: "AI-powered roofing cost estimation", icon: Cpu, isAI: true, planMin: "premium" },
-  { id: "analytics", label: "Advanced Analytics", description: "Deep business intelligence dashboards", icon: PieChart, isAI: true, planMin: "premium" },
-  { id: "reports", label: "Reports", description: "Generate detailed custom reports", icon: BookOpen, planMin: "premium" },
-  { id: "aiAssistant", label: "Ask Experts (AI)", description: "AI-powered CRM assistant", icon: Bot, isAI: true, planMin: "premium" },
-];
-
-const CURRENCIES = [
-  { value: "CAD", label: "CAD — Canadian Dollar" },
-  { value: "USD", label: "USD — US Dollar" },
-  { value: "EUR", label: "EUR — Euro" },
-  { value: "GBP", label: "GBP — British Pound" },
-  { value: "AUD", label: "AUD — Australian Dollar" },
-  { value: "INR", label: "INR — Indian Rupee" },
-];
-
-const TIMEZONES = [
-  { value: "America/Toronto", label: "Eastern Time (Toronto)" },
-  { value: "America/New_York", label: "Eastern Time (New York)" },
-  { value: "America/Chicago", label: "Central Time" },
-  { value: "America/Denver", label: "Mountain Time" },
-  { value: "America/Los_Angeles", label: "Pacific Time" },
-  { value: "America/Vancouver", label: "Pacific Time (Vancouver)" },
-  { value: "Europe/London", label: "GMT (London)" },
-  { value: "Europe/Paris", label: "CET (Paris)" },
-  { value: "Asia/Kolkata", label: "IST (India)" },
-  { value: "Asia/Tokyo", label: "JST (Tokyo)" },
-  { value: "Australia/Sydney", label: "AEST (Sydney)" },
-];
-
-const DATE_FORMATS = [
-  { value: "DD/MM/YYYY", label: "DD/MM/YYYY" },
-  { value: "MM/DD/YYYY", label: "MM/DD/YYYY" },
-  { value: "YYYY-MM-DD", label: "YYYY-MM-DD" },
-];
-
-const PLAN_ORDER: Record<PlanKey, number> = { basic: 0, standard: 1, premium: 2 };
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-function detectTimezone(): string {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone;
-  } catch {
-    return "America/Toronto";
+function getStepError(stepId: StepId, payload: OnboardingPayload): string | null {
+  switch (stepId) {
+    case "modules":
+      return payload.modules.length > 0
+        ? null
+        : "Select at least one module to continue.";
+    case "settings":
+      return payload.settings.currency && payload.settings.timezone && payload.settings.dateFormat
+        ? null
+        : "Currency, timezone, and date format are required.";
+    case "team": {
+      const invalidInvite = payload.teamInvites.some((invite) => {
+        const email = invite.email.trim();
+        return email.length > 0 && !EMAIL_REGEX.test(email);
+      });
+      return invalidInvite ? "Please fix invalid teammate email addresses." : null;
+    }
+    case "projects":
+      return payload.projectSettings?.defaultProjectStatus
+        ? null
+        : "Choose a default project status.";
+    case "ai":
+      return payload.aiSettings?.businessType
+        ? null
+        : "Select the business type that best fits your estimator.";
+    case "analytics":
+      return payload.analyticsSettings?.metrics?.length
+        ? null
+        : "Select at least one metric to track.";
+    default:
+      return null;
   }
 }
 
-function getTenantPlan(): PlanKey {
-  try {
-    const tenant = JSON.parse(localStorage.getItem("tenant") || "{}");
-    const plan = (tenant.plan || tenant.subscriptionTier || "standard").toLowerCase();
-    if (plan === "basic" || plan === "standard" || plan === "premium") return plan;
-  } catch { /* ignore */ }
-  return "standard";
+function updateStoredTenant(tenant: TenantAccessPayload): void {
+  localStorage.setItem(AUTH_STORAGE_KEYS.tenant, JSON.stringify(tenant));
 }
 
-function generateId(): string {
-  return Math.random().toString(36).substring(2, 9);
-}
-
-// ============================================================================
-// ANIMATED BACKGROUND
-// ============================================================================
-
-const AnimatedBackground = () => (
-  <div className="fixed inset-0 -z-10 bg-gradient-to-br from-slate-50 via-white to-cyan-50/30">
-    <div className="absolute -top-32 -left-32 h-[500px] w-[500px] rounded-full bg-cyan-400/[0.06] blur-[100px]" />
-    <div className="absolute -bottom-48 -right-48 h-[600px] w-[600px] rounded-full bg-violet-400/[0.04] blur-[120px]" />
-    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[400px] w-[400px] rounded-full bg-teal-300/[0.04] blur-[80px]" />
-    {/* Grid */}
-    <div className="absolute inset-0 opacity-[0.02]" style={{
-      backgroundImage: `linear-gradient(to right, #0F172A 1px, transparent 1px), linear-gradient(to bottom, #0F172A 1px, transparent 1px)`,
-      backgroundSize: "60px 60px",
-    }} />
-  </div>
-);
-
-// ============================================================================
-// GLASS CARD
-// ============================================================================
-
-const GlassCard = ({ children, className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.4 }}
-    className={cn("backdrop-blur-xl bg-white/80 border border-white/40 rounded-[5px] shadow-xl shadow-black/5", className)}
-    {...props}
-  >
-    {children}
-  </motion.div>
-);
-
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
-
-export default function Onboarding() {
+export default function OnboardingPage() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { toast } = useToast();
-  const plan = useMemo(() => getTenantPlan(), []);
 
-  // Filter steps for this plan
-  const visibleSteps = useMemo(
-    () => ALL_STEPS.filter(s => s.plans.includes(plan)),
-    [plan]
-  );
-
-  const planFeatures = useMemo(() => PLAN_FEATURE_ACCESS[plan], [plan]);
-  const planModules = useMemo(
-    () => MODULES.filter(m => PLAN_ORDER[m.planMin] <= PLAN_ORDER[plan]),
-    [plan]
-  );
-
+  const [tenant, setTenant] = useState<TenantAccessPayload | null>(null);
+  const [payload, setPayload] = useState<OnboardingPayload | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showConfetti, setShowConfetti] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showValidation, setShowValidation] = useState(false);
 
-  const [state, setState] = useState<OnboardingState>({
-    enabledModules: [...planFeatures],
-    currency: "CAD",
-    timezone: detectTimezone(),
-    dateFormat: "DD/MM/YYYY",
-    team: [],
-    projectStatuses: ["Not Started", "In Progress", "Completed"],
-    taskStatuses: ["Pending", "In Progress", "Done"],
-    businessType: "",
-    materialType: "",
-    costingMethod: "",
-  });
+  const plan = tenant?.plan || "standard";
+  const steps = useMemo(() => buildSteps(plan), [plan]);
+  const currentStep = steps[stepIndex] || steps[0];
+  const progress = steps.length > 1 ? (stepIndex / (steps.length - 1)) * 100 : 0;
+  const selectedFeatures = useMemo(
+    () => resolveEnabledFeaturePreview(payload?.modules || []),
+    [payload?.modules]
+  );
+  const allowedModules = useMemo(
+    () => getAllowedOnboardingModules(plan),
+    [plan]
+  );
+  const currentStepError = payload ? getStepError(currentStep?.id || "modules", payload) : null;
 
-  // Pre-fill from signup
   useEffect(() => {
-    const prefill = (location.state as any)?.prefill;
-    if (prefill) {
-      // Already handled by signup, just ensure timezone
-      const detected = detectTimezone();
-      if (detected && TIMEZONES.some(t => t.value === detected)) {
-        setState(s => ({ ...s, timezone: detected }));
-      }
+    if (!getAccessToken()) {
+      navigate("/login", { replace: true });
+      return;
     }
-  }, [location.state]);
 
-  const currentStep = visibleSteps[stepIndex];
-  const progress = ((stepIndex) / (visibleSteps.length - 1)) * 100;
+    let cancelled = false;
 
-  const goNext = useCallback(() => {
-    if (stepIndex < visibleSteps.length - 1) {
-      setStepIndex(i => i + 1);
-    }
-  }, [stepIndex, visibleSteps.length]);
-
-  const goBack = useCallback(() => {
-    if (stepIndex > 0) setStepIndex(i => i - 1);
-  }, [stepIndex]);
-
-  const toggleModule = (id: FeatureId) => {
-    setState(s => ({
-      ...s,
-      enabledModules: s.enabledModules.includes(id)
-        ? s.enabledModules.filter(m => m !== id)
-        : [...s.enabledModules, id],
-    }));
-  };
-
-  const addTeamMember = () => {
-    setState(s => ({
-      ...s,
-      team: [...s.team, { id: generateId(), email: "", role: "employee" }],
-    }));
-  };
-
-  const updateTeamMember = (id: string, field: "email" | "role", value: string) => {
-    setState(s => ({
-      ...s,
-      team: s.team.map(m => m.id === id ? { ...m, [field]: value } : m),
-    }));
-  };
-
-  const removeTeamMember = (id: string) => {
-    setState(s => ({ ...s, team: s.team.filter(m => m.id !== id) }));
-  };
-
-  // ── Complete onboarding ──
-  const handleComplete = async () => {
-    setIsSubmitting(true);
-    setShowConfetti(true);
-
-    try {
-      // Save enabled features
-      setEnabledFeatures(state.enabledModules);
-
-      // Try to save to backend
+    const load = async () => {
       try {
-        await apiClient.put("/tenants/settings", {
-          settings: {
-            enabledModules: state.enabledModules,
-            businessType: state.businessType || "general",
-            currency: state.currency,
-            timezone: state.timezone,
-            dateFormat: state.dateFormat,
-            projectStatuses: state.projectStatuses,
-            taskStatuses: state.taskStatuses,
-            aiSettings: plan === "premium" ? {
-              businessType: state.businessType,
-              materialType: state.materialType,
-              costingMethod: state.costingMethod,
-            } : undefined,
-          },
-        });
-      } catch {
-        // Backend save is best-effort
-      }
+        const response = await getTenantOnboarding();
+        const data = response?.data as TenantOnboardingApiResponse | undefined;
 
-      // Send team invites
-      if (state.team.length > 0) {
-        const validMembers = state.team.filter(m => m.email.trim());
-        if (validMembers.length > 0) {
-          try {
-            await apiClient.post("/tenants/invite", { members: validMembers });
-          } catch {
-            // Invites are best-effort
-          }
+        if (!data?.tenant || cancelled) {
+          return;
+        }
+
+        setTenant(data.tenant);
+        setPayload(mergeIncomingPayload(data.tenant.plan, data.onboarding));
+        setAvailableFeatures(normalizeEnabledFeatures(data.tenant.availableFeatures));
+        setOnboardingCompleted(data.tenant.onboardingCompleted === true);
+
+        if (data.tenant.onboardingCompleted) {
+          setEnabledFeatures(normalizeEnabledFeatures(data.tenant.enabledFeatures));
+          updateStoredTenant(data.tenant);
+          setStepIndex(buildSteps(data.tenant.plan).length - 1);
+        }
+      } catch (error: any) {
+        if (!cancelled) {
+          toast({
+            title: "Unable to load onboarding",
+            description:
+              error?.response?.data?.message ||
+              error?.message ||
+              "Please refresh and try again.",
+            variant: "destructive",
+          });
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
         }
       }
+    };
 
-      // Update localStorage
-      try {
-        const storedTenant = JSON.parse(localStorage.getItem("tenant") || "{}");
-        localStorage.setItem("tenant", JSON.stringify({
-          ...storedTenant,
-          enabledModules: state.enabledModules,
-          businessType: state.businessType || "general",
-        }));
-      } catch { /* ignore */ }
+    void load();
 
-      // Mark onboarding complete
-      setOnboardingCompleted(true);
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate, toast]);
 
-      // Wait for confetti
-      await new Promise(r => setTimeout(r, 2500));
+  const goNext = async () => {
+    if (!payload || !tenant) return;
 
-      toast({ title: "Welcome to Zodo CRM! 🎉", description: "Your workspace is ready. Let's get started!" });
-      navigate("/dashboard", { replace: true });
-    } catch (err: any) {
-      toast({ title: "Setup error", description: err?.message || "Something went wrong.", variant: "destructive" });
-    } finally {
-      setIsSubmitting(false);
+    if (currentStep.id !== "complete" && currentStepError) {
+      setShowValidation(true);
+      return;
     }
+
+    if (stepIndex === steps.length - 2) {
+      setIsSaving(true);
+      try {
+        const response = await completeTenantOnboarding(sanitizePayload(plan, payload));
+        const data = response?.data as TenantOnboardingApiResponse | undefined;
+
+        if (!data?.tenant) {
+          throw new Error(response?.message || "Onboarding could not be completed.");
+        }
+
+        setTenant(data.tenant);
+        setPayload(mergeIncomingPayload(data.tenant.plan, data.onboarding));
+        setAvailableFeatures(normalizeEnabledFeatures(data.tenant.availableFeatures));
+        setEnabledFeatures(normalizeEnabledFeatures(data.tenant.enabledFeatures));
+        clearOnboardingData();
+        setOnboardingCompleted(true);
+        updateStoredTenant(data.tenant);
+        setShowValidation(false);
+        setStepIndex(steps.length - 1);
+
+        toast({
+          title: "Workspace ready",
+          description: "Your CRM is configured and ready to go.",
+        });
+      } catch (error: any) {
+        toast({
+          title: "Could not finish onboarding",
+          description:
+            error?.response?.data?.message ||
+            error?.message ||
+            "Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsSaving(false);
+      }
+      return;
+    }
+
+    setShowValidation(false);
+    setStepIndex((current) => Math.min(current + 1, steps.length - 1));
   };
 
-  // ============================================================================
-  // RENDER
-  // ============================================================================
+  const goBack = () => {
+    setShowValidation(false);
+    setStepIndex((current) => Math.max(current - 1, 0));
+  };
+
+  if (isLoading || !tenant || !payload) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,rgba(6,182,212,0.15),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(34,197,94,0.12),transparent_30%),#f8fafc]">
+        <div className="flex items-center gap-3 rounded-full border border-slate-200 bg-white/85 px-5 py-3 text-sm font-medium text-slate-700 shadow-lg backdrop-blur">
+          <Loader2 className="h-4 w-4 animate-spin text-cyan-600" />
+          Loading your workspace setup...
+        </div>
+      </div>
+    );
+  }
+
+  const accent = PLAN_ACCENTS[plan];
+  const stepCountLabel =
+    currentStep.id === "complete"
+      ? "Complete"
+      : `Step ${Math.min(stepIndex + 1, steps.length - 1)} of ${steps.length - 1}`;
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      <AnimatedBackground />
-      {showConfetti && <Confetti recycle={false} numberOfPieces={300} gravity={0.15} />}
-
-      <div className="relative z-10 flex min-h-screen">
-        {/* ── SIDEBAR (desktop) ── */}
-        <div className="hidden lg:block w-72 p-5 shrink-0">
-          <GlassCard className="p-5 h-full flex flex-col">
-            {/* Logo */}
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-teal-600 rounded-[5px] flex items-center justify-center shadow-lg shadow-cyan-200/40">
-                <Sparkles size={20} className="text-white" />
-              </div>
-              <div>
-                <h2 className="font-bold text-slate-900 text-sm">Zodo CRM Setup</h2>
-                <p className="text-[11px] text-slate-400">Step {stepIndex + 1} of {visibleSteps.length}</p>
-              </div>
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(6,182,212,0.12),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.10),transparent_30%),linear-gradient(180deg,#f8fafc_0%,#eef6ff_100%)] px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-6 flex items-center justify-between gap-4 rounded-[28px] border border-white/70 bg-white/80 px-5 py-4 shadow-[0_30px_80px_rgba(15,23,42,0.08)] backdrop-blur">
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-950 shadow-lg shadow-slate-950/15">
+              <img src={logo} alt="Zodo CRM" className="h-7 w-auto" />
             </div>
-
-            {/* Progress */}
-            <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden mb-5">
-              <motion.div
-                className="h-full bg-gradient-to-r from-cyan-500 to-teal-400 rounded-full"
-                animate={{ width: `${progress}%` }}
-                transition={{ duration: 0.4 }}
-              />
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-400">
+                Zodo CRM
+              </p>
+              <h1 className="text-lg font-semibold text-slate-950">
+                Configure your workspace
+              </h1>
             </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge className={cn("border-0 bg-white", accent.tone)}>
+              {accent.badge}
+            </Badge>
+            <Badge variant="secondary" className="bg-slate-100 text-slate-600">
+              Upgrade anytime
+            </Badge>
+          </div>
+        </div>
 
-            {/* Steps */}
-            <nav className="space-y-1 flex-1">
-              {visibleSteps.map((step, idx) => {
-                const isCompleted = idx < stepIndex;
-                const isCurrent = idx === stepIndex;
-                const Icon = step.icon;
-                return (
-                  <button
-                    key={step.id}
-                    onClick={() => idx <= stepIndex && setStepIndex(idx)}
-                    disabled={idx > stepIndex}
-                    className={cn(
-                      "w-full flex items-center gap-3 p-2.5 rounded-[5px] text-left transition-all duration-200",
-                      isCurrent && "bg-cyan-50 border border-cyan-200 shadow-sm",
-                      isCompleted && "hover:bg-slate-50 cursor-pointer",
-                      idx > stepIndex && "opacity-35 cursor-not-allowed",
-                    )}
-                  >
-                    <div className={cn(
-                      "w-8 h-8 rounded-[5px] flex items-center justify-center shrink-0 transition-all",
-                      isCurrent && "bg-gradient-to-br from-cyan-500 to-teal-500 text-white shadow-sm shadow-cyan-200",
-                      isCompleted && "bg-emerald-100 text-emerald-600",
-                      idx > stepIndex && "bg-slate-100 text-slate-300",
-                    )}>
-                      {isCompleted ? <Check size={14} /> : <Icon size={14} />}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className={cn("text-xs font-semibold truncate", isCurrent ? "text-cyan-700" : isCompleted ? "text-slate-700" : "text-slate-400")}>
-                          {step.title}
-                        </span>
-                        {step.optional && <Badge variant="outline" className="text-[8px] px-1 py-0 bg-white/50 border-slate-200">Skip</Badge>}
+        <div className="grid gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
+          <aside className="space-y-5">
+            <Card className={cn("overflow-hidden border-white/80 bg-gradient-to-br", accent.highlight)}>
+              <CardContent className="space-y-5 p-6">
+                <div className="space-y-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-400">
+                    {stepCountLabel}
+                  </p>
+                  <h2 className="text-2xl font-semibold text-slate-950">
+                    {currentStep.title}
+                  </h2>
+                  <p className="text-sm leading-6 text-slate-600">
+                    {currentStep.subtitle}
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-sm text-slate-500">
+                    <span>Progress</span>
+                    <span>{Math.round(progress)}%</span>
+                  </div>
+                  <Progress value={progress} className="h-2 bg-slate-200/70" />
+                </div>
+
+                <div className="rounded-2xl border border-white/70 bg-white/80 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
+                    Automation Ready
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    Default stages, statuses, invoice settings, and module access
+                    will be prepared as soon as you finish.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl border border-white/70 bg-white/75 p-4">
+                    <p className="text-2xl font-semibold text-slate-950">
+                      {payload.modules.length}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">Modules selected</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/70 bg-white/75 p-4">
+                    <p className="text-2xl font-semibold text-slate-950">
+                      {selectedFeatures.length}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">Features enabled</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-white/80 bg-white/80">
+              <CardContent className="space-y-3 p-5">
+                {steps.map((step, index) => {
+                  const Icon = step.icon;
+                  const isActive = index === stepIndex;
+                  const isPast = index < stepIndex;
+
+                  return (
+                    <div
+                      key={step.id}
+                      className={cn(
+                        "flex items-start gap-3 rounded-2xl border px-4 py-3 transition-all",
+                        isActive
+                          ? "border-cyan-200 bg-cyan-50/80"
+                          : isPast
+                            ? "border-emerald-100 bg-emerald-50/80"
+                            : "border-slate-200/80 bg-white"
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          "flex h-10 w-10 items-center justify-center rounded-2xl",
+                          isPast
+                            ? "bg-emerald-500 text-white"
+                            : isActive
+                              ? "bg-slate-950 text-white"
+                              : "bg-slate-100 text-slate-500"
+                        )}
+                      >
+                        {isPast ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
                       </div>
-                      <p className="text-[10px] text-slate-400 truncate">{step.subtitle}</p>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-slate-900">
+                          {step.title}
+                        </p>
+                        <p className="text-sm leading-6 text-slate-500">
+                          {step.subtitle}
+                        </p>
+                        {step.optional ? (
+                          <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
+                            Optional
+                          </p>
+                        ) : null}
+                      </div>
                     </div>
-                  </button>
-                );
-              })}
-            </nav>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          </aside>
 
-            {/* Plan badge */}
-            <div className="mt-4 pt-4 border-t border-slate-100">
-              <div className={cn(
-                "flex items-center gap-2 px-3 py-2 rounded-[5px] text-xs font-semibold",
-                plan === "premium" ? "bg-violet-50 text-violet-700 border border-violet-200" :
-                plan === "standard" ? "bg-cyan-50 text-cyan-700 border border-cyan-200" :
-                "bg-slate-50 text-slate-600 border border-slate-200"
-              )}>
-                <Sparkles size={12} />
-                {plan.charAt(0).toUpperCase() + plan.slice(1)} Plan
-              </div>
-            </div>
-          </GlassCard>
-        </div>
-
-        {/* ── MOBILE HEADER ── */}
-        <div className="lg:hidden fixed top-0 left-0 right-0 z-50">
-          <GlassCard className="mx-3 mt-3 p-3 !rounded-[5px]">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-cyan-500 to-teal-500 rounded-[5px] flex items-center justify-center">
-                  <currentStep.icon size={16} className="text-white" />
-                </div>
+          <section className="rounded-[32px] border border-white/70 bg-white/85 shadow-[0_40px_100px_rgba(15,23,42,0.08)] backdrop-blur">
+            <div className="border-b border-slate-100 px-6 py-5 sm:px-8">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">{currentStep.title}</p>
-                  <p className="text-[10px] text-slate-400">Step {stepIndex + 1} of {visibleSteps.length}</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-400">
+                    {tenant.name}
+                  </p>
+                  <h3 className="mt-1 text-2xl font-semibold text-slate-950">
+                    {currentStep.title}
+                  </h3>
+                </div>
+                <div className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-600">
+                  {tenant.country || "Global workspace"}
                 </div>
               </div>
-              <span className="text-lg font-bold text-cyan-600">{Math.round(progress)}%</span>
             </div>
-            <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
-              <motion.div className="h-full bg-gradient-to-r from-cyan-500 to-teal-400 rounded-full" animate={{ width: `${progress}%` }} />
-            </div>
-          </GlassCard>
-        </div>
 
-        {/* ── MAIN CONTENT ── */}
-        <div className="flex-1 flex items-center justify-center p-4 pt-24 lg:pt-4 lg:pr-5">
-          <div className="w-full max-w-[720px]">
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentStep.id}
-                initial={{ opacity: 0, x: 30 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -30 }}
-                transition={{ duration: 0.25 }}
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.22, ease: "easeOut" }}
+                className="px-6 py-6 sm:px-8 sm:py-8"
               >
-                {/* ── STEP: MODULES ── */}
-                {currentStep.id === "modules" && (
-                  <GlassCard className="p-5 sm:p-7">
-                    <StepHeader icon={Settings} title="Module Setup" subtitle="Toggle the features you need. You can change these anytime in Settings." plan={plan} />
+                {currentStep.id === "modules" ? (
+                  <div className="space-y-6">
+                    <div className="rounded-3xl border border-slate-200/80 bg-slate-50/80 p-5">
+                      <p className="text-sm text-slate-600">
+                        Dashboard, calendar, and tasks are already ready for every workspace.
+                        Choose the rest of the modules you want live on day one.
+                      </p>
+                    </div>
 
-                    {/* Group by plan tier */}
-                    {(["basic", "standard", "premium"] as PlanKey[])
-                      .filter(p => PLAN_ORDER[p] <= PLAN_ORDER[plan])
-                      .map(tier => {
-                        const tierModules = planModules.filter(m => m.planMin === tier);
-                        if (tierModules.length === 0) return null;
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {allowedModules.map((moduleId) => {
+                        const module = ONBOARDING_MODULES[moduleId];
+                        const enabled = payload.modules.includes(moduleId);
+
                         return (
-                          <div key={tier} className="mt-5">
-                            <div className="flex items-center gap-2 mb-3">
-                              <span className={cn(
-                                "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-[5px]",
-                                tier === "premium" ? "bg-violet-100 text-violet-700" :
-                                tier === "standard" ? "bg-cyan-100 text-cyan-700" :
-                                "bg-slate-100 text-slate-600"
-                              )}>
-                                {tier} features
-                              </span>
-                              {tier !== "basic" && <span className="text-[10px] text-slate-400">Included in your plan</span>}
-                            </div>
-                            <div className="grid gap-2">
-                              {tierModules.map(mod => {
-                                const enabled = state.enabledModules.includes(mod.id);
-                                const Icon = mod.icon;
-                                return (
-                                  <div
-                                    key={mod.id}
-                                    className={cn(
-                                      "flex items-center gap-3 p-3 rounded-[5px] border transition-all duration-200 cursor-pointer",
-                                      enabled ? "bg-white border-cyan-200 shadow-sm" : "bg-slate-50/50 border-slate-100 opacity-60",
-                                      mod.isAI && enabled && "border-violet-200 bg-violet-50/30",
-                                    )}
-                                    onClick={() => toggleModule(mod.id)}
-                                  >
-                                    <div className={cn(
-                                      "w-9 h-9 rounded-[5px] flex items-center justify-center shrink-0",
-                                      enabled
-                                        ? mod.isAI ? "bg-gradient-to-br from-violet-500 to-purple-600 text-white" : "bg-gradient-to-br from-cyan-500 to-teal-500 text-white"
-                                        : "bg-slate-100 text-slate-400"
-                                    )}>
-                                      <Icon size={16} />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-1.5">
-                                        <span className="text-sm font-semibold text-slate-800">{mod.label}</span>
-                                        {mod.isAI && <Badge variant="outline" className="text-[8px] px-1.5 py-0 border-violet-200 text-violet-600 bg-violet-50">AI</Badge>}
-                                      </div>
-                                      <p className="text-[11px] text-slate-400">{mod.description}</p>
-                                    </div>
-                                    <Switch checked={enabled} onCheckedChange={() => toggleModule(mod.id)} className="shrink-0" />
+                          <Card
+                            key={moduleId}
+                            className={cn(
+                              "border transition-all",
+                              enabled
+                                ? "border-slate-950 bg-slate-950 text-white shadow-lg shadow-slate-950/10"
+                                : "border-slate-200 bg-white hover:border-slate-300",
+                              module.highlight && enabled
+                                ? "bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.22),transparent_35%),linear-gradient(145deg,#0f172a,#111827)]"
+                                : ""
+                            )}
+                          >
+                            <CardContent className="p-5">
+                              <div className="flex items-start justify-between gap-3">
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-base font-semibold">
+                                      {module.label}
+                                    </p>
+                                    {module.highlight ? (
+                                      <Badge
+                                        className={cn(
+                                          "border-0",
+                                          enabled
+                                            ? "bg-white/15 text-white"
+                                            : "bg-fuchsia-100 text-fuchsia-700"
+                                        )}
+                                      >
+                                        AI
+                                      </Badge>
+                                    ) : null}
                                   </div>
-                                );
-                              })}
-                            </div>
-                          </div>
+                                  <p
+                                    className={cn(
+                                      "mt-2 text-sm leading-6",
+                                      enabled ? "text-slate-200" : "text-slate-600"
+                                    )}
+                                  >
+                                    {module.description}
+                                  </p>
+                                </div>
+                                <Switch
+                                  checked={enabled}
+                                  onCheckedChange={(checked) =>
+                                    setPayload((current) =>
+                                      current
+                                        ? {
+                                            ...current,
+                                            modules: checked
+                                              ? [...current.modules, moduleId]
+                                              : current.modules.filter((value) => value !== moduleId),
+                                          }
+                                        : current
+                                    )
+                                  }
+                                />
+                              </div>
+
+                              <div
+                                className={cn(
+                                  "mt-4 flex flex-wrap gap-2",
+                                  enabled ? "text-slate-100" : "text-slate-500"
+                                )}
+                              >
+                                {module.featureIds.map((feature) => (
+                                  <span
+                                    key={feature}
+                                    className={cn(
+                                      "rounded-full border px-3 py-1 text-xs font-medium capitalize",
+                                      enabled
+                                        ? "border-white/15 bg-white/10"
+                                        : "border-slate-200 bg-slate-50"
+                                    )}
+                                  >
+                                    {feature.replace(/([A-Z])/g, " $1")}
+                                  </span>
+                                ))}
+                              </div>
+                            </CardContent>
+                          </Card>
                         );
                       })}
+                    </div>
+                  </div>
+                ) : null}
 
-                    <StepFooter onNext={goNext} nextLabel="Continue" />
-                  </GlassCard>
-                )}
-
-                {/* ── STEP: SETTINGS ── */}
-                {currentStep.id === "settings" && (
-                  <GlassCard className="p-5 sm:p-7">
-                    <StepHeader icon={Globe} title="Basic Settings" subtitle="Configure your workspace defaults. These can be changed later." plan={plan} />
-
-                    <div className="mt-6 space-y-5">
-                      <SettingsField label="Currency">
-                        <Select value={state.currency} onValueChange={v => setState(s => ({ ...s, currency: v }))}>
-                          <SelectTrigger className="h-11 rounded-[5px] border-slate-200">
-                            <div className="flex items-center gap-2"><DollarSign size={14} className="text-slate-400" /><SelectValue /></div>
-                          </SelectTrigger>
-                          <SelectContent className="rounded-[5px]">
-                            {CURRENCIES.map(c => <SelectItem key={c.value} value={c.value} className="rounded-[5px]">{c.label}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </SettingsField>
-
-                      <SettingsField label="Timezone">
-                        <Select value={state.timezone} onValueChange={v => setState(s => ({ ...s, timezone: v }))}>
-                          <SelectTrigger className="h-11 rounded-[5px] border-slate-200">
-                            <div className="flex items-center gap-2"><Globe size={14} className="text-slate-400" /><SelectValue /></div>
-                          </SelectTrigger>
-                          <SelectContent className="rounded-[5px] max-h-60">
-                            {TIMEZONES.map(t => <SelectItem key={t.value} value={t.value} className="rounded-[5px]">{t.label}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </SettingsField>
-
-                      <SettingsField label="Date Format">
-                        <Select value={state.dateFormat} onValueChange={v => setState(s => ({ ...s, dateFormat: v }))}>
-                          <SelectTrigger className="h-11 rounded-[5px] border-slate-200">
-                            <div className="flex items-center gap-2"><Calendar size={14} className="text-slate-400" /><SelectValue /></div>
-                          </SelectTrigger>
-                          <SelectContent className="rounded-[5px]">
-                            {DATE_FORMATS.map(f => <SelectItem key={f.value} value={f.value} className="rounded-[5px]">{f.label}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </SettingsField>
+                {currentStep.id === "settings" ? (
+                  <div className="grid gap-5 md:grid-cols-3">
+                    <div className="space-y-2">
+                      <Label>Currency</Label>
+                      <Select
+                        value={payload.settings.currency}
+                        onValueChange={(value) =>
+                          setPayload((current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  settings: { ...current.settings, currency: value as OnboardingPayload["settings"]["currency"] },
+                                }
+                              : current
+                          )
+                        }
+                      >
+                        <SelectTrigger className="h-12 rounded-2xl">
+                          <SelectValue placeholder="Select currency" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {CURRENCY_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
-                    <StepFooter onBack={goBack} onNext={goNext} nextLabel="Continue" />
-                  </GlassCard>
-                )}
+                    <div className="space-y-2">
+                      <Label>Timezone</Label>
+                      <Input
+                        value={payload.settings.timezone}
+                        onChange={(event) =>
+                          setPayload((current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  settings: { ...current.settings, timezone: event.target.value },
+                                }
+                              : current
+                          )
+                        }
+                        placeholder="e.g. America/New_York"
+                        className="h-12 rounded-2xl"
+                      />
+                    </div>
 
-                {/* ── STEP: TEAM ── */}
-                {currentStep.id === "team" && (
-                  <GlassCard className="p-5 sm:p-7">
-                    <StepHeader icon={Users} title="Team Setup" subtitle="Invite your team members. You can always do this later." plan={plan} />
+                    <div className="space-y-2">
+                      <Label>Date Format</Label>
+                      <Select
+                        value={payload.settings.dateFormat}
+                        onValueChange={(value) =>
+                          setPayload((current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  settings: { ...current.settings, dateFormat: value as OnboardingPayload["settings"]["dateFormat"] },
+                                }
+                              : current
+                          )
+                        }
+                      >
+                        <SelectTrigger className="h-12 rounded-2xl">
+                          <SelectValue placeholder="Select format" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DATE_FORMAT_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                ) : null}
 
-                    <div className="mt-6 space-y-3">
-                      {state.team.length === 0 ? (
-                        <div className="text-center py-8 border border-dashed border-slate-200 rounded-[5px] bg-slate-50/50">
-                          <UserPlus size={32} className="mx-auto text-slate-300 mb-3" />
-                          <p className="text-sm text-slate-500 mb-1">No team members added yet</p>
-                          <p className="text-xs text-slate-400">Click below to invite your first team member</p>
-                        </div>
-                      ) : (
-                        state.team.map((member) => (
-                          <div key={member.id} className="flex items-center gap-2 p-3 bg-white border border-slate-200 rounded-[5px]">
-                            <div className="flex-1">
-                              <Input
-                                value={member.email}
-                                onChange={e => updateTeamMember(member.id, "email", e.target.value)}
-                                placeholder="team@company.com"
-                                type="email"
-                                className="h-9 rounded-[5px] border-slate-200 text-sm"
-                              />
-                            </div>
-                            <Select value={member.role} onValueChange={v => updateTeamMember(member.id, "role", v)}>
-                              <SelectTrigger className="h-9 w-32 rounded-[5px] border-slate-200 text-xs">
+                {currentStep.id === "team" ? (
+                  <div className="space-y-4">
+                    {payload.teamInvites.map((invite, index) => {
+                      const showInviteError =
+                        showValidation &&
+                        invite.email.trim().length > 0 &&
+                        !EMAIL_REGEX.test(invite.email.trim());
+
+                      return (
+                        <div
+                          key={`${index}-${invite.role}`}
+                          className="grid gap-3 rounded-3xl border border-slate-200/80 bg-slate-50/70 p-4 md:grid-cols-[minmax(0,1fr)_200px_auto]"
+                        >
+                          <div className="space-y-2">
+                            <Label>Teammate Email</Label>
+                            <Input
+                              value={invite.email}
+                              onChange={(event) =>
+                                setPayload((current) =>
+                                  current
+                                    ? {
+                                        ...current,
+                                        teamInvites: current.teamInvites.map((item, rowIndex) =>
+                                          rowIndex === index
+                                            ? { ...item, email: event.target.value }
+                                            : item
+                                        ),
+                                      }
+                                    : current
+                                )
+                              }
+                              placeholder="name@company.com"
+                              className={cn("h-12 rounded-2xl", showInviteError && "border-rose-300 focus-visible:ring-rose-200")}
+                            />
+                            {showInviteError ? (
+                              <p className="text-sm text-rose-600">
+                                Enter a valid email address.
+                              </p>
+                            ) : null}
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label>Role</Label>
+                            <Select
+                              value={invite.role}
+                              onValueChange={(value) =>
+                                setPayload((current) =>
+                                  current
+                                    ? {
+                                        ...current,
+                                        teamInvites: current.teamInvites.map((item, rowIndex) =>
+                                          rowIndex === index
+                                            ? { ...item, role: value as typeof invite.role }
+                                            : item
+                                        ),
+                                      }
+                                    : current
+                                )
+                              }
+                            >
+                              <SelectTrigger className="h-12 rounded-2xl">
                                 <SelectValue />
                               </SelectTrigger>
-                              <SelectContent className="rounded-[5px]">
-                                <SelectItem value="admin" className="rounded-[5px]">Admin</SelectItem>
-                                <SelectItem value="manager" className="rounded-[5px]">Manager</SelectItem>
-                                <SelectItem value="employee" className="rounded-[5px]">Employee</SelectItem>
+                              <SelectContent>
+                                {TEAM_ROLE_OPTIONS.map((option) => (
+                                  <SelectItem key={option.value} value={option.value}>
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
-                            <button onClick={() => removeTeamMember(member.id)} className="p-1.5 rounded-[5px] text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors">
-                              <Trash2 size={14} />
-                            </button>
                           </div>
-                        ))
-                      )}
 
-                      <Button variant="outline" size="sm" onClick={addTeamMember} className="rounded-[5px] border-dashed border-slate-300 text-slate-500 hover:border-cyan-300 hover:text-cyan-600 w-full">
-                        <Plus size={14} className="mr-1.5" /> Add Team Member
+                          <div className="flex items-end">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              className="h-12 rounded-2xl text-slate-500"
+                              onClick={() =>
+                                setPayload((current) =>
+                                  current
+                                    ? {
+                                        ...current,
+                                        teamInvites:
+                                          current.teamInvites.length === 1
+                                            ? [{ email: "", role: "manager" }]
+                                            : current.teamInvites.filter((_, rowIndex) => rowIndex !== index),
+                                      }
+                                    : current
+                                )
+                              }
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="rounded-2xl"
+                        onClick={() =>
+                          setPayload((current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  teamInvites: [...current.teamInvites, { email: "", role: "employee" }],
+                                }
+                              : current
+                          )
+                        }
+                      >
+                        Add another
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="rounded-2xl text-slate-500"
+                        onClick={() => {
+                          setPayload((current) =>
+                            current
+                              ? { ...current, teamInvites: [{ email: "", role: "manager" }] }
+                              : current
+                          );
+                          setShowValidation(false);
+                          setStepIndex((current) => Math.min(current + 1, steps.length - 1));
+                        }}
+                      >
+                        Skip for now
                       </Button>
                     </div>
+                  </div>
+                ) : null}
 
-                    <StepFooter
-                      onBack={goBack}
-                      onNext={goNext}
-                      nextLabel="Continue"
-                      skipLabel="Skip for now"
-                      onSkip={goNext}
-                    />
-                  </GlassCard>
-                )}
+                {currentStep.id === "projects" ? (
+                  <div className="space-y-6">
+                    <div className="space-y-3">
+                      <Label>Default Project Status</Label>
+                      <div className="grid gap-3 md:grid-cols-3">
+                        {PROJECT_STATUS_OPTIONS.map((option) => {
+                          const selected =
+                            payload.projectSettings?.defaultProjectStatus === option.value;
 
-                {/* ── STEP: PROJECTS (Standard + Premium) ── */}
-                {currentStep.id === "projects" && (
-                  <GlassCard className="p-5 sm:p-7">
-                    <StepHeader icon={FolderKanban} title="Project & Workflow" subtitle="Set up your default project and task statuses." plan={plan} />
-
-                    <div className="mt-6 space-y-6">
-                      <EditableList
-                        label="Project Statuses"
-                        items={state.projectStatuses}
-                        onChange={items => setState(s => ({ ...s, projectStatuses: items }))}
-                        colors={["bg-slate-400", "bg-cyan-500", "bg-emerald-500"]}
-                      />
-                      <EditableList
-                        label="Task Statuses"
-                        items={state.taskStatuses}
-                        onChange={items => setState(s => ({ ...s, taskStatuses: items }))}
-                        colors={["bg-amber-400", "bg-cyan-500", "bg-emerald-500"]}
-                      />
-                    </div>
-
-                    <StepFooter onBack={goBack} onNext={goNext} nextLabel="Continue" />
-                  </GlassCard>
-                )}
-
-                {/* ── STEP: AI SETUP (Premium only) ── */}
-                {currentStep.id === "ai" && (
-                  <GlassCard className="p-5 sm:p-7">
-                    <StepHeader icon={Brain} title="AI Configuration" subtitle="Configure AI-powered tools for your workspace." plan={plan} />
-
-                    <div className="mt-6 space-y-5">
-                      <SettingsField label="Business Type">
-                        <Select value={state.businessType} onValueChange={v => setState(s => ({ ...s, businessType: v }))}>
-                          <SelectTrigger className="h-11 rounded-[5px] border-slate-200">
-                            <div className="flex items-center gap-2"><Cpu size={14} className="text-violet-400" /><SelectValue placeholder="Select your business type" /></div>
-                          </SelectTrigger>
-                          <SelectContent className="rounded-[5px]">
-                            <SelectItem value="roofing" className="rounded-[5px]">🏠 Roofing</SelectItem>
-                            <SelectItem value="construction" className="rounded-[5px]">🏗️ Construction</SelectItem>
-                            <SelectItem value="general_contractor" className="rounded-[5px]">🔧 General Contractor</SelectItem>
-                            <SelectItem value="other" className="rounded-[5px]">📦 Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </SettingsField>
-
-                      <SettingsField label="Material Type Preference (Optional)">
-                        <Select value={state.materialType} onValueChange={v => setState(s => ({ ...s, materialType: v }))}>
-                          <SelectTrigger className="h-11 rounded-[5px] border-slate-200">
-                            <SelectValue placeholder="Select material type" />
-                          </SelectTrigger>
-                          <SelectContent className="rounded-[5px]">
-                            <SelectItem value="asphalt" className="rounded-[5px]">Asphalt Shingles</SelectItem>
-                            <SelectItem value="metal" className="rounded-[5px]">Metal Roofing</SelectItem>
-                            <SelectItem value="tile" className="rounded-[5px]">Tile / Clay</SelectItem>
-                            <SelectItem value="flat" className="rounded-[5px]">Flat / TPO / EPDM</SelectItem>
-                            <SelectItem value="mixed" className="rounded-[5px]">Mixed / All Types</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </SettingsField>
-
-                      <SettingsField label="Costing Method (Optional)">
-                        <Select value={state.costingMethod} onValueChange={v => setState(s => ({ ...s, costingMethod: v }))}>
-                          <SelectTrigger className="h-11 rounded-[5px] border-slate-200">
-                            <SelectValue placeholder="Select costing method" />
-                          </SelectTrigger>
-                          <SelectContent className="rounded-[5px]">
-                            <SelectItem value="per_sqft" className="rounded-[5px]">Per Square Foot</SelectItem>
-                            <SelectItem value="per_square" className="rounded-[5px]">Per Roofing Square (100 sqft)</SelectItem>
-                            <SelectItem value="lump_sum" className="rounded-[5px]">Lump Sum</SelectItem>
-                            <SelectItem value="time_materials" className="rounded-[5px]">Time & Materials</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </SettingsField>
-
-                      <div className="flex items-center gap-2 p-3 rounded-[5px] border border-violet-100 bg-violet-50/50 text-xs text-violet-700">
-                        <Bot size={14} className="shrink-0" />
-                        These settings help our AI provide more accurate estimates and recommendations.
+                          return (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() =>
+                                setPayload((current) =>
+                                  current
+                                    ? {
+                                        ...current,
+                                        projectSettings: {
+                                          defaultProjectStatus: option.value,
+                                          taskStatuses:
+                                            current.projectSettings?.taskStatuses || ["pending", "in_progress", "done"],
+                                        },
+                                      }
+                                    : current
+                                )
+                              }
+                              className={cn(
+                                "rounded-3xl border px-4 py-4 text-left transition-all",
+                                selected
+                                  ? "border-slate-950 bg-slate-950 text-white"
+                                  : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                              )}
+                            >
+                              <p className="font-semibold">{option.label}</p>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
 
-                    <StepFooter onBack={goBack} onNext={goNext} nextLabel="Continue" />
-                  </GlassCard>
-                )}
+                    <div className="space-y-3">
+                      <Label>Task Statuses</Label>
+                      <div className="grid gap-3 md:grid-cols-3">
+                        {TASK_STATUS_OPTIONS.map((option) => {
+                          const selected =
+                            payload.projectSettings?.taskStatuses?.includes(option.value) ?? false;
 
-                {/* ── STEP: COMPLETE ── */}
-                {currentStep.id === "complete" && (
-                  <GlassCard className="p-5 sm:p-8 text-center">
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ type: "spring", stiffness: 200, delay: 0.1 }}
-                      className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-cyan-500 to-teal-500 rounded-[5px] flex items-center justify-center shadow-xl shadow-cyan-200/40"
-                    >
-                      <Rocket size={36} className="text-white" />
-                    </motion.div>
+                          return (
+                            <label
+                              key={option.value}
+                              className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3"
+                            >
+                              <Checkbox
+                                checked={selected}
+                                onCheckedChange={(checked) =>
+                                  setPayload((current) => {
+                                    if (!current) return current;
+                                    const currentStatuses = current.projectSettings?.taskStatuses || [];
+                                    const nextStatuses = checked
+                                      ? [...currentStatuses, option.value]
+                                      : currentStatuses.filter((status) => status !== option.value);
 
-                    <motion.h2
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.2 }}
-                      className="text-2xl sm:text-3xl font-bold text-slate-900"
-                    >
-                      Your workspace is ready 🚀
-                    </motion.h2>
+                                    return {
+                                      ...current,
+                                      projectSettings: {
+                                        defaultProjectStatus:
+                                          current.projectSettings?.defaultProjectStatus || "not_started",
+                                        taskStatuses: nextStatuses,
+                                      },
+                                    };
+                                  })
+                                }
+                              />
+                              <span className="text-sm font-medium text-slate-700">
+                                {option.label}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
 
-                    <motion.p
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.3 }}
-                      className="text-slate-500 mt-2 max-w-md mx-auto"
-                    >
-                      We've configured {state.enabledModules.length} modules for your {plan} plan.
-                      {state.team.length > 0 && ` ${state.team.filter(t => t.email).length} team invite(s) will be sent.`}
-                    </motion.p>
+                {currentStep.id === "ai" ? (
+                  <div className="grid gap-5 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Business Type</Label>
+                      <Select
+                        value={payload.aiSettings?.businessType || "roofing"}
+                        onValueChange={(value) =>
+                          setPayload((current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  aiSettings: {
+                                    businessType: value as NonNullable<typeof current.aiSettings>["businessType"],
+                                    materialType: current.aiSettings?.materialType || "",
+                                    costingMethod: current.aiSettings?.costingMethod || "",
+                                  },
+                                }
+                              : current
+                          )
+                        }
+                      >
+                        <SelectTrigger className="h-12 rounded-2xl">
+                          <SelectValue placeholder="Select business type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {AI_BUSINESS_TYPE_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                    {/* Summary cards */}
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.4 }}
-                      className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6"
-                    >
+                    <div className="space-y-2">
+                      <Label>Material Type</Label>
+                      <Input
+                        value={payload.aiSettings?.materialType || ""}
+                        onChange={(event) =>
+                          setPayload((current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  aiSettings: {
+                                    businessType: current.aiSettings?.businessType || "roofing",
+                                    materialType: event.target.value,
+                                    costingMethod: current.aiSettings?.costingMethod || "",
+                                  },
+                                }
+                              : current
+                          )
+                        }
+                        placeholder="e.g. Asphalt shingle"
+                        className="h-12 rounded-2xl"
+                      />
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <Label>Costing Method</Label>
+                      <Input
+                        value={payload.aiSettings?.costingMethod || ""}
+                        onChange={(event) =>
+                          setPayload((current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  aiSettings: {
+                                    businessType: current.aiSettings?.businessType || "roofing",
+                                    materialType: current.aiSettings?.materialType || "",
+                                    costingMethod: event.target.value,
+                                  },
+                                }
+                              : current
+                          )
+                        }
+                        placeholder="e.g. Per square + labor blend"
+                        className="h-12 rounded-2xl"
+                      />
+                    </div>
+                  </div>
+                ) : null}
+
+                {currentStep.id === "analytics" ? (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {ANALYTICS_METRIC_OPTIONS.map((option) => {
+                      const selected =
+                        payload.analyticsSettings?.metrics?.includes(option.value) ?? false;
+
+                      return (
+                        <label
+                          key={option.value}
+                          className={cn(
+                            "flex items-center gap-3 rounded-3xl border px-4 py-4 transition-all",
+                            selected
+                              ? "border-slate-950 bg-slate-950 text-white"
+                              : "border-slate-200 bg-white text-slate-700"
+                          )}
+                        >
+                          <Checkbox
+                            checked={selected}
+                            onCheckedChange={(checked) =>
+                              setPayload((current) => {
+                                if (!current) return current;
+                                const metrics = current.analyticsSettings?.metrics || [];
+                                const nextMetrics = checked
+                                  ? [...metrics, option.value]
+                                  : metrics.filter((metric) => metric !== option.value);
+
+                                return {
+                                  ...current,
+                                  analyticsSettings: {
+                                    metrics: nextMetrics,
+                                  },
+                                };
+                              })
+                            }
+                          />
+                          <div>
+                            <p className="font-semibold">{option.label}</p>
+                            <p className={cn("text-sm", selected ? "text-slate-200" : "text-slate-500")}>
+                              Include {option.label.toLowerCase()} in your launch dashboard.
+                            </p>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                ) : null}
+
+                {currentStep.id === "complete" ? (
+                  <div className="space-y-6">
+                    <div className="rounded-[28px] border border-emerald-200 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_35%),linear-gradient(145deg,#f0fdf4,#ffffff)] p-6">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20">
+                          <Rocket className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-emerald-600">
+                            Workspace Ready
+                          </p>
+                          <h4 className="text-2xl font-semibold text-slate-950">
+                            Your workspace is ready
+                          </h4>
+                        </div>
+                      </div>
+                      <p className="mt-4 text-sm leading-7 text-slate-600">
+                        Modules, settings, and automation-ready defaults are now live for your team.
+                      </p>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-4">
                       {[
-                        { label: "Modules", value: state.enabledModules.length, color: "text-cyan-600" },
-                        { label: "Currency", value: state.currency, color: "text-emerald-600" },
-                        { label: "Team", value: state.team.filter(t => t.email).length || "Solo", color: "text-violet-600" },
-                        { label: "Plan", value: plan.charAt(0).toUpperCase() + plan.slice(1), color: "text-amber-600" },
-                      ].map(s => (
-                        <div key={s.label} className="p-3 rounded-[5px] bg-white border border-slate-100">
-                          <div className={cn("text-lg font-bold", s.color)}>{s.value}</div>
-                          <div className="text-[10px] text-slate-400 uppercase tracking-wider">{s.label}</div>
+                        { label: "Modules", value: payload.modules.length },
+                        { label: "Features", value: selectedFeatures.length },
+                        {
+                          label: "Invites",
+                          value: payload.teamInvites.filter((invite) => invite.email.trim()).length,
+                        },
+                        {
+                          label: "Metrics",
+                          value: payload.analyticsSettings?.metrics?.length || 0,
+                        },
+                      ].map((item) => (
+                        <div key={item.label} className="rounded-3xl border border-slate-200 bg-slate-50/70 p-4">
+                          <p className="text-2xl font-semibold text-slate-950">{item.value}</p>
+                          <p className="mt-1 text-sm text-slate-500">{item.label}</p>
                         </div>
                       ))}
-                    </motion.div>
+                    </div>
 
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.5 }}
-                      className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3"
+                    <Button
+                      type="button"
+                      onClick={() => navigate("/dashboard", { replace: true })}
+                      className="h-12 rounded-2xl px-6"
                     >
-                      <Button
-                        variant="ghost"
-                        className="rounded-[5px] text-slate-500"
-                        onClick={goBack}
-                        disabled={isSubmitting}
-                      >
-                        <ArrowLeft size={16} className="mr-1.5" /> Go Back
-                      </Button>
-                      <Button
-                        className="h-12 px-8 rounded-[5px] bg-gradient-to-r from-cyan-600 to-teal-500 text-white text-sm font-semibold shadow-lg shadow-cyan-200/40 hover:shadow-xl hover:shadow-cyan-200/50 transition-all disabled:opacity-50"
-                        onClick={handleComplete}
-                        disabled={isSubmitting}
-                      >
-                        {isSubmitting ? (
-                          <><Loader2 size={16} className="mr-2 animate-spin" /> Setting up workspace...</>
-                        ) : (
-                          <><Rocket size={16} className="mr-2" /> Go to Dashboard</>
-                        )}
-                      </Button>
-                    </motion.div>
-                  </GlassCard>
-                )}
+                      <Rocket className="mr-2 h-4 w-4" />
+                      Go to Dashboard
+                    </Button>
+                  </div>
+                ) : null}
+
+                {showValidation && currentStepError ? (
+                  <p className="mt-6 text-sm font-medium text-rose-600">
+                    {currentStepError}
+                  </p>
+                ) : null}
               </motion.div>
             </AnimatePresence>
-          </div>
+
+            {currentStep.id !== "complete" ? (
+              <div className="flex flex-col gap-3 border-t border-slate-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="rounded-2xl"
+                  onClick={goBack}
+                  disabled={stepIndex === 0 || isSaving}
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back
+                </Button>
+
+                <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+                  <div className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-500">
+                    {selectedFeatures.length} features will launch with this workspace
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={() => void goNext()}
+                    disabled={Boolean(currentStepError) || isSaving}
+                    className="h-12 rounded-2xl px-5"
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Finalizing
+                      </>
+                    ) : stepIndex === steps.length - 2 ? (
+                      <>
+                        Finish Setup
+                        <Sparkles className="ml-2 h-4 w-4" />
+                      </>
+                    ) : (
+                      <>
+                        Continue
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+          </section>
         </div>
-      </div>
-    </div>
-  );
-}
-
-// ============================================================================
-// SUB-COMPONENTS
-// ============================================================================
-
-function StepHeader({ icon: Icon, title, subtitle, plan }: { icon: LucideIcon; title: string; subtitle: string; plan: PlanKey }) {
-  return (
-    <div className="flex items-start gap-4">
-      <div className="w-11 h-11 bg-gradient-to-br from-cyan-500 to-teal-500 rounded-[5px] flex items-center justify-center shadow-sm shadow-cyan-200/40 shrink-0">
-        <Icon size={20} className="text-white" />
-      </div>
-      <div>
-        <h2 className="text-lg sm:text-xl font-bold text-slate-900">{title}</h2>
-        <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>
-      </div>
-    </div>
-  );
-}
-
-function StepFooter({
-  onBack,
-  onNext,
-  nextLabel,
-  skipLabel,
-  onSkip,
-}: {
-  onBack?: () => void;
-  onNext: () => void;
-  nextLabel: string;
-  skipLabel?: string;
-  onSkip?: () => void;
-}) {
-  return (
-    <div className="mt-7 pt-5 border-t border-slate-100 flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        {onBack && (
-          <Button variant="ghost" size="sm" onClick={onBack} className="rounded-[5px] text-slate-500">
-            <ArrowLeft size={14} className="mr-1" /> Back
-          </Button>
-        )}
-        {skipLabel && onSkip && (
-          <Button variant="ghost" size="sm" onClick={onSkip} className="rounded-[5px] text-slate-400 hover:text-slate-600 text-xs">
-            {skipLabel}
-          </Button>
-        )}
-      </div>
-      <Button
-        size="sm"
-        onClick={onNext}
-        className="h-9 px-5 rounded-[5px] bg-gradient-to-r from-cyan-600 to-teal-500 text-white text-xs font-semibold shadow-sm shadow-cyan-200/30 hover:shadow-md transition-all"
-      >
-        {nextLabel} <ArrowRight size={14} className="ml-1.5" />
-      </Button>
-    </div>
-  );
-}
-
-function SettingsField({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500">{label}</Label>
-      {children}
-    </div>
-  );
-}
-
-function EditableList({
-  label,
-  items,
-  onChange,
-  colors,
-}: {
-  label: string;
-  items: string[];
-  onChange: (items: string[]) => void;
-  colors: string[];
-}) {
-  const updateItem = (index: number, value: string) => {
-    const next = [...items];
-    next[index] = value;
-    onChange(next);
-  };
-
-  const addItem = () => onChange([...items, ""]);
-
-  const removeItem = (index: number) => {
-    if (items.length <= 1) return;
-    onChange(items.filter((_, i) => i !== index));
-  };
-
-  return (
-    <div>
-      <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500">{label}</Label>
-      <div className="mt-2 space-y-2">
-        {items.map((item, idx) => (
-          <div key={idx} className="flex items-center gap-2">
-            <div className={cn("w-2.5 h-2.5 rounded-full shrink-0", colors[idx % colors.length])} />
-            <div className="flex items-center gap-1 px-2 py-0.5 rounded-[5px] bg-slate-100 text-[10px] text-slate-400 font-medium shrink-0 w-5 justify-center">
-              {idx + 1}
-            </div>
-            <Input
-              value={item}
-              onChange={e => updateItem(idx, e.target.value)}
-              className="h-9 rounded-[5px] border-slate-200 text-sm flex-1"
-              placeholder={`Status ${idx + 1}`}
-            />
-            {items.length > 1 && (
-              <button onClick={() => removeItem(idx)} className="p-1 text-slate-300 hover:text-red-500 transition-colors">
-                <Trash2 size={12} />
-              </button>
-            )}
-          </div>
-        ))}
-        <Button variant="ghost" size="sm" onClick={addItem} className="text-xs text-slate-400 hover:text-cyan-600">
-          <Plus size={12} className="mr-1" /> Add Status
-        </Button>
       </div>
     </div>
   );

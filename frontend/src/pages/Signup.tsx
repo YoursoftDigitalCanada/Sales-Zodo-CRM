@@ -478,7 +478,7 @@ const SignUpPage = () => {
       setAvailableFeatures(availableFeatures);
       clearEnabledFeatures();
       clearOnboardingData();
-      setOnboardingCompleted(false);
+      setOnboardingCompleted((data?.tenant as Record<string, any> | undefined)?.onboardingCompleted === true);
 
       toast({
         title: "Welcome to Zodo CRM",

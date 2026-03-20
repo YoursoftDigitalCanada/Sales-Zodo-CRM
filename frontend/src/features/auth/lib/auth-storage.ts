@@ -52,4 +52,10 @@ export function setAuthSession(session: AuthSessionInput): void {
 
 export function clearAuthSession(): void {
   Object.values(AUTH_STORAGE_KEYS).forEach((key) => localStorage.removeItem(key));
+  [
+    "enabledFeatures",
+    "availableFeatures",
+    "onboardingCompleted",
+    "onboardingData",
+  ].forEach((key) => localStorage.removeItem(key));
 }

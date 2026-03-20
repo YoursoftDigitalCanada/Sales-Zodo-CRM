@@ -307,28 +307,22 @@ class OnboardingService {
             },
         });
 
-        // ── 7. Enabled Modules + Business Type — stored in Tenant.settings JSON ──
+        // ── 7. Seed workspace access + business type in Tenant.settings JSON ──
+        // This prepares the tenant for the post-signup onboarding wizard.
         await tx.tenant.update({
             where: { id: tenantId },
             data: {
                 settings: {
                     enabledModules: [...(options.enabledModules || DEFAULT_ENABLED_MODULES)],
+                    uiFeatures: (options.settingsOverrides as Record<string, unknown> | undefined)?.uiFeatures || [],
                     businessType: options.businessType || 'general',
+                    onboardingCompleted: false,
                     ...(options.settingsOverrides || {}),
                 },
             },
         });
 
-        // ── 8. Mark onboarding as complete (MUST be last) ───────────────────
-        // This flag is the lifecycle gate: set TRUE only after all seed steps
-        // succeed. Because we're inside a transaction, if any prior step
-        // failed, this line is never reached and the flag stays false.
-        await tx.tenant.update({
-            where: { id: tenantId },
-            data: { onboardingCompleted: true },
-        });
-
-        logger.info(`[Onboarding] Tenant ${tenantId} seeded — 4 roles, ${DEFAULT_LEAD_SOURCES.length} lead sources, ${DEFAULT_TAGS.length} tags, onboarding complete`);
+        logger.info(`[Onboarding] Tenant ${tenantId} seeded — roles, lead sources, tags, and defaults ready for onboarding`);
 
         return {
             roles: {

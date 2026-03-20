@@ -64,6 +64,9 @@ export interface AuthResponse {
     plan?: string;
     companyType?: string;
     country?: string;
+    onboardingCompleted?: boolean;
+    availableModules?: string[];
+    availableFeatures?: string[];
     enabledModules?: string[];
     enabledFeatures?: string[];
   };

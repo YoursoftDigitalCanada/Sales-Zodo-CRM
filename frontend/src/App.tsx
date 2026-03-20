@@ -109,7 +109,7 @@ import RolesPage from "./pages/roles/RolesPage";
 const queryClient = new QueryClient();
 
 const isPublicPath = (pathname: string): boolean => {
-  if (pathname === "/" || pathname === "/login" || pathname === "/signup") {
+  if (pathname === "/" || pathname === "/login" || pathname === "/signup" || pathname === "/onboarding") {
     return true;
   }
   if (pathname.startsWith("/quote/")) {

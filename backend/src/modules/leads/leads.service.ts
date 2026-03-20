@@ -124,12 +124,8 @@ export class LeadsService {
       requestMetadata
     );
 
-    // ── Auto-generate leadNumber (LD-YYYY-XXXX) ─────────────────────────
-    const year = new Date().getFullYear();
-    const leadCount = await prisma.lead.count({
-      where: { tenantId, leadNumber: { startsWith: `LD-${year}-` } },
-    });
-    const leadNumber = `LD-${year}-${String(leadCount + 1).padStart(4, '0')}`;
+    // ── Auto-generate leadNumber (LD-YYYY-XXXX) within tenant scope ─────
+    const leadNumber = await this.generateLeadNumber(tenantId);
     (data as any).leadNumber = leadNumber;
 
     // ── Territory-first assignment, then round-robin fallback ────────────
@@ -1040,6 +1036,27 @@ export class LeadsService {
     });
 
     return matchedSource?.name || detected.sourceName;
+  }
+
+  private async generateLeadNumber(tenantId: string): Promise<string> {
+    const year = new Date().getFullYear();
+    const prefix = `LD-${year}-`;
+
+    const latestLeadForYear = await prisma.lead.findFirst({
+      where: {
+        tenantId,
+        leadNumber: { startsWith: prefix },
+      },
+      orderBy: { leadNumber: 'desc' },
+      select: { leadNumber: true },
+    });
+
+    const latestSequence = latestLeadForYear?.leadNumber
+      ? Number(latestLeadForYear.leadNumber.slice(prefix.length))
+      : 0;
+    const nextSequence = Number.isFinite(latestSequence) ? latestSequence + 1 : 1;
+
+    return `${prefix}${String(nextSequence).padStart(4, '0')}`;
   }
 
   /**

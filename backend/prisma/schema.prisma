@@ -1091,7 +1091,7 @@ model LeadSourceLog {
 
 model Lead {
   id                String          @id @default(uuid())
-  leadNumber        String?         @unique   // Auto-generated: LD-YYYY-0001
+  leadNumber        String?                   // Auto-generated: LD-YYYY-0001
   
   // Basic Info
   firstName         String
@@ -1245,6 +1245,7 @@ model Lead {
   @@index([serviceType])
   @@index([isInsuranceClaim])
   @@index([zipCode])
+  @@unique([tenantId, leadNumber])
 }
 
 model LeadContactedDetails {

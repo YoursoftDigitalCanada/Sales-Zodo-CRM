@@ -250,17 +250,6 @@ const navigationItems: NavigationItem[] = [
   //   ]
   // },
   {
-    title: "Documents",
-    icon: FileStack,
-    featureId: "files",
-    submenu: [
-      { title: "All Documents", path: "/documents", featureId: "files" },
-      { title: "Contracts", path: "javascript:void(0)", featureId: "files" },
-      { title: "Proposals", path: "javascript:void(0)", featureId: "files" },
-      { title: "Templates", path: "javascript:void(0)", featureId: "files" },
-    ]
-  },
-  {
     title: "AI Roof Estimator",
     icon: Zap,
     path: "/roof-estimator",
@@ -319,14 +308,6 @@ const navigationItems: NavigationItem[] = [
     badge: 7,
     badgeColor: "red",
   },
-  {
-    title: "Documents",
-    icon: FileText,
-    path: "/documents",
-    featureId: "files",
-    isNew: true,
-  },
-
   // ===== TEAM =====
   { title: "Team", isHeader: true },
   {

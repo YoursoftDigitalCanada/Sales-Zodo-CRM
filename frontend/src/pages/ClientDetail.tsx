@@ -14,6 +14,7 @@ import { getProjects } from "@/features/projects/services/projects-service";
 import { getFiles } from "@/features/files/services/files-service";
 import { getEmails } from "@/features/emails/services/emails-service";
 import { getInvoices } from "@/features/invoices/services/invoice-service";
+import { WhatsAppActionButton } from "@/features/whatsapp/components/WhatsAppActionButton";
 import { ActivityTimeline } from "@/components/ActivityTimeline";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -398,6 +399,11 @@ const ClientDetailPage = () => {
             <a href={`mailto:${client.primaryEmail}`} className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#E5E7EB] text-xs font-medium text-[#374151] hover:bg-[#F9FAFB] hover:border-[#D1D5DB] transition-all hover:scale-[1.02]">
               <Mail size={14} className="text-[#14B8A6]" />Email
             </a>
+            <WhatsAppActionButton
+              contactName={client.clientName}
+              phoneNumber={client.primaryPhone}
+              className="hidden sm:inline-flex h-auto px-3 py-2 hover:scale-[1.02]"
+            />
             <button onClick={() => setShowNoteForm(true)} className="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#E5E7EB] text-xs font-medium text-[#374151] hover:bg-[#F9FAFB] hover:border-[#D1D5DB] transition-all hover:scale-[1.02]">
               <StickyNote size={14} className="text-[#14B8A6]" />Add Note
             </button>

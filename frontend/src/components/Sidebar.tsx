@@ -397,6 +397,7 @@ const navigationItems: NavigationItem[] = [
       { title: "Billing", path: "/settings/billing" },
       { title: "Email Settings", path: "/settings/email" },
       { title: "Security", path: "/settings/security" },
+      { title: "Integrations", path: "/settings/integrations/whatsapp" },
     ]
   },
   {

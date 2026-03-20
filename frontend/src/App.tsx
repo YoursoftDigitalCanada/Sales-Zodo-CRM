@@ -83,6 +83,7 @@ import HelpCenterPage from "./pages/HelpCenter";
 
 // Integrations
 import IntegrationsPage from "./pages/integrations/IntegrationsPage";
+import WhatsAppIntegrationPage from "./pages/integrations/WhatsAppIntegrationPage";
 
 // Settings
 import SettingsPage from "./pages/settings/SettingsPage";
@@ -553,6 +554,8 @@ const AppRoutes = () => {
         <Route path="/settings/security" element={<SettingsPage />} />
         <Route path="/settings/notifications" element={<SettingsPage />} />
         <Route path="/settings/team" element={<SettingsPage />} />
+        <Route path="/settings/integrations" element={<WhatsAppIntegrationPage />} />
+        <Route path="/settings/integrations/whatsapp" element={<WhatsAppIntegrationPage />} />
         <Route path="/onboarding" element={<Onboarding />} />
 
         {/* ========== AI MODULES ========== */}

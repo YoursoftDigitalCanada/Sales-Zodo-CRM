@@ -19,6 +19,7 @@ import {
   Building2,
   CreditCard,
   Mail,
+  Plug,
   Shield,
   User,
   LogOut,
@@ -88,6 +89,12 @@ export const SettingsDropdown: React.FC<SettingsDropdownProps> = ({
       label: "Security",
       description: "Password and 2FA settings",
       path: "/settings?section=security",
+    },
+    {
+      icon: Plug,
+      label: "Integrations",
+      description: "WhatsApp Business and provider connections",
+      path: "/settings/integrations/whatsapp",
     },
   ];
 

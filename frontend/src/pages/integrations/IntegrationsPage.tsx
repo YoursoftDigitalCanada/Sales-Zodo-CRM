@@ -2,15 +2,17 @@
 
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 // import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useWhatsAppIntegration } from "@/features/whatsapp/use-whatsapp-integration";
 import {
     Search, Plus, ChevronDown, ChevronRight, ExternalLink,
     CheckCircle2, AlertTriangle, XCircle, X, Copy, Eye, EyeOff,
     RefreshCw, Trash2, Pause, Play, Settings, Plug, Webhook,
     Key, Clock, ArrowUpRight, MoreVertical, Zap, Shield,
-    Activity, BarChart3,
+    Activity, BarChart3, MessageSquare, PhoneCall,
 } from "lucide-react";
 import {
     integrations, categories, webhooks, apiKeys, syncEvents,
@@ -36,7 +38,7 @@ const tabs: { id: TabId; label: string; icon: React.ElementType }[] = [
 // ============================================
 
 export default function IntegrationsPage() {
-    
+    const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState("");
     const [activeTab, setActiveTab] = useState<TabId>("marketplace");
     const [activeCategory, setActiveCategory] = useState<IntegrationCategory>("All");
@@ -50,6 +52,7 @@ export default function IntegrationsPage() {
     const [showGenerateKey, setShowGenerateKey] = useState(false);
     const [newKeyName, setNewKeyName] = useState("");
     const { toast } = useToast();
+    const { access: whatsappAccess, connections: whatsappConnections, isConnected: isWhatsAppConnected, plan } = useWhatsAppIntegration();
 
     // ============================================
     // COMPUTED
@@ -69,6 +72,17 @@ export default function IntegrationsPage() {
         }
         return list;
     }, [localIntegrations, activeTab, activeCategory, searchQuery]);
+
+    const showWhatsAppCard = useMemo(() => {
+        const matchesTab = activeTab === "marketplace" || (activeTab === "connected" && isWhatsAppConnected);
+        const matchesCategory = activeCategory === "All" || activeCategory === "Communication";
+        const normalizedQuery = searchQuery.trim().toLowerCase();
+        const matchesSearch =
+            normalizedQuery.length === 0 ||
+            ["whatsapp", "meta", "twilio", "business chat"].some((term) => term.includes(normalizedQuery));
+
+        return matchesTab && matchesCategory && matchesSearch;
+    }, [activeTab, activeCategory, isWhatsAppConnected, searchQuery]);
 
     // ============================================
     // HANDLERS
@@ -295,6 +309,74 @@ export default function IntegrationsPage() {
 
                                 {/* Integration Cards Grid */}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {showWhatsAppCard && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            className="rounded-[24px] border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(135deg,#ECFDF5_0%,#FFFFFF_45%,#ECFEFF_100%)] p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+                                        >
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#DCFCE7]">
+                                                        <MessageSquare size={20} className="text-[#16A34A]" />
+                                                    </div>
+                                                    <div>
+                                                        <div className="flex items-center gap-2">
+                                                            <h4 className="font-semibold text-sm text-[#0F172A]">WhatsApp Business</h4>
+                                                            <span className="rounded bg-[#16A34A]/10 px-1.5 py-0.5 text-[9px] font-bold uppercase text-[#16A34A]">
+                                                                Featured
+                                                            </span>
+                                                        </div>
+                                                        <p className="mt-0.5 text-[11px] text-[#64748B]">
+                                                            Your own Meta or Twilio number inside CRM chat
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <span
+                                                    className={cn(
+                                                        "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
+                                                        isWhatsAppConnected
+                                                            ? "bg-[#16A34A]/10 text-[#16A34A]"
+                                                            : whatsappAccess.enabled
+                                                                ? "bg-[#0891B2]/10 text-[#0891B2]"
+                                                                : "bg-[#94A3B8]/10 text-[#94A3B8]"
+                                                    )}
+                                                >
+                                                    {isWhatsAppConnected ? "Connected" : whatsappAccess.enabled ? "Available" : "Plan locked"}
+                                                </span>
+                                            </div>
+
+                                            <p className="mt-4 text-xs leading-6 text-[#475569]">
+                                                Connect your own WhatsApp Business API, message leads and clients from CRM, and keep provider billing under your Meta or Twilio account.
+                                            </p>
+
+                                            <div className="mt-4 grid grid-cols-2 gap-3">
+                                                <div className="rounded-xl border border-[rgba(15,23,42,0.06)] bg-white/80 p-3">
+                                                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">Plan</p>
+                                                    <p className="mt-1 text-sm font-medium capitalize text-[#0F172A]">{plan}</p>
+                                                </div>
+                                                <div className="rounded-xl border border-[rgba(15,23,42,0.06)] bg-white/80 p-3">
+                                                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">Numbers</p>
+                                                    <p className="mt-1 text-sm font-medium text-[#0F172A]">
+                                                        {whatsappAccess.enabled ? `${whatsappConnections.length}/${whatsappAccess.maxNumbers}` : "0/0"}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-4 flex items-center gap-2 text-[11px] text-[#64748B]">
+                                                <PhoneCall size={12} className="text-[#16A34A]" />
+                                                <span>Meta + Twilio provider support</span>
+                                            </div>
+
+                                            <button
+                                                onClick={() => navigate("/integrations/whatsapp")}
+                                                className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#16A34A] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#15803D]"
+                                            >
+                                                {isWhatsAppConnected ? "Manage WhatsApp" : "Open WhatsApp"}
+                                                <ArrowUpRight size={14} />
+                                            </button>
+                                        </motion.div>
+                                    )}
                                     {filteredIntegrations.map((integration, index) => (
                                         <motion.div
                                             key={integration.id}
@@ -351,7 +433,7 @@ export default function IntegrationsPage() {
                                     ))}
                                 </div>
 
-                                {filteredIntegrations.length === 0 && (
+                                {filteredIntegrations.length === 0 && !showWhatsAppCard && (
                                     <div className="text-center py-12">
                                         <Plug size={40} className="text-[#94A3B8] mx-auto mb-3" />
                                         <p className="text-sm text-[#475569]">No integrations found</p>

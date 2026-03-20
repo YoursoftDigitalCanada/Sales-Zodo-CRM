@@ -556,6 +556,7 @@ const AppRoutes = () => {
         <Route path="/settings/team" element={<SettingsPage />} />
         <Route path="/settings/integrations" element={<WhatsAppIntegrationPage />} />
         <Route path="/settings/integrations/whatsapp" element={<WhatsAppIntegrationPage />} />
+        <Route path="/integrations/whatsapp" element={<WhatsAppIntegrationPage />} />
         <Route path="/onboarding" element={<Onboarding />} />
 
         {/* ========== AI MODULES ========== */}

@@ -132,15 +132,15 @@ const STAGE_META: Record<RoofingStageKey, RoofingStageMeta> = {
   },
 };
 
-const STAGE_MATCHERS: Array<{ test: RegExp; key: RoofingStageKey }> = [
-  { test: /invoice|billing|paid|payment/i, key: "invoiced" },
-  { test: /completed|closeout|closed/i, key: "completed" },
-  { test: /quality|final inspection|qc|final-check/i, key: "quality-check" },
-  { test: /production|install|materials delivered|in progress|roof install/i, key: "production" },
-  { test: /permit/i, key: "permit" },
-  { test: /insurance|claim|adjuster/i, key: "insurance" },
-  { test: /estimate|proposal|contract/i, key: "estimate" },
-  { test: /inspection|measure/i, key: "inspection" },
+const STAGE_MATCHERS: Array<{ pattern: RegExp; key: RoofingStageKey }> = [
+  { pattern: /invoice|billing|paid|payment/i, key: "invoiced" },
+  { pattern: /completed|closeout|closed/i, key: "completed" },
+  { pattern: /quality|final inspection|qc|final-check/i, key: "quality-check" },
+  { pattern: /production|install|materials delivered|in progress|roof install/i, key: "production" },
+  { pattern: /permit/i, key: "permit" },
+  { pattern: /insurance|claim|adjuster/i, key: "insurance" },
+  { pattern: /estimate|proposal|contract/i, key: "estimate" },
+  { pattern: /inspection|measure/i, key: "inspection" },
 ];
 
 export const ROOFING_STAGE_ORDER: RoofingStageKey[] = [
@@ -332,7 +332,7 @@ export function getRoofingStage(project: ProjectEntity): RoofingStageKey {
     .join(" ");
 
   for (const matcher of STAGE_MATCHERS) {
-    if (matcher.test(explicitStageText)) {
+    if (matcher.pattern.test(explicitStageText)) {
       return matcher.key;
     }
   }

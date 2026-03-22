@@ -12,6 +12,7 @@ import {
   createEagleViewOrder,
   getEagleViewReport,
   fetchEagleViewImage,
+  getEagleViewImagery,
   type RoofEstimate,
   type SaveEstimatePayload,
   type EagleViewOrderAddress,
@@ -381,19 +382,36 @@ export default function RoofEstimatorWizard() {
     up("placeId", placeId);
     setAddressSuggestions([]);
 
-    // 1. Fetch satellite image
+    // 1. Fetch geocode + Google satellite as baseline (we need lat/lng regardless)
     setSatelliteLoading(true);
-    let satLat = 0, satLng = 0, satUrl = "";
+    let satLat = 0, satLng = 0, googleSatUrl = "";
     try {
       const sat = await fetchSatelliteImage(desc, placeId);
-      satLat = sat.latitude; satLng = sat.longitude; satUrl = sat.satelliteImageUrl;
+      satLat = sat.latitude; satLng = sat.longitude; googleSatUrl = sat.satelliteImageUrl;
       up("latitude", satLat);
       up("longitude", satLng);
-      up("satelliteImageUrl", satUrl);
+      // Set Google satellite temporarily while EagleView loads
+      up("satelliteImageUrl", googleSatUrl);
     } catch {
       toast({ title: "Warning", description: "Could not load satellite image" });
     } finally { setSatelliteLoading(false); }
 
+    // 2. Try EagleView imagery API for the aerial image (replaces Google)
+    if (satLat && satLng) {
+      try {
+        setEagleViewLoading(true);
+        setEagleViewStatus("Loading EagleView aerial imagery…");
+        const evImagery = await getEagleViewImagery(satLat, satLng);
+        if (evImagery?.imageUrl) {
+          up("satelliteImageUrl", evImagery.imageUrl);
+          toast({ title: "📡 EagleView Imagery", description: "Aerial image loaded from EagleView" });
+        }
+      } catch {
+        // EagleView imagery not available — keep Google satellite
+      }
+    }
+
+    const satUrl = googleSatUrl; // for AI detection (uses the original URL)
     if (!satUrl) return;
 
     // 2. Run AI detection + EagleView in parallel

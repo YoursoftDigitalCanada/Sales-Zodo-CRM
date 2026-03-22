@@ -61,6 +61,7 @@ interface WizardData {
   latitude: number;
   longitude: number;
   satelliteImageUrl: string;
+  eagleViewReportUrl: string;
   roofAreaSqft: number;
   confidence: number;
   processingTimeSec: number;
@@ -115,7 +116,7 @@ interface WizardData {
 const DEFAULT_DATA: WizardData = {
   clientName: "", clientEmail: "", clientPhone: "", clientCompany: "",
   sourceType: "manual", leadId: "",
-  address: "", placeId: "", latitude: 0, longitude: 0, satelliteImageUrl: "",
+  address: "", placeId: "", latitude: 0, longitude: 0, satelliteImageUrl: "", eagleViewReportUrl: "",
   roofAreaSqft: 0, confidence: 0, processingTimeSec: 0, aiModel: "yolov8n-seg-cpu",
   pitch: "6/12", roofType: "gable", stories: 1, layers: 1, wastePercent: 10,
   measurementSource: "", tearOffRequired: false,
@@ -365,23 +366,20 @@ export default function RoofEstimatorWizard() {
     up("placeId", placeId);
     setAddressSuggestions([]);
 
-    // 1. Fetch geocode + Google satellite as baseline (we need lat/lng regardless)
+    // 1. Geocode for lat/lng (no Google satellite — EagleView handles imagery)
     setSatelliteLoading(true);
-    let satLat = 0, satLng = 0, googleSatUrl = "";
+    let satLat = 0, satLng = 0;
     try {
       const sat = await fetchSatelliteImage(desc, placeId);
-      satLat = sat.latitude; satLng = sat.longitude; googleSatUrl = sat.satelliteImageUrl;
+      satLat = sat.latitude; satLng = sat.longitude;
       up("latitude", satLat);
       up("longitude", satLng);
-      // Set Google satellite temporarily while EagleView loads
-      up("satelliteImageUrl", googleSatUrl);
+      // Don't set Google satellite image — we'll use EagleView report PDF
     } catch {
-      toast({ title: "Warning", description: "Could not load satellite image" });
+      toast({ title: "Warning", description: "Could not geocode address" });
     } finally { setSatelliteLoading(false); }
 
-    // NOTE: EagleView imagery API not available on sandbox — using Google satellite for image
-
-    if (!satLat && !googleSatUrl) return;
+    if (!satLat) return;
 
     // 2. EagleView Measurement Order (sole data source — AI detection disabled)
     setEagleViewLoading(true);
@@ -412,6 +410,12 @@ export default function RoofEstimatorWizard() {
           title: "📡 EagleView Data Loaded",
           description: `Area: ${report.area || "N/A"} | Pitch: ${report.pitch || "N/A"} | Facets: ${report.totalRoofFacets || "N/A"}`,
         });
+
+        // Store the EagleView report PDF link as the preview image
+        if (report.reportDownloadLink) {
+          up("eagleViewReportUrl", report.reportDownloadLink);
+          up("satelliteImageUrl", report.reportDownloadLink);
+        }
       } else {
         toast({ title: "EagleView", description: `Status: ${report.status} — data may still be processing` });
       }
@@ -748,12 +752,18 @@ export default function RoofEstimatorWizard() {
             height: 220, background: "#F1F5F9", display: "flex", alignItems: "center",
             justifyContent: "center", overflow: "hidden",
           }}>
-            {data.satelliteImageUrl ? (
+          {data.eagleViewReportUrl ? (
+              <iframe
+                src={data.eagleViewReportUrl}
+                title="EagleView Roof Report"
+                style={{ width: "100%", height: "100%", border: "none" }}
+              />
+            ) : data.satelliteImageUrl ? (
               <img src={data.satelliteImageUrl} alt="Satellite" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             ) : (
               <div style={{ textAlign: "center", color: "#94A3B8" }}>
                 <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                <div style={{ fontSize: 12, marginTop: 6 }}>Enter address to see satellite view</div>
+                <div style={{ fontSize: 12, marginTop: 6 }}>Enter address to load EagleView report</div>
               </div>
             )}
           </div>

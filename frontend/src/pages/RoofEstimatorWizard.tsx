@@ -396,20 +396,14 @@ export default function RoofEstimatorWizard() {
       toast({ title: "Warning", description: "Could not load satellite image" });
     } finally { setSatelliteLoading(false); }
 
-    // 2. Try EagleView imagery API for the aerial image (replaces Google)
-    if (satLat && satLng) {
-      try {
-        setEagleViewLoading(true);
-        setEagleViewStatus("Loading EagleView aerial imagery…");
-        const evImagery = await getEagleViewImagery(satLat, satLng);
-        if (evImagery?.imageUrl) {
-          up("satelliteImageUrl", evImagery.imageUrl);
-          toast({ title: "📡 EagleView Imagery", description: "Aerial image loaded from EagleView" });
-        }
-      } catch {
-        // EagleView imagery not available — keep Google satellite
-      }
-    }
+    // NOTE: EagleView imagery API disabled (returns 404 on sandbox)
+    // When switching to EagleView production, re-enable this:
+    // if (satLat && satLng) {
+    //   try {
+    //     const evImagery = await getEagleViewImagery(satLat, satLng);
+    //     if (evImagery?.imageUrl) up("satelliteImageUrl", evImagery.imageUrl);
+    //   } catch { /* keep Google satellite */ }
+    // }
 
     const satUrl = googleSatUrl;
     if (!satUrl && !satLat) return;

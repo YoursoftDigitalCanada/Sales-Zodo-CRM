@@ -35,8 +35,8 @@ export interface WizardStepMeta {
 }
 
 export const ALL_WIZARD_STEPS: WizardStepMeta[] = [
-  { id: "basic", title: "Basic", description: "Project identity" },
   { id: "clientSite", title: "Client & Site", description: "Client and location" },
+  { id: "basic", title: "Basic", description: "Project identity" },
   { id: "jobDetails", title: "Job Details", description: "Roof scope" },
   { id: "insurance", title: "Insurance", description: "Claim details" },
   { id: "financial", title: "Financial", description: "Budget and schedule" },
@@ -316,7 +316,7 @@ export function useProjectForm() {
   const { toast } = useToast();
 
   const [clientSearch, setClientSearch] = useState("");
-  const [currentStepId, setCurrentStepId] = useState<ProjectWizardStepId>("basic");
+  const [currentStepId, setCurrentStepId] = useState<ProjectWizardStepId>("clientSite");
   const [lastLocalSaveAt, setLastLocalSaveAt] = useState<Date | null>(null);
   const [lastRemoteSaveAt, setLastRemoteSaveAt] = useState<Date | null>(null);
 

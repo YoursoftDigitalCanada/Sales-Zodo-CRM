@@ -329,10 +329,45 @@ const Index = () => {
   const visibleAlerts = smartAlerts.filter((a) => !dismissedAlerts.includes(a.id));
   const stalledLeads = leads.filter((l) => l.status === "stalled");
   const hotLeads = leads.filter((l) => l.status === "hot");
+  const warmLeads = leads.filter((l) => l.status === "warm");
   const overdueInvoices = invoices.filter((i) => i.status === "overdue");
   const pendingInvoices = invoices.filter((i) => i.status === "pending");
   const totalOverdue = overdueInvoices.reduce((s, i) => s + i.amount, 0);
   const atRiskProjects = projects.filter((p) => p.status === "at-risk" || p.status === "delayed");
+  const hotPipelineValue = hotLeads.reduce((sum, lead) => sum + lead.value, 0);
+  const pendingInvoiceValue = pendingInvoices.reduce((sum, invoice) => sum + invoice.amount, 0);
+  const weightedWarmPipelineValue = Math.round(warmLeads.reduce((sum, lead) => sum + lead.value, 0) * 0.35);
+  const forecastValue = hotPipelineValue + pendingInvoiceValue + weightedWarmPipelineValue;
+  const hasForecastSignals = forecastValue > 0;
+  const hasBusinessData =
+    leads.length > 0 ||
+    invoices.length > 0 ||
+    projects.length > 0 ||
+    stats.pendingTasks > 0 ||
+    stats.clientsCount > 0 ||
+    stats.earnings > 0;
+  const pipelineHealthLabel = leads.length === 0 ? "No Pipeline Yet" : stalledLeads.length > 0 ? "Medium Risk" : "Healthy";
+  const pipelineHealthText =
+    leads.length === 0
+      ? "Add leads to start pipeline monitoring"
+      : `${stalledLeads.length} leads stalled >5 days`;
+  const forecastSupportText = hasForecastSignals
+    ? "Hot leads + pending invoices + weighted warm pipeline"
+    : hasBusinessData
+      ? "No closeable revenue signals yet"
+      : "Create leads or invoices to unlock forecasting";
+  const dailyAiSummary = !hasBusinessData
+    ? "Your workspace is fresh. Add leads, projects, or invoices to unlock AI forecasting, pipeline insights, and action summaries."
+    : [
+        overdueInvoices.length > 0 ? `${`$${totalOverdue.toLocaleString()}`} in overdue invoices.` : "",
+        stalledLeads.length > 0 ? `${stalledLeads.length} stalled lead${stalledLeads.length > 1 ? "s" : ""} need follow-up.` : "",
+        hotLeads.length > 0 ? `${hotLeads.length} hot lead${hotLeads.length > 1 ? "s" : ""} worth $${hotPipelineValue.toLocaleString()} are ready to close.` : "",
+        atRiskProjects.length > 0 ? `${atRiskProjects.length} project${atRiskProjects.length > 1 ? "s" : ""} need attention.` : "",
+        stats.pendingTasks > 0 ? `${stats.pendingTasks} task${stats.pendingTasks > 1 ? "s" : ""} pending.` : "All tasks on track.",
+        stats.projectsCount > 0 ? `${stats.projectsCount} active project${stats.projectsCount > 1 ? "s" : ""}.` : "",
+      ]
+        .filter(Boolean)
+        .join(" ");
 
   // ============================================
   // RENDER
@@ -507,13 +542,26 @@ const Index = () => {
             <div className={cn("grid divide-x divide-y md:divide-y-0 divide-[rgba(15,23,42,0.06)]", isMobile ? "grid-cols-3" : "grid-cols-2 md:grid-cols-3 lg:grid-cols-5")}>
               <div className="px-5 py-4">
                 <div className="flex items-center gap-1.5 mb-2"><Activity size={12} className="text-[#94A3B8]" /><span className="metric-label">Pipeline Health</span></div>
-                <div className="flex items-center gap-2 mb-1"><span className="text-lg font-bold text-[#0F172A] tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>{stalledLeads.length > 0 ? "Medium Risk" : "Healthy"}</span></div>
-                <p className="text-[11px] text-[#475569] leading-relaxed"><span className="text-[#FF7B36] font-medium">{stalledLeads.length} leads</span> stalled &gt;5 days</p>
+                <div className="flex items-center gap-2 mb-1"><span className="text-lg font-bold text-[#0F172A] tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>{pipelineHealthLabel}</span></div>
+                <p className="text-[11px] text-[#475569] leading-relaxed">
+                  {leads.length === 0 ? (
+                    pipelineHealthText
+                  ) : (
+                    <>
+                      <span className="text-[#FF7B36] font-medium">{stalledLeads.length} leads</span> stalled &gt;5 days
+                    </>
+                  )}
+                </p>
               </div>
               <div className="px-5 py-4">
                 <div className="flex items-center gap-1.5 mb-2"><TrendingUp size={12} className="text-[#94A3B8]" /><span className="metric-label">Revenue Forecast</span></div>
-                <div className="flex items-center gap-2 mb-1"><span className="text-lg font-bold text-[#0F172A] tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>+12%</span><span className="text-[11px] text-[#01C44A] font-medium">↑ trending</span></div>
-                <p className="text-[11px] text-[#475569]">vs previous period</p>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-lg font-bold text-[#0F172A] tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                    ${forecastValue.toLocaleString()}
+                  </span>
+                  {hasForecastSignals ? <span className="text-[11px] text-[#01C44A] font-medium">projected</span> : null}
+                </div>
+                <p className="text-[11px] text-[#475569]">{forecastSupportText}</p>
               </div>
               <div className="px-5 py-4">
                 <div className="flex items-center gap-1.5 mb-2"><DollarSign size={12} className="text-[#94A3B8]" /><span className="metric-label">Overdue Amount</span></div>
@@ -527,7 +575,7 @@ const Index = () => {
               </div>
               <div className="px-5 py-4">
                 <div className="flex items-center gap-1.5 mb-2"><Target size={12} className="text-[#94A3B8]" /><span className="metric-label">Hot Pipeline</span></div>
-                <div className="flex items-center gap-2 mb-1"><span className="text-lg font-bold text-[#01C44A] tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>${hotLeads.reduce((s, l) => s + l.value, 0).toLocaleString()}</span></div>
+                <div className="flex items-center gap-2 mb-1"><span className="text-lg font-bold text-[#01C44A] tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>${hotPipelineValue.toLocaleString()}</span></div>
                 <p className="text-[11px] text-[#475569]">{hotLeads.length} leads ready to close</p>
               </div>
             </div>
@@ -539,12 +587,7 @@ const Index = () => {
             <div className="bg-white rounded-2xl border border-[rgba(15,23,42,0.06)] px-5 py-3" style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.03)' }}>
               <p className="text-[12px] text-[#475569] leading-relaxed">
                 <span className="text-[#0F172A] font-medium">Today's overview:</span>{' '}
-                {overdueInvoices.length > 0 && <><span className="text-[#DC2626] font-medium">${totalOverdue.toLocaleString()}</span> in overdue invoices. </>}
-                {stalledLeads.length > 0 && <><span className="text-[#FF7B36] font-medium">{stalledLeads.length} stalled leads</span> need follow-up. </>}
-                {hotLeads.length > 0 && <><span className="text-[#01C44A] font-medium">{hotLeads.length} hot leads</span> worth ${hotLeads.reduce((s, l) => s + l.value, 0).toLocaleString()} are ready to close. </>}
-                {atRiskProjects.length > 0 && <><span className="text-[#FF7B36] font-medium">{atRiskProjects.length} project{atRiskProjects.length > 1 ? 's' : ''}</span> need attention. </>}
-                {stats.pendingTasks > 0 ? `${stats.pendingTasks} tasks pending.` : 'All tasks on track.'}
-                {stats.projectsCount > 0 ? ` ${stats.projectsCount} active projects.` : ''}
+                {dailyAiSummary}
               </p>
             </div>
           </div>

@@ -171,13 +171,6 @@ const navigationItems: NavigationItem[] = [
     featureId: "kanban",
   },
   {
-    title: "Time Tracking",
-    icon: Clock,
-    path: "/time-tracking",
-    featureId: "timeTracking",
-    isNew: true,
-  },
-  {
     title: "File Manager",
     icon: FileText,
     path: "/filemanager",

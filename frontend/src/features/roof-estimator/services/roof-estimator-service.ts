@@ -423,127 +423,37 @@ export async function updateEstimate(id: string, payload: Partial<SaveEstimatePa
     return res.data?.data;
 }
 
-// ── EagleView Property Data API v2 ───────────────────────────────────────
-
-export interface EagleViewOrderAddress {
-    addressLine1: string;
-    addressLine2?: string;
-    city: string;
-    state: string;
-    postalCode: string;
-    country?: string;
-}
-
-export interface EagleViewPlaceOrderResponse {
-    orderId: string;
-    reportIds: string[];
-}
+// ── EagleView Measurement Order API ──────────────────────────────────────
 
 export interface EagleViewReport {
-    reportId: string;
+    reportId: number;
     status: string;
     displayStatus?: string;
     street?: string;
     city?: string;
     state?: string;
     zip?: string;
-    area?: string;
-    pitch?: string;
-    totalRoofFacets?: string;
-    roofCondition?: string;
-    roofMaterial?: string;
-    imageReferences?: string[];
-    lengthRidge?: string;
+    latitude?: number;
+    longitude?: number;
+    area?: string;           // e.g. "1522.4 sq. ft"
+    pitch?: string;          // e.g. "6/12"
+    lengthRidge?: string;    // e.g. "46 ft"
     lengthValley?: string;
     lengthEave?: string;
     lengthRake?: string;
     lengthHip?: string;
-}
-
-export interface EagleViewPropertyResult {
-    requestId: string;
-    status: string;
-    address?: {
-        full_address?: string;
-        line1?: string;
-        locality?: string;
-        admin1?: string;
-        zip?: string;
-    };
-    coordinates?: { lat: number; lon: number };
-    roofData: {
-        area?: number;
-        pitch?: string;
-        facetCount?: number;
-        condition?: string;
-        material?: string;
-        complexity?: string;
-        stories?: number;
-        eaveHeight?: number;
-        footprintArea?: number;
-        imageReferences?: string[];
-    };
-    roofConditionMin?: { value: string; confidence: number };
-    roofConditionAvg?: { value: string; confidence: number };
-    imageTokens: string[];
-    structureCount: number;
-}
-
-export interface EagleViewHealth {
-    configured: boolean;
-    authenticated: boolean;
-    apiVersion: string;
-    baseUrl: string;
-    propertyApiBase: string;
-    environment: string;
+    totalRoofFacets?: string;
+    reportDownloadLink?: string;
 }
 
 /**
- * POST /eagleview/property/instant
- * Send a complete address string, server polls EagleView and returns roof data + images.
+ * POST /eagleview/orders/instant
+ * Send a full address string — server places order + polls for report.
+ * Returns complete measurement data (area, pitch, lengths, facets).
  */
-export async function requestPropertyInstant(completeAddress: string): Promise<EagleViewPropertyResult> {
-    const res = await api.post("/eagleview/property/instant", { address: completeAddress });
+export async function requestEagleViewInstant(fullAddress: string): Promise<EagleViewReport> {
+    const res = await api.post("/eagleview/orders/instant", { address: fullAddress });
     return res.data?.data;
-}
-
-/** Legacy: POST /eagleview/orders — maps to property request */
-export async function createEagleViewOrder(address: EagleViewOrderAddress, referenceId?: string): Promise<EagleViewPlaceOrderResponse> {
-    const res = await api.post("/eagleview/orders", { address, referenceId });
-    return res.data?.data;
-}
-
-/** Legacy: GET /eagleview/orders/:id — maps to property result */
-export async function getEagleViewReport(reportId: number | string): Promise<EagleViewReport> {
-    const res = await api.get(`/eagleview/orders/${reportId}`);
-    return res.data?.data;
-}
-
-export async function getEagleViewHealth(): Promise<EagleViewHealth> {
-    const res = await api.get("/eagleview/health");
-    return res.data?.data;
-}
-
-export async function getEagleViewImagery(lat: number, lng: number): Promise<{ imageUrl: string; captureDate?: string }> {
-    const res = await api.get("/eagleview/imagery", { params: { lat, lng } });
-    return res.data?.data;
-}
-
-/**
- * Fetch EagleView property image by token (via auth-protected proxy).
- * Returns a blob URL for img src.
- */
-export async function fetchEagleViewImage(imageToken: string | number): Promise<string | null> {
-    try {
-        // For new API: use property image endpoint
-        const res = await api.get(`/eagleview/property/0/image/${imageToken}`, { responseType: 'blob' });
-        if (res.data && res.data.size > 100) {
-            return URL.createObjectURL(res.data);
-        }
-        return null;
-    } catch {
-        return null;
-    }
 }
 
 export async function deleteEstimate(id: string): Promise<void> {

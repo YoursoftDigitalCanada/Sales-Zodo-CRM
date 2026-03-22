@@ -5,15 +5,13 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   autocompleteAddress,
   fetchSatelliteImage,
-  detectRoof,
   saveEstimate,
   updateEstimate,
   getEstimateById,
-  requestPropertyInstant,
-  fetchEagleViewImage,
+  requestEagleViewInstant,
   type RoofEstimate,
   type SaveEstimatePayload,
-  type EagleViewPropertyResult,
+  type EagleViewReport,
 } from "@/features/roof-estimator/services/roof-estimator-service";
 import { useToast } from "@/hooks/use-toast";
 import { generateEstimatePDF, downloadPDFBlob } from "@/features/roof-estimator/utils/generate-estimate-pdf";
@@ -235,7 +233,7 @@ export default function RoofEstimatorWizard() {
   // Step 2 specific
   const [addressSuggestions, setAddressSuggestions] = useState<{ description: string; placeId: string }[]>([]);
   const [addressLoading, setAddressLoading] = useState(false);
-  const [detecting, setDetecting] = useState(false);
+  // const [detecting, setDetecting] = useState(false); // AI detection disabled
   const [satelliteLoading, setSatelliteLoading] = useState(false);
   const [eagleViewLoading, setEagleViewLoading] = useState(false);
   const [eagleViewStatus, setEagleViewStatus] = useState<string>("");
@@ -360,20 +358,7 @@ export default function RoofEstimatorWizard() {
     finally { setAddressLoading(false); }
   }, [up]);
 
-  /* ── Parse address into EagleView parts ──── */
-  const parseAddressForEagleView = (addr: string): EagleViewOrderAddress | null => {
-    try {
-      const parts = addr.split(",").map(s => s.trim());
-      if (parts.length < 3) return null;
-      const addressLine1 = parts[0];
-      const city = parts[1];
-      const stateZip = parts[2].split(" ").filter(Boolean);
-      const state = stateZip[0] || "";
-      const postalCode = stateZip[1] || "";
-      const country = parts[3] || "CA";
-      return { addressLine1, city, state, postalCode, country };
-    } catch { return null; }
-  };
+  // parseAddressForEagleView removed — server handles address parsing
 
   const selectAddress = useCallback(async (desc: string, placeId: string) => {
     up("address", desc);
@@ -394,83 +379,51 @@ export default function RoofEstimatorWizard() {
       toast({ title: "Warning", description: "Could not load satellite image" });
     } finally { setSatelliteLoading(false); }
 
-    // NOTE: EagleView imagery API disabled on sandbox — using Google satellite for image
+    // NOTE: EagleView imagery API not available on sandbox — using Google satellite for image
 
     if (!satLat && !googleSatUrl) return;
 
-    // 2. EagleView Property Data API v2 (sole data source — AI detection disabled)
+    // 2. EagleView Measurement Order (sole data source — AI detection disabled)
     setEagleViewLoading(true);
-    setEagleViewStatus("Requesting EagleView property data…");
+    setEagleViewStatus("Requesting EagleView measurements…");
 
     try {
-      // Send full address string — server handles polling
-      const evResult = await requestPropertyInstant(desc);
+      // Send full address string — server handles address parsing + order + polling
+      const report = await requestEagleViewInstant(desc);
 
-      if (evResult.status === "Complete" || evResult.status === "Completed") {
-        const rd = evResult.roofData;
-
-        // Fill roof measurements
-        if (rd.area && rd.area > 0) up("roofAreaSqft", rd.area);
-        if (rd.pitch) up("pitch", rd.pitch.includes("/") ? rd.pitch : rd.pitch + "/12");
-        if (rd.facetCount) up("totalFacets" as any, rd.facetCount);
-        if (rd.stories) up("stories", rd.stories);
-        if (rd.condition) up("roofCondition" as any, rd.condition);
-        if (rd.material) up("roofMaterial" as any, rd.material);
+      if (report.status === "Completed" || report.area) {
+        // Parse area (e.g. "1522.4 sq. ft" → 1522.4)
+        if (report.area) {
+          const evArea = parseFloat(report.area);
+          if (evArea > 0) up("roofAreaSqft", evArea);
+        }
+        if (report.pitch) up("pitch", report.pitch.includes("/") ? report.pitch : report.pitch + "/12");
+        if (report.lengthRidge) up("ridgeLengthFt" as any, parseFloat(report.lengthRidge) || 0);
+        if (report.lengthValley) up("valleyLengthFt" as any, parseFloat(report.lengthValley) || 0);
+        if (report.lengthEave) up("eaveLengthFt" as any, parseFloat(report.lengthEave) || 0);
+        if (report.lengthRake) up("rakeLengthFt" as any, parseFloat(report.lengthRake) || 0);
+        if (report.lengthHip) up("hipLengthFt" as any, parseFloat(report.lengthHip) || 0);
+        if (report.totalRoofFacets) up("totalFacets" as any, parseInt(report.totalRoofFacets) || 0);
 
         up("measurementSource", "eagleview");
         up("confidence", 95);
 
         toast({
           title: "📡 EagleView Data Loaded",
-          description: `Area: ${rd.area || "N/A"} sq ft | Pitch: ${rd.pitch || "N/A"} | Facets: ${rd.facetCount || "N/A"}`,
+          description: `Area: ${report.area || "N/A"} | Pitch: ${report.pitch || "N/A"} | Facets: ${report.totalRoofFacets || "N/A"}`,
         });
-
-        // Try fetching EagleView property images
-        if (evResult.imageTokens?.length > 0) {
-          try {
-            setEagleViewStatus("Loading EagleView property image…");
-            const evImageUrl = await fetchEagleViewImage(evResult.imageTokens[0]);
-            if (evImageUrl) {
-              up("satelliteImageUrl", evImageUrl);
-              toast({ title: "📡 EagleView Image", description: "Property image loaded" });
-            }
-          } catch {
-            // Keep Google satellite as fallback
-          }
-        }
       } else {
-        toast({ title: "EagleView", description: `Status: ${evResult.status} — data may still be processing` });
+        toast({ title: "EagleView", description: `Status: ${report.status} — data may still be processing` });
       }
     } catch (err: any) {
-      toast({ title: "EagleView Error", description: err?.message || "Could not fetch property data", variant: "destructive" });
+      toast({ title: "EagleView Error", description: err?.message || "Could not fetch measurement data", variant: "destructive" });
     } finally {
       setEagleViewLoading(false);
       setEagleViewStatus("");
     }
   }, [up, toast]);
 
-  const runAiDetection = useCallback(async () => {
-    if (!data.satelliteImageUrl) {
-      toast({ title: "Error", description: "Load satellite image first", variant: "destructive" });
-      return;
-    }
-    setDetecting(true);
-    try {
-      const result = await detectRoof({
-        satelliteImageUrl: data.satelliteImageUrl,
-        latitude: data.latitude,
-        longitude: data.longitude,
-      });
-      up("roofAreaSqft", result.roofAreaSqft);
-      up("confidence", result.confidence);
-      up("processingTimeSec", result.processingTimeSec);
-      up("aiModel", result.aiModel);
-      up("measurementSource", "ai_satellite");
-      toast({ title: "Detection complete", description: `Found ${result.roofAreaSqft.toFixed(0)} sq ft with ${result.confidence.toFixed(0)}% confidence` });
-    } catch (e: any) {
-      toast({ title: "Detection failed", description: e?.message || "AI detection error", variant: "destructive" });
-    } finally { setDetecting(false); }
-  }, [data.satelliteImageUrl, data.latitude, data.longitude, up, toast]);
+  // runAiDetection removed — using EagleView only
 
   /* ── Save Draft / Create ──────────────────────── */
 
@@ -677,7 +630,7 @@ export default function RoofEstimatorWizard() {
       case 2: return <Step2Address data={data} up={up}
         suggestions={addressSuggestions} addressLoading={addressLoading}
         onAddressInput={handleAddressInput} onSelectAddress={selectAddress}
-        onDetect={runAiDetection} detecting={detecting} satelliteLoading={satelliteLoading}
+        satelliteLoading={satelliteLoading}
         eagleViewLoading={eagleViewLoading} eagleViewStatus={eagleViewStatus} />;
       case 3: return <Step3Materials data={data} up={up} total={totalMaterialCost}
         otherMaterials={data.otherMaterials}
@@ -1032,15 +985,13 @@ function Step1ClientInfo({ data, up, clients, leads, clientSearchQ, setClientSea
 
 /* ─── Step 2: Address & Roof Measurement ─────────────────── */
 
-function Step2Address({ data, up, suggestions, addressLoading, onAddressInput, onSelectAddress, onDetect, detecting, satelliteLoading, eagleViewLoading, eagleViewStatus }: {
+function Step2Address({ data, up, suggestions, addressLoading, onAddressInput, onSelectAddress, satelliteLoading, eagleViewLoading, eagleViewStatus }: {
   data: WizardData;
   up: <K extends keyof WizardData>(key: K, val: WizardData[K]) => void;
   suggestions: { description: string; placeId: string }[];
   addressLoading: boolean;
   onAddressInput: (val: string) => void;
   onSelectAddress: (desc: string, placeId: string) => void;
-  onDetect: () => void;
-  detecting: boolean;
   satelliteLoading: boolean;
   eagleViewLoading: boolean;
   eagleViewStatus: string;
@@ -1048,7 +999,7 @@ function Step2Address({ data, up, suggestions, addressLoading, onAddressInput, o
   return (
     <div>
       <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A", marginBottom: 4 }}>📍 Address & Roof Measurement</h2>
-      <p style={{ fontSize: 13, color: "#64748B", marginBottom: 20 }}>Enter the property address and detect the roof area using AI.</p>
+      <p style={{ fontSize: 13, color: "#64748B", marginBottom: 20 }}>Enter the property address — EagleView will provide roof measurements.</p>
 
       {/* Address input with autocomplete */}
       <Field label="Property Address">
@@ -1083,7 +1034,7 @@ function Step2Address({ data, up, suggestions, addressLoading, onAddressInput, o
       </Field>
 
       {/* Status indicators */}
-      {(detecting || satelliteLoading || eagleViewLoading) && (
+      {(satelliteLoading || eagleViewLoading) && (
         <div style={{
           display: "flex", alignItems: "center", gap: 10, padding: "12px 16px",
           background: "rgba(102,55,244,.06)", borderRadius: 10, marginBottom: 16,
@@ -1091,22 +1042,9 @@ function Step2Address({ data, up, suggestions, addressLoading, onAddressInput, o
         }}>
           <div style={{ width: 16, height: 16, border: "2px solid #CBD5E1", borderTopColor: "#6637F4", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
           <div style={{ fontSize: 13, color: "#6637F4", fontWeight: 500 }}>
-            {satelliteLoading ? "Loading satellite image…" : detecting ? "AI detecting roof…" : eagleViewStatus || "Loading EagleView data…"}
+            {satelliteLoading ? "Loading satellite image…" : eagleViewStatus || "Loading EagleView data…"}
           </div>
         </div>
-      )}
-
-      {/* Manual re-detect button (only show if satellite loaded but no area yet and not auto-detecting) */}
-      {data.satelliteImageUrl && !data.roofAreaSqft && !detecting && !satelliteLoading && (
-        <button onClick={onDetect} disabled={detecting} style={{
-          padding: "10px 20px", borderRadius: 8, border: "none",
-          background: "linear-gradient(135deg,#6637F4,#5429D9)", color: "#fff",
-          fontSize: 13, fontWeight: 700, cursor: "pointer", marginBottom: 20,
-          display: "flex", alignItems: "center", gap: 8,
-        }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
-          Re-run AI Detection
-        </button>
       )}
 
       {/* Measurement source badge */}

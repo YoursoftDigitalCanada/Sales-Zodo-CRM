@@ -1,14 +1,17 @@
 /**
- * EagleView Measurement Orders Service
+ * EagleView Property Data API v2 Service
  *
- * Built from the official EagleView Measurement Order API Swagger spec.
+ * Uses the new Property Data API v2:
+ *   POST /property/v2/request          — request property data (address or coords)
+ *   GET  /property/v2/result/{id}      — get results (poll until complete)
+ *   GET  /property/v2/image/{token}    — download property image (PNG)
  *
- * Endpoints used:
- *   POST /v2/Order/PlaceOrder          — create order
- *   GET  /v3/Report/GetReport          — get report status + measurements
- *   POST /v3/Report/GetReports         — list reports (paginated)
- *   GET  /v1/File/GetReportFile        — download report file
- *   GET  /v2/Product/GetAvailableProducts — list available products
+ * Base URL:
+ *   Sandbox:    https://sandbox.apis.eagleview.com
+ *   Production: https://apis.eagleview.com
+ *
+ * Sandbox test area: Omaha, NE bounding box
+ *   -96.00532698173473, 41.24140396772262, -95.97589954958912, 41.25672882015283
  */
 
 import axios from 'axios';
@@ -16,63 +19,62 @@ import { config } from '../../config';
 import { logger } from '../../common/utils/logger';
 import { eagleViewAuthService } from './eagleview-auth.service';
 
-const BASE_URL = config.integrations.eagleview.baseUrl;
+// Use the new apis.eagleview.com base URL (not apicenter)
+const PROPERTY_API_BASE = config.integrations.eagleview.baseUrl.includes('sandbox')
+    ? 'https://sandbox.apis.eagleview.com'
+    : 'https://apis.eagleview.com';
 
 // ── Types ────────────────────────────────────────────────────────────────
 
-export interface MeasurementAddress {
-    addressLine1: string;
-    addressLine2?: string;
-    city: string;
-    state: string;
-    postalCode: string;
-    country?: string;
-    latitude?: number;
-    longitude?: number;
+export interface PropertyDataRequest {
+    completeAddress: string;      // e.g. "694 East 6th Street, Sheridan, Wyoming 82801, United States"
+    callbackUrl?: string;
 }
 
-export interface PlaceOrderRequest {
-    address: MeasurementAddress;
-    primaryProductId?: number;       // default 2 (PremiumRoof)
-    deliveryProductId?: number;      // default 7 (PDF)
-    measurementInstructionType?: number; // default 1
-    changesInLast4Years?: boolean;
-    referenceId?: string;            // CRM lead/estimate ID
-    claimNumber?: string;
-    comments?: string;
-}
-
-export interface PlaceOrderResponse {
-    orderId: number;
-    reportIds: number[];
-}
-
-export interface ReportData {
-    reportId: number;
+export interface PropertyRequestResponse {
+    requestId: string;
     status: string;
-    displayStatus?: string;
-    street?: string;
-    city?: string;
-    state?: string;
-    zip?: string;
-    latitude?: number;
-    longitude?: number;
-    datePlaced?: string;
-    dateCompleted?: string | null;
-    referenceId?: string;
-    area?: string;
-    pitch?: string;
-    lengthRidge?: string;
-    lengthValley?: string;
-    lengthEave?: string;
-    lengthRake?: string;
-    lengthHip?: string;
-    totalRoofFacets?: string;
-    productPrimary?: string;
-    productDelivery?: string;
-    reportDownloadLink?: string;
-    eligibleForUpgrade?: boolean;
-    canCancelReport?: boolean;
+    href: string;
+}
+
+export interface RoofFacet {
+    area?: { value: number; unit: string; confidence: number };
+    pitch?: { value: string; unit: string; confidence: number };
+    condition?: { value: string; unit: string; confidence: number };
+}
+
+export interface StructureData {
+    structure_roof_area?: { value: number; unit: string; confidence: number };
+    structure_roof_condition_rating?: { value: string; unit: string; confidence: number };
+    structure_predominant_roof_pitch?: { value: string; unit: string; confidence: number };
+    structure_roof_material?: { value: string; unit: string; confidence: number };
+    structure_roof_facet_count?: { value: number; unit: string; confidence: number };
+    structure_roof_complexity?: { value: string; unit: string; confidence: number };
+    structure_stories_count?: { value: number; unit: string; confidence: number };
+    structure_eave_height?: { value: number; unit: string; confidence: number };
+    structure_type?: { value: string; unit: string; confidence: number };
+    structure_footprint_area?: { value: number; unit: string; confidence: number };
+    facets?: RoofFacet[];
+    image_references?: string[];
+}
+
+export interface PropertyDataResult {
+    requestId: string;
+    status: string;
+    address?: {
+        full_address?: string;
+        line1?: string;
+        locality?: string;
+        admin1?: string;
+        zip?: string;
+        country?: string;
+    };
+    coordinates?: { lat: number; lon: number };
+    structures?: StructureData[];
+    imagery?: Record<string, any>;
+    propertyImages?: { image_references: string[] };
+    roofConditionMin?: { value: string; confidence: number };
+    roofConditionAvg?: { value: string; confidence: number };
     rawData?: any;
 }
 
@@ -102,181 +104,126 @@ class EagleViewMeasurementService {
     }
 
     /**
-     * POST /v2/Order/PlaceOrder
+     * POST /property/v2/request
      *
-     * Required body fields:
-     *   OrderReports.ReportAddresses  { Address, City, State, Zip, AddressType }
-     *   OrderReports.PrimaryProductId
-     *   OrderReports.DeliveryProductId
-     *   OrderReports.MeasurementInstructionType
-     *   OrderReports.ChangesInLast4Years
+     * Submit a property data request with a complete address.
+     * Returns a requestId to poll for results.
      */
-    async placeOrder(payload: PlaceOrderRequest): Promise<PlaceOrderResponse> {
-        logger.info('[EagleView] Placing order', {
-            address: payload.address.addressLine1,
-            city: payload.address.city,
-        });
+    async requestPropertyData(completeAddress: string, callbackUrl?: string): Promise<PropertyRequestResponse> {
+        logger.info('[EagleView] Requesting property data', { address: completeAddress });
 
         return this.requestWithRetry(async () => {
             const headers = await this.getHeaders();
 
-            const body = {
-                OrderReports: {
-                    ReportAddresses: {
-                        Address: payload.address.addressLine1,
-                        City: payload.address.city,
-                        State: payload.address.state,
-                        Zip: payload.address.postalCode,
-                        Country: payload.address.country || 'US',
-                        AddressType: 0,
-                        ...(payload.address.latitude && { Latitude: payload.address.latitude }),
-                        ...(payload.address.longitude && { Longitude: payload.address.longitude }),
-                    },
-                    PrimaryProductId: payload.primaryProductId || 2,
-                    DeliveryProductId: payload.deliveryProductId || 7,
-                    MeasurementInstructionType: payload.measurementInstructionType || 1,
-                    ChangesInLast4Years: payload.changesInLast4Years ?? false,
-                    ...(payload.referenceId && { ReferenceId: payload.referenceId }),
-                    ...(payload.claimNumber && { ClaimNumber: payload.claimNumber }),
-                    ...(payload.comments && { Comments: payload.comments }),
+            const body: any = {
+                address: {
+                    completeAddress,
                 },
             };
+            if (callbackUrl) {
+                body.callbackUrl = callbackUrl;
+            }
 
             const response = await axios.post(
-                `${BASE_URL}/v2/Order/PlaceOrder`,
+                `${PROPERTY_API_BASE}/property/v2/request`,
                 body,
                 { headers, timeout: 30_000 },
             );
 
             const data = response.data;
+            const req = data.request || data;
 
-            logger.info('[EagleView] Order placed successfully', {
-                orderId: data.OrderId,
-                reportIds: data.ReportIds,
+            logger.info('[EagleView] Property data request accepted', {
+                requestId: req.id,
+                status: req.status,
             });
 
             return {
-                orderId: data.OrderId,
-                reportIds: data.ReportIds || [],
+                requestId: req.id,
+                status: req.status || 'In Progress',
+                href: req.href || `/property/v2/result/${req.id}`,
             };
         });
     }
 
     /**
-     * GET /v3/Report/GetReport?reportId=...
+     * GET /property/v2/result/{requestId}
      *
-     * Returns full report data including measurements.
+     * Retrieve results. Returns 202 if still processing, 200 if complete.
      */
-    async getReport(reportId: number): Promise<ReportData> {
-        logger.info('[EagleView] Fetching report', { reportId });
+    async getPropertyResult(requestId: string): Promise<PropertyDataResult> {
+        logger.info('[EagleView] Fetching property result', { requestId });
 
         return this.requestWithRetry(async () => {
             const headers = await this.getHeaders();
 
             const response = await axios.get(
-                `${BASE_URL}/v3/Report/GetReport`,
-                { headers, params: { reportId }, timeout: 15_000 },
+                `${PROPERTY_API_BASE}/property/v2/result/${requestId}`,
+                { headers, timeout: 30_000 },
             );
 
             const d = response.data;
 
+            // Parse structures
+            const structures: StructureData[] = [];
+            if (Array.isArray(d.structures)) {
+                for (const s of d.structures) {
+                    structures.push({
+                        structure_roof_area: s.structure_roof_area,
+                        structure_roof_condition_rating: s.structure_roof_condition_rating,
+                        structure_predominant_roof_pitch: s.structure_predominant_roof_pitch,
+                        structure_roof_material: s.structure_roof_material,
+                        structure_roof_facet_count: s.structure_roof_facet_count,
+                        structure_roof_complexity: s.structure_roof_complexity,
+                        structure_stories_count: s.structure_stories_count,
+                        structure_eave_height: s.structure_eave_height,
+                        structure_type: s.structure_type,
+                        structure_footprint_area: s.structure_footprint_area,
+                        facets: s.facets,
+                        image_references: s.image_references || [],
+                    });
+                }
+            }
+
             return {
-                reportId: d.ReportId || reportId,
-                status: d.Status || d.DisplayStatus || 'unknown',
-                displayStatus: d.DisplayStatus,
-                street: d.Street,
-                city: d.City,
-                state: d.State,
-                zip: d.Zip,
-                latitude: d.Latitude,
-                longitude: d.Longitude,
-                datePlaced: d.DatePlaced,
-                dateCompleted: d.DateCompleted,
-                referenceId: d.ReferenceId,
-                area: d.Area,
-                pitch: d.Pitch,
-                lengthRidge: d.LengthRidge,
-                lengthValley: d.LengthValley,
-                lengthEave: d.LengthEave,
-                lengthRake: d.LengthRake,
-                lengthHip: d.LengthHip,
-                totalRoofFacets: d.TotalRoofFacets,
-                productPrimary: d.ProductPrimary,
-                productDelivery: d.ProductDelivery,
-                reportDownloadLink: d.ReportDownloadLink,
-                eligibleForUpgrade: d.EligibleForUpgrade,
-                canCancelReport: d.CanCancelReport,
+                requestId: d.request?.id || requestId,
+                status: d.request?.status || (response.status === 202 ? 'In Progress' : 'Complete'),
+                address: d.response_address ? {
+                    full_address: d.response_address.full_address,
+                    line1: d.response_address.line1,
+                    locality: d.response_address.locality,
+                    admin1: d.response_address.admin1,
+                    zip: d.response_address.zip,
+                    country: d.response_address.country,
+                } : undefined,
+                coordinates: d.response_coordinates ? {
+                    lat: d.response_coordinates.lat,
+                    lon: d.response_coordinates.lon,
+                } : undefined,
+                structures,
+                imagery: d.imagery,
+                propertyImages: d.property_images,
+                roofConditionMin: d.property_roof_condition_rating_minimum,
+                roofConditionAvg: d.property_roof_condition_rating_average,
                 rawData: d,
             };
         });
     }
 
     /**
-     * POST /v3/Report/GetReports?page=&count=
+     * GET /property/v2/image/{imageToken}
      *
-     * List reports with optional filters.
+     * Download a property image (PNG) by its token.
      */
-    async getReports(page = 1, count = 20, filters?: {
-        productsToFilterBy?: number[];
-        statusesToFilterBy?: string;
-        referenceId?: string;
-    }): Promise<{ reports: ReportData[]; total: number }> {
-        return this.requestWithRetry(async () => {
-            const headers = await this.getHeaders();
-
-            const body = {
-                productsToFiterBy: filters?.productsToFilterBy || [],
-                ...(filters?.statusesToFilterBy && { statusesToFilterBy: filters.statusesToFilterBy }),
-                ...(filters?.referenceId && { referenceId: filters.referenceId }),
-            };
-
-            const response = await axios.post(
-                `${BASE_URL}/v3/Report/GetReports`,
-                body,
-                { headers, params: { page, count }, timeout: 15_000 },
-            );
-
-            const data = response.data;
-            const list = data?.ReportList || [];
-
-            return {
-                reports: (Array.isArray(list) ? list : [list]).map((r: any) => ({
-                    reportId: r.Id || r.ReportId,
-                    status: r.ReportStatus?.Status || r.ReportStatus?.DisplayStatus || 'unknown',
-                    displayStatus: r.ReportStatus?.DisplayStatus,
-                    street: r.Street1,
-                    city: r.City,
-                    state: r.State,
-                    zip: r.Zip,
-                    latitude: r.Latitude,
-                    longitude: r.Longitude,
-                    datePlaced: r.DatePlaced,
-                    dateCompleted: r.DateCompleted,
-                    referenceId: r.ReferenceId,
-                    reportDownloadLink: r.ReportDownloadLink,
-                    canCancelReport: r.CanCancelReport,
-                })),
-                total: data?.TotalOfReports || 0,
-            };
-        });
-    }
-
-    /**
-     * GET /v1/File/GetReportFile?reportId=&fileType=&fileFormat=
-     *
-     * fileType: 1=PDF, etc.
-     * fileFormat: 1=PDF, etc.
-     */
-    async getReportFile(reportId: number, fileType = 1, fileFormat = 1): Promise<Buffer> {
-        logger.info('[EagleView] Downloading report file', { reportId, fileType, fileFormat });
+    async getPropertyImage(imageToken: string): Promise<Buffer> {
+        logger.info('[EagleView] Downloading property image', { imageToken });
 
         const token = await eagleViewAuthService.getToken();
 
         const response = await axios.get(
-            `${BASE_URL}/v1/File/GetReportFile`,
+            `${PROPERTY_API_BASE}/property/v2/image/${imageToken}`,
             {
                 headers: { Authorization: `Bearer ${token}` },
-                params: { reportId, fileType, fileFormat },
                 responseType: 'arraybuffer',
                 timeout: 60_000,
             },
@@ -286,19 +233,62 @@ class EagleViewMeasurementService {
     }
 
     /**
-     * GET /v2/Product/GetAvailableProducts
+     * Convenience: request + poll until complete (max retries)
      */
+    async requestAndWait(
+        completeAddress: string,
+        maxRetries = 10,
+        pollIntervalMs = 3000,
+    ): Promise<PropertyDataResult> {
+        const req = await this.requestPropertyData(completeAddress);
+
+        for (let i = 0; i < maxRetries; i++) {
+            await new Promise(r => setTimeout(r, pollIntervalMs));
+
+            const result = await this.getPropertyResult(req.requestId);
+            if (result.status === 'Complete' || result.status === 'Completed') {
+                return result;
+            }
+
+            logger.info('[EagleView] Still processing', {
+                requestId: req.requestId,
+                attempt: i + 1,
+                status: result.status,
+            });
+        }
+
+        // Return whatever we have after max retries
+        return this.getPropertyResult(req.requestId);
+    }
+
+    // ── Legacy compatibility (kept for old endpoints) ────────────────────
+
+    async placeOrder(payload: any): Promise<any> {
+        const addr = payload.address;
+        const completeAddress = [
+            addr.addressLine1,
+            addr.city,
+            `${addr.state} ${addr.postalCode}`,
+            addr.country || 'US',
+        ].filter(Boolean).join(', ');
+
+        return this.requestPropertyData(completeAddress);
+    }
+
+    async getReport(reportId: number | string): Promise<any> {
+        return this.getPropertyResult(String(reportId));
+    }
+
+    async getReportFile(reportId: number | string, fileType = 1, fileFormat = 1): Promise<Buffer> {
+        return this.getPropertyImage(String(reportId));
+    }
+
     async getAvailableProducts(): Promise<any[]> {
-        return this.requestWithRetry(async () => {
-            const headers = await this.getHeaders();
+        return [];
+    }
 
-            const response = await axios.get(
-                `${BASE_URL}/GetAvailableProducts`,
-                { headers, timeout: 15_000 },
-            );
-
-            return Array.isArray(response.data) ? response.data : [];
-        });
+    async getReports(page?: number, count?: number, filters?: any): Promise<any> {
+        return { reports: [], total: 0 };
     }
 }
 

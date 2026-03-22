@@ -423,7 +423,7 @@ export async function updateEstimate(id: string, payload: Partial<SaveEstimatePa
     return res.data?.data;
 }
 
-// ── EagleView Integration ────────────────────────────────────────────────
+// ── EagleView Property Data API v2 ───────────────────────────────────────
 
 export interface EagleViewOrderAddress {
     addressLine1: string;
@@ -435,47 +435,86 @@ export interface EagleViewOrderAddress {
 }
 
 export interface EagleViewPlaceOrderResponse {
-    orderId: number;
-    reportIds: number[];
+    orderId: string;
+    reportIds: string[];
 }
 
 export interface EagleViewReport {
-    reportId: number;
+    reportId: string;
     status: string;
     displayStatus?: string;
     street?: string;
     city?: string;
     state?: string;
     zip?: string;
-    datePlaced?: string;
-    dateCompleted?: string | null;
-    referenceId?: string;
     area?: string;
     pitch?: string;
+    totalRoofFacets?: string;
+    roofCondition?: string;
+    roofMaterial?: string;
+    imageReferences?: string[];
     lengthRidge?: string;
     lengthValley?: string;
     lengthEave?: string;
     lengthRake?: string;
     lengthHip?: string;
-    totalRoofFacets?: string;
-    productPrimary?: string;
-    reportDownloadLink?: string;
-    eligibleForUpgrade?: boolean;
+}
+
+export interface EagleViewPropertyResult {
+    requestId: string;
+    status: string;
+    address?: {
+        full_address?: string;
+        line1?: string;
+        locality?: string;
+        admin1?: string;
+        zip?: string;
+    };
+    coordinates?: { lat: number; lon: number };
+    roofData: {
+        area?: number;
+        pitch?: string;
+        facetCount?: number;
+        condition?: string;
+        material?: string;
+        complexity?: string;
+        stories?: number;
+        eaveHeight?: number;
+        footprintArea?: number;
+        imageReferences?: string[];
+    };
+    roofConditionMin?: { value: string; confidence: number };
+    roofConditionAvg?: { value: string; confidence: number };
+    imageTokens: string[];
+    structureCount: number;
 }
 
 export interface EagleViewHealth {
     configured: boolean;
     authenticated: boolean;
+    apiVersion: string;
     baseUrl: string;
+    propertyApiBase: string;
     environment: string;
 }
 
+/**
+ * POST /eagleview/property/instant
+ * Send a complete address string, server polls EagleView and returns roof data + images.
+ */
+export async function requestPropertyInstant(completeAddress: string): Promise<EagleViewPropertyResult> {
+    const res = await api.post("/eagleview/property/instant", { address: completeAddress });
+    return res.data?.data;
+}
+
+/** Legacy: POST /eagleview/orders — maps to property request */
 export async function createEagleViewOrder(address: EagleViewOrderAddress, referenceId?: string): Promise<EagleViewPlaceOrderResponse> {
     const res = await api.post("/eagleview/orders", { address, referenceId });
     return res.data?.data;
 }
 
-export async function getEagleViewReport(reportId: number): Promise<EagleViewReport> {
+/** Legacy: GET /eagleview/orders/:id — maps to property result */
+export async function getEagleViewReport(reportId: number | string): Promise<EagleViewReport> {
     const res = await api.get(`/eagleview/orders/${reportId}`);
     return res.data?.data;
 }
@@ -491,12 +530,13 @@ export async function getEagleViewImagery(lat: number, lng: number): Promise<{ i
 }
 
 /**
- * Fetch EagleView aerial image for a report (via auth-protected proxy).
- * Returns a blob URL that can be used as an img src.
+ * Fetch EagleView property image by token (via auth-protected proxy).
+ * Returns a blob URL for img src.
  */
-export async function fetchEagleViewImage(reportId: number): Promise<string | null> {
+export async function fetchEagleViewImage(imageToken: string | number): Promise<string | null> {
     try {
-        const res = await api.get(`/eagleview/orders/${reportId}/image`, { responseType: 'blob' });
+        // For new API: use property image endpoint
+        const res = await api.get(`/eagleview/property/0/image/${imageToken}`, { responseType: 'blob' });
         if (res.data && res.data.size > 100) {
             return URL.createObjectURL(res.data);
         }

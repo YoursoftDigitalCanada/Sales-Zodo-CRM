@@ -1,8 +1,16 @@
 /**
- * EagleView Controller
+ * EagleView Controller — Property Data API v2
  *
- * Handles HTTP requests for EagleView integration.
- * Based on official EagleView Measurement Order API Swagger spec.
+ * Protected endpoints:
+ *   POST   /eagleview/property           - Request property data
+ *   GET    /eagleview/property/:id       - Get property data result
+ *   GET    /eagleview/property/:id/image/:token - Get property image
+ *   POST   /eagleview/property/instant   - Request + wait for result
+ *
+ * Legacy endpoints (still wired for backward compat):
+ *   POST   /eagleview/orders             - Places order (maps to property request)
+ *   GET    /eagleview/orders/:orderId    - Gets report (maps to property result)
+ *   GET    /eagleview/health             - Health check
  */
 
 import { Request, Response, NextFunction } from 'express';
@@ -11,72 +19,60 @@ import { sendSuccess } from '../../common/utils/responseFormatter';
 import { config } from '../../config';
 import { eagleViewAuthService } from './eagleview-auth.service';
 import { eagleViewMeasurementService } from './eagleview-measurement.service';
-import { eagleViewImageryService } from './eagleview-imagery.service';
-import { prisma } from '../../config/database';
 
 class EagleViewController {
 
-    // ── Measurement Orders ───────────────────────────────────────────────
+    // ── Property Data API v2 ─────────────────────────────────────────────
 
     /**
-     * POST /eagleview/orders
-     * Place a new measurement order via EagleView PlaceOrder API.
+     * POST /eagleview/property
+     * Request property data with a complete address string.
      */
-    async createOrder(req: Request, res: Response, next: NextFunction): Promise<void> {
+    async requestProperty(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const { address, referenceId, primaryProductId, deliveryProductId } = req.body;
+            const { address, callbackUrl } = req.body;
 
-            if (!address || !address.addressLine1 || !address.city || !address.state || !address.postalCode) {
+            if (!address) {
                 res.status(400).json({
                     success: false,
-                    message: 'Missing required address fields: addressLine1, city, state, postalCode',
+                    message: 'Missing required field: address (complete address string)',
                 });
                 return;
             }
 
-            const order = await eagleViewMeasurementService.placeOrder({
-                address,
-                referenceId,
-                primaryProductId: primaryProductId || 2,
-                deliveryProductId: deliveryProductId || 7,
-            });
+            const completeAddress = typeof address === 'string'
+                ? address
+                : address.completeAddress || address.addressLine1 || '';
 
-            sendSuccess(res, order, 'Measurement order placed');
-        } catch (error) {
-            next(error);
-        }
-    }
-
-    /**
-     * GET /eagleview/orders/:reportId
-     * Get report status and measurement data.
-     */
-    async getOrder(req: Request, res: Response, next: NextFunction): Promise<void> {
-        try {
-            const reportId = parseInt(req.params.orderId, 10);
-
-            if (isNaN(reportId)) {
-                res.status(400).json({ success: false, message: 'reportId must be a number' });
+            if (!completeAddress) {
+                res.status(400).json({
+                    success: false,
+                    message: 'Address cannot be empty',
+                });
                 return;
             }
 
-            const report = await eagleViewMeasurementService.getReport(reportId);
-            sendSuccess(res, report);
+            const result = await eagleViewMeasurementService.requestPropertyData(completeAddress, callbackUrl);
+            sendSuccess(res, result, 'Property data request accepted');
         } catch (error) {
             next(error);
         }
     }
 
     /**
-     * GET /eagleview/orders
-     * List reports (paginated).
+     * GET /eagleview/property/:requestId
+     * Get property data result by request ID.
      */
-    async listOrders(req: Request, res: Response, next: NextFunction): Promise<void> {
+    async getPropertyResult(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const page = parseInt(req.query.page as string, 10) || 1;
-            const count = parseInt(req.query.count as string, 10) || 20;
+            const { requestId } = req.params;
 
-            const result = await eagleViewMeasurementService.getReports(page, count);
+            if (!requestId) {
+                res.status(400).json({ success: false, message: 'requestId is required' });
+                return;
+            }
+
+            const result = await eagleViewMeasurementService.getPropertyResult(requestId);
             sendSuccess(res, result);
         } catch (error) {
             next(error);
@@ -84,70 +80,22 @@ class EagleViewController {
     }
 
     /**
-     * GET /eagleview/orders/:reportId/report
-     * Download the completed report PDF file.
+     * GET /eagleview/property/:requestId/image/:imageToken
+     * Download a property image (PNG).
      */
-    async downloadReport(req: Request, res: Response, next: NextFunction): Promise<void> {
+    async getPropertyImage(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const reportId = parseInt(req.params.orderId, 10);
+            const { imageToken } = req.params;
 
-            if (isNaN(reportId)) {
-                res.status(400).json({ success: false, message: 'reportId must be a number' });
+            if (!imageToken) {
+                res.status(400).json({ success: false, message: 'imageToken is required' });
                 return;
             }
 
-            const reportBuffer = await eagleViewMeasurementService.getReportFile(reportId, 1, 1);
+            const imageBuffer = await eagleViewMeasurementService.getPropertyImage(imageToken);
 
             res.set({
-                'Content-Type': 'application/pdf',
-                'Content-Disposition': `attachment; filename="eagleview-report-${reportId}.pdf"`,
-                'Content-Length': reportBuffer.length.toString(),
-            });
-            res.send(reportBuffer);
-        } catch (error) {
-            next(error);
-        }
-    }
-
-    /**
-     * GET /eagleview/orders/:reportId/image
-     * Proxy the EagleView aerial top-down image for a completed report.
-     * Tries fileType=2 (top-down image), falls back to fileType=3 (ortho).
-     */
-    async getReportImage(req: Request, res: Response, next: NextFunction): Promise<void> {
-        try {
-            const reportId = parseInt(req.params.orderId, 10);
-
-            if (isNaN(reportId)) {
-                res.status(400).json({ success: false, message: 'reportId must be a number' });
-                return;
-            }
-
-            let imageBuffer: Buffer | null = null;
-
-            // Try fileType=2 (top-down aerial image)
-            try {
-                imageBuffer = await eagleViewMeasurementService.getReportFile(reportId, 2, 1);
-            } catch {
-                logger.info('[EagleView] fileType=2 not available, trying fileType=3');
-            }
-
-            // Fallback: fileType=3 (ortho image)
-            if (!imageBuffer || imageBuffer.length < 100) {
-                try {
-                    imageBuffer = await eagleViewMeasurementService.getReportFile(reportId, 3, 1);
-                } catch {
-                    logger.info('[EagleView] fileType=3 not available either');
-                }
-            }
-
-            if (!imageBuffer || imageBuffer.length < 100) {
-                res.status(404).json({ success: false, message: 'No aerial image available for this report' });
-                return;
-            }
-
-            res.set({
-                'Content-Type': 'image/jpeg',
+                'Content-Type': 'image/png',
                 'Content-Length': imageBuffer.length.toString(),
                 'Cache-Control': 'public, max-age=86400',
             });
@@ -157,26 +105,171 @@ class EagleViewController {
         }
     }
 
-    // ── Imagery ──────────────────────────────────────────────────────────
-
     /**
-     * GET /eagleview/imagery?lat=...&lng=...
+     * POST /eagleview/property/instant
+     * Request property data and wait for it to complete (polls internally).
+     * Good for the wizard flow where we want to show results immediately.
      */
-    async getPropertyImagery(req: Request, res: Response, next: NextFunction): Promise<void> {
+    async requestPropertyInstant(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const lat = parseFloat(req.query.lat as string);
-            const lng = parseFloat(req.query.lng as string);
+            const { address } = req.body;
 
-            if (isNaN(lat) || isNaN(lng)) {
-                res.status(400).json({ success: false, message: 'lat and lng query params required' });
+            const completeAddress = typeof address === 'string'
+                ? address
+                : address?.completeAddress || address?.addressLine1 || '';
+
+            if (!completeAddress) {
+                res.status(400).json({
+                    success: false,
+                    message: 'Missing required field: address',
+                });
                 return;
             }
 
-            const imagery = await eagleViewImageryService.getPropertyImagery(lat, lng);
-            sendSuccess(res, imagery);
+            // Request and poll (max 10 tries, 3s apart = max 30s)
+            const result = await eagleViewMeasurementService.requestAndWait(completeAddress, 10, 3000);
+
+            // Extract useful roof data from structures
+            const roofData: any = {};
+            if (result.structures && result.structures.length > 0) {
+                const s = result.structures[0];
+                if (s.structure_roof_area?.value) roofData.area = s.structure_roof_area.value;
+                if (s.structure_predominant_roof_pitch?.value) roofData.pitch = s.structure_predominant_roof_pitch.value;
+                if (s.structure_roof_facet_count?.value) roofData.facetCount = s.structure_roof_facet_count.value;
+                if (s.structure_roof_condition_rating?.value) roofData.condition = s.structure_roof_condition_rating.value;
+                if (s.structure_roof_material?.value) roofData.material = s.structure_roof_material.value;
+                if (s.structure_roof_complexity?.value) roofData.complexity = s.structure_roof_complexity.value;
+                if (s.structure_stories_count?.value) roofData.stories = s.structure_stories_count.value;
+                if (s.structure_eave_height?.value) roofData.eaveHeight = s.structure_eave_height.value;
+                if (s.structure_footprint_area?.value) roofData.footprintArea = s.structure_footprint_area.value;
+                roofData.imageReferences = s.image_references || [];
+            }
+
+            // Collect all image tokens
+            const allImageTokens: string[] = [];
+            if (result.propertyImages?.image_references) {
+                allImageTokens.push(...result.propertyImages.image_references);
+            }
+            if (result.imagery) {
+                for (const key of Object.keys(result.imagery)) {
+                    const img = result.imagery[key];
+                    if (img?.image_id) allImageTokens.push(img.image_id);
+                    if (img?.image_reference) allImageTokens.push(img.image_reference);
+                }
+            }
+
+            sendSuccess(res, {
+                requestId: result.requestId,
+                status: result.status,
+                address: result.address,
+                coordinates: result.coordinates,
+                roofData,
+                roofConditionMin: result.roofConditionMin,
+                roofConditionAvg: result.roofConditionAvg,
+                imageTokens: allImageTokens,
+                structureCount: result.structures?.length || 0,
+            }, 'Property data retrieved');
         } catch (error) {
             next(error);
         }
+    }
+
+    // ── Legacy endpoints (backward compat) ───────────────────────────────
+
+    async createOrder(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const { address, referenceId } = req.body;
+            if (!address) {
+                res.status(400).json({ success: false, message: 'Missing address' });
+                return;
+            }
+            const completeAddress = typeof address === 'string'
+                ? address
+                : [address.addressLine1, address.city, `${address.state} ${address.postalCode}`, address.country || 'US']
+                    .filter(Boolean).join(', ');
+
+            const result = await eagleViewMeasurementService.requestPropertyData(completeAddress);
+            // Map to legacy format
+            sendSuccess(res, {
+                orderId: result.requestId,
+                reportIds: [result.requestId],
+            }, 'Property data request placed');
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async getOrder(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const requestId = req.params.orderId;
+            if (!requestId) {
+                res.status(400).json({ success: false, message: 'requestId is required' });
+                return;
+            }
+
+            const result = await eagleViewMeasurementService.getPropertyResult(requestId);
+
+            // Map to legacy report format
+            const roofData = result.structures?.[0];
+            sendSuccess(res, {
+                reportId: result.requestId,
+                status: result.status,
+                displayStatus: result.status,
+                street: result.address?.line1,
+                city: result.address?.locality,
+                state: result.address?.admin1,
+                zip: result.address?.zip,
+                latitude: result.coordinates?.lat,
+                longitude: result.coordinates?.lon,
+                area: roofData?.structure_roof_area?.value
+                    ? `${roofData.structure_roof_area.value} sq. ft`
+                    : undefined,
+                pitch: roofData?.structure_predominant_roof_pitch?.value,
+                totalRoofFacets: roofData?.structure_roof_facet_count?.value?.toString(),
+                roofCondition: roofData?.structure_roof_condition_rating?.value,
+                roofMaterial: roofData?.structure_roof_material?.value,
+                imageReferences: roofData?.image_references || [],
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async listOrders(req: Request, res: Response, next: NextFunction): Promise<void> {
+        sendSuccess(res, { reports: [], total: 0 });
+    }
+
+    async downloadReport(req: Request, res: Response, next: NextFunction): Promise<void> {
+        res.status(404).json({ success: false, message: 'Use /eagleview/property/:id/image/:token for images' });
+    }
+
+    async getReportImage(req: Request, res: Response, next: NextFunction): Promise<void> {
+        // Try to use image token from the request
+        const imageToken = req.query.imageToken as string || req.params.orderId;
+        if (!imageToken) {
+            res.status(400).json({ success: false, message: 'imageToken required' });
+            return;
+        }
+        try {
+            const imageBuffer = await eagleViewMeasurementService.getPropertyImage(imageToken);
+            res.set({
+                'Content-Type': 'image/png',
+                'Content-Length': imageBuffer.length.toString(),
+                'Cache-Control': 'public, max-age=86400',
+            });
+            res.send(imageBuffer);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // ── Imagery (disabled — not available in Property Data API) ───────────
+
+    async getPropertyImagery(req: Request, res: Response, next: NextFunction): Promise<void> {
+        res.status(404).json({
+            success: false,
+            message: 'Imagery endpoint not available. Use POST /eagleview/property/instant to get property data with images.',
+        });
     }
 
     // ── Health ────────────────────────────────────────────────────────────
@@ -199,7 +292,11 @@ class EagleViewController {
             data: {
                 configured,
                 authenticated: tokenOk,
+                apiVersion: 'Property Data API v2',
                 baseUrl: config.integrations.eagleview.baseUrl,
+                propertyApiBase: config.integrations.eagleview.baseUrl.includes('sandbox')
+                    ? 'https://sandbox.apis.eagleview.com'
+                    : 'https://apis.eagleview.com',
                 environment: config.integrations.eagleview.baseUrl.includes('sandbox')
                     ? 'sandbox'
                     : 'production',
@@ -208,84 +305,15 @@ class EagleViewController {
     }
 
     // ── Webhooks ─────────────────────────────────────────────────────────
-    // EagleView sends webhooks as GET /OrderStatusUpdate?StatusId=&SubStatusId=&RefId=&ReportId=
 
-    /**
-     * Handles both:
-     *   GET  /webhooks/eagleview/OrderStatusUpdate — order status changes
-     *   POST /webhooks/eagleview/FileDelivery      — file delivery
-     */
     async handleWebhook(req: Request, res: Response): Promise<void> {
-        const { StatusId, SubStatusId, RefId, ReportId } = req.query as Record<string, string>;
-
         logger.info('[EagleView] Webhook received', {
-            statusId: StatusId,
-            subStatusId: SubStatusId,
-            refId: RefId,
-            reportId: ReportId,
             method: req.method,
             path: req.path,
+            body: req.body,
+            query: req.query,
         });
-
-        try {
-            // If this is a status update and we have a RefId, attach report to lead
-            if (ReportId && RefId) {
-                const reportId = parseInt(ReportId, 10);
-
-                if (!isNaN(reportId)) {
-                    try {
-                        const report = await eagleViewMeasurementService.getReport(reportId);
-                        await this.attachReportToLead(RefId, report);
-                    } catch (err: any) {
-                        logger.warn('[EagleView] Could not fetch report for webhook', { reportId, err: err.message });
-                    }
-                }
-            }
-
-            res.status(200).json({ received: true });
-        } catch (error: any) {
-            logger.error('[EagleView] Webhook processing failed', { error: error.message });
-            res.status(200).json({ received: true, processingError: true });
-        }
-    }
-
-    /**
-     * Attach a completed EagleView report to a lead record.
-     */
-    private async attachReportToLead(leadId: string, report: any): Promise<void> {
-        try {
-            const lead = await prisma.lead.findUnique({
-                where: { id: leadId },
-                select: { id: true, notes: true, tenantId: true },
-            });
-
-            if (!lead) {
-                logger.warn('[EagleView] Lead not found for report attachment', { leadId });
-                return;
-            }
-
-            const existingNotes = lead.notes || '';
-            const reportNote = [
-                '\n\n--- EagleView Report ---',
-                `Report ID: ${report.reportId}`,
-                `Status: ${report.status}`,
-                `Area: ${report.area || 'N/A'} sq ft`,
-                `Pitch: ${report.pitch || 'N/A'}`,
-                `Facets: ${report.totalRoofFacets || 'N/A'}`,
-                `Completed: ${report.dateCompleted || 'pending'}`,
-                report.reportDownloadLink ? `Download: ${report.reportDownloadLink}` : '',
-                '--- End EagleView Report ---',
-            ].join('\n');
-
-            await prisma.lead.update({
-                where: { id: leadId },
-                data: { notes: existingNotes + reportNote },
-            });
-
-            logger.info('[EagleView] Report attached to lead', { leadId, reportId: report.reportId });
-        } catch (err) {
-            logger.error('[EagleView] Failed to attach report to lead', { leadId, err });
-        }
+        res.status(200).json({ received: true });
     }
 }
 

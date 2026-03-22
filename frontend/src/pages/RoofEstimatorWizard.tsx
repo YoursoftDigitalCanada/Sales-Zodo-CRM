@@ -9,13 +9,11 @@ import {
   saveEstimate,
   updateEstimate,
   getEstimateById,
-  createEagleViewOrder,
-  getEagleViewReport,
+  requestPropertyInstant,
   fetchEagleViewImage,
-  getEagleViewImagery,
   type RoofEstimate,
   type SaveEstimatePayload,
-  type EagleViewOrderAddress,
+  type EagleViewPropertyResult,
 } from "@/features/roof-estimator/services/roof-estimator-service";
 import { useToast } from "@/hooks/use-toast";
 import { generateEstimatePDF, downloadPDFBlob } from "@/features/roof-estimator/utils/generate-estimate-pdf";
@@ -396,80 +394,55 @@ export default function RoofEstimatorWizard() {
       toast({ title: "Warning", description: "Could not load satellite image" });
     } finally { setSatelliteLoading(false); }
 
-    // NOTE: EagleView imagery API disabled (returns 404 on sandbox)
-    // When switching to EagleView production, re-enable this:
-    // if (satLat && satLng) {
-    //   try {
-    //     const evImagery = await getEagleViewImagery(satLat, satLng);
-    //     if (evImagery?.imageUrl) up("satelliteImageUrl", evImagery.imageUrl);
-    //   } catch { /* keep Google satellite */ }
-    // }
+    // NOTE: EagleView imagery API disabled on sandbox — using Google satellite for image
 
-    const satUrl = googleSatUrl;
-    if (!satUrl && !satLat) return;
+    if (!satLat && !googleSatUrl) return;
 
-    // 3. EagleView measurement order (sole data source — AI detection disabled)
+    // 2. EagleView Property Data API v2 (sole data source — AI detection disabled)
     setEagleViewLoading(true);
-    setEagleViewStatus("Fetching EagleView measurements…");
-
-    // NOTE: AI detection commented out — using EagleView only
-    // const aiPromise = detectRoof({ satelliteImageUrl: satUrl, latitude: satLat, longitude: satLng })
-    //   .then((result) => { ... })
+    setEagleViewStatus("Requesting EagleView property data…");
 
     try {
-      const evAddr = parseAddressForEagleView(desc);
-      if (!evAddr || !evAddr.postalCode) {
-        setEagleViewStatus("");
-        setEagleViewLoading(false);
-        toast({ title: "EagleView", description: "Could not parse address for EagleView", variant: "destructive" });
-        return;
-      }
-      const order = await createEagleViewOrder(evAddr, `wizard-${Date.now()}`);
-      if (order.reportIds?.[0]) {
-        setEagleViewStatus("EagleView order placed, checking report…");
-        // Poll for report (max 5 tries, 3s apart)
-        for (let i = 0; i < 5; i++) {
-          await new Promise(r => setTimeout(r, 3000));
+      // Send full address string — server handles polling
+      const evResult = await requestPropertyInstant(desc);
+
+      if (evResult.status === "Complete" || evResult.status === "Completed") {
+        const rd = evResult.roofData;
+
+        // Fill roof measurements
+        if (rd.area && rd.area > 0) up("roofAreaSqft", rd.area);
+        if (rd.pitch) up("pitch", rd.pitch.includes("/") ? rd.pitch : rd.pitch + "/12");
+        if (rd.facetCount) up("totalFacets" as any, rd.facetCount);
+        if (rd.stories) up("stories", rd.stories);
+        if (rd.condition) up("roofCondition" as any, rd.condition);
+        if (rd.material) up("roofMaterial" as any, rd.material);
+
+        up("measurementSource", "eagleview");
+        up("confidence", 95);
+
+        toast({
+          title: "📡 EagleView Data Loaded",
+          description: `Area: ${rd.area || "N/A"} sq ft | Pitch: ${rd.pitch || "N/A"} | Facets: ${rd.facetCount || "N/A"}`,
+        });
+
+        // Try fetching EagleView property images
+        if (evResult.imageTokens?.length > 0) {
           try {
-            const report = await getEagleViewReport(order.reportIds[0]);
-            if (report.area) {
-              const evArea = parseFloat(report.area);
-              if (evArea > 0) up("roofAreaSqft", evArea);
+            setEagleViewStatus("Loading EagleView property image…");
+            const evImageUrl = await fetchEagleViewImage(evResult.imageTokens[0]);
+            if (evImageUrl) {
+              up("satelliteImageUrl", evImageUrl);
+              toast({ title: "📡 EagleView Image", description: "Property image loaded" });
             }
-            if (report.pitch) up("pitch", report.pitch.includes("/") ? report.pitch : report.pitch + "/12");
-            if (report.lengthRidge) up("ridgeLengthFt" as any, parseFloat(report.lengthRidge) || 0);
-            if (report.lengthValley) up("valleyLengthFt" as any, parseFloat(report.lengthValley) || 0);
-            if (report.lengthEave) up("eaveLengthFt" as any, parseFloat(report.lengthEave) || 0);
-            if (report.lengthRake) up("rakeLengthFt" as any, parseFloat(report.lengthRake) || 0);
-            if (report.lengthHip) up("hipLengthFt" as any, parseFloat(report.lengthHip) || 0);
-            if (report.totalRoofFacets) up("totalFacets" as any, parseInt(report.totalRoofFacets) || 0);
-            if (report.status === "Completed" || report.area) {
-              up("measurementSource", "eagleview");
-              up("confidence", 95);
-              toast({ title: "📡 EagleView Data Loaded", description: `Roof area: ${report.area || "N/A"} sq ft | Pitch: ${report.pitch || "N/A"}` });
-
-              // Fetch EagleView aerial image from report
-              try {
-                setEagleViewStatus("Loading EagleView aerial image…");
-                const evImageUrl = await fetchEagleViewImage(order.reportIds[0]);
-                if (evImageUrl) {
-                  up("satelliteImageUrl", evImageUrl);
-                  toast({ title: "📡 EagleView Image", description: "Aerial image loaded from EagleView report" });
-                }
-              } catch {
-                // Keep existing image as fallback
-              }
-
-              break;
-            }
-            setEagleViewStatus(`Polling EagleView report… (${i + 1}/5)`);
-          } catch { /* continue polling */ }
+          } catch {
+            // Keep Google satellite as fallback
+          }
         }
       } else {
-        toast({ title: "EagleView", description: "Order placed but no report ID returned" });
+        toast({ title: "EagleView", description: `Status: ${evResult.status} — data may still be processing` });
       }
     } catch (err: any) {
-      toast({ title: "EagleView Error", description: err?.message || "Could not fetch EagleView data", variant: "destructive" });
+      toast({ title: "EagleView Error", description: err?.message || "Could not fetch property data", variant: "destructive" });
     } finally {
       setEagleViewLoading(false);
       setEagleViewStatus("");

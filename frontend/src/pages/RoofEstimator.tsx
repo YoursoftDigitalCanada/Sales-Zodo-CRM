@@ -264,11 +264,11 @@ export default function RoofEstimator() {
         <StatCard label="Avg Confidence" value={stats ? fmtPct(stats.avgConfidence) : "—"} icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>} />
         {/* Wallet Balance */}
         <div style={{
-          background: "linear-gradient(135deg,#6637F4,#5429D9)", borderRadius: 14, padding: "20px 22px", flex: "1 1 200px",
+          background: "linear-gradient(135deg,#6637F4,#5429D9)", borderRadius: 14, padding: "20px 22px", flex: "1 1 280px", minWidth: 280,
           boxShadow: "0 2px 12px rgba(102,55,244,.2)", display: "flex", alignItems: "center", gap: 16,
-          position: "relative", overflow: "hidden",
+          position: "relative",
         }}>
-          <div style={{ position: "absolute", top: -20, right: -20, width: 80, height: 80, borderRadius: "50%", background: "rgba(255,255,255,.08)" }} />
+          <div style={{ position: "absolute", top: -20, right: -20, width: 80, height: 80, borderRadius: "50%", background: "rgba(255,255,255,.08)", pointerEvents: "none" }} />
           <div style={{
             width: 44, height: 44, borderRadius: 12, display: "flex", alignItems: "center",
             justifyContent: "center", background: "rgba(255,255,255,.2)",
@@ -276,7 +276,7 @@ export default function RoofEstimator() {
           }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 10H2"/><path d="M6 14h.01"/></svg>
           </div>
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 22, fontWeight: 700, color: "#fff", lineHeight: 1.2 }}>
               {wallet ? fmt(wallet.balance) : "—"}
             </div>
@@ -285,7 +285,7 @@ export default function RoofEstimator() {
           <button onClick={() => setShowAddFunds(true)} style={{
             padding: "7px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,.3)",
             background: "rgba(255,255,255,.15)", color: "#fff", fontSize: 12, fontWeight: 600,
-            cursor: "pointer", backdropFilter: "blur(4px)", transition: "all .15s",
+            cursor: "pointer", backdropFilter: "blur(4px)", transition: "all .15s", whiteSpace: "nowrap", flexShrink: 0,
           }}
           onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,.25)")}
           onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,.15)")}

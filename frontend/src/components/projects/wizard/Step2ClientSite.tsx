@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ProjectWizardFormValues } from "@/lib/validations/project.schema";
+import { ProjectWizardFormValues, CANADIAN_PROVINCES } from "@/lib/validations/project.schema";
 
 interface ClientOption {
   id: string;
@@ -60,6 +60,19 @@ export function Step2ClientSite({
   const selectedClientId = watch("clientId");
 
   const selectedClient = clientOptions.find((client) => client.id === selectedClientId) || null;
+
+  /* Auto-fill address when an existing client is selected */
+  const handleClientChange = (id: string) => {
+    setValue("clientId", id, { shouldValidate: true });
+    const client = clientOptions.find((c) => c.id === id);
+    if (client && (client.address || client.city || client.state || client.zip)) {
+      setValue("sameAsClientAddress", true, { shouldValidate: true });
+      setValue("jobSiteAddress", client.address || "", { shouldDirty: true });
+      setValue("jobSiteCity", client.city || "", { shouldDirty: true });
+      setValue("jobSiteState", client.state || "", { shouldDirty: true });
+      setValue("jobSiteZip", client.zip || "", { shouldDirty: true });
+    }
+  };
 
   const addressParts = [
     watch("jobSiteAddress"),
@@ -108,7 +121,7 @@ export function Step2ClientSite({
                 />
               </div>
 
-              <Select value={selectedClientId || ""} onValueChange={(value) => setValue("clientId", value, { shouldValidate: true })}>
+              <Select value={selectedClientId || ""} onValueChange={handleClientChange}>
                 <SelectTrigger>
                   <SelectValue placeholder={isClientsLoading ? "Loading clients..." : "Select client"} />
                 </SelectTrigger>
@@ -195,13 +208,28 @@ export function Step2ClientSite({
                 <FieldError message={errors.jobSiteCity?.message} />
               </div>
               <div>
-                <Label>State *</Label>
-                <Input {...register("jobSiteState")} placeholder="State" disabled={watch("sameAsClientAddress")} />
+                <Label>Province *</Label>
+                <Select
+                  value={watch("jobSiteState") || ""}
+                  onValueChange={(value) => setValue("jobSiteState", value, { shouldValidate: true })}
+                  disabled={watch("sameAsClientAddress")}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select province" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CANADIAN_PROVINCES.map((prov) => (
+                      <SelectItem key={prov.value} value={prov.value}>
+                        {prov.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FieldError message={errors.jobSiteState?.message} />
               </div>
               <div>
-                <Label>ZIP *</Label>
-                <Input {...register("jobSiteZip")} placeholder="ZIP" disabled={watch("sameAsClientAddress")} />
+                <Label>Postal Code *</Label>
+                <Input {...register("jobSiteZip")} placeholder="V3V 2Z0" disabled={watch("sameAsClientAddress")} />
                 <FieldError message={errors.jobSiteZip?.message} />
               </div>
             </div>

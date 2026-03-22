@@ -14,6 +14,22 @@ export const PROJECT_TYPE_OPTIONS = [
   { value: "OTHER", label: "Other" },
 ] as const;
 
+export const CANADIAN_PROVINCES = [
+  { value: "AB", label: "Alberta" },
+  { value: "BC", label: "British Columbia" },
+  { value: "MB", label: "Manitoba" },
+  { value: "NB", label: "New Brunswick" },
+  { value: "NL", label: "Newfoundland and Labrador" },
+  { value: "NS", label: "Nova Scotia" },
+  { value: "NT", label: "Northwest Territories" },
+  { value: "NU", label: "Nunavut" },
+  { value: "ON", label: "Ontario" },
+  { value: "PE", label: "Prince Edward Island" },
+  { value: "QC", label: "Quebec" },
+  { value: "SK", label: "Saskatchewan" },
+  { value: "YT", label: "Yukon" },
+] as const;
+
 export const PROPERTY_TYPE_OPTIONS = [
   { value: "RESIDENTIAL", label: "Residential" },
   { value: "COMMERCIAL", label: "Commercial" },
@@ -350,10 +366,13 @@ export const projectWizardSchema = z
         ctx.addIssue({ path: ["jobSiteCity"], code: z.ZodIssueCode.custom, message: "City is required" });
       }
       if (!values.jobSiteState) {
-        ctx.addIssue({ path: ["jobSiteState"], code: z.ZodIssueCode.custom, message: "State is required" });
+        ctx.addIssue({ path: ["jobSiteState"], code: z.ZodIssueCode.custom, message: "Province is required" });
       }
       if (!values.jobSiteZip) {
-        ctx.addIssue({ path: ["jobSiteZip"], code: z.ZodIssueCode.custom, message: "Zip is required" });
+        ctx.addIssue({ path: ["jobSiteZip"], code: z.ZodIssueCode.custom, message: "Postal code is required" });
+      }
+      if (values.jobSiteZip && !/^[A-Za-z]\d[A-Za-z]\s?\d[A-Za-z]\d$/i.test(values.jobSiteZip.trim())) {
+        ctx.addIssue({ path: ["jobSiteZip"], code: z.ZodIssueCode.custom, message: "Enter a valid Canadian postal code (e.g. V3V 2Z0)" });
       }
     }
 

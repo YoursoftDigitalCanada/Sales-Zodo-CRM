@@ -74,6 +74,9 @@ import eagleViewRoutes from '../modules/eagleview/eagleview.routes';
 import { eagleViewWebhookRouter } from '../modules/eagleview/eagleview.routes';
 import constructionEstimatorRoutes from '../modules/construction-estimator/construction-estimator.routes';
 
+// Wallet module
+import walletRoutes from '../modules/wallet/wallet.routes';
+
 // Timeline module
 import timelineRoutes from '../modules/timeline/timeline.routes';
 
@@ -202,6 +205,9 @@ export function registerRoutes(app: Application): void {
   protectedRouter.use('/eagleview', eagleViewRoutes);
   protectedRouter.use('/construction-estimator', constructionEstimatorRoutes);
 
+  // Wallet
+  protectedRouter.use('/wallet', walletRoutes);
+
   // Timeline
   protectedRouter.use('/timeline', timelineRoutes);
 
@@ -287,6 +293,7 @@ export function registerRoutes(app: Application): void {
         proposals: `${apiPrefix}/proposals`,
         supportTickets: `${apiPrefix}/support-tickets`,
         tickets: `${apiPrefix}/tickets`,
+        wallet: `${apiPrefix}/wallet`,
       },
     });
   });

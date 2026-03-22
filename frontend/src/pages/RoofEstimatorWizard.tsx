@@ -179,9 +179,9 @@ function StepIndicator({ current }: { current: number }) {
               <div style={{
                 width: 38, height: 38, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
                 fontWeight: 700, fontSize: 14,
-                background: done ? "#10B981" : active ? "linear-gradient(135deg,#0891B2,#0E7490)" : "#F1F5F9",
+                background: done ? "#10B981" : active ? "linear-gradient(135deg,#6637F4,#5429D9)" : "#F1F5F9",
                 color: done || active ? "#fff" : "#94A3B8",
-                boxShadow: active ? "0 2px 12px rgba(8,145,178,.3)" : "none",
+                boxShadow: active ? "0 2px 12px rgba(102,55,244,.3)" : "none",
                 transition: "all .3s ease",
               }}>
                 {done ? (
@@ -190,7 +190,7 @@ function StepIndicator({ current }: { current: number }) {
               </div>
               <span style={{
                 fontSize: 10, fontWeight: 600,
-                color: active ? "#0891B2" : done ? "#10B981" : "#94A3B8",
+                color: active ? "#6637F4" : done ? "#10B981" : "#94A3B8",
               }}>{s.label}</span>
             </div>
             {i < STEPS.length - 1 && (
@@ -714,7 +714,7 @@ export default function RoofEstimatorWizard() {
               </div>
               <div style={{
                 display: "flex", justifyContent: "space-between", fontSize: 14,
-                fontWeight: 700, color: "#0891B2", paddingTop: 8, borderTop: "1px solid #E2E8F0",
+                fontWeight: 700, color: "#6637F4", paddingTop: 8, borderTop: "1px solid #E2E8F0",
               }}>
                 <span>Final Price</span>
                 <span>{fmt(finalPrice)}</span>
@@ -758,10 +758,10 @@ export default function RoofEstimatorWizard() {
               {step < 7 ? (
                 <button onClick={goNext} style={{
                   padding: "10px 22px", borderRadius: 8, border: "none",
-                  background: "linear-gradient(135deg,#0891B2,#0E7490)", color: "#fff",
+                  background: "linear-gradient(135deg,#6637F4,#5429D9)", color: "#fff",
                   fontSize: 13, fontWeight: 700, cursor: "pointer",
                   display: "flex", alignItems: "center", gap: 6,
-                  boxShadow: "0 2px 8px rgba(8,145,178,.25)",
+                  boxShadow: "0 2px 8px rgba(102,55,244,.25)",
                 }}>
                   Next
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
@@ -881,7 +881,7 @@ function Step1ClientInfo({ data, up, clients, leads, clientSearchQ, setClientSea
                       border: "none", background: "transparent", fontSize: 13, color: "#0F172A",
                       cursor: "pointer", borderBottom: "1px solid #F1F5F9",
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = "#F0FDFA")}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#F5F3FF")}
                     onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
                       <div style={{ fontWeight: 600 }}>{c.clientName || c.ClientName || c.name || "Unnamed"}</div>
                       <div style={{ fontSize: 11, color: "#64748B" }}>{c.primaryEmail || c.contactEmail || ""}</div>
@@ -918,8 +918,8 @@ function Step1ClientInfo({ data, up, clients, leads, clientSearchQ, setClientSea
         <div style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{
             padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600,
-            background: data.sourceType === "client" ? "rgba(8,145,178,.1)" : "rgba(234,88,12,.1)",
-            color: data.sourceType === "client" ? "#0891B2" : "#EA580C",
+            background: data.sourceType === "client" ? "rgba(102,55,244,.1)" : "rgba(234,88,12,.1)",
+            color: data.sourceType === "client" ? "#6637F4" : "#EA580C",
           }}>
             {data.sourceType === "client" ? "✓ Client Selected" : "✓ Lead Selected"}
           </span>
@@ -1004,11 +1004,11 @@ function Step2Address({ data, up, suggestions, addressLoading, onAddressInput, o
       {(detecting || satelliteLoading || eagleViewLoading) && (
         <div style={{
           display: "flex", alignItems: "center", gap: 10, padding: "12px 16px",
-          background: "rgba(8,145,178,.06)", borderRadius: 10, marginBottom: 16,
-          border: "1px solid rgba(8,145,178,.15)",
+          background: "rgba(102,55,244,.06)", borderRadius: 10, marginBottom: 16,
+          border: "1px solid rgba(102,55,244,.15)",
         }}>
-          <div style={{ width: 16, height: 16, border: "2px solid #CBD5E1", borderTopColor: "#0891B2", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
-          <div style={{ fontSize: 13, color: "#0891B2", fontWeight: 500 }}>
+          <div style={{ width: 16, height: 16, border: "2px solid #CBD5E1", borderTopColor: "#6637F4", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+          <div style={{ fontSize: 13, color: "#6637F4", fontWeight: 500 }}>
             {satelliteLoading ? "Loading satellite image…" : detecting ? "AI detecting roof…" : eagleViewStatus || "Loading EagleView data…"}
           </div>
         </div>
@@ -1018,7 +1018,7 @@ function Step2Address({ data, up, suggestions, addressLoading, onAddressInput, o
       {data.satelliteImageUrl && !data.roofAreaSqft && !detecting && !satelliteLoading && (
         <button onClick={onDetect} disabled={detecting} style={{
           padding: "10px 20px", borderRadius: 8, border: "none",
-          background: "linear-gradient(135deg,#0891B2,#0E7490)", color: "#fff",
+          background: "linear-gradient(135deg,#6637F4,#5429D9)", color: "#fff",
           fontSize: 13, fontWeight: 700, cursor: "pointer", marginBottom: 20,
           display: "flex", alignItems: "center", gap: 8,
         }}>
@@ -1152,8 +1152,8 @@ function Step3Materials({ data, up, total, otherMaterials, onOtherMaterialsChang
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: "#0F172A" }}>Other Materials</span>
           <button onClick={addMaterial} style={{
-            padding: "6px 14px", borderRadius: 6, border: "1px solid #0891B2",
-            background: "rgba(8,145,178,.06)", color: "#0891B2", fontSize: 12,
+            padding: "6px 14px", borderRadius: 6, border: "1px solid #6637F4",
+            background: "rgba(102,55,244,.06)", color: "#6637F4", fontSize: 12,
             fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4,
           }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -1196,11 +1196,11 @@ function Step3Materials({ data, up, total, otherMaterials, onOtherMaterialsChang
 
       <div style={{
         display: "flex", justifyContent: "space-between", alignItems: "center",
-        padding: "14px 18px", background: "rgba(8,145,178,.06)", borderRadius: 10,
+        padding: "14px 18px", background: "rgba(102,55,244,.06)", borderRadius: 10,
         marginTop: 12,
       }}>
         <span style={{ fontSize: 14, fontWeight: 600, color: "#475569" }}>Total Material Cost</span>
-        <span style={{ fontSize: 20, fontWeight: 800, color: "#0891B2" }}>{fmt(total)}</span>
+        <span style={{ fontSize: 20, fontWeight: 800, color: "#6637F4" }}>{fmt(total)}</span>
       </div>
     </div>
   );
@@ -1231,11 +1231,11 @@ function Step4Labor({ data, up, total }: {
 
       <div style={{
         display: "flex", justifyContent: "space-between", alignItems: "center",
-        padding: "14px 18px", background: "rgba(8,145,178,.06)", borderRadius: 10,
+        padding: "14px 18px", background: "rgba(102,55,244,.06)", borderRadius: 10,
         marginTop: 12,
       }}>
         <span style={{ fontSize: 14, fontWeight: 600, color: "#475569" }}>Total Labor Cost</span>
-        <span style={{ fontSize: 20, fontWeight: 800, color: "#0891B2" }}>{fmt(total)}</span>
+        <span style={{ fontSize: 20, fontWeight: 800, color: "#6637F4" }}>{fmt(total)}</span>
       </div>
     </div>
   );
@@ -1263,11 +1263,11 @@ function Step5Extras({ data, up, total }: {
 
       <div style={{
         display: "flex", justifyContent: "space-between", alignItems: "center",
-        padding: "14px 18px", background: "rgba(8,145,178,.06)", borderRadius: 10,
+        padding: "14px 18px", background: "rgba(102,55,244,.06)", borderRadius: 10,
         marginTop: 8,
       }}>
         <span style={{ fontSize: 14, fontWeight: 600, color: "#475569" }}>Total Equipment & Extras</span>
-        <span style={{ fontSize: 20, fontWeight: 800, color: "#0891B2" }}>{fmt(total)}</span>
+        <span style={{ fontSize: 20, fontWeight: 800, color: "#6637F4" }}>{fmt(total)}</span>
       </div>
     </div>
   );
@@ -1313,7 +1313,7 @@ function Step6Profit({ data, up, subtotal, overheadAmount, profitAmount, taxAmou
         ))}
         <div style={{
           display: "flex", justifyContent: "space-between", paddingTop: 12,
-          fontSize: 18, fontWeight: 800, color: "#0891B2",
+          fontSize: 18, fontWeight: 800, color: "#6637F4",
         }}>
           <span>Final Estimate</span>
           <span>{fmt(finalPrice)}</span>
@@ -1394,16 +1394,16 @@ function Step7Final({ data, totalMaterialCost, totalLaborCost, totalEquipmentCos
         {/* Final price */}
         <div style={{
           display: "flex", justifyContent: "space-between", alignItems: "center",
-          marginTop: 12, paddingTop: 16, borderTop: "2px solid #0891B2",
+          marginTop: 12, paddingTop: 16, borderTop: "2px solid #6637F4",
         }}>
           <div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: "#0891B2" }}>{fmt(finalPrice)}</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: "#6637F4" }}>{fmt(finalPrice)}</div>
             <div style={{ fontSize: 11, color: "#64748B" }}>Price per square: {fmt(pricePerSquare)}</div>
           </div>
           <div style={{
-            background: "rgba(8,145,178,.08)", borderRadius: 10, padding: "10px 16px", textAlign: "center",
+            background: "rgba(102,55,244,.08)", borderRadius: 10, padding: "10px 16px", textAlign: "center",
           }}>
-            <div style={{ fontSize: 22, fontWeight: 800, color: "#0891B2" }}>{roofSquares.toFixed(1)}</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: "#6637F4" }}>{roofSquares.toFixed(1)}</div>
             <div style={{ fontSize: 10, color: "#64748B" }}>Roof Squares</div>
           </div>
         </div>

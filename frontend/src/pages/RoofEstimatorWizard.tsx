@@ -11,6 +11,7 @@ import {
   getEstimateById,
   createEagleViewOrder,
   getEagleViewReport,
+  fetchEagleViewImage,
   type RoofEstimate,
   type SaveEstimatePayload,
   type EagleViewOrderAddress,
@@ -438,6 +439,19 @@ export default function RoofEstimatorWizard() {
                 up("measurementSource", "eagleview");
                 up("confidence", 95);
                 toast({ title: "EagleView Data Loaded", description: `Roof area: ${report.area || "N/A"} sq ft` });
+
+                // Fetch EagleView aerial image to replace Google satellite
+                try {
+                  setEagleViewStatus("Loading EagleView aerial image…");
+                  const evImageUrl = await fetchEagleViewImage(order.reportIds[0]);
+                  if (evImageUrl) {
+                    up("satelliteImageUrl", evImageUrl);
+                    toast({ title: "📡 EagleView Image Loaded", description: "Aerial image replaced with EagleView imagery" });
+                  }
+                } catch {
+                  // Keep Google satellite as fallback
+                }
+
                 break;
               }
             } catch { /* continue polling */ }

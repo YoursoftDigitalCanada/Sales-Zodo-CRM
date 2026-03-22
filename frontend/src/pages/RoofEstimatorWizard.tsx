@@ -19,6 +19,12 @@ import { useToast } from "@/hooks/use-toast";
 import { generateEstimatePDF, downloadPDFBlob } from "@/features/roof-estimator/utils/generate-estimate-pdf";
 import { getClients, type ClientEntity } from "@/features/clients/services/clients-service";
 import { getLeads, type LeadEntity } from "@/features/leads/services/leads-service";
+import {
+  getWallet,
+  chargeEstimate,
+  checkBalance,
+  type WalletInfo,
+} from "@/features/wallet/services/wallet-service";
 
 interface OtherMaterial { name: string; qty: number; cost: number; }
 
@@ -232,12 +238,15 @@ export default function RoofEstimatorWizard() {
   const [eagleViewLoading, setEagleViewLoading] = useState(false);
   const [eagleViewStatus, setEagleViewStatus] = useState<string>("");
 
+  // Wallet balance
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);;
+
   // Update helper
   const up = useCallback(<K extends keyof WizardData>(key: K, val: WizardData[K]) => {
     setData((prev) => ({ ...prev, [key]: val }));
   }, []);
 
-  // Load clients + leads on mount
+  // Load clients + leads + wallet on mount
   useEffect(() => {
     (async () => {
       try {
@@ -245,6 +254,11 @@ export default function RoofEstimatorWizard() {
         setClients(c);
         setLeads(l);
       } catch { /* silent */ }
+      // Fetch wallet balance separately (non-blocking)
+      try {
+        const w = await getWallet();
+        setWalletBalance(w.balance);
+      } catch { /* silent — wallet may not exist yet */ }
     })();
   }, []);
 
@@ -507,6 +521,21 @@ export default function RoofEstimatorWizard() {
   const handleComplete = useCallback(async () => {
     setSaving(true);
     try {
+      // Check wallet balance first
+      try {
+        const balanceCheck = await checkBalance(20);
+        if (!balanceCheck.sufficient) {
+          toast({
+            title: "Insufficient Wallet Balance",
+            description: `You need $20.00 but only have $${balanceCheck.currentBalance.toFixed(2)}. Please add funds.`,
+            variant: "destructive",
+          });
+          setSaving(false);
+          return;
+        }
+      } catch {
+        // If wallet check fails, proceed anyway (wallet may not be set up)
+      }
       const payload = { ...buildPayload(), status: "completed", currentStep: 7 };
       let savedId = estimateId;
       if (estimateId) {
@@ -605,6 +634,14 @@ export default function RoofEstimatorWizard() {
         // PDF upload failed silently — user already has the download
       }
 
+      // Charge wallet $20 for the estimate
+      try {
+        await chargeEstimate(savedId || "NEW");
+        toast({ title: "💳 Wallet Charged", description: "$20.00 deducted for AI estimate generation" });
+      } catch {
+        // Wallet charge failed silently — estimate is already saved
+      }
+
       toast({ title: "Estimate Completed", description: "Report generated and downloaded" });
       navigate("/roof-estimator");
     } catch (e: any) {
@@ -638,7 +675,8 @@ export default function RoofEstimatorWizard() {
         totalMaterialCost={totalMaterialCost} totalLaborCost={totalLaborCost}
         totalEquipmentCost={totalEquipmentCost} overheadAmount={overheadAmount}
         profitAmount={profitAmount} taxAmount={taxAmount} finalPrice={finalPrice}
-        roofSquares={roofSquares} pricePerSquare={pricePerSquare} />;
+        roofSquares={roofSquares} pricePerSquare={pricePerSquare}
+        walletBalance={walletBalance} />;
       default: return null;
     }
   };
@@ -665,65 +703,10 @@ export default function RoofEstimatorWizard() {
       {/* Step Indicator */}
       <StepIndicator current={step} />
 
-      {/* Main content: two-column layout */}
+      {/* Main content: two-column layout (form left 60%, preview right 40%) */}
       <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
-        {/* Left: Satellite / Map preview */}
-        <div style={{
-          flex: "0 0 360px", background: "#fff", borderRadius: 14,
-          border: "1px solid #E2E8F0", boxShadow: "0 1px 4px rgba(0,0,0,.06)",
-          overflow: "hidden", position: "sticky", top: 24,
-        }}>
-          <div style={{
-            height: 260, background: "#F1F5F9", display: "flex", alignItems: "center",
-            justifyContent: "center", overflow: "hidden",
-          }}>
-            {data.satelliteImageUrl ? (
-              <img src={data.satelliteImageUrl} alt="Satellite" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            ) : (
-              <div style={{ textAlign: "center", color: "#94A3B8" }}>
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
-                </svg>
-                <div style={{ fontSize: 12, marginTop: 6 }}>Satellite preview</div>
-              </div>
-            )}
-          </div>
-          <div style={{ padding: "16px 18px" }}>
-            {data.address && (
-              <div style={{ fontSize: 13, color: "#0F172A", fontWeight: 600, marginBottom: 6 }}>{data.address}</div>
-            )}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              <MiniStat label="Roof Area" value={`${data.roofAreaSqft.toLocaleString()} sq ft`} />
-              <MiniStat label="Roof Squares" value={roofSquares.toFixed(1)} />
-              <MiniStat label="Pitch" value={data.pitch || "—"} />
-              <MiniStat label="Confidence" value={data.confidence ? `${data.confidence.toFixed(0)}%` : "—"} />
-            </div>
-            {/* Running totals */}
-            <div style={{ marginTop: 14, borderTop: "1px solid #E2E8F0", paddingTop: 14 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
-                <span style={{ color: "#64748B" }}>Materials</span>
-                <span style={{ color: "#0F172A", fontWeight: 600 }}>{fmt(totalMaterialCost)}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
-                <span style={{ color: "#64748B" }}>Labor</span>
-                <span style={{ color: "#0F172A", fontWeight: 600 }}>{fmt(totalLaborCost)}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
-                <span style={{ color: "#64748B" }}>Equipment</span>
-                <span style={{ color: "#0F172A", fontWeight: 600 }}>{fmt(totalEquipmentCost)}</span>
-              </div>
-              <div style={{
-                display: "flex", justifyContent: "space-between", fontSize: 14,
-                fontWeight: 700, color: "#6637F4", paddingTop: 8, borderTop: "1px solid #E2E8F0",
-              }}>
-                <span>Final Price</span>
-                <span>{fmt(finalPrice)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
 
-        {/* Right: Step form */}
+        {/* Left: Step form (60%) */}
         <div style={{
           flex: 1, background: "#fff", borderRadius: 14,
           border: "1px solid #E2E8F0", boxShadow: "0 1px 4px rgba(0,0,0,.06)",
@@ -778,6 +761,90 @@ export default function RoofEstimatorWizard() {
                   Complete Estimate
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+        {/* Right: Sticky Preview (40%) */}
+        <div style={{
+          flex: "0 0 380px", background: "#fff", borderRadius: 14,
+          border: "1px solid #E2E8F0", boxShadow: "0 1px 4px rgba(0,0,0,.06)",
+          overflow: "hidden", position: "sticky", top: 24,
+        }}>
+          <div style={{
+            padding: "14px 18px", borderBottom: "1px solid #E2E8F0",
+            fontSize: 14, fontWeight: 700, color: "#0F172A",
+          }}>
+            📊 Estimate Preview
+          </div>
+          <div style={{
+            height: 220, background: "#F1F5F9", display: "flex", alignItems: "center",
+            justifyContent: "center", overflow: "hidden",
+          }}>
+            {data.satelliteImageUrl ? (
+              <img src={data.satelliteImageUrl} alt="Satellite" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ) : (
+              <div style={{ textAlign: "center", color: "#94A3B8" }}>
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                <div style={{ fontSize: 12, marginTop: 6 }}>Enter address to see satellite view</div>
+              </div>
+            )}
+          </div>
+          <div style={{ padding: "16px 18px" }}>
+            {data.address && (
+              <div style={{ fontSize: 13, color: "#0F172A", fontWeight: 600, marginBottom: 10 }}>{data.address}</div>
+            )}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <MiniStat label="Roof Area" value={`${data.roofAreaSqft.toLocaleString()} sq ft`} />
+              <MiniStat label="Squares" value={roofSquares.toFixed(1)} />
+              <MiniStat label="Pitch" value={data.pitch || "—"} />
+              <MiniStat label="Confidence" value={data.confidence ? `${data.confidence.toFixed(0)}%` : "—"} />
+            </div>
+            {/* Running totals */}
+            <div style={{ marginTop: 14, borderTop: "1px solid #E2E8F0", paddingTop: 14 }}>
+              {[
+                { label: "Materials", value: totalMaterialCost },
+                { label: "Labor", value: totalLaborCost },
+                { label: "Equipment", value: totalEquipmentCost },
+              ].map((r) => (
+                <div key={r.label} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+                  <span style={{ color: "#64748B" }}>{r.label}</span>
+                  <span style={{ color: "#0F172A", fontWeight: 600 }}>{fmt(r.value)}</span>
+                </div>
+              ))}
+              <div style={{ height: 1, background: "#E2E8F0", margin: "6px 0" }} />
+              {[
+                { label: `Overhead (${data.overheadPercent}%)`, value: overheadAmount },
+                { label: `Profit (${data.profitMarginPercent}%)`, value: profitAmount },
+                { label: `Tax (${data.taxPercent}%)`, value: taxAmount },
+              ].map((r) => (
+                <div key={r.label} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 3 }}>
+                  <span style={{ color: "#94A3B8" }}>{r.label}</span>
+                  <span style={{ color: "#475569", fontWeight: 500 }}>{fmt(r.value)}</span>
+                </div>
+              ))}
+              <div style={{
+                display: "flex", justifyContent: "space-between", fontSize: 16,
+                fontWeight: 800, color: "#6637F4", paddingTop: 10, marginTop: 6, borderTop: "2px solid #6637F4",
+              }}>
+                <span>TOTAL</span>
+                <span>{fmt(finalPrice)}</span>
+              </div>
+            </div>
+            {/* Wallet info */}
+            <div style={{
+              marginTop: 14, padding: "10px 14px", borderRadius: 10,
+              background: "rgba(102,55,244,.06)", border: "1px solid rgba(102,55,244,.12)",
+              display: "flex", alignItems: "center", gap: 8, fontSize: 12,
+            }}>
+              <span>💳</span>
+              <div>
+                <div style={{ color: "#475569", fontWeight: 500 }}>Each estimate costs <strong style={{ color: "#6637F4" }}>$20.00</strong></div>
+                {walletBalance !== null && (
+                  <div style={{ color: walletBalance >= 20 ? "#059669" : "#DC2626", fontWeight: 600, marginTop: 2 }}>
+                    Balance: ${walletBalance.toFixed(2)} {walletBalance >= 20 ? "✔" : "— Insufficient"}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -1326,23 +1393,38 @@ function Step6Profit({ data, up, subtotal, overheadAmount, profitAmount, taxAmou
 /* ─── Step 6: Final Summary ──────────────────────────────── */
 
 function Step7Final({ data, totalMaterialCost, totalLaborCost, totalEquipmentCost,
-  overheadAmount, profitAmount, taxAmount, finalPrice, roofSquares, pricePerSquare }: {
+  overheadAmount, profitAmount, taxAmount, finalPrice, roofSquares, pricePerSquare, walletBalance }: {
   data: WizardData;
   totalMaterialCost: number; totalLaborCost: number; totalEquipmentCost: number;
   overheadAmount: number; profitAmount: number; taxAmount: number;
   finalPrice: number; roofSquares: number; pricePerSquare: number;
+  walletBalance: number | null;
 }) {
   return (
     <div>
-      <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A", marginBottom: 4 }}>📄 Final Estimate Summary</h2>
+      <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A", marginBottom: 4 }}>📋 Estimate Summary</h2>
       <p style={{ fontSize: 13, color: "#64748B", marginBottom: 20 }}>Review your complete estimate before finalizing.</p>
+
+      {/* Client Info */}
+      <div style={{
+        background: "#F8FAFC", borderRadius: 12, padding: "16px 20px", marginBottom: 16,
+        border: "1px solid #E2E8F0",
+      }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: "#0F172A", marginBottom: 8 }}>👤 Client Information</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 12 }}>
+          <div><span style={{ color: "#94A3B8" }}>Name</span><div style={{ color: "#0F172A", fontWeight: 500 }}>{data.clientName || "—"}</div></div>
+          <div><span style={{ color: "#94A3B8" }}>Email</span><div style={{ color: "#0F172A", fontWeight: 500 }}>{data.clientEmail || "—"}</div></div>
+          <div><span style={{ color: "#94A3B8" }}>Phone</span><div style={{ color: "#0F172A", fontWeight: 500 }}>{data.clientPhone || "—"}</div></div>
+          <div><span style={{ color: "#94A3B8" }}>Company</span><div style={{ color: "#0F172A", fontWeight: 500 }}>{data.clientCompany || "—"}</div></div>
+        </div>
+      </div>
 
       {/* Property Info */}
       <div style={{
         background: "#F8FAFC", borderRadius: 12, padding: "16px 20px", marginBottom: 16,
         border: "1px solid #E2E8F0",
       }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: "#0F172A", marginBottom: 8 }}>Property Details</div>
+        <div style={{ fontSize: 13, fontWeight: 700, color: "#0F172A", marginBottom: 8 }}>🏠 Property Details</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, fontSize: 12 }}>
           <div><span style={{ color: "#94A3B8" }}>Address</span><div style={{ color: "#0F172A", fontWeight: 500 }}>{data.address || "—"}</div></div>
           <div><span style={{ color: "#94A3B8" }}>Roof Area</span><div style={{ color: "#0F172A", fontWeight: 500 }}>{data.roofAreaSqft.toLocaleString()} sq ft</div></div>
@@ -1397,7 +1479,7 @@ function Step7Final({ data, totalMaterialCost, totalLaborCost, totalEquipmentCos
           marginTop: 12, paddingTop: 16, borderTop: "2px solid #6637F4",
         }}>
           <div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: "#6637F4" }}>{fmt(finalPrice)}</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: "#6637F4" }}>{fmt(finalPrice)}</div>
             <div style={{ fontSize: 11, color: "#64748B" }}>Price per square: {fmt(pricePerSquare)}</div>
           </div>
           <div style={{
@@ -1407,6 +1489,34 @@ function Step7Final({ data, totalMaterialCost, totalLaborCost, totalEquipmentCos
             <div style={{ fontSize: 10, color: "#64748B" }}>Roof Squares</div>
           </div>
         </div>
+      </div>
+
+      {/* Wallet charge info */}
+      <div style={{
+        marginTop: 16, padding: "14px 18px", borderRadius: 12,
+        background: "linear-gradient(135deg, rgba(102,55,244,.06), rgba(102,55,244,.02))",
+        border: "1px solid rgba(102,55,244,.15)",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center",
+            background: "linear-gradient(135deg,#6637F4,#5429D9)", color: "#fff", fontSize: 16,
+          }}>💳</div>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#0F172A" }}>Generate AI Estimate — $20.00</div>
+            <div style={{ fontSize: 11, color: "#64748B" }}>This amount will be deducted from your wallet</div>
+          </div>
+        </div>
+        {walletBalance !== null && (
+          <div style={{
+            padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 700,
+            background: walletBalance >= 20 ? "rgba(16,185,129,.1)" : "rgba(239,68,68,.1)",
+            color: walletBalance >= 20 ? "#059669" : "#DC2626",
+          }}>
+            Balance: ${walletBalance.toFixed(2)} {walletBalance >= 20 ? "✔" : "✖"}
+          </div>
+        )}
       </div>
 
       {/* Notes */}

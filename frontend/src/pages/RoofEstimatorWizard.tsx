@@ -25,6 +25,8 @@ import {
   checkBalance,
   type WalletInfo,
 } from "@/features/wallet/services/wallet-service";
+import { uploadFile } from "@/features/files/services/files-service";
+import { getProjects } from "@/features/projects/services/projects-service";
 
 interface OtherMaterial { name: string; qty: number; cost: number; }
 
@@ -618,18 +620,36 @@ export default function RoofEstimatorWizard() {
       const safeName = data.address.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 40);
       downloadPDFBlob(pdfBlob, `Roof_Estimate_${safeName}.pdf`);
 
-      // Upload PDF to server and save URL
+      // Upload PDF to File Manager (with projectId + clientId)
       try {
-        const formData = new FormData();
-        formData.append("file", pdfBlob, `estimate_${savedId}.pdf`);
-        const { default: api } = await import("@/lib/axios");
-        const uploadRes = await api.post("/files/upload", formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
-        const pdfUrl = uploadRes.data?.data?.url || uploadRes.data?.url;
+        const safeName = data.address.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 40);
+        const pdfFileName = `Roof_Estimate_${safeName}.pdf`;
+        const pdfFile = new File([pdfBlob], pdfFileName, { type: "application/pdf" });
+
+        // Find the client's project (if a client was selected)
+        let projectId: string | undefined;
+        if (data.clientId) {
+          try {
+            const projects = await getProjects({ clientId: data.clientId, limit: 1 });
+            if (projects.length > 0) {
+              projectId = String(projects[0].id);
+            }
+          } catch {
+            // No project found — upload without projectId
+          }
+        }
+
+        // Upload via proper /files endpoint with clientId and projectId
+        const uploadedFile = await uploadFile(pdfFile, { projectId });
+        const pdfUrl = uploadedFile?.path || uploadedFile?.id;
+
         if (pdfUrl && savedId) {
           await updateEstimate(savedId, { pdfUrl } as any);
         }
+
+        toast({ title: "📁 PDF Saved", description: projectId
+          ? "Estimate PDF saved to File Manager and linked to client project"
+          : "Estimate PDF saved to File Manager" });
       } catch {
         // PDF upload failed silently — user already has the download
       }

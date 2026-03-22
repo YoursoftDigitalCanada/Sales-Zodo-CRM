@@ -7,7 +7,7 @@ export class WalletController {
      */
     async getWallet(req: Request, res: Response, next: NextFunction) {
         try {
-            const tenantId = (req as any).tenantId;
+            const tenantId = (req as any).context.tenantId;
             const wallet = await walletService.getWallet(tenantId);
             res.json({ success: true, data: wallet });
         } catch (error) {
@@ -20,8 +20,8 @@ export class WalletController {
      */
     async addFunds(req: Request, res: Response, next: NextFunction) {
         try {
-            const tenantId = (req as any).tenantId;
-            const userId = (req as any).userId || (req as any).user?.id;
+            const tenantId = (req as any).context.tenantId;
+            const userId = (req as any).user?.employeeId || (req as any).user?.userId;
             const { amount, description } = req.body;
 
             const result = await walletService.addFunds(tenantId, amount, description, userId);
@@ -42,7 +42,7 @@ export class WalletController {
      */
     async checkBalance(req: Request, res: Response, next: NextFunction) {
         try {
-            const tenantId = (req as any).tenantId;
+            const tenantId = (req as any).context.tenantId;
             const { amount } = req.body;
 
             const result = await walletService.checkBalance(tenantId, amount);
@@ -57,8 +57,8 @@ export class WalletController {
      */
     async chargeEstimate(req: Request, res: Response, next: NextFunction) {
         try {
-            const tenantId = (req as any).tenantId;
-            const userId = (req as any).userId || (req as any).user?.id;
+            const tenantId = (req as any).context.tenantId;
+            const userId = (req as any).user?.employeeId || (req as any).user?.userId;
             const { estimateId } = req.body;
 
             const result = await walletService.chargeForEstimate(tenantId, estimateId, userId);
@@ -88,7 +88,7 @@ export class WalletController {
      */
     async getTransactions(req: Request, res: Response, next: NextFunction) {
         try {
-            const tenantId = (req as any).tenantId;
+            const tenantId = (req as any).context.tenantId;
             const page = parseInt(req.query.page as string) || 1;
             const limit = parseInt(req.query.limit as string) || 20;
 

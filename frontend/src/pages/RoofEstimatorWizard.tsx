@@ -411,79 +411,75 @@ export default function RoofEstimatorWizard() {
       }
     }
 
-    const satUrl = googleSatUrl; // for AI detection (uses the original URL)
-    if (!satUrl) return;
+    const satUrl = googleSatUrl;
+    if (!satUrl && !satLat) return;
 
-    // 2. Run AI detection + EagleView in parallel
-    setDetecting(true);
+    // 3. EagleView measurement order (sole data source — AI detection disabled)
     setEagleViewLoading(true);
-    setEagleViewStatus("Fetching measurements…");
+    setEagleViewStatus("Fetching EagleView measurements…");
 
-    const aiPromise = detectRoof({ satelliteImageUrl: satUrl, latitude: satLat, longitude: satLng })
-      .then((result) => {
-        up("roofAreaSqft", result.roofAreaSqft);
-        up("confidence", result.confidence);
-        up("processingTimeSec", result.processingTimeSec);
-        up("aiModel", result.aiModel);
-        up("measurementSource", "ai_satellite");
-        toast({ title: "AI Detection Complete", description: `${result.roofAreaSqft.toFixed(0)} sq ft — ${result.confidence.toFixed(0)}% confidence` });
-      })
-      .catch(() => { toast({ title: "AI Detection", description: "AI detection could not complete", variant: "destructive" }); })
-      .finally(() => setDetecting(false));
+    // NOTE: AI detection commented out — using EagleView only
+    // const aiPromise = detectRoof({ satelliteImageUrl: satUrl, latitude: satLat, longitude: satLng })
+    //   .then((result) => { ... })
 
-    const evPromise = (async () => {
-      try {
-        const evAddr = parseAddressForEagleView(desc);
-        if (!evAddr || !evAddr.postalCode) { setEagleViewStatus(""); return; }
-        const order = await createEagleViewOrder(evAddr, `wizard-${Date.now()}`);
-        if (order.reportIds?.[0]) {
-          setEagleViewStatus("EagleView order placed, checking report…");
-          // Poll for report (max 3 tries)
-          for (let i = 0; i < 3; i++) {
-            await new Promise(r => setTimeout(r, 3000));
-            try {
-              const report = await getEagleViewReport(order.reportIds[0]);
-              if (report.area) {
-                const evArea = parseFloat(report.area);
-                if (evArea > 0) up("roofAreaSqft", evArea);
-              }
-              if (report.pitch) up("pitch", report.pitch.includes("/") ? report.pitch : report.pitch + "/12");
-              if (report.lengthRidge) up("ridgeLengthFt" as any, parseFloat(report.lengthRidge) || 0);
-              if (report.lengthValley) up("valleyLengthFt" as any, parseFloat(report.lengthValley) || 0);
-              if (report.lengthEave) up("eaveLengthFt" as any, parseFloat(report.lengthEave) || 0);
-              if (report.lengthRake) up("rakeLengthFt" as any, parseFloat(report.lengthRake) || 0);
-              if (report.lengthHip) up("hipLengthFt" as any, parseFloat(report.lengthHip) || 0);
-              if (report.status === "Completed" || report.area) {
-                up("measurementSource", "eagleview");
-                up("confidence", 95);
-                toast({ title: "EagleView Data Loaded", description: `Roof area: ${report.area || "N/A"} sq ft` });
-
-                // Fetch EagleView aerial image to replace Google satellite
-                try {
-                  setEagleViewStatus("Loading EagleView aerial image…");
-                  const evImageUrl = await fetchEagleViewImage(order.reportIds[0]);
-                  if (evImageUrl) {
-                    up("satelliteImageUrl", evImageUrl);
-                    toast({ title: "📡 EagleView Image Loaded", description: "Aerial image replaced with EagleView imagery" });
-                  }
-                } catch {
-                  // Keep Google satellite as fallback
-                }
-
-                break;
-              }
-            } catch { /* continue polling */ }
-          }
-        }
-      } catch {
-        // EagleView not available — silent, AI already provides data
-      } finally {
-        setEagleViewLoading(false);
+    try {
+      const evAddr = parseAddressForEagleView(desc);
+      if (!evAddr || !evAddr.postalCode) {
         setEagleViewStatus("");
+        setEagleViewLoading(false);
+        toast({ title: "EagleView", description: "Could not parse address for EagleView", variant: "destructive" });
+        return;
       }
-    })();
+      const order = await createEagleViewOrder(evAddr, `wizard-${Date.now()}`);
+      if (order.reportIds?.[0]) {
+        setEagleViewStatus("EagleView order placed, checking report…");
+        // Poll for report (max 5 tries, 3s apart)
+        for (let i = 0; i < 5; i++) {
+          await new Promise(r => setTimeout(r, 3000));
+          try {
+            const report = await getEagleViewReport(order.reportIds[0]);
+            if (report.area) {
+              const evArea = parseFloat(report.area);
+              if (evArea > 0) up("roofAreaSqft", evArea);
+            }
+            if (report.pitch) up("pitch", report.pitch.includes("/") ? report.pitch : report.pitch + "/12");
+            if (report.lengthRidge) up("ridgeLengthFt" as any, parseFloat(report.lengthRidge) || 0);
+            if (report.lengthValley) up("valleyLengthFt" as any, parseFloat(report.lengthValley) || 0);
+            if (report.lengthEave) up("eaveLengthFt" as any, parseFloat(report.lengthEave) || 0);
+            if (report.lengthRake) up("rakeLengthFt" as any, parseFloat(report.lengthRake) || 0);
+            if (report.lengthHip) up("hipLengthFt" as any, parseFloat(report.lengthHip) || 0);
+            if (report.totalRoofFacets) up("totalFacets" as any, parseInt(report.totalRoofFacets) || 0);
+            if (report.status === "Completed" || report.area) {
+              up("measurementSource", "eagleview");
+              up("confidence", 95);
+              toast({ title: "📡 EagleView Data Loaded", description: `Roof area: ${report.area || "N/A"} sq ft | Pitch: ${report.pitch || "N/A"}` });
 
-    await Promise.allSettled([aiPromise, evPromise]);
+              // Fetch EagleView aerial image from report
+              try {
+                setEagleViewStatus("Loading EagleView aerial image…");
+                const evImageUrl = await fetchEagleViewImage(order.reportIds[0]);
+                if (evImageUrl) {
+                  up("satelliteImageUrl", evImageUrl);
+                  toast({ title: "📡 EagleView Image", description: "Aerial image loaded from EagleView report" });
+                }
+              } catch {
+                // Keep existing image as fallback
+              }
+
+              break;
+            }
+            setEagleViewStatus(`Polling EagleView report… (${i + 1}/5)`);
+          } catch { /* continue polling */ }
+        }
+      } else {
+        toast({ title: "EagleView", description: "Order placed but no report ID returned" });
+      }
+    } catch (err: any) {
+      toast({ title: "EagleView Error", description: err?.message || "Could not fetch EagleView data", variant: "destructive" });
+    } finally {
+      setEagleViewLoading(false);
+      setEagleViewStatus("");
+    }
   }, [up, toast]);
 
   const runAiDetection = useCallback(async () => {

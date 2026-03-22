@@ -74,7 +74,7 @@ export function Step1BasicInfo({ stageOptions, isLoadingStages }: Step1BasicInfo
     <div className="space-y-4">
       <Card className="border-[rgba(15,23,42,0.08)]">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-[#0F172A]">Step 1: Basic Information</CardTitle>
+          <CardTitle className="text-sm font-semibold text-[#0F172A]">Step 2: Basic Information</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">

@@ -209,7 +209,7 @@ export default function IntegrationsPage() {
                 <header className="bg-white border-b border-[rgba(15,23,42,0.06)] px-6 py-4 flex-shrink-0">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-lg bg-[#0891B2]/10 flex items-center justify-center">
+                            <div className="w-9 h-9 rounded-md bg-[#0891B2]/10 flex items-center justify-center">
                                 <Plug size={20} className="text-[#0891B2]" />
                             </div>
                             <div>
@@ -227,7 +227,7 @@ export default function IntegrationsPage() {
                                     placeholder="Search integrations..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-56 h-9 pl-9 pr-3 rounded-lg bg-[#F8FAFC] border border-[rgba(15,23,42,0.08)] text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#0891B2]/20"
+                                    className="w-56 h-9 pl-9 pr-3 rounded-md bg-[#F8FAFC] border border-[rgba(15,23,42,0.06)] text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#0891B2]/20"
                                 />
                             </div>
                         </div>
@@ -275,8 +275,8 @@ export default function IntegrationsPage() {
                                         { label: "Events Today", value: totalEventsToday.toLocaleString(), icon: Zap, color: "text-[#D97706]", bg: "bg-[#D97706]/8" },
                                         { label: "Uptime", value: "99.9%", icon: Shield, color: "text-[#7C3AED]", bg: "bg-[#7C3AED]/8" },
                                     ].map((stat) => (
-                                        <div key={stat.label} className="bg-white rounded-lg card-shadow p-4 flex items-center gap-3">
-                                            <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", stat.bg)}>
+                                        <div key={stat.label} className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] shadow-sm hover:shadow-lg transition-all p-4 flex items-center gap-3">
+                                            <div className={cn("w-10 h-10 rounded-md flex items-center justify-center", stat.bg)}>
                                                 <stat.icon size={18} className={stat.color} />
                                             </div>
                                             <div>
@@ -298,7 +298,7 @@ export default function IntegrationsPage() {
                                                     "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all",
                                                     activeCategory === cat
                                                         ? "bg-[#0891B2] text-white"
-                                                        : "bg-white border border-[rgba(15,23,42,0.08)] text-[#475569] hover:bg-[#F8FAFC]"
+                                                        : "bg-white border border-[rgba(15,23,42,0.06)] text-[#475569] hover:bg-[#F8FAFC]"
                                                 )}
                                             >
                                                 {cat}
@@ -313,11 +313,11 @@ export default function IntegrationsPage() {
                                         <motion.div
                                             initial={{ opacity: 0, y: 20 }}
                                             animate={{ opacity: 1, y: 0 }}
-                                            className="rounded-[24px] border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(135deg,#ECFDF5_0%,#FFFFFF_45%,#ECFEFF_100%)] p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+                                            className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[linear-gradient(135deg,#ECFDF5_0%,#FFFFFF_45%,#ECFEFF_100%)] p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
                                         >
                                             <div className="flex items-start justify-between gap-3">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#DCFCE7]">
+                                                    <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[#DCFCE7]">
                                                         <MessageSquare size={20} className="text-[#16A34A]" />
                                                     </div>
                                                     <div>
@@ -351,11 +351,11 @@ export default function IntegrationsPage() {
                                             </p>
 
                                             <div className="mt-4 grid grid-cols-2 gap-3">
-                                                <div className="rounded-xl border border-[rgba(15,23,42,0.06)] bg-white/80 p-3">
+                                                <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white/80 p-3">
                                                     <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">Plan</p>
                                                     <p className="mt-1 text-sm font-medium capitalize text-[#0F172A]">{plan}</p>
                                                 </div>
-                                                <div className="rounded-xl border border-[rgba(15,23,42,0.06)] bg-white/80 p-3">
+                                                <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white/80 p-3">
                                                     <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">Numbers</p>
                                                     <p className="mt-1 text-sm font-medium text-[#0F172A]">
                                                         {whatsappAccess.enabled ? `${whatsappConnections.length}/${whatsappAccess.maxNumbers}` : "0/0"}
@@ -370,7 +370,7 @@ export default function IntegrationsPage() {
 
                                             <button
                                                 onClick={() => navigate("/integrations/whatsapp")}
-                                                className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#16A34A] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#15803D]"
+                                                className="mt-5 flex w-full items-center justify-center gap-2 rounded-md bg-[#16A34A] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#15803D]"
                                             >
                                                 {isWhatsAppConnected ? "Manage WhatsApp" : "Open WhatsApp"}
                                                 <ArrowUpRight size={14} />
@@ -383,12 +383,12 @@ export default function IntegrationsPage() {
                                             initial={{ opacity: 0, y: 20 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: 0.03 * index }}
-                                            className="bg-white rounded-lg card-shadow p-5 group hover:shadow-md transition-all cursor-pointer"
+                                            className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] shadow-sm hover:shadow-lg transition-all p-5 group hover:shadow-md transition-all cursor-pointer"
                                             onClick={() => setSelectedIntegration(integration)}
                                         >
                                             <div className="flex items-start justify-between mb-3">
                                                 <div className="flex items-center gap-3">
-                                                    <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", integration.bgColor)}>
+                                                    <div className={cn("w-10 h-10 rounded-md flex items-center justify-center", integration.bgColor)}>
                                                         <integration.icon size={20} className={integration.color} />
                                                     </div>
                                                     <div>
@@ -418,14 +418,14 @@ export default function IntegrationsPage() {
                                             {integration.status === "available" && (
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); handleConnect(integration); }}
-                                                    className="w-full mt-1 px-3 py-2 bg-[#0891B2] text-white rounded-lg text-xs font-medium hover:bg-[#0891B2]/90 transition-colors opacity-0 group-hover:opacity-100"
+                                                    className="w-full mt-1 px-3 py-2 bg-[#0891B2] text-white rounded-md text-xs font-medium hover:bg-[#0891B2]/90 transition-colors opacity-0 group-hover:opacity-100"
                                                 >
                                                     Connect
                                                 </button>
                                             )}
 
                                             {integration.status === "coming_soon" && (
-                                                <div className="mt-1 px-3 py-2 bg-[#F1F5F9] text-[#94A3B8] rounded-lg text-xs font-medium text-center">
+                                                <div className="mt-1 px-3 py-2 bg-[#F1F5F9] text-[#94A3B8] rounded-md text-xs font-medium text-center">
                                                     Coming Soon
                                                 </div>
                                             )}
@@ -453,7 +453,7 @@ export default function IntegrationsPage() {
                                     </div>
                                     <button
                                         onClick={() => setShowAddWebhook(true)}
-                                        className="flex items-center gap-2 px-4 py-2 bg-[#0891B2] text-white rounded-lg text-sm font-medium hover:bg-[#0891B2]/90 transition-colors"
+                                        className="flex items-center gap-2 px-4 py-2 bg-[#0891B2] text-white rounded-md text-sm font-medium hover:bg-[#0891B2]/90 transition-colors"
                                     >
                                         <Plus size={16} /> Add Webhook
                                     </button>
@@ -463,20 +463,20 @@ export default function IntegrationsPage() {
                                 <AnimatePresence>
                                     {showAddWebhook && (
                                         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-                                            className="bg-white rounded-lg card-shadow p-5 overflow-hidden">
+                                            className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] shadow-sm hover:shadow-lg transition-all p-5 overflow-hidden">
                                             <h4 className="font-semibold text-sm text-[#0F172A] mb-3">New Webhook Endpoint</h4>
                                             <div className="flex gap-3">
                                                 <input type="text" placeholder="https://your-api.com/webhook" value={newWebhookUrl} onChange={(e) => setNewWebhookUrl(e.target.value)}
-                                                    className="flex-1 h-10 px-4 rounded-lg border border-[rgba(15,23,42,0.12)] bg-[#F8FAFC] text-sm focus:outline-none focus:ring-2 focus:ring-[#0891B2]/20" />
-                                                <button onClick={handleAddWebhook} className="px-5 py-2 bg-[#0891B2] text-white rounded-lg text-sm font-medium hover:bg-[#0891B2]/90">Create</button>
-                                                <button onClick={() => setShowAddWebhook(false)} className="px-3 py-2 text-[#475569] hover:bg-[#F8FAFC] rounded-lg text-sm">Cancel</button>
+                                                    className="flex-1 h-10 px-4 rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] text-sm focus:outline-none focus:ring-2 focus:ring-[#0891B2]/20" />
+                                                <button onClick={handleAddWebhook} className="px-5 py-2 bg-[#0891B2] text-white rounded-md text-sm font-medium hover:bg-[#0891B2]/90">Create</button>
+                                                <button onClick={() => setShowAddWebhook(false)} className="px-3 py-2 text-[#475569] hover:bg-[#F8FAFC] rounded-md text-sm">Cancel</button>
                                             </div>
                                         </motion.div>
                                     )}
                                 </AnimatePresence>
 
                                 {/* Webhook List */}
-                                <div className="bg-white rounded-lg card-shadow divide-y divide-[rgba(15,23,42,0.06)]">
+                                <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] shadow-sm hover:shadow-lg transition-all divide-y divide-[rgba(15,23,42,0.06)]">
                                     {localWebhooks.map((wh) => (
                                         <div key={wh.id} className="p-5">
                                             <div className="flex items-start justify-between mb-2">
@@ -492,11 +492,11 @@ export default function IntegrationsPage() {
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-2 ml-4">
-                                                    <button onClick={() => handleTestWebhook(wh)} className="px-3 py-1.5 text-xs font-medium text-[#0891B2] bg-[#0891B2]/10 rounded-lg hover:bg-[#0891B2]/15 transition-colors">Test</button>
-                                                    <button onClick={() => handleToggleWebhook(wh)} className="p-1.5 text-[#475569] hover:bg-[#F8FAFC] rounded-lg transition-colors">
+                                                    <button onClick={() => handleTestWebhook(wh)} className="px-3 py-1.5 text-xs font-medium text-[#0891B2] bg-[#0891B2]/10 rounded-md hover:bg-[#0891B2]/15 transition-colors">Test</button>
+                                                    <button onClick={() => handleToggleWebhook(wh)} className="p-1.5 text-[#475569] hover:bg-[#F8FAFC] rounded-md transition-colors">
                                                         {wh.status === "active" ? <Pause size={14} /> : <Play size={14} />}
                                                     </button>
-                                                    <button onClick={() => handleDeleteWebhook(wh)} className="p-1.5 text-[#DC2626]/60 hover:bg-[#DC2626]/10 rounded-lg transition-colors">
+                                                    <button onClick={() => handleDeleteWebhook(wh)} className="p-1.5 text-[#DC2626]/60 hover:bg-[#DC2626]/10 rounded-md transition-colors">
                                                         <Trash2 size={14} />
                                                     </button>
                                                 </div>
@@ -520,7 +520,7 @@ export default function IntegrationsPage() {
                                         <p className="text-sm text-[#475569] mt-0.5">Manage API keys for programmatic access</p>
                                     </div>
                                     <button onClick={() => setShowGenerateKey(true)}
-                                        className="flex items-center gap-2 px-4 py-2 bg-[#0891B2] text-white rounded-lg text-sm font-medium hover:bg-[#0891B2]/90 transition-colors">
+                                        className="flex items-center gap-2 px-4 py-2 bg-[#0891B2] text-white rounded-md text-sm font-medium hover:bg-[#0891B2]/90 transition-colors">
                                         <Plus size={16} /> Generate Key
                                     </button>
                                 </div>
@@ -529,20 +529,20 @@ export default function IntegrationsPage() {
                                 <AnimatePresence>
                                     {showGenerateKey && (
                                         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-                                            className="bg-white rounded-lg card-shadow p-5 overflow-hidden">
+                                            className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] shadow-sm hover:shadow-lg transition-all p-5 overflow-hidden">
                                             <h4 className="font-semibold text-sm text-[#0F172A] mb-3">Generate New API Key</h4>
                                             <div className="flex gap-3">
                                                 <input type="text" placeholder="Key name (e.g., Production API)" value={newKeyName} onChange={(e) => setNewKeyName(e.target.value)}
-                                                    className="flex-1 h-10 px-4 rounded-lg border border-[rgba(15,23,42,0.12)] bg-[#F8FAFC] text-sm focus:outline-none focus:ring-2 focus:ring-[#0891B2]/20" />
-                                                <button onClick={handleGenerateKey} className="px-5 py-2 bg-[#0891B2] text-white rounded-lg text-sm font-medium hover:bg-[#0891B2]/90">Generate</button>
-                                                <button onClick={() => setShowGenerateKey(false)} className="px-3 py-2 text-[#475569] hover:bg-[#F8FAFC] rounded-lg text-sm">Cancel</button>
+                                                    className="flex-1 h-10 px-4 rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] text-sm focus:outline-none focus:ring-2 focus:ring-[#0891B2]/20" />
+                                                <button onClick={handleGenerateKey} className="px-5 py-2 bg-[#0891B2] text-white rounded-md text-sm font-medium hover:bg-[#0891B2]/90">Generate</button>
+                                                <button onClick={() => setShowGenerateKey(false)} className="px-3 py-2 text-[#475569] hover:bg-[#F8FAFC] rounded-md text-sm">Cancel</button>
                                             </div>
                                         </motion.div>
                                     )}
                                 </AnimatePresence>
 
                                 {/* API Keys List */}
-                                <div className="bg-white rounded-lg card-shadow divide-y divide-[rgba(15,23,42,0.06)]">
+                                <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] shadow-sm hover:shadow-lg transition-all divide-y divide-[rgba(15,23,42,0.06)]">
                                     {localApiKeys.map((key) => (
                                         <div key={key.id} className="p-5 flex items-center justify-between">
                                             <div className="flex-1">
@@ -569,12 +569,12 @@ export default function IntegrationsPage() {
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <button onClick={() => handleCopyKey(key)}
-                                                    className="p-2 text-[#475569] hover:bg-[#F8FAFC] rounded-lg transition-colors" title="Copy">
+                                                    className="p-2 text-[#475569] hover:bg-[#F8FAFC] rounded-md transition-colors" title="Copy">
                                                     <Copy size={14} />
                                                 </button>
                                                 {key.status === "active" && (
                                                     <button onClick={() => handleRevokeKey(key)}
-                                                        className="px-3 py-1.5 text-xs font-medium text-[#DC2626] bg-[#DC2626]/10 rounded-lg hover:bg-[#DC2626]/15 transition-colors">
+                                                        className="px-3 py-1.5 text-xs font-medium text-[#DC2626] bg-[#DC2626]/10 rounded-md hover:bg-[#DC2626]/15 transition-colors">
                                                         Revoke
                                                     </button>
                                                 )}
@@ -584,12 +584,12 @@ export default function IntegrationsPage() {
                                 </div>
 
                                 {/* API Docs Link */}
-                                <div className="bg-white rounded-lg card-shadow p-5 flex items-center justify-between">
+                                <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] shadow-sm hover:shadow-lg transition-all p-5 flex items-center justify-between">
                                     <div>
                                         <h4 className="font-semibold text-sm text-[#0F172A]">API Documentation</h4>
                                         <p className="text-xs text-[#475569] mt-0.5">Full REST API reference with examples and SDKs</p>
                                     </div>
-                                    <button className="flex items-center gap-2 px-4 py-2 bg-[#F8FAFC] border border-[rgba(15,23,42,0.08)] text-[#0F172A] rounded-lg text-sm font-medium hover:bg-[#F1F5F9] transition-colors">
+                                    <button className="flex items-center gap-2 px-4 py-2 bg-[#F8FAFC] border border-[rgba(15,23,42,0.06)] text-[#0F172A] rounded-md text-sm font-medium hover:bg-[#F1F5F9] transition-colors">
                                         <ExternalLink size={14} /> View Docs
                                     </button>
                                 </div>
@@ -604,7 +604,7 @@ export default function IntegrationsPage() {
                                     <p className="text-sm text-[#475569] mt-0.5">Real-time log of all integration events and sync operations</p>
                                 </div>
 
-                                <div className="bg-white rounded-lg card-shadow divide-y divide-[rgba(15,23,42,0.06)]">
+                                <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] shadow-sm hover:shadow-lg transition-all divide-y divide-[rgba(15,23,42,0.06)]">
                                     {syncEvents.map((event, index) => (
                                         <motion.div
                                             key={event.id}
@@ -613,7 +613,7 @@ export default function IntegrationsPage() {
                                             transition={{ delay: 0.03 * index }}
                                             className="px-5 py-3.5 flex items-center gap-4"
                                         >
-                                            <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0",
+                                            <div className={cn("w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0",
                                                 event.status === "success" ? "bg-[#16A34A]/10" : event.status === "warning" ? "bg-[#D97706]/10" : "bg-[#DC2626]/10"
                                             )}>
                                                 {event.status === "success" ? <CheckCircle2 size={16} className="text-[#16A34A]" /> :
@@ -648,7 +648,7 @@ export default function IntegrationsPage() {
                             {/* Modal Header */}
                             <div className="flex items-center justify-between px-6 py-4 border-b border-[rgba(15,23,42,0.06)]">
                                 <div className="flex items-center gap-3">
-                                    <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", selectedIntegration.bgColor)}>
+                                    <div className={cn("w-10 h-10 rounded-md flex items-center justify-center", selectedIntegration.bgColor)}>
                                         <selectedIntegration.icon size={20} className={selectedIntegration.color} />
                                     </div>
                                     <div>
@@ -656,7 +656,7 @@ export default function IntegrationsPage() {
                                         <StatusBadge status={selectedIntegration.status} />
                                     </div>
                                 </div>
-                                <button onClick={() => setSelectedIntegration(null)} className="p-2 hover:bg-[#F8FAFC] rounded-lg"><X size={18} /></button>
+                                <button onClick={() => setSelectedIntegration(null)} className="p-2 hover:bg-[#F8FAFC] rounded-md"><X size={18} /></button>
                             </div>
 
                             {/* Modal Body */}
@@ -672,7 +672,7 @@ export default function IntegrationsPage() {
                                     <>
                                         <div className="space-y-3">
                                             <h4 className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">Connection Details</h4>
-                                            <div className="bg-[#F8FAFC] rounded-lg p-4 space-y-2">
+                                            <div className="bg-[#F8FAFC] rounded-md p-4 space-y-2">
                                                 <div className="flex justify-between text-sm"><span className="text-[#475569]">Connected</span><span className="text-[#0F172A] font-medium">{selectedIntegration.connectedAt}</span></div>
                                                 <div className="flex justify-between text-sm"><span className="text-[#475569]">Last sync</span><span className="text-[#0F172A] font-medium">{selectedIntegration.lastSync}</span></div>
                                                 <div className="flex justify-between text-sm"><span className="text-[#475569]">Events today</span><span className="text-[#0F172A] font-medium">{selectedIntegration.eventsToday}</span></div>
@@ -684,14 +684,14 @@ export default function IntegrationsPage() {
                                             <h4 className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">Actions</h4>
                                             <div className="space-y-2">
                                                 <button onClick={() => handleSync(selectedIntegration)}
-                                                    className="w-full flex items-center gap-2 px-4 py-2.5 bg-[#F8FAFC] border border-[rgba(15,23,42,0.08)] rounded-lg text-sm font-medium text-[#0F172A] hover:bg-[#F1F5F9] transition-colors">
+                                                    className="w-full flex items-center gap-2 px-4 py-2.5 bg-[#F8FAFC] border border-[rgba(15,23,42,0.06)] rounded-md text-sm font-medium text-[#0F172A] hover:bg-[#F1F5F9] transition-colors">
                                                     <RefreshCw size={14} /> Force Sync Now
                                                 </button>
-                                                <button className="w-full flex items-center gap-2 px-4 py-2.5 bg-[#F8FAFC] border border-[rgba(15,23,42,0.08)] rounded-lg text-sm font-medium text-[#0F172A] hover:bg-[#F1F5F9] transition-colors">
+                                                <button className="w-full flex items-center gap-2 px-4 py-2.5 bg-[#F8FAFC] border border-[rgba(15,23,42,0.06)] rounded-md text-sm font-medium text-[#0F172A] hover:bg-[#F1F5F9] transition-colors">
                                                     <Settings size={14} /> Configure Settings
                                                 </button>
                                                 <button onClick={() => handleDisconnect(selectedIntegration)}
-                                                    className="w-full flex items-center gap-2 px-4 py-2.5 bg-[#DC2626]/5 border border-[#DC2626]/15 rounded-lg text-sm font-medium text-[#DC2626] hover:bg-[#DC2626]/10 transition-colors">
+                                                    className="w-full flex items-center gap-2 px-4 py-2.5 bg-[#DC2626]/5 border border-[#DC2626]/15 rounded-md text-sm font-medium text-[#DC2626] hover:bg-[#DC2626]/10 transition-colors">
                                                     <XCircle size={14} /> Disconnect
                                                 </button>
                                             </div>
@@ -704,17 +704,17 @@ export default function IntegrationsPage() {
                                         <h4 className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">Setup</h4>
                                         <p className="text-sm text-[#475569]">Click the button below to authorize ZODO CRM to connect with {selectedIntegration.name}. You'll be redirected to grant permissions.</p>
                                         <button onClick={() => handleConnect(selectedIntegration)}
-                                            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#0891B2] text-white rounded-lg text-sm font-medium hover:bg-[#0891B2]/90 transition-colors">
+                                            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#0891B2] text-white rounded-md text-sm font-medium hover:bg-[#0891B2]/90 transition-colors">
                                             <Plug size={16} /> Connect {selectedIntegration.name}
                                         </button>
                                     </div>
                                 )}
 
                                 {selectedIntegration.status === "coming_soon" && (
-                                    <div className="bg-[#F8FAFC] rounded-lg p-5 text-center">
+                                    <div className="bg-[#F8FAFC] rounded-md p-5 text-center">
                                         <p className="text-sm text-[#475569] mb-3">This integration is under development. Get notified when it launches.</p>
                                         <button onClick={() => { toast({ title: "You're on the list!", description: `We'll notify you when ${selectedIntegration.name} is available.` }); setSelectedIntegration(null); }}
-                                            className="px-4 py-2 bg-[#0891B2] text-white rounded-lg text-sm font-medium hover:bg-[#0891B2]/90 transition-colors">
+                                            className="px-4 py-2 bg-[#0891B2] text-white rounded-md text-sm font-medium hover:bg-[#0891B2]/90 transition-colors">
                                             Notify Me
                                         </button>
                                     </div>

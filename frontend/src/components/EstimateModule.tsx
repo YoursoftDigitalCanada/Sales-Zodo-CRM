@@ -22,18 +22,15 @@ import { getLeads } from "@/features/leads/services/leads-service";
 import {
   autocompleteAddress,
   calculateMaterials,
-  createEagleViewOrder,
   detectRoof,
-  fetchEagleViewImage,
   fetchParcelBoundary,
   fetchSatelliteImage,
-  getEagleViewReport,
+  requestEagleViewInstant,
   getGoogleMapsJsApiKey,
   getPlaceDetails,
   saveEstimate,
   segmentRoof,
   type DetectionResult,
-  type EagleViewPlaceOrderResponse,
   type EagleViewReport,
   type MaterialEstimate,
   type ParcelBoundaryResult,
@@ -339,7 +336,7 @@ export default function EstimateModule(): JSX.Element {
   const [creatingAndSaving, setCreatingAndSaving] = useState(false);
   const [samOverlay, setSamOverlay] = useState<string | null>(null);
   const [segmenting, setSegmenting] = useState(false);
-  const [eagleViewOrder, setEagleViewOrder] = useState<EagleViewPlaceOrderResponse | null>(null);
+  const [eagleViewOrder, setEagleViewOrder] = useState<{ orderId?: number; reportIds?: number[] } | null>(null);
   const [eagleViewReport, setEagleViewReport] = useState<EagleViewReport | null>(null);
   const [eagleViewImageUrl, setEagleViewImageUrl] = useState<string | null>(null);
   const [orderingEagleView, setOrderingEagleView] = useState(false);
@@ -725,26 +722,16 @@ export default function EstimateModule(): JSX.Element {
       const state = stateZip[0] || "";
       const postalCode = stateZip[1] || "";
 
-      const order = await createEagleViewOrder(
-        { addressLine1, city, state, postalCode },
-      );
+      const report = await requestEagleViewInstant(address);
 
-      setEagleViewOrder(order);
-
-      // Immediately fetch the first report status
-      if (order.reportIds?.length > 0) {
-        try {
-          const report = await getEagleViewReport(order.reportIds[0]);
-          setEagleViewReport(report);
-          // Try to fetch aerial image
-          const imgUrl = await fetchEagleViewImage(order.reportIds[0]);
-          if (imgUrl) setEagleViewImageUrl(imgUrl);
-        } catch { /* report may not be ready yet */ }
+      setEagleViewReport(report);
+      if (report.reportDownloadLink) {
+        setEagleViewImageUrl(report.reportDownloadLink);
       }
 
       toast({
-        title: "EagleView Order Placed",
-        description: `Order #${order.orderId} — Report IDs: ${order.reportIds.join(", ")}`,
+        title: "EagleView Data Loaded",
+        description: `Area: ${report.area || "N/A"} | Pitch: ${report.pitch || "N/A"}`,
       });
     } catch (error: any) {
       toast({
@@ -758,17 +745,17 @@ export default function EstimateModule(): JSX.Element {
   }, [satellite, address, toast]);
 
   const handleCheckEagleViewStatus = useCallback(async () => {
-    if (!eagleViewOrder?.reportIds?.length) return;
+    if (!address) return;
     setPollingEagleView(true);
     try {
-      const report = await getEagleViewReport(eagleViewOrder.reportIds[0]);
+      const report = await requestEagleViewInstant(address);
       setEagleViewReport(report);
-      // Update aerial image
-      const imgUrl = await fetchEagleViewImage(eagleViewOrder.reportIds[0]);
-      if (imgUrl) setEagleViewImageUrl(imgUrl);
+      if (report.reportDownloadLink) {
+        setEagleViewImageUrl(report.reportDownloadLink);
+      }
       toast({
         title: "EagleView Status",
-        description: `Report ${report.reportId}: ${report.status}`,
+        description: `Report: ${report.status} | Area: ${report.area || "N/A"}`,
       });
     } catch (error: any) {
       toast({
@@ -779,7 +766,7 @@ export default function EstimateModule(): JSX.Element {
     } finally {
       setPollingEagleView(false);
     }
-  }, [eagleViewOrder, toast]);
+  }, [address, toast]);
 
   const handlePolygonChange = useCallback(
     (points: PolygonPoint[]) => {

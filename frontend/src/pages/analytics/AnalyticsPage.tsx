@@ -35,6 +35,10 @@ import {
     getRevenueTrend,
     getBookingStats,
     getDashboardKPIs,
+    getOverviewKPIs,
+    getRevenueVsTarget,
+    getActivityMetricsApi,
+    getTeamPerformanceApi,
 } from "@/features/analytics";
 
 export default function AnalyticsPage() {
@@ -58,17 +62,51 @@ export default function AnalyticsPage() {
     const fetchAnalytics = useCallback(async () => {
         try {
             setLoading(true);
-            const [kpis, revenue, pipeline, leads, revTrend] = await Promise.allSettled([
+            const [kpis, revenue, pipeline, leads, revTrend, overviewKpis, revTarget, actMetrics, teamPerf] = await Promise.allSettled([
                 getDashboardKPIs(),
                 getRevenueReport(),
                 getPipelineHealth(),
                 getLeadSourcesReport(),
                 getRevenueTrend(),
+                getOverviewKPIs(),
+                getRevenueVsTarget(),
+                getActivityMetricsApi(),
+                getTeamPerformanceApi(),
             ]);
             if (kpis.status === 'fulfilled' && Array.isArray(kpis.value) && kpis.value.length) setKpiCards(kpis.value as any);
-            if (revenue.status === 'fulfilled' && Array.isArray(revenue.value) && revenue.value.length) setRevenueData(revenue.value as any);
+
+            // Revenue vs Target — wire live data into revenueData
+            if (revTarget.status === 'fulfilled' && Array.isArray(revTarget.value) && revTarget.value.length) {
+                setRevenueData(revTarget.value as any);
+            } else if (revenue.status === 'fulfilled' && Array.isArray(revenue.value) && revenue.value.length) {
+                setRevenueData(revenue.value as any);
+            }
+
             if (pipeline.status === 'fulfilled' && Array.isArray(pipeline.value) && pipeline.value.length) setPipelineStages(pipeline.value as any);
             if (leads.status === 'fulfilled' && Array.isArray(leads.value) && leads.value.length) setLeadSources(leads.value as any);
+
+            // Activity Metrics — wire live data
+            if (actMetrics.status === 'fulfilled' && Array.isArray(actMetrics.value) && actMetrics.value.length) {
+                setActivityMetrics(actMetrics.value as any);
+            }
+
+            // Team Performance — wire live data
+            if (teamPerf.status === 'fulfilled' && Array.isArray(teamPerf.value) && teamPerf.value.length) {
+                setTeamPerformance(teamPerf.value as any);
+            }
+
+            // Overview KPIs — update KPI cards with live deal metrics
+            if (overviewKpis.status === 'fulfilled' && overviewKpis.value) {
+                const ok = overviewKpis.value as any;
+                const fmt = (v: number) => v >= 1000000 ? `$${(v/1000000).toFixed(1)}M` : v >= 1000 ? `$${(v/1000).toFixed(0)}K` : `$${v}`;
+                setKpiCards(prev => prev.map((card, i) => {
+                    if (i === 0) return { ...card, value: fmt(ok.totalRevenue || 0), label: 'Total Revenue' };
+                    if (i === 1) return { ...card, value: String(ok.dealsWon || 0), label: 'Deals Won' };
+                    if (i === 2) return { ...card, value: `${ok.conversionRate || 0}%`, label: 'Conversion Rate' };
+                    if (i === 3) return { ...card, value: fmt(ok.avgDealSize || 0), label: 'Avg Deal Size' };
+                    return card;
+                }));
+            }
         } catch (err) {
             console.error('Analytics fetch failed', err);
         } finally {

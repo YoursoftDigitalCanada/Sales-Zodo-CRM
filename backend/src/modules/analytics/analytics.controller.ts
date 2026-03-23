@@ -113,13 +113,6 @@ export class AnalyticsController {
 
     /**
      * GET /analytics/business-overview — Human-readable AI summary
-     *
-     * Builds the full AI context, then distills it into a structured
-     * response for the frontend dashboard widget and copilot.
-     *
-     * Response shape:
-     *   businessHealth, businessType, zeroState,
-     *   topInsights (top 5), suggestedActions, riskAlerts, summary
      */
     async getBusinessOverview(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
@@ -131,11 +124,7 @@ export class AnalyticsController {
                 businessType: context.businessType,
                 zeroState: context.zeroState,
                 onboardingCompleted: context.onboardingCompleted,
-
-                // Top 5 severity-ranked insights
                 topInsights: insights.slice(0, 5),
-
-                // Actionable items only
                 suggestedActions: insights
                     .filter(i => i.action)
                     .map(i => ({
@@ -145,13 +134,9 @@ export class AnalyticsController {
                         severity: i.severity,
                         category: i.category,
                     })),
-
-                // Critical + warning alerts
                 riskAlerts: insights.filter(
                     i => i.severity === 'critical' || i.severity === 'warning'
                 ),
-
-                // Quick summary stats
                 summary: {
                     totalLeads: context.pipeline.totalLeads,
                     conversionRate: context.pipeline.conversionRate,
@@ -163,11 +148,50 @@ export class AnalyticsController {
                     activeClients: context.clients.total,
                     netPosition: context.growthIndicators.netPosition,
                 },
-
                 generatedAt: context.generatedAt,
             };
 
             sendSuccess(res, overview);
+        } catch (e) { next(e); }
+    }
+
+    /**
+     * GET /analytics/overview-kpis — Deal-equivalent KPIs from Projects
+     */
+    async getOverviewKPIs(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const data = await analyticsService.getOverviewKPIs(req.context.tenantId);
+            sendSuccess(res, data);
+        } catch (e) { next(e); }
+    }
+
+    /**
+     * GET /analytics/revenue-vs-target — Monthly revenue vs target
+     */
+    async getRevenueVsTarget(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const data = await analyticsService.getRevenueVsTarget(req.context.tenantId);
+            sendSuccess(res, data);
+        } catch (e) { next(e); }
+    }
+
+    /**
+     * GET /analytics/activity-metrics — Activity counts by period
+     */
+    async getActivityMetrics(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const data = await analyticsService.getActivityMetrics(req.context.tenantId);
+            sendSuccess(res, data);
+        } catch (e) { next(e); }
+    }
+
+    /**
+     * GET /analytics/team-performance — Per-rep performance data
+     */
+    async getTeamPerformance(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const data = await analyticsService.getTeamPerformance(req.context.tenantId);
+            sendSuccess(res, data);
         } catch (e) { next(e); }
     }
 }

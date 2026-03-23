@@ -77,3 +77,23 @@ export async function getBusinessOverview(): Promise<unknown> {
     const response = await api.get("/analytics/business-overview");
     return response.data?.data || response.data;
 }
+
+export async function getOverviewKPIs(): Promise<unknown> {
+    const response = await api.get("/analytics/overview-kpis");
+    return response.data?.data || response.data;
+}
+
+export async function getRevenueVsTarget(): Promise<unknown> {
+    const response = await api.get("/analytics/revenue-vs-target");
+    return response.data?.data || response.data;
+}
+
+export async function getActivityMetricsApi(): Promise<unknown> {
+    const response = await api.get("/analytics/activity-metrics");
+    return response.data?.data || response.data;
+}
+
+export async function getTeamPerformanceApi(): Promise<unknown> {
+    const response = await api.get("/analytics/team-performance");
+    return response.data?.data || response.data;
+}

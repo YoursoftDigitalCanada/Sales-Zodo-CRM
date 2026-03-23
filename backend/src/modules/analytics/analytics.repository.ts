@@ -368,6 +368,179 @@ export class AnalyticsRepository {
             })),
         };
     }
+    // ── Overview KPIs (Project-based, Deal-equivalent) ──────────────────
+
+    async getOverviewKPIs(tenantId: string) {
+        const now = new Date();
+        const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 12, 1);
+
+        const projects = await prisma.project.findMany({
+            where: { tenantId, deletedAt: null, createdAt: { gte: twelveMonthsAgo } },
+            select: { status: true, contractValue: true, createdAt: true, completedAt: true },
+        });
+
+        let totalRevenue = 0;
+        let dealsWon = 0;
+        let dealsLost = 0;
+        let totalCycleDays = 0;
+        let cycleCount = 0;
+
+        for (const p of projects) {
+            const val = Number(p.contractValue) || 0;
+            if (p.status === 'COMPLETED') {
+                dealsWon++;
+                totalRevenue += val;
+                if (p.completedAt) {
+                    totalCycleDays += (p.completedAt.getTime() - p.createdAt.getTime()) / (1000 * 60 * 60 * 24);
+                    cycleCount++;
+                }
+            } else if (p.status === 'CANCELLED') {
+                dealsLost++;
+            }
+        }
+
+        const decided = dealsWon + dealsLost;
+        return {
+            totalRevenue: Math.round(totalRevenue * 100) / 100,
+            dealsWon,
+            dealsLost,
+            totalProjects: projects.length,
+            conversionRate: decided > 0 ? Math.round((dealsWon / decided) * 1000) / 10 : 0,
+            avgDealSize: dealsWon > 0 ? Math.round(totalRevenue / dealsWon) : 0,
+            avgDealCycle: cycleCount > 0 ? Math.round((totalCycleDays / cycleCount) * 10) / 10 : 0,
+        };
+    }
+
+    // ── Revenue vs Target (monthly, last 12 months) ──────────────────────
+
+    async getRevenueVsTarget(tenantId: string) {
+        const now = new Date();
+        const months: { label: string; start: Date; end: Date }[] = [];
+
+        for (let i = 11; i >= 0; i--) {
+            const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
+            const label = start.toLocaleDateString('en-US', { month: 'short' });
+            months.push({ label, start, end });
+        }
+
+        // Revenue from paid invoices
+        const revenueResults = await Promise.all(
+            months.map(async (m) => {
+                const agg = await prisma.invoice.aggregate({
+                    where: { tenantId, status: 'PAID', paidAt: { gte: m.start, lte: m.end } },
+                    _sum: { total: true },
+                });
+                return Number(agg._sum.total) || 0;
+            }),
+        );
+
+        // Target: average contractValue of completed projects / month as estimate
+        const completedProjects = await prisma.project.findMany({
+            where: { tenantId, deletedAt: null, status: 'COMPLETED' },
+            select: { contractValue: true },
+        });
+        const avgMonthlyTarget = completedProjects.length > 0
+            ? completedProjects.reduce((s, p) => s + (Number(p.contractValue) || 0), 0) / 12
+            : 0;
+
+        return months.map((m, i) => ({
+            month: m.label,
+            revenue: Math.round(revenueResults[i] * 100) / 100,
+            target: Math.round(avgMonthlyTarget * 100) / 100,
+            deals: 0, // placeholder
+        }));
+    }
+
+    // ── Activity Metrics (today / this week / this month) ─────────────────
+
+    async getActivityMetrics(tenantId: string) {
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const weekStart = new Date(todayStart);
+        weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+        const countByPeriod = async (model: 'email' | 'task' | 'quote' | 'calendarEvent', extra?: Record<string, unknown>) => {
+            const base: any = { tenantId, ...extra };
+            const [today, week, month] = await Promise.all([
+                (prisma[model] as any).count({ where: { ...base, createdAt: { gte: todayStart } } }),
+                (prisma[model] as any).count({ where: { ...base, createdAt: { gte: weekStart } } }),
+                (prisma[model] as any).count({ where: { ...base, createdAt: { gte: monthStart } } }),
+            ]);
+            return { today, thisWeek: week, thisMonth: month };
+        };
+
+        const [emails, tasks, proposals, meetings] = await Promise.all([
+            countByPeriod('email'),
+            countByPeriod('task'),
+            countByPeriod('quote'),
+            countByPeriod('calendarEvent'),
+        ]);
+
+        return [
+            { label: 'Emails', icon: 'Mail', ...emails },
+            { label: 'Tasks', icon: 'CheckSquare', ...tasks },
+            { label: 'Proposals', icon: 'FileText', ...proposals },
+            { label: 'Meetings', icon: 'Calendar', ...meetings },
+            { label: 'Follow-ups', icon: 'PhoneCall', today: 0, thisWeek: 0, thisMonth: 0 },
+        ];
+    }
+
+    // ── Team Performance (from Projects by salesRepId) ────────────────────
+
+    async getTeamPerformance(tenantId: string) {
+        const projects = await prisma.project.findMany({
+            where: { tenantId, deletedAt: null, salesRepId: { not: null } },
+            select: { status: true, contractValue: true, salesRepId: true },
+        });
+
+        const repIds = [...new Set(projects.map(p => p.salesRepId).filter(Boolean))] as string[];
+        if (repIds.length === 0) return [];
+
+        const employees = await prisma.employee.findMany({
+            where: { id: { in: repIds }, tenantId },
+            select: { id: true, user: { select: { firstName: true, lastName: true } } },
+        });
+        const nameMap = new Map(employees.map(e => [e.id, { name: `${e.user.firstName} ${e.user.lastName}`, initials: `${e.user.firstName[0]}${e.user.lastName[0]}` }]));
+
+        const grouped: Record<string, { wonDeals: number; totalDeals: number; revenue: number; activities: number }> = {};
+        for (const p of projects) {
+            const repId = p.salesRepId!;
+            if (!grouped[repId]) grouped[repId] = { wonDeals: 0, totalDeals: 0, revenue: 0, activities: 0 };
+            grouped[repId].totalDeals++;
+            if (p.status === 'COMPLETED') {
+                grouped[repId].wonDeals++;
+                grouped[repId].revenue += Number(p.contractValue) || 0;
+            }
+        }
+
+        // Get activity counts per rep
+        const taskCounts = await prisma.task.groupBy({
+            by: ['assignedToId'],
+            where: { tenantId, assignedToId: { in: repIds } },
+            _count: true,
+        });
+        const taskMap = new Map(taskCounts.map(t => [t.assignedToId, t._count]));
+
+        return Object.entries(grouped)
+            .map(([repId, data]) => {
+                const info = nameMap.get(repId) || { name: 'Unknown', initials: '??' };
+                return {
+                    id: repId,
+                    name: info.name,
+                    avatar: info.initials.toUpperCase(),
+                    revenue: `$${(data.revenue / 1000).toFixed(0)}K`,
+                    revenueRaw: data.revenue,
+                    dealsWon: data.wonDeals,
+                    dealsClosed: data.totalDeals,
+                    winRate: data.totalDeals > 0 ? Math.round((data.wonDeals / data.totalDeals) * 100) : 0,
+                    quota: 0, // placeholder
+                    activities: taskMap.get(repId) || 0,
+                };
+            })
+            .sort((a, b) => b.revenueRaw - a.revenueRaw);
+    }
 }
 
 export const analyticsRepository = new AnalyticsRepository();

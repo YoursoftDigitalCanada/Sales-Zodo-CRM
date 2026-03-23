@@ -121,6 +121,34 @@ export class AnalyticsService {
             generatedAt: new Date().toISOString(),
         };
     }
+
+    /**
+     * Overview KPIs — Project-based deal metrics (last 12 months).
+     */
+    async getOverviewKPIs(tenantId: string) {
+        return analyticsRepository.getOverviewKPIs(tenantId);
+    }
+
+    /**
+     * Revenue vs Target — monthly comparison over 12 months.
+     */
+    async getRevenueVsTarget(tenantId: string) {
+        return analyticsRepository.getRevenueVsTarget(tenantId);
+    }
+
+    /**
+     * Activity Metrics — emails, tasks, proposals, meetings by period.
+     */
+    async getActivityMetrics(tenantId: string) {
+        return analyticsRepository.getActivityMetrics(tenantId);
+    }
+
+    /**
+     * Team Performance — per-rep breakdown from projects.
+     */
+    async getTeamPerformance(tenantId: string) {
+        return analyticsRepository.getTeamPerformance(tenantId);
+    }
 }
 
 export const analyticsService = new AnalyticsService();

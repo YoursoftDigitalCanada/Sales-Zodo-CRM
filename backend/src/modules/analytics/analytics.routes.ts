@@ -71,4 +71,28 @@ router.get('/business-overview',
     analyticsController.getBusinessOverview.bind(analyticsController),
 );
 
+// ── Overview KPIs — Deal-equivalent metrics from Projects ───────────────
+router.get('/overview-kpis',
+    requirePermission(PERMISSIONS.ANALYTICS_VIEW),
+    analyticsController.getOverviewKPIs.bind(analyticsController),
+);
+
+// ── Revenue vs Target — Monthly comparison ──────────────────────────────
+router.get('/revenue-vs-target',
+    requirePermission(PERMISSIONS.ANALYTICS_VIEW),
+    analyticsController.getRevenueVsTarget.bind(analyticsController),
+);
+
+// ── Activity Metrics — Emails, tasks, proposals, meetings by period ─────
+router.get('/activity-metrics',
+    requirePermission(PERMISSIONS.ANALYTICS_VIEW),
+    analyticsController.getActivityMetrics.bind(analyticsController),
+);
+
+// ── Team Performance — Per-rep breakdown from Projects ───────────────────
+router.get('/team-performance',
+    requirePermission(PERMISSIONS.ANALYTICS_VIEW),
+    analyticsController.getTeamPerformance.bind(analyticsController),
+);
+
 export default router;

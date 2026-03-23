@@ -14,6 +14,7 @@ export const createEmployeeSchema = z.object({
 
 export const updateEmployeeSchema = z.object({
     body: z.object({
+        roleId: z.string().uuid().optional(),
         employeeCode: z.string().max(50).optional(),
         department: z.string().max(100).optional().nullable(),
         position: z.string().max(100).optional().nullable(),

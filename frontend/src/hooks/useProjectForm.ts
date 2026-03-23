@@ -10,6 +10,8 @@ import {
   ProjectStageOption,
   ProjectUserOption,
   createProject,
+  updateProject,
+  getProjectById,
   getCrews,
   getProjectManagers,
   getProjectStages,
@@ -312,8 +314,10 @@ function createDraftPayload(values: ProjectWizardFormValues, stageOptions: Proje
   };
 }
 
-export function useProjectForm() {
+export function useProjectForm(editId?: string) {
   const { toast } = useToast();
+  const isEditMode = Boolean(editId);
+  const [editLoaded, setEditLoaded] = useState(false);
 
   const [clientSearch, setClientSearch] = useState("");
   const [currentStepId, setCurrentStepId] = useState<ProjectWizardStepId>("clientSite");
@@ -321,9 +325,10 @@ export function useProjectForm() {
   const [lastRemoteSaveAt, setLastRemoteSaveAt] = useState<Date | null>(null);
 
   const initialDefaults = useMemo<ProjectWizardFormValues>(() => {
+    if (editId) return { ...projectWizardDefaultValues };
     const draft = readDraftFromStorage();
     return { ...projectWizardDefaultValues, ...(draft || {}) };
-  }, []);
+  }, [editId]);
 
   const form = useForm<ProjectWizardFormValues>({
     resolver: zodResolver(projectWizardSchema),
@@ -366,6 +371,61 @@ export function useProjectForm() {
       form.setValue("stageSelection", defaultStage.id, { shouldDirty: false });
     }
   }, [form, stageQuery.data]);
+
+  // ─── EDIT MODE: fetch existing project and prefill form ───
+  useEffect(() => {
+    if (!editId || editLoaded) return;
+    (async () => {
+      try {
+        const p = await getProjectById(editId);
+        if (!p) return;
+
+        const vals: Partial<ProjectWizardFormValues> = {
+          projectName: p.name || "",
+          description: p.description || "",
+          projectType: (p.projectType as any) || "RE_ROOF",
+          propertyType: (p.propertyType as any) || "RESIDENTIAL",
+          priority: (p.priority as any) || "NORMAL",
+          stageSelection: (p.status as string) || "PENDING",
+          clientSelection: p.client?.id ? "existing" : "new",
+          clientId: p.client?.id || "",
+          jobSiteAddress: p.jobSiteAddress || p.location || "",
+          jobSiteCity: p.jobSiteCity || "",
+          jobSiteState: p.jobSiteState || "",
+          jobSiteZip: p.jobSiteZip || "",
+          roofType: (p.roofType as any) || "",
+          shingleManufacturer: p.shingleManufacturer || "",
+          shingleColor: p.shingleColor || "",
+          permitRequired: p.permitRequired || false,
+          permitStatus: (p.permitStatus as any) || "",
+          permitNumber: p.permitNumber || "",
+          isInsuranceJob: p.isInsuranceJob || false,
+          insuranceCompany: p.insuranceCompany || "",
+          policyNumber: p.policyNumber || "",
+          claimNumber: p.claimNumber || "",
+          contractValue: p.contractValue ? Number(p.contractValue) : undefined,
+          estimatedStartDate: p.estimatedStartDate ? String(p.estimatedStartDate).split("T")[0] : "",
+          estimatedEndDate: p.estimatedEndDate ? String(p.estimatedEndDate).split("T")[0] : "",
+        };
+
+        // Set budget breakdown if available
+        if (p.estimatedCost) {
+          vals.estimatedMaterialCost = Number(p.estimatedCost);
+        }
+
+        form.reset({ ...projectWizardDefaultValues, ...vals });
+        setEditLoaded(true);
+
+        // Set client search to help find existing client
+        if (p.client?.id) {
+          setClientSearch(p.clientName || p.client?.clientName || "");
+        }
+      } catch (err) {
+        console.error("Failed to load project for editing", err);
+        toast({ title: "Error", description: "Could not load project data for editing.", variant: "destructive" });
+      }
+    })();
+  }, [editId, editLoaded, form, toast]);
 
   const clientsQuery = useQuery({
     queryKey: ["project-wizard-clients", clientSearch],
@@ -481,13 +541,20 @@ export function useProjectForm() {
       }
 
       if (!resolvedClientId) {
-        throw new Error("Client is required to create a project");
+        throw new Error("Client is required to save a project");
       }
 
       const payload = createProjectPayload(values, stageQuery.data || [], resolvedClientId);
-      const result = await createProject(payload);
-      clearDraftStorage();
-      return result;
+
+      if (isEditMode && editId) {
+        const result = await updateProject(editId, payload);
+        clearDraftStorage();
+        return result;
+      } else {
+        const result = await createProject(payload);
+        clearDraftStorage();
+        return result;
+      }
     },
   });
 
@@ -562,12 +629,12 @@ export function useProjectForm() {
 
     try {
       const created = await submitMutation.mutateAsync(form.getValues());
-      toast({ title: "Project created", description: "Roofing project created successfully." });
+      toast({ title: isEditMode ? "Project updated" : "Project created", description: isEditMode ? "Roofing project updated successfully." : "Roofing project created successfully." });
       return created;
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Please check the form values and try again.";
       toast({
-        title: "Unable to create project",
+        title: isEditMode ? "Unable to update project" : "Unable to create project",
         description: message,
         variant: "destructive",
       });

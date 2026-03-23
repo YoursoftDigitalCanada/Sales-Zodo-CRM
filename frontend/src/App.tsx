@@ -306,7 +306,7 @@ const AppRoutes = () => {
           path="/projects/:id/edit"
           element={
             <FeatureGuard featureId="projects">
-              <AddProjectPage />
+              <ProjectCreateWizardPage />
             </FeatureGuard>
           }
         />

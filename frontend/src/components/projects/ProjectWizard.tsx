@@ -30,8 +30,9 @@ function extractEntityId(value: unknown): string {
   return "";
 }
 
-export function ProjectWizard() {
+export function ProjectWizard({ editId }: { editId?: string }) {
   const navigate = useNavigate();
+  const isEditMode = Boolean(editId);
   const {
     form,
     currentStepId,
@@ -63,7 +64,7 @@ export function ProjectWizard() {
     isSavingDraft,
     lastLocalSaveAt,
     lastRemoteSaveAt,
-  } = useProjectForm();
+  } = useProjectForm(editId);
 
   const isLastStep = currentStepIndex >= visibleSteps.length - 1;
   const activeStep = useMemo(
@@ -150,7 +151,7 @@ export function ProjectWizard() {
           <CardHeader className="space-y-3 pb-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <CardTitle className="text-lg font-semibold text-[#0F172A]">Create Roofing Project</CardTitle>
+                <CardTitle className="text-lg font-semibold text-[#0F172A]">{isEditMode ? "Edit Roofing Project" : "Create Roofing Project"}</CardTitle>
                 <p className="text-sm text-[#64748B]">
                   Step {currentStepIndex + 1} of {visibleSteps.length}: {activeStep?.description}
                 </p>
@@ -243,7 +244,7 @@ export function ProjectWizard() {
                 disabled={isSubmitting}
               >
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Create Project
+                {isEditMode ? "Update Project" : "Create Project"}
               </Button>
             )}
           </div>

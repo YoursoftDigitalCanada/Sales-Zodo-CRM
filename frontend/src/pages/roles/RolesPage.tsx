@@ -45,10 +45,10 @@ const ROLE_COLORS: Record<string, string> = {
 /** Build permission map from role's permissions array: { module: [action1, action2] } */
 function buildPermMap(role: ApiRole, allPerms: ApiPermission[]): Record<string, string[]> {
     const result: Record<string, string[]> = {};
-    const rolePermIds = new Set((role.permissions || []).map((rp) => rp.permission.code));
+    const rolePermCodes = new Set((role.permissions || []).map((p) => p.code));
     for (const p of allPerms) {
         if (!result[p.module]) result[p.module] = [];
-        if (rolePermIds.has(p.code)) {
+        if (rolePermCodes.has(p.code)) {
             result[p.module].push(p.action);
         }
     }
@@ -156,7 +156,7 @@ export default function RolesPage() {
 
     const handleDuplicateRole = async (role: ApiRole) => {
         try {
-            const permIds = (role.permissions || []).map((rp) => rp.permission.id);
+            const permIds = (role.permissions || []).map((p) => p.id);
             await createRole({ name: `${role.name} (Copy)`, description: role.description || undefined, permissionIds: permIds });
             toast({ title: "Role Duplicated", description: `Copy of "${role.name}" created.` });
             await loadData();
@@ -341,7 +341,7 @@ export default function RolesPage() {
                                         const permCount = (role.permissions || []).length;
                                         const maxPerms = allPermissions.length;
                                         const color = ROLE_COLORS[role.name] || "#0891B2";
-                                        const usersCount = role._count?.employees || 0;
+                                        const usersCount = role.employeesCount || 0;
                                         return (
                                             <div key={role.id} className="bg-white rounded-lg card-shadow p-5 hover:shadow-md transition-shadow">
                                                 <div className="flex items-start justify-between mb-3">

@@ -10,15 +10,10 @@ export interface ApiRole {
     description: string | null;
     isSystemRole: boolean;
     isDefault: boolean;
-    tenantId: string;
+    employeesCount: number;
     createdAt: string;
     updatedAt: string;
-    _count?: { employees: number };
-    permissions?: Array<{
-        id: string;
-        permissionId: string;
-        permission: { id: string; code: string; name: string };
-    }>;
+    permissions: Array<{ id: string; code: string; name: string }>;
 }
 
 export interface ApiPermission {

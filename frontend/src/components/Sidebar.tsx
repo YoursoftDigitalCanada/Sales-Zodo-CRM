@@ -538,6 +538,7 @@ export function Sidebar({
   const [openSubmenus, setOpenSubmenus] = useState<{ [key: string]: boolean }>({});
   const [user, setUser] = useState<{ firstName: string; lastName: string; email?: string } | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [upgradeDismissed, setUpgradeDismissed] = useState(false);
 
   useEffect(() => {
     return subscribeEnabledFeatures(() =>
@@ -694,33 +695,6 @@ export function Sidebar({
             {collapsed ? <Menu size={20} /> : <X size={20} />}
           </motion.button>
         </div>
-
-        {/* Quick Actions - Only when expanded */}
-        {!collapsed && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="px-4 py-3 border-b border-[rgba(15,23,42,0.06)]"
-          >
-            <div className="flex items-center gap-2">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-lg text-sm font-medium transition-colors"
-              >
-                <Zap size={14} />
-                Quick Add
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="p-2 bg-white hover:bg-[#F1F5F9] text-[#475569] hover:text-[#0F172A] rounded-md transition-colors"
-              >
-                <Globe size={16} />
-              </motion.button>
-            </div>
-          </motion.div>
-        )}
 
         {/* Navigation */}
         <nav className="relative flex-1 overflow-y-auto p-4 space-y-1 custom-scrollbar">
@@ -984,29 +958,49 @@ export function Sidebar({
           })}
         </nav>
 
-        {/* Upgrade Banner - Only when expanded */}
-        {!collapsed && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mx-4 mb-4"
-          >
-            <div className="rounded-md bg-white border border-[rgba(15,23,42,0.06)] p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Award size={16} className="text-[#FF7B36]" />
-                <span className="text-sm font-semibold text-[#0F172A]">Upgrade to Pro</span>
+        {/* Upgrade Banner - Only when expanded + plan-aware + dismissible */}
+        {!collapsed && !upgradeDismissed && (() => {
+          // Read plan from localStorage
+          let plan = 'free';
+          try {
+            const storedUser = localStorage.getItem('user');
+            if (storedUser) {
+              const parsed = JSON.parse(storedUser);
+              plan = (parsed.subscriptionTier || parsed.planType || 'free').toLowerCase();
+            }
+          } catch {}
+          // Don't show for premium/pro users
+          if (plan === 'premium' || plan === 'pro') return null;
+          const upgradeTarget = plan === 'standard' ? 'Premium' : plan === 'basic' ? 'Standard or Premium' : 'Pro';
+          return (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mx-4 mb-4"
+            >
+              <div className="rounded-md bg-white border border-[rgba(15,23,42,0.06)] p-4 relative">
+                <button
+                  onClick={() => setUpgradeDismissed(true)}
+                  className="absolute top-2 right-2 p-1 rounded-md text-[#94A3B8] hover:text-[#0F172A] hover:bg-[#F1F5F9] transition-colors"
+                >
+                  <X size={14} />
+                </button>
+                <div className="flex items-center gap-2 mb-2">
+                  <Award size={16} className="text-[#FF7B36]" />
+                  <span className="text-sm font-semibold text-[#0F172A]">Upgrade to {upgradeTarget}</span>
+                </div>
+                <p className="text-xs text-[#475569] mb-3">
+                  Unlock advanced analytics, custom reports, and more.
+                </p>
+                <button
+                  className="w-full py-2 bg-[#FF7B36] hover:bg-[#FF7B36]/90 text-white text-xs font-semibold rounded-lg transition-colors"
+                >
+                  Upgrade Now
+                </button>
               </div>
-              <p className="text-xs text-[#475569] mb-3">
-                Unlock advanced analytics, custom reports, and more.
-              </p>
-              <button
-                className="w-full py-2 bg-[#FF7B36] hover:bg-[#FF7B36]/90 text-white text-xs font-semibold rounded-lg transition-colors"
-              >
-                Upgrade Now
-              </button>
-            </div>
-          </motion.div>
-        )}
+            </motion.div>
+          );
+        })()}
 
         {/* User Footer */}
         <div className="relative p-4 border-t border-[rgba(15,23,42,0.06)] flex-shrink-0">

@@ -66,11 +66,11 @@ interface SmartAlert {
 // THEME COLORS
 // ============================================
 const themeColors: Record<ThemeColor, { bg: string; text: string; light: string; gradient: string }> = {
-  teal: { bg: "bg-[#6637F4]", text: "text-[#6637F4]", light: "bg-[#6637F4]/10", gradient: "from-[#6637F4]" },
+  teal: { bg: "bg-[#0891B2]", text: "text-[#0891B2]", light: "bg-[#0891B2]/10", gradient: "from-[#0891B2]" },
   gold: { bg: "bg-[#D97706]", text: "text-[#D97706]", light: "bg-[#D97706]/10", gradient: "from-[#FBBF24]" },
   navy: { bg: "bg-[#FF7B36]", text: "text-[#FF7B36]", light: "bg-[#FF7B36]/10", gradient: "from-[#FF7B36]" },
   green: { bg: "bg-[#01C44A]", text: "text-[#01C44A]", light: "bg-[#01C44A]/10", gradient: "from-[#01C44A]" },
-  blue: { bg: "bg-[#6637F4]", text: "text-[#6637F4]", light: "bg-[#6637F4]/10", gradient: "from-[#6637F4]" },
+  blue: { bg: "bg-[#0891B2]", text: "text-[#0891B2]", light: "bg-[#0891B2]/10", gradient: "from-[#0891B2]" },
   purple: { bg: "bg-[#FF7B36]", text: "text-[#FF7B36]", light: "bg-[#FF7B36]/10", gradient: "from-[#FF7B36]" },
 };
 const getColorClasses = (color: ThemeColor) => themeColors[color] || themeColors.teal;
@@ -389,7 +389,7 @@ const Index = () => {
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={() => navigate("/settings/profile")} className="p-1.5 rounded-full text-[#475569]">
-                  <div className="h-7 w-7 rounded-full bg-[#6637F4] flex items-center justify-center text-white text-[10px] font-bold">{user ? (user.firstName[0] + user.lastName[0]).toUpperCase() : "GU"}</div>
+                  <div className="h-7 w-7 rounded-full bg-[#0891B2] flex items-center justify-center text-white text-[10px] font-bold">{user ? (user.firstName[0] + user.lastName[0]).toUpperCase() : "GU"}</div>
                 </button>
                 <div ref={notificationRef} className="relative">
                   <button onClick={() => setShowNotifications(!showNotifications)} className="relative p-1.5 rounded-full text-[#475569]">
@@ -398,22 +398,22 @@ const Index = () => {
                   </button>
                   <AnimatePresence>
                     {showNotifications && (
-                      <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} transition={{ duration: 0.15 }} className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-80 bg-white border border-[rgba(15,23,42,0.06)] card-shadow rounded-2xl overflow-hidden z-50">
-                        <div className="p-4 border-b border-[rgba(15,23,42,0.06)]"><div className="flex items-center justify-between"><h4 className="font-semibold text-[#0F172A]">Notifications</h4><button onClick={handleMarkAllAsRead} className="text-xs text-[#6637F4] font-medium cursor-pointer hover:underline">Mark all as read</button></div></div>
+                      <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} transition={{ duration: 0.15 }} className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-80 bg-white border border-[rgba(15,23,42,0.06)] card-shadow rounded-md overflow-hidden z-50">
+                        <div className="p-4 border-b border-[rgba(15,23,42,0.06)]"><div className="flex items-center justify-between"><h4 className="font-semibold text-[#0F172A]">Notifications</h4><button onClick={handleMarkAllAsRead} className="text-xs text-[#0891B2] font-medium cursor-pointer hover:underline">Mark all as read</button></div></div>
                         <div className="max-h-80 overflow-y-auto">
                           {notifications.map((notification) => {
                             const colors = getColorClasses(notification.color); return (
-                              <div key={notification.id} className={cn("p-3 hover:bg-white transition-colors cursor-pointer border-b border-[rgba(15,23,42,0.06)] last:border-0", !notification.read && "bg-[#6637F4]/5")}>
+                              <div key={notification.id} className={cn("p-3 hover:bg-white transition-colors cursor-pointer border-b border-[rgba(15,23,42,0.06)] last:border-0", !notification.read && "bg-[#0891B2]/5")}>
                                 <div className="flex gap-3">
                                   <div className={cn("w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0", colors.light)}><notification.icon size={16} className={colors.text} /></div>
                                   <div className="flex-1 min-w-0"><p className="text-xs font-medium text-[#0F172A]">{notification.title}</p><p className="text-[11px] text-[#475569] line-clamp-2">{notification.message}</p><p className="text-[10px] text-[#94A3B8] mt-0.5">{notification.time}</p></div>
-                                  {!notification.read && <div className="w-1.5 h-1.5 rounded-full bg-[#6637F4] flex-shrink-0 mt-2" />}
+                                  {!notification.read && <div className="w-1.5 h-1.5 rounded-full bg-[#0891B2] flex-shrink-0 mt-2" />}
                                 </div>
                               </div>
                             );
                           })}
                         </div>
-                        <div className="p-2.5 bg-white text-center border-t border-[rgba(15,23,42,0.06)]"><button onClick={() => navigate("/notifications")} className="text-xs text-[#6637F4] font-medium hover:underline">View All Notifications</button></div>
+                        <div className="p-2.5 bg-white text-center border-t border-[rgba(15,23,42,0.06)]"><button onClick={() => navigate("/notifications")} className="text-xs text-[#0891B2] font-medium hover:underline">View All Notifications</button></div>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -426,15 +426,15 @@ const Index = () => {
               <div className="flex items-center gap-2 md:gap-6 flex-1 min-w-0">
                 <div className="relative flex-1 max-w-[140px] sm:max-w-xs md:max-w-none md:flex-none md:w-64">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#475569]" />
-                  <input type="text" placeholder="Search anything..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onClick={() => setShowSearchModal(true)} className="w-full h-8 pl-9 pr-4 md:pr-14 rounded-lg bg-white border border-[rgba(15,23,42,0.06)] text-xs text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-1 focus:ring-[#6637F4]/30 transition-colors" />
+                  <input type="text" placeholder="Search anything..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onClick={() => setShowSearchModal(true)} className="w-full h-8 pl-9 pr-4 md:pr-14 rounded-md bg-white border border-[rgba(15,23,42,0.06)] text-xs text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-1 focus:ring-[#0891B2]/30 transition-colors" />
                   <kbd className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-0.5 rounded bg-[#F1F5F9] text-[10px] text-[#475569] border border-[rgba(15,23,42,0.06)] font-mono hidden md:flex items-center gap-1"><Command size={10} />K</kbd>
                 </div>
               </div>
               <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 flex-shrink-0">
-                <button onClick={() => setShowCopilot(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#6637F4]/8 text-[#6637F4] text-xs font-medium rounded-lg hover:bg-[#6637F4]/14 transition-colors border border-[#6637F4]/15">
+                <button onClick={() => setShowCopilot(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0891B2]/8 text-[#0891B2] text-xs font-medium rounded-md hover:bg-[#0891B2]/14 transition-colors border border-[#0891B2]/15">
                   <Sparkles size={14} /><span className="hidden sm:inline">Ask Experts</span>
                 </button>
-                <button onClick={() => navigate("/projects/add")} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#6637F4] text-white text-xs font-medium rounded-lg hover:bg-[#6637F4]/90 transition-colors">
+                <button onClick={() => navigate("/projects/add")} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0891B2] text-white text-xs font-medium rounded-md hover:bg-[#0891B2]/90 transition-colors">
                   <Plus size={14} /><span className="hidden sm:inline">New</span>
                 </button>
                 <button onClick={toggleDarkMode} className="p-2 rounded-md bg-white border border-[rgba(15,23,42,0.06)] text-[#94A3B8] hover:text-[#475569] transition-colors">
@@ -447,22 +447,22 @@ const Index = () => {
                   </button>
                   <AnimatePresence>
                     {showNotifications && (
-                      <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} transition={{ duration: 0.15 }} className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-80 max-w-80 bg-white border border-[rgba(15,23,42,0.06)] card-shadow rounded-2xl overflow-hidden z-50">
-                        <div className="p-4 border-b border-[rgba(15,23,42,0.06)]"><div className="flex items-center justify-between"><h4 className="font-semibold text-[#0F172A]">Notifications</h4><button onClick={handleMarkAllAsRead} className="text-xs text-[#6637F4] font-medium cursor-pointer hover:underline">Mark all as read</button></div></div>
+                      <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} transition={{ duration: 0.15 }} className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-80 max-w-80 bg-white border border-[rgba(15,23,42,0.06)] card-shadow rounded-md overflow-hidden z-50">
+                        <div className="p-4 border-b border-[rgba(15,23,42,0.06)]"><div className="flex items-center justify-between"><h4 className="font-semibold text-[#0F172A]">Notifications</h4><button onClick={handleMarkAllAsRead} className="text-xs text-[#0891B2] font-medium cursor-pointer hover:underline">Mark all as read</button></div></div>
                         <div className="max-h-80 overflow-y-auto">
                           {notifications.map((notification) => {
                             const colors = getColorClasses(notification.color); return (
-                              <div key={notification.id} className={cn("p-4 hover:bg-white transition-colors cursor-pointer border-b border-[rgba(15,23,42,0.06)] last:border-0", !notification.read && "bg-[#6637F4]/5")}>
+                              <div key={notification.id} className={cn("p-4 hover:bg-white transition-colors cursor-pointer border-b border-[rgba(15,23,42,0.06)] last:border-0", !notification.read && "bg-[#0891B2]/5")}>
                                 <div className="flex gap-3">
                                   <div className={cn("w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0", colors.light)}><notification.icon size={18} className={colors.text} /></div>
                                   <div className="flex-1 min-w-0"><p className="text-sm font-medium text-[#0F172A]">{notification.title}</p><p className="text-sm text-[#475569]">{notification.message}</p><p className="text-xs text-[#475569] mt-1">{notification.time}</p></div>
-                                  {!notification.read && <div className="w-2 h-2 rounded-full bg-[#6637F4] flex-shrink-0 mt-2" />}
+                                  {!notification.read && <div className="w-2 h-2 rounded-full bg-[#0891B2] flex-shrink-0 mt-2" />}
                                 </div>
                               </div>
                             );
                           })}
                         </div>
-                        <div className="p-3 bg-white text-center border-t border-[rgba(15,23,42,0.06)]"><button onClick={() => navigate("/notifications")} className="text-sm text-[#6637F4] font-medium hover:underline">View All Notifications</button></div>
+                        <div className="p-3 bg-white text-center border-t border-[rgba(15,23,42,0.06)]"><button onClick={() => navigate("/notifications")} className="text-sm text-[#0891B2] font-medium hover:underline">View All Notifications</button></div>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -470,8 +470,8 @@ const Index = () => {
                 <div ref={profileRef} className="relative flex items-center gap-3 pl-3 ml-3 border-l border-[rgba(15,23,42,0.06)] hidden md:flex">
                   <div className="text-right hidden sm:block"><p className="text-sm font-semibold text-[#0F172A]">{user ? `${user.firstName} ${user.lastName}` : "Guest User"}</p><p className="text-xs text-[#94A3B8]">{user?.role || "Administrator"}</p></div>
                   <motion.button whileHover={{ scale: 1.05 }} onClick={() => setShowProfileMenu(!showProfileMenu)} className="relative cursor-pointer flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-lg bg-[#6637F4] flex items-center justify-center text-white text-xs font-bold">{user ? (user.firstName[0] + user.lastName[0]).toUpperCase() : "GU"}</div>
-                    <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-[#01C44A] rounded-full border-2 border-[#F7F7FB]" />
+                    <div className="h-8 w-8 rounded-md bg-[#0891B2] flex items-center justify-center text-white text-xs font-bold">{user ? (user.firstName[0] + user.lastName[0]).toUpperCase() : "GU"}</div>
+                    <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-[#01C44A] rounded-full border-2 border-[rgba(15,23,42,0.06)]" />
                   </motion.button>
                   <ChevronDown size={16} className={cn("text-[#475569] transition-transform", showProfileMenu && "rotate-180")} />
                   <AnimatePresence>
@@ -512,13 +512,13 @@ const Index = () => {
           {visibleAlerts.length > 0 && (
             <div className="space-y-2">
               {visibleAlerts.map((alert) => (
-                <motion.div key={alert.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, height: 0 }} className={cn("flex items-center gap-3 px-4 py-2.5 rounded-lg border", alert.type === "danger" ? "bg-[#FF2E2D]/5 border-[#FF2E2D]/15" : alert.type === "warning" ? "bg-[#D97706]/5 border-[#D97706]/15" : "bg-[#6637F4]/5 border-[#6637F4]/15")}>
-                  <AlertTriangle size={14} className={alert.type === "danger" ? "text-[#FF2E2D]" : alert.type === "warning" ? "text-[#D97706]" : "text-[#6637F4]"} />
+                <motion.div key={alert.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, height: 0 }} className={cn("flex items-center gap-3 px-4 py-2.5 rounded-md border", alert.type === "danger" ? "bg-[#FF2E2D]/5 border-red-200/15" : alert.type === "warning" ? "bg-[#D97706]/5 border-[#D97706]/15" : "bg-[#0891B2]/5 border-[#0891B2]/15")}>
+                  <AlertTriangle size={14} className={alert.type === "danger" ? "text-[#FF2E2D]" : alert.type === "warning" ? "text-[#D97706]" : "text-[#0891B2]"} />
                   <div className="flex-1 min-w-0">
                     <span className="text-xs font-semibold text-[#0F172A]">{alert.title}</span>
                     <span className="text-xs text-[#475569] ml-2">{alert.message}</span>
                   </div>
-                  <button onClick={() => navigate(alert.actionPath)} className="text-[11px] font-medium text-[#6637F4] hover:underline whitespace-nowrap">{alert.action}</button>
+                  <button onClick={() => navigate(alert.actionPath)} className="text-[11px] font-medium text-[#0891B2] hover:underline whitespace-nowrap">{alert.action}</button>
                   <button onClick={() => handleDismissAlert(alert.id)} className="text-[#94A3B8] hover:text-[#475569]"><X size={14} /></button>
                 </motion.div>
               ))}
@@ -526,10 +526,10 @@ const Index = () => {
           )}
 
           {/* ===== AI BUSINESS OVERVIEW ===== */}
-          <div className="bg-white rounded-2xl border-l-[3px] border-l-[#6637F4] p-0 overflow-hidden ai-hero-pulse" style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.04), 0 8px 20px rgba(15,23,42,0.05)' }}>
+          <div className="bg-white rounded-md border-l-[3px] border-l-[#0891B2] p-0 overflow-hidden ai-hero-pulse" style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.04), 0 8px 20px rgba(15,23,42,0.05)' }}>
             <div className="flex items-center justify-between px-5 pt-4 pb-3">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-[#6637F4]/8 flex items-center justify-center"><Sparkles size={16} className="text-[#6637F4]" /></div>
+                <div className="w-8 h-8 rounded-md bg-[#0891B2]/8 flex items-center justify-center"><Sparkles size={16} className="text-[#0891B2]" /></div>
                 <div>
                   <h2 className="text-sm font-semibold text-[#0F172A] tracking-tight">AI Business Intelligence</h2>
                   <p className="text-[11px] text-[#94A3B8]">Real-time insights across your CRM</p>
@@ -583,8 +583,8 @@ const Index = () => {
 
           {/* ===== AI DAILY SUMMARY ===== */}
           <div className="ai-insight-enter" style={{ animationDelay: '200ms' }}>
-            <div className="flex items-center gap-2 px-1 mb-3"><Sparkles size={13} className="text-[#6637F4]" /><span className="text-xs font-semibold text-[#0F172A]">Daily AI Summary</span><span className="ai-tag">AI</span></div>
-            <div className="bg-white rounded-2xl border border-[rgba(15,23,42,0.06)] px-5 py-3" style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.03)' }}>
+            <div className="flex items-center gap-2 px-1 mb-3"><Sparkles size={13} className="text-[#0891B2]" /><span className="text-xs font-semibold text-[#0F172A]">Daily AI Summary</span><span className="ai-tag">AI</span></div>
+            <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] px-5 py-3" style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.03)' }}>
               <p className="text-[12px] text-[#475569] leading-relaxed">
                 <span className="text-[#0F172A] font-medium">Today's overview:</span>{' '}
                 {dailyAiSummary}
@@ -597,8 +597,8 @@ const Index = () => {
             /* Mobile: compact icon grid matching screenshot */
             <div className="grid grid-cols-4 gap-2">
               {quickActions.map((action, index) => (
-                <motion.button key={index} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 * index }} whileTap={{ scale: 0.95 }} onClick={() => handleQuickAction(action.path)} className="flex flex-col items-center gap-1.5 py-3 bg-white rounded-xl border border-[rgba(15,23,42,0.06)] active:bg-[#F1F5F9] transition-colors">
-                  <div className="w-9 h-9 rounded-lg bg-[#F1F5F9] flex items-center justify-center"><action.icon size={18} className="text-[#475569]" /></div>
+                <motion.button key={index} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 * index }} whileTap={{ scale: 0.95 }} onClick={() => handleQuickAction(action.path)} className="flex flex-col items-center gap-1.5 py-3 bg-white rounded-md border border-[rgba(15,23,42,0.06)] active:bg-[#F1F5F9] transition-colors">
+                  <div className="w-9 h-9 rounded-md bg-[#F1F5F9] flex items-center justify-center"><action.icon size={18} className="text-[#475569]" /></div>
                   <span className="text-[10px] font-medium text-[#475569] leading-tight text-center px-1">{action.title}</span>
                 </motion.button>
               ))}
@@ -608,10 +608,10 @@ const Index = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
               {quickActions.map((action, index) => {
                 const colors = getColorClasses(action.color); return (
-                  <motion.button key={index} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 * index }} whileHover={{ scale: 1.01, y: -2 }} whileTap={{ scale: 0.99 }} onClick={() => handleQuickAction(action.path)} className="flex items-center gap-4 p-4 bg-white rounded-2xl card-shadow hover:shadow-md transition-all group">
+                  <motion.button key={index} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 * index }} whileHover={{ scale: 1.01, y: -2 }} whileTap={{ scale: 0.99 }} onClick={() => handleQuickAction(action.path)} className="flex items-center gap-4 p-4 bg-white rounded-md card-shadow hover:shadow-md transition-all group">
                     <div className="w-10 h-10 rounded-md bg-[#F1F5F9] flex items-center justify-center"><action.icon size={20} className="text-[#475569]" /></div>
-                    <div className="text-left"><p className="font-semibold text-[#0F172A] group-hover:text-[#6637F4] transition-colors">{action.title}</p><p className="text-xs text-[#475569]">{action.description}</p></div>
-                    <ArrowUpRight size={16} className="ml-auto text-[#94A3B8] group-hover:text-[#6637F4] transition-colors" />
+                    <div className="text-left"><p className="font-semibold text-[#0F172A] group-hover:text-[#0891B2] transition-colors">{action.title}</p><p className="text-xs text-[#475569]">{action.description}</p></div>
+                    <ArrowUpRight size={16} className="ml-auto text-[#94A3B8] group-hover:text-[#0891B2] transition-colors" />
                   </motion.button>
                 );
               })}
@@ -621,9 +621,9 @@ const Index = () => {
           {/* ===== STAT CARDS ===== */}
           {isMobile ? (
             /* Mobile: list-style stat rows with chevrons */
-            <div className="bg-white rounded-2xl card-shadow divide-y divide-[rgba(15,23,42,0.04)] overflow-hidden">
+            <div className="bg-white rounded-md card-shadow divide-y divide-[rgba(15,23,42,0.04)] overflow-hidden">
               {[
-                { icon: FolderKanban, color: "#6637F4", bg: "#6637F4/10", title: "Active Projects", value: `${stats.projectsCount}`, sub: stats.projectsCount > 0 ? `${stats.projectsCount}, on track` : "none", path: "/projects" },
+                { icon: FolderKanban, color: "#0891B2", bg: "#0891B2/10", title: "Active Projects", value: `${stats.projectsCount}`, sub: stats.projectsCount > 0 ? `${stats.projectsCount}, on track` : "none", path: "/projects" },
                 { icon: DollarSign, color: "#01C44A", bg: "#01C44A/10", title: "Total Earnings", value: `$${stats.earnings.toLocaleString()}`, sub: "paid invoices", path: "/invoice" },
                 { icon: Clock, color: "#FF7B36", bg: "#FF7B36/10", title: "Pending Tasks", value: `${stats.pendingTasks}`, sub: stats.pendingTasks > 0 ? `${stats.pendingTasks}, needs action` : "all done", path: "/tasks" },
               ].map((s, i) => (
@@ -650,14 +650,14 @@ const Index = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
 
             {/* Leads Tracker */}
-            <div className="bg-white rounded-2xl card-shadow overflow-hidden">
+            <div className="bg-white rounded-md card-shadow overflow-hidden">
               <div className="p-5 border-b border-[rgba(15,23,42,0.06)]">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-[#6637F4]/10 flex items-center justify-center"><Target size={16} className="text-[#6637F4]" /></div>
+                    <div className="w-9 h-9 rounded-md bg-[#0891B2]/10 flex items-center justify-center"><Target size={16} className="text-[#0891B2]" /></div>
                     <div><h3 className="font-semibold text-sm text-[#0F172A]">Lead Pipeline</h3><p className="text-[11px] text-[#94A3B8]">{hotLeads.length} hot · {stalledLeads.length} stalled</p></div>
                   </div>
-                  <button onClick={() => navigate("/leads")} className="text-xs text-[#6637F4] font-medium hover:underline flex items-center gap-1">View All <ArrowUpRight size={12} /></button>
+                  <button onClick={() => navigate("/leads")} className="text-xs text-[#0891B2] font-medium hover:underline flex items-center gap-1">View All <ArrowUpRight size={12} /></button>
                 </div>
               </div>
               <div className="divide-y divide-[rgba(15,23,42,0.04)] max-h-[320px] overflow-y-auto">
@@ -677,7 +677,7 @@ const Index = () => {
                         <span className="text-[10px] text-[#94A3B8]">{lead.daysInStage}d in stage</span>
                       </div>
                       {(lead.status === "stalled" || lead.status === "hot") && (
-                        <button onClick={() => handleFollowUpLead(lead)} className="text-[10px] font-medium text-[#6637F4] hover:underline flex items-center gap-1"><Send size={10} /> Follow Up</button>
+                        <button onClick={() => handleFollowUpLead(lead)} className="text-[10px] font-medium text-[#0891B2] hover:underline flex items-center gap-1"><Send size={10} /> Follow Up</button>
                       )}
                     </div>
                   </div>
@@ -686,14 +686,14 @@ const Index = () => {
             </div>
 
             {/* Invoices Tracker */}
-            <div className="bg-white rounded-2xl card-shadow overflow-hidden">
+            <div className="bg-white rounded-md card-shadow overflow-hidden">
               <div className="p-5 border-b border-[rgba(15,23,42,0.06)]">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-[#FF7B36]/10 flex items-center justify-center"><FileText size={16} className="text-[#FF7B36]" /></div>
+                    <div className="w-9 h-9 rounded-md bg-[#FF7B36]/10 flex items-center justify-center"><FileText size={16} className="text-[#FF7B36]" /></div>
                     <div><h3 className="font-semibold text-sm text-[#0F172A]">Invoice Tracker</h3><p className="text-[11px] text-[#94A3B8]">{overdueInvoices.length} overdue · {pendingInvoices.length} pending</p></div>
                   </div>
-                  <button onClick={() => navigate("/invoices")} className="text-xs text-[#6637F4] font-medium hover:underline flex items-center gap-1">View All <ArrowUpRight size={12} /></button>
+                  <button onClick={() => navigate("/invoices")} className="text-xs text-[#0891B2] font-medium hover:underline flex items-center gap-1">View All <ArrowUpRight size={12} /></button>
                 </div>
               </div>
               <div className="divide-y divide-[rgba(15,23,42,0.04)] max-h-[320px] overflow-y-auto">
@@ -723,14 +723,14 @@ const Index = () => {
           </div>
 
           {/* ===== PROJECTS OVERVIEW ===== */}
-          <div className="bg-white rounded-2xl card-shadow overflow-hidden">
+          <div className="bg-white rounded-md card-shadow overflow-hidden">
             <div className="p-5 border-b border-[rgba(15,23,42,0.06)]">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-[#6637F4]/10 flex items-center justify-center"><Briefcase size={16} className="text-[#6637F4]" /></div>
+                  <div className="w-9 h-9 rounded-md bg-[#0891B2]/10 flex items-center justify-center"><Briefcase size={16} className="text-[#0891B2]" /></div>
                   <div><h3 className="font-semibold text-sm text-[#0F172A]">Projects Overview</h3><p className="text-[11px] text-[#94A3B8]">{projects.filter(p => p.status !== "completed").length} active · {atRiskProjects.length} need attention</p></div>
                 </div>
-                <button onClick={() => navigate("/projects")} className="text-xs text-[#6637F4] font-medium hover:underline flex items-center gap-1">View All <ArrowUpRight size={12} /></button>
+                <button onClick={() => navigate("/projects")} className="text-xs text-[#0891B2] font-medium hover:underline flex items-center gap-1">View All <ArrowUpRight size={12} /></button>
               </div>
             </div>
             <div className="responsive-table">
@@ -750,7 +750,7 @@ const Index = () => {
                     <td className="py-3 px-5 text-[#475569]">{proj.client}</td>
                     <td className="py-3 px-5">
                       <div className="flex items-center justify-center gap-2">
-                        <div className="w-20 h-1.5 bg-[#F1F5F9] rounded-full overflow-hidden"><div className="h-full rounded-full" style={{ width: `${proj.progress}%`, backgroundColor: proj.progress === 100 ? "#01C44A" : proj.progress > 60 ? "#6637F4" : proj.progress > 30 ? "#D97706" : "#FF2E2D" }} /></div>
+                        <div className="w-20 h-1.5 bg-[#F1F5F9] rounded-full overflow-hidden"><div className="h-full rounded-full" style={{ width: `${proj.progress}%`, backgroundColor: proj.progress === 100 ? "#01C44A" : proj.progress > 60 ? "#0891B2" : proj.progress > 30 ? "#D97706" : "#FF2E2D" }} /></div>
                         <span className="text-[10px] font-medium text-[#475569] w-8">{proj.progress}%</span>
                       </div>
                     </td>
@@ -760,7 +760,7 @@ const Index = () => {
                     </td>
                     <td className="py-3 px-5 text-[#475569]">{proj.deadline}</td>
                     <td className="py-3 px-5">
-                      <div className="flex items-center justify-center -space-x-1.5">{proj.team.slice(0, 3).map((t, i) => <div key={i} className="w-6 h-6 rounded-full bg-[#6637F4]/10 border-2 border-white flex items-center justify-center text-[8px] font-bold text-[#6637F4]">{t}</div>)}{proj.team.length > 3 && <div className="w-6 h-6 rounded-full bg-[#F1F5F9] border-2 border-white flex items-center justify-center text-[8px] font-bold text-[#475569]">+{proj.team.length - 3}</div>}</div>
+                      <div className="flex items-center justify-center -space-x-1.5">{proj.team.slice(0, 3).map((t, i) => <div key={i} className="w-6 h-6 rounded-full bg-[#0891B2]/10 border-2 border-white flex items-center justify-center text-[8px] font-bold text-[#0891B2]">{t}</div>)}{proj.team.length > 3 && <div className="w-6 h-6 rounded-full bg-[#F1F5F9] border-2 border-white flex items-center justify-center text-[8px] font-bold text-[#475569]">+{proj.team.length - 3}</div>}</div>
                     </td>
                   </tr>
                 ))}</tbody>
@@ -776,11 +776,11 @@ const Index = () => {
 
           {/* ===== ACTIVITY & PROJECTS TABLE ===== */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="bg-white border border-[rgba(15,23,42,0.06)] rounded-2xl overflow-hidden">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="bg-white border border-[rgba(15,23,42,0.06)] rounded-md overflow-hidden">
               <div className="p-6 border-b border-[rgba(15,23,42,0.06)]">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-[#6637F4]/10 flex items-center justify-center"><Zap size={18} className="text-[#6637F4]" /></div><div><h3 className="font-semibold text-[#0F172A]">Recent Activity</h3><p className="text-xs text-[#475569]">Latest updates</p></div></div>
-                  <button onClick={() => navigate("/activity")} className="text-sm text-[#6637F4] font-medium hover:underline">View All</button>
+                  <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-md bg-[#0891B2]/10 flex items-center justify-center"><Zap size={18} className="text-[#0891B2]" /></div><div><h3 className="font-semibold text-[#0F172A]">Recent Activity</h3><p className="text-xs text-[#475569]">Latest updates</p></div></div>
+                  <button onClick={() => navigate("/activity")} className="text-sm text-[#0891B2] font-medium hover:underline">View All</button>
                 </div>
               </div>
               <div className="divide-y divide-[rgba(15,23,42,0.06)]">
@@ -789,7 +789,7 @@ const Index = () => {
                     <motion.div key={activity.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 * index }} className="p-4 hover:bg-white transition-colors cursor-pointer group">
                       <div className="flex items-start gap-3">
                         <div className={cn("w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0", colors.light)}><activity.icon size={18} className={colors.text} /></div>
-                        <div className="flex-1 min-w-0"><p className="text-sm text-[#0F172A] group-hover:text-[#6637F4] transition-colors">{activity.message}</p><p className="text-xs text-[#475569] mt-1 flex items-center gap-1"><Clock size={10} />{activity.time}</p></div>
+                        <div className="flex-1 min-w-0"><p className="text-sm text-[#0F172A] group-hover:text-[#0891B2] transition-colors">{activity.message}</p><p className="text-xs text-[#475569] mt-1 flex items-center gap-1"><Clock size={10} />{activity.time}</p></div>
                       </div>
                     </motion.div>
                   );
@@ -804,8 +804,8 @@ const Index = () => {
         {!isMobile && (
           <footer className="px-6 py-4 bg-[#F7F7FB] border-b border-[rgba(15,23,42,0.06)]">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-2 md:gap-4 text-xs md:text-sm text-[#94A3B8]">
-              <div className="flex items-center gap-2"><span>© {new Date().getFullYear()}</span><span className="font-semibold text-[#0F172A]">ZODO</span><span className="text-[#6637F4] font-semibold">CRM</span><span>• All rights reserved</span></div>
-              <div className="flex items-center gap-4"><a href="#" className="hover:text-[#6637F4] transition-colors">Privacy</a><a href="#" className="hover:text-[#6637F4] transition-colors">Terms</a><a href="#" className="hover:text-[#6637F4] transition-colors">Support</a></div>
+              <div className="flex items-center gap-2"><span>© {new Date().getFullYear()}</span><span className="font-semibold text-[#0F172A]">ZODO</span><span className="text-[#0891B2] font-semibold">CRM</span><span>• All rights reserved</span></div>
+              <div className="flex items-center gap-4"><a href="#" className="hover:text-[#0891B2] transition-colors">Privacy</a><a href="#" className="hover:text-[#0891B2] transition-colors">Terms</a><a href="#" className="hover:text-[#0891B2] transition-colors">Support</a></div>
             </div>
           </footer>
         )}
@@ -817,7 +817,7 @@ const Index = () => {
       <AnimatePresence>
         {showSearchModal && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 bg-black/60 backdrop-blur-md" onClick={() => setShowSearchModal(false)}>
-            <motion.div initial={{ opacity: 0, y: -20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -20, scale: 0.95 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-2xl bg-white border border-[rgba(15,23,42,0.06)] card-shadow rounded-2xl overflow-hidden">
+            <motion.div initial={{ opacity: 0, y: -20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -20, scale: 0.95 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-2xl bg-white border border-[rgba(15,23,42,0.06)] card-shadow rounded-md overflow-hidden">
               <div className="flex items-center gap-3 p-4 border-b border-[rgba(15,23,42,0.06)]">
                 <Search size={20} className="text-[#475569]" />
                 <input ref={searchInputRef} type="text" placeholder="Search projects, clients, invoices..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="flex-1 bg-transparent text-lg text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none" />
@@ -829,8 +829,8 @@ const Index = () => {
                   const colors = getColorClasses(action.color); return (
                     <button key={index} onClick={() => { handleQuickAction(action.path); setShowSearchModal(false); }} className="w-full flex items-center gap-3 p-3 rounded-md hover:bg-white transition-colors group">
                       <div className={cn("w-10 h-10 rounded-md flex items-center justify-center", colors.light)}><action.icon size={18} className={colors.text} /></div>
-                      <div className="text-left"><p className="text-sm font-medium text-[#0F172A] group-hover:text-[#6637F4] transition-colors">{action.title}</p><p className="text-xs text-[#475569]">{action.description}</p></div>
-                      <ArrowUpRight size={14} className="ml-auto text-[#94A3B8] group-hover:text-[#6637F4] transition-colors" />
+                      <div className="text-left"><p className="text-sm font-medium text-[#0F172A] group-hover:text-[#0891B2] transition-colors">{action.title}</p><p className="text-xs text-[#475569]">{action.description}</p></div>
+                      <ArrowUpRight size={14} className="ml-auto text-[#94A3B8] group-hover:text-[#0891B2] transition-colors" />
                     </button>
                   );
                 })}</div>

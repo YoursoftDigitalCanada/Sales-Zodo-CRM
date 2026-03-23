@@ -97,7 +97,7 @@ function getTaskStatusTone(status: unknown): string {
   const text = readText(status).toUpperCase();
   if (text === "DONE" || text === "COMPLETED") return "border-[#BBF7D0] bg-[#F0FDF4] text-[#166534]";
   if (text === "IN_PROGRESS") return "border-[#BFDBFE] bg-[#EFF6FF] text-[#1D4ED8]";
-  return "border-[#E2E8F0] bg-[#F8FAFC] text-[#475569]";
+  return "border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] text-[#475569]";
 }
 
 function getTaskPriorityTone(priority: unknown): string {
@@ -136,8 +136,8 @@ function StatCard({
   return (
     <div
       className={cn(
-        "rounded-[5px] border p-4 shadow-sm",
-        accent ? "border-[#BBF7D0] bg-[#F0FDF4]" : "border-[#E2E8F0] bg-[#F8FAFC]",
+        "rounded-md border p-4 shadow-sm",
+        accent ? "border-[#BBF7D0] bg-[#F0FDF4]" : "border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]",
       )}
     >
       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#64748B]">{label}</p>
@@ -149,7 +149,7 @@ function StatCard({
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-[#EEF2F6] py-3 last:border-b-0 last:pb-0">
+    <div className="flex items-start justify-between gap-4 border-b border-[rgba(15,23,42,0.06)] py-3 last:border-b-0 last:pb-0">
       <span className="text-sm text-[#64748B]">{label}</span>
       <span className="text-right text-sm font-medium text-[#0F172A]">{value}</span>
     </div>
@@ -304,10 +304,10 @@ export default function ProjectDetailPage() {
       <div className="min-h-screen bg-[#F8FAFC]">
         <div className="mx-auto max-w-[1400px] px-4 py-6 md:px-6">
           <div className="space-y-4">
-            <Skeleton className="h-10 w-40 rounded-[5px]" />
-            <Skeleton className="h-52 w-full rounded-[5px]" />
-            <Skeleton className="h-36 w-full rounded-[5px]" />
-            <Skeleton className="h-64 w-full rounded-[5px]" />
+            <Skeleton className="h-10 w-40 rounded-md" />
+            <Skeleton className="h-52 w-full rounded-md" />
+            <Skeleton className="h-36 w-full rounded-md" />
+            <Skeleton className="h-64 w-full rounded-md" />
           </div>
         </div>
       </div>
@@ -317,16 +317,16 @@ export default function ProjectDetailPage() {
   if (!project) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#F8FAFC] px-4">
-        <Card className="w-full max-w-lg rounded-[5px] border-[rgba(15,23,42,0.08)] shadow-sm">
+        <Card className="w-full max-w-lg rounded-md border-[rgba(15,23,42,0.08)] shadow-sm">
           <CardContent className="flex flex-col items-center py-14 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-[5px] bg-[#FEE2E2] text-[#B91C1C]">
+            <div className="flex h-14 w-14 items-center justify-center rounded-md bg-[#FEE2E2] text-[#B91C1C]">
               <AlertCircle className="h-6 w-6" />
             </div>
             <h2 className="mt-5 text-xl font-semibold text-[#0F172A]">Roofing job not found</h2>
             <p className="mt-2 text-sm text-[#64748B]">
               The project may have been deleted or the link is no longer valid.
             </p>
-            <Button className="mt-5 rounded-[5px]" variant="outline" onClick={() => navigate("/projects")}>
+            <Button className="mt-5 rounded-md" variant="outline" onClick={() => navigate("/projects")}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Operations Board
             </Button>
@@ -368,13 +368,13 @@ export default function ProjectDetailPage() {
     <div className="min-h-screen bg-[#F8FAFC] pb-10">
       <div className="mx-auto max-w-[1400px] px-4 py-5 md:px-6 md:py-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <Button variant="outline" className="rounded-[5px]" onClick={() => navigate("/projects")}>
+          <Button variant="outline" className="rounded-md" onClick={() => navigate("/projects")}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Operations Board
           </Button>
 
           <Button
-            className="rounded-[5px]"
+            className="rounded-md"
             variant="outline"
             onClick={() => navigate(`/projects/${id}/edit`)}
           >
@@ -383,22 +383,22 @@ export default function ProjectDetailPage() {
           </Button>
         </div>
 
-        <Card className="mt-4 overflow-hidden rounded-[5px] border-[rgba(15,23,42,0.08)] shadow-[0_18px_42px_rgba(15,23,42,0.06)]">
+        <Card className="mt-4 overflow-hidden rounded-md border-[rgba(15,23,42,0.08)] shadow-sm hover:shadow-lg transition-all">
           <CardContent className="bg-[radial-gradient(circle_at_top_right,_rgba(14,165,233,0.14),_transparent_28%),linear-gradient(180deg,#FFFFFF_0%,#F8FCFE_100%)] p-6 md:p-7">
             <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
               <div className="max-w-3xl">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge className={cn("rounded-[5px] border px-2.5 py-1 text-xs font-medium", stageMeta.border, stageMeta.softBg, stageMeta.accentText)}>
+                  <Badge className={cn("rounded-md border px-2.5 py-1 text-xs font-medium", stageMeta.border, stageMeta.softBg, stageMeta.accentText)}>
                     {stageMeta.label}
                   </Badge>
-                  <Badge className="rounded-[5px] border border-[#E2E8F0] bg-white px-2.5 py-1 text-xs font-medium text-[#334155]">
+                  <Badge className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white px-2.5 py-1 text-xs font-medium text-[#334155]">
                     {getProjectJobType(project)}
                   </Badge>
-                  <Badge className="rounded-[5px] border border-[#E2E8F0] bg-white px-2.5 py-1 text-xs font-medium text-[#334155]">
+                  <Badge className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white px-2.5 py-1 text-xs font-medium text-[#334155]">
                     Priority: {getProjectPriorityLabel(project)}
                   </Badge>
                   {stageKey === "production" ? (
-                    <Badge className="rounded-[5px] border border-[#BBF7D0] bg-[#F0FDF4] px-2.5 py-1 text-xs font-medium text-[#166534]">
+                    <Badge className="rounded-md border border-[#BBF7D0] bg-[#F0FDF4] px-2.5 py-1 text-xs font-medium text-[#166534]">
                       <Sparkles className="mr-1.5 h-3.5 w-3.5" />
                       Production Live
                     </Badge>
@@ -417,16 +417,16 @@ export default function ProjectDetailPage() {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2 xl:w-[440px]">
-                <div className="rounded-[5px] border border-[#E2E8F0] bg-white p-4 shadow-sm">
+                <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm">
                   <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#64748B]">
                     <TrendingUp className="h-3.5 w-3.5" />
                     Progress
                   </div>
                   <p className="mt-2 text-2xl font-semibold text-[#0F172A]">{progress}%</p>
-                  <Progress value={progress} className="mt-3 h-2 rounded-[5px] bg-[#E2E8F0]" />
+                  <Progress value={progress} className="mt-3 h-2 rounded-md bg-[#E2E8F0]" />
                 </div>
 
-                <div className="rounded-[5px] border border-[#E2E8F0] bg-white p-4 shadow-sm">
+                <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm">
                   <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#64748B]">
                     <HardHat className="h-3.5 w-3.5" />
                     Next Action
@@ -435,7 +435,7 @@ export default function ProjectDetailPage() {
                   <p className="mt-1 text-xs text-[#64748B]">{workStatus}</p>
                 </div>
 
-                <div className="rounded-[5px] border border-[#E2E8F0] bg-white p-4 shadow-sm">
+                <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm">
                   <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#64748B]">
                     <CalendarClock className="h-3.5 w-3.5" />
                     Timeline
@@ -444,7 +444,7 @@ export default function ProjectDetailPage() {
                   <p className="mt-1 text-xs text-[#64748B]">{formatRelativeTimeline(dueDate)}</p>
                 </div>
 
-                <div className="rounded-[5px] border border-[#E2E8F0] bg-white p-4 shadow-sm">
+                <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm">
                   <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#64748B]">
                     <MapPin className="h-3.5 w-3.5" />
                     Job Site
@@ -456,7 +456,7 @@ export default function ProjectDetailPage() {
           </CardContent>
         </Card>
 
-        <Card className="mt-6 rounded-[5px] border-[rgba(15,23,42,0.08)] shadow-[0_18px_42px_rgba(15,23,42,0.06)]">
+        <Card className="mt-6 rounded-md border-[rgba(15,23,42,0.08)] shadow-sm hover:shadow-lg transition-all">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-semibold text-[#0F172A]">Financial Visibility</CardTitle>
             <p className="text-sm text-[#64748B]">
@@ -474,7 +474,7 @@ export default function ProjectDetailPage() {
             <StatCard label="Gross Profit" value={formatCurrency(grossProfit, currencyCode)} supporting="Revenue minus actual cost" accent={grossProfit >= 0} />
             <StatCard label="Profit Margin" value={`${profitMargin.toFixed(1)}%`} supporting="Margin on contract value" accent={profitMargin >= 20} />
 
-            <div className="rounded-[5px] border border-[#E2E8F0] bg-[#F8FAFC] p-4 shadow-sm md:col-span-2 xl:col-span-5">
+            <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-4 shadow-sm md:col-span-2 xl:col-span-5">
               <div className="grid gap-3 md:grid-cols-3">
                 <DetailRow label="Material Cost" value={formatCurrency(materialCost, currencyCode)} />
                 <DetailRow label="Labor Cost" value={formatCurrency(laborCost, currencyCode)} />
@@ -484,7 +484,7 @@ export default function ProjectDetailPage() {
           </CardContent>
         </Card>
 
-        <Card className="mt-6 rounded-[5px] border-[rgba(15,23,42,0.08)] shadow-[0_18px_42px_rgba(15,23,42,0.06)]">
+        <Card className="mt-6 rounded-md border-[rgba(15,23,42,0.08)] shadow-sm hover:shadow-lg transition-all">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-semibold text-[#0F172A]">Production</CardTitle>
             <p className="text-sm text-[#64748B]">
@@ -493,7 +493,7 @@ export default function ProjectDetailPage() {
           </CardHeader>
           <CardContent className="grid gap-4 xl:grid-cols-[1.1fr,0.9fr]">
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-[5px] border border-[#E2E8F0] bg-[#F8FAFC] p-4 shadow-sm">
+              <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-4 shadow-sm">
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#64748B]">
                   <Users className="h-3.5 w-3.5" />
                   Crew Assigned
@@ -504,7 +504,7 @@ export default function ProjectDetailPage() {
                 </p>
               </div>
 
-              <div className="rounded-[5px] border border-[#E2E8F0] bg-[#F8FAFC] p-4 shadow-sm">
+              <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-4 shadow-sm">
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#64748B]">
                   <HardHat className="h-3.5 w-3.5" />
                   Work Status
@@ -515,12 +515,12 @@ export default function ProjectDetailPage() {
                 </p>
               </div>
 
-              <div className="rounded-[5px] border border-[#E2E8F0] bg-white p-4 shadow-sm">
+              <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm">
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#64748B]">
                   <ShieldEllipsis className="h-3.5 w-3.5" />
                   Permit
                 </div>
-                <div className={cn("mt-3 inline-flex rounded-[5px] border px-2.5 py-1 text-xs font-medium", getIndicatorToneClasses(permit.tone))}>
+                <div className={cn("mt-3 inline-flex rounded-md border px-2.5 py-1 text-xs font-medium", getIndicatorToneClasses(permit.tone))}>
                   {permit.label}
                 </div>
                 <div className="mt-4 space-y-2 text-sm text-[#475569]">
@@ -530,12 +530,12 @@ export default function ProjectDetailPage() {
                 </div>
               </div>
 
-              <div className="rounded-[5px] border border-[#E2E8F0] bg-white p-4 shadow-sm">
+              <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm">
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#64748B]">
                   <ShieldCheck className="h-3.5 w-3.5" />
                   Insurance
                 </div>
-                <div className={cn("mt-3 inline-flex rounded-[5px] border px-2.5 py-1 text-xs font-medium", getIndicatorToneClasses(insurance.tone))}>
+                <div className={cn("mt-3 inline-flex rounded-md border px-2.5 py-1 text-xs font-medium", getIndicatorToneClasses(insurance.tone))}>
                   {insurance.label}
                 </div>
                 <div className="mt-4 space-y-2 text-sm text-[#475569]">
@@ -546,7 +546,7 @@ export default function ProjectDetailPage() {
               </div>
             </div>
 
-            <div className="rounded-[5px] border border-[#E2E8F0] bg-white p-4 shadow-sm">
+            <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm">
               <h3 className="text-sm font-semibold text-[#0F172A]">Field Snapshot</h3>
               <div className="mt-4 space-y-1">
                 <DetailRow label="Start Date" value={formatTimelineDate(startDate)} />
@@ -557,7 +557,7 @@ export default function ProjectDetailPage() {
                 <DetailRow label="Color" value={readText(project.shingleColor) || "Not captured"} />
               </div>
 
-              <div className="mt-5 rounded-[5px] border border-[#E0F2FE] bg-[#F0F9FF] p-4">
+              <div className="mt-5 rounded-md border border-[#E0F2FE] bg-[#F0F9FF] p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#0E7490]">Overview</p>
                 <p className="mt-2 text-sm text-[#0F172A]">
                   {stageMeta.description}. Current next step: <span className="font-semibold">{getNextAction(project)}</span>.
@@ -569,7 +569,7 @@ export default function ProjectDetailPage() {
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#64748B]">Assigned Team</p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {members.slice(0, 8).map((member) => (
-                      <Badge key={readText(member.id) || getMemberName(member)} className="rounded-[5px] border border-[#E2E8F0] bg-[#F8FAFC] px-2.5 py-1 text-xs font-medium text-[#334155]">
+                      <Badge key={readText(member.id) || getMemberName(member)} className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-2.5 py-1 text-xs font-medium text-[#334155]">
                         {getMemberName(member)}
                       </Badge>
                     ))}
@@ -580,7 +580,7 @@ export default function ProjectDetailPage() {
           </CardContent>
         </Card>
 
-        <Card className="mt-6 rounded-[5px] border-[rgba(15,23,42,0.08)] shadow-[0_18px_42px_rgba(15,23,42,0.06)]">
+        <Card className="mt-6 rounded-md border-[rgba(15,23,42,0.08)] shadow-sm hover:shadow-lg transition-all">
           <CardHeader className="pb-2">
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
               <div>
@@ -589,7 +589,7 @@ export default function ProjectDetailPage() {
                   Roofing-specific work items for inspection, permit coordination, installation, and closeout.
                 </p>
               </div>
-              <Button className="rounded-[5px] bg-[#0E7490] hover:bg-[#155E75]" onClick={() => setShowAddTask(true)}>
+              <Button className="rounded-md bg-[#0E7490] hover:bg-[#155E75]" onClick={() => setShowAddTask(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add Roofing Task
               </Button>
@@ -602,7 +602,7 @@ export default function ProjectDetailPage() {
                   key={suggestion}
                   type="button"
                   onClick={() => setNewTask((current) => ({ ...current, title: suggestion }))}
-                  className="rounded-[5px] border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-1.5 text-sm text-[#334155] transition hover:border-[#BAE6FD] hover:bg-[#F0F9FF]"
+                  className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-3 py-1.5 text-sm text-[#334155] transition hover:border-[#BAE6FD] hover:bg-[#F0F9FF]"
                 >
                   {suggestion}
                 </button>
@@ -625,7 +625,7 @@ export default function ProjectDetailPage() {
                 Loading roofing tasks...
               </div>
             ) : displayTasks.length === 0 ? (
-              <div className="rounded-[5px] border border-dashed border-[#D7E3EA] bg-[#F8FAFC] px-6 py-14 text-center">
+              <div className="rounded-md border border-dashed border-[#D7E3EA] bg-[#F8FAFC] px-6 py-14 text-center">
                 <CheckSquare className="mx-auto h-8 w-8 text-[#94A3B8]" />
                 <h3 className="mt-4 text-lg font-semibold text-[#0F172A]">No tasks on this job yet</h3>
                 <p className="mt-2 text-sm text-[#64748B]">
@@ -635,14 +635,14 @@ export default function ProjectDetailPage() {
             ) : (
               <div className="space-y-3">
                 {displayTasks.map((task, index) => (
-                  <div key={readText(task.id) || `${task.normalizedTitle}-${index}`} className="rounded-[5px] border border-[#E2E8F0] bg-white p-4 shadow-sm">
+                  <div key={readText(task.id) || `${task.normalizedTitle}-${index}`} className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm">
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <Badge className={cn("rounded-[5px] border px-2 py-1 text-xs font-medium", getTaskStatusTone(task.status))}>
+                          <Badge className={cn("rounded-md border px-2 py-1 text-xs font-medium", getTaskStatusTone(task.status))}>
                             {task.statusLabel}
                           </Badge>
-                          <Badge className={cn("rounded-[5px] border px-2 py-1 text-xs font-medium", getTaskPriorityTone(task.priority))}>
+                          <Badge className={cn("rounded-md border px-2 py-1 text-xs font-medium", getTaskPriorityTone(task.priority))}>
                             {readText(task.priority) || "Medium"}
                           </Badge>
                         </div>
@@ -653,15 +653,15 @@ export default function ProjectDetailPage() {
                       </div>
 
                       <div className="grid gap-2 text-sm text-[#475569] sm:grid-cols-3 lg:min-w-[360px]">
-                        <div className="rounded-[5px] border border-[#EEF2F6] bg-[#F8FAFC] px-3 py-2">
+                        <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-3 py-2">
                           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#64748B]">Due</p>
                           <p className="mt-1 font-medium text-[#0F172A]">{formatTimelineDate(readText(task.dueDate))}</p>
                         </div>
-                        <div className="rounded-[5px] border border-[#EEF2F6] bg-[#F8FAFC] px-3 py-2">
+                        <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-3 py-2">
                           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#64748B]">Assignee</p>
                           <p className="mt-1 font-medium text-[#0F172A]">{getAssigneeLabel(task)}</p>
                         </div>
-                        <div className="rounded-[5px] border border-[#EEF2F6] bg-[#F8FAFC] px-3 py-2">
+                        <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-3 py-2">
                           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#64748B]">Relative</p>
                           <p className="mt-1 font-medium text-[#0F172A]">{formatRelativeTimeline(readText(task.dueDate))}</p>
                         </div>
@@ -674,7 +674,7 @@ export default function ProjectDetailPage() {
           </CardContent>
         </Card>
 
-        <Card className="mt-6 rounded-[5px] border-[rgba(15,23,42,0.08)] shadow-[0_18px_42px_rgba(15,23,42,0.06)]">
+        <Card className="mt-6 rounded-md border-[rgba(15,23,42,0.08)] shadow-sm hover:shadow-lg transition-all">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-semibold text-[#0F172A]">Files</CardTitle>
             <p className="text-sm text-[#64748B]">
@@ -690,28 +690,28 @@ export default function ProjectDetailPage() {
             ) : (
               <div className="grid gap-4 xl:grid-cols-2">
                 {groupedFiles.map((group) => (
-                  <div key={group.key} className="rounded-[5px] border border-[#E2E8F0] bg-white p-4 shadow-sm">
+                  <div key={group.key} className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm">
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <h3 className="text-base font-semibold text-[#0F172A]">{getCategoryGroupLabel(group.key)}</h3>
                         <p className="mt-1 text-sm text-[#64748B]">{group.items.length} file{group.items.length === 1 ? "" : "s"}</p>
                       </div>
-                      <Badge className="rounded-[5px] border border-[#E2E8F0] bg-[#F8FAFC] px-2.5 py-1 text-xs font-medium text-[#334155]">
+                      <Badge className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-2.5 py-1 text-xs font-medium text-[#334155]">
                         {group.label}
                       </Badge>
                     </div>
 
                     <div className="mt-4 space-y-3">
                       {group.items.length === 0 ? (
-                        <div className="rounded-[5px] border border-dashed border-[#D7E3EA] bg-[#F8FAFC] px-3 py-5 text-center text-sm text-[#94A3B8]">
+                        <div className="rounded-md border border-dashed border-[#D7E3EA] bg-[#F8FAFC] px-3 py-5 text-center text-sm text-[#94A3B8]">
                           No {group.label.toLowerCase()} files yet
                         </div>
                       ) : (
                         group.items.map((item) => (
-                          <div key={item.id} className="flex items-start justify-between gap-3 rounded-[5px] border border-[#EEF2F6] bg-[#F8FAFC] p-3">
+                          <div key={item.id} className="flex items-start justify-between gap-3 rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-3">
                             <div className="min-w-0">
                               <div className="flex items-center gap-2">
-                                <div className="flex h-9 w-9 items-center justify-center rounded-[5px] bg-white text-[#0E7490] shadow-sm">
+                                <div className="flex h-9 w-9 items-center justify-center rounded-md bg-white text-[#0E7490] shadow-sm">
                                   <FileText className="h-4 w-4" />
                                 </div>
                                 <div className="min-w-0">
@@ -728,7 +728,7 @@ export default function ProjectDetailPage() {
                                 href={item.href}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="rounded-[5px] border border-[#E2E8F0] bg-white p-2 text-[#0E7490] transition hover:bg-[#F0F9FF]"
+                                className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-2 text-[#0E7490] transition hover:bg-[#F0F9FF]"
                               >
                                 <Download className="h-4 w-4" />
                               </a>
@@ -744,7 +744,7 @@ export default function ProjectDetailPage() {
           </CardContent>
         </Card>
 
-        <Card className="mt-6 rounded-[5px] border-[rgba(15,23,42,0.08)] shadow-[0_18px_42px_rgba(15,23,42,0.06)]">
+        <Card className="mt-6 rounded-md border-[rgba(15,23,42,0.08)] shadow-sm hover:shadow-lg transition-all">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-semibold text-[#0F172A]">Activity Timeline</CardTitle>
             <p className="text-sm text-[#64748B]">
@@ -758,7 +758,7 @@ export default function ProjectDetailPage() {
       </div>
 
       <Dialog open={showAddTask} onOpenChange={setShowAddTask}>
-        <DialogContent className="rounded-[5px] sm:max-w-[560px]">
+        <DialogContent className="rounded-md sm:max-w-[560px]">
           <DialogHeader>
             <DialogTitle>Add Roofing Task</DialogTitle>
             <DialogDescription>
@@ -773,7 +773,7 @@ export default function ProjectDetailPage() {
                   key={suggestion}
                   type="button"
                   onClick={() => setNewTask((current) => ({ ...current, title: suggestion }))}
-                  className="rounded-[5px] border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-1.5 text-sm text-[#334155] transition hover:border-[#BAE6FD] hover:bg-[#F0F9FF]"
+                  className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-3 py-1.5 text-sm text-[#334155] transition hover:border-[#BAE6FD] hover:bg-[#F0F9FF]"
                 >
                   {suggestion}
                 </button>
@@ -787,7 +787,7 @@ export default function ProjectDetailPage() {
                 placeholder="Inspection"
                 value={newTask.title}
                 onChange={(event) => setNewTask((current) => ({ ...current, title: event.target.value }))}
-                className="rounded-[5px]"
+                className="rounded-md"
               />
             </div>
 
@@ -798,7 +798,7 @@ export default function ProjectDetailPage() {
                 placeholder="Add notes for the crew, permit runner, or office team..."
                 value={newTask.description}
                 onChange={(event) => setNewTask((current) => ({ ...current, description: event.target.value }))}
-                className="rounded-[5px]"
+                className="rounded-md"
               />
             </div>
 
@@ -806,10 +806,10 @@ export default function ProjectDetailPage() {
               <div className="space-y-1.5">
                 <Label>Priority</Label>
                 <Select value={newTask.priority} onValueChange={(value) => setNewTask((current) => ({ ...current, priority: value }))}>
-                  <SelectTrigger className="rounded-[5px]">
+                  <SelectTrigger className="rounded-md">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="rounded-[5px]">
+                  <SelectContent className="rounded-md">
                     <SelectItem value="LOW">Low</SelectItem>
                     <SelectItem value="MEDIUM">Medium</SelectItem>
                     <SelectItem value="HIGH">High</SelectItem>
@@ -821,10 +821,10 @@ export default function ProjectDetailPage() {
               <div className="space-y-1.5">
                 <Label>Status</Label>
                 <Select value={newTask.status} onValueChange={(value) => setNewTask((current) => ({ ...current, status: value }))}>
-                  <SelectTrigger className="rounded-[5px]">
+                  <SelectTrigger className="rounded-md">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="rounded-[5px]">
+                  <SelectContent className="rounded-md">
                     <SelectItem value="TODO">To Do</SelectItem>
                     <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
                     <SelectItem value="DONE">Done</SelectItem>
@@ -841,17 +841,17 @@ export default function ProjectDetailPage() {
                   type="date"
                   value={newTask.dueDate}
                   onChange={(event) => setNewTask((current) => ({ ...current, dueDate: event.target.value }))}
-                  className="rounded-[5px]"
+                  className="rounded-md"
                 />
               </div>
 
               <div className="space-y-1.5">
                 <Label>Assign To</Label>
                 <Select value={newTask.assignedToId} onValueChange={(value) => setNewTask((current) => ({ ...current, assignedToId: value }))}>
-                  <SelectTrigger className="rounded-[5px]">
+                  <SelectTrigger className="rounded-md">
                     <SelectValue placeholder="Unassigned" />
                   </SelectTrigger>
-                  <SelectContent className="rounded-[5px]">
+                  <SelectContent className="rounded-md">
                     <SelectItem value="none">Unassigned</SelectItem>
                     {employees.map((employee) => {
                       const user = (employee.user as Record<string, unknown> | undefined) || {};
@@ -876,11 +876,11 @@ export default function ProjectDetailPage() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" className="rounded-[5px]" onClick={() => setShowAddTask(false)}>
+            <Button variant="outline" className="rounded-md" onClick={() => setShowAddTask(false)}>
               Cancel
             </Button>
             <Button
-              className="rounded-[5px] bg-[#0E7490] hover:bg-[#155E75]"
+              className="rounded-md bg-[#0E7490] hover:bg-[#155E75]"
               onClick={handleCreateTask}
               disabled={creatingTask || !newTask.title.trim()}
             >

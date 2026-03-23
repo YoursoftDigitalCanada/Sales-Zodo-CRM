@@ -77,6 +77,7 @@ import ConstructionEstimator from "./pages/ConstructionEstimator";
 // Inspections
 import InspectionList from "./pages/Inspections/InspectionList";
 import InspectionDetail from "./pages/Inspections/InspectionDetail";
+import InspectionForm from "./pages/Inspections/InspectionForm";
 
 // Help Center
 import HelpCenterPage from "./pages/HelpCenter";
@@ -206,6 +207,14 @@ const AppRoutes = () => {
           element={
             <FeatureGuard featureId="leads">
               <InspectionList />
+            </FeatureGuard>
+          }
+        />
+        <Route
+          path="/inspections/new"
+          element={
+            <FeatureGuard featureId="leads">
+              <InspectionForm />
             </FeatureGuard>
           }
         />

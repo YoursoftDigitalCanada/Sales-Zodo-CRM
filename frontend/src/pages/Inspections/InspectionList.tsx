@@ -402,7 +402,7 @@ const InspectionList = () => {
                             </TooltipProvider>
                             <Button
                                 className="rounded-lg bg-[#1E40AF] hover:bg-[#1E40AF]/90 text-white gap-2"
-                                onClick={() => toast({ title: "Schedule Inspection", description: "This would open the scheduling form." })}
+                                onClick={() => navigate("/inspections/new")}
                             >
                                 <Plus size={16} />
                                 <span className="hidden sm:inline">Schedule Inspection</span>

@@ -1,27 +1,67 @@
 import { type ElementType, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   AlertCircle,
+  ArrowDownRight,
+  ArrowUpRight,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   CircleDollarSign,
   ClipboardList,
+  Eye,
+  Filter,
   HardHat,
+  LayoutGrid,
+  List,
+  MoreHorizontal,
+  MoreVertical,
+  Pencil,
   Plus,
   RefreshCw,
   Search,
+  SlidersHorizontal,
+  Trash2,
   TrendingUp,
+  MapPin,
+  Calendar,
+  DollarSign,
+  Users,
+  Building2,
 } from "lucide-react";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
-import { RoofingProjectCard } from "@/features/projects/components/RoofingProjectCard";
 import {
   ProjectEntity,
   deleteProjectById,
@@ -60,85 +100,486 @@ function useDebouncedValue<T>(value: T, delay = 300): T {
   return debouncedValue;
 }
 
-function SummaryCard({
+// ============================================
+// STAT CARD (matches Client List pattern)
+// ============================================
+
+const StatCard = ({
   title,
   value,
-  description,
+  subtitle,
+  trend,
   icon: Icon,
-  tone,
+  color,
+  delay = 0,
 }: {
   title: string;
-  value: string;
-  description: string;
-  icon: ElementType;
-  tone: "teal" | "slate" | "green" | "amber";
-}) {
-  const tones = {
-    teal: "bg-[#E0F2FE] text-[#0E7490]",
-    slate: "bg-[#E2E8F0] text-[#0F172A]",
-    green: "bg-[#DCFCE7] text-[#166534]",
-    amber: "bg-[#FEF3C7] text-[#B45309]",
-  } as const;
+  value: string | number;
+  subtitle: string;
+  trend?: number;
+  icon: React.ElementType;
+  color: "teal" | "gold" | "navy" | "green" | "red" | "purple";
+  delay?: number;
+}) => {
+  const colorClasses = {
+    teal: { bg: "bg-[#0891B2]", light: "bg-[#0891B2]/10", text: "text-[#0891B2]" },
+    gold: { bg: "bg-[#D97706]", light: "bg-[#D97706]/10", text: "text-[#D97706]" },
+    navy: { bg: "bg-[#F8FAFC]", light: "bg-[#F8FAFC]/10", text: "text-[#0F172A]" },
+    purple: { bg: "bg-purple-500", light: "bg-purple-500/10", text: "text-purple-500" },
+    green: { bg: "bg-emerald-500", light: "bg-emerald-500/10", text: "text-emerald-500" },
+    red: { bg: "bg-red-500", light: "bg-red-500/10", text: "text-red-500" },
+  };
+
+  const colors = colorClasses[color];
 
   return (
-    <Card className="rounded-[5px] border-[rgba(15,23,42,0.08)] shadow-[0_14px_32px_rgba(15,23,42,0.05)]">
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-3">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay }}
+      whileHover={{ y: -4 }}
+      className="relative bg-white rounded-md p-5 border border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg transition-all overflow-hidden group"
+    >
+      <div className={cn("absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-10 group-hover:opacity-20 transition-all", colors.bg)} />
+
+      <div className="relative flex items-start justify-between">
+        <div>
+          <p className="text-sm text-[#94A3B8] mb-1">{title}</p>
+          <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">{value}</p>
+          <p className="text-xs text-[#475569] mt-1">{subtitle}</p>
+        </div>
+        <div className="flex flex-col items-end gap-2">
+          <div className={cn("w-10 h-10 rounded-md flex items-center justify-center", colors.light)}>
+            <Icon size={18} className={colors.text} />
+          </div>
+          {trend !== undefined && (
+            <div className={cn(
+              "flex items-center gap-1 text-xs font-medium",
+              trend >= 0 ? "text-emerald-600" : "text-red-600"
+            )}>
+              {trend >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+              {Math.abs(trend)}%
+            </div>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+// ============================================
+// PROJECT ROW COMPONENT (Table view — matches Client List row)
+// ============================================
+
+const ProjectRow = ({
+  project,
+  isSelected,
+  onSelect,
+  onView,
+  onEdit,
+  onDelete,
+}: {
+  project: ProjectEntity;
+  isSelected: boolean;
+  onSelect: (checked: boolean) => void;
+  onView: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) => {
+  const stage = getRoofingStage(project);
+  const stageMeta = getRoofingStageMeta(stage);
+  const progress = getProjectProgress(project);
+  const clientName = getProjectClientName(project);
+  const site = getProjectSite(project);
+  const contractVal = getContractValue(project);
+  const profit = getGrossProfit(project);
+  const dueDate = project.estimatedEndDate ?? project.dueDate ?? project.endDate;
+  const priorityLabel = getProjectPriorityLabel(project);
+
+  const getInitials = (name: string) =>
+    name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+
+  return (
+    <motion.tr
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className={cn(
+        "group hover:bg-[#F8FAFC]/80 transition-colors cursor-pointer border-b border-[rgba(15,23,42,0.06)] last:border-0",
+        isSelected && "bg-[#0891B2]/5"
+      )}
+      onClick={onView}
+    >
+      {/* Checkbox */}
+      <td className="py-4 px-4" onClick={(e) => e.stopPropagation()}>
+        <Checkbox
+          checked={isSelected}
+          onCheckedChange={onSelect}
+          className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
+        />
+      </td>
+
+      {/* Project Name & Client */}
+      <td className="py-4 px-4">
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <div className="w-10 h-10 rounded-md bg-[#F1F5F9]/70 flex items-center justify-center text-[#0F172A] font-semibold text-sm">
+              {getInitials(project.name || "P")}
+            </div>
+            <div
+              className={cn(
+                "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white",
+                stage === "completed" || stage === "invoiced" ? "bg-emerald-500" :
+                stage === "production" ? "bg-[#0891B2]" :
+                stage === "on_hold" ? "bg-[#D97706]" : "bg-slate-400"
+              )}
+            />
+          </div>
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#64748B]">{title}</p>
-            <p className="mt-2 text-2xl font-semibold text-[#0F172A]">{value}</p>
-            <p className="mt-1 text-xs text-[#64748B]">{description}</p>
-          </div>
-          <div className={cn("flex h-10 w-10 items-center justify-center rounded-[5px]", tones[tone])}>
-            <Icon className="h-4 w-4" />
+            <div className="font-semibold text-[#0F172A] group-hover:text-[#0891B2] transition-colors">
+              {project.name}
+            </div>
+            <div className="flex items-center gap-2 text-xs text-[#475569]">
+              {clientName && (
+                <>
+                  <Building2 size={12} className="text-[#0891B2]" />
+                  <span className="font-medium text-[#0F172A]">{clientName}</span>
+                  <span>•</span>
+                </>
+              )}
+              <span>{getProjectCode(project)}</span>
+            </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
-  );
-}
+      </td>
 
-function EmptyState({ onCreate }: { onCreate: () => void }) {
-  return (
-    <Card className="rounded-[5px] border-dashed border-[rgba(15,23,42,0.18)] bg-white shadow-sm">
-      <CardContent className="py-16 text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-[5px] bg-[#E0F2FE] text-[#0E7490]">
-          <HardHat className="h-6 w-6" />
+      {/* Stage */}
+      <td className="py-4 px-4">
+        <span className={cn(
+          "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold",
+          stageMeta.softBg, stageMeta.accentText
+        )}>
+          <span className={cn("w-1.5 h-1.5 rounded-full", stageMeta.accentText.replace("text-", "bg-"))} />
+          {stageMeta.label}
+        </span>
+      </td>
+
+      {/* Priority */}
+      <td className="py-4 px-4">
+        <span className={cn(
+          "px-2 py-0.5 rounded-full text-[10px] font-medium",
+          priorityLabel === "High" || priorityLabel === "Urgent" || priorityLabel === "Emergency"
+            ? "bg-red-100 text-red-700"
+            : priorityLabel === "Medium"
+            ? "bg-[#D97706]/10 text-[#D97706]"
+            : "bg-[#F1F5F9] text-[#475569]"
+        )}>
+          {priorityLabel}
+        </span>
+      </td>
+
+      {/* Contract Value */}
+      <td className="py-4 px-4">
+        <span className="font-medium text-[#0F172A]">{formatCurrency(contractVal)}</span>
+      </td>
+
+      {/* Profit */}
+      <td className="py-4 px-4">
+        <span className={cn("font-semibold", profit > 0 ? "text-emerald-600" : profit < 0 ? "text-red-600" : "text-[#475569]")}>
+          {formatCurrency(profit)}
+        </span>
+      </td>
+
+      {/* Site */}
+      <td className="py-4 px-4">
+        <div className="flex items-center gap-2 text-sm text-[#475569]">
+          <MapPin size={14} className="text-[#475569] shrink-0" />
+          <span className="truncate max-w-[140px]">{site || "-"}</span>
         </div>
-        <h3 className="mt-5 text-lg font-semibold text-[#0F172A]">No roofing jobs match this view</h3>
-        <p className="mx-auto mt-2 max-w-xl text-sm text-[#64748B]">
-          Adjust the stage filters or create a new roofing job to start tracking inspections, permits, production, and profit in one place.
-        </p>
-        <Button onClick={onCreate} className="mt-5 rounded-[5px] bg-[#0E7490] hover:bg-[#155E75]">
-          <Plus className="mr-2 h-4 w-4" />
-          Create Roofing Job
-        </Button>
-      </CardContent>
-    </Card>
+      </td>
+
+      {/* Due Date */}
+      <td className="py-4 px-4">
+        <div className="flex items-center gap-2 text-sm text-[#475569]">
+          <Calendar size={14} className="text-[#475569]" />
+          <span>{formatTimelineDate(dueDate)}</span>
+        </div>
+      </td>
+
+      {/* Progress */}
+      <td className="py-4 px-4">
+        <div className="flex items-center gap-2">
+          <div className="w-16 h-1.5 bg-[#F1F5F9] rounded-full overflow-hidden">
+            <div
+              className={cn("h-full rounded-full", progress >= 100 ? "bg-emerald-500" : "bg-[#0891B2]")}
+              style={{ width: `${Math.min(progress, 100)}%` }}
+            />
+          </div>
+          <span className="text-xs text-[#475569] font-medium">{progress}%</span>
+        </div>
+      </td>
+
+      {/* Actions */}
+      <td className="py-4 px-4" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={onView}
+            className="p-2 rounded-md hover:bg-[#0891B2]/10 text-[#0891B2] transition-colors"
+            title="View"
+          >
+            <Eye size={16} />
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={onEdit}
+            className="p-2 rounded-md hover:bg-[#D97706]/10 text-[#D97706] transition-colors"
+            title="Edit"
+          >
+            <Pencil size={16} />
+          </motion.button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="p-2 rounded-md hover:bg-white/10 text-[#475569] transition-colors">
+                <MoreVertical size={16} />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48 rounded-md">
+              <DropdownMenuItem className="rounded-md" onClick={onView}>
+                <Eye size={14} className="mr-2" /> View Details
+              </DropdownMenuItem>
+              <DropdownMenuItem className="rounded-md" onClick={onEdit}>
+                <Pencil size={14} className="mr-2" /> Edit
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="rounded-md text-red-600 focus:text-red-600 focus:bg-red-50" onClick={onDelete}>
+                <Trash2 size={14} className="mr-2" /> Archive
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </td>
+    </motion.tr>
   );
-}
+};
+
+// ============================================
+// PROJECT CARD (Grid view — matches Client List card)
+// ============================================
+
+const ProjectCard = ({
+  project,
+  isSelected,
+  onSelect,
+  onView,
+  onEdit,
+  onDelete,
+}: {
+  project: ProjectEntity;
+  isSelected: boolean;
+  onSelect: (checked: boolean) => void;
+  onView: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) => {
+  const stage = getRoofingStage(project);
+  const stageMeta = getRoofingStageMeta(stage);
+  const progress = getProjectProgress(project);
+  const clientName = getProjectClientName(project);
+  const site = getProjectSite(project);
+  const contractVal = getContractValue(project);
+  const profit = getGrossProfit(project);
+  const dueDate = project.estimatedEndDate ?? project.dueDate ?? project.endDate;
+  const priorityLabel = getProjectPriorityLabel(project);
+
+  const getInitials = (name: string) =>
+    name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      whileHover={{ y: -4 }}
+      className={cn(
+        "bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-5 cursor-pointer group",
+        "hover:border-[#22D3EE]/30 hover:shadow-lg transition-all",
+        isSelected && "border-[#22D3EE] bg-[#0891B2]/5"
+      )}
+      onClick={onView}
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={onSelect}
+            onClick={(e) => e.stopPropagation()}
+            className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
+          />
+          <div className="relative">
+            <div className="w-12 h-12 rounded-md bg-[#F1F5F9]/70 flex items-center justify-center text-[#0F172A] font-semibold">
+              {getInitials(project.name || "P")}
+            </div>
+            <div
+              className={cn(
+                "absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white",
+                stage === "completed" || stage === "invoiced" ? "bg-emerald-500" :
+                stage === "production" ? "bg-[#0891B2]" :
+                stage === "on_hold" ? "bg-[#D97706]" : "bg-slate-400"
+              )}
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="p-1.5 rounded-md hover:bg-white/10 text-[#475569]">
+                <MoreHorizontal size={16} />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48 rounded-md">
+              <DropdownMenuItem className="rounded-md" onClick={onView}>
+                <Eye size={14} className="mr-2" /> View Details
+              </DropdownMenuItem>
+              <DropdownMenuItem className="rounded-md" onClick={onEdit}>
+                <Pencil size={14} className="mr-2" /> Edit
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="rounded-md text-red-600 focus:text-red-600" onClick={onDelete}>
+                <Trash2 size={14} className="mr-2" /> Archive
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      {/* Project Info */}
+      <div className="mb-4">
+        <h3 className="font-semibold text-[#0F172A] group-hover:text-[#0891B2] transition-colors mb-1">
+          {project.name}
+        </h3>
+        <div className="flex items-center gap-2 text-xs text-[#475569]">
+          {clientName && (
+            <>
+              <Building2 size={12} className="text-[#0891B2]" />
+              <span className="font-medium text-[#0F172A]">{clientName}</span>
+              <span>•</span>
+            </>
+          )}
+          <span>{getProjectCode(project)}</span>
+        </div>
+      </div>
+
+      {/* Stage & Priority */}
+      <div className="flex items-center gap-2 mb-4">
+        <span className={cn(
+          "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold",
+          stageMeta.softBg, stageMeta.accentText
+        )}>
+          <span className={cn("w-1.5 h-1.5 rounded-full", stageMeta.accentText.replace("text-", "bg-"))} />
+          {stageMeta.label}
+        </span>
+        <span className={cn(
+          "px-2 py-0.5 rounded-full text-[10px] font-medium",
+          priorityLabel === "High" || priorityLabel === "Urgent" || priorityLabel === "Emergency"
+            ? "bg-red-100 text-red-700"
+            : priorityLabel === "Medium"
+            ? "bg-[#D97706]/10 text-[#D97706]"
+            : "bg-[#F1F5F9] text-[#475569]"
+        )}>
+          {priorityLabel}
+        </span>
+      </div>
+
+      {/* Details Grid */}
+      <div className="space-y-2 mb-4">
+        <div className="flex items-center gap-2 text-sm text-[#475569]">
+          <MapPin size={14} className="text-[#475569] shrink-0" />
+          <span className="truncate">{site || "-"}</span>
+        </div>
+        <div className="flex items-center gap-2 text-sm text-[#475569]">
+          <Calendar size={14} className="text-[#475569]" />
+          <span>{formatTimelineDate(dueDate)} ({formatRelativeTimeline(dueDate)})</span>
+        </div>
+      </div>
+
+      {/* Bottom Section: Financial & Progress */}
+      <div className="pt-3 border-t border-[rgba(15,23,42,0.06)]">
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <div>
+            <p className="text-xs text-[#94A3B8]">Contract</p>
+            <p className="text-sm font-semibold text-[#0F172A]">{formatCurrency(contractVal)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-[#94A3B8]">Gross Profit</p>
+            <p className={cn("text-sm font-semibold", profit > 0 ? "text-emerald-600" : profit < 0 ? "text-red-600" : "text-[#475569]")}>
+              {formatCurrency(profit)}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="flex-1 h-1.5 bg-[#F1F5F9] rounded-full overflow-hidden">
+            <div
+              className={cn("h-full rounded-full transition-all", progress >= 100 ? "bg-emerald-500" : "bg-[#0891B2]")}
+              style={{ width: `${Math.min(progress, 100)}%` }}
+            />
+          </div>
+          <span className="text-xs text-[#475569] font-medium">{progress}%</span>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+// ============================================
+// LOADING SKELETONS
+// ============================================
 
 function ProjectsLoadingGrid() {
   return (
-    <div className="grid grid-cols-1 gap-4 xl:grid-cols-2 2xl:grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
       {Array.from({ length: 6 }).map((_, index) => (
-        <Card key={index} className="rounded-[5px] border-[rgba(15,23,42,0.08)]">
-          <CardContent className="space-y-4 p-5">
-            <Skeleton className="h-4 w-24 rounded-[5px]" />
-            <Skeleton className="h-6 w-3/5 rounded-[5px]" />
-            <Skeleton className="h-4 w-1/2 rounded-[5px]" />
-            <Skeleton className="h-14 w-full rounded-[5px]" />
-            <Skeleton className="h-20 w-full rounded-[5px]" />
-            <Skeleton className="h-12 w-full rounded-[5px]" />
-          </CardContent>
-        </Card>
+        <div key={index} className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-5">
+          <Skeleton className="h-12 w-12 rounded-md" />
+          <Skeleton className="h-5 w-3/5 rounded-md mt-3" />
+          <Skeleton className="h-4 w-1/2 rounded-md mt-2" />
+          <Skeleton className="h-8 w-full rounded-md mt-4" />
+          <Skeleton className="h-8 w-full rounded-md mt-2" />
+          <Skeleton className="h-2 w-full rounded-full mt-3" />
+        </div>
       ))}
     </div>
   );
 }
 
-type BoardTab = "board" | "pipeline";
+function EmptyState({ onCreate }: { onCreate: () => void }) {
+  return (
+    <div className="bg-white rounded-md border border-dashed border-[rgba(15,23,42,0.18)] p-16 text-center">
+      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-md bg-[#0891B2]/10 text-[#0891B2]">
+        <HardHat className="h-6 w-6" />
+      </div>
+      <h3 className="mt-5 text-lg font-semibold text-[#0F172A]">No roofing jobs match this view</h3>
+      <p className="mx-auto mt-2 max-w-xl text-sm text-[#64748B]">
+        Adjust the stage filters or create a new roofing job to start tracking inspections, permits, production, and profit.
+      </p>
+      <Button onClick={onCreate} className="mt-5 rounded-md bg-[#0891B2] hover:bg-[#0E7490]">
+        <Plus className="mr-2 h-4 w-4" />
+        Create Roofing Job
+      </Button>
+    </div>
+  );
+}
 
+// ============================================
+// MAIN PAGE COMPONENT
+// ============================================
+
+type ViewMode = "grid" | "table";
 const PRIORITY_OPTIONS = ["ALL", "Low", "Medium", "High"] as const;
 
 export default function ProjectsPage() {
@@ -150,7 +591,8 @@ export default function ProjectsPage() {
   const [stageFilter, setStageFilter] = useState<string>("ALL");
   const [priorityFilter, setPriorityFilter] = useState<string>("ALL");
   const [jobTypeFilter, setJobTypeFilter] = useState<string>("ALL");
-  const [activeTab, setActiveTab] = useState<BoardTab>("board");
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [selectedProjects, setSelectedProjects] = useState<Set<string | number>>(new Set());
   const [pendingDelete, setPendingDelete] = useState<ProjectEntity | null>(null);
 
   const debouncedSearch = useDebouncedValue(search, 250);
@@ -171,17 +613,10 @@ export default function ProjectsPage() {
     onSuccess: () => {
       setPendingDelete(null);
       queryClient.invalidateQueries({ queryKey: ["projects"] });
-      toast({
-        title: "Roofing job archived",
-        description: "The job was removed from the active operations board.",
-      });
+      toast({ title: "Roofing job archived", description: "The job was removed from the active operations board." });
     },
     onError: () => {
-      toast({
-        title: "Archive failed",
-        description: "The job could not be archived right now.",
-        variant: "destructive",
-      });
+      toast({ title: "Archive failed", description: "The job could not be archived right now.", variant: "destructive" });
     },
   });
 
@@ -195,11 +630,7 @@ export default function ProjectsPage() {
       });
     },
     onError: () => {
-      toast({
-        title: "Update failed",
-        description: "The job could not be updated.",
-        variant: "destructive",
-      });
+      toast({ title: "Update failed", description: "The job could not be updated.", variant: "destructive" });
     },
   });
 
@@ -218,8 +649,7 @@ export default function ProjectsPage() {
       const priority = getProjectPriorityLabel(project);
       const jobType = getProjectJobType(project);
       const searchableText = [project.name, getProjectClientName(project), getProjectCode(project)]
-        .join(" ")
-        .toLowerCase();
+        .join(" ").toLowerCase();
 
       const matchesSearch = !needle || searchableText.includes(needle);
       const matchesStage = stageFilter === "ALL" || stage === stageFilter;
@@ -262,332 +692,311 @@ export default function ProjectsPage() {
     const stage = getRoofingStage(project);
     return stage === "completed" || stage === "invoiced";
   }).length;
-  const stageBreakdown = buildStageBreakdown(metricsProjects);
 
-  const pipelineColumns = useMemo(
-    () =>
-      ROOFING_STAGE_ORDER.map((stageKey) => {
-        const meta = getRoofingStageMeta(stageKey);
-        const projects = orderedProjects.filter((project) => getRoofingStage(project) === stageKey);
-        return { meta, projects };
-      }),
-    [orderedProjects],
-  );
+  const toggleSelect = (id: string | number) => {
+    setSelectedProjects((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedProjects(new Set(orderedProjects.map((p) => p.id)));
+    } else {
+      setSelectedProjects(new Set());
+    }
+  };
+
+  const allSelected = orderedProjects.length > 0 && selectedProjects.size === orderedProjects.length;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-10">
-      <div className="mx-auto max-w-[1600px] px-4 py-5 md:px-6 md:py-6">
-        <motion.section
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-[5px] border border-[#0F172A1A] bg-[radial-gradient(circle_at_top_right,_rgba(56,189,248,0.18),_transparent_35%),linear-gradient(135deg,#0F172A_0%,#12394B_52%,#0E7490_100%)] p-6 text-white shadow-[0_22px_60px_rgba(14,116,144,0.24)] md:p-8"
-        >
-          <div className="pointer-events-none absolute -right-12 top-0 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
-          <div className="pointer-events-none absolute bottom-0 left-0 h-32 w-32 rounded-full bg-[#67E8F9]/10 blur-2xl" />
-
-          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl">
-              <Badge className="border-0 bg-white/15 text-white">
-                <HardHat className="mr-1.5 h-3.5 w-3.5" />
-                Roofing Operations Board
-              </Badge>
-              <h1 className="mt-4 text-3xl font-semibold tracking-tight">
-                Run inspection, insurance, permits, and production from one board
-              </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-cyan-50/90 md:text-base">
-                This view turns generic projects into roofing jobs with stage-aware cards, production readiness, and clear gross profit visibility for every contract.
-              </p>
+    <div className="min-h-screen bg-[#F8FAFC]">
+      <main className="flex-1 transition-all duration-300">
+        {/* ============================================ */}
+        {/* HEADER — matches Client List header */}
+        {/* ============================================ */}
+        <header className="sticky top-0 z-30 backdrop-blur-xl bg-white/80 border-b border-[rgba(15,23,42,0.06)]/50">
+          <div className="flex h-16 items-center justify-between px-6">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-[#475569]">CRM</span>
+                <ChevronRight size={16} className="text-[#475569]" />
+                <span className="font-medium text-[#0F172A]">Roofing Projects</span>
+              </div>
             </div>
-
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                className="rounded-[5px] border-white/25 bg-white/10 text-white hover:bg-white/15"
+            <div className="flex items-center gap-3">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => queryClient.invalidateQueries({ queryKey: ["projects"] })}
+                className="p-2 rounded-md hover:bg-white/10 text-[#475569] transition-colors"
+                title="Refresh"
               >
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Refresh Board
-              </Button>
+                <RefreshCw size={18} />
+              </motion.button>
               <Button
-                className="rounded-[5px] bg-white text-[#0F172A] hover:bg-cyan-50"
                 onClick={() => navigate("/projects/add")}
+                className="bg-[#0891B2] hover:bg-[#0E7490] text-white rounded-md shadow-sm"
               >
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus size={18} className="mr-2" />
                 Create Roofing Job
               </Button>
             </div>
           </div>
-        </motion.section>
+        </header>
 
-        <section className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-          <SummaryCard
-            title="Total Jobs"
-            value={String(metricsProjects.length)}
-            description={hasActiveFilters ? "In the current filtered view" : "Across the roofing portfolio"}
-            icon={ClipboardList}
-            tone="teal"
-          />
-          <SummaryCard
-            title="In Production"
-            value={String(productionCount)}
-            description="Actively in field execution"
-            icon={HardHat}
-            tone="slate"
-          />
-          <SummaryCard
-            title="Completed"
-            value={String(completedCount)}
-            description="Finished or already invoiced"
-            icon={CheckCircle2}
-            tone="green"
-          />
-          <SummaryCard
-            title="Contract Value"
-            value={formatCurrency(totalContractValue)}
-            description="Total booked revenue"
-            icon={CircleDollarSign}
-            tone="amber"
-          />
-          <SummaryCard
-            title="Actual Cost"
-            value={formatCurrency(totalActualCost)}
-            description="Materials, labor, and field spend"
-            icon={AlertCircle}
-            tone="slate"
-          />
-          <SummaryCard
-            title="Gross Profit"
-            value={formatCurrency(totalGrossProfit)}
-            description="Contract minus actual cost"
-            icon={TrendingUp}
-            tone="green"
-          />
-        </section>
-
-        <Card className="mt-5 rounded-[5px] border-[rgba(15,23,42,0.08)] shadow-[0_14px_32px_rgba(15,23,42,0.05)]">
-          <CardContent className="p-4">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="px-6 py-6 max-w-[1600px] mx-auto">
+          {/* ============================================ */}
+          {/*  TITLE SECTION */}
+          {/* ============================================ */}
+          <div className="mb-6">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-md bg-[#0891B2]/10 flex items-center justify-center">
+                <HardHat size={20} className="text-[#0891B2]" />
+              </div>
               <div>
-                <p className="text-sm font-semibold text-[#0F172A]">Jobs by Stage</p>
-                <p className="mt-1 text-sm text-[#64748B]">
-                  Each stage maps to the real roofing lifecycle, from inspection through invoicing.
+                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Roofing Projects</h1>
+                <p className="text-sm text-[#94A3B8]">
+                  {allProjects.length} total projects • Manage inspections, insurance, permits, and production
                 </p>
               </div>
-              {hasActiveFilters ? (
-                <Button
-                  variant="outline"
-                  className="rounded-[5px]"
-                  onClick={() => {
-                    setSearch("");
-                    setStageFilter("ALL");
-                    setPriorityFilter("ALL");
-                    setJobTypeFilter("ALL");
-                  }}
-                >
-                  Reset Filters
-                </Button>
-              ) : null}
             </div>
+          </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
-              {stageBreakdown.map((stage) => (
-                <div key={stage.key} className={cn("rounded-[5px] border p-3 shadow-sm", stage.border, stage.softBg)}>
-                  <p className={cn("text-[11px] font-semibold uppercase tracking-[0.16em]", stage.accentText)}>{stage.shortLabel}</p>
-                  <p className="mt-2 text-xl font-semibold text-[#0F172A]">{stage.count}</p>
-                  <p className="mt-1 text-xs text-[#64748B]">{formatCurrency(stage.value)} in contract value</p>
+          {/* ============================================ */}
+          {/* STAT CARDS — matches Client List */}
+          {/* ============================================ */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 mb-6">
+            <StatCard title="Total Jobs" value={metricsProjects.length} subtitle="Across portfolio" icon={ClipboardList} color="teal" delay={0} />
+            <StatCard title="In Production" value={productionCount} subtitle="In field execution" icon={HardHat} color="gold" delay={0.05} />
+            <StatCard title="Completed" value={completedCount} subtitle="Finished / invoiced" icon={CheckCircle2} color="green" delay={0.1} />
+            <StatCard title="Contract Value" value={formatCurrency(totalContractValue)} subtitle="Total booked revenue" icon={CircleDollarSign} color="navy" delay={0.15} />
+            <StatCard title="Actual Cost" value={formatCurrency(totalActualCost)} subtitle="Materials & labor" icon={AlertCircle} color="red" delay={0.2} />
+            <StatCard title="Gross Profit" value={formatCurrency(totalGrossProfit)} subtitle="Contract minus cost" icon={TrendingUp} color="green" delay={0.25} />
+          </div>
+
+          {/* ============================================ */}
+          {/* TOOLBAR — matches Client List toolbar */}
+          {/* ============================================ */}
+          <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4 mb-6">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+
+              {/* Left side: Search + Filters */}
+              <div className="flex flex-1 flex-col gap-3 md:flex-row md:items-center">
+                <div className="relative flex-1 max-w-md">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
+                  <Input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search jobs, clients, codes..."
+                    className="pl-9 rounded-md border-[rgba(15,23,42,0.1)]"
+                  />
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
 
-        <Card className="mt-5 rounded-[5px] border-[rgba(15,23,42,0.08)] shadow-[0_14px_32px_rgba(15,23,42,0.05)]">
-          <CardContent className="p-4">
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.2fr,0.7fr,0.7fr,0.7fr,auto]">
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
-                <Input
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search by job, client, or project code"
-                  className="rounded-[5px] pl-9"
-                />
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Select value={stageFilter} onValueChange={setStageFilter}>
+                    <SelectTrigger className="w-[140px] rounded-md border-[rgba(15,23,42,0.1)]">
+                      <SelectValue placeholder="Stage" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-md">
+                      <SelectItem value="ALL">All Stages</SelectItem>
+                      {ROOFING_STAGE_ORDER.map((stageKey) => (
+                        <SelectItem key={stageKey} value={stageKey}>
+                          {getRoofingStageMeta(stageKey).label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={jobTypeFilter} onValueChange={setJobTypeFilter}>
+                    <SelectTrigger className="w-[140px] rounded-md border-[rgba(15,23,42,0.1)]">
+                      <SelectValue placeholder="Job Type" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-md">
+                      {jobTypeOptions.map((option) => (
+                        <SelectItem key={option} value={option}>
+                          {option === "ALL" ? "All Job Types" : option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                    <SelectTrigger className="w-[140px] rounded-md border-[rgba(15,23,42,0.1)]">
+                      <SelectValue placeholder="Priority" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-md">
+                      {PRIORITY_OPTIONS.map((option) => (
+                        <SelectItem key={option} value={option}>
+                          {option === "ALL" ? "All Priorities" : option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {hasActiveFilters && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-md text-[#0891B2] border-[#0891B2]/30 hover:bg-[#0891B2]/5"
+                      onClick={() => {
+                        setSearch("");
+                        setStageFilter("ALL");
+                        setPriorityFilter("ALL");
+                        setJobTypeFilter("ALL");
+                      }}
+                    >
+                      Clear Filters
+                    </Button>
+                  )}
+                </div>
               </div>
 
-              <Select value={stageFilter} onValueChange={setStageFilter}>
-                <SelectTrigger className="rounded-[5px]">
-                  <SelectValue placeholder="Stage" />
-                </SelectTrigger>
-                <SelectContent className="rounded-[5px]">
-                  <SelectItem value="ALL">All Stages</SelectItem>
-                  {ROOFING_STAGE_ORDER.map((stageKey) => (
-                    <SelectItem key={stageKey} value={stageKey}>
-                      {getRoofingStageMeta(stageKey).label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={jobTypeFilter} onValueChange={setJobTypeFilter}>
-                <SelectTrigger className="rounded-[5px]">
-                  <SelectValue placeholder="Job Type" />
-                </SelectTrigger>
-                <SelectContent className="rounded-[5px]">
-                  {jobTypeOptions.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option === "ALL" ? "All Job Types" : option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                <SelectTrigger className="rounded-[5px]">
-                  <SelectValue placeholder="Priority" />
-                </SelectTrigger>
-                <SelectContent className="rounded-[5px]">
-                  {PRIORITY_OPTIONS.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option === "ALL" ? "All Priorities" : option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Button
-                variant="outline"
-                className="rounded-[5px]"
-                disabled={!hasActiveFilters}
-                onClick={() => {
-                  setSearch("");
-                  setStageFilter("ALL");
-                  setPriorityFilter("ALL");
-                  setJobTypeFilter("ALL");
-                }}
-              >
-                Quick Reset
-              </Button>
+              {/* Right side: View toggle */}
+              <div className="flex items-center gap-2">
+                <div className="flex items-center border border-[rgba(15,23,42,0.1)] rounded-md overflow-hidden">
+                  <button
+                    onClick={() => setViewMode("grid")}
+                    className={cn(
+                      "p-2 transition-colors",
+                      viewMode === "grid"
+                        ? "bg-[#0891B2] text-white"
+                        : "bg-white text-[#475569] hover:bg-[#F1F5F9]"
+                    )}
+                  >
+                    <LayoutGrid size={16} />
+                  </button>
+                  <button
+                    onClick={() => setViewMode("table")}
+                    className={cn(
+                      "p-2 transition-colors",
+                      viewMode === "table"
+                        ? "bg-[#0891B2] text-white"
+                        : "bg-white text-[#475569] hover:bg-[#F1F5F9]"
+                    )}
+                  >
+                    <List size={16} />
+                  </button>
+                </div>
+              </div>
             </div>
-          </CardContent>
-        </Card>
 
-        <div className="mt-5 flex flex-wrap gap-2">
-          {[
-            { value: "board" as const, label: "Operations Board" },
-            { value: "pipeline" as const, label: "Stage Pipeline" },
-          ].map((tab) => (
-            <button
-              key={tab.value}
-              type="button"
-              onClick={() => setActiveTab(tab.value)}
-              className={cn(
-                "rounded-[5px] border px-4 py-2 text-sm font-medium transition",
-                activeTab === tab.value
-                  ? "border-[#0E7490] bg-[#E0F2FE] text-[#0E7490]"
-                  : "border-[rgba(15,23,42,0.08)] bg-white text-[#334155] hover:bg-[#F8FAFC]",
+            {/* Bulk Actions (when selected) */}
+            <AnimatePresence>
+              {selectedProjects.size > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mt-3 pt-3 border-t border-[rgba(15,23,42,0.06)] flex items-center gap-3"
+                >
+                  <span className="text-sm font-medium text-[#0891B2]">
+                    {selectedProjects.size} selected
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="rounded-md text-red-600 border-red-200 hover:bg-red-50"
+                    onClick={() => {
+                      // Could add bulk delete
+                      setSelectedProjects(new Set());
+                    }}
+                  >
+                    <Trash2 size={14} className="mr-1" /> Clear Selection
+                  </Button>
+                </motion.div>
               )}
-            >
-              {tab.label}
-            </button>
-          ))}
+            </AnimatePresence>
+          </div>
+
+          {/* ============================================ */}
+          {/* PROJECT LIST / GRID */}
+          {/* ============================================ */}
+          <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden">
+            {projectsQuery.isLoading ? (
+              <div className="p-6">
+                <ProjectsLoadingGrid />
+              </div>
+            ) : orderedProjects.length === 0 ? (
+              <div className="p-6">
+                <EmptyState onCreate={() => navigate("/projects/add")} />
+              </div>
+            ) : viewMode === "table" ? (
+              /* TABLE VIEW */
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]/60">
+                      <th className="py-3 px-4 text-left">
+                        <Checkbox
+                          checked={allSelected}
+                          onCheckedChange={toggleSelectAll}
+                          className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
+                        />
+                      </th>
+                      <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-[#64748B]">Project</th>
+                      <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-[#64748B]">Stage</th>
+                      <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-[#64748B]">Priority</th>
+                      <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-[#64748B]">Contract</th>
+                      <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-[#64748B]">Profit</th>
+                      <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-[#64748B]">Site</th>
+                      <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-[#64748B]">Due</th>
+                      <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-[#64748B]">Progress</th>
+                      <th className="py-3 px-4"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <AnimatePresence>
+                      {orderedProjects.map((project) => (
+                        <ProjectRow
+                          key={project.id}
+                          project={project}
+                          isSelected={selectedProjects.has(project.id)}
+                          onSelect={() => toggleSelect(project.id)}
+                          onView={() => navigate(`/projects/${project.id}`)}
+                          onEdit={() => navigate(`/projects/${project.id}/edit`)}
+                          onDelete={() => setPendingDelete(project)}
+                        />
+                      ))}
+                    </AnimatePresence>
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              /* GRID VIEW */
+              <div className="p-6">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  <AnimatePresence>
+                    {orderedProjects.map((project) => (
+                      <ProjectCard
+                        key={project.id}
+                        project={project}
+                        isSelected={selectedProjects.has(project.id)}
+                        onSelect={() => toggleSelect(project.id)}
+                        onView={() => navigate(`/projects/${project.id}`)}
+                        onEdit={() => navigate(`/projects/${project.id}/edit`)}
+                        onDelete={() => setPendingDelete(project)}
+                      />
+                    ))}
+                  </AnimatePresence>
+                </div>
+              </div>
+            )}
+
+            {/* Footer / Results count */}
+            <div className="px-4 py-3 border-t border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]/60 flex items-center justify-between text-sm text-[#64748B]">
+              <span>Showing {orderedProjects.length} of {allProjects.length} projects</span>
+              <span>{selectedProjects.size > 0 ? `${selectedProjects.size} selected` : ""}</span>
+            </div>
+          </div>
         </div>
+      </main>
 
-        <section className="mt-5">
-          {projectsQuery.isLoading ? (
-            <ProjectsLoadingGrid />
-          ) : orderedProjects.length === 0 ? (
-            <EmptyState onCreate={() => navigate("/projects/add")} />
-          ) : activeTab === "board" ? (
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2 2xl:grid-cols-3">
-              {orderedProjects.map((project) => (
-                <RoofingProjectCard
-                  key={project.id}
-                  project={project}
-                  onOpen={(item) => navigate(`/projects/${item.id}`)}
-                  onMoveToProduction={(item) => statusMutation.mutate({ id: item.id, status: "IN_PROGRESS" })}
-                  onMarkCompleted={(item) => statusMutation.mutate({ id: item.id, status: "COMPLETED" })}
-                  onArchive={setPendingDelete}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-4">
-              {pipelineColumns.map(({ meta, projects }) => (
-                <Card key={meta.key} className={cn("rounded-[5px] border shadow-[0_14px_32px_rgba(15,23,42,0.05)]", meta.border)}>
-                  <CardContent className="p-4">
-                    <div className={cn("rounded-[5px] border px-3 py-3", meta.border, meta.softBg)}>
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className={cn("text-[11px] font-semibold uppercase tracking-[0.16em]", meta.accentText)}>{meta.shortLabel}</p>
-                          <h3 className="mt-1 text-lg font-semibold text-[#0F172A]">{meta.label}</h3>
-                          <p className="mt-1 text-sm text-[#64748B]">{meta.description}</p>
-                        </div>
-                        <Badge className={cn("rounded-[5px] border px-2.5 py-1 text-xs font-medium", meta.border, meta.softBg, meta.accentText)}>
-                          {projects.length}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 space-y-3">
-                      {projects.length === 0 ? (
-                        <div className="rounded-[5px] border border-dashed border-[#D7E3EA] bg-[#F8FAFC] px-3 py-5 text-center text-sm text-[#94A3B8]">
-                          No jobs in this stage
-                        </div>
-                      ) : (
-                        projects.map((project) => (
-                          <button
-                            key={project.id}
-                            type="button"
-                            onClick={() => navigate(`/projects/${project.id}`)}
-                            className="w-full rounded-[5px] border border-[#E2E8F0] bg-white p-3 text-left shadow-sm transition hover:border-[#7DD3FC] hover:bg-[#F8FCFE]"
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#64748B]">{getProjectCode(project)}</p>
-                                <p className="mt-1 truncate text-sm font-semibold text-[#0F172A]">{project.name}</p>
-                                <p className="mt-1 truncate text-sm text-[#64748B]">{getProjectClientName(project)}</p>
-                              </div>
-                              <Badge className="rounded-[5px] border border-[#E2E8F0] bg-[#F8FAFC] px-2 py-1 text-xs text-[#334155]">
-                                {getProjectProgress(project)}%
-                              </Badge>
-                            </div>
-
-                            <div className="mt-3 grid gap-2 text-xs text-[#475569]">
-                              <div className="flex items-center justify-between gap-3">
-                                <span>Next Action</span>
-                                <span className="truncate font-medium text-[#0F172A]">{getNextAction(project)}</span>
-                              </div>
-                              <div className="flex items-center justify-between gap-3">
-                                <span>Due</span>
-                                <span className="font-medium text-[#0F172A]">
-                                  {formatTimelineDate(project.estimatedEndDate ?? project.dueDate ?? project.endDate)}
-                                </span>
-                              </div>
-                              <div className="flex items-center justify-between gap-3">
-                                <span>Timeline</span>
-                                <span className="font-medium text-[#0F172A]">
-                                  {formatRelativeTimeline(project.estimatedEndDate ?? project.dueDate ?? project.endDate)}
-                                </span>
-                              </div>
-                              <div className="flex items-center justify-between gap-3">
-                                <span>Site</span>
-                                <span className="truncate font-medium text-[#0F172A]">{getProjectSite(project)}</span>
-                              </div>
-                            </div>
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </section>
-      </div>
-
+      {/* Archive Dialog */}
       <AlertDialog open={Boolean(pendingDelete)} onOpenChange={(open) => (!open ? setPendingDelete(null) : undefined)}>
-        <AlertDialogContent className="rounded-[5px]">
+        <AlertDialogContent className="rounded-md">
           <AlertDialogHeader>
             <AlertDialogTitle>Archive roofing job?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -597,9 +1006,9 @@ export default function ProjectsPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-[5px]">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-md">Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="rounded-[5px] bg-rose-600 hover:bg-rose-700"
+              className="rounded-md bg-rose-600 hover:bg-rose-700"
               onClick={() => pendingDelete && archiveMutation.mutate(pendingDelete.id)}
             >
               {archiveMutation.isPending ? "Archiving..." : "Archive Job"}

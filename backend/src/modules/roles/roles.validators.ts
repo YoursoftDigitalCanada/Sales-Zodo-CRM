@@ -5,6 +5,7 @@ export const createRoleSchema = z.object({
         name: z.string().min(1).max(100),
         description: z.string().max(500).optional().nullable(),
         permissions: z.array(z.string()).default([]),
+        permissionIds: z.array(z.string().uuid()).optional(),
         isDefault: z.boolean().default(false),
     }),
 });
@@ -14,6 +15,7 @@ export const updateRoleSchema = z.object({
         name: z.string().min(1).max(100).optional(),
         description: z.string().max(500).optional().nullable(),
         permissions: z.array(z.string()).optional(),
+        permissionIds: z.array(z.string().uuid()).optional(),
         isDefault: z.boolean().optional(),
     }),
 });

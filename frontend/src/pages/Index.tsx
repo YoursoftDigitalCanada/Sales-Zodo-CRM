@@ -80,9 +80,9 @@ const getColorClasses = (color: ThemeColor) => themeColors[color] || themeColors
 // ============================================
 const quickActions: QuickAction[] = [
   { title: "New Project", icon: FolderKanban, color: "teal", path: "/projects/add", description: "Create a new project" },
-  { title: "Add Client", icon: Users, color: "gold", path: "/clients/new", description: "Add a new client" },
-  { title: "Create Invoice", icon: DollarSign, color: "navy", path: "/invoices/new", description: "Generate invoice" },
-  { title: "Ask Experts", icon: Sparkles, color: "purple", path: "/dashboard", description: "AI assistant" },
+  { title: "Add Client", icon: Users, color: "gold", path: "/client-list/add", description: "Add a new client" },
+  { title: "Create Invoice", icon: DollarSign, color: "navy", path: "/invoice/create", description: "Generate invoice" },
+  { title: "Ask Experts", icon: Sparkles, color: "purple", path: "__copilot__", description: "AI assistant" },
 ];
 
 // Map API notification type → icon & color for the bell dropdown
@@ -317,7 +317,13 @@ const Index = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     try { await markAllNotificationsRead(); } catch { /* optimistic */ }
   };
-  const handleQuickAction = (path: string) => navigate(path);
+  const handleQuickAction = (path: string) => {
+    if (path === "__copilot__") {
+      setShowCopilot(true);
+    } else {
+      navigate(path);
+    }
+  };
   const handleLogout = () => { localStorage.removeItem("user"); localStorage.removeItem("token"); navigate("/login"); };
   const unreadNotificationsCount = notifications.filter((n) => !n.read).length;
 

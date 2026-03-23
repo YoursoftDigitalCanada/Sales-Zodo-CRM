@@ -73,6 +73,7 @@ interface SubMenuItem {
   title: string;
   path: string;
   featureId?: FeatureId | FeatureId[];
+  permissionModule?: string;
   badge?: string | number;
   badgeColor?: "teal" | "gold" | "red" | "blue";
   isNew?: boolean;
@@ -83,6 +84,7 @@ interface NavigationItem {
   icon?: LucideIcon;
   path?: string;
   featureId?: FeatureId | FeatureId[];
+  permissionModule?: string;
   isHeader?: boolean;
   submenu?: SubMenuItem[];
   badge?: string | number;
@@ -112,12 +114,14 @@ const navigationItems: NavigationItem[] = [
     title: "Dashboard",
     icon: LayoutDashboard,
     path: "/dashboard",
+    permissionModule: "dashboard",
   },
   {
     title: "Calendar",
     icon: Calendar,
     path: "/calendar",
     featureId: "calendar",
+    permissionModule: "calendar",
     isNew: true,
   },
   {
@@ -125,6 +129,7 @@ const navigationItems: NavigationItem[] = [
     icon: CheckSquare,
     path: "/tasks",
     featureId: "tasks",
+    permissionModule: "tasks",
     badge: 5,
     badgeColor: "red",
   },
@@ -135,19 +140,21 @@ const navigationItems: NavigationItem[] = [
     title: "Leads",
     icon: Target,
     featureId: "leads",
+    permissionModule: "leads",
     submenu: [
       { title: "All Leads", path: "/leads", featureId: "leads" },
       { title: "Pipeline", path: "/leads/pipeline", featureId: "leads", isNew: true },
-      { title: "Lead Sources", path: "/leads/sources", featureId: "leads" },
+      { title: "Lead Sources", path: "/leads/sources", featureId: "leads", permissionModule: "lead-sources" },
     ]
   },
   {
     title: "Clients",
     icon: Users,
     featureId: "clients",
+    permissionModule: "clients",
     submenu: [
       { title: "Client List", path: "/client-list", featureId: "clients" },
-      { title: "Client Contacts", path: "/contacts", featureId: "clients" },
+      { title: "Client Contacts", path: "/contacts", featureId: "clients", permissionModule: "contacts" },
       { title: "Client Groups", path: "/clients/groups", featureId: "clients" },
     ]
   },
@@ -158,6 +165,7 @@ const navigationItems: NavigationItem[] = [
     title: "All Projects",
     icon: Briefcase,
     featureId: "projects",
+    permissionModule: "projects",
     submenu: [
       { title: "Active Projects", path: "/projects", featureId: "projects" },
       { title: "Archived", path: "javascript:void(0)", featureId: "projects" },
@@ -169,12 +177,14 @@ const navigationItems: NavigationItem[] = [
     icon: FolderKanban,
     path: "/kanban",
     featureId: "kanban",
+    permissionModule: "projects",
   },
   {
     title: "File Manager",
     icon: FileText,
     path: "/filemanager",
     featureId: "files",
+    permissionModule: "files",
   },
 
   // ===== FINANCE =====
@@ -183,6 +193,7 @@ const navigationItems: NavigationItem[] = [
     title: "Invoices",
     icon: Receipt,
     featureId: "finance",
+    permissionModule: "invoices",
     submenu: [
       { title: "All Invoices", path: "/invoice", featureId: "finance" },
       { title: "Create Invoice", path: "/invoice/create", featureId: "finance" },
@@ -194,19 +205,14 @@ const navigationItems: NavigationItem[] = [
     icon: FileStack,
     path: "/quotes",
     featureId: "finance",
+    permissionModule: "quotes",
     isNew: true,
   },
-  // DRAFT — re-enable next year
-  // {
-  //   title: "Expenses",
-  //   icon: Landmark,
-  //   path: "/expenses",
-  //   featureId: "invoices",
-  // },
   {
     title: "Payments",
     icon: CreditCard,
     featureId: "finance",
+    permissionModule: "invoices",
     submenu: [
       { title: "All Payments", path: "javascript:void(0)", featureId: "finance" },
       { title: "Payment Methods", path: "javascript:void(0)", featureId: "finance" },
@@ -216,37 +222,12 @@ const navigationItems: NavigationItem[] = [
 
   // ===== BUSINESS =====
   { title: "Business", isHeader: true },
-  // DRAFT — re-enable next year
-  // {
-  //   title: "Bookings",
-  //   icon: CalendarDays,
-  //   path: "/bookings",
-  //   featureId: "calendar",
-  //   badge: 2,
-  //   badgeColor: "blue",
-  // },
-  // {
-  //   title: "Services",
-  //   icon: Layers,
-  //   path: "/services",
-  //   featureId: "calendar",
-  // },
-  // {
-  //   title: "Ecommerce",
-  //   icon: ShoppingCart,
-  //   featureId: "api",
-  //   submenu: [
-  //     { title: "Dashboard", path: "/ecommerce", featureId: "api" },
-  //     { title: "Products", path: "/ecommerce/products", featureId: "api" },
-  //     { title: "Orders", path: "/ecommerce/orders", featureId: "api", badge: 8, badgeColor: "red" },
-  //     { title: "Categories", path: "/ecommerce/categories", featureId: "api" },
-  //   ]
-  // },
   {
     title: "AI Roof Estimator",
     icon: Zap,
     path: "/roof-estimator",
     featureId: "roofEstimator",
+    permissionModule: "roof-estimator",
     badge: "AI",
     badgeColor: "teal",
   },
@@ -255,6 +236,7 @@ const navigationItems: NavigationItem[] = [
     icon: CheckSquare,
     path: "/inspections",
     featureId: "leads",
+    permissionModule: "leads",
     isNew: true,
   },
   {
@@ -262,6 +244,7 @@ const navigationItems: NavigationItem[] = [
     icon: Shield,
     path: "javascript:void(0)",
     featureId: "leads",
+    permissionModule: "leads",
     isNew: true,
   },
 
@@ -272,6 +255,7 @@ const navigationItems: NavigationItem[] = [
     icon: Mail,
     path: "/letterbox",
     featureId: "letterbox",
+    permissionModule: "emails",
     badge: 12,
     badgeColor: "teal",
   },
@@ -280,6 +264,7 @@ const navigationItems: NavigationItem[] = [
     icon: MessageSquare,
     path: "/chats",
     featureId: "chat",
+    permissionModule: "chat",
     badge: "●",
     badgeColor: "teal",
   },
@@ -298,6 +283,7 @@ const navigationItems: NavigationItem[] = [
     icon: Bell,
     path: "/notifications",
     featureId: "letterbox",
+    permissionModule: "notifications",
     badge: 7,
     badgeColor: "red",
   },
@@ -307,6 +293,7 @@ const navigationItems: NavigationItem[] = [
     title: "Employees",
     icon: UserCog,
     featureId: "team",
+    permissionModule: "employees",
     submenu: [
       { title: "All Employees", path: "/employees", featureId: "team" },
       { title: "Departments", path: "/employees/departments", featureId: "team", isNew: true },
@@ -319,12 +306,14 @@ const navigationItems: NavigationItem[] = [
     icon: Users,
     path: "/users",
     featureId: "team",
+    permissionModule: "employees",
   },
   {
     title: "Roles & Permissions",
     icon: Shield,
     path: "/roles",
     featureId: "team",
+    permissionModule: "roles",
   },
 
   // ===== ANALYTICS =====
@@ -333,6 +322,7 @@ const navigationItems: NavigationItem[] = [
     title: "Reports",
     icon: BarChart3,
     featureId: "reports",
+    permissionModule: "analytics",
     submenu: [
       { title: "Sales Report", path: "/reports/sales", featureId: "reports" },
       { title: "Revenue Report", path: "/reports/revenue", featureId: "reports" },
@@ -345,6 +335,7 @@ const navigationItems: NavigationItem[] = [
     icon: TrendingUp,
     path: "/analytics",
     featureId: "analytics",
+    permissionModule: "analytics",
     isPro: true,
   },
 
@@ -353,6 +344,7 @@ const navigationItems: NavigationItem[] = [
   {
     title: "Settings",
     icon: Settings,
+    permissionModule: "settings",
     submenu: [
       { title: "General", path: "/settings/general" },
       { title: "Company Profile", path: "/settings/company" },
@@ -366,6 +358,7 @@ const navigationItems: NavigationItem[] = [
     title: "Integrations",
     icon: Plug,
     path: "/integrations",
+    permissionModule: "settings",
     isNew: true,
   },
   {
@@ -388,9 +381,35 @@ const hasFeatureAccess = (
   return list.some((f) => enabled.has(f));
 };
 
-const filterNavigationItemsByFeatures = (
+// ============================================
+// PERMISSION-BASED FILTERING
+// ============================================
+
+/** Check if user has ANY permission for a given module */
+const hasModulePermission = (
+  permissionModule: string | undefined,
+  userPermissions: string[] | null
+): boolean => {
+  // No permissionModule defined = always visible (e.g. Help Center)
+  if (!permissionModule) return true;
+  // No permissions loaded = show everything (Owner/Admin or legacy user)
+  if (!userPermissions) return true;
+  // Check if user has at least one permission code starting with this module
+  // Permission codes follow the format: module_action (e.g. leads_view, invoices_create)
+  const modulePrefix = permissionModule.replace(/-/g, '-');
+  return userPermissions.some((code) => {
+    const codeParts = code.split('_');
+    // permission code is like "leads_view" or "lead-sources_view"
+    const codeModule = codeParts.slice(0, -1).join('_'); // everything before last underscore
+    return codeModule === modulePrefix;
+  });
+};
+
+const filterNavigationItems = (
   items: NavigationItem[],
-  enabled: Set<FeatureId>
+  enabled: Set<FeatureId>,
+  userPermissions: string[] | null,
+  isOwnerOrAdmin: boolean
 ): NavigationItem[] => {
   const sections: Array<{ header: NavigationItem | null; items: NavigationItem[] }> = [];
   let current: { header: NavigationItem | null; items: NavigationItem[] } = {
@@ -413,20 +432,26 @@ const filterNavigationItemsByFeatures = (
   for (const section of sections) {
     const visibleItems = section.items
       .map((item) => {
-        // Regular link item
-        if (!item.submenu) {
-          return hasFeatureAccess(item.featureId, enabled) ? item : null;
-        }
+        // Feature gate check
+        if (!hasFeatureAccess(item.featureId, enabled)) return null;
 
-        // Submenu group: filter children; show group only if at least one child is enabled.
+        // Permission check (Owner/Admin bypass)
+        if (!isOwnerOrAdmin && !hasModulePermission(item.permissionModule, userPermissions)) return null;
+
+        // Regular link item
+        if (!item.submenu) return item;
+
+        // Submenu group: filter children
         const submenu = item.submenu
-          .filter((sub) =>
-            hasFeatureAccess(sub.featureId ?? item.featureId, enabled)
-          )
+          .filter((sub) => {
+            if (!hasFeatureAccess(sub.featureId ?? item.featureId, enabled)) return false;
+            // Check sub-item permission if it has its own permissionModule
+            if (!isOwnerOrAdmin && sub.permissionModule && !hasModulePermission(sub.permissionModule, userPermissions)) return false;
+            return true;
+          })
           .map((sub) => ({ ...sub }));
 
         if (submenu.length === 0) return null;
-        if (!hasFeatureAccess(item.featureId, enabled)) return null;
 
         return { ...item, submenu };
       })
@@ -527,11 +552,41 @@ export function Sidebar({
   const [user, setUser] = useState<{ firstName: string; lastName: string; email?: string } | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [upgradeDismissed, setUpgradeDismissed] = useState(false);
+  const [userPermissions, setUserPermissions] = useState<string[] | null>(null);
+  const [isOwnerOrAdmin, setIsOwnerOrAdmin] = useState(true);
 
   useEffect(() => {
     return subscribeEnabledFeatures(() =>
       setEnabledFeaturesState(getEnabledFeatures())
     );
+  }, []);
+
+  // Load user permissions from localStorage
+  useEffect(() => {
+    const loadPermissions = () => {
+      try {
+        const storedPerms = localStorage.getItem("permissions");
+        const storedEmployee = localStorage.getItem("employee");
+        if (storedPerms) {
+          const perms = JSON.parse(storedPerms);
+          setUserPermissions(Array.isArray(perms) ? perms : null);
+        }
+        // Check if user is Owner or Admin (bypass permission filtering)
+        if (storedEmployee) {
+          const emp = JSON.parse(storedEmployee);
+          const roleName = emp?.role?.name || emp?.roleName || "";
+          setIsOwnerOrAdmin(["Owner", "Admin", "Super Admin"].includes(roleName));
+        } else {
+          // If no employee record, user is likely the tenant owner
+          setIsOwnerOrAdmin(true);
+        }
+      } catch (e) {
+        console.error("Failed to parse permissions");
+      }
+    };
+    loadPermissions();
+    window.addEventListener("storage", loadPermissions);
+    return () => window.removeEventListener("storage", loadPermissions);
   }, []);
 
   const enabledFeatureSet = useMemo(
@@ -540,8 +595,8 @@ export function Sidebar({
   );
 
   const visibleNavigationItems = useMemo(
-    () => filterNavigationItemsByFeatures(navigationItems, enabledFeatureSet),
-    [enabledFeatureSet]
+    () => filterNavigationItems(navigationItems, enabledFeatureSet, userPermissions, isOwnerOrAdmin),
+    [enabledFeatureSet, userPermissions, isOwnerOrAdmin]
   );
 
   // Auto-open submenu if current path is inside it

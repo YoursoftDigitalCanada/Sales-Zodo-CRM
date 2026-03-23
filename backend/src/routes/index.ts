@@ -57,6 +57,7 @@ import settingsRoutes from '../modules/settings/settings.routes';
 import analyticsRoutes from '../modules/analytics/analytics.routes';
 import auditRoutes from '../modules/audit/audit.routes';
 import sessionsRoutes from '../modules/sessions/sessions.routes';
+import reportsRoutes from '../modules/reports/reports.routes';
 
 // Applications module
 import applicationsRoutes from '../modules/applications/applications.routes';
@@ -185,6 +186,7 @@ export function registerRoutes(app: Application): void {
   protectedRouter.use('/analytics', analyticsRoutes);
   protectedRouter.use('/audit-logs', auditRoutes);
   protectedRouter.use('/sessions', sessionsRoutes);
+  protectedRouter.use('/reports', reportsRoutes);
 
   // Tags & Notifications (shared)
   protectedRouter.use('/tags', tagsRoutes);

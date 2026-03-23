@@ -546,6 +546,7 @@ const AppRoutes = () => {
         />
 
         {/* ========== SETTINGS ROUTES ========== */}
+        <Route path="/reports" element={<ReportsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/settings/general" element={<SettingsPage />} />
         <Route path="/settings/company" element={<SettingsPage />} />

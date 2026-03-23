@@ -38,4 +38,8 @@ router.get('/:id', requirePermission(PERMISSIONS.EMPLOYEES_VIEW), validate(emplo
 router.put('/:id', requirePermission(PERMISSIONS.EMPLOYEES_UPDATE), validate(employeeIdSchema), validate(updateEmployeeSchema), employeesController.update.bind(employeesController));
 router.delete('/:id', requirePermission(PERMISSIONS.EMPLOYEES_DELETE), validate(employeeIdSchema), employeesController.delete.bind(employeesController));
 
+// Data-level access management
+router.get('/:id/access', requirePermission(PERMISSIONS.EMPLOYEES_VIEW), validate(employeeIdSchema), employeesController.getAccess.bind(employeesController));
+router.put('/:id/access', requirePermission(PERMISSIONS.EMPLOYEES_UPDATE), validate(employeeIdSchema), employeesController.setAccess.bind(employeesController));
+
 export default router;

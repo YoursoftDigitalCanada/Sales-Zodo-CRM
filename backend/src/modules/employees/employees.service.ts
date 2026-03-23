@@ -165,6 +165,83 @@ export class EmployeesService {
 
         await employeesRepository.delete(id, tenantId);
     }
+
+    /**
+     * Get data-level access for an employee.
+     * Returns the list of client IDs and project IDs the employee has access to.
+     */
+    async getAccess(employeeId: string, tenantId: string) {
+        const existing = await employeesRepository.findById(employeeId, tenantId);
+        if (!existing) throw new NotFoundError('Employee not found', ErrorCodes.EMPLOYEE_NOT_FOUND);
+
+        const accessRows = await prisma.userAccess.findMany({
+            where: { employeeId, tenantId },
+            include: {
+                client: { select: { id: true, clientName: true } },
+                project: { select: { id: true, name: true } },
+            },
+        });
+
+        return {
+            employeeId,
+            clients: accessRows
+                .filter((r) => r.clientId)
+                .map((r) => ({ id: r.client!.id, name: r.client!.clientName })),
+            projects: accessRows
+                .filter((r) => r.projectId)
+                .map((r) => ({ id: r.project!.id, name: r.project!.name })),
+        };
+    }
+
+    /**
+     * Set data-level access for an employee.
+     * Replaces all UserAccess rows for this employee.
+     *
+     * Body: { clientIds: string[], projectIds: string[] }
+     */
+    async setAccess(employeeId: string, tenantId: string, data: { clientIds?: string[]; projectIds?: string[] }) {
+        const existing = await employeesRepository.findById(employeeId, tenantId);
+        if (!existing) throw new NotFoundError('Employee not found', ErrorCodes.EMPLOYEE_NOT_FOUND);
+
+        const clientIds = data.clientIds || [];
+        const projectIds = data.projectIds || [];
+
+        await prisma.$transaction(async (tx) => {
+            // Delete all existing access rows
+            await tx.userAccess.deleteMany({ where: { employeeId, tenantId } });
+
+            // Insert new client access rows
+            if (clientIds.length > 0) {
+                await tx.userAccess.createMany({
+                    data: clientIds.map((clientId) => ({
+                        employeeId,
+                        clientId,
+                        tenantId,
+                    })),
+                });
+            }
+
+            // Insert new project access rows
+            if (projectIds.length > 0) {
+                await tx.userAccess.createMany({
+                    data: projectIds.map((projectId) => ({
+                        employeeId,
+                        projectId,
+                        tenantId,
+                    })),
+                });
+            }
+        });
+
+        activityLogger.log({
+            tenantId, entityType: 'Employee', entityId: employeeId,
+            action: 'UPDATE', module: 'employees',
+            description: `Updated data access for employee: ${clientIds.length} clients, ${projectIds.length} projects`,
+            metadata: { clientIds, projectIds },
+        });
+
+        return this.getAccess(employeeId, tenantId);
+    }
 }
 
 export const employeesService = new EmployeesService();

@@ -720,6 +720,7 @@ model Tenant {
   leadInsuranceClaims   LeadInsuranceClaim[]
   leadContactedDetails  LeadContactedDetails[]
   subscription          Subscription?
+  userAccesses          UserAccess[]
   timeEntries           TimeEntry[]
   jobNotes              JobNote[]
   crewNotifications     CrewNotification[]
@@ -854,6 +855,7 @@ model Employee {
   employeeDocuments     EmployeeDocument[]
   jobCompletions        JobCompletion[]
   createdProposals      Proposal[]       @relation("ProposalCreatedBy")
+  userAccesses          UserAccess[]
 
   @@unique([tenantId, userId])
   @@unique([tenantId, employeeNumber])
@@ -928,6 +930,34 @@ model RolePermission {
   @@unique([roleId, permissionId])
   @@index([roleId])
   @@index([permissionId])
+}
+
+// ============================================================================
+// DATA-LEVEL ACCESS CONTROL
+// ============================================================================
+
+model UserAccess {
+  id          String    @id @default(uuid())
+
+  employeeId  String
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  clientId    String?
+  client      Client?   @relation("UserAccessClient", fields: [clientId], references: [id], onDelete: Cascade)
+
+  projectId   String?
+  project     Project?  @relation("UserAccessProject", fields: [projectId], references: [id], onDelete: Cascade)
+
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime  @default(now())
+
+  @@unique([employeeId, clientId, projectId])
+  @@index([employeeId])
+  @@index([tenantId])
+  @@index([clientId])
+  @@index([projectId])
 }
 
 // ============================================================================
@@ -1580,6 +1610,7 @@ model Client {
   roofData                RoofData[]
   calendarEvents          CalendarEvent[]
   contracts               Contract[]
+  userAccesses            UserAccess[]   @relation("UserAccessClient")
 
   @@index([tenantId])
   @@index([status])
@@ -1959,6 +1990,7 @@ model Project {
   materialRequests MaterialRequest[]
   incidentReports IncidentReport[]
   jobCompletion   JobCompletion?
+  userAccesses    UserAccess[]   @relation("UserAccessProject")
 
   @@unique([tenantId, code])
   @@unique([tenantId, projectNumber])

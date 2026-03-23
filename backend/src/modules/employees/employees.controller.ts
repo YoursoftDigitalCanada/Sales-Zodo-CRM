@@ -38,6 +38,20 @@ export class EmployeesController {
             sendNoContent(res);
         } catch (e) { next(e); }
     }
+
+    async getAccess(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const access = await employeesService.getAccess(req.params.id, req.context.tenantId);
+            sendSuccess(res, access);
+        } catch (e) { next(e); }
+    }
+
+    async setAccess(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const access = await employeesService.setAccess(req.params.id, req.context.tenantId, sanitizeBody(req.body));
+            sendSuccess(res, access, 'Data access updated');
+        } catch (e) { next(e); }
+    }
 }
 
 export const employeesController = new EmployeesController();

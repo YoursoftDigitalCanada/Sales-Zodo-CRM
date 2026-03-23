@@ -593,6 +593,28 @@ export class AuthService {
 
     const sidebarModules = getModulesForPermissions(permissions);
 
+    // Build allowedModules from permissions (unique module names)
+    const allowedModules = [...new Set(
+      employee.role.permissions.map((rp) => rp.permission.module)
+    )];
+
+    // Load data-level access
+    const roleName = employee.role.name;
+    let dataAccess: { hasFullAccess: boolean; clientIds: string[]; projectIds: string[] } = {
+      hasFullAccess: roleName === 'Owner' || roleName === 'Admin',
+      clientIds: [],
+      projectIds: [],
+    };
+
+    if (!dataAccess.hasFullAccess) {
+      const accessRows = await prisma.userAccess.findMany({
+        where: { employeeId: employee.id, tenantId },
+        select: { clientId: true, projectId: true },
+      });
+      dataAccess.clientIds = accessRows.filter((r) => r.clientId).map((r) => r.clientId!);
+      dataAccess.projectIds = accessRows.filter((r) => r.projectId).map((r) => r.projectId!);
+    }
+
     return {
       user: {
         id: user.id,
@@ -617,7 +639,9 @@ export class AuthService {
         logo: employee.tenant.logo,
       },
       permissions,
+      allowedModules,
       sidebarModules,
+      dataAccess,
     };
   }
 

@@ -128,9 +128,9 @@ const dateFormats: DateFormatValue[] = ["YYYY-MM-DD", "DD-MM-YYYY", "MM-DD-YYYY"
 const emailEncryptions = ["SSL/TLS", "STARTTLS", "NONE"] as const;
 
 const fieldClass =
-  "w-full rounded-xl border border-[rgba(15,23,42,0.08)] bg-[#F8FAFC] px-4 py-3 text-sm text-[#0F172A] outline-none transition focus:border-[#0F766E] focus:ring-4 focus:ring-[#99F6E4]/40";
+  "w-full rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-4 py-3 text-sm text-[#0F172A] outline-none transition focus:border-[#0891B2] focus:ring-4 focus:ring-[#22D3EE]/30";
 
-const cardClass = "rounded-[28px] border border-[rgba(15,23,42,0.08)] bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)]";
+const cardClass = "rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm hover:shadow-lg transition-shadow";
 
 function getErrorMessage(error: unknown): string {
   const maybeError = error as { response?: { data?: { message?: string } }; message?: string };
@@ -197,7 +197,7 @@ function SaveButton({
     <button
       onClick={onClick}
       disabled={loading}
-      className="inline-flex items-center gap-2 rounded-xl bg-[#0F766E] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#115E59] disabled:cursor-not-allowed disabled:opacity-70"
+      className="inline-flex items-center gap-2 rounded-md bg-[#0891B2] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#0E7490] disabled:cursor-not-allowed disabled:opacity-70"
     >
       {loading ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
       {loading ? "Saving..." : label}
@@ -218,7 +218,7 @@ function Toggle({
       onClick={() => onChange(!checked)}
       className={cn(
         "relative inline-flex h-7 w-12 items-center rounded-full transition",
-        checked ? "bg-[#0F766E]" : "bg-[#CBD5E1]"
+        checked ? "bg-[#0891B2]" : "bg-[#CBD5E1]"
       )}
     >
       <span
@@ -234,7 +234,7 @@ function Toggle({
 function AccessDeniedCard({ label }: { label: string }) {
   return (
     <div className={cardClass}>
-      <div className="flex items-start gap-3 rounded-2xl border border-[#FECACA] bg-[#FEF2F2] p-4 text-[#991B1B]">
+      <div className="flex items-start gap-3 rounded-md border border-[#FECACA] bg-[#FEF2F2] p-4 text-[#991B1B]">
         <AlertTriangle size={18} className="mt-0.5 flex-shrink-0" />
         <div>
           <p className="font-medium">Access restricted</p>
@@ -267,7 +267,7 @@ function UsageBar({
         </span>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-[#E2E8F0]">
-        <div className="h-full rounded-full bg-gradient-to-r from-[#14B8A6] to-[#0F766E]" style={{ width: `${Math.min(percent, 100)}%` }} />
+        <div className="h-full rounded-full bg-gradient-to-r from-[#0891B2] to-[#0E7490]" style={{ width: `${Math.min(percent, 100)}%` }} />
       </div>
     </div>
   );
@@ -601,9 +601,9 @@ export default function SettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,#CCFBF1,transparent_45%),linear-gradient(180deg,#F8FAFC_0%,#EEF2FF_100%)]">
+      <div className="flex min-h-screen items-center justify-center bg-[#F8FAFC]">
         <div className="flex flex-col items-center gap-3 text-center">
-          <Loader2 size={34} className="animate-spin text-[#0F766E]" />
+          <Loader2 size={34} className="animate-spin text-[#0891B2]" />
           <p className="text-sm text-[#475569]">Loading workspace settings...</p>
         </div>
       </div>
@@ -611,13 +611,13 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#CCFBF1,transparent_35%),linear-gradient(180deg,#F8FAFC_0%,#EEF2FF_100%)]">
+    <div className="min-h-screen bg-[#F8FAFC]">
       <div className="mx-auto flex max-w-[1500px] flex-col gap-6 px-4 py-6 sm:px-6 xl:flex-row">
         <aside className="xl:sticky xl:top-6 xl:h-[calc(100vh-3rem)] xl:w-[320px] xl:flex-shrink-0">
-          <div className="overflow-hidden rounded-[32px] border border-[rgba(15,23,42,0.08)] bg-white/90 p-5 shadow-[0_28px_70px_rgba(15,23,42,0.09)] backdrop-blur">
-            <div className="mb-6 rounded-[26px] bg-[linear-gradient(135deg,#0F766E_0%,#115E59_55%,#0F172A_100%)] p-5 text-white">
+          <div className="overflow-hidden rounded-md border border-[rgba(15,23,42,0.06)] bg-white/90 p-5 shadow-sm backdrop-blur">
+            <div className="mb-6 rounded-md bg-[linear-gradient(135deg,#0891B2_0%,#0E7490_55%,#0F172A_100%)] p-5 text-white">
               <div className="flex items-center gap-3">
-                <div className="rounded-2xl bg-white/15 p-3">
+                <div className="rounded-md bg-white/15 p-3">
                   <Settings size={22} />
                 </div>
                 <div>
@@ -636,16 +636,16 @@ export default function SettingsPage() {
                     key={tab.id}
                     onClick={() => navigateToTab(tab.id)}
                     className={cn(
-                      "flex w-full items-start gap-3 rounded-2xl px-4 py-3 text-left transition",
-                      active ? "bg-[#ECFEFF] text-[#0F766E]" : "hover:bg-[#F8FAFC] text-[#334155]"
+                      "flex w-full items-start gap-3 rounded-md px-4 py-3 text-left transition",
+                      active ? "bg-[#0891B2]/5 text-[#0891B2]" : "hover:bg-[#F8FAFC] text-[#334155]"
                     )}
                   >
-                    <div className={cn("rounded-xl p-2.5", active ? "bg-[#CCFBF1]" : "bg-[#F1F5F9]")}>
+                    <div className={cn("rounded-md p-2.5", active ? "bg-[#0891B2]/10" : "bg-[#F1F5F9]")}>
                       <Icon size={18} />
                     </div>
                     <div>
                       <div className="text-sm font-semibold">{tab.label}</div>
-                      <div className={cn("mt-0.5 text-xs", active ? "text-[#0F766E]/80" : "text-[#64748B]")}>{tab.description}</div>
+                      <div className={cn("mt-0.5 text-xs", active ? "text-[#0891B2]/80" : "text-[#64748B]")}>{tab.description}</div>
                     </div>
                   </button>
                 );
@@ -708,10 +708,10 @@ export default function SettingsPage() {
                             type="button"
                             onClick={() => setGeneral({ ...general, theme })}
                             className={cn(
-                              "flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition",
+                              "flex flex-1 items-center justify-center gap-2 rounded-md border px-4 py-3 text-sm font-medium transition",
                               general.theme === theme
-                                ? "border-[#0F766E] bg-[#ECFEFF] text-[#0F766E]"
-                                : "border-[rgba(15,23,42,0.08)] bg-[#F8FAFC] text-[#475569]"
+                                ? "border-[#0891B2] bg-[#0891B2]/5 text-[#0891B2]"
+                                : "border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] text-[#475569]"
                             )}
                           >
                             {theme === "light" ? "Light" : "Dark"}
@@ -736,10 +736,10 @@ export default function SettingsPage() {
                 <div className={cardClass}>
                   <SectionHeader title="Company Profile" description="Control how your workspace looks and how customers can contact you." />
                   <div className="mt-6 grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
-                    <div className="rounded-[24px] border border-dashed border-[rgba(15,23,42,0.14)] bg-[#F8FAFC] p-5">
+                    <div className="rounded-md border border-dashed border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-5">
                       <p className="text-sm font-medium text-[#0F172A]">Company logo</p>
                       <p className="mt-1 text-xs text-[#64748B]">PNG, JPG, WEBP, or SVG. Maximum 2MB.</p>
-                      <div className="mt-5 flex aspect-square items-center justify-center overflow-hidden rounded-[24px] bg-white">
+                      <div className="mt-5 flex aspect-square items-center justify-center overflow-hidden rounded-md bg-white">
                         {company.logoUrl ? (
                           <img src={company.logoUrl} alt="Company logo" className="h-full w-full object-contain p-4" />
                         ) : (
@@ -764,7 +764,7 @@ export default function SettingsPage() {
                       <button
                         type="button"
                         onClick={() => logoInputRef.current?.click()}
-                        className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[rgba(15,23,42,0.08)] bg-white px-4 py-3 text-sm font-medium text-[#0F172A] transition hover:border-[#0F766E]"
+                        className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-md border border-[rgba(15,23,42,0.06)] bg-white px-4 py-3 text-sm font-medium text-[#0F172A] transition hover:border-[#0891B2]"
                       >
                         {savingSection === "logo" ? <Loader2 size={15} className="animate-spin" /> : <Upload size={15} />}
                         {savingSection === "logo" ? "Uploading..." : "Upload logo"}
@@ -810,28 +810,28 @@ export default function SettingsPage() {
                     title={`${billing.name} Plan`}
                     description={billing.description}
                     badge={
-                      <div className="rounded-full bg-[#ECFEFF] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#0F766E]">
+                      <div className="rounded-full bg-[#0891B2]/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#0891B2]">
                         {billing.status}
                       </div>
                     }
                   />
                   <div className="mt-6 grid gap-4 lg:grid-cols-4">
-                    <div className="rounded-2xl bg-[#0F172A] p-5 text-white">
+                    <div className="rounded-md bg-[#0F172A] p-5 text-white">
                       <p className="text-xs uppercase tracking-[0.18em] text-white/65">Current rate</p>
                       <p className="mt-3 text-3xl font-semibold">{formatMoney(billing.currentRate)}</p>
                       <p className="mt-2 text-sm text-white/70">{billing.billingCycle === "YEARLY" ? "Billed yearly" : "Billed monthly"}</p>
                     </div>
-                    <div className="rounded-2xl bg-[#F8FAFC] p-5">
+                    <div className="rounded-md bg-[#F8FAFC] p-5">
                       <p className="text-xs uppercase tracking-[0.18em] text-[#64748B]">Total paid</p>
                       <p className="mt-3 text-3xl font-semibold text-[#0F172A]">{formatMoney(billing.totalPaid)}</p>
                       <p className="mt-2 text-sm text-[#64748B]">Lifetime subscription payments</p>
                     </div>
-                    <div className="rounded-2xl bg-[#F8FAFC] p-5">
+                    <div className="rounded-md bg-[#F8FAFC] p-5">
                       <p className="text-xs uppercase tracking-[0.18em] text-[#64748B]">Monthly price</p>
                       <p className="mt-3 text-3xl font-semibold text-[#0F172A]">{formatMoney(billing.monthlyRate)}</p>
                       <p className="mt-2 text-sm text-[#64748B]">Per workspace monthly price</p>
                     </div>
-                    <div className="rounded-2xl bg-[#F8FAFC] p-5">
+                    <div className="rounded-md bg-[#F8FAFC] p-5">
                       <p className="text-xs uppercase tracking-[0.18em] text-[#64748B]">Next billing date</p>
                       <p className="mt-3 text-lg font-semibold text-[#0F172A]">{billing.nextBillingDate ? formatDateTime(billing.nextBillingDate) : "Not scheduled"}</p>
                     </div>
@@ -858,12 +858,12 @@ export default function SettingsPage() {
                   <SectionHeader title="Billing Invoices" description="Recent subscription billing records for this workspace." />
                   <div className="mt-6 space-y-3">
                     {billingInvoices.length === 0 ? (
-                      <div className="rounded-2xl border border-dashed border-[rgba(15,23,42,0.14)] p-6 text-sm text-[#64748B]">
+                      <div className="rounded-md border border-dashed border-[rgba(15,23,42,0.06)] p-6 text-sm text-[#64748B]">
                         No billing invoices are available yet for this workspace.
                       </div>
                     ) : (
                       billingInvoices.map((invoice) => (
-                        <div key={invoice.id} className="flex flex-col gap-3 rounded-2xl border border-[rgba(15,23,42,0.08)] bg-[#F8FAFC] p-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div key={invoice.id} className="flex flex-col gap-3 rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-4 sm:flex-row sm:items-center sm:justify-between">
                           <div>
                             <p className="font-medium text-[#0F172A]">{invoice.label}</p>
                             <p className="mt-1 text-sm text-[#64748B]">
@@ -970,14 +970,14 @@ export default function SettingsPage() {
                 <div className={cardClass}>
                   <SectionHeader title="Test Email & Templates" description="Verify delivery and keep reusable email content up to date." />
                   <div className="mt-6 grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
-                    <div className="space-y-4 rounded-[24px] bg-[#F8FAFC] p-4">
+                    <div className="space-y-4 rounded-md bg-[#F8FAFC] p-4">
                       <Field label="Send a test email">
                         <input className={fieldClass} type="email" value={testEmailAddress} onChange={(event) => setTestEmailAddress(event.target.value)} />
                       </Field>
                       <button
                         onClick={handleSendTestEmail}
                         disabled={savingSection === "test-email"}
-                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[rgba(15,23,42,0.08)] bg-white px-4 py-3 text-sm font-medium text-[#0F172A] transition hover:border-[#0F766E] disabled:opacity-70"
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-[rgba(15,23,42,0.06)] bg-white px-4 py-3 text-sm font-medium text-[#0F172A] transition hover:border-[#0891B2] disabled:opacity-70"
                       >
                         {savingSection === "test-email" ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
                         {savingSection === "test-email" ? "Sending..." : "Send test email"}
@@ -990,10 +990,10 @@ export default function SettingsPage() {
                             type="button"
                             onClick={() => setSelectedTemplateId(template.id)}
                             className={cn(
-                              "w-full rounded-2xl border px-4 py-3 text-left transition",
+                              "w-full rounded-md border px-4 py-3 text-left transition",
                               selectedTemplateId === template.id
-                                ? "border-[#0F766E] bg-[#ECFEFF]"
-                                : "border-[rgba(15,23,42,0.08)] bg-white hover:border-[#99F6E4]"
+                                ? "border-[#0891B2] bg-[#0891B2]/5"
+                                : "border-[rgba(15,23,42,0.06)] bg-white hover:border-[#99F6E4]"
                             )}
                           >
                             <p className="text-sm font-semibold text-[#0F172A]">{template.name}</p>
@@ -1066,7 +1066,7 @@ export default function SettingsPage() {
                 <div className={cardClass}>
                   <SectionHeader title="Security Policy" description="Set the authentication requirements and access guardrails for this workspace." />
                   <div className="mt-6 grid gap-6 lg:grid-cols-2">
-                    <div className="rounded-2xl bg-[#F8FAFC] p-5">
+                    <div className="rounded-md bg-[#F8FAFC] p-5">
                       <div className="flex items-center justify-between gap-4">
                         <div>
                           <p className="font-medium text-[#0F172A]">Require two-factor authentication</p>
@@ -1103,12 +1103,12 @@ export default function SettingsPage() {
                   <SectionHeader title="Active Sessions" description="Current active sessions for your account." />
                   <div className="mt-6 space-y-3">
                     {sessions.length === 0 ? (
-                      <div className="rounded-2xl border border-dashed border-[rgba(15,23,42,0.14)] p-6 text-sm text-[#64748B]">
+                      <div className="rounded-md border border-dashed border-[rgba(15,23,42,0.06)] p-6 text-sm text-[#64748B]">
                         No active sessions were found.
                       </div>
                     ) : (
                       sessions.map((session) => (
-                        <div key={session.id} className="flex flex-col gap-3 rounded-2xl border border-[rgba(15,23,42,0.08)] bg-[#F8FAFC] p-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div key={session.id} className="flex flex-col gap-3 rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-4 lg:flex-row lg:items-center lg:justify-between">
                           <div>
                             <div className="flex items-center gap-2">
                               <p className="font-medium text-[#0F172A]">{session.device}</p>
@@ -1127,7 +1127,7 @@ export default function SettingsPage() {
                             type="button"
                             disabled={session.current}
                             onClick={() => void handleRevokeSession(session.id)}
-                            className="rounded-xl border border-[rgba(15,23,42,0.08)] bg-white px-4 py-2 text-sm font-medium text-[#0F172A] transition hover:border-[#DC2626] hover:text-[#DC2626] disabled:cursor-not-allowed disabled:opacity-50"
+                            className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white px-4 py-2 text-sm font-medium text-[#0F172A] transition hover:border-[#DC2626] hover:text-[#DC2626] disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             Revoke
                           </button>
@@ -1142,7 +1142,7 @@ export default function SettingsPage() {
                     title="Audit Log"
                     description="Recent profile, security, export, and access events for this workspace."
                     badge={
-                      <button onClick={handleExportAudit} className="inline-flex items-center gap-2 rounded-xl border border-[rgba(15,23,42,0.08)] bg-[#F8FAFC] px-3 py-2 text-sm font-medium text-[#0F172A] transition hover:border-[#0F766E] hover:text-[#0F766E]">
+                      <button onClick={handleExportAudit} className="inline-flex items-center gap-2 rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-3 py-2 text-sm font-medium text-[#0F172A] transition hover:border-[#0891B2] hover:text-[#0891B2]">
                         <Download size={15} />
                         Export CSV
                       </button>
@@ -1150,12 +1150,12 @@ export default function SettingsPage() {
                   />
                   <div className="mt-6 space-y-3">
                     {auditLogs.length === 0 ? (
-                      <div className="rounded-2xl border border-dashed border-[rgba(15,23,42,0.14)] p-6 text-sm text-[#64748B]">
+                      <div className="rounded-md border border-dashed border-[rgba(15,23,42,0.06)] p-6 text-sm text-[#64748B]">
                         No audit events have been recorded yet.
                       </div>
                     ) : (
                       auditLogs.map((log) => (
-                        <div key={log.id} className="rounded-2xl border border-[rgba(15,23,42,0.08)] bg-[#F8FAFC] p-4">
+                        <div key={log.id} className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-4">
                           <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
                             <div>
                               <p className="font-medium text-[#0F172A]">{log.description}</p>
@@ -1189,7 +1189,7 @@ export default function SettingsPage() {
                     { key: "weeklyDigest", label: "Weekly digest", description: "Send a weekly workspace summary." },
                     { key: "productUpdates", label: "Product updates", description: "Receive release notes and product announcements." },
                   ].map((item) => (
-                    <div key={item.key} className="flex items-center justify-between gap-4 rounded-2xl border border-[rgba(15,23,42,0.08)] bg-[#F8FAFC] p-4">
+                    <div key={item.key} className="flex items-center justify-between gap-4 rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-4">
                       <div>
                         <p className="font-medium text-[#0F172A]">{item.label}</p>
                         <p className="mt-1 text-sm text-[#64748B]">{item.description}</p>
@@ -1247,7 +1247,7 @@ export default function SettingsPage() {
                     <button
                       onClick={handleInviteUser}
                       disabled={savingSection === "invite"}
-                      className="inline-flex items-center gap-2 rounded-xl bg-[#0F766E] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#115E59] disabled:opacity-70"
+                      className="inline-flex items-center gap-2 rounded-md bg-[#0891B2] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#0E7490] disabled:opacity-70"
                     >
                       {savingSection === "invite" ? <Loader2 size={15} className="animate-spin" /> : <UserPlus size={15} />}
                       {savingSection === "invite" ? "Inviting..." : "Invite member"}
@@ -1259,10 +1259,10 @@ export default function SettingsPage() {
                   <SectionHeader title="Team Directory" description="Review active workspace members, their roles, and access state." />
                   <div className="mt-6 space-y-3">
                     {teamMembers.map((member) => (
-                      <div key={member.id} className="flex flex-col gap-4 rounded-2xl border border-[rgba(15,23,42,0.08)] bg-[#F8FAFC] p-4 xl:flex-row xl:items-center xl:justify-between">
+                      <div key={member.id} className="flex flex-col gap-4 rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-4 xl:flex-row xl:items-center xl:justify-between">
                         <div>
                           <div className="flex items-center gap-3">
-                            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#CCFBF1] text-sm font-semibold text-[#0F766E]">
+                            <div className="flex h-11 w-11 items-center justify-center rounded-md bg-[#0891B2]/10 text-sm font-semibold text-[#0891B2]">
                               {(member.fullName || member.email).slice(0, 2).toUpperCase()}
                             </div>
                             <div>
@@ -1290,7 +1290,7 @@ export default function SettingsPage() {
                           <button
                             type="button"
                             onClick={() => void handleRemoveUser(member.id)}
-                            className="rounded-xl border border-[rgba(15,23,42,0.08)] bg-white px-4 py-2.5 text-sm font-medium text-[#0F172A] transition hover:border-[#DC2626] hover:text-[#DC2626]"
+                            className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white px-4 py-2.5 text-sm font-medium text-[#0F172A] transition hover:border-[#DC2626] hover:text-[#DC2626]"
                           >
                             Remove
                           </button>

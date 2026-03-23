@@ -394,14 +394,12 @@ const hasModulePermission = (
   if (!permissionModule) return true;
   // No permissions loaded = show everything (Owner/Admin or legacy user)
   if (!userPermissions) return true;
-  // Check if user has at least one permission code starting with this module
-  // Permission codes follow the format: module_action (e.g. leads_view, invoices_create)
-  const modulePrefix = permissionModule.replace(/-/g, '-');
+  // Permission codes use dot notation: "module.action" (e.g. "leads.view", "invoices.create")
   return userPermissions.some((code) => {
-    const codeParts = code.split('_');
-    // permission code is like "leads_view" or "lead-sources_view"
-    const codeModule = codeParts.slice(0, -1).join('_'); // everything before last underscore
-    return codeModule === modulePrefix;
+    const dotIndex = code.lastIndexOf('.');
+    if (dotIndex === -1) return false;
+    const codeModule = code.substring(0, dotIndex);
+    return codeModule === permissionModule;
   });
 };
 

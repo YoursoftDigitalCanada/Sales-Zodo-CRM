@@ -31,11 +31,9 @@ export interface ApiEmployee {
     department: string | null;
     position: string | null;
     isActive: boolean;
-    userId: string;
-    roleId: string;
     createdAt: string;
-    user?: { email: string; firstName: string; lastName: string; lastLoginAt: string | null; status: string };
-    role?: { id: string; name: string };
+    user?: { id: string; email: string; firstName: string; lastName: string; lastLoginAt: string | null };
+    role?: { id: string; name: string } | null;
 }
 
 // --- Roles ---

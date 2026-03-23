@@ -542,7 +542,7 @@ export default function RolesPage() {
                                                             <td className="py-3 px-4 text-center">
                                                                 <select
                                                                     className="h-7 px-2 rounded border border-[rgba(15,23,42,0.12)] bg-[#F8FAFC] text-[10px] text-[#475569] focus:outline-none"
-                                                                    value={emp.roleId}
+                                                                    value={emp.role?.id || ""}
                                                                     onChange={(e) => handleChangeUserRole(emp.id, e.target.value)}
                                                                 >
                                                                     {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}

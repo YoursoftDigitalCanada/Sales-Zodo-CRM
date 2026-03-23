@@ -1,6 +1,6 @@
 // src/pages/AddProject.tsx
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 // import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { Button } from "@/components/ui/button";
@@ -73,7 +73,8 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { createProject } from "@/features/projects";
+import { createProject, updateProject, getProjectById } from "@/features/projects";
+import type { ProjectEntity } from "@/features/projects";
 import { getClients } from "@/features/clients/services/clients-service";
 import { getEmployees } from "@/features/users/services/users-service";
 
@@ -662,7 +663,12 @@ const ProgressIndicator = ({
 
 const AddProjectPage = () => {
   const navigate = useNavigate();
+  const { id: editId } = useParams<{ id: string }>();
+  const isEditMode = Boolean(editId);
   const { toast } = useToast();
+
+  // Edit loading
+  const [editLoading, setEditLoading] = useState(false);
 
   // Sidebar
     const [user, setUser] = useState<User | null>(null);
@@ -747,6 +753,44 @@ const AddProjectPage = () => {
     };
     fetchDropdownData();
   }, []);
+
+  // ============================================
+  // EDIT: FETCH EXISTING PROJECT DATA
+  // ============================================
+
+  useEffect(() => {
+    if (!editId) return;
+    const fetchProject = async () => {
+      setEditLoading(true);
+      try {
+        const p = await getProjectById(editId);
+        if (p) {
+          setName(p.name || "");
+          setDescription(p.description || "");
+          setClientId(p.client?.id || "");
+          setStatus((p.status as string) || "PENDING");
+          setPriority((p.priority as string) || "NORMAL");
+          setProgress(p.completionPercentage || p.progress || 0);
+          if (p.estimatedStartDate || p.startDate || p.actualStartDate) {
+            const d = p.estimatedStartDate || p.startDate || p.actualStartDate;
+            setStartDate(d ? d.split("T")[0] : "");
+          }
+          if (p.estimatedEndDate || p.dueDate || p.endDate) {
+            const d = p.estimatedEndDate || p.dueDate || p.endDate;
+            setDueDate(d ? d.split("T")[0] : "");
+          }
+          if (p.budget) setBudget(String(p.budget));
+          if (p.projectType) setCategory(p.projectType);
+        }
+      } catch (err) {
+        console.error("Failed to load project for editing", err);
+        toast({ title: "Error", description: "Could not load project data", variant: "destructive" });
+      } finally {
+        setEditLoading(false);
+      }
+    };
+    fetchProject();
+  }, [editId, toast]);
 
   // ============================================
   // HANDLERS
@@ -845,21 +889,27 @@ const AddProjectPage = () => {
         notifyTeamMembers: sendNotification,
       };
 
-      await createProject(projectData as Record<string, unknown>);
+      if (isEditMode && editId) {
+        await updateProject(editId, projectData as Record<string, unknown>);
+      } else {
+        await createProject(projectData as Record<string, unknown>);
+      }
 
       toast({
-        title: isDraft ? "Draft Saved" : "Project Created",
-        description: isDraft
-          ? "Your project has been saved as a draft"
-          : "Your project has been created successfully",
+        title: isEditMode ? "Project Updated" : isDraft ? "Draft Saved" : "Project Created",
+        description: isEditMode
+          ? "Your project has been updated successfully"
+          : isDraft
+            ? "Your project has been saved as a draft"
+            : "Your project has been created successfully",
       });
 
       navigate("/projects");
     } catch (err: any) {
-      console.error("Failed to create project", err);
+      console.error("Failed to save project", err);
       toast({
         title: "Error",
-        description: "Failed to create project: " + (err?.message || err),
+        description: `Failed to ${isEditMode ? "update" : "create"} project: ` + (err?.message || err),
         variant: "destructive",
       });
     } finally {
@@ -900,7 +950,7 @@ const AddProjectPage = () => {
               <div className="flex items-center gap-2 text-sm">
                 <span className="text-[#475569]">Projects</span>
                 <ChevronRight size={16} className="text-[#475569]" />
-                <span className="font-medium text-[#0F172A]">New Project</span>
+                <span className="font-medium text-[#0F172A]">{isEditMode ? "Edit Project" : "New Project"}</span>
               </div>
             </div>
 
@@ -938,7 +988,7 @@ const AddProjectPage = () => {
                 <FolderPlus size={24} className="text-[#0F172A]" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Create New Project</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">{isEditMode ? "Edit Project" : "Create New Project"}</h1>
                 <p className="text-[#94A3B8]">Fill in the details to start a new project</p>
               </div>
             </div>
@@ -1274,7 +1324,7 @@ const AddProjectPage = () => {
                         Notify Team Members
                       </p>
                       <p className="text-xs text-[#475569]">
-                        Send email notifications when created
+                        {isEditMode ? "Send email notifications when updated" : "Send email notifications when created"}
                       </p>
                     </div>
                     <Checkbox
@@ -1306,7 +1356,7 @@ const AddProjectPage = () => {
                     ) : (
                       <>
                         <Sparkles size={18} className="mr-2" />
-                        Create Project
+                        {submitting ? (isEditMode ? "Updating..." : "Creating...") : (isEditMode ? "Update Project" : "Create Project")}
                       </>
                     )}
                   </Button>

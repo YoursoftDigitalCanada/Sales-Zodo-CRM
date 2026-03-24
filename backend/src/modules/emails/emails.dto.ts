@@ -16,6 +16,12 @@ export interface SendEmailDto {
     bodyHtml?: string;
     fromName?: string;
     fromAddress?: string;
+    attachments?: {
+        filename: string;
+        mimeType: string;
+        size: number;
+        path: string;
+    }[];
 }
 
 export interface EmailQueryDto {
@@ -44,6 +50,13 @@ export interface EmailResponseDto {
     isRead: boolean;
     isStarred: boolean;
     hasAttachments: boolean;
+    attachments: {
+        id: string;
+        filename: string;
+        mimeType: string;
+        size: number;
+        path: string;
+    }[];
     receivedAt: Date | null;
     sentAt: Date | null;
     createdAt: Date;
@@ -71,6 +84,13 @@ export function toEmailResponseDto(e: EmailWithRelations): EmailResponseDto {
         isRead: e.isRead,
         isStarred: e.isStarred,
         hasAttachments: e.hasAttachments,
+        attachments: (e.attachments || []).map((attachment) => ({
+            id: attachment.id,
+            filename: attachment.filename,
+            mimeType: attachment.mimeType,
+            size: Number(attachment.size || 0),
+            path: attachment.path,
+        })),
         receivedAt: e.receivedAt,
         sentAt: e.sentAt,
         createdAt: e.createdAt,

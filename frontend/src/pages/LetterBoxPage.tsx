@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import {
   Select,
@@ -44,6 +43,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { sendEmail as apiSendEmail, getEmails as apiGetEmails, deleteEmail as apiDeleteEmail, markAsRead as apiMarkAsRead, getEmailConfigStatus, fetchEmailsNow, toggleStar as apiToggleStar, moveToFolder as apiMoveToFolder } from "@/features/emails/services/emails-service";
+import { API_ORIGIN } from "@/services/api";
 import {
   Bell,
   Search,
@@ -426,21 +426,94 @@ const getInitials = (name: string) => {
 };
 
 const getAttachmentIcon = (type: string) => {
-  switch (type) {
-    case "pdf":
+  const normalizedType = type.toLowerCase();
+
+  if (normalizedType.includes("pdf")) {
       return "📄";
-    case "zip":
-      return "📦";
-    case "figma":
-      return "🎨";
-    case "image":
-      return "🖼️";
-    default:
-      return "📎";
   }
+
+  if (normalizedType.includes("zip") || normalizedType.includes("compressed")) {
+      return "📦";
+  }
+
+  if (normalizedType.includes("figma")) {
+      return "🎨";
+  }
+
+  if (normalizedType.includes("image")) {
+      return "🖼️";
+  }
+
+  return "📎";
 };
 
-const formatFileSize = (size: string) => size;
+const formatFileSize = (size: string | number) => {
+  if (typeof size === "string") {
+    return size;
+  }
+
+  if (!Number.isFinite(size) || size <= 0) {
+    return "0 B";
+  }
+
+  const units = ["B", "KB", "MB", "GB"];
+  let value = size;
+  let unitIndex = 0;
+
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+
+  return `${value >= 10 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`;
+};
+
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+const plainTextToHtml = (value: string) => {
+  const escaped = escapeHtml(value);
+  if (!escaped.trim()) {
+    return "";
+  }
+
+  return escaped
+    .split("\n")
+    .map((line) => (line ? line : "<br/>"))
+    .join("<br/>");
+};
+
+const htmlToPlainText = (value: string) => {
+  if (typeof window === "undefined") {
+    return value.replace(/<[^>]+>/g, " ");
+  }
+
+  const temp = document.createElement("div");
+  temp.innerHTML = value;
+  return (temp.textContent || temp.innerText || "").replace(/\u00A0/g, " ");
+};
+
+const buildAttachmentUrl = (value?: string) => {
+  if (!value) return undefined;
+  return /^https?:\/\//i.test(value) ? value : `${API_ORIGIN}${value.startsWith("/") ? value : `/${value}`}`;
+};
+
+const getInitialComposeValues = (replyTo?: Email, forwardEmail?: Email) => {
+  const forwardedText = forwardEmail
+    ? `\n\n---------- Forwarded message ----------\nFrom: ${forwardEmail.from.name} <${forwardEmail.from.email}>\nDate: ${forwardEmail.date}\nSubject: ${forwardEmail.subject}\n\n${forwardEmail.preview}`
+    : "";
+
+  return {
+    to: replyTo ? replyTo.from.email : "",
+    subject: replyTo ? `Re: ${replyTo.subject}` : forwardEmail ? `Fwd: ${forwardEmail.subject}` : "",
+    bodyHtml: forwardedText ? plainTextToHtml(forwardedText) : "",
+  };
+};
 
 // ============================================
 // COMPOSE EMAIL DIALOG
@@ -458,20 +531,48 @@ const ComposeEmailDialog = ({
   forwardEmail?: Email;
 }) => {
   const { toast } = useToast();
+  const editorRef = useRef<HTMLDivElement | null>(null);
   const [to, setTo] = useState(replyTo ? replyTo.from.email : "");
   const [cc, setCc] = useState("");
   const [subject, setSubject] = useState(
     replyTo ? `Re: ${replyTo.subject}` : forwardEmail ? `Fwd: ${forwardEmail.subject}` : ""
   );
-  const [body, setBody] = useState(
-    forwardEmail
-      ? `\n\n---------- Forwarded message ----------\nFrom: ${forwardEmail.from.name} <${forwardEmail.from.email}>\nDate: ${forwardEmail.date}\nSubject: ${forwardEmail.subject}\n\n${forwardEmail.preview}`
-      : ""
-  );
+  const [bodyHtml, setBodyHtml] = useState(getInitialComposeValues(replyTo, forwardEmail).bodyHtml);
   const [showCc, setShowCc] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [isSending, setIsSending] = useState(false);
+  const [isEditorFocused, setIsEditorFocused] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const initialValues = getInitialComposeValues(replyTo, forwardEmail);
+    setTo(initialValues.to);
+    setCc("");
+    setSubject(initialValues.subject);
+    setBodyHtml(initialValues.bodyHtml);
+    setShowCc(false);
+    setAttachments([]);
+    setIsMinimized(false);
+    setIsEditorFocused(false);
+
+    requestAnimationFrame(() => {
+      if (editorRef.current) {
+        editorRef.current.innerHTML = initialValues.bodyHtml;
+      }
+    });
+  }, [isOpen, replyTo, forwardEmail]);
+
+  const syncEditorState = useCallback(() => {
+    setBodyHtml(editorRef.current?.innerHTML || "");
+  }, []);
+
+  const applyEditorCommand = useCallback((command: string, value?: string) => {
+    editorRef.current?.focus();
+    document.execCommand(command, false, value);
+    syncEditorState();
+  }, [syncEditorState]);
 
   const handleSend = async () => {
     if (!to.trim() || !subject.trim()) {
@@ -487,13 +588,16 @@ const ComposeEmailDialog = ({
     try {
       const toAddresses = to.split(/[,;]/).map((email) => email.trim()).filter(Boolean).map((email) => ({ email }));
       const ccAddresses = cc ? cc.split(/[,;]/).map((email) => email.trim()).filter(Boolean).map((email) => ({ email })) : undefined;
+      const currentBodyHtml = (editorRef.current?.innerHTML || bodyHtml || "").trim();
+      const bodyText = htmlToPlainText(currentBodyHtml).trim();
 
       await apiSendEmail({
         toAddresses,
         ccAddresses,
         subject,
-        bodyHtml: `<div style="white-space:pre-wrap">${body}</div>`,
-        bodyText: body,
+        bodyHtml: currentBodyHtml,
+        bodyText,
+        attachments,
       });
 
       toast({
@@ -637,13 +741,23 @@ const ComposeEmailDialog = ({
           </div>
 
           {/* Body */}
-          <div className="pt-2">
-            <Textarea
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              placeholder="Write your message here..."
-              rows={12}
-              className="w-full border-0 resize-none focus-visible:ring-0 p-0"
+          <div className="pt-2 relative">
+            {!isEditorFocused && !htmlToPlainText(bodyHtml).trim() && (
+              <span className="pointer-events-none absolute left-0 top-0 text-[#94A3B8]">
+                Write your message here...
+              </span>
+            )}
+            <div
+              ref={editorRef}
+              contentEditable
+              suppressContentEditableWarning
+              onInput={syncEditorState}
+              onFocus={() => setIsEditorFocused(true)}
+              onBlur={() => {
+                setIsEditorFocused(false);
+                syncEditorState();
+              }}
+              className="min-h-[288px] w-full border-0 p-0 outline-none text-[#475569] prose prose-sm max-w-none [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6 [&_p]:my-0"
             />
           </div>
 
@@ -653,10 +767,10 @@ const ComposeEmailDialog = ({
               {attachments.map((file, index) => (
                 <div
                   key={index}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-md text-sm"
+                  className="flex items-center gap-2 px-3 py-1.5 bg-[#F8FAFC] rounded-md text-sm"
                 >
                   <Paperclip size={14} className="text-[#94A3B8]" />
-                  <span className="text-slate-200">{file.name}</span>
+                  <span className="text-[#0F172A]">{file.name}</span>
                   <button
                     onClick={() =>
                       setAttachments((prev) => prev.filter((_, i) => i !== index))
@@ -677,15 +791,19 @@ const ComposeEmailDialog = ({
           <div className="flex items-center gap-1">
             <TooltipProvider>
               {[
-                { icon: Bold, label: "Bold" },
-                { icon: Italic, label: "Italic" },
-                { icon: Underline, label: "Underline" },
-                { icon: List, label: "Bullet List" },
-                { icon: ListOrdered, label: "Numbered List" },
+                { icon: Bold, label: "Bold", command: "bold" },
+                { icon: Italic, label: "Italic", command: "italic" },
+                { icon: Underline, label: "Underline", command: "underline" },
+                { icon: List, label: "Bullet List", command: "insertUnorderedList" },
+                { icon: ListOrdered, label: "Numbered List", command: "insertOrderedList" },
               ].map((tool) => (
                 <Tooltip key={tool.label}>
                   <TooltipTrigger asChild>
-                    <button className="p-2 rounded-md hover:bg-slate-200 text-[#94A3B8] transition-colors">
+                    <button
+                      type="button"
+                      onClick={() => applyEditorCommand(tool.command)}
+                      className="p-2 rounded-md hover:bg-slate-200 text-[#94A3B8] transition-colors"
+                    >
                       <tool.icon size={16} />
                     </button>
                   </TooltipTrigger>
@@ -717,7 +835,15 @@ const ComposeEmailDialog = ({
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button className="p-2 rounded-md hover:bg-slate-200 text-[#94A3B8] transition-colors">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const url = window.prompt("Enter a link URL");
+                      if (!url) return;
+                      applyEditorCommand("createLink", url);
+                    }}
+                    className="p-2 rounded-md hover:bg-slate-200 text-[#94A3B8] transition-colors"
+                  >
                     <Link2 size={16} />
                   </button>
                 </TooltipTrigger>
@@ -727,7 +853,11 @@ const ComposeEmailDialog = ({
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button className="p-2 rounded-md hover:bg-slate-200 text-[#94A3B8] transition-colors">
+                  <button
+                    type="button"
+                    onClick={() => applyEditorCommand("insertText", "🙂")}
+                    className="p-2 rounded-md hover:bg-slate-200 text-[#94A3B8] transition-colors"
+                  >
                     <Smile size={16} />
                   </button>
                 </TooltipTrigger>
@@ -1165,6 +1295,11 @@ const EmailDetailView = ({
                 <motion.div
                   key={attachment.id}
                   whileHover={{ y: -2 }}
+                  onClick={() => {
+                    if (attachment.url) {
+                      window.open(attachment.url, "_blank", "noopener,noreferrer");
+                    }
+                  }}
                   className="flex items-center gap-3 px-4 py-3 bg-[#F8FAFC] rounded-md border border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-md transition-all cursor-pointer group"
                 >
                   <span className="text-2xl">{getAttachmentIcon(attachment.type)}</span>
@@ -1178,6 +1313,12 @@ const EmailDetailView = ({
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      if (attachment.url) {
+                        window.open(attachment.url, "_blank", "noopener,noreferrer");
+                      }
+                    }}
                   >
                     <Download size={14} />
                   </Button>
@@ -1278,6 +1419,15 @@ const LetterBoxPage = () => {
           starred: e.isStarred ?? false,
           important: false,
           hasAttachments: e.hasAttachments ?? false,
+          attachments: Array.isArray(e.attachments)
+            ? e.attachments.map((attachment: any) => ({
+                id: attachment.id,
+                name: attachment.filename || "Attachment",
+                size: formatFileSize(typeof attachment.size === "number" ? attachment.size : Number(attachment.size || 0)),
+                type: attachment.mimeType || "file",
+                url: buildAttachmentUrl(attachment.path),
+              }))
+            : [],
           labels: [],
           folder: (e.folder || 'INBOX').toLowerCase(),
         };

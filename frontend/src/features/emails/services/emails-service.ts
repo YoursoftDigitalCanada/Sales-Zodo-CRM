@@ -3,9 +3,11 @@ import api from "@/lib/axios";
 export interface SendEmailPayload {
     toAddresses: { email: string; name?: string }[];
     ccAddresses?: { email: string; name?: string }[];
+    bccAddresses?: { email: string; name?: string }[];
     subject: string;
     bodyHtml?: string;
     bodyText?: string;
+    attachments?: File[];
 }
 
 export interface EmailResponse {
@@ -14,11 +16,24 @@ export interface EmailResponse {
     bodyHtml?: string;
     bodyText?: string;
     fromAddress?: string;
+    fromName?: string;
     toAddresses: { email: string; name?: string }[];
     ccAddresses?: { email: string; name?: string }[];
+    bccAddresses?: { email: string; name?: string }[];
     status: string;
     isRead: boolean;
+    isStarred?: boolean;
+    folder?: string;
+    hasAttachments?: boolean;
+    attachments?: {
+        id: string;
+        filename: string;
+        mimeType: string;
+        size: number;
+        path: string;
+    }[];
     createdAt: string;
+    receivedAt?: string;
     sentAt?: string;
 }
 
@@ -34,7 +49,16 @@ export async function getEmailById(id: string): Promise<EmailResponse> {
 }
 
 export async function sendEmail(payload: SendEmailPayload): Promise<EmailResponse> {
-    const response = await api.post("/emails/send", payload);
+    const hasAttachments = Array.isArray(payload.attachments) && payload.attachments.length > 0;
+
+    const response = hasAttachments
+        ? await api.post("/emails/send", buildEmailFormData(payload), {
+            headers: {
+                "Content-Type": "multipart/form-data",
+            },
+        })
+        : await api.post("/emails/send", payload);
+
     return response.data?.data || response.data;
 }
 
@@ -65,4 +89,26 @@ export async function getEmailConfigStatus(): Promise<{ smtpConfigured: boolean;
 export async function fetchEmailsNow(): Promise<{ fetched: number; error: string | null }> {
     const response = await api.post("/emails/fetch-now");
     return response.data?.data || response.data;
+}
+
+function buildEmailFormData(payload: SendEmailPayload): FormData {
+    const formData = new FormData();
+    formData.append("toAddresses", JSON.stringify(payload.toAddresses || []));
+    formData.append("ccAddresses", JSON.stringify(payload.ccAddresses || []));
+    formData.append("bccAddresses", JSON.stringify(payload.bccAddresses || []));
+    formData.append("subject", payload.subject || "");
+
+    if (typeof payload.bodyHtml === "string") {
+        formData.append("bodyHtml", payload.bodyHtml);
+    }
+
+    if (typeof payload.bodyText === "string") {
+        formData.append("bodyText", payload.bodyText);
+    }
+
+    for (const file of payload.attachments || []) {
+        formData.append("attachments", file);
+    }
+
+    return formData;
 }

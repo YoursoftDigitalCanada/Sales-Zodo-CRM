@@ -22,7 +22,13 @@ export class EmailsController {
 
     async sendEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const result = await emailsService.sendEmail(req.context.tenantId, sanitizeBody(req.body));
+            const files = ((req as any).files as Express.Multer.File[] | undefined) || [];
+            const result = await emailsService.sendEmail(
+                req.context.tenantId,
+                sanitizeBody(req.body),
+                req.user?.userId,
+                files,
+            );
             sendCreated(res, result, 'Email sent');
         } catch (e) { next(e); }
     }

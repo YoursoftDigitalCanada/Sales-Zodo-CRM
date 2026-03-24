@@ -13,8 +13,13 @@ export const sendEmailSchema = z.object({
         subject: z.string().min(1).max(500),
         bodyText: z.string().optional(),
         bodyHtml: z.string().optional(),
-    }).refine((data) => data.bodyText || data.bodyHtml, {
-        message: 'Either bodyText or bodyHtml must be provided',
+        attachmentsCount: z.number().int().min(0).optional().default(0),
+    }).refine((data) => {
+        const hasBodyText = Boolean(data.bodyText?.trim());
+        const hasBodyHtml = Boolean(data.bodyHtml?.trim());
+        return hasBodyText || hasBodyHtml || data.attachmentsCount > 0;
+    }, {
+        message: 'Provide email content or at least one attachment',
     }),
 });
 

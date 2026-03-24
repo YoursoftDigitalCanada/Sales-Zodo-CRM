@@ -6,6 +6,8 @@ import { ErrorCodes } from '../../common/errors/errorCodes';
 import { activityLogger } from '../../common/services/activity-logger.service';
 import { mailerService } from '../../common/services/mailer.service';
 import { settingsRepository } from '../settings/settings.repository';
+import fs from 'fs/promises';
+import path from 'path';
 
 export class EmailsService {
     async getEmailById(id: string, tenantId: string) {
@@ -23,11 +25,32 @@ export class EmailsService {
         };
     }
 
-    async sendEmail(tenantId: string, data: SendEmailDto, sentById?: string) {
+    private async buildUploadedAttachments(tenantId: string, files: Express.Multer.File[] = []) {
+        return Promise.all(files.map(async (file) => ({
+            filename: file.originalname,
+            mimeType: file.mimetype || 'application/octet-stream',
+            size: file.size,
+            path: path.posix.join('/uploads', tenantId, 'emails', file.filename),
+            content: await fs.readFile(file.path),
+        })));
+    }
+
+    private async cleanupUploadedFiles(files: Express.Multer.File[] = []) {
+        await Promise.all(files.map(async (file) => {
+            try {
+                await fs.unlink(file.path);
+            } catch {
+                // Ignore cleanup failures for temporary upload files.
+            }
+        }));
+    }
+
+    async sendEmail(tenantId: string, data: SendEmailDto, sentById?: string, files: Express.Multer.File[] = []) {
         const smtpConfig = await settingsRepository.getSmtpConfig(tenantId);
         const smtpConfigured = Boolean(smtpConfig?.host && smtpConfig?.user && smtpConfig?.pass);
 
         if (!smtpConfigured) {
+            await this.cleanupUploadedFiles(files);
             throw new BadRequestError(
                 'Letter Box outgoing mail requires workspace SMTP settings. Configure Settings > Email > SMTP to send from your own mailbox.',
             );
@@ -41,8 +64,11 @@ export class EmailsService {
             : [];
 
         if (toAddresses.length === 0) {
+            await this.cleanupUploadedFiles(files);
             throw new BadRequestError('At least one recipient email address is required');
         }
+
+        const uploadedAttachments = await this.buildUploadedAttachments(tenantId, files);
 
         const delivery = await mailerService.sendMailWithConfigDetailed(
             {
@@ -58,10 +84,16 @@ export class EmailsService {
                 subject: data.subject,
                 html: data.bodyHtml || data.bodyText || '',
                 text: data.bodyText,
+                attachments: uploadedAttachments.map((attachment) => ({
+                    filename: attachment.filename,
+                    content: attachment.content,
+                    contentType: attachment.mimeType,
+                })),
             },
         );
 
         if (!delivery.sent) {
+            await this.cleanupUploadedFiles(files);
             const errorMessage = delivery.error || 'Check the configured SMTP username, password, host, and port.';
             const normalizedError = errorMessage.toLowerCase();
 
@@ -86,6 +118,12 @@ export class EmailsService {
             ...data,
             fromName: senderName,
             fromAddress: senderEmail,
+            attachments: uploadedAttachments.map(({ filename, mimeType, size, path: attachmentPath }) => ({
+                filename,
+                mimeType,
+                size,
+                path: attachmentPath,
+            })),
         }, sentById);
         const dto = toEmailResponseDto(email);
 

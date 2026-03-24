@@ -25,7 +25,17 @@ export class EmailsRepository {
                 status: 'SENT',
                 sentById,
                 sentAt: new Date(),
-                hasAttachments: false,
+                hasAttachments: (data.attachments?.length || 0) > 0,
+                attachments: data.attachments && data.attachments.length > 0
+                    ? {
+                        create: data.attachments.map((attachment) => ({
+                            filename: attachment.filename,
+                            mimeType: attachment.mimeType,
+                            size: BigInt(attachment.size),
+                            path: attachment.path,
+                        })),
+                    }
+                    : undefined,
             },
             include: emailInclude,
         });

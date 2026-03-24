@@ -1,6 +1,10 @@
 import { ImapFlow } from 'imapflow';
 const { simpleParser } = require('mailparser');
 import { PrismaClient } from '@prisma/client';
+import fs from 'fs/promises';
+import path from 'path';
+import { randomUUID } from 'crypto';
+import { config } from '../../config';
 
 const prisma = new PrismaClient();
 const INITIAL_SYNC_MAX_MESSAGES = 250;
@@ -16,6 +20,34 @@ export interface ImapConfig {
 }
 
 class ImapService {
+    private async storeAttachments(tenantId: string, parsedAttachments: any[] = []) {
+        if (!Array.isArray(parsedAttachments) || parsedAttachments.length === 0) {
+            return [];
+        }
+
+        const uploadDir = path.resolve(config.upload.uploadPath, tenantId, 'emails');
+        await fs.mkdir(uploadDir, { recursive: true });
+
+        return Promise.all(parsedAttachments.map(async (attachment: any) => {
+            const originalName = typeof attachment?.filename === 'string' && attachment.filename.trim()
+                ? attachment.filename.trim()
+                : 'attachment';
+            const safeName = originalName.replace(/[^a-zA-Z0-9._-]/g, '_').substring(0, 100) || 'attachment';
+            const storedName = `${randomUUID()}-${safeName}`;
+            const targetPath = path.join(uploadDir, storedName);
+            const content = Buffer.isBuffer(attachment?.content) ? attachment.content : Buffer.from(attachment?.content || '');
+
+            await fs.writeFile(targetPath, content);
+
+            return {
+                filename: originalName,
+                mimeType: attachment?.contentType || 'application/octet-stream',
+                size: BigInt(Number(attachment?.size || content.length || 0)),
+                path: path.posix.join('/uploads', tenantId, 'emails', storedName),
+            };
+        }));
+    }
+
     /**
      * Fetch new (unseen) emails from IMAP server and store them in DB.
      * Uses messageId for deduplication.
@@ -161,6 +193,8 @@ class ImapService {
         // Determine if this is a sent email (from the IMAP user) or received
         const isSent = fromAddr?.address?.toLowerCase() === imapUser.toLowerCase();
 
+        const storedAttachments = await this.storeAttachments(tenantId, parsed.attachments || []);
+
         await prisma.email.create({
             data: {
                 tenantId,
@@ -177,7 +211,12 @@ class ImapService {
                 folder: isSent ? 'SENT' : 'INBOX',
                 status: isSent ? 'SENT' : 'RECEIVED',
                 isRead: isSent, // Sent emails are read by default
-                hasAttachments: (parsed.attachments?.length || 0) > 0,
+                hasAttachments: storedAttachments.length > 0,
+                attachments: storedAttachments.length > 0
+                    ? {
+                        create: storedAttachments,
+                    }
+                    : undefined,
                 size: BigInt(parsed.html?.length || parsed.text?.length || 0),
                 receivedAt: parsed.date || new Date(),
                 sentAt: isSent ? (parsed.date || new Date()) : null,

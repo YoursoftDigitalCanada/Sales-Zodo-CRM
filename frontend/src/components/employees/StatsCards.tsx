@@ -78,6 +78,10 @@ export const EmployeeStats: React.FC<EmployeeStatsProps> = ({
   onLeave,
   newHires,
 }) => {
+  const activePercentage = totalEmployees > 0
+    ? Math.round((activeEmployees / totalEmployees) * 100)
+    : 0;
+
   const stats = [
     {
       title: 'Total Employees',
@@ -89,7 +93,7 @@ export const EmployeeStats: React.FC<EmployeeStatsProps> = ({
     {
       title: 'Active Employees',
       value: activeEmployees,
-      subtitle: `${Math.round((activeEmployees / totalEmployees) * 100)}% of total`,
+      subtitle: `${activePercentage}% of total`,
       icon: <UserCheck className="w-6 h-6 text-emerald-600" />,
       color: 'bg-emerald-100',
     },

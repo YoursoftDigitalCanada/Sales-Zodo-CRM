@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -45,7 +45,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Department, EmploymentType, EmployeeStatus } from './types';
+import { Department, Employee, EmploymentType, EmployeeStatus } from './types';
 
 const employeeFormSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
@@ -78,13 +78,14 @@ const employeeFormSchema = z.object({
 });
 
 type EmployeeFormValues = z.infer<typeof employeeFormSchema>;
+type EditableEmployee = Employee & { portalEmail?: string };
 
 interface AddEmployeeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   departments: Department[];
-  onSubmit: (data: EmployeeFormValues) => void;
-  editingEmployee?: any;
+  onSubmit: (data: EmployeeFormValues) => void | Promise<void>;
+  editingEmployee?: EditableEmployee;
 }
 
 export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
@@ -94,6 +95,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
   onSubmit,
   editingEmployee,
 }) => {
+  const [showPortalPassword, setShowPortalPassword] = useState(false);
   const form = useForm<EmployeeFormValues>({
     resolver: zodResolver(employeeFormSchema),
     defaultValues: {
@@ -123,8 +125,36 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
     },
   });
 
-  const handleSubmit = (data: EmployeeFormValues) => {
-    onSubmit(data);
+  useEffect(() => {
+    form.reset({
+      firstName: editingEmployee?.firstName || '',
+      lastName: editingEmployee?.lastName || '',
+      email: editingEmployee?.email || '',
+      phone: editingEmployee?.phone || '',
+      position: editingEmployee?.position || '',
+      departmentId: editingEmployee?.departmentId || '',
+      employmentType: editingEmployee?.employmentType || 'full-time',
+      status: editingEmployee?.status || 'active',
+      joinDate: editingEmployee?.joinDate
+        ? new Date(editingEmployee.joinDate).toISOString().split('T')[0]
+        : new Date().toISOString().split('T')[0],
+      salary: editingEmployee?.salary?.toString() || '',
+      street: editingEmployee?.address?.street || '',
+      city: editingEmployee?.address?.city || '',
+      state: editingEmployee?.address?.state || '',
+      zipCode: editingEmployee?.address?.zipCode || '',
+      country: editingEmployee?.address?.country || 'USA',
+      emergencyName: editingEmployee?.emergencyContact?.name || '',
+      emergencyRelationship: editingEmployee?.emergencyContact?.relationship || '',
+      emergencyPhone: editingEmployee?.emergencyContact?.phone || '',
+      skills: editingEmployee?.skills?.join(', ') || '',
+      portalEmail: editingEmployee?.portalEmail || '',
+      portalPassword: '',
+    });
+  }, [editingEmployee, form, open]);
+
+  const handleSubmit = async (data: EmployeeFormValues) => {
+    await onSubmit(data);
     form.reset();
     onOpenChange(false);
   };
@@ -281,7 +311,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Department</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select value={field.value} onValueChange={field.onChange}>
                         <FormControl>
                           <SelectTrigger>
                             <Building2 className="w-4 h-4 text-[#94A3B8] mr-2" />
@@ -308,7 +338,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Employment Type</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select value={field.value} onValueChange={field.onChange}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select type" />
@@ -332,7 +362,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Status</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select value={field.value} onValueChange={field.onChange}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select status" />
@@ -547,7 +577,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
                             className="pl-10"
                             placeholder="firstname.lastname@zodo.ca"
                             onChange={(e) => {
-                              let val = e.target.value;
+                              const val = e.target.value;
                               field.onChange(val);
                             }}
                           />
@@ -562,9 +592,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
                 <FormField
                   control={form.control}
                   name="portalPassword"
-                  render={({ field }) => {
-                    const [showPw, setShowPw] = React.useState(false);
-                    return (
+                  render={({ field }) => (
                       <FormItem>
                         <FormLabel>Portal Password</FormLabel>
                         <FormControl>
@@ -572,24 +600,23 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
                             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
                             <Input
                               {...field}
-                              type={showPw ? 'text' : 'password'}
+                              type={showPortalPassword ? 'text' : 'password'}
                               className="pl-10 pr-10"
                               placeholder="Min 8 characters"
                             />
                             <button
                               type="button"
                               className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#0F172A]"
-                              onClick={() => setShowPw(!showPw)}
+                              onClick={() => setShowPortalPassword((current) => !current)}
                             >
-                              {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                              {showPortalPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                             </button>
                           </div>
                         </FormControl>
                         <p className="text-xs text-muted-foreground">Min 8 chars, must include uppercase, lowercase, number, and special character (!@#$%...)</p>
                         <FormMessage />
                       </FormItem>
-                    );
-                  }}
+                  )}
                 />
 
                 <div className="bg-blue-50 border border-blue-200 rounded-md p-4">

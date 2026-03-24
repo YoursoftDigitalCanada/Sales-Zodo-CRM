@@ -35,6 +35,45 @@ export interface EmployeeResponseDto {
     updatedAt: Date;
 }
 
+export interface DepartmentConfigDto {
+    id: string;
+    name: string;
+    code: string;
+    description: string;
+    headId?: string | null;
+    budget: number;
+    color: string;
+    createdAt: string;
+    isActive: boolean;
+}
+
+export interface CreateDepartmentDto {
+    name: string;
+    code: string;
+    description: string;
+    headId?: string | null;
+    budget: number;
+    color: string;
+    isActive?: boolean;
+}
+
+export interface UpdateDepartmentDto extends Partial<CreateDepartmentDto> { }
+
+export interface DepartmentResponseDto {
+    id: string;
+    name: string;
+    code: string;
+    description: string;
+    headId?: string | null;
+    headName?: string;
+    headAvatar?: string | null;
+    employeeCount: number;
+    budget: number;
+    color: string;
+    createdAt: Date;
+    isActive: boolean;
+}
+
 type EmployeeWithUser = Employee & {
     user: { id: string; firstName: string; lastName: string; email: string };
     role?: { id: string; name: string } | null;

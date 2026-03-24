@@ -39,3 +39,25 @@ export const employeeQuerySchema = z.object({
 export const employeeIdSchema = z.object({
     params: z.object({ id: z.string().uuid() }),
 });
+
+const departmentBodySchema = z.object({
+    name: z.string().trim().min(2).max(100),
+    code: z.string().trim().min(2).max(5).transform((value) => value.toUpperCase()),
+    description: z.string().trim().min(10).max(500),
+    headId: z.string().optional().nullable(),
+    budget: z.coerce.number().min(0),
+    color: z.string().trim().min(1).max(20),
+    isActive: z.boolean().optional(),
+});
+
+export const createDepartmentSchema = z.object({
+    body: departmentBodySchema,
+});
+
+export const updateDepartmentSchema = z.object({
+    body: departmentBodySchema.partial(),
+});
+
+export const departmentIdSchema = z.object({
+    params: z.object({ departmentId: z.string().min(1) }),
+});

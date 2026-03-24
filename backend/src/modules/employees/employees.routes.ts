@@ -5,7 +5,15 @@ import { authenticate, loadEmployee } from '../../common/middleware/auth.middlew
 import { requirePermission } from '../../common/middleware/permission.middleware';
 import { validate } from '../../common/middleware/validate.middleware';
 import { PERMISSIONS } from '../../common/constants/permissions';
-import { createEmployeeSchema, updateEmployeeSchema, employeeQuerySchema, employeeIdSchema } from './employees.validators';
+import {
+    createEmployeeSchema,
+    updateEmployeeSchema,
+    employeeQuerySchema,
+    employeeIdSchema,
+    createDepartmentSchema,
+    updateDepartmentSchema,
+    departmentIdSchema,
+} from './employees.validators';
 
 const router = Router();
 router.use(authenticate);
@@ -13,6 +21,10 @@ router.use(loadEmployee);
 
 router.get('/', requirePermission(PERMISSIONS.EMPLOYEES_VIEW), validate(employeeQuerySchema), employeesController.getMany.bind(employeesController));
 router.post('/', requirePermission(PERMISSIONS.EMPLOYEES_CREATE), validate(createEmployeeSchema), employeesController.create.bind(employeesController));
+router.get('/departments', requirePermission(PERMISSIONS.EMPLOYEES_VIEW), employeesController.getDepartments.bind(employeesController));
+router.post('/departments', requirePermission(PERMISSIONS.EMPLOYEES_CREATE), validate(createDepartmentSchema), employeesController.createDepartment.bind(employeesController));
+router.put('/departments/:departmentId', requirePermission(PERMISSIONS.EMPLOYEES_UPDATE), validate(departmentIdSchema), validate(updateDepartmentSchema), employeesController.updateDepartment.bind(employeesController));
+router.delete('/departments/:departmentId', requirePermission(PERMISSIONS.EMPLOYEES_DELETE), validate(departmentIdSchema), employeesController.deleteDepartment.bind(employeesController));
 
 // Create crew portal access (User + Employee in same tenant)
 router.post('/create-portal-access', requirePermission(PERMISSIONS.EMPLOYEES_CREATE), async (req: Request, res: Response, next: NextFunction) => {

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Plus,
@@ -8,8 +8,9 @@ import {
   Users,
   Mail,
   UserPlus,
-  Filter
+  Filter,
 } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import {
@@ -29,14 +30,13 @@ import {
   EmployeeFilters,
   AddEmployeeDialog,
   EmployeeDetailPanel,
-  mockEmployees,
-  mockDepartments,
+  Department,
   Employee,
   EmployeeStatus,
   EmploymentType,
 } from '@/components/employees';
-import { getEmployees } from "@/features/users";
-import api from "@/lib/axios";
+import { getDepartments, getEmployees } from '@/features/users';
+import api from '@/lib/axios';
 
 interface FilterState {
   departments: string[];
@@ -44,9 +44,135 @@ interface FilterState {
   employmentTypes: EmploymentType[];
 }
 
+type ApiDepartment = {
+  id: string;
+  name?: string;
+  code?: string;
+  description?: string;
+  headId?: string | null;
+  headName?: string;
+  headAvatar?: string | null;
+  employeeCount?: number;
+  budget?: number;
+  color?: string;
+  createdAt?: string;
+  isActive?: boolean;
+};
+
+type ApiEmployee = {
+  id: string;
+  employeeNumber?: string;
+  employeeId?: string;
+  phone?: string;
+  position?: string;
+  jobTitle?: string;
+  departmentId?: string;
+  department?: string | { name?: string };
+  isActive?: boolean;
+  status?: string;
+  employmentType?: string;
+  hireDate?: string;
+  createdAt?: string;
+  salary?: number;
+  user?: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    avatar?: string | null;
+  };
+};
+
+type EmployeeFormPayload = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  position: string;
+  departmentId: string;
+  employmentType: EmploymentType;
+  status: EmployeeStatus;
+  joinDate: string;
+  salary: string;
+  portalEmail?: string;
+  portalPassword?: string;
+};
+
+const normalizeDepartmentName = (value: string) => value.trim().replace(/\s+/g, ' ').toLowerCase();
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (
+    error
+    && typeof error === 'object'
+    && 'response' in error
+  ) {
+    const response = (error as { response?: { data?: { message?: string } } }).response;
+    if (response?.data?.message) {
+      return response.data.message;
+    }
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return fallback;
+};
+
+const mapDepartmentData = (data: ApiDepartment[]): Department[] =>
+  data.map((department) => ({
+    id: department.id,
+    name: department.name || '',
+    code: department.code || '',
+    description: department.description || '',
+    headId: department.headId || undefined,
+    headName: department.headName || undefined,
+    headAvatar: department.headAvatar || undefined,
+    employeeCount: Number(department.employeeCount || 0),
+    budget: Number(department.budget || 0),
+    color: department.color || '#22D3EE',
+    createdAt: new Date(department.createdAt || Date.now()),
+    isActive: department.isActive !== false,
+  }));
+
+const mapEmployeeData = (data: ApiEmployee[], departments: Department[]): Employee[] => {
+  const departmentMap = new Map(
+    departments.map((department) => [normalizeDepartmentName(department.name), department]),
+  );
+
+  return data.map((employee) => {
+    const departmentName = typeof employee.department === 'string'
+      ? employee.department
+      : employee.department?.name || '';
+    const matchedDepartment = departmentMap.get(normalizeDepartmentName(departmentName));
+
+    return {
+      id: employee.id,
+      employeeId: employee.employeeNumber || employee.employeeId || `EMP${String(employee.id || '').slice(0, 4)}`,
+      firstName: employee.user?.firstName || '',
+      lastName: employee.user?.lastName || '',
+      email: employee.user?.email || '',
+      phone: employee.phone || '',
+      avatar: employee.user?.avatar || undefined,
+      position: employee.jobTitle || employee.position || '',
+      departmentId: matchedDepartment?.id || employee.departmentId || '',
+      departmentName,
+      status: employee.isActive === false ? 'inactive' : (employee.status?.toLowerCase() || 'active'),
+      employmentType: employee.employmentType?.toLowerCase().replace('_', '-') || 'full-time',
+      joinDate: new Date(employee.hireDate || employee.createdAt || Date.now()),
+      salary: Number(employee.salary || 0),
+      skills: [],
+      address: { street: '', city: '', state: '', zipCode: '', country: '' },
+      emergencyContact: { name: '', relationship: '', phone: '' },
+      documents: [],
+      performance: { rating: 0, lastReviewDate: new Date(), nextReviewDate: new Date() },
+    } as Employee;
+  });
+};
+
 const AllEmployeesPage: React.FC = () => {
-  // State
+  const [searchParams] = useSearchParams();
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
@@ -58,7 +184,6 @@ const AllEmployeesPage: React.FC = () => {
   });
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  // Dialog states
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | undefined>();
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
@@ -67,204 +192,208 @@ const AllEmployeesPage: React.FC = () => {
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
 
-  // Map API employee data to frontend Employee type
-  const mapEmployeeData = (data: any[]): Employee[] => {
-    return data.map((e: any) => ({
-      id: e.id,
-      employeeId: e.employeeNumber || e.employeeId || `EMP${e.id?.slice(0, 3)}`,
-      firstName: e.user?.firstName || '',
-      lastName: e.user?.lastName || '',
-      email: e.user?.email || '',
-      phone: e.phone || '',
-      position: e.jobTitle || e.position || '',
-      departmentId: e.departmentId || '',
-      departmentName: e.department?.name || e.department || '',
-      status: e.isActive === false ? 'inactive' : (e.status?.toLowerCase() || 'active'),
-      employmentType: e.employmentType?.toLowerCase().replace('_', '-') || 'full-time',
-      joinDate: new Date(e.hireDate || e.createdAt),
-      salary: e.salary || 0,
-      skills: [],
-      address: { street: '', city: '', state: '', zipCode: '', country: '' },
-      emergencyContact: { name: '', relationship: '', phone: '' },
-      documents: [],
-      performance: { rating: 0, lastReviewDate: new Date(), nextReviewDate: new Date() },
-    }));
-  };
-
-  // Fetch employees from API
-  const refreshEmployees = async () => {
+  const refreshData = useCallback(async (showErrorToast = true) => {
     try {
-      const data = await getEmployees() as any[] || [];
-      setEmployees(mapEmployeeData(data));
+      const [departmentData, employeeData] = await Promise.all([
+        getDepartments(),
+        getEmployees(),
+      ]);
+      const mappedDepartments = mapDepartmentData(departmentData as ApiDepartment[]);
+      setDepartments(mappedDepartments);
+      setEmployees(mapEmployeeData(employeeData as ApiEmployee[], mappedDepartments));
     } catch (error) {
       console.error('Failed to fetch employees:', error);
-    }
-  };
-
-  // Fetch employees from API on mount
-  useEffect(() => {
-    const fetchEmployees = async () => {
-      try {
-        const data = await getEmployees() as any[] || [];
-        setEmployees(mapEmployeeData(data));
-      } catch (error) {
-        console.error('Failed to fetch employees:', error);
-      } finally {
-        setIsLoading(false);
+      if (showErrorToast) {
+        toast.error('Failed to load employees');
       }
-    };
-    fetchEmployees();
+    }
   }, []);
 
-  // Calculate stats
+  useEffect(() => {
+    const load = async () => {
+      setIsLoading(true);
+      await refreshData(false);
+      setIsLoading(false);
+    };
+    load();
+  }, [refreshData]);
+
+  useEffect(() => {
+    const requestedDepartment = searchParams.get('department');
+    if (!requestedDepartment || departments.length === 0) {
+      return;
+    }
+
+    const matchedDepartment = departments.find(
+      (department) => normalizeDepartmentName(department.name) === normalizeDepartmentName(requestedDepartment),
+    );
+    if (!matchedDepartment) {
+      return;
+    }
+
+    setFilters((current) => {
+      if (
+        current.departments.length === 1
+        && current.departments[0] === matchedDepartment.id
+      ) {
+        return current;
+      }
+
+      return {
+        ...current,
+        departments: [matchedDepartment.id],
+      };
+    });
+  }, [departments, searchParams]);
+
   const stats = useMemo(() => {
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
     return {
       totalEmployees: employees.length,
-      activeEmployees: employees.filter((e) => e.status === 'active').length,
-      onLeave: employees.filter((e) => e.status === 'on-leave').length,
-      newHires: employees.filter((e) => new Date(e.joinDate) >= thirtyDaysAgo).length,
+      activeEmployees: employees.filter((employee) => employee.status === 'active').length,
+      onLeave: employees.filter((employee) => employee.status === 'on-leave').length,
+      newHires: employees.filter((employee) => new Date(employee.joinDate) >= thirtyDaysAgo).length,
     };
   }, [employees]);
 
-  // Filter and sort employees
+  const selectedDepartmentNames = useMemo(() => new Set(
+    departments
+      .filter((department) => filters.departments.includes(department.id))
+      .map((department) => normalizeDepartmentName(department.name)),
+  ), [departments, filters.departments]);
+
   const filteredEmployees = useMemo(() => {
     let result = [...employees];
 
-    // Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
-        (emp) =>
-          `${emp.firstName} ${emp.lastName}`.toLowerCase().includes(query) ||
-          emp.email.toLowerCase().includes(query) ||
-          emp.employeeId.toLowerCase().includes(query) ||
-          emp.position.toLowerCase().includes(query) ||
-          emp.departmentName.toLowerCase().includes(query)
+        (employee) =>
+          `${employee.firstName} ${employee.lastName}`.toLowerCase().includes(query)
+          || employee.email.toLowerCase().includes(query)
+          || employee.employeeId.toLowerCase().includes(query)
+          || employee.position.toLowerCase().includes(query)
+          || employee.departmentName.toLowerCase().includes(query),
       );
     }
 
-    // Department filter
     if (filters.departments.length > 0) {
-      result = result.filter((emp) => filters.departments.includes(emp.departmentId));
+      result = result.filter((employee) => (
+        filters.departments.includes(employee.departmentId)
+        || selectedDepartmentNames.has(normalizeDepartmentName(employee.departmentName))
+      ));
     }
 
-    // Status filter
     if (filters.statuses.length > 0) {
-      result = result.filter((emp) => filters.statuses.includes(emp.status));
+      result = result.filter((employee) => filters.statuses.includes(employee.status));
     }
 
-    // Employment type filter
     if (filters.employmentTypes.length > 0) {
-      result = result.filter((emp) => filters.employmentTypes.includes(emp.employmentType));
+      result = result.filter((employee) => filters.employmentTypes.includes(employee.employmentType));
     }
 
-    // Sort
     switch (sortBy) {
       case 'name-asc':
         result.sort((a, b) =>
-          `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`)
+          `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`),
         );
         break;
       case 'name-desc':
         result.sort((a, b) =>
-          `${b.firstName} ${b.lastName}`.localeCompare(`${a.firstName} ${a.lastName}`)
+          `${b.firstName} ${b.lastName}`.localeCompare(`${a.firstName} ${a.lastName}`),
         );
         break;
       case 'joinDate-desc':
-        result.sort(
-          (a, b) => new Date(b.joinDate).getTime() - new Date(a.joinDate).getTime()
-        );
+        result.sort((a, b) => new Date(b.joinDate).getTime() - new Date(a.joinDate).getTime());
         break;
       case 'joinDate-asc':
-        result.sort(
-          (a, b) => new Date(a.joinDate).getTime() - new Date(b.joinDate).getTime()
-        );
+        result.sort((a, b) => new Date(a.joinDate).getTime() - new Date(b.joinDate).getTime());
         break;
       case 'department':
         result.sort((a, b) => a.departmentName.localeCompare(b.departmentName));
         break;
+      default:
+        break;
     }
 
     return result;
-  }, [employees, searchQuery, filters, sortBy]);
+  }, [employees, searchQuery, filters, sortBy, selectedDepartmentNames]);
 
-  // Selection handlers
   const handleSelectAll = (selected: boolean) => {
-    if (selected) {
-      setSelectedIds(filteredEmployees.map((e) => e.id));
-    } else {
-      setSelectedIds([]);
-    }
+    setSelectedIds(selected ? filteredEmployees.map((employee) => employee.id) : []);
   };
 
   const handleSelectOne = (id: string, selected: boolean) => {
-    if (selected) {
-      setSelectedIds([...selectedIds, id]);
-    } else {
-      setSelectedIds(selectedIds.filter((i) => i !== id));
-    }
+    setSelectedIds((current) => (
+      selected ? [...current, id] : current.filter((currentId) => currentId !== id)
+    ));
   };
 
-  // View employee details
   const handleViewEmployee = (employee: Employee) => {
     setSelectedEmployee(employee);
     setIsDetailPanelOpen(true);
   };
 
-  // Edit employee
   const handleEditEmployee = (employee: Employee) => {
     setEditingEmployee(employee);
     setIsAddDialogOpen(true);
   };
 
-  // Delete employee
   const handleDeleteEmployee = (employee: Employee) => {
     setEmployeeToDelete(employee);
     setIsDeleteDialogOpen(true);
   };
 
-  const confirmDeleteEmployee = () => {
-    if (employeeToDelete) {
-      setEmployees(employees.filter((e) => e.id !== employeeToDelete.id));
+  const confirmDeleteEmployee = async () => {
+    if (!employeeToDelete) {
+      return;
+    }
+
+    try {
+      await api.delete(`/employees/${employeeToDelete.id}`);
       toast.success(`${employeeToDelete.firstName} ${employeeToDelete.lastName} has been removed`);
       setEmployeeToDelete(null);
       setIsDeleteDialogOpen(false);
-
-      // Close detail panel if viewing deleted employee
       if (selectedEmployee?.id === employeeToDelete.id) {
         setIsDetailPanelOpen(false);
         setSelectedEmployee(null);
       }
+      await refreshData();
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to delete employee'));
     }
   };
 
-  // Bulk delete
   const handleBulkDelete = () => {
     setIsBulkDeleteDialogOpen(true);
   };
 
-  const confirmBulkDelete = () => {
-    const count = selectedIds.length;
-    setEmployees(employees.filter((e) => !selectedIds.includes(e.id)));
-    toast.success(`${count} employee${count !== 1 ? 's' : ''} have been removed`);
-    setSelectedIds([]);
-    setIsBulkDeleteDialogOpen(false);
+  const confirmBulkDelete = async () => {
+    const idsToDelete = [...selectedIds];
+    if (idsToDelete.length === 0) {
+      return;
+    }
 
-    // Close detail panel if viewing deleted employee
-    if (selectedEmployee && selectedIds.includes(selectedEmployee.id)) {
-      setIsDetailPanelOpen(false);
-      setSelectedEmployee(null);
+    try {
+      await Promise.all(idsToDelete.map((id) => api.delete(`/employees/${id}`)));
+      toast.success(`${idsToDelete.length} employee${idsToDelete.length !== 1 ? 's' : ''} have been removed`);
+      setSelectedIds([]);
+      setIsBulkDeleteDialogOpen(false);
+      if (selectedEmployee && idsToDelete.includes(selectedEmployee.id)) {
+        setIsDetailPanelOpen(false);
+        setSelectedEmployee(null);
+      }
+      await refreshData();
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to delete employees'));
     }
   };
 
-  // Add/Edit employee submission
-  const handleAddEmployee = async (data: any) => {
-    const department = mockDepartments.find((d) => d.id === data.departmentId);
+  const handleAddEmployee = async (data: EmployeeFormPayload) => {
+    const department = departments.find((item) => item.id === data.departmentId);
 
-    // If portal credentials are provided, create crew portal access within this tenant
     if (data.portalEmail && data.portalPassword && !editingEmployee) {
       try {
         await api.post('/employees/create-portal-access', {
@@ -276,39 +405,32 @@ const AllEmployeesPage: React.FC = () => {
           department: department?.name,
         });
         toast.success(`${data.firstName} ${data.lastName} added with Crew Portal access`);
-        // Re-fetch from DB so the new employee persists across refresh
-        await refreshEmployees();
+        await refreshData();
         return;
-      } catch (err: any) {
-        const msg = err.response?.data?.message || err.message || 'Unknown error';
-        toast.error(`Portal creation failed: ${msg}`);
+      } catch (error) {
+        toast.error(`Portal creation failed: ${getErrorMessage(error, 'Unknown error')}`);
         return;
       }
     }
 
     if (editingEmployee) {
-      // Update existing employee via API
       try {
         await api.put(`/employees/${editingEmployee.id}`, {
-          department: department?.name || data.department,
+          department: department?.name,
           position: data.position,
           isActive: data.status === 'active',
         });
         toast.success(`${data.firstName} ${data.lastName}'s profile has been updated`);
         setEditingEmployee(undefined);
-        await refreshEmployees();
-      } catch (err: any) {
-        const msg = err.response?.data?.message || err.message || 'Unknown error';
-        toast.error(`Update failed: ${msg}`);
+        await refreshData();
+      } catch (error) {
+        toast.error(`Update failed: ${getErrorMessage(error, 'Unknown error')}`);
       }
     } else {
-      // Non-portal employee creation — add to local state and show success
-      // (Full API-based creation requires a User first; portal flow handles this)
       toast.info('To persist employees, use the Crew Portal tab to create login credentials.');
     }
   };
 
-  // Handle dialog close
   const handleDialogClose = (open: boolean) => {
     setIsAddDialogOpen(open);
     if (!open) {
@@ -316,48 +438,44 @@ const AllEmployeesPage: React.FC = () => {
     }
   };
 
-  // Export employees
   const handleExport = () => {
     const dataToExport = selectedIds.length > 0
-      ? employees.filter(e => selectedIds.includes(e.id))
+      ? employees.filter((employee) => selectedIds.includes(employee.id))
       : filteredEmployees;
 
-    // Create CSV content
     const headers = ['ID', 'Name', 'Email', 'Phone', 'Position', 'Department', 'Status', 'Join Date'];
-    const rows = dataToExport.map(emp => [
-      emp.employeeId,
-      `${emp.firstName} ${emp.lastName}`,
-      emp.email,
-      emp.phone,
-      emp.position,
-      emp.departmentName,
-      emp.status,
-      new Date(emp.joinDate).toLocaleDateString()
+    const rows = dataToExport.map((employee) => [
+      employee.employeeId,
+      `${employee.firstName} ${employee.lastName}`,
+      employee.email,
+      employee.phone,
+      employee.position,
+      employee.departmentName,
+      employee.status,
+      new Date(employee.joinDate).toLocaleDateString(),
     ]);
 
-    const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
+    const csvContent = [headers, ...rows].map((row) => row.join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `employees-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `employees-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
     window.URL.revokeObjectURL(url);
 
     toast.success(`Exported ${dataToExport.length} employee${dataToExport.length !== 1 ? 's' : ''}`);
   };
 
-  // Send bulk email
   const handleBulkEmail = () => {
-    const selectedEmployees = employees.filter(e => selectedIds.includes(e.id));
-    const emails = selectedEmployees.map(e => e.email).join(',');
+    const selectedEmployees = employees.filter((employee) => selectedIds.includes(employee.id));
+    const emails = selectedEmployees.map((employee) => employee.email).join(',');
     window.location.href = `mailto:${emails}`;
     toast.info(`Opening email client for ${selectedIds.length} recipients`);
   };
 
   return (
     <div className="p-6 space-y-6 bg-[#F8FAFC] min-h-screen">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">All Employees</h1>
@@ -384,7 +502,6 @@ const AllEmployeesPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Stats */}
       <EmployeeStats
         totalEmployees={stats.totalEmployees}
         activeEmployees={stats.activeEmployees}
@@ -392,20 +509,18 @@ const AllEmployeesPage: React.FC = () => {
         newHires={stats.newHires}
       />
 
-      {/* Filters */}
       <EmployeeFilters
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
-        departments={mockDepartments}
+        departments={departments}
         filters={filters}
         onFiltersChange={setFilters}
         sortBy={sortBy}
         onSortChange={setSortBy}
       />
 
-      {/* Bulk Actions */}
       {selectedIds.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -427,37 +542,18 @@ const AllEmployeesPage: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSelectedIds([])}
-            >
+            <Button variant="outline" size="sm" onClick={() => setSelectedIds([])}>
               Clear Selection
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1"
-              onClick={handleBulkEmail}
-            >
+            <Button variant="outline" size="sm" className="gap-1" onClick={handleBulkEmail}>
               <Mail className="w-4 h-4" />
               Send Email
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1"
-              onClick={handleExport}
-            >
+            <Button variant="outline" size="sm" className="gap-1" onClick={handleExport}>
               <Download className="w-4 h-4" />
               Export
             </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              className="gap-1"
-              onClick={handleBulkDelete}
-            >
+            <Button variant="destructive" size="sm" className="gap-1" onClick={handleBulkDelete}>
               <Trash2 className="w-4 h-4" />
               Delete
             </Button>
@@ -465,8 +561,7 @@ const AllEmployeesPage: React.FC = () => {
         </motion.div>
       )}
 
-      {/* Employee List */}
-      {filteredEmployees.length > 0 ? (
+      {!isLoading && filteredEmployees.length > 0 ? (
         viewMode === 'grid' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredEmployees.map((employee, index) => (
@@ -491,8 +586,7 @@ const AllEmployeesPage: React.FC = () => {
             onDelete={handleDeleteEmployee}
           />
         )
-      ) : (
-        // Empty State
+      ) : !isLoading ? (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -505,53 +599,52 @@ const AllEmployeesPage: React.FC = () => {
             No employees found
           </h3>
           <p className="text-[#475569] mb-6 max-w-md mx-auto">
-            {searchQuery ||
-              filters.departments.length > 0 ||
-              filters.statuses.length > 0 ||
-              filters.employmentTypes.length > 0
-              ? "No employees match your current filters. Try adjusting your search criteria."
-              : "Get started by adding your first team member to the organization."}
+            {searchQuery
+            || filters.departments.length > 0
+            || filters.statuses.length > 0
+            || filters.employmentTypes.length > 0
+              ? 'No employees match your current filters. Try adjusting your search criteria.'
+              : 'Get started by adding your first team member to the organization.'}
           </p>
-          {!searchQuery &&
-            filters.departments.length === 0 &&
-            filters.statuses.length === 0 &&
-            filters.employmentTypes.length === 0 && (
-              <Button
-                onClick={() => setIsAddDialogOpen(true)}
-                className="gap-2 bg-[#0891B2] hover:bg-[#0891B2]/90 text-white"
-              >
-                <UserPlus className="w-4 h-4" />
-                Add Your First Employee
-              </Button>
-            )}
-          {(searchQuery ||
-            filters.departments.length > 0 ||
-            filters.statuses.length > 0 ||
-            filters.employmentTypes.length > 0) && (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSearchQuery('');
-                  setFilters({ departments: [], statuses: [], employmentTypes: [] });
-                }}
-                className="gap-2"
-              >
-                <Filter className="w-4 h-4" />
-                Clear All Filters
-              </Button>
-            )}
+          {!searchQuery
+          && filters.departments.length === 0
+          && filters.statuses.length === 0
+          && filters.employmentTypes.length === 0 && (
+            <Button
+              onClick={() => setIsAddDialogOpen(true)}
+              className="gap-2 bg-[#0891B2] hover:bg-[#0891B2]/90 text-white"
+            >
+              <UserPlus className="w-4 h-4" />
+              Add Your First Employee
+            </Button>
+          )}
+          {(searchQuery
+            || filters.departments.length > 0
+            || filters.statuses.length > 0
+            || filters.employmentTypes.length > 0) && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSearchQuery('');
+                setFilters({ departments: [], statuses: [], employmentTypes: [] });
+              }}
+              className="gap-2"
+            >
+              <Filter className="w-4 h-4" />
+              Clear All Filters
+            </Button>
+          )}
         </motion.div>
-      )}
+      ) : null}
 
-      {/* Pagination Info */}
-      {filteredEmployees.length > 0 && (
+      {!isLoading && filteredEmployees.length > 0 && (
         <div className="flex items-center justify-between text-sm text-[#475569]">
           <p>
             Showing {filteredEmployees.length} of {employees.length} employees
           </p>
-          {filters.departments.length > 0 ||
-            filters.statuses.length > 0 ||
-            filters.employmentTypes.length > 0 ? (
+          {filters.departments.length > 0
+          || filters.statuses.length > 0
+          || filters.employmentTypes.length > 0 ? (
             <Button
               variant="ghost"
               size="sm"
@@ -563,16 +656,14 @@ const AllEmployeesPage: React.FC = () => {
         </div>
       )}
 
-      {/* Add/Edit Employee Dialog */}
       <AddEmployeeDialog
         open={isAddDialogOpen}
         onOpenChange={handleDialogClose}
-        departments={mockDepartments}
+        departments={departments}
         onSubmit={handleAddEmployee}
         editingEmployee={editingEmployee}
       />
 
-      {/* Employee Detail Panel */}
       <EmployeeDetailPanel
         employee={selectedEmployee}
         isOpen={isDetailPanelOpen}
@@ -584,7 +675,6 @@ const AllEmployeesPage: React.FC = () => {
         onDelete={handleDeleteEmployee}
       />
 
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -609,7 +699,6 @@ const AllEmployeesPage: React.FC = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Bulk Delete Confirmation Dialog */}
       <AlertDialog open={isBulkDeleteDialogOpen} onOpenChange={setIsBulkDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

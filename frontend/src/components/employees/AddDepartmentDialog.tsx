@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -45,7 +45,7 @@ interface AddDepartmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   employees: Employee[];
-  onSubmit: (data: DepartmentFormValues) => void;
+  onSubmit: (data: DepartmentFormValues) => void | Promise<void>;
   editingDepartment?: Department;
 }
 
@@ -60,6 +60,7 @@ const colorOptions = [
   { value: '#6366F1', label: 'Indigo' },
   { value: '#FBBF24', label: 'Gold' },
 ];
+const NO_HEAD_VALUE = '__none__';
 
 export const AddDepartmentDialog: React.FC<AddDepartmentDialogProps> = ({
   open,
@@ -80,8 +81,22 @@ export const AddDepartmentDialog: React.FC<AddDepartmentDialogProps> = ({
     },
   });
 
-  const handleSubmit = (data: DepartmentFormValues) => {
-    onSubmit(data);
+  useEffect(() => {
+    form.reset({
+      name: editingDepartment?.name || '',
+      code: editingDepartment?.code || '',
+      description: editingDepartment?.description || '',
+      headId: editingDepartment?.headId || '',
+      budget: editingDepartment?.budget?.toString() || '',
+      color: editingDepartment?.color || '#22D3EE',
+    });
+  }, [editingDepartment, form, open]);
+
+  const handleSubmit = async (data: DepartmentFormValues) => {
+    await onSubmit({
+      ...data,
+      headId: data.headId || undefined,
+    });
     form.reset();
     onOpenChange(false);
   };
@@ -167,7 +182,10 @@ export const AddDepartmentDialog: React.FC<AddDepartmentDialogProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Department Head</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select
+                    value={field.value || NO_HEAD_VALUE}
+                    onValueChange={(value) => field.onChange(value === NO_HEAD_VALUE ? '' : value)}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <User className="w-4 h-4 text-[#94A3B8] mr-2" />
@@ -175,7 +193,7 @@ export const AddDepartmentDialog: React.FC<AddDepartmentDialogProps> = ({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">No Head Assigned</SelectItem>
+                      <SelectItem value={NO_HEAD_VALUE}>No Head Assigned</SelectItem>
                       {managers.map((manager) => (
                         <SelectItem key={manager.id} value={manager.id}>
                           {manager.firstName} {manager.lastName} - {manager.position}

@@ -52,6 +52,38 @@ export class EmployeesController {
             sendSuccess(res, access, 'Data access updated');
         } catch (e) { next(e); }
     }
+
+    async getDepartments(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const departments = await employeesService.getDepartments(req.context.tenantId);
+            sendSuccess(res, departments);
+        } catch (e) { next(e); }
+    }
+
+    async createDepartment(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const department = await employeesService.createDepartment(req.context.tenantId, sanitizeBody(req.body));
+            sendCreated(res, department, 'Department created');
+        } catch (e) { next(e); }
+    }
+
+    async updateDepartment(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const department = await employeesService.updateDepartment(
+                req.params.departmentId,
+                req.context.tenantId,
+                sanitizeBody(req.body),
+            );
+            sendSuccess(res, department, 'Department updated');
+        } catch (e) { next(e); }
+    }
+
+    async deleteDepartment(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            await employeesService.deleteDepartment(req.params.departmentId, req.context.tenantId);
+            sendNoContent(res);
+        } catch (e) { next(e); }
+    }
 }
 
 export const employeesController = new EmployeesController();

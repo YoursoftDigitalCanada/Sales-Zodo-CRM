@@ -6,6 +6,8 @@ import {
     Download, Filter, CalendarDays, RefreshCw, ChevronDown,
     ArrowUpRight, ArrowDownRight, TrendingUp, BarChart3,
     Info, Maximize2, Share2, Printer, Loader2,
+    Clock, Zap, Eye, MousePointerClick,
+    type LucideIcon,
 } from "lucide-react";
 import {
     analyticsTabs,
@@ -63,49 +65,153 @@ export default function AnalyticsPage() {
         try {
             setLoading(true);
             const [kpis, revenue, pipeline, leads, revTrend, overviewKpis, revTarget, actMetrics, teamPerf] = await Promise.allSettled([
-                getDashboardKPIs(),
-                getRevenueReport(),
-                getPipelineHealth(),
-                getLeadSourcesReport(),
-                getRevenueTrend(),
-                getOverviewKPIs(),
-                getRevenueVsTarget(),
-                getActivityMetricsApi(),
-                getTeamPerformanceApi(),
+                getDashboardKPIs(),       // 0: object { leads, clients, revenue, ... }
+                getRevenueReport(),       // 1: object { total, thisMonth, lastMonth, outstanding, growth }
+                getPipelineHealth(),      // 2: object { total, stages: [...] }
+                getLeadSourcesReport(),   // 3: array of { sourceId, sourceName, count }
+                getRevenueTrend(),        // 4: array of { month, revenue }
+                getOverviewKPIs(),        // 5: object { totalRevenue, dealsWon, dealsLost, conversionRate, avgDealSize, ... }
+                getRevenueVsTarget(),     // 6: array of { month, revenue, target, deals }
+                getActivityMetricsApi(),  // 7: array of { label, icon, today, thisWeek, thisMonth }
+                getTeamPerformanceApi(),  // 8: array of team members
             ]);
-            if (kpis.status === 'fulfilled' && Array.isArray(kpis.value) && kpis.value.length) setKpiCards(kpis.value as any);
 
-            // Revenue vs Target — wire live data into revenueData
-            if (revTarget.status === 'fulfilled' && Array.isArray(revTarget.value) && revTarget.value.length) {
-                setRevenueData(revTarget.value as any);
-            } else if (revenue.status === 'fulfilled' && Array.isArray(revenue.value) && revenue.value.length) {
-                setRevenueData(revenue.value as any);
-            }
+            const fmt = (v: number) => v >= 1000000 ? `$${(v/1000000).toFixed(1)}M` : v >= 1000 ? `$${(v/1000).toFixed(0)}K` : `$${v}`;
 
-            if (pipeline.status === 'fulfilled' && Array.isArray(pipeline.value) && pipeline.value.length) setPipelineStages(pipeline.value as any);
-            if (leads.status === 'fulfilled' && Array.isArray(leads.value) && leads.value.length) setLeadSources(leads.value as any);
-
-            // Activity Metrics — wire live data
-            if (actMetrics.status === 'fulfilled' && Array.isArray(actMetrics.value) && actMetrics.value.length) {
-                setActivityMetrics(actMetrics.value as any);
-            }
-
-            // Team Performance — wire live data
-            if (teamPerf.status === 'fulfilled' && Array.isArray(teamPerf.value) && teamPerf.value.length) {
-                setTeamPerformance(teamPerf.value as any);
-            }
-
-            // Overview KPIs — update KPI cards with live deal metrics
+            // ─── KPI Cards ──────────────────────────────────────────────
+            // Build from overviewKPIs (project-based) + dashboard KPIs
             if (overviewKpis.status === 'fulfilled' && overviewKpis.value) {
                 const ok = overviewKpis.value as any;
-                const fmt = (v: number) => v >= 1000000 ? `$${(v/1000000).toFixed(1)}M` : v >= 1000 ? `$${(v/1000).toFixed(0)}K` : `$${v}`;
+                const dashData = kpis.status === 'fulfilled' ? kpis.value as any : null;
+                const revenueGrowth = dashData?.revenue?.growth ?? 0;
+
                 setKpiCards(prev => prev.map((card, i) => {
-                    if (i === 0) return { ...card, value: fmt(ok.totalRevenue || 0), label: 'Total Revenue' };
-                    if (i === 1) return { ...card, value: String(ok.dealsWon || 0), label: 'Deals Won' };
-                    if (i === 2) return { ...card, value: `${ok.conversionRate || 0}%`, label: 'Conversion Rate' };
-                    if (i === 3) return { ...card, value: fmt(ok.avgDealSize || 0), label: 'Avg Deal Size' };
+                    if (i === 0) return { ...card, value: fmt(ok.totalRevenue || 0), change: `${revenueGrowth >= 0 ? '+' : ''}${revenueGrowth}%`, trend: revenueGrowth >= 0 ? 'up' as const : 'down' as const };
+                    if (i === 1) return { ...card, value: String(ok.dealsWon || 0) };
+                    if (i === 2) return { ...card, value: `${ok.conversionRate || 0}%` };
+                    if (i === 3) return { ...card, value: fmt(ok.avgDealSize || 0) };
                     return card;
                 }));
+            } else if (kpis.status === 'fulfilled' && kpis.value) {
+                // Fallback: use dashboard KPIs
+                const d = kpis.value as any;
+                setKpiCards(prev => prev.map((card, i) => {
+                    if (i === 0) return { ...card, value: fmt(d.revenue?.total || 0), change: `${(d.revenue?.growth ?? 0) >= 0 ? '+' : ''}${d.revenue?.growth ?? 0}%`, trend: (d.revenue?.growth ?? 0) >= 0 ? 'up' as const : 'down' as const };
+                    if (i === 1) return { ...card, value: String(d.leads?.converted || 0) };
+                    if (i === 2) return { ...card, value: `${d.leads?.conversionRate || 0}%` };
+                    if (i === 3) return { ...card, value: fmt(d.projects?.total || 0) };
+                    return card;
+                }));
+            }
+
+            // ─── Revenue Trend Data ─────────────────────────────────────
+            if (revTarget.status === 'fulfilled' && Array.isArray(revTarget.value) && revTarget.value.length) {
+                setRevenueData(revTarget.value.map((d: any) => ({
+                    month: d.month || '',
+                    revenue: Number(d.revenue) || 0,
+                    target: Number(d.target) || 0,
+                    deals: Number(d.deals) || 0,
+                })));
+            } else if (revTrend.status === 'fulfilled' && Array.isArray(revTrend.value) && revTrend.value.length) {
+                setRevenueData(revTrend.value.map((d: any) => ({
+                    month: d.month || '',
+                    revenue: Number(d.revenue) || 0,
+                    target: 0,
+                    deals: 0,
+                })));
+            }
+
+            // ─── Pipeline Stages ────────────────────────────────────────
+            if (pipeline.status === 'fulfilled' && pipeline.value) {
+                const pData = pipeline.value as any;
+                const stages = Array.isArray(pData) ? pData : pData?.stages;
+                if (Array.isArray(stages) && stages.length) {
+                    const stageColors: Record<string, string> = {
+                        NEW: '#94A3B8', CONTACTED: '#0891B2', QUALIFIED: '#0891B2',
+                        PROPOSAL: '#7C3AED', NEGOTIATION: '#D97706',
+                        WON: '#16A34A', LOST: '#DC2626',
+                    };
+                    const stageNames: Record<string, string> = {
+                        NEW: 'Leads', CONTACTED: 'Contacted', QUALIFIED: 'Qualified',
+                        PROPOSAL: 'Proposal', NEGOTIATION: 'Negotiation',
+                        WON: 'Closed Won', LOST: 'Closed Lost',
+                    };
+                    const total = stages.reduce((s: number, st: any) => s + (st.count || 0), 0);
+                    setPipelineStages(stages.map((s: any) => ({
+                        name: stageNames[s.status] || s.status || s.name || 'Unknown',
+                        count: s.count || 0,
+                        value: fmt(s.value || 0),
+                        conversion: s.percentage ?? (total > 0 ? Math.round((s.count / total) * 100) : 0),
+                        color: stageColors[s.status] || s.color || '#94A3B8',
+                        avgDays: s.avgDays || 0,
+                    })));
+                }
+            }
+
+            // ─── Lead Sources ───────────────────────────────────────────
+            if (leads.status === 'fulfilled') {
+                const srcData = leads.value as any;
+                const srcArr = Array.isArray(srcData) ? srcData : srcData?.bySource || [];
+                if (srcArr.length) {
+                    const srcColors = ['#0891B2', '#7C3AED', '#16A34A', '#D97706', '#DC2626', '#EC4899', '#6366F1', '#14B8A6'];
+                    setLeadSources(srcArr.map((s: any, i: number) => ({
+                        name: s.sourceName || s.source || s.name || 'Unknown',
+                        leads: s.count || s.leads || 0,
+                        converted: s.converted || 0,
+                        revenue: s.revenue || '$0',
+                        color: srcColors[i % srcColors.length],
+                    })));
+                }
+            }
+
+            // ─── Activity Metrics ───────────────────────────────────────
+            if (actMetrics.status === 'fulfilled' && Array.isArray(actMetrics.value) && actMetrics.value.length) {
+                const iconMap: Record<string, LucideIcon> = {
+                    Mail: Zap, CheckSquare: Clock, FileText: Eye,
+                    Calendar: Clock, PhoneCall: MousePointerClick,
+                };
+                setActivityMetrics(actMetrics.value.map((m: any) => ({
+                    label: m.label || 'Unknown',
+                    today: m.today || 0,
+                    thisWeek: m.thisWeek || 0,
+                    thisMonth: m.thisMonth || 0,
+                    icon: iconMap[m.icon] || Zap,
+                })));
+            }
+
+            // ─── Team Performance ───────────────────────────────────────
+            if (teamPerf.status === 'fulfilled' && Array.isArray(teamPerf.value) && teamPerf.value.length) {
+                setTeamPerformance(teamPerf.value.map((t: any) => ({
+                    id: t.id || '',
+                    name: t.name || 'Unknown',
+                    avatar: t.avatar || '??',
+                    dealsWon: t.dealsWon || 0,
+                    dealsClosed: t.dealsClosed || 0,
+                    revenue: typeof t.revenue === 'string' ? t.revenue : fmt(t.revenueRaw || t.revenue || 0),
+                    quota: t.quota || 0,
+                    activities: t.activities || 0,
+                    winRate: t.winRate || 0,
+                })));
+            }
+
+            // ─── Forecast (derived from revenue data) ───────────────────
+            if (revTarget.status === 'fulfilled' && Array.isArray(revTarget.value) && revTarget.value.length) {
+                const months = revTarget.value as any[];
+                const quarterLabels = ['Q1', 'Q2', 'Q3', 'Q4'];
+                const year = new Date().getFullYear();
+                const quarters: ForecastQuarter[] = quarterLabels.map((q, qi) => {
+                    const qMonths = months.filter((_: any, idx: number) => Math.floor(idx / 3) === qi);
+                    const rev = qMonths.reduce((s: number, m: any) => s + (Number(m.revenue) || 0), 0);
+                    const tgt = qMonths.reduce((s: number, m: any) => s + (Number(m.target) || 0), 0);
+                    return {
+                        quarter: `${q} ${year}`,
+                        committed: Math.round(rev),
+                        bestCase: Math.round(rev * 1.15),
+                        pipeline: Math.round(tgt * 1.5),
+                        target: Math.round(tgt),
+                    };
+                });
+                setForecastData(quarters);
             }
         } catch (err) {
             console.error('Analytics fetch failed', err);
@@ -117,7 +223,7 @@ export default function AnalyticsPage() {
     useEffect(() => { fetchAnalytics(); }, [fetchAnalytics]);
 
     // Chart helpers
-    const maxRevenue = Math.max(...revenueData.map((d) => Math.max(d.revenue, d.target)));
+    const maxRevenue = revenueData.length > 0 ? Math.max(...revenueData.map((d) => Math.max(d.revenue, d.target))) : 1;
     const totalLeads = leadSources.reduce((s, l) => s + l.leads, 0);
 
     const barHeight = (val: number, max: number, maxPx: number) => (val / max) * maxPx;

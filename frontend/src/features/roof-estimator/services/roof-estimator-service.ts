@@ -450,6 +450,8 @@ export interface EagleViewReport {
     totalRoofFacets?: string;
     reportDownloadLink?: string;
     imageUrl?: string;
+    imageDataUrl?: string;
+    imageFileTypeId?: number;
     imageType?: string;
     imageCaptureDate?: string;
     imageResolution?: string;

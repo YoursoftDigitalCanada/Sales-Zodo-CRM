@@ -23,6 +23,7 @@ import {
   autocompleteAddress,
   calculateMaterials,
   detectRoof,
+  type EagleViewAddressInput,
   fetchParcelBoundary,
   fetchSatelliteImage,
   requestEagleViewInstant,
@@ -87,6 +88,30 @@ function extractApiKeyFromUrl(url: string): string {
     return parsed.searchParams.get("key") || "";
   } catch {
     return "";
+  }
+}
+
+async function resolveEagleViewAddress(
+  address: string,
+  selectedAddressPlaceId: string,
+): Promise<string | EagleViewAddressInput> {
+  if (!selectedAddressPlaceId) {
+    return address;
+  }
+
+  try {
+    const details = await getPlaceDetails(selectedAddressPlaceId);
+    return {
+      addressLine1: details.addressLine1,
+      city: details.city,
+      state: details.state,
+      postalCode: details.postalCode,
+      country: details.country,
+      latitude: details.lat,
+      longitude: details.lng,
+    };
+  } catch {
+    return address;
   }
 }
 
@@ -714,19 +739,12 @@ export default function EstimateModule(): JSX.Element {
 
     setOrderingEagleView(true);
     try {
-      // Parse address into components
-      const parts = address.split(",").map((s: string) => s.trim());
-      const addressLine1 = parts[0] || address;
-      const city = parts[1] || "";
-      const stateZip = (parts[2] || "").split(" ");
-      const state = stateZip[0] || "";
-      const postalCode = stateZip[1] || "";
-
-      const report = await requestEagleViewInstant(address);
+      const eagleViewAddress = await resolveEagleViewAddress(address, selectedAddressPlaceId);
+      const report = await requestEagleViewInstant(eagleViewAddress);
 
       setEagleViewReport(report);
-      if (report.reportDownloadLink) {
-        setEagleViewImageUrl(report.reportDownloadLink);
+      if (report.imageDataUrl || report.imageUrl) {
+        setEagleViewImageUrl(report.imageDataUrl || report.imageUrl || null);
       }
 
       toast({
@@ -742,16 +760,17 @@ export default function EstimateModule(): JSX.Element {
     } finally {
       setOrderingEagleView(false);
     }
-  }, [satellite, address, toast]);
+  }, [satellite, address, selectedAddressPlaceId, toast]);
 
   const handleCheckEagleViewStatus = useCallback(async () => {
     if (!address) return;
     setPollingEagleView(true);
     try {
-      const report = await requestEagleViewInstant(address);
+      const eagleViewAddress = await resolveEagleViewAddress(address, selectedAddressPlaceId);
+      const report = await requestEagleViewInstant(eagleViewAddress);
       setEagleViewReport(report);
-      if (report.reportDownloadLink) {
-        setEagleViewImageUrl(report.reportDownloadLink);
+      if (report.imageDataUrl || report.imageUrl) {
+        setEagleViewImageUrl(report.imageDataUrl || report.imageUrl || null);
       }
       toast({
         title: "EagleView Status",
@@ -760,13 +779,13 @@ export default function EstimateModule(): JSX.Element {
     } catch (error: any) {
       toast({
         title: "Status check failed",
-        description: error?.message || "Unexpected error",
+        description: error?.response?.data?.message || error?.message || "Unexpected error",
         variant: "destructive",
       });
     } finally {
       setPollingEagleView(false);
     }
-  }, [address, toast]);
+  }, [address, selectedAddressPlaceId, toast]);
 
   const handlePolygonChange = useCallback(
     (points: PolygonPoint[]) => {

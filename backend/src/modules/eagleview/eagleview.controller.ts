@@ -13,7 +13,6 @@ import { logger } from '../../common/utils/logger';
 import { sendSuccess } from '../../common/utils/responseFormatter';
 import { config } from '../../config';
 import { eagleViewAuthService } from './eagleview-auth.service';
-import { eagleViewImageryService } from './eagleview-imagery.service';
 import { eagleViewMeasurementService, type OrderAddress } from './eagleview-measurement.service';
 
 class EagleViewController {
@@ -67,14 +66,13 @@ class EagleViewController {
             logger.info('[EagleView] Instant order request', { address: orderAddress });
 
             const report = await eagleViewMeasurementService.placeOrderAndWait(orderAddress);
-            const imagery = await this.tryGetImagery(orderAddress, report.latitude, report.longitude);
+            const aerialImage = await eagleViewMeasurementService.getPrimaryAerialImageDataUrl(report.reportId, report);
+            const { reportDownloadLink: _reportDownloadLink, ...reportData } = report;
 
             sendSuccess(res, {
-                ...report,
-                imageUrl: imagery?.imageUrl,
-                imageType: imagery?.imageType,
-                imageCaptureDate: imagery?.captureDate,
-                imageResolution: imagery?.resolution,
+                ...reportData,
+                imageDataUrl: aerialImage?.dataUrl,
+                imageFileTypeId: aerialImage?.fileTypeId,
             }, 'EagleView report retrieved');
         } catch (error) {
             next(error);
@@ -183,30 +181,6 @@ class EagleViewController {
         return undefined;
     }
 
-    private async tryGetImagery(
-        address: OrderAddress,
-        reportLatitude?: number,
-        reportLongitude?: number,
-    ) {
-        const lat = Number.isFinite(reportLatitude) ? reportLatitude : address.latitude;
-        const lng = Number.isFinite(reportLongitude) ? reportLongitude : address.longitude;
-
-        if (typeof lat !== 'number' || !Number.isFinite(lat) || typeof lng !== 'number' || !Number.isFinite(lng)) {
-            return null;
-        }
-
-        try {
-            return await eagleViewImageryService.getPropertyImagery(lat, lng);
-        } catch (error: any) {
-            logger.warn('[EagleView] Property imagery unavailable', {
-                status: error?.response?.status,
-                message: error?.message,
-                lat,
-                lng,
-            });
-            return null;
-        }
-    }
 }
 
 export const eagleViewController = new EagleViewController();

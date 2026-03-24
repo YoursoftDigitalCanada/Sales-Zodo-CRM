@@ -82,10 +82,8 @@ const isLikelyPdfUrl = (url?: string | null): boolean =>
   Boolean(url && /(?:\.pdf(?:$|[?#]))|getreportfile|reportdownload/i.test(url));
 
 const splitPreviewSource = (url?: string | null) => {
-  if (!url) return { imageUrl: "", reportUrl: "" };
-  return isLikelyPdfUrl(url)
-    ? { imageUrl: "", reportUrl: url }
-    : { imageUrl: url, reportUrl: "" };
+  if (!url || isLikelyPdfUrl(url)) return { imageUrl: "", reportUrl: "" };
+  return { imageUrl: url, reportUrl: "" };
 };
 
 /* ─── WizardData type ────────────────────────────────────── */
@@ -440,33 +438,37 @@ export default function RoofEstimatorWizard() {
         longitude: details.lng,
       });
 
-      if (report.status === "Completed" || report.area) {
-        const roofArea = parseMeasurementNumber(report.area);
-        const pitch = normalizePitch(report);
-        const previewSource = splitPreviewSource(report.imageUrl || report.reportDownloadLink || "");
+        if (report.status === "Completed" || report.area) {
+          const roofArea = parseMeasurementNumber(report.area);
+          const pitch = normalizePitch(report);
+          const previewSource = splitPreviewSource(report.imageDataUrl || report.imageUrl || "");
 
-        if (roofArea !== null && roofArea > 0) {
-          up("roofAreaSqft", roofArea);
-        }
-        if (pitch) {
-          up("pitch", pitch);
-        }
-        up("satelliteImageUrl", previewSource.imageUrl);
-        up("eagleViewReportUrl", report.imageUrl ? (report.reportDownloadLink || "") : previewSource.reportUrl);
+          if (roofArea !== null && roofArea > 0) {
+            up("roofAreaSqft", roofArea);
+          }
+          if (pitch) {
+            up("pitch", pitch);
+          }
+          up("satelliteImageUrl", previewSource.imageUrl);
+          up("eagleViewReportUrl", "");
 
-        up("measurementSource", "eagleview");
-        up("confidence", 100);
-        up("aiModel", "eagleview");
+          up("measurementSource", "eagleview");
+          up("confidence", 100);
+          up("aiModel", "eagleview");
 
-        toast({
-          title: "📡 EagleView Data Loaded",
-          description: `Area: ${report.area || "N/A"} | Pitch: ${pitch || "N/A"} | Image: ${report.imageUrl ? "Loaded" : "Unavailable"}`,
-        });
+          toast({
+            title: "📡 EagleView Data Loaded",
+            description: `Area: ${report.area || "N/A"} | Pitch: ${pitch || "N/A"} | Image: ${previewSource.imageUrl ? "Loaded" : "Unavailable"}`,
+          });
       } else {
         toast({ title: "EagleView", description: `Status: ${report.status} — data may still be processing` });
       }
     } catch (err: any) {
-      toast({ title: "EagleView Error", description: err?.message || "Could not fetch measurement data", variant: "destructive" });
+      toast({
+        title: "EagleView Error",
+        description: err?.response?.data?.message || err?.message || "Could not fetch measurement data",
+        variant: "destructive",
+      });
     } finally {
       setEagleViewLoading(false);
       setEagleViewStatus("");
@@ -673,7 +675,6 @@ export default function RoofEstimatorWizard() {
   /* ─── Render Steps ─────────────────────────────── */
 
   const previewImageUrl = !isLikelyPdfUrl(data.satelliteImageUrl) ? data.satelliteImageUrl : "";
-  const previewReportUrl = data.eagleViewReportUrl || (isLikelyPdfUrl(data.satelliteImageUrl) ? data.satelliteImageUrl : "");
 
   const renderStep = () => {
     switch (step) {
@@ -803,16 +804,10 @@ export default function RoofEstimatorWizard() {
           }}>
           {previewImageUrl ? (
               <img src={previewImageUrl} alt="Satellite" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            ) : previewReportUrl ? (
-              <iframe
-                src={previewReportUrl}
-                title="EagleView Roof Report"
-                style={{ width: "100%", height: "100%", border: "none" }}
-              />
             ) : (
               <div style={{ textAlign: "center", color: "#94A3B8" }}>
                 <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                <div style={{ fontSize: 12, marginTop: 6 }}>Enter address to load EagleView report</div>
+                <div style={{ fontSize: 12, marginTop: 6 }}>Enter address to load EagleView aerial image</div>
               </div>
             )}
           </div>

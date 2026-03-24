@@ -80,7 +80,7 @@ export const strictRateLimiter = rateLimiter({
  */
 export const apiRateLimiter = rateLimiter({
   windowMs: 60 * 1000, // 1 minute
-  max: 300, // 300 requests per minute
+  max: 1000, // 1000 requests per minute
 });
 
 /**

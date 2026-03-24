@@ -28,8 +28,8 @@ const envSchema = z.object({
   BCRYPT_ROUNDS: z.string().transform(Number).default('12'),
 
   // Rate Limiting
-  RATE_LIMIT_WINDOW_MS: z.string().transform(Number).default('900000'),
-  RATE_LIMIT_MAX_REQUESTS: z.string().transform(Number).default('500'),
+  RATE_LIMIT_WINDOW_MS: z.string().transform(Number).default('60000'),
+  RATE_LIMIT_MAX_REQUESTS: z.string().transform(Number).default('1000'),
 
   // File Upload
   MAX_FILE_SIZE: z.string().transform(Number).default('10485760'),

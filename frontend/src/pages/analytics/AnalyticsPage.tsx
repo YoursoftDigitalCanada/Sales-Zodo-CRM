@@ -472,29 +472,50 @@ export default function AnalyticsPage() {
                                     {/* Win/Loss */}
                                     <div className="bg-white rounded-lg card-shadow p-6">
                                         <h3 className="font-semibold text-[#0F172A] mb-4">Win/Loss Analysis</h3>
-                                        <div className="space-y-4">
-                                            {[
-                                                { label: "Win Rate", value: "32.6%", desc: "Deals won vs total", color: "#16A34A", pct: 32.6 },
-                                                { label: "Loss Rate", value: "24.1%", desc: "Deals lost vs total", color: "#DC2626", pct: 24.1 },
-                                                { label: "Still Open", value: "43.3%", desc: "Deals in progress", color: "#D97706", pct: 43.3 },
-                                            ].map((item) => (
-                                                <div key={item.label}>
-                                                    <div className="flex justify-between items-baseline mb-1">
-                                                        <div>
-                                                            <span className="text-sm font-medium text-[#0F172A]">{item.label}</span>
-                                                            <span className="text-xs text-[#94A3B8] ml-2">{item.desc}</span>
-                                                        </div>
-                                                        <span className="text-lg font-bold" style={{ color: item.color }}>{item.value}</span>
+                                        {(() => {
+                                            const totalPipeline = pipelineStages.reduce((s, st) => s + st.count, 0) || 1;
+                                            const wonCount = pipelineStages.find(s => s.name === 'Closed Won')?.count || 0;
+                                            const lostCount = pipelineStages.find(s => s.name === 'Closed Lost')?.count || 0;
+                                            const openCount = totalPipeline - wonCount - lostCount;
+                                            const winPct = Math.round((wonCount / totalPipeline) * 1000) / 10;
+                                            const lossPct = Math.round((lostCount / totalPipeline) * 1000) / 10;
+                                            const openPct = Math.round((openCount / totalPipeline) * 1000) / 10;
+                                            const items = [
+                                                { label: "Win Rate", value: `${winPct}%`, desc: "Deals won vs total", color: "#16A34A", pct: winPct },
+                                                { label: "Loss Rate", value: `${lossPct}%`, desc: "Deals lost vs total", color: "#DC2626", pct: lossPct },
+                                                { label: "Still Open", value: `${openPct}%`, desc: "Deals in progress", color: "#D97706", pct: openPct },
+                                            ];
+                                            return (
+                                                <>
+                                                    <div className="space-y-4">
+                                                        {items.map((item) => (
+                                                            <div key={item.label}>
+                                                                <div className="flex justify-between items-baseline mb-1">
+                                                                    <div>
+                                                                        <span className="text-sm font-medium text-[#0F172A]">{item.label}</span>
+                                                                        <span className="text-xs text-[#94A3B8] ml-2">{item.desc}</span>
+                                                                    </div>
+                                                                    <span className="text-lg font-bold" style={{ color: item.color }}>{item.value}</span>
+                                                                </div>
+                                                                <div className="w-full h-3 bg-[#F1F5F9] rounded-full overflow-hidden">
+                                                                    <div className="h-full rounded-full transition-all" style={{ width: `${item.pct}%`, backgroundColor: item.color }} />
+                                                                </div>
+                                                            </div>
+                                                        ))}
                                                     </div>
-                                                    <div className="w-full h-3 bg-[#F1F5F9] rounded-full overflow-hidden">
-                                                        <div className="h-full rounded-full transition-all" style={{ width: `${item.pct}%`, backgroundColor: item.color }} />
+                                                    <div className="mt-4 p-3 bg-[#0891B2]/5 rounded-lg border border-[#0891B2]/10">
+                                                        <p className="text-xs text-[#0891B2] flex items-center gap-2">
+                                                            <Info size={14} />
+                                                            <strong>AI Insight:</strong>
+                                                            {wonCount > 0
+                                                                ? ` Win rate is ${winPct}% with ${wonCount} deal${wonCount !== 1 ? 's' : ''} won out of ${totalPipeline} total. ${openCount > 0 ? `${openCount} deal${openCount !== 1 ? 's' : ''} still in progress.` : ''}`
+                                                                : ' No completed deals yet. Focus on moving leads through the pipeline to close your first deal.'
+                                                            }
+                                                        </p>
                                                     </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <div className="mt-4 p-3 bg-[#0891B2]/5 rounded-lg border border-[#0891B2]/10">
-                                            <p className="text-xs text-[#0891B2] flex items-center gap-2"><Info size={14} /> <strong>AI Insight:</strong> Win rate increased 4.1% this quarter. Top factor: faster follow-up response times (avg 2.3 hrs vs 5.1 hrs).</p>
-                                        </div>
+                                                </>
+                                            );
+                                        })()}
                                     </div>
                                 </div>
 

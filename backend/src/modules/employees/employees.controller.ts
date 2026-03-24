@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import { employeesService } from './employees.service';
 import { sendSuccess, sendCreated, sendNoContent } from '../../common/utils/responseFormatter';
 import { sanitizeBody } from '../../common/utils/sanitize-body';
+import { BadRequestError } from '../../common/errors/HttpErrors';
+import { ErrorCodes } from '../../common/errors/errorCodes';
 
 export class EmployeesController {
     async create(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -82,6 +84,109 @@ export class EmployeesController {
         try {
             await employeesService.deleteDepartment(req.params.departmentId, req.context.tenantId);
             sendNoContent(res);
+        } catch (e) { next(e); }
+    }
+
+    async getAttendance(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const records = await employeesService.getAttendance(req.context.tenantId, req.query as any);
+            sendSuccess(res, records);
+        } catch (e) { next(e); }
+    }
+
+    async getAttendanceSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const summary = await employeesService.getAttendanceSummary(req.context.tenantId, req.query as any);
+            sendSuccess(res, summary);
+        } catch (e) { next(e); }
+    }
+
+    async getCurrentAttendance(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const employeeId = req.context.employeeId || req.user?.employeeId;
+            if (!employeeId) {
+                sendSuccess(res, {
+                    isCheckedIn: false,
+                    isOnBreak: false,
+                    breakMinutes: 0,
+                    activeEntry: null,
+                });
+                return;
+            }
+
+            const status = await employeesService.getCurrentAttendanceStatus(employeeId, req.context.tenantId);
+            sendSuccess(res, status);
+        } catch (e) { next(e); }
+    }
+
+    async checkInAttendance(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const employeeId = req.context.employeeId || req.user?.employeeId;
+            if (!employeeId) {
+                throw new BadRequestError(
+                    'Your user account is not linked to an employee profile',
+                    ErrorCodes.EMPLOYEE_NOT_FOUND,
+                );
+            }
+
+            const status = await employeesService.checkInAttendance(employeeId, req.context.tenantId, sanitizeBody(req.body));
+            sendSuccess(res, status, 'Checked in successfully');
+        } catch (e) { next(e); }
+    }
+
+    async checkOutAttendance(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const employeeId = req.context.employeeId || req.user?.employeeId;
+            if (!employeeId) {
+                throw new BadRequestError(
+                    'Your user account is not linked to an employee profile',
+                    ErrorCodes.EMPLOYEE_NOT_FOUND,
+                );
+            }
+
+            const status = await employeesService.checkOutAttendance(employeeId, req.context.tenantId, sanitizeBody(req.body));
+            sendSuccess(res, status, 'Checked out successfully');
+        } catch (e) { next(e); }
+    }
+
+    async startAttendanceBreak(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const employeeId = req.context.employeeId || req.user?.employeeId;
+            if (!employeeId) {
+                throw new BadRequestError(
+                    'Your user account is not linked to an employee profile',
+                    ErrorCodes.EMPLOYEE_NOT_FOUND,
+                );
+            }
+
+            const status = await employeesService.startAttendanceBreak(employeeId, req.context.tenantId);
+            sendSuccess(res, status, 'Break started');
+        } catch (e) { next(e); }
+    }
+
+    async endAttendanceBreak(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const employeeId = req.context.employeeId || req.user?.employeeId;
+            if (!employeeId) {
+                throw new BadRequestError(
+                    'Your user account is not linked to an employee profile',
+                    ErrorCodes.EMPLOYEE_NOT_FOUND,
+                );
+            }
+
+            const status = await employeesService.endAttendanceBreak(employeeId, req.context.tenantId);
+            sendSuccess(res, status, 'Break ended');
+        } catch (e) { next(e); }
+    }
+
+    async updateAttendance(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const updated = await employeesService.updateAttendanceRecord(
+                req.params.attendanceId,
+                req.context.tenantId,
+                sanitizeBody(req.body),
+            );
+            sendSuccess(res, updated, 'Attendance record updated');
         } catch (e) { next(e); }
     }
 }

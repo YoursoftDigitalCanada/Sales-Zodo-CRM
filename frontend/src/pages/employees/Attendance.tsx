@@ -1,11 +1,9 @@
-import React, { useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
-import { format, subDays, startOfMonth, endOfMonth } from 'date-fns';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { format, endOfDay, endOfMonth, startOfDay, startOfMonth, subDays } from 'date-fns';
 import {
   Search,
   Download,
   Calendar as CalendarIcon,
-  Filter,
   Clock,
   Users,
   BarChart3,
@@ -13,6 +11,16 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
@@ -28,20 +36,273 @@ import {
   AttendanceTable,
   AttendanceCalendar,
   CheckInOutCard,
-  mockAttendanceRecords,
-  mockEmployees,
+  AttendanceRecord,
 } from '@/components/employees';
+import { getStoredEmployee } from '@/features/auth/lib/auth-storage';
+import {
+  AttendanceCurrentEntity,
+  AttendanceEntity,
+  AttendanceSummaryEntity,
+  checkInAttendance,
+  checkOutAttendance,
+  endAttendanceBreak,
+  getAttendanceRecords,
+  getAttendanceSummary,
+  getCurrentAttendance,
+  getEmployees,
+  startAttendanceBreak,
+  updateAttendanceRecord,
+} from '@/features/users';
+
+type EmployeeOption = {
+  id: string;
+  name: string;
+  avatar?: string | null;
+};
+
+type ApiEmployee = {
+  id: string;
+  user?: {
+    firstName?: string;
+    lastName?: string;
+    avatar?: string | null;
+  };
+};
+
+type EditAttendanceFormState = {
+  startDate: string;
+  startTime: string;
+  endDate: string;
+  endTime: string;
+  notes: string;
+  location: 'office' | 'remote';
+};
+
+const EMPTY_SUMMARY: AttendanceSummaryEntity = {
+  totalEmployees: 0,
+  presentCount: 0,
+  absentCount: 0,
+  lateCount: 0,
+  halfDayCount: 0,
+  onLeaveCount: 0,
+  totalWorkingDays: 0,
+  averageCheckIn: null,
+  averageWorkHours: 0,
+  overtimeHours: 0,
+};
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (
+    error
+    && typeof error === 'object'
+    && 'response' in error
+  ) {
+    const response = (error as { response?: { data?: { message?: string } } }).response;
+    if (response?.data?.message) {
+      return response.data.message;
+    }
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return fallback;
+};
+
+const toAttendanceRecord = (record: AttendanceEntity): AttendanceRecord => ({
+  id: record.id,
+  employeeId: record.employeeId,
+  employeeName: record.employeeName,
+  employeeAvatar: record.employeeAvatar || undefined,
+  date: new Date(record.date),
+  checkIn: record.checkIn ? new Date(record.checkIn) : undefined,
+  checkOut: record.checkOut ? new Date(record.checkOut) : undefined,
+  status: record.status,
+  workHours: Number(record.workHours || 0),
+  overtime: Number(record.overtime || 0),
+  notes: record.notes || undefined,
+  location: record.location,
+  isRemote: record.isRemote,
+});
+
+const toEmployeeOption = (employee: ApiEmployee): EmployeeOption => ({
+  id: employee.id,
+  name: `${employee.user?.firstName || ''} ${employee.user?.lastName || ''}`.trim() || 'Unnamed Employee',
+  avatar: employee.user?.avatar || null,
+});
+
+const toDateInputValue = (value?: Date): string => (value ? format(value, 'yyyy-MM-dd') : '');
+const toTimeInputValue = (value?: Date): string => (value ? format(value, 'HH:mm') : '');
+
+const buildEditFormState = (record: AttendanceRecord): EditAttendanceFormState => ({
+  startDate: toDateInputValue(record.checkIn || record.date),
+  startTime: toTimeInputValue(record.checkIn || record.date),
+  endDate: toDateInputValue(record.checkOut || record.checkIn || record.date),
+  endTime: record.checkOut ? toTimeInputValue(record.checkOut) : '',
+  notes: record.notes || '',
+  location: record.isRemote ? 'remote' : 'office',
+});
+
+const buildIsoDateTime = (dateValue: string, timeValue: string): string => {
+  const normalizedTime = timeValue || '00:00';
+  return new Date(`${dateValue}T${normalizedTime}:00`).toISOString();
+};
 
 const AttendancePage: React.FC = () => {
+  const storedEmployee = getStoredEmployee();
+  const currentEmployeeId = typeof storedEmployee?.id === 'string' ? storedEmployee.id : undefined;
+
+  const [employees, setEmployees] = useState<EmployeeOption[]>([]);
+  const [records, setRecords] = useState<AttendanceRecord[]>([]);
+  const [calendarRecords, setCalendarRecords] = useState<AttendanceRecord[]>([]);
+  const [todaySummary, setTodaySummary] = useState<AttendanceSummaryEntity>(EMPTY_SUMMARY);
+  const [teamMonthlySummary, setTeamMonthlySummary] = useState<AttendanceSummaryEntity>(EMPTY_SUMMARY);
+  const [myMonthlySummary, setMyMonthlySummary] = useState<AttendanceSummaryEntity>(EMPTY_SUMMARY);
+  const [currentStatus, setCurrentStatus] = useState<AttendanceCurrentEntity | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState<string>('all');
   const [dateRange, setDateRange] = useState('today');
   const [activeTab, setActiveTab] = useState('overview');
-  
-  // Check-in state (for demo)
-  const [isCheckedIn, setIsCheckedIn] = useState(false);
-  const [checkInTime, setCheckInTime] = useState<Date | undefined>();
-  const [isOnBreak, setIsOnBreak] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [isLoading, setIsLoading] = useState(true);
+  const [isActionLoading, setIsActionLoading] = useState(false);
+  const [detailsRecord, setDetailsRecord] = useState<AttendanceRecord | null>(null);
+  const [editingRecord, setEditingRecord] = useState<AttendanceRecord | null>(null);
+  const [editForm, setEditForm] = useState<EditAttendanceFormState | null>(null);
+
+  const refreshCalendarData = useCallback(async (month: Date, showErrorToast = true) => {
+    try {
+      const data = await getAttendanceRecords({
+        dateFrom: startOfDay(startOfMonth(month)).toISOString(),
+        dateTo: endOfDay(endOfMonth(month)).toISOString(),
+      });
+      setCalendarRecords(data.map(toAttendanceRecord));
+    } catch (error) {
+      console.error('Failed to load attendance calendar:', error);
+      if (showErrorToast) {
+        toast.error(getErrorMessage(error, 'Failed to load attendance calendar'));
+      }
+    }
+  }, []);
+
+  const refreshData = useCallback(async (showErrorToast = true) => {
+    try {
+      const now = new Date();
+      const monthStart = startOfMonth(now);
+      const todayStart = startOfDay(now);
+      const todayEnd = endOfDay(now);
+
+      const [
+        employeeData,
+        attendanceData,
+        todaySummaryData,
+        teamMonthSummaryData,
+        currentAttendanceData,
+        myMonthSummaryData,
+      ] = await Promise.all([
+        getEmployees(),
+        getAttendanceRecords({
+          dateFrom: startOfDay(subDays(now, 90)).toISOString(),
+          dateTo: todayEnd.toISOString(),
+        }),
+        getAttendanceSummary({
+          dateFrom: todayStart.toISOString(),
+          dateTo: todayEnd.toISOString(),
+        }),
+        getAttendanceSummary({
+          dateFrom: monthStart.toISOString(),
+          dateTo: todayEnd.toISOString(),
+        }),
+        getCurrentAttendance(),
+        currentEmployeeId
+          ? getAttendanceSummary({
+            dateFrom: monthStart.toISOString(),
+            dateTo: todayEnd.toISOString(),
+            employeeId: currentEmployeeId,
+          })
+          : Promise.resolve(EMPTY_SUMMARY),
+      ]);
+
+      setEmployees((employeeData as ApiEmployee[]).map(toEmployeeOption));
+      setRecords(attendanceData.map(toAttendanceRecord));
+      setTodaySummary(todaySummaryData);
+      setTeamMonthlySummary(teamMonthSummaryData);
+      setMyMonthlySummary(myMonthSummaryData);
+      setCurrentStatus(currentAttendanceData);
+    } catch (error) {
+      console.error('Failed to load attendance data:', error);
+      if (showErrorToast) {
+        toast.error(getErrorMessage(error, 'Failed to load attendance data'));
+      }
+    }
+  }, [currentEmployeeId]);
+
+  useEffect(() => {
+    const load = async () => {
+      setIsLoading(true);
+      await refreshData(false);
+      setIsLoading(false);
+    };
+    load();
+  }, [refreshData]);
+
+  useEffect(() => {
+    refreshCalendarData(calendarMonth, false);
+  }, [calendarMonth, refreshCalendarData]);
+
+  const filteredRecords = useMemo(() => {
+    let nextRecords = [...records];
+    const today = new Date();
+
+    switch (dateRange) {
+      case 'today':
+        nextRecords = nextRecords.filter((record) =>
+          format(record.date, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd'));
+        break;
+      case 'yesterday':
+        nextRecords = nextRecords.filter((record) =>
+          format(record.date, 'yyyy-MM-dd') === format(subDays(today, 1), 'yyyy-MM-dd'));
+        break;
+      case 'week': {
+        const weekAgo = subDays(today, 7);
+        nextRecords = nextRecords.filter((record) => record.date >= weekAgo);
+        break;
+      }
+      case 'month': {
+        const monthStart = startOfMonth(today);
+        nextRecords = nextRecords.filter((record) => record.date >= monthStart);
+        break;
+      }
+      default:
+        break;
+    }
+
+    if (selectedEmployee !== 'all') {
+      nextRecords = nextRecords.filter((record) => record.employeeId === selectedEmployee);
+    }
+
+    if (searchQuery.trim()) {
+      const query = searchQuery.trim().toLowerCase();
+      nextRecords = nextRecords.filter((record) => record.employeeName.toLowerCase().includes(query));
+    }
+
+    nextRecords.sort((a, b) => b.date.getTime() - a.date.getTime());
+    return nextRecords;
+  }, [dateRange, records, searchQuery, selectedEmployee]);
+
+  const todaysRecords = useMemo(() => {
+    const todayKey = format(new Date(), 'yyyy-MM-dd');
+    return records
+      .filter((record) => format(record.date, 'yyyy-MM-dd') === todayKey)
+      .sort((a, b) => b.date.getTime() - a.date.getTime());
+  }, [records]);
+
+  const currentCheckInTime = currentStatus?.activeEntry?.checkIn
+    ? new Date(currentStatus.activeEntry.checkIn)
+    : undefined;
+
+  const displayedMonthlySummary = currentEmployeeId ? myMonthlySummary : teamMonthlySummary;
 
   const exportRecords = () => {
     const headers = ['Employee', 'Date', 'Check In', 'Check Out', 'Work Hours', 'Overtime', 'Status', 'Location', 'Notes'];
@@ -69,142 +330,108 @@ const AttendancePage: React.FC = () => {
     window.URL.revokeObjectURL(url);
     toast.success(`Exported ${filteredRecords.length} attendance record${filteredRecords.length === 1 ? '' : 's'}`);
   };
-  
-  // Filter records based on date range
-  const filteredRecords = useMemo(() => {
-    let records = [...mockAttendanceRecords];
-    const today = new Date();
 
-    // Filter by date range
-    switch (dateRange) {
-      case 'today': {
-        records = records.filter(
-          (r) => format(r.date, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd')
-        );
-        break;
-      }
-      case 'yesterday': {
-        records = records.filter(
-          (r) => format(r.date, 'yyyy-MM-dd') === format(subDays(today, 1), 'yyyy-MM-dd')
-        );
-        break;
-      }
-      case 'week': {
-        const weekAgo = subDays(today, 7);
-        records = records.filter((r) => r.date >= weekAgo);
-        break;
-      }
-      case 'month': {
-        const monthStart = startOfMonth(today);
-        records = records.filter((r) => r.date >= monthStart);
-        break;
-      }
-      default:
-        break;
+  const refreshAfterMutation = useCallback(async () => {
+    await Promise.all([
+      refreshData(false),
+      refreshCalendarData(calendarMonth, false),
+    ]);
+  }, [calendarMonth, refreshCalendarData, refreshData]);
+
+  const handleCheckIn = async (isRemote: boolean) => {
+    setIsActionLoading(true);
+    try {
+      const nextStatus = await checkInAttendance({ isRemote });
+      setCurrentStatus(nextStatus);
+      await refreshAfterMutation();
+      toast.success(`Checked in successfully ${isRemote ? '(Remote)' : '(Office)'}`);
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to check in'));
+    } finally {
+      setIsActionLoading(false);
     }
-
-    // Filter by employee
-    if (selectedEmployee !== 'all') {
-      records = records.filter((r) => r.employeeId === selectedEmployee);
-    }
-
-    // Filter by search
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      records = records.filter((r) =>
-        r.employeeName.toLowerCase().includes(query)
-      );
-    }
-
-    // Sort by date (most recent first)
-    records.sort((a, b) => b.date.getTime() - a.date.getTime());
-
-    return records;
-  }, [dateRange, selectedEmployee, searchQuery]);
-
-  // Calculate stats for today
-  const todayStats = useMemo(() => {
-    const today = new Date();
-    const todayRecords = mockAttendanceRecords.filter(
-      (r) => format(r.date, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd')
-    );
-
-    const checkedInToday = todayRecords.filter((r) => r.checkIn);
-    const averageCheckInMinutes = checkedInToday.length > 0
-      ? checkedInToday.reduce((sum, record) => (
-        sum + (record.checkIn?.getHours() || 0) * 60 + (record.checkIn?.getMinutes() || 0)
-      ), 0) / checkedInToday.length
-      : null;
-    const averageCheckIn = averageCheckInMinutes === null
-      ? undefined
-      : `${String(Math.floor(averageCheckInMinutes / 60)).padStart(2, '0')}:${String(Math.round(averageCheckInMinutes % 60)).padStart(2, '0')}`;
-
-    return {
-      presentToday: todayRecords.filter((r) => r.status === 'present').length,
-      absentToday: todayRecords.filter((r) => r.status === 'absent').length,
-      lateToday: todayRecords.filter((r) => r.status === 'late').length,
-      onLeaveToday: todayRecords.filter((r) => r.status === 'half-day').length,
-      totalEmployees: mockEmployees.length,
-      averageCheckIn,
-      averageWorkHours: todayRecords.length > 0
-        ? todayRecords.reduce((sum, record) => sum + record.workHours, 0) / todayRecords.length
-        : 0,
-      overtimeHours: todayRecords.reduce((sum, record) => sum + record.overtime, 0),
-    };
-  }, []);
-
-  // Calculate monthly summary
-  const monthlySummary = useMemo(() => {
-    const today = new Date();
-    const monthStart = startOfMonth(today);
-    const monthRecords = mockAttendanceRecords.filter(
-      (r) => r.date >= monthStart && r.status !== 'weekend' && r.status !== 'holiday'
-    );
-
-    const presentDays = monthRecords.filter((r) => r.status === 'present').length;
-    const absentDays = monthRecords.filter((r) => r.status === 'absent').length;
-    const lateDays = monthRecords.filter((r) => r.status === 'late').length;
-    const halfDays = monthRecords.filter((r) => r.status === 'half-day').length;
-    const totalWorkHours = monthRecords.reduce((sum, r) => sum + r.workHours, 0);
-    const totalOvertime = monthRecords.reduce((sum, r) => sum + r.overtime, 0);
-
-    return {
-      totalWorkingDays: presentDays + absentDays + lateDays + halfDays,
-      presentDays,
-      absentDays,
-      lateDays,
-      halfDays,
-      averageWorkHours: presentDays > 0 ? totalWorkHours / presentDays : 0,
-      totalOvertime,
-    };
-  }, []);
-
-  const handleCheckIn = (isRemote: boolean) => {
-    setIsCheckedIn(true);
-    setCheckInTime(new Date());
-    toast.success(`Checked in successfully ${isRemote ? '(Remote)' : '(Office)'}`);
   };
 
-  const handleCheckOut = () => {
-    setIsCheckedIn(false);
-    setCheckInTime(undefined);
-    setIsOnBreak(false);
-    toast.success('Checked out successfully');
+  const handleCheckOut = async () => {
+    setIsActionLoading(true);
+    try {
+      const nextStatus = await checkOutAttendance();
+      setCurrentStatus(nextStatus);
+      await refreshAfterMutation();
+      toast.success('Checked out successfully');
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to check out'));
+    } finally {
+      setIsActionLoading(false);
+    }
   };
 
-  const handleBreakStart = () => {
-    setIsOnBreak(true);
-    toast.info('Break started');
+  const handleBreakStart = async () => {
+    setIsActionLoading(true);
+    try {
+      const nextStatus = await startAttendanceBreak();
+      setCurrentStatus(nextStatus);
+      await refreshAfterMutation();
+      toast.success('Break started');
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to start break'));
+    } finally {
+      setIsActionLoading(false);
+    }
   };
 
-  const handleBreakEnd = () => {
-    setIsOnBreak(false);
-    toast.info('Break ended');
+  const handleBreakEnd = async () => {
+    setIsActionLoading(true);
+    try {
+      const nextStatus = await endAttendanceBreak();
+      setCurrentStatus(nextStatus);
+      await refreshAfterMutation();
+      toast.success('Break ended');
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to end break'));
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const handleEditRecord = (record: AttendanceRecord) => {
+    setEditingRecord(record);
+    setEditForm(buildEditFormState(record));
+  };
+
+  const handleSaveRecord = async () => {
+    if (!editingRecord || !editForm) {
+      return;
+    }
+
+    if (!editForm.startDate || !editForm.startTime) {
+      toast.error('Check-in date and time are required');
+      return;
+    }
+
+    setIsActionLoading(true);
+    try {
+      await updateAttendanceRecord(editingRecord.id, {
+        startTime: buildIsoDateTime(editForm.startDate, editForm.startTime),
+        endTime: editForm.endTime
+          ? buildIsoDateTime(editForm.endDate || editForm.startDate, editForm.endTime)
+          : null,
+        notes: editForm.notes.trim() || null,
+        isRemote: editForm.location === 'remote',
+      });
+      await refreshAfterMutation();
+      setEditingRecord(null);
+      setEditForm(null);
+      toast.success('Attendance record updated');
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to update attendance record'));
+    } finally {
+      setIsActionLoading(false);
+    }
   };
 
   return (
     <div className="p-6 space-y-6 bg-[#F8FAFC] min-h-screen">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Attendance</h1>
@@ -213,26 +440,29 @@ const AttendancePage: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" className="gap-2" onClick={exportRecords}>
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={exportRecords}
+            disabled={isLoading || filteredRecords.length === 0}
+          >
             <Download className="w-4 h-4" />
             Export Report
           </Button>
         </div>
       </div>
 
-      {/* Stats Cards */}
       <AttendanceStatsCards
-        presentToday={todayStats.presentToday}
-        absentToday={todayStats.absentToday}
-        lateToday={todayStats.lateToday}
-        onLeaveToday={todayStats.onLeaveToday}
-        totalEmployees={todayStats.totalEmployees}
-        averageCheckIn={todayStats.averageCheckIn}
-        averageWorkHours={todayStats.averageWorkHours}
-        overtimeHours={todayStats.overtimeHours}
+        presentToday={todaySummary.presentCount + todaySummary.halfDayCount}
+        absentToday={todaySummary.absentCount}
+        lateToday={todaySummary.lateCount}
+        onLeaveToday={todaySummary.onLeaveCount}
+        totalEmployees={todaySummary.totalEmployees}
+        averageCheckIn={todaySummary.averageCheckIn || undefined}
+        averageWorkHours={todaySummary.averageWorkHours}
+        overtimeHours={todaySummary.overtimeHours}
       />
 
-      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="bg-white">
           <TabsTrigger value="overview" className="gap-2">
@@ -253,48 +483,45 @@ const AttendancePage: React.FC = () => {
           </TabsTrigger>
         </TabsList>
 
-        {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Check In/Out Card */}
             <CheckInOutCard
-              isCheckedIn={isCheckedIn}
-              checkInTime={checkInTime}
+              isCheckedIn={currentStatus?.isCheckedIn === true}
+              checkInTime={currentCheckInTime}
               onCheckIn={handleCheckIn}
               onCheckOut={handleCheckOut}
               onBreakStart={handleBreakStart}
               onBreakEnd={handleBreakEnd}
-              isOnBreak={isOnBreak}
+              isOnBreak={currentStatus?.isOnBreak === true}
+              isLoading={isActionLoading}
             />
 
-            {/* Monthly Summary */}
             <div className="lg:col-span-2">
               <AttendanceSummaryCard
-                totalWorkingDays={monthlySummary.totalWorkingDays}
-                presentDays={monthlySummary.presentDays}
-                absentDays={monthlySummary.absentDays}
-                lateDays={monthlySummary.lateDays}
-                halfDays={monthlySummary.halfDays}
-                averageWorkHours={monthlySummary.averageWorkHours}
-                totalOvertime={monthlySummary.totalOvertime}
+                totalWorkingDays={teamMonthlySummary.totalWorkingDays}
+                presentDays={teamMonthlySummary.presentCount}
+                absentDays={teamMonthlySummary.absentCount}
+                lateDays={teamMonthlySummary.lateCount}
+                halfDays={teamMonthlySummary.halfDayCount}
+                averageWorkHours={teamMonthlySummary.averageWorkHours}
+                totalOvertime={teamMonthlySummary.overtimeHours}
               />
             </div>
           </div>
 
-          {/* Recent Records */}
           <div>
             <h3 className="text-lg font-semibold text-[#0F172A] mb-4">
               Today's Attendance
             </h3>
             <AttendanceTable
-              records={filteredRecords.slice(0, 10)}
+              records={todaysRecords.slice(0, 10)}
+              onEdit={handleEditRecord}
+              onViewDetails={setDetailsRecord}
             />
           </div>
         </TabsContent>
 
-        {/* Records Tab */}
         <TabsContent value="records" className="space-y-6">
-          {/* Filters */}
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
@@ -313,9 +540,9 @@ const AttendancePage: React.FC = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Employees</SelectItem>
-                {mockEmployees.map((emp) => (
-                  <SelectItem key={emp.id} value={emp.id}>
-                    {emp.firstName} {emp.lastName}
+                {employees.map((employee) => (
+                  <SelectItem key={employee.id} value={employee.id}>
+                    {employee.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -335,11 +562,13 @@ const AttendancePage: React.FC = () => {
             </Select>
           </div>
 
-          {/* Attendance Table */}
-          <AttendanceTable records={filteredRecords} />
+          <AttendanceTable
+            records={filteredRecords}
+            onEdit={handleEditRecord}
+            onViewDetails={setDetailsRecord}
+          />
         </TabsContent>
 
-        {/* Calendar Tab */}
         <TabsContent value="calendar" className="space-y-6">
           <div className="flex flex-col sm:flex-row gap-4 mb-4">
             <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
@@ -349,9 +578,9 @@ const AttendancePage: React.FC = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Employees</SelectItem>
-                {mockEmployees.map((emp) => (
-                  <SelectItem key={emp.id} value={emp.id}>
-                    {emp.firstName} {emp.lastName}
+                {employees.map((employee) => (
+                  <SelectItem key={employee.id} value={employee.id}>
+                    {employee.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -359,43 +588,232 @@ const AttendancePage: React.FC = () => {
           </div>
 
           <AttendanceCalendar
-            records={mockAttendanceRecords}
+            records={calendarRecords}
             employeeId={selectedEmployee !== 'all' ? selectedEmployee : undefined}
+            month={calendarMonth}
+            onMonthChange={setCalendarMonth}
+            onDateClick={(date) => {
+              const clickedRecords = calendarRecords.filter((record) =>
+                format(record.date, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
+                && (selectedEmployee === 'all' || record.employeeId === selectedEmployee),
+              );
+              if (clickedRecords[0]) {
+                setDetailsRecord(clickedRecords[0]);
+              }
+            }}
           />
         </TabsContent>
 
-        {/* My Attendance Tab */}
         <TabsContent value="my-attendance" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <CheckInOutCard
-              isCheckedIn={isCheckedIn}
-              checkInTime={checkInTime}
+              isCheckedIn={currentStatus?.isCheckedIn === true}
+              checkInTime={currentCheckInTime}
               onCheckIn={handleCheckIn}
               onCheckOut={handleCheckOut}
               onBreakStart={handleBreakStart}
               onBreakEnd={handleBreakEnd}
-              isOnBreak={isOnBreak}
+              isOnBreak={currentStatus?.isOnBreak === true}
+              isLoading={isActionLoading}
             />
 
             <div className="lg:col-span-2">
               <AttendanceSummaryCard
-                totalWorkingDays={monthlySummary.totalWorkingDays}
-                presentDays={monthlySummary.presentDays}
-                absentDays={monthlySummary.absentDays}
-                lateDays={monthlySummary.lateDays}
-                halfDays={monthlySummary.halfDays}
-                averageWorkHours={monthlySummary.averageWorkHours}
-                totalOvertime={monthlySummary.totalOvertime}
+                totalWorkingDays={displayedMonthlySummary.totalWorkingDays}
+                presentDays={displayedMonthlySummary.presentCount}
+                absentDays={displayedMonthlySummary.absentCount}
+                lateDays={displayedMonthlySummary.lateCount}
+                halfDays={displayedMonthlySummary.halfDayCount}
+                averageWorkHours={displayedMonthlySummary.averageWorkHours}
+                totalOvertime={displayedMonthlySummary.overtimeHours}
               />
             </div>
           </div>
 
           <AttendanceCalendar
-            records={mockAttendanceRecords}
-            employeeId="emp-1" // Current user's ID
+            records={calendarRecords}
+            employeeId={currentEmployeeId}
+            month={calendarMonth}
+            onMonthChange={setCalendarMonth}
+            onDateClick={(date) => {
+              const clickedRecord = calendarRecords.find((record) =>
+                record.employeeId === currentEmployeeId
+                && format(record.date, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'),
+              );
+              if (clickedRecord) {
+                setDetailsRecord(clickedRecord);
+              }
+            }}
           />
         </TabsContent>
       </Tabs>
+
+      <Dialog open={Boolean(detailsRecord)} onOpenChange={(open) => {
+        if (!open) {
+          setDetailsRecord(null);
+        }
+      }}>
+        <DialogContent className="sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle>Attendance Details</DialogTitle>
+            <DialogDescription>
+              Review the saved attendance record from the database.
+            </DialogDescription>
+          </DialogHeader>
+
+          {detailsRecord && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="rounded-md border border-[rgba(15,23,42,0.06)] p-3">
+                  <p className="text-xs uppercase tracking-wide text-[#64748B]">Employee</p>
+                  <p className="mt-1 font-medium text-[#0F172A]">{detailsRecord.employeeName}</p>
+                </div>
+                <div className="rounded-md border border-[rgba(15,23,42,0.06)] p-3">
+                  <p className="text-xs uppercase tracking-wide text-[#64748B]">Status</p>
+                  <p className="mt-1 font-medium text-[#0F172A] capitalize">{detailsRecord.status}</p>
+                </div>
+                <div className="rounded-md border border-[rgba(15,23,42,0.06)] p-3">
+                  <p className="text-xs uppercase tracking-wide text-[#64748B]">Check In</p>
+                  <p className="mt-1 font-medium text-[#0F172A]">
+                    {detailsRecord.checkIn ? format(detailsRecord.checkIn, 'MMM d, yyyy h:mm a') : '—'}
+                  </p>
+                </div>
+                <div className="rounded-md border border-[rgba(15,23,42,0.06)] p-3">
+                  <p className="text-xs uppercase tracking-wide text-[#64748B]">Check Out</p>
+                  <p className="mt-1 font-medium text-[#0F172A]">
+                    {detailsRecord.checkOut ? format(detailsRecord.checkOut, 'MMM d, yyyy h:mm a') : '—'}
+                  </p>
+                </div>
+                <div className="rounded-md border border-[rgba(15,23,42,0.06)] p-3">
+                  <p className="text-xs uppercase tracking-wide text-[#64748B]">Work Hours</p>
+                  <p className="mt-1 font-medium text-[#0F172A]">{detailsRecord.workHours.toFixed(1)}h</p>
+                </div>
+                <div className="rounded-md border border-[rgba(15,23,42,0.06)] p-3">
+                  <p className="text-xs uppercase tracking-wide text-[#64748B]">Location</p>
+                  <p className="mt-1 font-medium text-[#0F172A]">
+                    {detailsRecord.location || (detailsRecord.isRemote ? 'Remote' : 'Office')}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-md border border-[rgba(15,23,42,0.06)] p-3">
+                <p className="text-xs uppercase tracking-wide text-[#64748B]">Notes</p>
+                <p className="mt-1 text-sm text-[#475569] whitespace-pre-wrap">
+                  {detailsRecord.notes || 'No notes saved for this record.'}
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDetailsRecord(null)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(editingRecord)} onOpenChange={(open) => {
+        if (!open) {
+          setEditingRecord(null);
+          setEditForm(null);
+        }
+      }}>
+        <DialogContent className="sm:max-w-[560px]">
+          <DialogHeader>
+            <DialogTitle>Edit Attendance Record</DialogTitle>
+            <DialogDescription>
+              Update the existing record and save it directly to the database.
+            </DialogDescription>
+          </DialogHeader>
+
+          {editingRecord && editForm && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="attendance-start-date">Check In Date</Label>
+                  <Input
+                    id="attendance-start-date"
+                    type="date"
+                    value={editForm.startDate}
+                    onChange={(e) => setEditForm((current) => current ? { ...current, startDate: e.target.value } : current)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="attendance-start-time">Check In Time</Label>
+                  <Input
+                    id="attendance-start-time"
+                    type="time"
+                    value={editForm.startTime}
+                    onChange={(e) => setEditForm((current) => current ? { ...current, startTime: e.target.value } : current)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="attendance-end-date">Check Out Date</Label>
+                  <Input
+                    id="attendance-end-date"
+                    type="date"
+                    value={editForm.endDate}
+                    onChange={(e) => setEditForm((current) => current ? { ...current, endDate: e.target.value } : current)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="attendance-end-time">Check Out Time</Label>
+                  <Input
+                    id="attendance-end-time"
+                    type="time"
+                    value={editForm.endTime}
+                    onChange={(e) => setEditForm((current) => current ? { ...current, endTime: e.target.value } : current)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Location</Label>
+                <Select
+                  value={editForm.location}
+                  onValueChange={(value: 'office' | 'remote') =>
+                    setEditForm((current) => current ? { ...current, location: value } : current)}
+                >
+                  <SelectTrigger className="bg-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="office">Office</SelectItem>
+                    <SelectItem value="remote">Remote</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="attendance-notes">Notes</Label>
+                <Textarea
+                  id="attendance-notes"
+                  rows={4}
+                  value={editForm.notes}
+                  onChange={(e) => setEditForm((current) => current ? { ...current, notes: e.target.value } : current)}
+                  placeholder="Add notes for this attendance record"
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEditingRecord(null);
+                setEditForm(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSaveRecord} disabled={isActionLoading}>
+              {isActionLoading ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

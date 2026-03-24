@@ -21,6 +21,49 @@ export interface DepartmentEntity {
     isActive: boolean;
 }
 
+export interface AttendanceEntity {
+    id: string;
+    employeeId: string;
+    employeeName: string;
+    employeeAvatar?: string | null;
+    date: string;
+    checkIn?: string;
+    checkOut?: string;
+    status: "present" | "absent" | "late" | "half-day";
+    workHours: number;
+    overtime: number;
+    notes?: string | null;
+    location?: string;
+    isRemote: boolean;
+    breakMinutes: number;
+}
+
+export interface AttendanceSummaryEntity {
+    totalEmployees: number;
+    presentCount: number;
+    absentCount: number;
+    lateCount: number;
+    halfDayCount: number;
+    onLeaveCount: number;
+    totalWorkingDays: number;
+    averageCheckIn: string | null;
+    averageWorkHours: number;
+    overtimeHours: number;
+}
+
+export interface AttendanceCurrentEntity {
+    isCheckedIn: boolean;
+    isOnBreak: boolean;
+    breakMinutes: number;
+    activeEntry: AttendanceEntity | null;
+}
+
+export interface AttendanceQueryParams {
+    dateFrom?: string;
+    dateTo?: string;
+    employeeId?: string;
+}
+
 export async function getUsers(): Promise<UserEntity[]> {
     const response = await api.get("/users");
     return extractApiArray<UserEntity>(response.data);
@@ -62,4 +105,64 @@ export async function updateDepartment(id: string, data: Record<string, unknown>
 
 export async function deleteDepartment(id: string): Promise<void> {
     await api.delete(`/employees/departments/${id}`);
+}
+
+export async function getAttendanceRecords(
+    params?: AttendanceQueryParams,
+): Promise<AttendanceEntity[]> {
+    const response = await api.get("/employees/attendance", { params });
+    return extractApiArray<AttendanceEntity>(response.data);
+}
+
+export async function getAttendanceSummary(
+    params?: AttendanceQueryParams,
+): Promise<AttendanceSummaryEntity> {
+    const response = await api.get("/employees/attendance/summary", { params });
+    return extractApiData<AttendanceSummaryEntity>(response.data);
+}
+
+export async function getCurrentAttendance(): Promise<AttendanceCurrentEntity> {
+    const response = await api.get("/employees/attendance/current");
+    return extractApiData<AttendanceCurrentEntity>(response.data);
+}
+
+export async function checkInAttendance(data: {
+    isRemote?: boolean;
+    lat?: number;
+    lng?: number;
+}): Promise<AttendanceCurrentEntity> {
+    const response = await api.post("/employees/attendance/check-in", data);
+    return extractApiData<AttendanceCurrentEntity>(response.data);
+}
+
+export async function checkOutAttendance(data?: {
+    lat?: number;
+    lng?: number;
+    notes?: string | null;
+}): Promise<AttendanceCurrentEntity> {
+    const response = await api.post("/employees/attendance/check-out", data || {});
+    return extractApiData<AttendanceCurrentEntity>(response.data);
+}
+
+export async function startAttendanceBreak(): Promise<AttendanceCurrentEntity> {
+    const response = await api.post("/employees/attendance/break/start");
+    return extractApiData<AttendanceCurrentEntity>(response.data);
+}
+
+export async function endAttendanceBreak(): Promise<AttendanceCurrentEntity> {
+    const response = await api.post("/employees/attendance/break/end");
+    return extractApiData<AttendanceCurrentEntity>(response.data);
+}
+
+export async function updateAttendanceRecord(
+    id: string,
+    data: {
+        startTime?: string;
+        endTime?: string | null;
+        notes?: string | null;
+        isRemote?: boolean;
+    },
+): Promise<AttendanceEntity> {
+    const response = await api.put(`/employees/attendance/${id}`, data);
+    return extractApiData<AttendanceEntity>(response.data);
 }

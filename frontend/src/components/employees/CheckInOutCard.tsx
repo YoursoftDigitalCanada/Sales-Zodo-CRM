@@ -23,6 +23,7 @@ interface CheckInOutCardProps {
   onBreakStart?: () => void;
   onBreakEnd?: () => void;
   isOnBreak?: boolean;
+  isLoading?: boolean;
 }
 
 export const CheckInOutCard: React.FC<CheckInOutCardProps> = ({
@@ -33,6 +34,7 @@ export const CheckInOutCard: React.FC<CheckInOutCardProps> = ({
   onBreakStart,
   onBreakEnd,
   isOnBreak = false,
+  isLoading = false,
 }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isRemote, setIsRemote] = useState(false);
@@ -110,16 +112,18 @@ export const CheckInOutCard: React.FC<CheckInOutCardProps> = ({
                 id="remote-toggle"
                 checked={isRemote}
                 onCheckedChange={setIsRemote}
+                disabled={isLoading}
               />
             </div>
 
             {/* Check In Button */}
             <Button
               onClick={() => onCheckIn(isRemote)}
+              disabled={isLoading}
               className="w-full h-14 text-lg bg-[#0891B2] hover:bg-[#0891B2]/90 text-white "
             >
               <LogIn className="w-5 h-5 mr-2" />
-              Check In
+              {isLoading ? 'Saving...' : 'Check In'}
             </Button>
           </>
         ) : (
@@ -139,17 +143,18 @@ export const CheckInOutCard: React.FC<CheckInOutCardProps> = ({
             <Button
               variant="outline"
               onClick={isOnBreak ? onBreakEnd : onBreakStart}
+              disabled={isLoading}
               className={`w-full ${isOnBreak ? 'border-amber-300 bg-amber-50 text-amber-700' : ''}`}
             >
               {isOnBreak ? (
                 <>
                   <Play className="w-4 h-4 mr-2" />
-                  End Break
+                  {isLoading ? 'Saving...' : 'End Break'}
                 </>
               ) : (
                 <>
                   <Coffee className="w-4 h-4 mr-2" />
-                  Take a Break
+                  {isLoading ? 'Saving...' : 'Take a Break'}
                 </>
               )}
             </Button>
@@ -158,10 +163,11 @@ export const CheckInOutCard: React.FC<CheckInOutCardProps> = ({
             <Button
               onClick={onCheckOut}
               variant="destructive"
+              disabled={isLoading}
               className="w-full h-14 text-lg"
             >
               <LogOut className="w-5 h-5 mr-2" />
-              Check Out
+              {isLoading ? 'Saving...' : 'Check Out'}
             </Button>
           </>
         )}

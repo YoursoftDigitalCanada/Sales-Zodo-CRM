@@ -3,6 +3,11 @@ interface AuthUser {
   [key: string]: unknown;
 }
 
+interface AuthEmployee {
+  id?: string;
+  [key: string]: unknown;
+}
+
 interface AuthSessionInput {
   accessToken: string;
   refreshToken?: string;
@@ -58,4 +63,17 @@ export function clearAuthSession(): void {
     "onboardingCompleted",
     "onboardingData",
   ].forEach((key) => localStorage.removeItem(key));
+}
+
+export function getStoredEmployee(): AuthEmployee | null {
+  const rawEmployee = localStorage.getItem(AUTH_STORAGE_KEYS.employee);
+  if (!rawEmployee) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(rawEmployee) as AuthEmployee;
+  } catch {
+    return null;
+  }
 }

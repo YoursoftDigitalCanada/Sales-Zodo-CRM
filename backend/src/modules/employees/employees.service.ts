@@ -7,6 +7,13 @@ import {
     UpdateDepartmentDto,
     DepartmentConfigDto,
     DepartmentResponseDto,
+    AttendanceQueryDto,
+    AttendanceRecordDto,
+    AttendanceSummaryDto,
+    AttendanceCurrentStatusDto,
+    AttendanceCheckInDto,
+    AttendanceCheckOutDto,
+    UpdateAttendanceRecordDto,
     toEmployeeResponseDto,
 } from './employees.dto';
 import { NotFoundError, ConflictError, BadRequestError } from '../../common/errors/HttpErrors';
@@ -30,8 +37,47 @@ type EmployeeDepartmentRow = {
     };
 };
 
+type AttendanceTimeEntryRow = {
+    id: string;
+    startTime: Date;
+    endTime: Date | null;
+    duration: number | null;
+    phase: string | null;
+    notes: string | null;
+    description: string | null;
+    status: string;
+    employeeId: string;
+    employee: {
+        user: {
+            firstName: string;
+            lastName: string;
+            avatar: string | null;
+        };
+    };
+};
+
+type AttendanceMeta = {
+    isOnBreak?: boolean;
+    breakStartedAt?: string | null;
+    breakMinutes?: number;
+    text?: string | null;
+};
+
+type DailyAttendanceAggregate = {
+    employeeId: string;
+    dayKey: string;
+    checkIn: Date;
+    workedMinutes: number;
+    totalBreakMinutes: number;
+    hasCompletedEntry: boolean;
+};
+
 const DEPARTMENTS_SETTINGS_KEY = 'employeeDepartments';
 const DEFAULT_DEPARTMENT_COLORS = ['#22D3EE', '#8B5CF6', '#F59E0B', '#EC4899', '#10B981', '#3B82F6', '#EF4444', '#FBBF24'];
+const ATTENDANCE_META_PREFIX = '__attendance_meta__:';
+const LATE_THRESHOLD_MINUTES = 9 * 60 + 15;
+const HALF_DAY_MINUTES = 4 * 60;
+const FULL_DAY_MINUTES = 8 * 60;
 
 function asRecord(value: unknown): Record<string, unknown> {
     return value && typeof value === 'object' && !Array.isArray(value)
@@ -106,6 +152,162 @@ function coerceDepartmentConfig(value: unknown): DepartmentConfigDto | null {
         createdAt,
         isActive: typeof record.isActive === 'boolean' ? record.isActive : true,
     };
+}
+
+function normalizeDate(value?: Date | string | null): Date | null {
+    if (!value) {
+        return null;
+    }
+
+    const nextValue = value instanceof Date ? value : new Date(value);
+    return Number.isNaN(nextValue.getTime()) ? null : nextValue;
+}
+
+function getDayKey(value: Date): string {
+    return value.toISOString().slice(0, 10);
+}
+
+function getMinutesSinceMidnight(value: Date): number {
+    return value.getHours() * 60 + value.getMinutes();
+}
+
+function roundHours(minutes: number): number {
+    return Math.round((Math.max(0, minutes) / 60) * 10) / 10;
+}
+
+function isWeekend(value: Date): boolean {
+    const day = value.getDay();
+    return day === 0 || day === 6;
+}
+
+function formatAverageCheckIn(minutes: number): string {
+    const hours24 = Math.floor(minutes / 60);
+    const mins = Math.round(minutes % 60);
+    const period = hours24 >= 12 ? 'PM' : 'AM';
+    const hours12 = hours24 % 12 || 12;
+    return `${hours12}:${String(mins).padStart(2, '0')} ${period}`;
+}
+
+function overlapsRange(
+    rangeStart: Date,
+    rangeEnd: Date,
+    itemStart: Date,
+    itemEnd: Date,
+): boolean {
+    return itemStart <= rangeEnd && itemEnd >= rangeStart;
+}
+
+function parseAttendanceMeta(description?: string | null): AttendanceMeta {
+    if (!description || !description.startsWith(ATTENDANCE_META_PREFIX)) {
+        return {
+            breakMinutes: 0,
+            text: description || null,
+        };
+    }
+
+    try {
+        const parsed = JSON.parse(description.slice(ATTENDANCE_META_PREFIX.length)) as AttendanceMeta;
+        return {
+            isOnBreak: parsed.isOnBreak === true,
+            breakStartedAt: typeof parsed.breakStartedAt === 'string' ? parsed.breakStartedAt : null,
+            breakMinutes: typeof parsed.breakMinutes === 'number' && Number.isFinite(parsed.breakMinutes)
+                ? Math.max(0, parsed.breakMinutes)
+                : 0,
+            text: typeof parsed.text === 'string' ? parsed.text : null,
+        };
+    } catch {
+        return {
+            breakMinutes: 0,
+            text: description,
+        };
+    }
+}
+
+function serializeAttendanceMeta(meta: AttendanceMeta): string | null {
+    const normalized: AttendanceMeta = {
+        isOnBreak: meta.isOnBreak === true,
+        breakStartedAt: meta.breakStartedAt || null,
+        breakMinutes: typeof meta.breakMinutes === 'number' && Number.isFinite(meta.breakMinutes)
+            ? Math.max(0, Math.round(meta.breakMinutes))
+            : 0,
+        text: meta.text?.trim() || null,
+    };
+
+    return `${ATTENDANCE_META_PREFIX}${JSON.stringify(normalized)}`;
+}
+
+function getBreakMinutes(meta: AttendanceMeta, now: Date = new Date()): number {
+    const savedBreakMinutes = typeof meta.breakMinutes === 'number' && Number.isFinite(meta.breakMinutes)
+        ? Math.max(0, meta.breakMinutes)
+        : 0;
+
+    if (!meta.isOnBreak || !meta.breakStartedAt) {
+        return savedBreakMinutes;
+    }
+
+    const breakStartedAt = normalizeDate(meta.breakStartedAt);
+    if (!breakStartedAt) {
+        return savedBreakMinutes;
+    }
+
+    const activeBreakMinutes = Math.max(0, Math.round((now.getTime() - breakStartedAt.getTime()) / 60000));
+    return savedBreakMinutes + activeBreakMinutes;
+}
+
+function getRawDurationMinutes(entry: AttendanceTimeEntryRow, now: Date = new Date()): number {
+    if (typeof entry.duration === 'number' && Number.isFinite(entry.duration)) {
+        return Math.max(0, entry.duration);
+    }
+
+    const endTime = entry.endTime || now;
+    return Math.max(0, Math.round((endTime.getTime() - entry.startTime.getTime()) / 60000));
+}
+
+function getEffectiveDurationMinutes(entry: AttendanceTimeEntryRow, meta: AttendanceMeta, now: Date = new Date()): number {
+    return Math.max(0, getRawDurationMinutes(entry, now) - getBreakMinutes(meta, now));
+}
+
+function getAttendanceStatus(
+    checkIn: Date,
+    workedMinutes: number,
+    hasCompletedEntry: boolean,
+): AttendanceRecordDto['status'] {
+    if (hasCompletedEntry && workedMinutes > 0 && workedMinutes < HALF_DAY_MINUTES) {
+        return 'half-day';
+    }
+
+    if (getMinutesSinceMidnight(checkIn) > LATE_THRESHOLD_MINUTES) {
+        return 'late';
+    }
+
+    return 'present';
+}
+
+function mapTimeEntryToAttendanceRecord(entry: AttendanceTimeEntryRow): AttendanceRecordDto {
+    const meta = parseAttendanceMeta(entry.description);
+    const workedMinutes = getEffectiveDurationMinutes(entry, meta);
+    const workHours = roundHours(workedMinutes);
+
+    return {
+        id: entry.id,
+        employeeId: entry.employeeId,
+        employeeName: `${entry.employee.user.firstName} ${entry.employee.user.lastName}`.trim(),
+        employeeAvatar: entry.employee.user.avatar,
+        date: entry.startTime,
+        checkIn: entry.startTime,
+        checkOut: entry.endTime || undefined,
+        status: getAttendanceStatus(entry.startTime, workedMinutes, Boolean(entry.endTime)),
+        workHours,
+        overtime: roundHours(Math.max(0, workedMinutes - FULL_DAY_MINUTES)),
+        notes: entry.notes,
+        location: isRemoteAttendance(entry.phase) ? 'Remote' : 'Office',
+        isRemote: isRemoteAttendance(entry.phase),
+        breakMinutes: getBreakMinutes(meta),
+    };
+}
+
+function isRemoteAttendance(phase?: string | null): boolean {
+    return phase?.trim().toUpperCase() === 'REMOTE';
 }
 
 export class EmployeesService {
@@ -505,6 +707,491 @@ export class EmployeesService {
         return this.getAccess(employeeId, tenantId);
     }
 
+    async getAttendance(tenantId: string, query: AttendanceQueryDto): Promise<AttendanceRecordDto[]> {
+        const { dateFrom, dateTo, employeeId } = this.resolveAttendanceRange(query);
+        const entries = await prisma.timeEntry.findMany({
+            where: {
+                tenantId,
+                ...(employeeId ? { employeeId } : {}),
+                startTime: {
+                    gte: dateFrom,
+                    lte: dateTo,
+                },
+            },
+            include: {
+                employee: {
+                    select: {
+                        user: {
+                            select: {
+                                firstName: true,
+                                lastName: true,
+                                avatar: true,
+                            },
+                        },
+                    },
+                },
+            },
+            orderBy: {
+                startTime: 'desc',
+            },
+        });
+
+        return entries.map(mapTimeEntryToAttendanceRecord);
+    }
+
+    async getAttendanceSummary(tenantId: string, query: AttendanceQueryDto): Promise<AttendanceSummaryDto> {
+        const { dateFrom, dateTo, employeeId } = this.resolveAttendanceRange(query);
+        const [entries, activeEmployees, leaveRequests] = await Promise.all([
+            prisma.timeEntry.findMany({
+                where: {
+                    tenantId,
+                    ...(employeeId ? { employeeId } : {}),
+                    startTime: {
+                        gte: dateFrom,
+                        lte: dateTo,
+                    },
+                },
+                include: {
+                    employee: {
+                        select: {
+                            user: {
+                                select: {
+                                    firstName: true,
+                                    lastName: true,
+                                    avatar: true,
+                                },
+                            },
+                        },
+                    },
+                },
+                orderBy: {
+                    startTime: 'asc',
+                },
+            }),
+            employeeId
+                ? prisma.employee.count({
+                    where: {
+                        id: employeeId,
+                        tenantId,
+                        isActive: true,
+                    },
+                })
+                : prisma.employee.count({
+                    where: {
+                        tenantId,
+                        isActive: true,
+                    },
+                }),
+            prisma.leaveRequest.findMany({
+                where: {
+                    tenantId,
+                    ...(employeeId ? { employeeId } : {}),
+                    status: 'APPROVED',
+                    startDate: { lte: dateTo },
+                    endDate: { gte: dateFrom },
+                },
+                select: {
+                    employeeId: true,
+                    startDate: true,
+                    endDate: true,
+                },
+            }),
+        ]);
+
+        const dailyAttendance = this.buildDailyAttendance(entries, dateFrom, dateTo);
+        const leaveDayKeys = this.buildLeaveDayKeys(leaveRequests, dateFrom, dateTo);
+        const totalEmployees = employeeId ? Math.min(activeEmployees, 1) : activeEmployees;
+
+        let presentCount = 0;
+        let lateCount = 0;
+        let halfDayCount = 0;
+        let totalWorkedMinutes = 0;
+        let totalOvertimeMinutes = 0;
+        let totalCheckInMinutes = 0;
+        let workedDayCount = 0;
+
+        for (const attendance of dailyAttendance.values()) {
+            if (attendance.workedMinutes <= 0) {
+                continue;
+            }
+
+            workedDayCount += 1;
+            totalWorkedMinutes += attendance.workedMinutes;
+            totalOvertimeMinutes += Math.max(0, attendance.workedMinutes - FULL_DAY_MINUTES);
+            totalCheckInMinutes += getMinutesSinceMidnight(attendance.checkIn);
+
+            const status = getAttendanceStatus(
+                attendance.checkIn,
+                attendance.workedMinutes,
+                attendance.hasCompletedEntry,
+            );
+
+            if (status === 'half-day') {
+                halfDayCount += 1;
+                continue;
+            }
+
+            if (status === 'late') {
+                lateCount += 1;
+                continue;
+            }
+
+            presentCount += 1;
+        }
+
+        const businessDays = this.countBusinessDays(dateFrom, dateTo);
+        const leaveDayCount = leaveDayKeys.size;
+        const totalWorkingDays = Math.max(
+            0,
+            (employeeId ? businessDays : businessDays * totalEmployees) - leaveDayCount,
+        );
+        const absentCount = Math.max(
+            0,
+            totalWorkingDays - presentCount - lateCount - halfDayCount,
+        );
+
+        return {
+            totalEmployees,
+            presentCount,
+            absentCount,
+            lateCount,
+            halfDayCount,
+            onLeaveCount: leaveDayCount,
+            totalWorkingDays,
+            averageCheckIn: workedDayCount > 0
+                ? formatAverageCheckIn(totalCheckInMinutes / workedDayCount)
+                : null,
+            averageWorkHours: workedDayCount > 0 ? roundHours(totalWorkedMinutes / workedDayCount) : 0,
+            overtimeHours: roundHours(totalOvertimeMinutes),
+        };
+    }
+
+    async getCurrentAttendanceStatus(employeeId: string, tenantId: string): Promise<AttendanceCurrentStatusDto> {
+        const activeEntry = await prisma.timeEntry.findFirst({
+            where: {
+                employeeId,
+                tenantId,
+                status: 'CLOCKED_IN',
+            },
+            include: {
+                employee: {
+                    select: {
+                        user: {
+                            select: {
+                                firstName: true,
+                                lastName: true,
+                                avatar: true,
+                            },
+                        },
+                    },
+                },
+            },
+            orderBy: {
+                startTime: 'desc',
+            },
+        });
+
+        if (!activeEntry) {
+            return {
+                isCheckedIn: false,
+                isOnBreak: false,
+                breakMinutes: 0,
+                activeEntry: null,
+            };
+        }
+
+        const meta = parseAttendanceMeta(activeEntry.description);
+        return {
+            isCheckedIn: true,
+            isOnBreak: meta.isOnBreak === true,
+            breakMinutes: getBreakMinutes(meta),
+            activeEntry: mapTimeEntryToAttendanceRecord(activeEntry),
+        };
+    }
+
+    async checkInAttendance(
+        employeeId: string,
+        tenantId: string,
+        data: AttendanceCheckInDto,
+    ): Promise<AttendanceCurrentStatusDto> {
+        const existing = await prisma.timeEntry.findFirst({
+            where: {
+                employeeId,
+                tenantId,
+                status: 'CLOCKED_IN',
+            },
+        });
+
+        if (existing) {
+            throw new ConflictError('Already checked in. Please check out first.', ErrorCodes.RESOURCE_ALREADY_EXISTS);
+        }
+
+        await prisma.timeEntry.create({
+            data: {
+                employeeId,
+                tenantId,
+                startTime: new Date(),
+                status: 'CLOCKED_IN',
+                phase: data.isRemote ? 'REMOTE' : 'OFFICE',
+                clockInLat: data.lat ?? null,
+                clockInLng: data.lng ?? null,
+                description: serializeAttendanceMeta({
+                    isOnBreak: false,
+                    breakStartedAt: null,
+                    breakMinutes: 0,
+                    text: null,
+                }),
+            },
+        });
+
+        activityLogger.log({
+            tenantId,
+            entityType: 'Attendance',
+            entityId: employeeId,
+            action: 'CREATE',
+            module: 'employees',
+            description: `Employee ${employeeId} checked in`,
+            metadata: { isRemote: data.isRemote === true },
+        });
+
+        return this.getCurrentAttendanceStatus(employeeId, tenantId);
+    }
+
+    async checkOutAttendance(
+        employeeId: string,
+        tenantId: string,
+        data: AttendanceCheckOutDto,
+    ): Promise<AttendanceCurrentStatusDto> {
+        const entry = await prisma.timeEntry.findFirst({
+            where: {
+                employeeId,
+                tenantId,
+                status: 'CLOCKED_IN',
+            },
+            orderBy: {
+                startTime: 'desc',
+            },
+        });
+
+        if (!entry) {
+            throw new NotFoundError('No active attendance entry found', ErrorCodes.RESOURCE_NOT_FOUND);
+        }
+
+        const endTime = new Date();
+        const meta = parseAttendanceMeta(entry.description);
+        const breakMinutes = getBreakMinutes(meta, endTime);
+
+        await prisma.timeEntry.update({
+            where: { id: entry.id },
+            data: {
+                endTime,
+                duration: Math.max(0, Math.round((endTime.getTime() - entry.startTime.getTime()) / 60000)),
+                status: 'COMPLETED',
+                clockOutLat: data.lat ?? null,
+                clockOutLng: data.lng ?? null,
+                notes: data.notes !== undefined ? data.notes : entry.notes,
+                description: serializeAttendanceMeta({
+                    ...meta,
+                    isOnBreak: false,
+                    breakStartedAt: null,
+                    breakMinutes,
+                }),
+            },
+        });
+
+        activityLogger.log({
+            tenantId,
+            entityType: 'Attendance',
+            entityId: entry.id,
+            action: 'UPDATE',
+            module: 'employees',
+            description: `Employee ${employeeId} checked out`,
+        });
+
+        return this.getCurrentAttendanceStatus(employeeId, tenantId);
+    }
+
+    async startAttendanceBreak(employeeId: string, tenantId: string): Promise<AttendanceCurrentStatusDto> {
+        const entry = await prisma.timeEntry.findFirst({
+            where: {
+                employeeId,
+                tenantId,
+                status: 'CLOCKED_IN',
+            },
+            orderBy: {
+                startTime: 'desc',
+            },
+        });
+
+        if (!entry) {
+            throw new NotFoundError('No active attendance entry found', ErrorCodes.RESOURCE_NOT_FOUND);
+        }
+
+        const meta = parseAttendanceMeta(entry.description);
+        if (meta.isOnBreak) {
+            throw new ConflictError('Break is already active', ErrorCodes.RESOURCE_ALREADY_EXISTS);
+        }
+
+        await prisma.timeEntry.update({
+            where: { id: entry.id },
+            data: {
+                description: serializeAttendanceMeta({
+                    ...meta,
+                    isOnBreak: true,
+                    breakStartedAt: new Date().toISOString(),
+                }),
+            },
+        });
+
+        return this.getCurrentAttendanceStatus(employeeId, tenantId);
+    }
+
+    async endAttendanceBreak(employeeId: string, tenantId: string): Promise<AttendanceCurrentStatusDto> {
+        const entry = await prisma.timeEntry.findFirst({
+            where: {
+                employeeId,
+                tenantId,
+                status: 'CLOCKED_IN',
+            },
+            orderBy: {
+                startTime: 'desc',
+            },
+        });
+
+        if (!entry) {
+            throw new NotFoundError('No active attendance entry found', ErrorCodes.RESOURCE_NOT_FOUND);
+        }
+
+        const meta = parseAttendanceMeta(entry.description);
+        if (!meta.isOnBreak || !meta.breakStartedAt) {
+            throw new BadRequestError('Break is not currently active', ErrorCodes.INVALID_INPUT);
+        }
+
+        await prisma.timeEntry.update({
+            where: { id: entry.id },
+            data: {
+                description: serializeAttendanceMeta({
+                    ...meta,
+                    isOnBreak: false,
+                    breakStartedAt: null,
+                    breakMinutes: getBreakMinutes(meta),
+                }),
+            },
+        });
+
+        return this.getCurrentAttendanceStatus(employeeId, tenantId);
+    }
+
+    async updateAttendanceRecord(
+        attendanceId: string,
+        tenantId: string,
+        data: UpdateAttendanceRecordDto,
+    ): Promise<AttendanceRecordDto> {
+        const existing = await prisma.timeEntry.findFirst({
+            where: {
+                id: attendanceId,
+                tenantId,
+            },
+            include: {
+                employee: {
+                    select: {
+                        user: {
+                            select: {
+                                firstName: true,
+                                lastName: true,
+                                avatar: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        if (!existing) {
+            throw new NotFoundError('Attendance record not found', ErrorCodes.RESOURCE_NOT_FOUND);
+        }
+
+        const startTime = data.startTime ? new Date(data.startTime) : existing.startTime;
+        const endTime = data.endTime === undefined
+            ? existing.endTime
+            : data.endTime
+                ? new Date(data.endTime)
+                : null;
+
+        if (Number.isNaN(startTime.getTime()) || (endTime && Number.isNaN(endTime.getTime()))) {
+            throw new BadRequestError('Invalid attendance date or time');
+        }
+
+        if (endTime && endTime.getTime() < startTime.getTime()) {
+            throw new BadRequestError('Check-out time must be after check-in time');
+        }
+
+        const meta = parseAttendanceMeta(existing.description);
+        const updated = await prisma.timeEntry.update({
+            where: {
+                id: attendanceId,
+            },
+            data: {
+                startTime,
+                endTime,
+                duration: endTime
+                    ? Math.max(0, Math.round((endTime.getTime() - startTime.getTime()) / 60000))
+                    : null,
+                status: endTime ? 'COMPLETED' : 'CLOCKED_IN',
+                notes: data.notes !== undefined ? data.notes : existing.notes,
+                phase: data.isRemote === undefined
+                    ? existing.phase
+                    : data.isRemote
+                        ? 'REMOTE'
+                        : 'OFFICE',
+                description: serializeAttendanceMeta({
+                    ...meta,
+                    isOnBreak: endTime ? false : meta.isOnBreak,
+                    breakStartedAt: endTime ? null : meta.breakStartedAt,
+                }),
+            },
+            include: {
+                employee: {
+                    select: {
+                        user: {
+                            select: {
+                                firstName: true,
+                                lastName: true,
+                                avatar: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        activityLogger.log({
+            tenantId,
+            entityType: 'Attendance',
+            entityId: attendanceId,
+            action: 'UPDATE',
+            module: 'employees',
+            description: `Updated attendance record ${attendanceId}`,
+            metadata: { updatedFields: Object.keys(data) },
+        });
+
+        return mapTimeEntryToAttendanceRecord(updated);
+    }
+
+    async getAttendanceOwnerId(attendanceId: string, tenantId: string): Promise<string | null> {
+        const entry = await prisma.timeEntry.findFirst({
+            where: {
+                id: attendanceId,
+                tenantId,
+            },
+            select: {
+                employeeId: true,
+            },
+        });
+
+        return entry?.employeeId || null;
+    }
+
     private async getDepartmentContext(tenantId: string): Promise<{ settings: Record<string, unknown>; employees: EmployeeDepartmentRow[] }> {
         const [tenant, employees] = await Promise.all([
             prisma.tenant.findUnique({
@@ -676,6 +1363,104 @@ export class EmployeesService {
                 } as any,
             },
         });
+    }
+
+    private resolveAttendanceRange(query: AttendanceQueryDto): { dateFrom: Date; dateTo: Date; employeeId?: string } {
+        const now = new Date();
+        const dateFrom = normalizeDate(query.dateFrom) || new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+        const dateTo = normalizeDate(query.dateTo) || new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+        if (dateTo.getTime() < dateFrom.getTime()) {
+            throw new BadRequestError('dateTo must be after dateFrom');
+        }
+
+        return {
+            dateFrom,
+            dateTo,
+            employeeId: query.employeeId || undefined,
+        };
+    }
+
+    private buildDailyAttendance(
+        entries: AttendanceTimeEntryRow[],
+        dateFrom: Date,
+        dateTo: Date,
+    ): Map<string, DailyAttendanceAggregate> {
+        const dailyAttendance = new Map<string, DailyAttendanceAggregate>();
+
+        for (const entry of entries) {
+            if (!overlapsRange(dateFrom, dateTo, entry.startTime, entry.endTime || entry.startTime)) {
+                continue;
+            }
+
+            const meta = parseAttendanceMeta(entry.description);
+            const key = `${entry.employeeId}:${getDayKey(entry.startTime)}`;
+            const existing = dailyAttendance.get(key);
+            const workedMinutes = getEffectiveDurationMinutes(entry, meta);
+            const breakMinutes = getBreakMinutes(meta);
+
+            if (!existing) {
+                dailyAttendance.set(key, {
+                    employeeId: entry.employeeId,
+                    dayKey: getDayKey(entry.startTime),
+                    checkIn: entry.startTime,
+                    workedMinutes,
+                    totalBreakMinutes: breakMinutes,
+                    hasCompletedEntry: Boolean(entry.endTime),
+                });
+                continue;
+            }
+
+            existing.checkIn = entry.startTime.getTime() < existing.checkIn.getTime()
+                ? entry.startTime
+                : existing.checkIn;
+            existing.workedMinutes += workedMinutes;
+            existing.totalBreakMinutes += breakMinutes;
+            existing.hasCompletedEntry = existing.hasCompletedEntry || Boolean(entry.endTime);
+        }
+
+        return dailyAttendance;
+    }
+
+    private buildLeaveDayKeys(
+        leaveRequests: Array<{ employeeId: string; startDate: Date; endDate: Date }>,
+        dateFrom: Date,
+        dateTo: Date,
+    ): Set<string> {
+        const leaveDayKeys = new Set<string>();
+
+        for (const leaveRequest of leaveRequests) {
+            const current = new Date(Math.max(leaveRequest.startDate.getTime(), dateFrom.getTime()));
+            const end = new Date(Math.min(leaveRequest.endDate.getTime(), dateTo.getTime()));
+            current.setHours(0, 0, 0, 0);
+            end.setHours(0, 0, 0, 0);
+
+            while (current.getTime() <= end.getTime()) {
+                if (!isWeekend(current)) {
+                    leaveDayKeys.add(`${leaveRequest.employeeId}:${getDayKey(current)}`);
+                }
+                current.setDate(current.getDate() + 1);
+            }
+        }
+
+        return leaveDayKeys;
+    }
+
+    private countBusinessDays(start: Date, end: Date): number {
+        const cursor = new Date(start);
+        const finish = new Date(end);
+        cursor.setHours(0, 0, 0, 0);
+        finish.setHours(0, 0, 0, 0);
+
+        let total = 0;
+        while (cursor.getTime() <= finish.getTime()) {
+            if (!isWeekend(cursor)) {
+                total += 1;
+            }
+            cursor.setDate(cursor.getDate() + 1);
+        }
+
+        return total;
     }
 }
 

@@ -51,7 +51,7 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
       <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-10 text-center">
         <h3 className="text-base font-semibold text-[#0F172A]">No attendance records found</h3>
         <p className="mt-2 text-sm text-[#475569]">
-          Try a different employee or date filter to see mock attendance data.
+          Try a different employee or date filter to see attendance data from the database.
         </p>
       </div>
     );

@@ -28,21 +28,49 @@ interface AttendanceCalendarProps {
   records: AttendanceRecord[];
   employeeId?: string;
   onDateClick?: (date: Date, record?: AttendanceRecord) => void;
+  month?: Date;
+  onMonthChange?: (month: Date) => void;
 }
 
 export const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
   records,
   employeeId,
   onDateClick,
+  month,
+  onMonthChange,
 }) => {
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [internalMonth, setInternalMonth] = useState(new Date());
+  const currentMonth = month || internalMonth;
 
   const filteredRecords = employeeId 
     ? records.filter(r => r.employeeId === employeeId)
     : records;
 
+  const setCurrentMonth = (value: Date) => {
+    if (!month) {
+      setInternalMonth(value);
+    }
+    onMonthChange?.(value);
+  };
+
+  const getRecordsForDate = (date: Date): AttendanceRecord[] => {
+    return filteredRecords.filter(r => isSameDay(new Date(r.date), date));
+  };
+
   const getRecordForDate = (date: Date): AttendanceRecord | undefined => {
-    return filteredRecords.find(r => isSameDay(new Date(r.date), date));
+    const dayRecords = getRecordsForDate(date);
+    if (dayRecords.length === 0) {
+      return undefined;
+    }
+
+    if (employeeId || dayRecords.length === 1) {
+      return dayRecords[0];
+    }
+
+    const priority: AttendanceStatus[] = ['late', 'half-day', 'present', 'absent', 'holiday', 'weekend'];
+    return [...dayRecords].sort(
+      (a, b) => priority.indexOf(a.status) - priority.indexOf(b.status),
+    )[0];
   };
 
   const monthStart = startOfMonth(currentMonth);
@@ -114,6 +142,7 @@ export const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
       <div className="grid grid-cols-7 gap-1">
         {days.map((day, index) => {
           const record = getRecordForDate(day);
+          const dayRecords = getRecordsForDate(day);
           const isCurrentMonth = isSameMonth(day, currentMonth);
           const isCurrentDay = isToday(day);
 
@@ -149,16 +178,33 @@ export const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
                 {record && isCurrentMonth && (
                   <TooltipContent>
                     <div className="text-sm">
-                      <p className="font-medium">{getAttendanceStatusConfig(record.status).label}</p>
-                      {record.checkIn && (
-                        <p className="text-[#94A3B8]">
-                          In: {format(record.checkIn, 'h:mm a')}
-                        </p>
-                      )}
-                      {record.checkOut && (
-                        <p className="text-[#94A3B8]">
-                          Out: {format(record.checkOut, 'h:mm a')}
-                        </p>
+                      {employeeId || dayRecords.length === 1 ? (
+                        <>
+                          <p className="font-medium">{getAttendanceStatusConfig(record.status).label}</p>
+                          {record.checkIn && (
+                            <p className="text-[#94A3B8]">
+                              In: {format(record.checkIn, 'h:mm a')}
+                            </p>
+                          )}
+                          {record.checkOut && (
+                            <p className="text-[#94A3B8]">
+                              Out: {format(record.checkOut, 'h:mm a')}
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <p className="font-medium">{dayRecords.length} attendance records</p>
+                          <p className="text-[#94A3B8]">
+                            Present: {dayRecords.filter((item) => item.status === 'present').length}
+                          </p>
+                          <p className="text-[#94A3B8]">
+                            Late: {dayRecords.filter((item) => item.status === 'late').length}
+                          </p>
+                          <p className="text-[#94A3B8]">
+                            Half Day: {dayRecords.filter((item) => item.status === 'half-day').length}
+                          </p>
+                        </>
                       )}
                     </div>
                   </TooltipContent>

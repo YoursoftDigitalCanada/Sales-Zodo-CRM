@@ -2,7 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { employeesController } from './employees.controller';
 import { employeesService } from './employees.service';
 import { authenticate, loadEmployee } from '../../common/middleware/auth.middleware';
-import { requirePermission } from '../../common/middleware/permission.middleware';
+import { requireOwnershipOrPermission, requirePermission } from '../../common/middleware/permission.middleware';
 import { validate } from '../../common/middleware/validate.middleware';
 import { PERMISSIONS } from '../../common/constants/permissions';
 import {
@@ -13,6 +13,11 @@ import {
     createDepartmentSchema,
     updateDepartmentSchema,
     departmentIdSchema,
+    attendanceQuerySchema,
+    attendanceIdSchema,
+    checkInAttendanceSchema,
+    checkOutAttendanceSchema,
+    updateAttendanceSchema,
 } from './employees.validators';
 
 const router = Router();
@@ -21,6 +26,21 @@ router.use(loadEmployee);
 
 router.get('/', requirePermission(PERMISSIONS.EMPLOYEES_VIEW), validate(employeeQuerySchema), employeesController.getMany.bind(employeesController));
 router.post('/', requirePermission(PERMISSIONS.EMPLOYEES_CREATE), validate(createEmployeeSchema), employeesController.create.bind(employeesController));
+router.get('/attendance', requirePermission(PERMISSIONS.EMPLOYEES_VIEW), validate(attendanceQuerySchema), employeesController.getAttendance.bind(employeesController));
+router.get('/attendance/summary', requirePermission(PERMISSIONS.EMPLOYEES_VIEW), validate(attendanceQuerySchema), employeesController.getAttendanceSummary.bind(employeesController));
+router.get('/attendance/current', employeesController.getCurrentAttendance.bind(employeesController));
+router.post('/attendance/check-in', validate(checkInAttendanceSchema), employeesController.checkInAttendance.bind(employeesController));
+router.post('/attendance/check-out', validate(checkOutAttendanceSchema), employeesController.checkOutAttendance.bind(employeesController));
+router.post('/attendance/break/start', employeesController.startAttendanceBreak.bind(employeesController));
+router.post('/attendance/break/end', employeesController.endAttendanceBreak.bind(employeesController));
+router.put(
+    '/attendance/:attendanceId',
+    validate(attendanceIdSchema),
+    validate(updateAttendanceSchema),
+    requireOwnershipOrPermission(PERMISSIONS.EMPLOYEES_UPDATE, async (req: Request) =>
+        employeesService.getAttendanceOwnerId(req.params.attendanceId, req.context.tenantId)),
+    employeesController.updateAttendance.bind(employeesController),
+);
 router.get('/departments', requirePermission(PERMISSIONS.EMPLOYEES_VIEW), employeesController.getDepartments.bind(employeesController));
 router.post('/departments', requirePermission(PERMISSIONS.EMPLOYEES_CREATE), validate(createDepartmentSchema), employeesController.createDepartment.bind(employeesController));
 router.put('/departments/:departmentId', requirePermission(PERMISSIONS.EMPLOYEES_UPDATE), validate(departmentIdSchema), validate(updateDepartmentSchema), employeesController.updateDepartment.bind(employeesController));

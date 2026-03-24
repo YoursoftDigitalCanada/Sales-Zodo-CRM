@@ -61,3 +61,45 @@ export const updateDepartmentSchema = z.object({
 export const departmentIdSchema = z.object({
     params: z.object({ departmentId: z.string().min(1) }),
 });
+
+const isoDateString = z.string().datetime();
+
+export const attendanceQuerySchema = z.object({
+    query: z.object({
+        dateFrom: isoDateString.optional(),
+        dateTo: isoDateString.optional(),
+        employeeId: z.string().uuid().optional(),
+    }),
+});
+
+export const attendanceIdSchema = z.object({
+    params: z.object({ attendanceId: z.string().uuid() }),
+});
+
+export const checkInAttendanceSchema = z.object({
+    body: z.object({
+        isRemote: z.boolean().optional(),
+        lat: z.number().optional(),
+        lng: z.number().optional(),
+    }).optional().default({}),
+});
+
+export const checkOutAttendanceSchema = z.object({
+    body: z.object({
+        lat: z.number().optional(),
+        lng: z.number().optional(),
+        notes: z.string().max(2000).optional().nullable(),
+    }).optional().default({}),
+});
+
+export const updateAttendanceSchema = z.object({
+    body: z.object({
+        startTime: isoDateString.optional(),
+        endTime: isoDateString.optional().nullable(),
+        notes: z.string().max(2000).optional().nullable(),
+        isRemote: z.boolean().optional(),
+    }).refine(
+        (value) => Object.keys(value).length > 0,
+        'At least one attendance field is required',
+    ),
+});

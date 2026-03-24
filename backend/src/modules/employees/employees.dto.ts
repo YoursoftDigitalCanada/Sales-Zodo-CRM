@@ -74,6 +74,68 @@ export interface DepartmentResponseDto {
     isActive: boolean;
 }
 
+export interface AttendanceQueryDto {
+    dateFrom?: Date | string;
+    dateTo?: Date | string;
+    employeeId?: string;
+}
+
+export interface AttendanceSummaryDto {
+    totalEmployees: number;
+    presentCount: number;
+    absentCount: number;
+    lateCount: number;
+    halfDayCount: number;
+    onLeaveCount: number;
+    totalWorkingDays: number;
+    averageCheckIn: string | null;
+    averageWorkHours: number;
+    overtimeHours: number;
+}
+
+export interface AttendanceRecordDto {
+    id: string;
+    employeeId: string;
+    employeeName: string;
+    employeeAvatar?: string | null;
+    date: Date;
+    checkIn?: Date;
+    checkOut?: Date;
+    status: 'present' | 'absent' | 'late' | 'half-day';
+    workHours: number;
+    overtime: number;
+    notes?: string | null;
+    location?: string;
+    isRemote: boolean;
+    breakMinutes: number;
+}
+
+export interface AttendanceCurrentStatusDto {
+    isCheckedIn: boolean;
+    isOnBreak: boolean;
+    breakMinutes: number;
+    activeEntry: AttendanceRecordDto | null;
+}
+
+export interface AttendanceCheckInDto {
+    isRemote?: boolean;
+    lat?: number;
+    lng?: number;
+}
+
+export interface AttendanceCheckOutDto {
+    lat?: number;
+    lng?: number;
+    notes?: string | null;
+}
+
+export interface UpdateAttendanceRecordDto {
+    startTime?: Date | string;
+    endTime?: Date | string | null;
+    notes?: string | null;
+    isRemote?: boolean;
+}
+
 type EmployeeWithUser = Employee & {
     user: { id: string; firstName: string; lastName: string; email: string };
     role?: { id: string; name: string } | null;

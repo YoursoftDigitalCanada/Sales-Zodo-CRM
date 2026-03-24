@@ -46,11 +46,22 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
   onEdit,
   onViewDetails,
 }) => {
+  if (records.length === 0) {
+    return (
+      <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-10 text-center">
+        <h3 className="text-base font-semibold text-[#0F172A]">No attendance records found</h3>
+        <p className="mt-2 text-sm text-[#475569]">
+          Try a different employee or date filter to see mock attendance data.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden">
       <Table>
         <TableHeader>
-          <TableRow className="bg-white/5/50">
+          <TableRow className="bg-slate-50">
             <TableHead>Employee</TableHead>
             <TableHead>Date</TableHead>
             <TableHead>Check In</TableHead>
@@ -87,7 +98,7 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
                 </TableCell>
                 <TableCell>
                   {record.checkIn ? (
-                    <div className="flex items-center gap-1.5 text-slate-200">
+                    <div className="flex items-center gap-1.5 text-[#0F172A]">
                       <Clock className="w-4 h-4 text-emerald-500" />
                       {format(record.checkIn, 'h:mm a')}
                     </div>
@@ -97,7 +108,7 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
                 </TableCell>
                 <TableCell>
                   {record.checkOut ? (
-                    <div className="flex items-center gap-1.5 text-slate-200">
+                    <div className="flex items-center gap-1.5 text-[#0F172A]">
                       <Clock className="w-4 h-4 text-red-500" />
                       {format(record.checkOut, 'h:mm a')}
                     </div>

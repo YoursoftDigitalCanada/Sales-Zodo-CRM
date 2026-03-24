@@ -127,9 +127,9 @@ export const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
                     onClick={() => onDateClick?.(day, record)}
                     className={`
                       relative aspect-square p-1 rounded-md text-sm
-                      ${!isCurrentMonth ? 'text-gray-300' : 'text-slate-200'}
+                      ${!isCurrentMonth ? 'text-gray-300' : 'text-[#0F172A]'}
                       ${isCurrentDay ? 'ring-2 ring-[#22D3EE] ring-offset-2' : ''}
-                      hover:bg-white/10 transition-colors
+                      hover:bg-slate-50 transition-colors
                     `}
                   >
                     <span className={`${isCurrentDay ? 'font-bold text-[#0891B2]' : ''}`}>

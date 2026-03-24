@@ -30,7 +30,6 @@ import {
   CheckInOutCard,
   mockAttendanceRecords,
   mockEmployees,
-  AttendanceRecord,
 } from '@/components/employees';
 
 const AttendancePage: React.FC = () => {
@@ -44,6 +43,33 @@ const AttendancePage: React.FC = () => {
   const [checkInTime, setCheckInTime] = useState<Date | undefined>();
   const [isOnBreak, setIsOnBreak] = useState(false);
 
+  const exportRecords = () => {
+    const headers = ['Employee', 'Date', 'Check In', 'Check Out', 'Work Hours', 'Overtime', 'Status', 'Location', 'Notes'];
+    const rows = filteredRecords.map((record) => [
+      record.employeeName,
+      format(record.date, 'yyyy-MM-dd'),
+      record.checkIn ? format(record.checkIn, 'HH:mm') : '',
+      record.checkOut ? format(record.checkOut, 'HH:mm') : '',
+      record.workHours.toFixed(1),
+      record.overtime.toFixed(1),
+      record.status,
+      record.location || (record.isRemote ? 'Remote' : 'Office'),
+      record.notes || '',
+    ]);
+
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `attendance-${dateRange}-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    window.URL.revokeObjectURL(url);
+    toast.success(`Exported ${filteredRecords.length} attendance record${filteredRecords.length === 1 ? '' : 's'}`);
+  };
+  
   // Filter records based on date range
   const filteredRecords = useMemo(() => {
     let records = [...mockAttendanceRecords];
@@ -51,23 +77,29 @@ const AttendancePage: React.FC = () => {
 
     // Filter by date range
     switch (dateRange) {
-      case 'today':
+      case 'today': {
         records = records.filter(
           (r) => format(r.date, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd')
         );
         break;
-      case 'yesterday':
+      }
+      case 'yesterday': {
         records = records.filter(
           (r) => format(r.date, 'yyyy-MM-dd') === format(subDays(today, 1), 'yyyy-MM-dd')
         );
         break;
-      case 'week':
+      }
+      case 'week': {
         const weekAgo = subDays(today, 7);
         records = records.filter((r) => r.date >= weekAgo);
         break;
-      case 'month':
+      }
+      case 'month': {
         const monthStart = startOfMonth(today);
         records = records.filter((r) => r.date >= monthStart);
+        break;
+      }
+      default:
         break;
     }
 
@@ -88,7 +120,7 @@ const AttendancePage: React.FC = () => {
     records.sort((a, b) => b.date.getTime() - a.date.getTime());
 
     return records;
-  }, [mockAttendanceRecords, dateRange, selectedEmployee, searchQuery]);
+  }, [dateRange, selectedEmployee, searchQuery]);
 
   // Calculate stats for today
   const todayStats = useMemo(() => {
@@ -97,12 +129,27 @@ const AttendancePage: React.FC = () => {
       (r) => format(r.date, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd')
     );
 
+    const checkedInToday = todayRecords.filter((r) => r.checkIn);
+    const averageCheckInMinutes = checkedInToday.length > 0
+      ? checkedInToday.reduce((sum, record) => (
+        sum + (record.checkIn?.getHours() || 0) * 60 + (record.checkIn?.getMinutes() || 0)
+      ), 0) / checkedInToday.length
+      : null;
+    const averageCheckIn = averageCheckInMinutes === null
+      ? undefined
+      : `${String(Math.floor(averageCheckInMinutes / 60)).padStart(2, '0')}:${String(Math.round(averageCheckInMinutes % 60)).padStart(2, '0')}`;
+
     return {
       presentToday: todayRecords.filter((r) => r.status === 'present').length,
       absentToday: todayRecords.filter((r) => r.status === 'absent').length,
       lateToday: todayRecords.filter((r) => r.status === 'late').length,
       onLeaveToday: todayRecords.filter((r) => r.status === 'half-day').length,
       totalEmployees: mockEmployees.length,
+      averageCheckIn,
+      averageWorkHours: todayRecords.length > 0
+        ? todayRecords.reduce((sum, record) => sum + record.workHours, 0) / todayRecords.length
+        : 0,
+      overtimeHours: todayRecords.reduce((sum, record) => sum + record.overtime, 0),
     };
   }, []);
 
@@ -166,7 +213,7 @@ const AttendancePage: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" className="gap-2">
+          <Button variant="outline" className="gap-2" onClick={exportRecords}>
             <Download className="w-4 h-4" />
             Export Report
           </Button>
@@ -180,6 +227,9 @@ const AttendancePage: React.FC = () => {
         lateToday={todayStats.lateToday}
         onLeaveToday={todayStats.onLeaveToday}
         totalEmployees={todayStats.totalEmployees}
+        averageCheckIn={todayStats.averageCheckIn}
+        averageWorkHours={todayStats.averageWorkHours}
+        overtimeHours={todayStats.overtimeHours}
       />
 
       {/* Tabs */}

@@ -5,10 +5,8 @@ import {
   Clock, 
   LogIn, 
   LogOut, 
-  MapPin, 
   Coffee, 
   Play, 
-  Pause,
   Home,
   Building2
 } from 'lucide-react';
@@ -68,26 +66,26 @@ export const CheckInOutCard: React.FC<CheckInOutCardProps> = ({
       <div 
         className={`p-6 ${
           isCheckedIn 
-            ? ' from-emerald-500 to-emerald-600' 
-            : ' from-gray-100 to-gray-200'
+            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600' 
+            : 'bg-gradient-to-r from-slate-50 to-slate-100'
         }`}
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 className={`font-semibold ${isCheckedIn ? 'text-[#0F172A]' : 'text-slate-200'}`}>
+          <h3 className={`font-semibold ${isCheckedIn ? 'text-white' : 'text-[#0F172A]'}`}>
             {isCheckedIn ? 'Currently Working' : 'Not Checked In'}
           </h3>
           {isCheckedIn && (
-            <Badge className="bg-white/20 text-[#0F172A] border-0">
+            <Badge className="bg-white/20 text-white border-0">
               {isOnBreak ? 'On Break' : 'Active'}
             </Badge>
           )}
         </div>
         
-        <div className={`text-4xl font-mono font-bold ${isCheckedIn ? 'text-[#0F172A]' : 'text-[#94A3B8]'}`}>
+        <div className={`text-4xl font-mono font-bold ${isCheckedIn ? 'text-white' : 'text-[#0F172A]'}`}>
           {isCheckedIn ? elapsedTime : format(currentTime, 'HH:mm:ss')}
         </div>
         
-        <p className={`text-sm mt-2 ${isCheckedIn ? 'text-[#0F172A]/80' : 'text-[#475569]'}`}>
+        <p className={`text-sm mt-2 ${isCheckedIn ? 'text-white/80' : 'text-[#475569]'}`}>
           {format(currentTime, 'EEEE, MMMM d, yyyy')}
         </p>
       </div>
@@ -97,14 +95,14 @@ export const CheckInOutCard: React.FC<CheckInOutCardProps> = ({
         {!isCheckedIn ? (
           <>
             {/* Remote Toggle */}
-            <div className="flex items-center justify-between p-3 bg-white/5 rounded-md">
+            <div className="flex items-center justify-between p-3 bg-slate-50 rounded-md">
               <div className="flex items-center gap-2">
                 {isRemote ? (
                   <Home className="w-5 h-5 text-blue-500" />
                 ) : (
                   <Building2 className="w-5 h-5 text-[#475569]" />
                 )}
-                <Label htmlFor="remote-toggle" className="text-sm text-slate-200">
+                <Label htmlFor="remote-toggle" className="text-sm text-[#0F172A]">
                   {isRemote ? 'Working Remotely' : 'Working from Office'}
                 </Label>
               </div>
@@ -127,7 +125,7 @@ export const CheckInOutCard: React.FC<CheckInOutCardProps> = ({
         ) : (
           <>
             {/* Check In Info */}
-            <div className="flex items-center justify-between p-3 bg-white/5 rounded-md">
+            <div className="flex items-center justify-between p-3 bg-slate-50 rounded-md">
               <div className="flex items-center gap-2 text-[#475569]">
                 <Clock className="w-4 h-4" />
                 <span className="text-sm">Checked in at</span>

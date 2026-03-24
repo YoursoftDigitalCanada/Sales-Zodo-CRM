@@ -2,10 +2,20 @@ import {
   Employee, 
   Department, 
   AttendanceRecord, 
+  AttendanceStatus,
   LeaveRequest, 
   LeaveBalance 
 } from './types';
 import { subDays, addDays, setHours, setMinutes } from 'date-fns';
+
+const deterministicRandom = (seed: number): number => {
+  const value = Math.sin(seed) * 10000;
+  return value - Math.floor(value);
+};
+
+const getEmployeeAttendanceSeed = (employeeId: string, dayOffset: number): number => (
+  employeeId.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0) + dayOffset * 97
+);
 
 export const mockDepartments: Department[] = [
   {
@@ -398,6 +408,7 @@ export const generateAttendanceRecords = (): AttendanceRecord[] => {
     for (let i = 0; i < 30; i++) {
       const date = subDays(today, i);
       const dayOfWeek = date.getDay();
+      const seed = getEmployeeAttendanceSeed(employee.id, i);
       
       // Skip weekends
       if (dayOfWeek === 0 || dayOfWeek === 6) {
@@ -416,34 +427,44 @@ export const generateAttendanceRecords = (): AttendanceRecord[] => {
       }
       
       // Random attendance status
-      const random = Math.random();
+      const random = deterministicRandom(seed);
       let status: AttendanceStatus;
       let checkIn: Date | undefined;
       let checkOut: Date | undefined;
       let workHours = 0;
       let overtime = 0;
+      let notes: string | undefined;
+      const remoteRoll = deterministicRandom(seed + 11);
+      const startMinuteRoll = deterministicRandom(seed + 17);
+      const endMinuteRoll = deterministicRandom(seed + 23);
+      const overtimeRoll = deterministicRandom(seed + 29);
       
       if (random < 0.75) {
         status = 'present';
-        checkIn = setMinutes(setHours(new Date(date), 9), Math.floor(Math.random() * 15));
-        checkOut = setMinutes(setHours(new Date(date), 17 + Math.floor(Math.random() * 3)), Math.floor(Math.random() * 60));
-        workHours = 8 + Math.random() * 2;
+        checkIn = setMinutes(setHours(new Date(date), 9), Math.floor(startMinuteRoll * 15));
+        checkOut = setMinutes(setHours(new Date(date), 17 + Math.floor(overtimeRoll * 3)), Math.floor(endMinuteRoll * 60));
+        workHours = 8 + overtimeRoll * 2;
         overtime = workHours > 8 ? workHours - 8 : 0;
       } else if (random < 0.85) {
         status = 'late';
-        checkIn = setMinutes(setHours(new Date(date), 9), 30 + Math.floor(Math.random() * 90));
-        checkOut = setMinutes(setHours(new Date(date), 18), Math.floor(Math.random() * 60));
+        checkIn = setMinutes(setHours(new Date(date), 9), 30 + Math.floor(startMinuteRoll * 90));
+        checkOut = setMinutes(setHours(new Date(date), 18), Math.floor(endMinuteRoll * 60));
         workHours = 7.5;
         overtime = 0;
+        notes = 'Arrived later than scheduled start time';
       } else if (random < 0.92) {
         status = 'half-day';
-        checkIn = setMinutes(setHours(new Date(date), 9), Math.floor(Math.random() * 15));
-        checkOut = setMinutes(setHours(new Date(date), 13), Math.floor(Math.random() * 60));
+        checkIn = setMinutes(setHours(new Date(date), 9), Math.floor(startMinuteRoll * 15));
+        checkOut = setMinutes(setHours(new Date(date), 13), Math.floor(endMinuteRoll * 60));
         workHours = 4;
         overtime = 0;
+        notes = 'Approved half-day shift';
       } else {
         status = 'absent';
+        notes = 'No call, no show';
       }
+
+      const isRemote = remoteRoll > 0.7;
       
       records.push({
         id: `att-${employee.id}-${i}`,
@@ -456,8 +477,9 @@ export const generateAttendanceRecords = (): AttendanceRecord[] => {
         status,
         workHours,
         overtime,
-        isRemote: Math.random() > 0.7,
-        notes: status === 'absent' ? 'No call, no show' : undefined,
+        isRemote,
+        location: isRemote ? 'Remote' : 'Head Office',
+        notes,
       });
     }
   });

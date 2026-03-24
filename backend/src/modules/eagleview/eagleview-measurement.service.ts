@@ -26,6 +26,8 @@ export interface OrderAddress {
     state: string;
     postalCode: string;
     country?: string;
+    latitude?: number;
+    longitude?: number;
 }
 
 export interface PlaceOrderResponse {
@@ -70,26 +72,40 @@ class EagleViewMeasurementService {
     /**
      * POST /v2/Order/PlaceOrder
      */
-    async placeOrder(address: OrderAddress, referenceId?: string): Promise<PlaceOrderResponse> {
+    async placeOrder(address: OrderAddress, _referenceId?: string): Promise<PlaceOrderResponse> {
         logger.info('[EagleView] Placing measurement order', { address: address.addressLine1 });
 
         const headers = await this.getHeaders();
 
+        const hasCoordinates = Number.isFinite(address.latitude) && Number.isFinite(address.longitude);
+        const reportAddress = {
+            Address: address.addressLine1,
+            City: address.city,
+            State: address.state,
+            Zip: address.postalCode,
+            Country: address.country || 'US',
+            AddressType: 0,
+            ...(hasCoordinates
+                ? {
+                    Latitude: address.latitude,
+                    Longitude: address.longitude,
+                }
+                : {}),
+        };
+
         const body = {
-            OrderReports: {
-                ReportAddresses: {
-                    Address: address.addressLine1,
-                    City: address.city,
-                    State: address.state,
-                    Zip: address.postalCode,
-                    Country: address.country || 'CA',
-                    AddressType: 0,
+            OrderReports: [
+                {
+                    ReportAddresses: [reportAddress],
+                    BuildingId: 'House',
+                    PrimaryProductId: 2,
+                    DeliveryProductId: 7,
+                    AddOnProductIds: [],
+                    MeasurementInstructionType: 1,
+                    ChangesInLast4Years: false,
+                    Comments: '',
                 },
-                PrimaryProductId: 2,
-                DeliveryProductId: 7,
-                MeasurementInstructionType: 1,
-                ChangesInLast4Years: false,
-            },
+            ],
         };
 
         const response = await axios.post(`${BASE_URL}/v2/Order/PlaceOrder`, body, {

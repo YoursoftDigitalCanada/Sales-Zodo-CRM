@@ -508,6 +508,52 @@ export class RoofEstimatorService {
         );
     }
 
+    private getAddressComponent(
+        components: Array<{ long_name?: string; short_name?: string; types?: string[] }>,
+        type: string,
+        format: 'long' | 'short' = 'long',
+    ): string {
+        const component = components.find((item) => Array.isArray(item.types) && item.types.includes(type));
+        if (!component) return '';
+        return format === 'short'
+            ? component.short_name || component.long_name || ''
+            : component.long_name || component.short_name || '';
+    }
+
+    private buildStreetAddress(
+        components: Array<{ long_name?: string; short_name?: string; types?: string[] }>,
+    ): string {
+        const streetNumber = this.getAddressComponent(components, 'street_number');
+        const route = this.getAddressComponent(components, 'route');
+        const subpremise = this.getAddressComponent(components, 'subpremise');
+
+        const streetLine = [streetNumber, route].filter(Boolean).join(' ').trim();
+        return [streetLine, subpremise].filter(Boolean).join(', ').trim();
+    }
+
+    private extractStructuredAddress(
+        components: Array<{ long_name?: string; short_name?: string; types?: string[] }>,
+    ): {
+        addressLine1: string;
+        city: string;
+        state: string;
+        postalCode: string;
+        country: string;
+    } {
+        const city = this.getAddressComponent(components, 'locality')
+            || this.getAddressComponent(components, 'postal_town')
+            || this.getAddressComponent(components, 'administrative_area_level_3')
+            || this.getAddressComponent(components, 'sublocality_level_1');
+
+        return {
+            addressLine1: this.buildStreetAddress(components),
+            city,
+            state: this.getAddressComponent(components, 'administrative_area_level_1', 'short'),
+            postalCode: this.getAddressComponent(components, 'postal_code'),
+            country: this.getAddressComponent(components, 'country', 'short') || 'US',
+        };
+    }
+
     /**
      * Google Place Details API — fetch detailed place info after autocomplete selection.
      * Returns full address, coordinates, place types, and viewport for precise map centering.
@@ -517,6 +563,11 @@ export class RoofEstimatorService {
         formattedAddress: string;
         lat: number;
         lng: number;
+        addressLine1: string;
+        city: string;
+        state: string;
+        postalCode: string;
+        country: string;
         locationType: string;
         types: string[];
         url: string | null;
@@ -556,6 +607,8 @@ export class RoofEstimatorService {
         }
 
         const result = response.data.result;
+        const addressComponents = Array.isArray(result.address_components) ? result.address_components : [];
+        const structuredAddress = this.extractStructuredAddress(addressComponents);
         const lat = Number(result.geometry.location.lat);
         const lng = Number(result.geometry.location.lng);
 
@@ -581,6 +634,11 @@ export class RoofEstimatorService {
             formattedAddress: result.formatted_address || '',
             lat,
             lng,
+            addressLine1: structuredAddress.addressLine1,
+            city: structuredAddress.city,
+            state: structuredAddress.state,
+            postalCode: structuredAddress.postalCode,
+            country: structuredAddress.country,
             locationType: result.geometry.location_type || 'ROOFTOP', // Place Details gives precise coords
             types: Array.isArray(result.types) ? result.types : [],
             url: result.url || null,

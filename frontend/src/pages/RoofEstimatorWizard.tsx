@@ -4,12 +4,11 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   autocompleteAddress,
-  fetchSatelliteImage,
+  getPlaceDetails,
   saveEstimate,
   updateEstimate,
   getEstimateById,
   requestEagleViewInstant,
-  type RoofEstimate,
   type SaveEstimatePayload,
   type EagleViewReport,
 } from "@/features/roof-estimator/services/roof-estimator-service";
@@ -21,7 +20,6 @@ import {
   getWallet,
   chargeEstimate,
   checkBalance,
-  type WalletInfo,
 } from "@/features/wallet/services/wallet-service";
 import { uploadFile } from "@/features/files/services/files-service";
 import { getProjects } from "@/features/projects/services/projects-service";
@@ -44,6 +42,51 @@ const STEPS = [
 
 const fmt = (n: number | null | undefined) =>
   n != null ? `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "$0.00";
+
+const parseMeasurementNumber = (value?: string | number | null): number | null => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value !== "string") return null;
+
+  const match = value.replace(/,/g, "").match(/-?\d+(\.\d+)?/);
+  if (!match) return null;
+
+  const parsed = Number(match[0]);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const normalizePitch = (report: Pick<EagleViewReport, "pitch" | "pitchTable">): string => {
+  const directPitch = report.pitch?.trim();
+  if (directPitch) {
+    if (directPitch.includes("/")) return directPitch;
+    const parsedPitch = parseMeasurementNumber(directPitch);
+    return parsedPitch !== null ? `${parsedPitch}/12` : directPitch;
+  }
+
+  if (!Array.isArray(report.pitchTable) || report.pitchTable.length === 0) {
+    return "";
+  }
+
+  const primaryPitch = [...report.pitchTable]
+    .map((row) => ({
+      pitch: row.Pitch?.trim() || "",
+      area: parseMeasurementNumber(row.RoofArea) ?? 0,
+      percentage: parseMeasurementNumber(row.PercentageRoofArea) ?? 0,
+    }))
+    .sort((left, right) => right.area - left.area || right.percentage - left.percentage)[0];
+
+  if (!primaryPitch?.pitch) return "";
+  return primaryPitch.pitch.includes("/") ? primaryPitch.pitch : `${primaryPitch.pitch}/12`;
+};
+
+const isLikelyPdfUrl = (url?: string | null): boolean =>
+  Boolean(url && /(?:\.pdf(?:$|[?#]))|getreportfile|reportdownload/i.test(url));
+
+const splitPreviewSource = (url?: string | null) => {
+  if (!url) return { imageUrl: "", reportUrl: "" };
+  return isLikelyPdfUrl(url)
+    ? { imageUrl: "", reportUrl: url }
+    : { imageUrl: url, reportUrl: "" };
+};
 
 /* ─── WizardData type ────────────────────────────────────── */
 
@@ -269,13 +312,15 @@ export default function RoofEstimatorWizard() {
       (async () => {
         try {
           const est = await getEstimateById(id);
+          const previewSource = splitPreviewSource(est.satelliteImageUrl || "");
           setEstimateId(est.id);
           setStep(est.currentStep || 1);
           setData({
             clientName: est.client?.clientName || "", clientEmail: "", clientPhone: "",
             clientCompany: est.client?.companyName || "", sourceType: est.clientId ? "client" : "manual",
             leadId: "", address: est.address || "", placeId: "", latitude: est.latitude || 0,
-            longitude: est.longitude || 0, satelliteImageUrl: est.satelliteImageUrl || "",
+            longitude: est.longitude || 0, satelliteImageUrl: previewSource.imageUrl,
+            eagleViewReportUrl: previewSource.reportUrl,
             roofAreaSqft: est.roofAreaSqft || 0, confidence: est.confidence || 0,
             processingTimeSec: est.processingTimeSec || 0, aiModel: est.aiModel || "yolov8n-seg-cpu",
             pitch: est.pitch || "6/12", roofType: est.roofType || "gable",
@@ -359,63 +404,64 @@ export default function RoofEstimatorWizard() {
     finally { setAddressLoading(false); }
   }, [up]);
 
-  // parseAddressForEagleView removed — server handles address parsing
-
   const selectAddress = useCallback(async (desc: string, placeId: string) => {
     up("address", desc);
     up("placeId", placeId);
     setAddressSuggestions([]);
+    up("satelliteImageUrl", "");
+    up("eagleViewReportUrl", "");
 
-    // 1. Geocode for lat/lng (no Google satellite — EagleView handles imagery)
+    // Resolve the selected place into a precise structured address before ordering.
     setSatelliteLoading(true);
-    let satLat = 0, satLng = 0;
+    let details: Awaited<ReturnType<typeof getPlaceDetails>> | null = null;
     try {
-      const sat = await fetchSatelliteImage(desc, placeId);
-      satLat = sat.latitude; satLng = sat.longitude;
-      up("latitude", satLat);
-      up("longitude", satLng);
-      // Don't set Google satellite image — we'll use EagleView report PDF
+      details = await getPlaceDetails(placeId);
+      up("address", details.formattedAddress || desc);
+      up("latitude", details.lat);
+      up("longitude", details.lng);
     } catch {
-      toast({ title: "Warning", description: "Could not geocode address" });
+      toast({ title: "Warning", description: "Could not load the selected property details" });
     } finally { setSatelliteLoading(false); }
 
-    if (!satLat) return;
+    if (!details) return;
 
-    // 2. EagleView Measurement Order (sole data source — AI detection disabled)
+    // EagleView measurement order + imagery
     setEagleViewLoading(true);
     setEagleViewStatus("Requesting EagleView measurements…");
 
     try {
-      // Send full address string — server handles address parsing + order + polling
-      const report = await requestEagleViewInstant(desc);
+      const report = await requestEagleViewInstant({
+        addressLine1: details.addressLine1,
+        city: details.city,
+        state: details.state,
+        postalCode: details.postalCode,
+        country: details.country,
+        latitude: details.lat,
+        longitude: details.lng,
+      });
 
       if (report.status === "Completed" || report.area) {
-        // Parse area (e.g. "1522.4 sq. ft" → 1522.4)
-        if (report.area) {
-          const evArea = parseFloat(report.area);
-          if (evArea > 0) up("roofAreaSqft", evArea);
+        const roofArea = parseMeasurementNumber(report.area);
+        const pitch = normalizePitch(report);
+        const previewSource = splitPreviewSource(report.imageUrl || report.reportDownloadLink || "");
+
+        if (roofArea !== null && roofArea > 0) {
+          up("roofAreaSqft", roofArea);
         }
-        if (report.pitch) up("pitch", report.pitch.includes("/") ? report.pitch : report.pitch + "/12");
-        if (report.lengthRidge) up("ridgeLengthFt" as any, parseFloat(report.lengthRidge) || 0);
-        if (report.lengthValley) up("valleyLengthFt" as any, parseFloat(report.lengthValley) || 0);
-        if (report.lengthEave) up("eaveLengthFt" as any, parseFloat(report.lengthEave) || 0);
-        if (report.lengthRake) up("rakeLengthFt" as any, parseFloat(report.lengthRake) || 0);
-        if (report.lengthHip) up("hipLengthFt" as any, parseFloat(report.lengthHip) || 0);
-        if (report.totalRoofFacets) up("totalFacets" as any, parseInt(report.totalRoofFacets) || 0);
+        if (pitch) {
+          up("pitch", pitch);
+        }
+        up("satelliteImageUrl", previewSource.imageUrl);
+        up("eagleViewReportUrl", report.imageUrl ? (report.reportDownloadLink || "") : previewSource.reportUrl);
 
         up("measurementSource", "eagleview");
-        up("confidence", 95);
+        up("confidence", 100);
+        up("aiModel", "eagleview");
 
         toast({
           title: "📡 EagleView Data Loaded",
-          description: `Area: ${report.area || "N/A"} | Pitch: ${report.pitch || "N/A"} | Facets: ${report.totalRoofFacets || "N/A"}`,
+          description: `Area: ${report.area || "N/A"} | Pitch: ${pitch || "N/A"} | Image: ${report.imageUrl ? "Loaded" : "Unavailable"}`,
         });
-
-        // Store the EagleView report PDF link as the preview image
-        if (report.reportDownloadLink) {
-          up("eagleViewReportUrl", report.reportDownloadLink);
-          up("satelliteImageUrl", report.reportDownloadLink);
-        }
       } else {
         toast({ title: "EagleView", description: `Status: ${report.status} — data may still be processing` });
       }
@@ -626,6 +672,9 @@ export default function RoofEstimatorWizard() {
 
   /* ─── Render Steps ─────────────────────────────── */
 
+  const previewImageUrl = !isLikelyPdfUrl(data.satelliteImageUrl) ? data.satelliteImageUrl : "";
+  const previewReportUrl = data.eagleViewReportUrl || (isLikelyPdfUrl(data.satelliteImageUrl) ? data.satelliteImageUrl : "");
+
   const renderStep = () => {
     switch (step) {
       case 1: return <Step1ClientInfo data={data} up={up}
@@ -752,14 +801,14 @@ export default function RoofEstimatorWizard() {
             height: 220, background: "#F1F5F9", display: "flex", alignItems: "center",
             justifyContent: "center", overflow: "hidden",
           }}>
-          {data.eagleViewReportUrl ? (
+          {previewImageUrl ? (
+              <img src={previewImageUrl} alt="Satellite" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ) : previewReportUrl ? (
               <iframe
-                src={data.eagleViewReportUrl}
+                src={previewReportUrl}
                 title="EagleView Roof Report"
                 style={{ width: "100%", height: "100%", border: "none" }}
               />
-            ) : data.satelliteImageUrl ? (
-              <img src={data.satelliteImageUrl} alt="Satellite" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             ) : (
               <div style={{ textAlign: "center", color: "#94A3B8" }}>
                 <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>

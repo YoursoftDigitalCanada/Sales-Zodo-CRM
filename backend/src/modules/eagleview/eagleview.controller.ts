@@ -13,7 +13,8 @@ import { logger } from '../../common/utils/logger';
 import { sendSuccess } from '../../common/utils/responseFormatter';
 import { config } from '../../config';
 import { eagleViewAuthService } from './eagleview-auth.service';
-import { eagleViewMeasurementService } from './eagleview-measurement.service';
+import { eagleViewImageryService } from './eagleview-imagery.service';
+import { eagleViewMeasurementService, type OrderAddress } from './eagleview-measurement.service';
 
 class EagleViewController {
 
@@ -29,15 +30,7 @@ class EagleViewController {
                 return;
             }
 
-            const orderAddress = typeof address === 'string'
-                ? this.parseAddressString(address)
-                : {
-                    addressLine1: address.addressLine1 || address.Address || '',
-                    city: address.city || address.City || '',
-                    state: address.state || address.State || '',
-                    postalCode: address.postalCode || address.Zip || '',
-                    country: address.country || address.Country || 'CA',
-                };
+            const orderAddress = this.normalizeAddress(address);
 
             const result = await eagleViewMeasurementService.placeOrder(orderAddress, referenceId);
             sendSuccess(res, result, 'EagleView order placed');
@@ -59,20 +52,14 @@ class EagleViewController {
                 return;
             }
 
-            const orderAddress = typeof address === 'string'
-                ? this.parseAddressString(address)
-                : {
-                    addressLine1: address.addressLine1 || address.Address || '',
-                    city: address.city || address.City || '',
-                    state: address.state || address.State || '',
-                    postalCode: address.postalCode || address.Zip || '',
-                    country: address.country || address.Country || 'CA',
-                };
+            const orderAddress = this.normalizeAddress(address);
+            const hasStructuredAddress = Boolean(orderAddress.addressLine1 && orderAddress.postalCode);
+            const hasCoordinates = Number.isFinite(orderAddress.latitude) && Number.isFinite(orderAddress.longitude);
 
-            if (!orderAddress.addressLine1 || !orderAddress.postalCode) {
+            if (!hasStructuredAddress && !hasCoordinates) {
                 res.status(400).json({
                     success: false,
-                    message: 'Could not parse address. Need at least street address and postal code.',
+                    message: 'Could not parse address. Need either street + postal code or latitude/longitude.',
                 });
                 return;
             }
@@ -80,8 +67,15 @@ class EagleViewController {
             logger.info('[EagleView] Instant order request', { address: orderAddress });
 
             const report = await eagleViewMeasurementService.placeOrderAndWait(orderAddress);
+            const imagery = await this.tryGetImagery(orderAddress, report.latitude, report.longitude);
 
-            sendSuccess(res, report, 'EagleView report retrieved');
+            sendSuccess(res, {
+                ...report,
+                imageUrl: imagery?.imageUrl,
+                imageType: imagery?.imageType,
+                imageCaptureDate: imagery?.captureDate,
+                imageResolution: imagery?.resolution,
+            }, 'EagleView report retrieved');
         } catch (error) {
             next(error);
         }
@@ -146,7 +140,25 @@ class EagleViewController {
 
     // ── Helpers ──────────────────────────────────────────────────────────
 
-    private parseAddressString(addr: string) {
+    private normalizeAddress(address: unknown): OrderAddress {
+        if (typeof address === 'string') {
+            return this.parseAddressString(address);
+        }
+
+        const raw = (address && typeof address === 'object') ? address as Record<string, unknown> : {};
+
+        return {
+            addressLine1: this.readString(raw.addressLine1) || this.readString(raw.Address),
+            city: this.readString(raw.city) || this.readString(raw.City),
+            state: this.readString(raw.state) || this.readString(raw.State),
+            postalCode: this.readString(raw.postalCode) || this.readString(raw.Zip),
+            country: this.readString(raw.country) || this.readString(raw.Country) || 'US',
+            latitude: this.readNumber(raw.latitude) ?? this.readNumber(raw.Latitude),
+            longitude: this.readNumber(raw.longitude) ?? this.readNumber(raw.Longitude),
+        };
+    }
+
+    private parseAddressString(addr: string): OrderAddress {
         const parts = addr.split(',').map(s => s.trim());
         const addressLine1 = parts[0] || '';
         const city = parts[1] || '';
@@ -156,6 +168,44 @@ class EagleViewController {
         const postalCode = stateZipTokens.slice(1).join(' ') || '';
         const country = parts[3] || 'US';
         return { addressLine1, city, state, postalCode, country };
+    }
+
+    private readString(value: unknown): string {
+        return typeof value === 'string' ? value.trim() : '';
+    }
+
+    private readNumber(value: unknown): number | undefined {
+        if (typeof value === 'number' && Number.isFinite(value)) return value;
+        if (typeof value === 'string' && value.trim()) {
+            const parsed = Number(value);
+            if (Number.isFinite(parsed)) return parsed;
+        }
+        return undefined;
+    }
+
+    private async tryGetImagery(
+        address: OrderAddress,
+        reportLatitude?: number,
+        reportLongitude?: number,
+    ) {
+        const lat = Number.isFinite(reportLatitude) ? reportLatitude : address.latitude;
+        const lng = Number.isFinite(reportLongitude) ? reportLongitude : address.longitude;
+
+        if (typeof lat !== 'number' || !Number.isFinite(lat) || typeof lng !== 'number' || !Number.isFinite(lng)) {
+            return null;
+        }
+
+        try {
+            return await eagleViewImageryService.getPropertyImagery(lat, lng);
+        } catch (error: any) {
+            logger.warn('[EagleView] Property imagery unavailable', {
+                status: error?.response?.status,
+                message: error?.message,
+                lat,
+                lng,
+            });
+            return null;
+        }
     }
 }
 

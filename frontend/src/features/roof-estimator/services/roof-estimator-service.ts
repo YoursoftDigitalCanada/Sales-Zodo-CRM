@@ -114,6 +114,11 @@ export interface PlaceDetailsResult {
     formattedAddress: string;
     lat: number;
     lng: number;
+    addressLine1: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
     locationType: string;
     types: string[];
     url: string | null;
@@ -444,15 +449,30 @@ export interface EagleViewReport {
     lengthHip?: string;
     totalRoofFacets?: string;
     reportDownloadLink?: string;
+    imageUrl?: string;
+    imageType?: string;
+    imageCaptureDate?: string;
+    imageResolution?: string;
+    pitchTable?: Array<{ Pitch: string; RoofArea: string; PercentageRoofArea: string }>;
+}
+
+export interface EagleViewAddressInput {
+    addressLine1: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country?: string;
+    latitude?: number;
+    longitude?: number;
 }
 
 /**
  * POST /eagleview/orders/instant
- * Send a full address string — server places order + polls for report.
- * Returns complete measurement data (area, pitch, lengths, facets).
+ * Send a full address string or structured address — server places order + polls for report.
+ * Returns EagleView measurements plus preview metadata when available.
  */
-export async function requestEagleViewInstant(fullAddress: string): Promise<EagleViewReport> {
-    const res = await api.post("/eagleview/orders/instant", { address: fullAddress });
+export async function requestEagleViewInstant(address: string | EagleViewAddressInput): Promise<EagleViewReport> {
+    const res = await api.post("/eagleview/orders/instant", { address });
     return res.data?.data;
 }
 

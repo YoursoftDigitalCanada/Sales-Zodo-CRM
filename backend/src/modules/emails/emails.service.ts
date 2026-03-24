@@ -1,7 +1,7 @@
 import { emailsRepository } from './emails.repository';
 import { EmailFolder } from '@prisma/client';
 import { SendEmailDto, EmailQueryDto, toEmailResponseDto } from './emails.dto';
-import { NotFoundError } from '../../common/errors/HttpErrors';
+import { BadRequestError, NotFoundError, ServiceUnavailableError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
 import { activityLogger } from '../../common/services/activity-logger.service';
 import { mailerService } from '../../common/services/mailer.service';
@@ -24,51 +24,70 @@ export class EmailsService {
     }
 
     async sendEmail(tenantId: string, data: SendEmailDto, sentById?: string) {
-        // 1. Get tenant SMTP config
         const smtpConfig = await settingsRepository.getSmtpConfig(tenantId);
+        const smtpConfigured = Boolean(smtpConfig?.host && smtpConfig?.user && smtpConfig?.pass);
 
-        // 2. Determine sender address
-        const senderEmail = smtpConfig?.senderEmail || smtpConfig?.user || '';
-        const senderName = smtpConfig?.senderName || 'ZODO CRM';
+        if (!smtpConfigured) {
+            throw new BadRequestError(
+                'Letter Box outgoing mail requires workspace SMTP settings. Configure Settings > Email > SMTP to send from your own mailbox.',
+            );
+        }
 
-        // 3. Save the email record in DB
-        const email = await emailsRepository.send(tenantId, {
-            ...data,
-            fromAddress: senderEmail,
-        }, sentById);
-        const dto = toEmailResponseDto(email);
+        const senderEmail = smtpConfig.senderEmail || smtpConfig.user;
+        const senderName = smtpConfig.senderName || 'ZODO CRM';
 
-        // 4. Actually deliver the email via SMTP
         const toAddresses = Array.isArray(data.toAddresses)
             ? data.toAddresses.map((a: any) => typeof a === 'string' ? a : a.email).filter(Boolean)
             : [];
 
-        if (toAddresses.length > 0) {
-            let sent = false;
+        if (toAddresses.length === 0) {
+            throw new BadRequestError('At least one recipient email address is required');
+        }
 
-            // Try tenant-specific SMTP first
-            if (smtpConfig && smtpConfig.host && smtpConfig.user && smtpConfig.pass) {
-                sent = await mailerService.sendMailWithConfig(
-                    { host: smtpConfig.host, port: smtpConfig.port, user: smtpConfig.user, pass: smtpConfig.pass, senderName, senderEmail },
-                    { to: toAddresses, subject: data.subject, html: data.bodyHtml || data.bodyText || '', text: data.bodyText }
+        const delivery = await mailerService.sendMailWithConfigDetailed(
+            {
+                host: smtpConfig.host,
+                port: smtpConfig.port,
+                user: smtpConfig.user,
+                pass: smtpConfig.pass,
+                senderName,
+                senderEmail,
+            },
+            {
+                to: toAddresses,
+                subject: data.subject,
+                html: data.bodyHtml || data.bodyText || '',
+                text: data.bodyText,
+            },
+        );
+
+        if (!delivery.sent) {
+            const errorMessage = delivery.error || 'Check the configured SMTP username, password, host, and port.';
+            const normalizedError = errorMessage.toLowerCase();
+
+            if (
+                normalizedError.includes('invalid login')
+                || normalizedError.includes('authentication failed')
+                || normalizedError.includes('535')
+                || normalizedError.includes('username')
+                || normalizedError.includes('password')
+            ) {
+                throw new BadRequestError(
+                    `Workspace SMTP delivery failed because the configured mailbox credentials were rejected. Letter Box did not fall back to the OTP mailbox. ${errorMessage}`,
                 );
             }
 
-            // Fallback to global SMTP (env vars)
-            if (!sent) {
-                sent = await mailerService.sendMail({
-                    to: toAddresses,
-                    subject: data.subject,
-                    html: data.bodyHtml || data.bodyText || '',
-                    text: data.bodyText,
-                });
-            }
-
-            // Update status based on delivery result
-            if (!sent) {
-                console.warn(`⚠️ Email ${dto.id} saved but SMTP delivery failed — no SMTP configured or connection error`);
-            }
+            throw new ServiceUnavailableError(
+                `Workspace SMTP delivery failed. Letter Box did not fall back to the OTP mailbox. ${errorMessage}`,
+            );
         }
+
+        const email = await emailsRepository.send(tenantId, {
+            ...data,
+            fromName: senderName,
+            fromAddress: senderEmail,
+        }, sentById);
+        const dto = toEmailResponseDto(email);
 
         activityLogger.log({
             tenantId, entityType: 'Email', entityId: dto.id,

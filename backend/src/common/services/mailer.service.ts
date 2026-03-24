@@ -42,6 +42,12 @@ class MailerService {
             });
     }
 
+    private formatErrorMessage(error: any): string {
+        const smtpResponse = typeof error?.response === 'string' ? error.response : '';
+        const errorCode = typeof error?.code === 'string' ? `${error.code}: ` : '';
+        return smtpResponse || `${errorCode}${error?.message || 'Unknown mailer error'}`;
+    }
+
     /**
      * Reconfigure SMTP transport at runtime (called when tenant updates SMTP settings).
      */
@@ -60,9 +66,17 @@ class MailerService {
         smtpConfig: { host: string; port: number; user: string; pass: string; senderName?: string; senderEmail?: string },
         opts: { to: string | string[]; subject: string; html: string; text?: string; attachments?: Array<{ filename: string; content: Buffer; contentType?: string }> }
     ): Promise<boolean> {
+        const result = await this.sendMailWithConfigDetailed(smtpConfig, opts);
+        return result.sent;
+    }
+
+    async sendMailWithConfigDetailed(
+        smtpConfig: { host: string; port: number; user: string; pass: string; senderName?: string; senderEmail?: string },
+        opts: { to: string | string[]; subject: string; html: string; text?: string; attachments?: Array<{ filename: string; content: Buffer; contentType?: string }> }
+    ): Promise<{ sent: boolean; error?: string }> {
         if (!nodemailer) {
             console.warn('⚠️ Skipping email — nodemailer not available');
-            return false;
+            return { sent: false, error: 'nodemailer is not installed' };
         }
         try {
             // Create a one-off transport for this tenant's SMTP config
@@ -89,10 +103,11 @@ class MailerService {
                 })),
             });
             console.log('📧 Email sent:', info.messageId, '→', opts.to);
-            return true;
+            return { sent: true };
         } catch (err: any) {
-            console.error('❌ Email send failed:', err.message);
-            return false;
+            const errorMessage = this.formatErrorMessage(err);
+            console.error('❌ Email send failed:', errorMessage);
+            return { sent: false, error: errorMessage };
         }
     }
 

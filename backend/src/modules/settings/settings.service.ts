@@ -117,7 +117,7 @@ export class SettingsService {
       throw new BadRequestError('SMTP must be configured before sending a test email');
     }
 
-    const delivered = await mailerService.sendMailWithConfig(
+    const delivery = await mailerService.sendMailWithConfigDetailed(
       {
         host: smtp.host,
         port: smtp.port,
@@ -134,8 +134,10 @@ export class SettingsService {
       }
     );
 
-    if (!delivered) {
-      throw new BadRequestError('Unable to send test email with the configured SMTP server');
+    if (!delivery.sent) {
+      throw new BadRequestError(
+        `Unable to send test email with the configured SMTP server. ${delivery.error || 'Check the SMTP username, password, host, and port.'}`,
+      );
     }
 
     return {

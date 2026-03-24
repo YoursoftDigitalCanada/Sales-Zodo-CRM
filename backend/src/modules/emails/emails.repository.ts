@@ -16,6 +16,7 @@ export class EmailsRepository {
                 subject: data.subject,
                 bodyText: data.bodyText,
                 bodyHtml: data.bodyHtml,
+                fromName: data.fromName || null,
                 fromAddress: data.fromAddress || '',
                 toAddresses: data.toAddresses as unknown as Prisma.InputJsonValue,
                 ccAddresses: data.ccAddresses as unknown as Prisma.InputJsonValue,

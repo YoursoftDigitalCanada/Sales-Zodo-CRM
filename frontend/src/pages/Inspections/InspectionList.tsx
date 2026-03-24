@@ -172,17 +172,7 @@ function mapApiInspection(raw: InspectionEntity): Inspection {
     };
 }
 
-// Demo data for when API returns empty
-const DEMO_INSPECTIONS: Inspection[] = [
-    { id: "demo-1", leadId: "1", customerName: "John Smith", customerEmail: "john@email.com", customerPhone: "(555) 000-0001", address: "123 Oak Street, Austin TX 78701", inspectorName: "Mike Rodriguez", date: "2024-03-15T10:00:00", time: "2024-03-15T10:00:00", status: "completed", damageRating: "HIGH", estimateStatus: "completed", totalEstimate: 18500, insuranceCompany: "StateFarm", claimNumber: "SF-2024-001", stormDamage: true, inspectionType: "Initial" },
-    { id: "demo-2", leadId: "2", customerName: "Sarah Johnson", customerEmail: "sarah@email.com", customerPhone: "(555) 000-0002", address: "456 Elm Avenue, Dallas TX 75201", inspectorName: "David Chen", date: "2024-03-16T14:00:00", time: "2024-03-16T14:00:00", status: "scheduled", damageRating: null, estimateStatus: null, totalEstimate: null, insuranceCompany: "Allstate", claimNumber: "AL-2024-042", stormDamage: true, inspectionType: "Initial" },
-    { id: "demo-3", leadId: "3", customerName: "Robert Williams", customerEmail: "rob@email.com", customerPhone: "(555) 000-0003", address: "789 Pine Road, Houston TX 77001", inspectorName: "Mike Rodriguez", date: "2024-03-14T09:00:00", time: "2024-03-14T09:00:00", status: "pending_report", damageRating: "MODERATE", estimateStatus: "pending", totalEstimate: null, insuranceCompany: null, claimNumber: null, stormDamage: false, inspectionType: "Follow-up" },
-    { id: "demo-4", leadId: "4", customerName: "Emily Davis", customerEmail: "emily@email.com", customerPhone: "(555) 000-0004", address: "321 Maple Drive, San Antonio TX 78201", inspectorName: "James Wilson", date: "2024-03-15T11:30:00", time: "2024-03-15T11:30:00", status: "in_progress", damageRating: "HIGH", estimateStatus: "in_progress", totalEstimate: 22000, insuranceCompany: "USAA", claimNumber: "USAA-2024-119", stormDamage: true, inspectionType: "Initial" },
-    { id: "demo-5", leadId: "5", customerName: "Michael Brown", customerEmail: "mike@email.com", customerPhone: "(555) 000-0005", address: "654 Cedar Lane, Fort Worth TX 76101", inspectorName: "David Chen", date: "2024-03-13T15:00:00", time: "2024-03-13T15:00:00", status: "follow_up", damageRating: "LOW", estimateStatus: "completed", totalEstimate: 4200, insuranceCompany: null, claimNumber: null, stormDamage: false, inspectionType: "Re-inspection" },
-    { id: "demo-6", leadId: "6", customerName: "Jessica Martinez", customerEmail: "jess@email.com", customerPhone: "(555) 000-0006", address: "987 Birch Way, Plano TX 75023", inspectorName: "Mike Rodriguez", date: "2024-03-17T08:30:00", time: "2024-03-17T08:30:00", status: "scheduled", damageRating: null, estimateStatus: null, totalEstimate: null, insuranceCompany: "Liberty Mutual", claimNumber: "LM-2024-087", stormDamage: true, inspectionType: "Initial" },
-    { id: "demo-7", leadId: "7", customerName: "William Taylor", customerEmail: "will@email.com", customerPhone: "(555) 000-0007", address: "135 Walnut Blvd, Irving TX 75038", inspectorName: "James Wilson", date: "2024-03-12T10:00:00", time: "2024-03-12T10:00:00", status: "completed", damageRating: "HIGH", estimateStatus: "completed", totalEstimate: 15800, insuranceCompany: "StateFarm", claimNumber: "SF-2024-033", stormDamage: true, inspectionType: "Initial" },
-    { id: "demo-8", leadId: "8", customerName: "Amanda Wilson", customerEmail: "amanda@email.com", customerPhone: "(555) 000-0008", address: "246 Spruce Court, Arlington TX 76010", inspectorName: "David Chen", date: "2024-03-15T13:00:00", time: "2024-03-15T13:00:00", status: "pending_report", damageRating: "MODERATE", estimateStatus: "pending", totalEstimate: null, insuranceCompany: "Travelers", claimNumber: "TR-2024-055", stormDamage: true, inspectionType: "Initial" },
-];
+
 
 // ============================================
 // STAT CARD
@@ -265,11 +255,9 @@ const InspectionList = () => {
             try {
                 setLoading(true);
                 const data = await getAllInspections();
-                const mapped = data.map(mapApiInspection);
-                setInspections(mapped.length > 0 ? mapped : DEMO_INSPECTIONS);
+                setInspections(data.map(mapApiInspection));
             } catch {
-                // Use demo data on error
-                setInspections(DEMO_INSPECTIONS);
+                setInspections([]);
             } finally {
                 setLoading(false);
             }
@@ -287,10 +275,10 @@ const InspectionList = () => {
         const today = new Date().toDateString();
         return {
             total: inspections.length,
-            todayScheduled: inspections.filter((i) => new Date(i.date).toDateString() === today && i.status === "scheduled").length || 8,
-            pendingReport: inspections.filter((i) => i.status === "pending_report").length || 15,
-            completed: inspections.filter((i) => i.status === "completed").length || 24,
-            followUp: inspections.filter((i) => i.status === "follow_up").length || 5,
+            todayScheduled: inspections.filter((i) => new Date(i.date).toDateString() === today && i.status === "scheduled").length,
+            pendingReport: inspections.filter((i) => i.status === "pending_report").length,
+            completed: inspections.filter((i) => i.status === "completed").length,
+            followUp: inspections.filter((i) => i.status === "follow_up").length,
         };
     }, [inspections]);
 
@@ -416,7 +404,7 @@ const InspectionList = () => {
             <div className="p-4 sm:p-6 lg:p-8">
                 {/* Stats Cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4 lg:gap-6 mb-6">
-                    <StatCard title="Total Inspections" value={stats.total || 42} icon={ClipboardList} color="#3B82F6" change={12} />
+                    <StatCard title="Total Inspections" value={stats.total} icon={ClipboardList} color="#3B82F6" />
                     <StatCard title="Today Scheduled" value={stats.todayScheduled} icon={CalendarDays} color="#F59E0B" delay={0.1} />
                     <StatCard title="Pending Report" value={stats.pendingReport} icon={FileText} color="#F97316" delay={0.2} />
                     <StatCard title="Completed" value={stats.completed} icon={CheckCircle2} color="#10B981" delay={0.3} />

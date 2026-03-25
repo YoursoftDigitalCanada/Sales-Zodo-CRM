@@ -118,6 +118,8 @@ export const departmentIdSchema = z.object({
 });
 
 const isoDateString = z.string().datetime();
+const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected date in YYYY-MM-DD format');
+const leaveTypeSchema = z.enum(['annual', 'sick', 'personal', 'unpaid']);
 
 export const attendanceQuerySchema = z.object({
     query: z.object({
@@ -157,4 +159,24 @@ export const updateAttendanceSchema = z.object({
         (value) => Object.keys(value).length > 0,
         'At least one attendance field is required',
     ),
+});
+
+export const leaveRequestIdSchema = z.object({
+    params: z.object({ leaveRequestId: z.string().uuid() }),
+});
+
+export const createLeaveRequestSchema = z.object({
+    body: z.object({
+        leaveType: leaveTypeSchema,
+        startDate: dateString,
+        endDate: dateString,
+        reason: z.string().trim().min(10).max(2000),
+    }),
+});
+
+export const reviewLeaveRequestSchema = z.object({
+    body: z.object({
+        status: z.enum(['approved', 'rejected']),
+        reviewNote: z.string().trim().max(2000).optional().nullable(),
+    }),
 });

@@ -295,12 +295,11 @@ const navigationItems: NavigationItem[] = [
     title: "Employees",
     icon: UserCog,
     featureId: "team",
-    permissionModule: "employees",
     submenu: [
-      { title: "All Employees", path: "/employees", featureId: "team", adminOnly: true },
-      { title: "Departments", path: "/employees/departments", featureId: "team", isNew: true, adminOnly: true },
+      { title: "All Employees", path: "/employees", featureId: "team", permissionModule: "employees", adminOnly: true },
+      { title: "Departments", path: "/employees/departments", featureId: "team", permissionModule: "employees", isNew: true, adminOnly: true },
       { title: "Attendance", path: "/employees/attendance", featureId: "team" },
-      { title: "Leave Requests", path: "/employees/leave-requests", featureId: "team", badge: 2, badgeColor: "gold", adminOnly: true },
+      { title: "Leave Requests", path: "/employees/leave-requests", featureId: "team", badge: 2, badgeColor: "gold" },
     ]
   },
   {

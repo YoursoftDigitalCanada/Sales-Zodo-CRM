@@ -271,6 +271,37 @@ export interface AttendanceCurrentStatusDto {
     activeEntry: AttendanceRecordDto | null;
 }
 
+export interface LeaveRequestDto {
+    id: string;
+    employeeId: string;
+    employeeName: string;
+    employeeAvatar?: string | null;
+    employeePosition: string;
+    departmentName: string;
+    leaveType: 'annual' | 'sick' | 'personal' | 'unpaid';
+    startDate: Date;
+    endDate: Date;
+    totalDays: number;
+    reason: string;
+    status: 'pending' | 'approved' | 'rejected';
+    appliedAt: Date;
+    approvedBy?: string;
+    approvedAt?: Date;
+    rejectionReason?: string;
+}
+
+export interface CreateLeaveRequestDto {
+    leaveType: 'annual' | 'sick' | 'personal' | 'unpaid';
+    startDate: string;
+    endDate: string;
+    reason: string;
+}
+
+export interface ReviewLeaveRequestDto {
+    status: 'approved' | 'rejected';
+    reviewNote?: string | null;
+}
+
 export interface AttendanceCheckInDto {
     isRemote?: boolean;
     lat?: number;

@@ -68,6 +68,25 @@ export interface AttendanceQueryParams {
     employeeId?: string;
 }
 
+export interface LeaveRequestEntity {
+    id: string;
+    employeeId: string;
+    employeeName: string;
+    employeeAvatar?: string | null;
+    employeePosition: string;
+    departmentName: string;
+    leaveType: "annual" | "sick" | "personal" | "unpaid";
+    startDate: string;
+    endDate: string;
+    totalDays: number;
+    reason: string;
+    status: "pending" | "approved" | "rejected";
+    appliedAt: string;
+    approvedBy?: string;
+    approvedAt?: string;
+    rejectionReason?: string;
+}
+
 export async function getUsers(): Promise<UserEntity[]> {
     const response = await api.get("/users");
     return extractApiArray<UserEntity>(response.data);
@@ -183,4 +202,35 @@ export async function updateAttendanceRecord(
 ): Promise<AttendanceEntity> {
     const response = await api.put(`/employees/attendance/${id}`, data);
     return extractApiData<AttendanceEntity>(response.data);
+}
+
+export async function getLeaveRequests(): Promise<LeaveRequestEntity[]> {
+    const response = await api.get("/employees/leave-requests");
+    return extractApiArray<LeaveRequestEntity>(response.data);
+}
+
+export async function getMyLeaveRequests(): Promise<LeaveRequestEntity[]> {
+    const response = await api.get("/employees/leave-requests/my");
+    return extractApiArray<LeaveRequestEntity>(response.data);
+}
+
+export async function createLeaveRequest(data: {
+    leaveType: "annual" | "sick" | "personal" | "unpaid";
+    startDate: string;
+    endDate: string;
+    reason: string;
+}): Promise<LeaveRequestEntity> {
+    const response = await api.post("/employees/leave-requests", data);
+    return extractApiData<LeaveRequestEntity>(response.data);
+}
+
+export async function reviewLeaveRequest(
+    id: string,
+    data: {
+        status: "approved" | "rejected";
+        reviewNote?: string | null;
+    },
+): Promise<LeaveRequestEntity> {
+    const response = await api.put(`/employees/leave-requests/${id}/review`, data);
+    return extractApiData<LeaveRequestEntity>(response.data);
 }

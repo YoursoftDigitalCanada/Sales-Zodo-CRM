@@ -19,6 +19,9 @@ import {
     checkInAttendanceSchema,
     checkOutAttendanceSchema,
     updateAttendanceSchema,
+    createLeaveRequestSchema,
+    leaveRequestIdSchema,
+    reviewLeaveRequestSchema,
 } from './employees.validators';
 
 const router = Router();
@@ -27,6 +30,10 @@ router.use(loadEmployee);
 
 router.get('/attendance/my', validate(attendanceQuerySchema), employeesController.getMyAttendance.bind(employeesController));
 router.get('/attendance/summary/my', validate(attendanceQuerySchema), employeesController.getMyAttendanceSummary.bind(employeesController));
+router.get('/leave-requests/my', employeesController.getMyLeaveRequests.bind(employeesController));
+router.post('/leave-requests', validate(createLeaveRequestSchema), employeesController.createLeaveRequest.bind(employeesController));
+router.get('/leave-requests', requirePermission(PERMISSIONS.EMPLOYEES_VIEW), employeesController.getLeaveRequests.bind(employeesController));
+router.put('/leave-requests/:leaveRequestId/review', requirePermission(PERMISSIONS.EMPLOYEES_UPDATE), validate(leaveRequestIdSchema), validate(reviewLeaveRequestSchema), employeesController.reviewLeaveRequest.bind(employeesController));
 router.get('/', requirePermission(PERMISSIONS.EMPLOYEES_VIEW), validate(employeeQuerySchema), employeesController.getMany.bind(employeesController));
 router.post('/', requirePermission(PERMISSIONS.EMPLOYEES_CREATE), validate(createEmployeeSchema), employeesController.create.bind(employeesController));
 router.get('/attendance', requirePermission(PERMISSIONS.EMPLOYEES_VIEW), validate(attendanceQuerySchema), employeesController.getAttendance.bind(employeesController));

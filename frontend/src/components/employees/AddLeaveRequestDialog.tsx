@@ -34,7 +34,7 @@ import { LeaveType, LeaveBalance } from './types';
 import { getLeaveTypeConfig } from './utils';
 
 const leaveRequestSchema = z.object({
-  leaveType: z.enum(['annual', 'sick', 'personal', 'maternity', 'paternity', 'unpaid', 'bereavement']),
+  leaveType: z.enum(['annual', 'sick', 'personal', 'unpaid']),
   startDate: z.string().min(1, 'Start date is required'),
   endDate: z.string().min(1, 'End date is required'),
   reason: z.string().min(10, 'Please provide a detailed reason (at least 10 characters)'),
@@ -45,7 +45,7 @@ type LeaveRequestFormValues = z.infer<typeof leaveRequestSchema>;
 interface AddLeaveRequestDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: LeaveRequestFormValues) => void;
+  onSubmit: (data: LeaveRequestFormValues) => void | Promise<void>;
   leaveBalances: LeaveBalance[];
 }
 
@@ -55,6 +55,7 @@ export const AddLeaveRequestDialog: React.FC<AddLeaveRequestDialogProps> = ({
   onSubmit,
   leaveBalances,
 }) => {
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const form = useForm<LeaveRequestFormValues>({
     resolver: zodResolver(leaveRequestSchema),
     defaultValues: {
@@ -79,13 +80,18 @@ export const AddLeaveRequestDialog: React.FC<AddLeaveRequestDialogProps> = ({
   const totalDays = calculateDays();
   const selectedBalance = leaveBalances.find(b => b.type === watchLeaveType);
 
-  const handleSubmit = (data: LeaveRequestFormValues) => {
-    onSubmit(data);
-    form.reset();
-    onOpenChange(false);
+  const handleSubmit = async (data: LeaveRequestFormValues) => {
+    setIsSubmitting(true);
+    try {
+      await onSubmit(data);
+      form.reset();
+      onOpenChange(false);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const leaveTypes: LeaveType[] = ['annual', 'sick', 'personal', 'maternity', 'paternity', 'unpaid', 'bereavement'];
+  const leaveTypes: LeaveType[] = ['annual', 'sick', 'personal', 'unpaid'];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -155,7 +161,7 @@ export const AddLeaveRequestDialog: React.FC<AddLeaveRequestDialogProps> = ({
                           {...field} 
                           type="date" 
                           className="pl-10"
-                          min={format(addDays(new Date(), 1), 'yyyy-MM-dd')}
+                          min={format(new Date(), 'yyyy-MM-dd')}
                         />
                       </div>
                     </FormControl>
@@ -177,7 +183,7 @@ export const AddLeaveRequestDialog: React.FC<AddLeaveRequestDialogProps> = ({
                           {...field} 
                           type="date" 
                           className="pl-10"
-                          min={watchStartDate || format(addDays(new Date(), 1), 'yyyy-MM-dd')}
+                          min={watchStartDate || format(new Date(), 'yyyy-MM-dd')}
                         />
                       </div>
                     </FormControl>
@@ -196,7 +202,7 @@ export const AddLeaveRequestDialog: React.FC<AddLeaveRequestDialogProps> = ({
                     {totalDays} business day{totalDays !== 1 ? 's' : ''}
                   </span>
                 </div>
-                {selectedBalance && totalDays > selectedBalance.available && (
+                {selectedBalance && selectedBalance.type !== 'unpaid' && totalDays > selectedBalance.available && (
                   <p className="text-sm text-red-600 mt-2">
                     ⚠️ You don't have enough leave balance for this duration
                   </p>
@@ -240,15 +246,16 @@ export const AddLeaveRequestDialog: React.FC<AddLeaveRequestDialogProps> = ({
                 type="button" 
                 variant="outline" 
                 onClick={() => onOpenChange(false)}
+                disabled={isSubmitting}
               >
                 Cancel
               </Button>
               <Button 
                 type="submit"
                 className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white"
-                disabled={selectedBalance && totalDays > selectedBalance.available}
+                disabled={isSubmitting || Boolean(selectedBalance && selectedBalance.type !== 'unpaid' && totalDays > selectedBalance.available)}
               >
-                Submit Request
+                {isSubmitting ? 'Submitting...' : 'Submit Request'}
               </Button>
             </div>
           </form>

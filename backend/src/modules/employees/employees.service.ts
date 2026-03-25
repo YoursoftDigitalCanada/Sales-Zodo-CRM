@@ -14,6 +14,9 @@ import {
     AttendanceCheckInDto,
     AttendanceCheckOutDto,
     UpdateAttendanceRecordDto,
+    LeaveRequestDto,
+    CreateLeaveRequestDto,
+    ReviewLeaveRequestDto,
     toEmployeeResponseDto,
     buildEmployeeProfileData,
 } from './employees.dto';
@@ -75,6 +78,34 @@ type DailyAttendanceAggregate = {
     workedMinutes: number;
     totalBreakMinutes: number;
     hasCompletedEntry: boolean;
+};
+
+type LeaveRequestRow = {
+    id: string;
+    type: 'VACATION' | 'SICK' | 'PERSONAL' | 'UNPAID';
+    startDate: Date;
+    endDate: Date;
+    reason: string | null;
+    status: string;
+    reviewNote: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    employeeId: string;
+    employee: {
+        department: string | null;
+        position: string | null;
+        user: {
+            firstName: string;
+            lastName: string;
+            avatar: string | null;
+        };
+    };
+    reviewedBy: {
+        user: {
+            firstName: string;
+            lastName: string;
+        };
+    } | null;
 };
 
 const DEPARTMENTS_SETTINGS_KEY = 'employeeDepartments';
@@ -317,6 +348,46 @@ function mapTimeEntryToAttendanceRecord(entry: AttendanceTimeEntryRow): Attendan
 
 function isRemoteAttendance(phase?: string | null): boolean {
     return phase?.trim().toUpperCase() === 'REMOTE';
+}
+
+function mapLeaveTypeToDto(value: LeaveRequestRow['type']): LeaveRequestDto['leaveType'] {
+    switch (value) {
+        case 'VACATION':
+            return 'annual';
+        case 'SICK':
+            return 'sick';
+        case 'UNPAID':
+            return 'unpaid';
+        case 'PERSONAL':
+        default:
+            return 'personal';
+    }
+}
+
+function mapLeaveTypeToPrisma(value: CreateLeaveRequestDto['leaveType']): LeaveRequestRow['type'] {
+    switch (value) {
+        case 'annual':
+            return 'VACATION';
+        case 'sick':
+            return 'SICK';
+        case 'unpaid':
+            return 'UNPAID';
+        case 'personal':
+        default:
+            return 'PERSONAL';
+    }
+}
+
+function mapLeaveStatusToDto(value: string): LeaveRequestDto['status'] {
+    switch (value.trim().toUpperCase()) {
+        case 'APPROVED':
+            return 'approved';
+        case 'REJECTED':
+            return 'rejected';
+        case 'PENDING':
+        default:
+            return 'pending';
+    }
 }
 
 export class EmployeesService {
@@ -1247,6 +1318,246 @@ export class EmployeesService {
         return entry?.employeeId || null;
     }
 
+    async getLeaveRequests(tenantId: string): Promise<LeaveRequestDto[]> {
+        const requests = await prisma.leaveRequest.findMany({
+            where: { tenantId },
+            include: {
+                employee: {
+                    select: {
+                        department: true,
+                        position: true,
+                        user: {
+                            select: {
+                                firstName: true,
+                                lastName: true,
+                                avatar: true,
+                            },
+                        },
+                    },
+                },
+                reviewedBy: {
+                    select: {
+                        user: {
+                            select: {
+                                firstName: true,
+                                lastName: true,
+                            },
+                        },
+                    },
+                },
+            },
+            orderBy: {
+                createdAt: 'desc',
+            },
+        });
+
+        return requests.map((request) => this.mapLeaveRequestToDto(request));
+    }
+
+    async getMyLeaveRequests(employeeId: string, tenantId: string): Promise<LeaveRequestDto[]> {
+        const requests = await prisma.leaveRequest.findMany({
+            where: {
+                tenantId,
+                employeeId,
+            },
+            include: {
+                employee: {
+                    select: {
+                        department: true,
+                        position: true,
+                        user: {
+                            select: {
+                                firstName: true,
+                                lastName: true,
+                                avatar: true,
+                            },
+                        },
+                    },
+                },
+                reviewedBy: {
+                    select: {
+                        user: {
+                            select: {
+                                firstName: true,
+                                lastName: true,
+                            },
+                        },
+                    },
+                },
+            },
+            orderBy: {
+                createdAt: 'desc',
+            },
+        });
+
+        return requests.map((request) => this.mapLeaveRequestToDto(request));
+    }
+
+    async createLeaveRequest(
+        employeeId: string,
+        tenantId: string,
+        data: CreateLeaveRequestDto,
+    ): Promise<LeaveRequestDto> {
+        const startDate = new Date(`${data.startDate}T00:00:00.000Z`);
+        const endDate = new Date(`${data.endDate}T00:00:00.000Z`);
+
+        if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+            throw new BadRequestError('Invalid leave request dates', ErrorCodes.INVALID_INPUT);
+        }
+
+        if (endDate.getTime() < startDate.getTime()) {
+            throw new BadRequestError('End date must be on or after start date', ErrorCodes.INVALID_INPUT);
+        }
+
+        const created = await prisma.leaveRequest.create({
+            data: {
+                type: mapLeaveTypeToPrisma(data.leaveType),
+                startDate,
+                endDate,
+                reason: data.reason.trim(),
+                employeeId,
+                tenantId,
+            },
+            include: {
+                employee: {
+                    select: {
+                        department: true,
+                        position: true,
+                        user: {
+                            select: {
+                                firstName: true,
+                                lastName: true,
+                                avatar: true,
+                            },
+                        },
+                    },
+                },
+                reviewedBy: {
+                    select: {
+                        user: {
+                            select: {
+                                firstName: true,
+                                lastName: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        activityLogger.log({
+            tenantId,
+            entityType: 'LeaveRequest',
+            entityId: created.id,
+            action: 'CREATE',
+            module: 'employees',
+            description: `Employee ${employeeId} submitted a leave request`,
+            metadata: {
+                leaveType: data.leaveType,
+                startDate: data.startDate,
+                endDate: data.endDate,
+            },
+        });
+
+        return this.mapLeaveRequestToDto(created);
+    }
+
+    async reviewLeaveRequest(
+        leaveRequestId: string,
+        tenantId: string,
+        reviewerEmployeeId: string | null,
+        data: ReviewLeaveRequestDto,
+    ): Promise<LeaveRequestDto> {
+        const existing = await prisma.leaveRequest.findFirst({
+            where: {
+                id: leaveRequestId,
+                tenantId,
+            },
+            include: {
+                employee: {
+                    select: {
+                        department: true,
+                        position: true,
+                        user: {
+                            select: {
+                                firstName: true,
+                                lastName: true,
+                                avatar: true,
+                            },
+                        },
+                    },
+                },
+                reviewedBy: {
+                    select: {
+                        user: {
+                            select: {
+                                firstName: true,
+                                lastName: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        if (!existing) {
+            throw new NotFoundError('Leave request not found', ErrorCodes.RESOURCE_NOT_FOUND);
+        }
+
+        if (existing.status.trim().toUpperCase() !== 'PENDING') {
+            throw new ConflictError('Leave request has already been reviewed', ErrorCodes.RESOURCE_ALREADY_EXISTS);
+        }
+
+        const updated = await prisma.leaveRequest.update({
+            where: { id: leaveRequestId },
+            data: {
+                status: data.status.trim().toUpperCase(),
+                reviewNote: data.reviewNote?.trim() || null,
+                reviewedById: reviewerEmployeeId || null,
+            },
+            include: {
+                employee: {
+                    select: {
+                        department: true,
+                        position: true,
+                        user: {
+                            select: {
+                                firstName: true,
+                                lastName: true,
+                                avatar: true,
+                            },
+                        },
+                    },
+                },
+                reviewedBy: {
+                    select: {
+                        user: {
+                            select: {
+                                firstName: true,
+                                lastName: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        activityLogger.log({
+            tenantId,
+            entityType: 'LeaveRequest',
+            entityId: leaveRequestId,
+            action: 'UPDATE',
+            module: 'employees',
+            description: `Leave request ${leaveRequestId} marked as ${data.status}`,
+            metadata: {
+                status: data.status,
+                reviewedByEmployeeId: reviewerEmployeeId,
+            },
+        });
+
+        return this.mapLeaveRequestToDto(updated);
+    }
+
     private async getDepartmentContext(tenantId: string): Promise<{ settings: Record<string, unknown>; employees: EmployeeDepartmentRow[] }> {
         const [tenant, employees] = await Promise.all([
             prisma.tenant.findUnique({
@@ -1516,6 +1827,32 @@ export class EmployeesService {
         }
 
         return total;
+    }
+
+    private mapLeaveRequestToDto(request: LeaveRequestRow): LeaveRequestDto {
+        const reviewedByName = request.reviewedBy
+            ? `${request.reviewedBy.user.firstName} ${request.reviewedBy.user.lastName}`.trim()
+            : '';
+        const status = mapLeaveStatusToDto(request.status);
+
+        return {
+            id: request.id,
+            employeeId: request.employeeId,
+            employeeName: `${request.employee.user.firstName} ${request.employee.user.lastName}`.trim(),
+            employeeAvatar: request.employee.user.avatar,
+            employeePosition: request.employee.position || 'Staff',
+            departmentName: request.employee.department || 'Unassigned',
+            leaveType: mapLeaveTypeToDto(request.type),
+            startDate: request.startDate,
+            endDate: request.endDate,
+            totalDays: this.countBusinessDays(request.startDate, request.endDate),
+            reason: request.reason?.trim() || 'No reason provided',
+            status,
+            appliedAt: request.createdAt,
+            approvedBy: reviewedByName || undefined,
+            approvedAt: status === 'pending' ? undefined : request.updatedAt,
+            rejectionReason: status === 'rejected' ? request.reviewNote?.trim() || undefined : undefined,
+        };
     }
 }
 

@@ -1,11 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Plus,
   Search,
   Download,
   Calendar,
-  Filter,
   LayoutGrid,
   List,
   Clock,
@@ -13,7 +12,6 @@ import {
   XCircle,
   AlertCircle,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -33,189 +31,312 @@ import {
   LeaveBalanceCard,
   LeaveCalendar,
   AddLeaveRequestDialog,
-  mockLeaveRequests,
-  mockLeaveBalances,
-  mockEmployees,
+  LeaveBalance,
   LeaveRequest,
   LeaveStatus,
   LeaveType,
 } from '@/components/employees';
 import { getStoredEmployee, isStoredEmployeeAdmin } from '@/features/auth/lib/auth-storage';
+import {
+  LeaveRequestEntity,
+  createLeaveRequest,
+  getLeaveRequests,
+  getMyLeaveRequests,
+  reviewLeaveRequest,
+} from '@/features/users';
+
+const SUPPORTED_LEAVE_TYPES: LeaveType[] = ['annual', 'sick', 'personal', 'unpaid'];
+
+const DEFAULT_LEAVE_TOTALS: Record<LeaveType, number> = {
+  annual: 12,
+  sick: 10,
+  personal: 5,
+  maternity: 0,
+  paternity: 0,
+  unpaid: 0,
+  bereavement: 3,
+};
+
+type LeaveRequestFormValues = {
+  leaveType: 'annual' | 'sick' | 'personal' | 'unpaid';
+  startDate: string;
+  endDate: string;
+  reason: string;
+};
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (
+    error
+    && typeof error === 'object'
+    && 'response' in error
+  ) {
+    const response = (error as { response?: { data?: { message?: string } } }).response;
+    if (response?.data?.message) {
+      return response.data.message;
+    }
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return fallback;
+};
+
+const toLeaveRequest = (request: LeaveRequestEntity): LeaveRequest => ({
+  id: request.id,
+  employeeId: request.employeeId,
+  employeeName: request.employeeName,
+  employeeAvatar: request.employeeAvatar || undefined,
+  employeePosition: request.employeePosition,
+  departmentName: request.departmentName,
+  leaveType: request.leaveType,
+  startDate: new Date(request.startDate),
+  endDate: new Date(request.endDate),
+  totalDays: Number(request.totalDays || 0),
+  reason: request.reason,
+  status: request.status,
+  appliedAt: new Date(request.appliedAt),
+  approvedBy: request.approvedBy,
+  approvedAt: request.approvedAt ? new Date(request.approvedAt) : undefined,
+  rejectionReason: request.rejectionReason,
+});
+
+const deriveLeaveBalances = (requests: LeaveRequest[]): LeaveBalance[] => (
+  SUPPORTED_LEAVE_TYPES.map((type) => {
+    const used = requests
+      .filter((request) => request.leaveType === type && request.status === 'approved')
+      .reduce((sum, request) => sum + request.totalDays, 0);
+    const pending = requests
+      .filter((request) => request.leaveType === type && request.status === 'pending')
+      .reduce((sum, request) => sum + request.totalDays, 0);
+    const total = DEFAULT_LEAVE_TOTALS[type];
+
+    return {
+      type,
+      total,
+      used,
+      pending,
+      available: Math.max(total - used - pending, 0),
+    };
+  })
+);
 
 const LeaveRequestsPage: React.FC = () => {
-  const navigate = useNavigate();
-  const isAdminUser = isStoredEmployeeAdmin(getStoredEmployee());
-  const [leaveRequests, setLeaveRequests] = useState(mockLeaveRequests);
+  const storedEmployee = getStoredEmployee();
+  const currentEmployeeId = typeof storedEmployee?.id === 'string' ? storedEmployee.id : undefined;
+  const isAdminUser = isStoredEmployeeAdmin(storedEmployee);
+
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<LeaveStatus | 'all'>('all');
   const [typeFilter, setTypeFilter] = useState<LeaveType | 'all'>('all');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [activeTab, setActiveTab] = useState('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isActionLoading, setIsActionLoading] = useState(false);
+
+  const refreshData = useCallback(async (showErrorToast = true) => {
+    try {
+      const data = isAdminUser
+        ? await getLeaveRequests()
+        : await getMyLeaveRequests();
+      setLeaveRequests(data.map(toLeaveRequest));
+    } catch (error) {
+      console.error('Failed to load leave requests:', error);
+      if (showErrorToast) {
+        toast.error(getErrorMessage(error, 'Failed to load leave requests'));
+      }
+    }
+  }, [isAdminUser]);
 
   useEffect(() => {
-    if (!isAdminUser) {
-      navigate('/employees/attendance', { replace: true });
-    }
-  }, [isAdminUser, navigate]);
+    const load = async () => {
+      setIsLoading(true);
+      await refreshData(false);
+      setIsLoading(false);
+    };
 
-  // Calculate stats
+    load();
+  }, [refreshData]);
+
+  const myLeaveRequests = useMemo(() => {
+    if (!currentEmployeeId) {
+      return [];
+    }
+
+    return leaveRequests.filter((request) => request.employeeId === currentEmployeeId);
+  }, [currentEmployeeId, leaveRequests]);
+
+  const leaveBalances = useMemo(
+    () => deriveLeaveBalances(myLeaveRequests),
+    [myLeaveRequests],
+  );
+
   const stats = useMemo(() => {
     const now = new Date();
     const thisMonth = now.getMonth();
     const thisYear = now.getFullYear();
 
-    const thisMonthRequests = leaveRequests.filter((r) => {
-      const appliedDate = new Date(r.appliedAt);
-      return (
-        appliedDate.getMonth() === thisMonth &&
-        appliedDate.getFullYear() === thisYear
-      );
-    });
+    const thisMonthRequests = leaveRequests.filter((request) => (
+      request.appliedAt.getMonth() === thisMonth
+      && request.appliedAt.getFullYear() === thisYear
+    ));
 
     return {
-      pendingRequests: leaveRequests.filter((r) => r.status === 'pending').length,
-      approvedThisMonth: thisMonthRequests.filter((r) => r.status === 'approved').length,
-      rejectedThisMonth: thisMonthRequests.filter((r) => r.status === 'rejected').length,
-      employeesOnLeave: leaveRequests.filter((r) => {
-        if (r.status !== 'approved') return false;
-        const start = new Date(r.startDate);
-        const end = new Date(r.endDate);
-        return now >= start && now <= end;
+      pendingRequests: leaveRequests.filter((request) => request.status === 'pending').length,
+      approvedThisMonth: thisMonthRequests.filter((request) => request.status === 'approved').length,
+      rejectedThisMonth: thisMonthRequests.filter((request) => request.status === 'rejected').length,
+      employeesOnLeave: leaveRequests.filter((request) => {
+        if (request.status !== 'approved') {
+          return false;
+        }
+
+        return now >= request.startDate && now <= request.endDate;
       }).length,
     };
   }, [leaveRequests]);
 
-  // Filter requests
   const filteredRequests = useMemo(() => {
     let result = [...leaveRequests];
 
-    // Tab filter
     switch (activeTab) {
       case 'pending':
-        result = result.filter((r) => r.status === 'pending');
+        result = result.filter((request) => request.status === 'pending');
         break;
       case 'approved':
-        result = result.filter((r) => r.status === 'approved');
+        result = result.filter((request) => request.status === 'approved');
         break;
       case 'rejected':
-        result = result.filter((r) => r.status === 'rejected');
+        result = result.filter((request) => request.status === 'rejected');
+        break;
+      default:
         break;
     }
 
-    // Status filter
     if (statusFilter !== 'all') {
-      result = result.filter((r) => r.status === statusFilter);
+      result = result.filter((request) => request.status === statusFilter);
     }
 
-    // Type filter
     if (typeFilter !== 'all') {
-      result = result.filter((r) => r.leaveType === typeFilter);
+      result = result.filter((request) => request.leaveType === typeFilter);
     }
 
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(
-        (r) =>
-          r.employeeName.toLowerCase().includes(query) ||
-          r.reason.toLowerCase().includes(query)
-      );
+    if (searchQuery.trim()) {
+      const query = searchQuery.trim().toLowerCase();
+      result = result.filter((request) => (
+        request.employeeName.toLowerCase().includes(query)
+        || request.reason.toLowerCase().includes(query)
+        || request.departmentName.toLowerCase().includes(query)
+      ));
     }
 
-    // Sort by applied date (most recent first)
-    result.sort(
-      (a, b) => new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime()
-    );
-
+    result.sort((a, b) => b.appliedAt.getTime() - a.appliedAt.getTime());
     return result;
-  }, [leaveRequests, activeTab, statusFilter, typeFilter, searchQuery]);
-
-  const handleApprove = (request: LeaveRequest) => {
-    setLeaveRequests(
-      leaveRequests.map((r) =>
-        r.id === request.id
-          ? {
-              ...r,
-              status: 'approved' as LeaveStatus,
-              approvedBy: 'Current User',
-              approvedAt: new Date(),
-            }
-          : r
-      )
-    );
-    toast.success(`Leave request for ${request.employeeName} has been approved`);
-  };
-
-  const handleReject = (request: LeaveRequest) => {
-    setLeaveRequests(
-      leaveRequests.map((r) =>
-        r.id === request.id
-          ? {
-              ...r,
-              status: 'rejected' as LeaveStatus,
-              approvedBy: 'Current User',
-              approvedAt: new Date(),
-              rejectionReason: 'Request rejected by manager',
-            }
-          : r
-      )
-    );
-    toast.error(`Leave request for ${request.employeeName} has been rejected`);
-  };
-
-  const handleViewDetails = (request: LeaveRequest) => {
-    toast.info(`Viewing details for ${request.employeeName}'s request`);
-  };
-
-  const handleAddLeaveRequest = (data: any) => {
-    const newRequest: LeaveRequest = {
-      id: `leave-${Date.now()}`,
-      employeeId: 'emp-1', // Current user
-      employeeName: 'Current User',
-      employeePosition: 'Software Developer',
-      departmentName: 'Engineering',
-      leaveType: data.leaveType,
-      startDate: new Date(data.startDate),
-      endDate: new Date(data.endDate),
-      totalDays: Math.ceil(
-        (new Date(data.endDate).getTime() - new Date(data.startDate).getTime()) /
-          (1000 * 60 * 60 * 24)
-      ) + 1,
-      reason: data.reason,
-      status: 'pending',
-      appliedAt: new Date(),
-    };
-
-    setLeaveRequests([newRequest, ...leaveRequests]);
-    toast.success('Leave request submitted successfully');
-  };
+  }, [activeTab, leaveRequests, searchQuery, statusFilter, typeFilter]);
 
   const getTabCount = (tab: string) => {
     switch (tab) {
       case 'pending':
-        return leaveRequests.filter((r) => r.status === 'pending').length;
+        return leaveRequests.filter((request) => request.status === 'pending').length;
       case 'approved':
-        return leaveRequests.filter((r) => r.status === 'approved').length;
+        return leaveRequests.filter((request) => request.status === 'approved').length;
       case 'rejected':
-        return leaveRequests.filter((r) => r.status === 'rejected').length;
+        return leaveRequests.filter((request) => request.status === 'rejected').length;
       default:
         return leaveRequests.length;
     }
   };
 
+  const exportRequests = () => {
+    const headers = ['Employee', 'Department', 'Leave Type', 'Start Date', 'End Date', 'Total Days', 'Status', 'Reason'];
+    const rows = filteredRequests.map((request) => [
+      request.employeeName,
+      request.departmentName,
+      request.leaveType,
+      request.startDate.toISOString().slice(0, 10),
+      request.endDate.toISOString().slice(0, 10),
+      String(request.totalDays),
+      request.status,
+      request.reason,
+    ]);
+
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `leave-requests-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    window.URL.revokeObjectURL(url);
+    toast.success(`Exported ${filteredRequests.length} leave request${filteredRequests.length === 1 ? '' : 's'}`);
+  };
+
+  const handleApprove = async (request: LeaveRequest) => {
+    setIsActionLoading(true);
+    try {
+      await reviewLeaveRequest(request.id, { status: 'approved' });
+      await refreshData(false);
+      toast.success(`Leave request for ${request.employeeName} approved`);
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to approve leave request'));
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const handleReject = async (request: LeaveRequest) => {
+    setIsActionLoading(true);
+    try {
+      await reviewLeaveRequest(request.id, {
+        status: 'rejected',
+        reviewNote: `Rejected by ${isAdminUser ? 'admin' : 'reviewer'}`,
+      });
+      await refreshData(false);
+      toast.success(`Leave request for ${request.employeeName} rejected`);
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to reject leave request'));
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const handleViewDetails = (request: LeaveRequest) => {
+    const dateRange = `${request.startDate.toLocaleDateString()} - ${request.endDate.toLocaleDateString()}`;
+    toast.info(`${request.employeeName}: ${request.leaveType} leave, ${dateRange}`);
+  };
+
+  const handleAddLeaveRequest = async (data: LeaveRequestFormValues) => {
+    try {
+      await createLeaveRequest(data);
+      await refreshData(false);
+      toast.success('Leave request submitted successfully');
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to submit leave request'));
+      throw error;
+    }
+  };
+
+  const upcomingLeaves = useMemo(() => (
+    leaveRequests
+      .filter((request) => request.status === 'approved' && request.startDate > new Date())
+      .slice(0, 3)
+  ), [leaveRequests]);
+
   return (
     <div className="p-6 space-y-6 bg-[#F8FAFC] min-h-screen">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Leave Requests</h1>
           <p className="text-[#475569] mt-1">
-            Manage and approve employee leave requests
+            {isAdminUser ? 'Manage and approve employee leave requests' : 'Apply for leave and track your approval status'}
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" className="gap-2">
+          <Button variant="outline" className="gap-2" onClick={exportRequests} disabled={isLoading || filteredRequests.length === 0}>
             <Download className="w-4 h-4" />
             Export
           </Button>
@@ -229,7 +350,6 @@ const LeaveRequestsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Stats */}
       <LeaveStats
         pendingRequests={stats.pendingRequests}
         approvedThisMonth={stats.approvedThisMonth}
@@ -237,11 +357,8 @@ const LeaveRequestsPage: React.FC = () => {
         employeesOnLeave={stats.employeesOnLeave}
       />
 
-      {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Leave Requests Section */}
         <div className="lg:col-span-3 space-y-6">
-          {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
               <TabsList className="bg-white">
@@ -268,7 +385,6 @@ const LeaveRequestsPage: React.FC = () => {
                 </TabsTrigger>
               </TabsList>
 
-              {/* View Mode Toggle */}
               <div className="flex rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-1">
                 <Button
                   variant={viewMode === 'cards' ? 'default' : 'ghost'}
@@ -293,12 +409,11 @@ const LeaveRequestsPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Filters */}
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
                 <Input
-                  placeholder="Search by employee or reason..."
+                  placeholder={isAdminUser ? 'Search by employee, department, or reason...' : 'Search your leave requests...'}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10 bg-white"
@@ -317,109 +432,56 @@ const LeaveRequestsPage: React.FC = () => {
                   <SelectItem value="annual">Annual Leave</SelectItem>
                   <SelectItem value="sick">Sick Leave</SelectItem>
                   <SelectItem value="personal">Personal Leave</SelectItem>
-                  <SelectItem value="maternity">Maternity Leave</SelectItem>
-                  <SelectItem value="paternity">Paternity Leave</SelectItem>
                   <SelectItem value="unpaid">Unpaid Leave</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={statusFilter}
+                onValueChange={(value) => setStatusFilter(value as LeaveStatus | 'all')}
+              >
+                <SelectTrigger className="w-[180px] bg-white">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Content */}
-            <TabsContent value="all" className="mt-0">
-              {viewMode === 'cards' ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {filteredRequests.map((request, index) => (
-                    <LeaveRequestCard
-                      key={request.id}
-                      request={request}
-                      onApprove={handleApprove}
-                      onReject={handleReject}
-                      onViewDetails={handleViewDetails}
-                      index={index}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <LeaveRequestTable
-                  requests={filteredRequests}
-                  onApprove={handleApprove}
-                  onReject={handleReject}
-                  onViewDetails={handleViewDetails}
-                />
-              )}
-            </TabsContent>
-
-            <TabsContent value="pending" className="mt-0">
-              {viewMode === 'cards' ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {filteredRequests.map((request, index) => (
-                    <LeaveRequestCard
-                      key={request.id}
-                      request={request}
-                      onApprove={handleApprove}
-                      onReject={handleReject}
-                      onViewDetails={handleViewDetails}
-                      index={index}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <LeaveRequestTable
-                  requests={filteredRequests}
-                  onApprove={handleApprove}
-                  onReject={handleReject}
-                  onViewDetails={handleViewDetails}
-                />
-              )}
-            </TabsContent>
-
-            <TabsContent value="approved" className="mt-0">
-              {viewMode === 'cards' ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {filteredRequests.map((request, index) => (
-                    <LeaveRequestCard
-                      key={request.id}
-                      request={request}
-                      onViewDetails={handleViewDetails}
-                      showActions={false}
-                      index={index}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <LeaveRequestTable
-                  requests={filteredRequests}
-                  onViewDetails={handleViewDetails}
-                  showActions={false}
-                />
-              )}
-            </TabsContent>
-
-            <TabsContent value="rejected" className="mt-0">
-              {viewMode === 'cards' ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {filteredRequests.map((request, index) => (
-                    <LeaveRequestCard
-                      key={request.id}
-                      request={request}
-                      onViewDetails={handleViewDetails}
-                      showActions={false}
-                      index={index}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <LeaveRequestTable
-                  requests={filteredRequests}
-                  onViewDetails={handleViewDetails}
-                  showActions={false}
-                />
-              )}
-            </TabsContent>
+            {(['all', 'pending', 'approved', 'rejected'] as const).map((tab) => (
+              <TabsContent key={tab} value={tab} className="mt-0">
+                {viewMode === 'cards' ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {filteredRequests.map((request, index) => (
+                      <LeaveRequestCard
+                        key={request.id}
+                        request={request}
+                        onApprove={isAdminUser ? handleApprove : undefined}
+                        onReject={isAdminUser ? handleReject : undefined}
+                        onViewDetails={handleViewDetails}
+                        showActions={isAdminUser && request.status === 'pending' && !isActionLoading}
+                        index={index}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <LeaveRequestTable
+                    requests={filteredRequests}
+                    onApprove={isAdminUser ? handleApprove : undefined}
+                    onReject={isAdminUser ? handleReject : undefined}
+                    onViewDetails={handleViewDetails}
+                    showActions={isAdminUser && !isActionLoading}
+                  />
+                )}
+              </TabsContent>
+            ))}
           </Tabs>
 
-          {/* Empty State */}
-          {filteredRequests.length === 0 && (
+          {!isLoading && filteredRequests.length === 0 && (
             <div className="text-center py-12 bg-white rounded-md border border-[rgba(15,23,42,0.06)]">
               <div className="w-16 h-16 bg-[#F8FAFC] rounded-full flex items-center justify-center mx-auto mb-4">
                 <Calendar className="w-8 h-8 text-[#94A3B8]" />
@@ -428,14 +490,15 @@ const LeaveRequestsPage: React.FC = () => {
                 No leave requests found
               </h3>
               <p className="text-[#475569]">
-                {searchQuery || typeFilter !== 'all'
+                {searchQuery || typeFilter !== 'all' || statusFilter !== 'all'
                   ? 'Try adjusting your filters'
-                  : 'Leave requests will appear here'}
+                  : isAdminUser
+                    ? 'Employee leave requests will appear here'
+                    : 'Your leave requests will appear here'}
               </p>
             </div>
           )}
 
-          {/* Leave Calendar */}
           <div className="mt-6">
             <h3 className="text-lg font-semibold text-[#0F172A] mb-4">
               Leave Calendar
@@ -447,11 +510,9 @@ const LeaveRequestsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Sidebar - Leave Balance */}
         <div className="space-y-6">
-          <LeaveBalanceCard balances={mockLeaveBalances} />
+          <LeaveBalanceCard balances={leaveBalances} />
 
-          {/* Quick Stats */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -480,14 +541,14 @@ const LeaveRequestsPage: React.FC = () => {
               <Button
                 variant="outline"
                 className="w-full justify-start gap-2"
+                onClick={() => setActiveTab('approved')}
               >
                 <Calendar className="w-4 h-4" />
-                View Calendar
+                View Approved
               </Button>
             </div>
           </motion.div>
 
-          {/* Upcoming Leaves */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -498,35 +559,25 @@ const LeaveRequestsPage: React.FC = () => {
               Upcoming Leaves
             </h3>
             <div className="space-y-3">
-              {leaveRequests
-                .filter(
-                  (r) =>
-                    r.status === 'approved' && new Date(r.startDate) > new Date()
-                )
-                .slice(0, 3)
-                .map((request) => (
-                  <div
-                    key={request.id}
-                    className="flex items-center gap-3 p-3 bg-[#F8FAFC] rounded-md"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-[#0F172A] truncate">
-                        {request.employeeName}
-                      </p>
-                      <p className="text-xs text-[#475569]">
-                        {new Date(request.startDate).toLocaleDateString()} -{' '}
-                        {new Date(request.endDate).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <Badge variant="outline" className="text-xs">
-                      {request.totalDays}d
-                    </Badge>
+              {upcomingLeaves.map((request) => (
+                <div
+                  key={request.id}
+                  className="flex items-center gap-3 p-3 bg-[#F8FAFC] rounded-md"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-[#0F172A] truncate">
+                      {request.employeeName}
+                    </p>
+                    <p className="text-xs text-[#475569]">
+                      {request.startDate.toLocaleDateString()} - {request.endDate.toLocaleDateString()}
+                    </p>
                   </div>
-                ))}
-              {leaveRequests.filter(
-                (r) =>
-                  r.status === 'approved' && new Date(r.startDate) > new Date()
-              ).length === 0 && (
+                  <Badge variant="outline" className="text-xs">
+                    {request.totalDays}d
+                  </Badge>
+                </div>
+              ))}
+              {upcomingLeaves.length === 0 && (
                 <p className="text-sm text-[#475569] text-center py-4">
                   No upcoming leaves
                 </p>
@@ -536,12 +587,11 @@ const LeaveRequestsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Add Leave Request Dialog */}
       <AddLeaveRequestDialog
         open={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}
         onSubmit={handleAddLeaveRequest}
-        leaveBalances={mockLeaveBalances}
+        leaveBalances={leaveBalances}
       />
     </div>
   );

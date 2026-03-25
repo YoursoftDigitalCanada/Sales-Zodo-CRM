@@ -232,6 +232,54 @@ export class EmployeesController {
             sendSuccess(res, updated, 'Attendance record updated');
         } catch (e) { next(e); }
     }
+
+    async getLeaveRequests(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const requests = await employeesService.getLeaveRequests(req.context.tenantId);
+            sendSuccess(res, requests);
+        } catch (e) { next(e); }
+    }
+
+    async getMyLeaveRequests(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const employeeId = req.context.employeeId || req.user?.employeeId;
+            if (!employeeId) {
+                sendSuccess(res, []);
+                return;
+            }
+
+            const requests = await employeesService.getMyLeaveRequests(employeeId, req.context.tenantId);
+            sendSuccess(res, requests);
+        } catch (e) { next(e); }
+    }
+
+    async createLeaveRequest(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const employeeId = req.context.employeeId || req.user?.employeeId;
+            if (!employeeId) {
+                throw new BadRequestError(
+                    'Your user account is not linked to an employee profile',
+                    ErrorCodes.EMPLOYEE_NOT_FOUND,
+                );
+            }
+
+            const request = await employeesService.createLeaveRequest(employeeId, req.context.tenantId, sanitizeBody(req.body));
+            sendCreated(res, request, 'Leave request submitted');
+        } catch (e) { next(e); }
+    }
+
+    async reviewLeaveRequest(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const reviewerEmployeeId = req.context.employeeId || req.user?.employeeId || null;
+            const request = await employeesService.reviewLeaveRequest(
+                req.params.leaveRequestId,
+                req.context.tenantId,
+                reviewerEmployeeId,
+                sanitizeBody(req.body),
+            );
+            sendSuccess(res, request, 'Leave request updated');
+        } catch (e) { next(e); }
+    }
 }
 
 export const employeesController = new EmployeesController();

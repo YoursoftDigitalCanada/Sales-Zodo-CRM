@@ -794,6 +794,29 @@ const Pipeline = () => {
     setPendingAddStageId(null);
   };
 
+  const getLeadErrorMessage = (error: any, fallback: string) => {
+    const responseData = error?.response?.data;
+
+    if (
+      typeof responseData?.message === "string" &&
+      responseData.message.trim() &&
+      responseData.message !== "Validation failed"
+    ) {
+      return responseData.message;
+    }
+
+    const validationErrors = responseData?.details?.errors;
+    if (validationErrors && typeof validationErrors === "object") {
+      for (const value of Object.values(validationErrors)) {
+        if (Array.isArray(value) && value.length > 0 && typeof value[0] === "string") {
+          return value[0];
+        }
+      }
+    }
+
+    return responseData?.message || error?.message || fallback;
+  };
+
   const handleCreateLeadFromDialog = async (data: any) => {
     try {
       const requestedStageStatus = pendingAddStageId ? stageIdToStatus[pendingAddStageId] : undefined;
@@ -843,13 +866,15 @@ const Pipeline = () => {
         title: "Lead Added",
         description: `${newLead.firstName} ${newLead.lastName} was added to ${stageName}.`,
       });
+      return true;
     } catch (error: any) {
       console.error("Failed to add lead from pipeline:", error);
       toast({
         title: "Error",
-        description: error?.response?.data?.message || "Failed to add lead.",
+        description: getLeadErrorMessage(error, "Failed to add lead."),
         variant: "destructive",
       });
+      return false;
     }
   };
 

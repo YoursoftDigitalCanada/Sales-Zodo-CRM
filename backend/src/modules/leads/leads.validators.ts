@@ -11,7 +11,9 @@ import {
 } from "@contracts/lead";
 
 export const createLeadSchema = z.object({
-  body: CreateLeadSchema,
+  body: CreateLeadSchema.extend({
+    skipDuplicateCheck: z.boolean().optional(),
+  }),
 });
 
 export const updateLeadSchema = z.object({

@@ -13,6 +13,10 @@ export interface LeadEntity {
     [key: string]: unknown;
 }
 
+type CreateLeadRequest = Partial<CreateLeadDto> & {
+    skipDuplicateCheck?: boolean;
+};
+
 export async function getLeads(params?: Record<string, unknown>): Promise<LeadEntity[]> {
     const response = await api.get("/leads", { params: { limit: 100, ...params } });
     return extractApiArray<LeadEntity>(response.data);
@@ -23,7 +27,7 @@ export async function getLeadById(id: string | number): Promise<LeadEntity> {
     return response.data?.data || response.data;
 }
 
-export async function createLead(data: CreateLeadDto | Partial<CreateLeadDto>): Promise<LeadEntity> {
+export async function createLead(data: CreateLeadRequest): Promise<LeadEntity> {
     const response = await api.post("/leads", data);
     return response.data?.data || response.data;
 }

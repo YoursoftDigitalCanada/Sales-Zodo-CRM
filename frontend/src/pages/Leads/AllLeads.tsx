@@ -931,7 +931,7 @@ export const LeadFormDialog = ({
   isOpen: boolean;
   onClose: () => void;
   lead: Lead | null;
-  onSubmit: (data: Partial<Lead>) => Promise<void>;
+  onSubmit: (data: Partial<Lead>) => Promise<boolean>;
 }) => {
   type LeadFormTab = "basic" | "property" | "service" | "qualification" | "insurance" | "assessment" | "details";
 
@@ -1375,7 +1375,7 @@ export const LeadFormDialog = ({
 
     setSaving(true);
     try {
-      await onSubmit({
+      const didSave = await onSubmit({
         ...formData,
         potentialValue: parseFloat(formData.potentialValue) || 0,
         tags: formData.tags
@@ -1385,7 +1385,10 @@ export const LeadFormDialog = ({
         numberOfOtherQuotes: formData.numberOfOtherQuotes ? parseInt(formData.numberOfOtherQuotes) : undefined,
         leadScore: formData.leadScore ? parseInt(formData.leadScore) : undefined,
       });
-      onClose();
+
+      if (didSave) {
+        onClose();
+      }
     } finally {
       setSaving(false);
     }
@@ -3388,33 +3391,55 @@ const AllLeads = () => {
     };
   };
 
+  const getLeadErrorMessage = (error: any, fallback: string) => {
+    const responseData = error?.response?.data;
+
+    if (
+      typeof responseData?.message === "string" &&
+      responseData.message.trim() &&
+      responseData.message !== "Validation failed"
+    ) {
+      return responseData.message;
+    }
+
+    const validationErrors = responseData?.details?.errors;
+    if (validationErrors && typeof validationErrors === "object") {
+      for (const value of Object.values(validationErrors)) {
+        if (Array.isArray(value) && value.length > 0 && typeof value[0] === "string") {
+          return value[0];
+        }
+      }
+    }
+
+    return responseData?.message || error?.message || fallback;
+  };
+
   const handleAddLead = async (data: Partial<Lead>) => {
+    const apiData: Record<string, any> = {
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email,
+      phone: data.phone || undefined,
+      companyName: data.companyName,
+      jobTitle: data.jobTitle || undefined,
+      website: data.website && data.website.trim() ? data.website.trim() : undefined,
+      location: data.location || undefined,
+      status: (data.status || "new").toUpperCase(),
+      temperature: (data.temperature || "warm").toUpperCase(),
+      potentialValue: data.potentialValue || 0,
+      notes: data.notes || undefined,
+      ...buildNewFieldsPayload(data),
+    };
+
+    if (data.leadSourceId && data.leadSourceId !== "none" && data.leadSourceId !== "") {
+      apiData.leadSourceId = data.leadSourceId;
+    }
+
+    if (data.assignedToId && data.assignedToId !== "unassigned" && data.assignedToId !== "") {
+      apiData.assignedToId = data.assignedToId;
+    }
+
     try {
-      const apiData: Record<string, any> = {
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
-        phone: data.phone || undefined,
-        companyName: data.companyName,
-        jobTitle: data.jobTitle || undefined,
-        website: data.website && data.website.trim() ? data.website.trim() : undefined,
-        location: data.location || undefined,
-        status: (data.status || "new").toUpperCase(),
-        temperature: (data.temperature || "warm").toUpperCase(),
-        potentialValue: data.potentialValue || 0,
-        notes: data.notes || undefined,
-        ...buildNewFieldsPayload(data),
-      };
-      // Send leadSourceId if selected
-      if (data.leadSourceId && data.leadSourceId !== "none" && data.leadSourceId !== "") {
-        apiData.leadSourceId = data.leadSourceId;
-      }
-
-      // Only send assignedToId if a valid employee is selected
-      if (data.assignedToId && data.assignedToId !== "unassigned" && data.assignedToId !== "") {
-        apiData.assignedToId = data.assignedToId;
-      }
-
       const responseData = await createLead(apiData);
       const newLead = mapApiLead(responseData);
       setLeads((prev) => [newLead, ...prev]);
@@ -3422,20 +3447,21 @@ const AllLeads = () => {
         title: "Lead Added",
         description: `${newLead.firstName} ${newLead.lastName} has been added to your leads.`,
       });
+      return true;
     } catch (error: any) {
-      // Handle duplicate detection (409 response)
       if (error.response?.status === 409 && error.response?.data?.error === 'DUPLICATE_LEAD_DETECTED') {
         setDuplicateMatches(error.response.data.duplicates || []);
         setPendingLeadData(apiData);
         setIsDuplicateWarningOpen(true);
-        return;
+        return false;
       }
       console.error("Failed to add lead:", error);
       toast({
         title: "Error",
-        description: error.response?.data?.message || "Failed to add lead.",
+        description: getLeadErrorMessage(error, "Failed to add lead."),
         variant: "destructive",
       });
+      return false;
     }
   };
 
@@ -3447,6 +3473,8 @@ const AllLeads = () => {
       const newLead = mapApiLead(responseData);
       setLeads((prev) => [newLead, ...prev]);
       setIsDuplicateWarningOpen(false);
+      setIsFormOpen(false);
+      setCurrentLead(null);
       setPendingLeadData(null);
       setDuplicateMatches([]);
       toast({
@@ -3457,7 +3485,7 @@ const AllLeads = () => {
       console.error("Failed to create lead:", error);
       toast({
         title: "Error",
-        description: error.response?.data?.message || "Failed to add lead.",
+        description: getLeadErrorMessage(error, "Failed to add lead."),
         variant: "destructive",
       });
     }
@@ -3478,6 +3506,8 @@ const AllLeads = () => {
       setLeads(apiLeads.map(mapApiLead));
 
       setIsDuplicateWarningOpen(false);
+      setIsFormOpen(false);
+      setCurrentLead(null);
       setPendingLeadData(null);
       setDuplicateMatches([]);
       toast({
@@ -3488,14 +3518,14 @@ const AllLeads = () => {
       console.error("Failed to merge leads:", error);
       toast({
         title: "Error",
-        description: error.response?.data?.message || error.message || "Failed to merge leads.",
+        description: getLeadErrorMessage(error, "Failed to merge leads."),
         variant: "destructive",
       });
     }
   };
 
   const handleEditLead = async (data: Partial<Lead>) => {
-    if (!currentLead) return;
+    if (!currentLead) return false;
     try {
       const apiData: Record<string, any> = {
         firstName: data.firstName,
@@ -3535,13 +3565,15 @@ const AllLeads = () => {
         title: "Lead Updated",
         description: "The lead has been updated successfully.",
       });
+      return true;
     } catch (error: any) {
       console.error("Failed to update lead:", error);
       toast({
         title: "Error",
-        description: error.response?.data?.message || "Failed to update lead.",
+        description: getLeadErrorMessage(error, "Failed to update lead."),
         variant: "destructive",
       });
+      return false;
     }
   };
 

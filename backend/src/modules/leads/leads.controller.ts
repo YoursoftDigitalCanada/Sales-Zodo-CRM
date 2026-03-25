@@ -21,8 +21,10 @@ export class LeadsController {
     try {
       const tenantId = req.context.tenantId;
       const employeeId = req.user!.employeeId!;
-      const data = sanitizeBody<CreateLeadDto>(req.body);
-      const skipDuplicateCheck = req.body.skipDuplicateCheck === true;
+      const {
+        skipDuplicateCheck = false,
+        ...data
+      } = sanitizeBody<CreateLeadDto & { skipDuplicateCheck?: boolean }>(req.body);
 
       const lead = await leadsManager.createLead(
         req, tenantId, data as CreateLeadDto, employeeId,

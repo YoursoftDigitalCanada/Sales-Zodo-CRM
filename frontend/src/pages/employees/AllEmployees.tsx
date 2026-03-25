@@ -69,11 +69,33 @@ type ApiEmployee = {
   departmentId?: string;
   department?: string | { name?: string };
   isActive?: boolean;
+  employmentStatus?: string;
   status?: string;
   employmentType?: string;
   hireDate?: string;
   createdAt?: string;
-  salary?: number;
+  salary?: number | null;
+  skills?: string[];
+  managerId?: string | null;
+  managerName?: string | null;
+  address?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    country?: string;
+  };
+  emergencyContact?: {
+    name?: string;
+    relationship?: string;
+    phone?: string;
+  };
+  documents?: {
+    id: string;
+    name?: string;
+    type?: string;
+    uploadedAt?: string;
+  }[];
   user?: {
     firstName?: string;
     lastName?: string;
@@ -93,11 +115,80 @@ type EmployeeFormPayload = {
   status: EmployeeStatus;
   joinDate: string;
   salary: string;
+  street?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  country?: string;
+  emergencyName?: string;
+  emergencyRelationship?: string;
+  emergencyPhone?: string;
+  skills?: string;
   portalEmail?: string;
   portalPassword?: string;
 };
 
 const normalizeDepartmentName = (value: string) => value.trim().replace(/\s+/g, ' ').toLowerCase();
+const normalizeEmploymentType = (value?: string | null): EmploymentType => {
+  const normalized = value?.trim().toLowerCase();
+  if (
+    normalized === 'full-time'
+    || normalized === 'part-time'
+    || normalized === 'contract'
+    || normalized === 'intern'
+  ) {
+    return normalized;
+  }
+
+  return 'full-time';
+};
+
+const normalizeEmployeeStatus = (value?: string | null, isActive?: boolean): EmployeeStatus => {
+  const normalized = value?.trim().toLowerCase();
+  if (
+    normalized === 'active'
+    || normalized === 'inactive'
+    || normalized === 'on-leave'
+    || normalized === 'probation'
+  ) {
+    return normalized;
+  }
+
+  return isActive === false ? 'inactive' : 'active';
+};
+
+const parseSkills = (value?: string) =>
+  (value || '')
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+const buildEmployeePayload = (data: EmployeeFormPayload, departmentName?: string) => ({
+  firstName: data.firstName.trim(),
+  lastName: data.lastName.trim(),
+  email: data.email.trim().toLowerCase(),
+  phone: data.phone.trim(),
+  department: departmentName || null,
+  position: data.position.trim(),
+  hireDate: data.joinDate ? new Date(`${data.joinDate}T00:00:00.000Z`).toISOString() : null,
+  employmentType: data.employmentType,
+  employmentStatus: data.status,
+  isActive: data.status !== 'inactive',
+  salary: data.salary ? Number(data.salary) : null,
+  skills: parseSkills(data.skills),
+  address: {
+    street: data.street?.trim() || '',
+    city: data.city?.trim() || '',
+    state: data.state?.trim() || '',
+    zipCode: data.zipCode?.trim() || '',
+    country: data.country?.trim() || '',
+  },
+  emergencyContact: {
+    name: data.emergencyName?.trim() || '',
+    relationship: data.emergencyRelationship?.trim() || '',
+    phone: data.emergencyPhone?.trim() || '',
+  },
+});
 
 const getErrorMessage = (error: unknown, fallback: string) => {
   if (
@@ -156,14 +247,31 @@ const mapEmployeeData = (data: ApiEmployee[], departments: Department[]): Employ
       position: employee.jobTitle || employee.position || '',
       departmentId: matchedDepartment?.id || employee.departmentId || '',
       departmentName,
-      status: employee.isActive === false ? 'inactive' : (employee.status?.toLowerCase() || 'active'),
-      employmentType: employee.employmentType?.toLowerCase().replace('_', '-') || 'full-time',
+      managerId: employee.managerId || undefined,
+      managerName: employee.managerName || undefined,
+      status: normalizeEmployeeStatus(employee.employmentStatus || employee.status, employee.isActive),
+      employmentType: normalizeEmploymentType(employee.employmentType),
       joinDate: new Date(employee.hireDate || employee.createdAt || Date.now()),
       salary: Number(employee.salary || 0),
-      skills: [],
-      address: { street: '', city: '', state: '', zipCode: '', country: '' },
-      emergencyContact: { name: '', relationship: '', phone: '' },
-      documents: [],
+      skills: employee.skills || [],
+      address: {
+        street: employee.address?.street || '',
+        city: employee.address?.city || '',
+        state: employee.address?.state || '',
+        zipCode: employee.address?.zipCode || '',
+        country: employee.address?.country || '',
+      },
+      emergencyContact: {
+        name: employee.emergencyContact?.name || '',
+        relationship: employee.emergencyContact?.relationship || '',
+        phone: employee.emergencyContact?.phone || '',
+      },
+      documents: (employee.documents || []).map((document) => ({
+        id: document.id,
+        name: document.name || 'Document',
+        type: document.type || 'file',
+        uploadedAt: new Date(document.uploadedAt || Date.now()),
+      })),
       performance: { rating: 0, lastReviewDate: new Date(), nextReviewDate: new Date() },
     } as Employee;
   });
@@ -199,13 +307,16 @@ const AllEmployeesPage: React.FC = () => {
         getEmployees(),
       ]);
       const mappedDepartments = mapDepartmentData(departmentData as ApiDepartment[]);
+      const mappedEmployees = mapEmployeeData(employeeData as ApiEmployee[], mappedDepartments);
       setDepartments(mappedDepartments);
-      setEmployees(mapEmployeeData(employeeData as ApiEmployee[], mappedDepartments));
+      setEmployees(mappedEmployees);
+      return { mappedDepartments, mappedEmployees };
     } catch (error) {
       console.error('Failed to fetch employees:', error);
       if (showErrorToast) {
         toast.error('Failed to load employees');
       }
+      return null;
     }
   }, []);
 
@@ -393,16 +504,25 @@ const AllEmployeesPage: React.FC = () => {
 
   const handleAddEmployee = async (data: EmployeeFormPayload) => {
     const department = departments.find((item) => item.id === data.departmentId);
+    const payload = buildEmployeePayload(data, department?.name);
 
     if (data.portalEmail && data.portalPassword && !editingEmployee) {
       try {
         await api.post('/employees/create-portal-access', {
           email: data.portalEmail,
           password: data.portalPassword,
-          firstName: data.firstName,
-          lastName: data.lastName,
-          position: data.position || 'Crew Member',
-          department: department?.name,
+          phone: payload.phone,
+          firstName: payload.firstName,
+          lastName: payload.lastName,
+          position: payload.position || 'Crew Member',
+          department: payload.department,
+          hireDate: payload.hireDate,
+          salary: payload.salary,
+          employmentStatus: payload.employmentStatus,
+          employmentType: payload.employmentType,
+          skills: payload.skills,
+          address: payload.address,
+          emergencyContact: payload.emergencyContact,
         });
         toast.success(`${data.firstName} ${data.lastName} added with Crew Portal access`);
         await refreshData();
@@ -416,13 +536,15 @@ const AllEmployeesPage: React.FC = () => {
     if (editingEmployee) {
       try {
         await api.put(`/employees/${editingEmployee.id}`, {
-          department: department?.name,
-          position: data.position,
-          isActive: data.status === 'active',
+          ...payload,
         });
         toast.success(`${data.firstName} ${data.lastName}'s profile has been updated`);
+        const refreshed = await refreshData();
+        if (selectedEmployee?.id === editingEmployee.id) {
+          const updatedEmployee = refreshed?.mappedEmployees.find((employee) => employee.id === editingEmployee.id) || null;
+          setSelectedEmployee(updatedEmployee);
+        }
         setEditingEmployee(undefined);
-        await refreshData();
       } catch (error) {
         toast.error(`Update failed: ${getErrorMessage(error, 'Unknown error')}`);
       }

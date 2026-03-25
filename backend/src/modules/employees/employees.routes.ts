@@ -13,6 +13,7 @@ import {
     createDepartmentSchema,
     updateDepartmentSchema,
     departmentIdSchema,
+    createPortalAccessSchema,
     attendanceQuerySchema,
     attendanceIdSchema,
     checkInAttendanceSchema,
@@ -47,17 +48,45 @@ router.put('/departments/:departmentId', requirePermission(PERMISSIONS.EMPLOYEES
 router.delete('/departments/:departmentId', requirePermission(PERMISSIONS.EMPLOYEES_DELETE), validate(departmentIdSchema), employeesController.deleteDepartment.bind(employeesController));
 
 // Create crew portal access (User + Employee in same tenant)
-router.post('/create-portal-access', requirePermission(PERMISSIONS.EMPLOYEES_CREATE), async (req: Request, res: Response, next: NextFunction) => {
+router.post('/create-portal-access', requirePermission(PERMISSIONS.EMPLOYEES_CREATE), validate(createPortalAccessSchema), async (req: Request, res: Response, next: NextFunction) => {
     try {
         const tenantId = (req as any).context?.tenantId;
-        const { email, password, firstName, lastName, position, department } = req.body;
+        const {
+            email,
+            password,
+            firstName,
+            lastName,
+            phone,
+            position,
+            department,
+            hireDate,
+            salary,
+            employmentStatus,
+            employmentType,
+            skills,
+            address,
+            emergencyContact,
+        } = req.body;
 
         if (!email || !password || !firstName || !lastName) {
             return res.status(400).json({ success: false, message: 'email, password, firstName, and lastName are required' });
         }
 
         const result = await employeesService.createPortalAccess(tenantId, {
-            email, password, firstName, lastName, position, department,
+            email,
+            password,
+            firstName,
+            lastName,
+            phone,
+            position,
+            department,
+            hireDate,
+            salary,
+            employmentStatus,
+            employmentType,
+            skills,
+            address,
+            emergencyContact,
         });
 
         return res.status(201).json(result);

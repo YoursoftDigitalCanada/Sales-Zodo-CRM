@@ -1,26 +1,81 @@
 import { z } from 'zod';
 
+const employmentStatusSchema = z.enum(['active', 'inactive', 'on-leave', 'probation']);
+const employmentTypeSchema = z.enum(['full-time', 'part-time', 'contract', 'intern']);
+
+const employeeAddressSchema = z.object({
+    street: z.string().max(200).optional().nullable(),
+    city: z.string().max(100).optional().nullable(),
+    state: z.string().max(100).optional().nullable(),
+    zipCode: z.string().max(30).optional().nullable(),
+    country: z.string().max(100).optional().nullable(),
+});
+
+const emergencyContactSchema = z.object({
+    name: z.string().max(100).optional().nullable(),
+    relationship: z.string().max(100).optional().nullable(),
+    phone: z.string().max(50).optional().nullable(),
+});
+
 export const createEmployeeSchema = z.object({
     body: z.object({
         userId: z.string().uuid(),
         employeeCode: z.string().max(50).optional(),
+        employeeNumber: z.string().max(50).optional(),
         department: z.string().max(100).optional().nullable(),
         position: z.string().max(100).optional().nullable(),
         hireDate: z.string().datetime().optional().nullable(),
-        salary: z.number().min(0).optional().nullable(),
+        phone: z.string().max(50).optional().nullable(),
+        salary: z.coerce.number().min(0).optional().nullable(),
+        employmentStatus: employmentStatusSchema.optional(),
+        employmentType: employmentTypeSchema.optional(),
+        skills: z.array(z.string().max(100)).optional(),
+        address: employeeAddressSchema.optional().nullable(),
+        emergencyContact: emergencyContactSchema.optional().nullable(),
         isActive: z.boolean().default(true),
     }),
 });
 
 export const updateEmployeeSchema = z.object({
     body: z.object({
+        firstName: z.string().min(1).max(100).optional(),
+        lastName: z.string().min(1).max(100).optional(),
+        email: z.string().email().optional(),
+        phone: z.string().max(50).optional().nullable(),
         roleId: z.string().uuid().optional(),
         employeeCode: z.string().max(50).optional(),
+        employeeNumber: z.string().max(50).optional(),
         department: z.string().max(100).optional().nullable(),
         position: z.string().max(100).optional().nullable(),
         hireDate: z.string().datetime().optional().nullable(),
-        salary: z.number().min(0).optional().nullable(),
+        salary: z.coerce.number().min(0).optional().nullable(),
+        employmentStatus: employmentStatusSchema.optional(),
+        employmentType: employmentTypeSchema.optional(),
+        skills: z.array(z.string().max(100)).optional(),
+        address: employeeAddressSchema.optional().nullable(),
+        emergencyContact: emergencyContactSchema.optional().nullable(),
         isActive: z.boolean().optional(),
+    }),
+});
+
+export const createPortalAccessSchema = z.object({
+    body: z.object({
+        email: z.string().email().refine((value) => value.endsWith('@zodo.ca'), {
+            message: 'Portal email must end with @zodo.ca',
+        }),
+        password: z.string().min(8).max(128),
+        firstName: z.string().min(1).max(100),
+        lastName: z.string().min(1).max(100),
+        phone: z.string().max(50).optional().nullable(),
+        position: z.string().max(100).optional().nullable(),
+        department: z.string().max(100).optional().nullable(),
+        hireDate: z.string().datetime().optional().nullable(),
+        salary: z.coerce.number().min(0).optional().nullable(),
+        employmentStatus: employmentStatusSchema.optional(),
+        employmentType: employmentTypeSchema.optional(),
+        skills: z.array(z.string().max(100)).optional(),
+        address: employeeAddressSchema.optional().nullable(),
+        emergencyContact: emergencyContactSchema.optional().nullable(),
     }),
 });
 

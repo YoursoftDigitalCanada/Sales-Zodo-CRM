@@ -805,6 +805,10 @@ model Employee {
   position              String?
   hireDate              DateTime?
   isActive              Boolean       @default(true)
+  employmentStatus      String        @default("active")
+  employmentType        String        @default("full-time")
+  salary                Float?
+  profileData           Json          @default("{}")
   
   // Tenant relation (REQUIRED for employees)
   tenantId              String

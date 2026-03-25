@@ -1,10 +1,35 @@
-import { PrismaClient, Prisma } from '@prisma/client';
-import { CreateEmployeeDto, UpdateEmployeeDto, EmployeeQueryDto } from './employees.dto';
+import { Prisma } from '@prisma/client';
+import { prisma } from '../../config/database';
+import {
+    CreateEmployeeDto,
+    UpdateEmployeeDto,
+    EmployeeQueryDto,
+    buildEmployeeProfileData,
+    normalizeEmployeeProfileData,
+} from './employees.dto';
 
-const prisma = new PrismaClient();
 const employeeInclude = {
-    user: { select: { id: true, firstName: true, lastName: true, email: true } },
+    user: {
+        select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            avatar: true,
+            phone: true,
+        },
+    },
     role: { select: { id: true, name: true } },
+    employeeDocuments: {
+        select: {
+            id: true,
+            name: true,
+            type: true,
+            fileUrl: true,
+            createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' as const },
+    },
 };
 
 export class EmployeesRepository {
@@ -14,10 +39,18 @@ export class EmployeesRepository {
                 tenantId,
                 userId: data.userId,
                 roleId: data.roleId,
-                employeeNumber: data.employeeNumber,
+                employeeNumber: data.employeeNumber || (data as { employeeCode?: string }).employeeCode,
                 department: data.department,
                 position: data.position,
                 hireDate: data.hireDate ? new Date(data.hireDate) : null,
+                employmentStatus: data.employmentStatus || (data.isActive === false ? 'inactive' : 'active'),
+                employmentType: data.employmentType || 'full-time',
+                salary: data.salary ?? null,
+                profileData: buildEmployeeProfileData({
+                    skills: data.skills,
+                    address: data.address,
+                    emergencyContact: data.emergencyContact,
+                }),
                 isActive: data.isActive ?? true,
             },
             include: employeeInclude,
@@ -54,14 +87,64 @@ export class EmployeesRepository {
         const existing = await prisma.employee.findFirst({ where: { id, tenantId } });
         if (!existing) throw new Error('Employee not found or access denied');
 
+        const currentProfile = normalizeEmployeeProfileData(existing.profileData);
+
         return prisma.employee.update({
             where: { id },
             data: {
-                ...(data.roleId !== undefined && { roleId: data.roleId }),
-                ...(data.employeeNumber !== undefined && { employeeNumber: data.employeeNumber }),
+                ...(data.roleId !== undefined
+                    ? {
+                        role: {
+                            connect: { id: data.roleId },
+                        },
+                    }
+                    : {}),
+                ...(
+                    data.employeeNumber !== undefined
+                    || (data as { employeeCode?: string }).employeeCode !== undefined
+                        ? {
+                            employeeNumber: data.employeeNumber ?? (data as { employeeCode?: string }).employeeCode ?? null,
+                        }
+                        : {}
+                ),
                 ...(data.department !== undefined && { department: data.department }),
                 ...(data.position !== undefined && { position: data.position }),
                 ...(data.hireDate !== undefined && { hireDate: data.hireDate ? new Date(data.hireDate) : null }),
+                ...(data.employmentStatus !== undefined && { employmentStatus: data.employmentStatus || 'active' }),
+                ...(data.employmentType !== undefined && { employmentType: data.employmentType || 'full-time' }),
+                ...(data.salary !== undefined && { salary: data.salary ?? null }),
+                ...(
+                    data.skills !== undefined
+                    || data.address !== undefined
+                    || data.emergencyContact !== undefined
+                        ? {
+                            profileData: buildEmployeeProfileData({
+                                skills: data.skills ?? currentProfile.skills,
+                                address: data.address ?? currentProfile.address,
+                                emergencyContact: data.emergencyContact ?? currentProfile.emergencyContact,
+                                managerId: currentProfile.managerId,
+                                managerName: currentProfile.managerName,
+                            }),
+                        }
+                        : {}
+                ),
+                ...(
+                    data.firstName !== undefined
+                    || data.lastName !== undefined
+                    || data.email !== undefined
+                    || data.phone !== undefined
+                        ? {
+                            user: {
+                                update: {
+                                    ...(data.firstName !== undefined ? { firstName: data.firstName } : {}),
+                                    ...(data.lastName !== undefined ? { lastName: data.lastName } : {}),
+                                    ...(data.email !== undefined ? { email: data.email.toLowerCase() } : {}),
+                                    ...(data.phone !== undefined ? { phone: data.phone || null } : {}),
+                                },
+                            },
+                        }
+                        : {}
+                ),
                 ...(data.isActive !== undefined && { isActive: data.isActive }),
             },
             include: employeeInclude,

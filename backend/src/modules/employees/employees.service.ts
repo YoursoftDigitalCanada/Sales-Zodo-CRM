@@ -15,6 +15,7 @@ import {
     AttendanceCheckOutDto,
     UpdateAttendanceRecordDto,
     toEmployeeResponseDto,
+    buildEmployeeProfileData,
 } from './employees.dto';
 import { NotFoundError, ConflictError, BadRequestError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
@@ -314,18 +315,19 @@ export class EmployeesService {
     async create(tenantId: string, data: CreateEmployeeDto) {
         const emp = await employeesRepository.create(tenantId, data);
         const dto = toEmployeeResponseDto(emp);
+        const employeeName = `${emp.user.firstName} ${emp.user.lastName}`.trim();
 
         activityLogger.log({
             tenantId, entityType: 'Employee', entityId: dto.id,
             action: 'CREATE', module: 'employees',
-            description: `Created employee "${(emp as any).firstName || ''} ${(emp as any).lastName || ''}"`.trim(),
+            description: `Created employee "${employeeName}"`,
             metadata: { position: (emp as any).position, department: (emp as any).department },
         });
 
         eventBus.emit('employee.created', {
             tenantId,
             employeeId: dto.id,
-            employeeName: `${(emp as any).firstName || ''} ${(emp as any).lastName || ''}`.trim(),
+            employeeName,
             department: (emp as any).department || undefined,
         });
 
@@ -341,8 +343,26 @@ export class EmployeesService {
         password: string;
         firstName: string;
         lastName: string;
+        phone?: string | null;
         position?: string;
         department?: string;
+        hireDate?: string | Date | null;
+        salary?: number | null;
+        employmentStatus?: string | null;
+        employmentType?: string | null;
+        skills?: string[] | null;
+        address?: {
+            street?: string | null;
+            city?: string | null;
+            state?: string | null;
+            zipCode?: string | null;
+            country?: string | null;
+        } | null;
+        emergencyContact?: {
+            name?: string | null;
+            relationship?: string | null;
+            phone?: string | null;
+        } | null;
     }) {
         // Validate email domain
         if (!data.email.endsWith('@zodo.ca')) {
@@ -380,6 +400,7 @@ export class EmployeesService {
                     passwordHash,
                     firstName: data.firstName,
                     lastName: data.lastName,
+                    phone: data.phone || null,
                     status: 'ACTIVE',
                     emailVerified: true,
                     tenant: { connect: { id: tenantId } },
@@ -393,7 +414,16 @@ export class EmployeesService {
                     role: { connect: { id: staffRole.id } },
                     position: data.position || 'Crew Member',
                     department: data.department || null,
-                    isActive: true,
+                    hireDate: data.hireDate ? new Date(data.hireDate) : null,
+                    employmentStatus: data.employmentStatus || 'active',
+                    employmentType: data.employmentType || 'full-time',
+                    salary: data.salary ?? null,
+                    profileData: buildEmployeeProfileData({
+                        skills: data.skills,
+                        address: data.address,
+                        emergencyContact: data.emergencyContact,
+                    }),
+                    isActive: data.employmentStatus !== 'inactive',
                 },
                 include: {
                     user: { select: { email: true, firstName: true, lastName: true } },
@@ -604,13 +634,29 @@ export class EmployeesService {
     async update(id: string, tenantId: string, data: UpdateEmployeeDto) {
         const existing = await employeesRepository.findById(id, tenantId);
         if (!existing) throw new NotFoundError('Employee not found', ErrorCodes.EMPLOYEE_NOT_FOUND);
+
+        if (data.email && data.email.toLowerCase() !== existing.user.email.toLowerCase()) {
+            const matchingUser = await prisma.user.findUnique({
+                where: { email: data.email.toLowerCase() },
+                select: { id: true },
+            });
+
+            if (matchingUser && matchingUser.id !== existing.userId) {
+                throw new ConflictError(
+                    'An account with this email already exists',
+                    ErrorCodes.USER_ALREADY_EXISTS,
+                );
+            }
+        }
+
         const emp = await employeesRepository.update(id, tenantId, data);
         const dto = toEmployeeResponseDto(emp);
+        const employeeName = `${emp.user.firstName} ${emp.user.lastName}`.trim();
 
         activityLogger.log({
             tenantId, entityType: 'Employee', entityId: dto.id,
             action: 'UPDATE', module: 'employees',
-            description: `Updated employee "${(emp as any).firstName || ''} ${(emp as any).lastName || ''}"`.trim(),
+            description: `Updated employee "${employeeName}"`,
             metadata: { updatedFields: Object.keys(data) },
         });
 
@@ -620,11 +666,12 @@ export class EmployeesService {
     async delete(id: string, tenantId: string) {
         const existing = await employeesRepository.findById(id, tenantId);
         if (!existing) throw new NotFoundError('Employee not found', ErrorCodes.EMPLOYEE_NOT_FOUND);
+        const employeeName = `${existing.user.firstName} ${existing.user.lastName}`.trim();
 
         activityLogger.log({
             tenantId, entityType: 'Employee', entityId: id,
             action: 'DELETE', module: 'employees',
-            description: `Deleted employee "${(existing as any).firstName || ''} ${(existing as any).lastName || ''}"`.trim(),
+            description: `Deleted employee "${employeeName}"`,
         });
 
         await employeesRepository.delete(id, tenantId);

@@ -543,10 +543,10 @@ const AllEmployeesPage: React.FC = () => {
         });
         toast.success(`${data.firstName} ${data.lastName} added with Crew Portal access`);
         await refreshData();
-        return;
+        return true;
       } catch (error) {
         toast.error(`Portal creation failed: ${getErrorMessage(error, 'Unknown error')}`);
-        return;
+        return false;
       }
     }
 
@@ -562,12 +562,15 @@ const AllEmployeesPage: React.FC = () => {
           setSelectedEmployee(updatedEmployee);
         }
         setEditingEmployee(undefined);
+        return true;
       } catch (error) {
         toast.error(`Update failed: ${getErrorMessage(error, 'Unknown error')}`);
+        return false;
       }
-    } else {
-      toast.info('To persist employees, use the Crew Portal tab to create login credentials.');
     }
+
+    toast.error('Crew Portal email and password are required to create a new employee.');
+    return false;
   };
 
   const handleDialogClose = (open: boolean) => {

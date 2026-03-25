@@ -95,7 +95,7 @@ interface AddEmployeeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   departments: Department[];
-  onSubmit: (data: EmployeeFormValues) => void | Promise<void>;
+  onSubmit: (data: EmployeeFormValues) => boolean | Promise<boolean>;
   editingEmployee?: EditableEmployee;
 }
 
@@ -167,7 +167,36 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
   }, [editingEmployee, form, open]);
 
   const handleSubmit = async (data: EmployeeFormValues) => {
-    await onSubmit(data);
+    if (!editingEmployee) {
+      let hasPortalErrors = false;
+
+      if (!data.portalEmail?.trim()) {
+        form.setError('portalEmail', {
+          type: 'manual',
+          message: 'Portal email is required to create a new employee.',
+        });
+        hasPortalErrors = true;
+      }
+
+      if (!data.portalPassword?.trim()) {
+        form.setError('portalPassword', {
+          type: 'manual',
+          message: 'Portal password is required to create a new employee.',
+        });
+        hasPortalErrors = true;
+      }
+
+      if (hasPortalErrors) {
+        setActiveStep('portal');
+        return;
+      }
+    }
+
+    const didSave = await onSubmit(data);
+    if (!didSave) {
+      return;
+    }
+
     form.reset();
     setActiveStep('basic');
     onOpenChange(false);
@@ -616,7 +645,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
                   </div>
                   <p className="text-sm text-cyan-700">
                     Create login credentials for the employee to access the Crew Portal at{' '}
-                    <strong>crew.zodo.ca</strong>. Leave empty to skip portal access.
+                    <strong>crew.zodo.ca</strong>. New employees need portal credentials at creation time.
                   </p>
                 </div>
 
@@ -635,6 +664,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
                             placeholder="firstname.lastname@zodo.ca"
                             onChange={(e) => {
                               const val = e.target.value;
+                              form.clearErrors('portalEmail');
                               field.onChange(val);
                             }}
                           />
@@ -660,6 +690,10 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
                               type={showPortalPassword ? 'text' : 'password'}
                               className="pl-10 pr-10"
                               placeholder="Min 8 characters"
+                              onChange={(e) => {
+                                form.clearErrors('portalPassword');
+                                field.onChange(e.target.value);
+                              }}
                             />
                             <button
                               type="button"

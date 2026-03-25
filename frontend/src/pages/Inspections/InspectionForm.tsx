@@ -228,7 +228,7 @@ const InspectionForm = () => {
     return (
         <div className="min-h-screen bg-[#F9FAFB]">
             {/* Header */}
-            <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
+            <header className="crm-module-header bg-white border-b border-gray-100 sticky top-0 z-10">
                 <div className="px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <Button variant="ghost" size="sm" className="rounded-lg text-gray-500 hover:text-gray-900 gap-1.5" onClick={() => navigate("/inspections")}>

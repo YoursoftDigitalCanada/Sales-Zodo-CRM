@@ -383,7 +383,7 @@ const Index = () => {
       <main>
         {/* ============= MOBILE HEADER ============= */}
         <header className={cn(
-          "sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-[rgba(15,23,42,0.06)]",
+          "crm-module-header sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-[rgba(15,23,42,0.06)]",
           isMobile ? "pt-[env(safe-area-inset-top,7px)]" : "pt-0"
         )}>
           {isMobile ? (

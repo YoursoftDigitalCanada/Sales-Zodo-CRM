@@ -354,7 +354,7 @@ const ClientDetailPage = () => {
       `}</style>
 
       {/* ═══════════ SECTION 1: STICKY PROFILE HEADER ═══════════ */}
-      <header className="sticky top-0 z-30 bg-white border-b border-[#E5E7EB] shadow-[0_2px_4px_rgba(0,0,0,0.05)]">
+      <header className="crm-module-header sticky top-0 z-30 bg-white border-b border-[#E5E7EB] shadow-[0_2px_4px_rgba(0,0,0,0.05)]">
         {/* Breadcrumb */}
         <div className="px-6 pt-3 pb-1">
           <Breadcrumb><BreadcrumbList>

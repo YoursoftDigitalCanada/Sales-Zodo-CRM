@@ -172,7 +172,7 @@ export default function TimeTrackingPage() {
 
       <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
         {/* Header */}
-        <header className="bg-white border-b border-[rgba(15,23,42,0.06)] px-6 py-4">
+        <header className="crm-module-header bg-white border-b border-[rgba(15,23,42,0.06)] px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Time Tracking</h1>

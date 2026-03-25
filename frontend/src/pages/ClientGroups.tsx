@@ -1885,7 +1885,7 @@ const ClientGroupsPage = () => {
 
       <main className="flex-1 overflow-auto">
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-[rgba(15,23,42,0.06)]">
+        <div className="crm-module-header sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-[rgba(15,23,42,0.06)]">
           <div className="px-8 py-6">
             <div className="flex items-center justify-between mb-6">
               <div>

@@ -12,7 +12,7 @@ export default function RoofEstimatorPolygonEditor(): JSX.Element {
   return (
     <div className="flex h-screen overflow-hidden bg-[#F8FAFC]">
       <main className="flex-1 overflow-y-auto">
-        <div className="sticky top-0 z-30 border-b border-[rgba(15,23,42,0.06)] bg-white/95 px-4 py-3 backdrop-blur lg:px-6">
+        <div className="crm-module-header sticky top-0 z-30 flex min-h-[72px] items-center border-b border-[rgba(15,23,42,0.06)] bg-white/95 px-4 py-3 backdrop-blur lg:px-6">
           <Button
             type="button"
             variant="outline"

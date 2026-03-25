@@ -2273,7 +2273,7 @@ export default function UsersPage() {
         )}
       >
         {/* Header */}
-        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-[rgba(15,23,42,0.06)]">
+        <header className="crm-module-header sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-[rgba(15,23,42,0.06)]">
           <div className="px-6 py-4">
             <div className="flex items-center justify-between">
               {/* Title & Breadcrumb */}

@@ -262,7 +262,7 @@ export default function RolesPage() {
         <div className="flex h-screen bg-[#F8FAFC]">
             <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
                 {/* Header */}
-                <header className="bg-white border-b border-[rgba(15,23,42,0.06)] px-6 py-4 flex-shrink-0">
+                <header className="crm-module-header bg-white border-b border-[rgba(15,23,42,0.06)] px-6 py-4 flex-shrink-0">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-lg bg-[#0891B2]/10 flex items-center justify-center">

@@ -468,7 +468,7 @@ const LeadSourcesPage = () => {
         <div className="min-h-screen bg-[#F7F7FB]">
             <main className="flex-1 transition-all duration-300">
                 {/* Header */}
-                <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-[rgba(15,23,42,0.06)]">
+                <header className="crm-module-header sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-[rgba(15,23,42,0.06)]">
                     <div className="flex h-16 items-center justify-between px-6">
                         <div className="flex items-center gap-2 text-sm">
                             <button onClick={() => navigate("/dashboard")} className="text-[#475569] hover:text-[#6637F4] transition-colors">

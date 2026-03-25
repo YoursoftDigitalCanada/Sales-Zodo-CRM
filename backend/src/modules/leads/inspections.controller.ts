@@ -33,7 +33,7 @@ export class InspectionsController {
     async getAll(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const tenantId = req.context.tenantId;
-            const inspections = await inspectionsService.getAll(tenantId);
+            const inspections = await inspectionsService.getAll(tenantId, req.dataAccess);
             sendSuccess(res, inspections);
         } catch (error) {
             next(error);

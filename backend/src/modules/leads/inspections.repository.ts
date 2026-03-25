@@ -1,5 +1,7 @@
 import { prisma } from '../../config/database';
 import { CreateLeadInspectionDto, UpdateLeadInspectionDto } from './inspections.dto';
+import type { DataAccessContext } from '../../common/access/data-access';
+import { buildLeadAccessWhere } from '../../common/access/data-access';
 
 export class InspectionsRepository {
     /**
@@ -19,9 +21,18 @@ export class InspectionsRepository {
     /**
      * Get all inspections across all leads for a tenant
      */
-    async findAll(tenantId: string) {
+    async findAll(tenantId: string, dataAccess?: DataAccessContext) {
+        const leadAccessWhere = buildLeadAccessWhere(dataAccess);
+
         return prisma.leadInspection.findMany({
-            where: { tenantId },
+            where: {
+                tenantId,
+                ...(Object.keys(leadAccessWhere).length > 0
+                    ? {
+                        lead: leadAccessWhere,
+                    }
+                    : {}),
+            },
             include: {
                 lead: {
                     select: {

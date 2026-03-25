@@ -1,6 +1,7 @@
 import { inspectionsRepository } from './inspections.repository';
 import { CreateLeadInspectionDto, UpdateLeadInspectionDto, toLeadInspectionResponseDto } from './inspections.dto';
 import { NotFoundError } from '../../common/errors/HttpErrors';
+import type { DataAccessContext } from '../../common/access/data-access';
 
 export class InspectionsService {
     /**
@@ -14,8 +15,8 @@ export class InspectionsService {
     /**
      * Get all inspections across all leads for a tenant
      */
-    async getAll(tenantId: string) {
-        const inspections = await inspectionsRepository.findAll(tenantId);
+    async getAll(tenantId: string, dataAccess?: DataAccessContext) {
+        const inspections = await inspectionsRepository.findAll(tenantId, dataAccess);
         return inspections.map((i: any) => ({
             ...toLeadInspectionResponseDto(i),
             lead: i.lead || null,

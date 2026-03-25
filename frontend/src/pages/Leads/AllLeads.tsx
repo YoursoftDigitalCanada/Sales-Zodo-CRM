@@ -170,6 +170,7 @@ interface Lead {
   temperature: LeadTemperature;
   potentialValue: number;
   currency: string;
+  assignedTo?: string;
   assignedToName: string;
   assignedToId?: string;
   leadSourceId?: string;
@@ -3123,6 +3124,9 @@ const mapApiLead = (apiLead: any): Lead => ({
   temperature: (apiLead.temperature || "WARM") as LeadTemperature,
   potentialValue: apiLead.potentialValue || 0,
   currency: "CAD",
+  assignedTo: apiLead.assignedTo
+    ? `${apiLead.assignedTo.user?.firstName || ""} ${apiLead.assignedTo.user?.lastName || ""}`.trim()
+    : "",
   assignedToName: apiLead.assignedTo
     ? `${apiLead.assignedTo.user?.firstName || ""} ${apiLead.assignedTo.user?.lastName || ""}`.trim()
     : "",

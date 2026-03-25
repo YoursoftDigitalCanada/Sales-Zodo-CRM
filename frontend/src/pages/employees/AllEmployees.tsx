@@ -10,7 +10,7 @@ import {
   UserPlus,
   Filter,
 } from 'lucide-react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import {
@@ -35,6 +35,7 @@ import {
   EmployeeStatus,
   EmploymentType,
 } from '@/components/employees';
+import { getStoredEmployee, isStoredEmployeeAdmin } from '@/features/auth/lib/auth-storage';
 import { getDepartments, getEmployees } from '@/features/users';
 import api from '@/lib/axios';
 
@@ -278,6 +279,8 @@ const mapEmployeeData = (data: ApiEmployee[], departments: Department[]): Employ
 };
 
 const AllEmployeesPage: React.FC = () => {
+  const navigate = useNavigate();
+  const isAdminUser = isStoredEmployeeAdmin(getStoredEmployee());
   const [searchParams] = useSearchParams();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -300,7 +303,17 @@ const AllEmployeesPage: React.FC = () => {
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
 
+  useEffect(() => {
+    if (!isAdminUser) {
+      navigate('/employees/attendance', { replace: true });
+    }
+  }, [isAdminUser, navigate]);
+
   const refreshData = useCallback(async (showErrorToast = true) => {
+    if (!isAdminUser) {
+      return null;
+    }
+
     try {
       const [departmentData, employeeData] = await Promise.all([
         getDepartments(),
@@ -318,16 +331,20 @@ const AllEmployeesPage: React.FC = () => {
       }
       return null;
     }
-  }, []);
+  }, [isAdminUser]);
 
   useEffect(() => {
+    if (!isAdminUser) {
+      return;
+    }
+
     const load = async () => {
       setIsLoading(true);
       await refreshData(false);
       setIsLoading(false);
     };
     load();
-  }, [refreshData]);
+  }, [isAdminUser, refreshData]);
 
   useEffect(() => {
     const requestedDepartment = searchParams.get('department');

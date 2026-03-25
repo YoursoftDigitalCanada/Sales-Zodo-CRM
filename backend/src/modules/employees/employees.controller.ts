@@ -94,9 +94,52 @@ export class EmployeesController {
         } catch (e) { next(e); }
     }
 
+    async getMyAttendance(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const employeeId = req.context.employeeId || req.user?.employeeId;
+            if (!employeeId) {
+                sendSuccess(res, []);
+                return;
+            }
+
+            const records = await employeesService.getAttendance(req.context.tenantId, {
+                ...(req.query as any),
+                employeeId,
+            });
+            sendSuccess(res, records);
+        } catch (e) { next(e); }
+    }
+
     async getAttendanceSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const summary = await employeesService.getAttendanceSummary(req.context.tenantId, req.query as any);
+            sendSuccess(res, summary);
+        } catch (e) { next(e); }
+    }
+
+    async getMyAttendanceSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const employeeId = req.context.employeeId || req.user?.employeeId;
+            if (!employeeId) {
+                sendSuccess(res, {
+                    totalEmployees: 0,
+                    presentCount: 0,
+                    absentCount: 0,
+                    lateCount: 0,
+                    halfDayCount: 0,
+                    onLeaveCount: 0,
+                    totalWorkingDays: 0,
+                    averageCheckIn: null,
+                    averageWorkHours: 0,
+                    overtimeHours: 0,
+                });
+                return;
+            }
+
+            const summary = await employeesService.getAttendanceSummary(req.context.tenantId, {
+                ...(req.query as any),
+                employeeId,
+            });
             sendSuccess(res, summary);
         } catch (e) { next(e); }
     }

@@ -258,6 +258,10 @@ export interface AttendanceRecordDto {
     location?: string;
     isRemote: boolean;
     breakMinutes: number;
+    clockInLat?: number | null;
+    clockInLng?: number | null;
+    clockOutLat?: number | null;
+    clockOutLng?: number | null;
 }
 
 export interface AttendanceCurrentStatusDto {

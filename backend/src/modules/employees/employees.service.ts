@@ -43,6 +43,10 @@ type AttendanceTimeEntryRow = {
     startTime: Date;
     endTime: Date | null;
     duration: number | null;
+    clockInLat: number | null;
+    clockInLng: number | null;
+    clockOutLat: number | null;
+    clockOutLng: number | null;
     phase: string | null;
     notes: string | null;
     description: string | null;
@@ -304,6 +308,10 @@ function mapTimeEntryToAttendanceRecord(entry: AttendanceTimeEntryRow): Attendan
         location: isRemoteAttendance(entry.phase) ? 'Remote' : 'Office',
         isRemote: isRemoteAttendance(entry.phase),
         breakMinutes: getBreakMinutes(meta),
+        clockInLat: entry.clockInLat,
+        clockInLng: entry.clockInLng,
+        clockOutLat: entry.clockOutLat,
+        clockOutLng: entry.clockOutLng,
     };
 }
 

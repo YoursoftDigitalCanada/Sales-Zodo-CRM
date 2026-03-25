@@ -5,6 +5,11 @@ interface AuthUser {
 
 interface AuthEmployee {
   id?: string;
+  role?: {
+    name?: string;
+    [key: string]: unknown;
+  } | null;
+  roleName?: string;
   [key: string]: unknown;
 }
 
@@ -76,4 +81,26 @@ export function getStoredEmployee(): AuthEmployee | null {
   } catch {
     return null;
   }
+}
+
+export function getStoredEmployeeRoleName(employee?: AuthEmployee | null): string {
+  const roleValue = employee?.role?.name;
+  if (typeof roleValue === "string" && roleValue.trim()) {
+    return roleValue.trim();
+  }
+
+  if (typeof employee?.roleName === "string" && employee.roleName.trim()) {
+    return employee.roleName.trim();
+  }
+
+  return "";
+}
+
+export function isStoredEmployeeAdmin(employee?: AuthEmployee | null): boolean {
+  if (!employee) {
+    return true;
+  }
+
+  const roleName = getStoredEmployeeRoleName(employee);
+  return /^(owner|admin|super admin|super_admin)$/i.test(roleName);
 }

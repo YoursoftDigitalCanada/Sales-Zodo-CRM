@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Plus,
@@ -13,6 +13,7 @@ import {
   XCircle,
   AlertCircle,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -39,8 +40,11 @@ import {
   LeaveStatus,
   LeaveType,
 } from '@/components/employees';
+import { getStoredEmployee, isStoredEmployeeAdmin } from '@/features/auth/lib/auth-storage';
 
 const LeaveRequestsPage: React.FC = () => {
+  const navigate = useNavigate();
+  const isAdminUser = isStoredEmployeeAdmin(getStoredEmployee());
   const [leaveRequests, setLeaveRequests] = useState(mockLeaveRequests);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<LeaveStatus | 'all'>('all');
@@ -48,6 +52,12 @@ const LeaveRequestsPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [activeTab, setActiveTab] = useState('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isAdminUser) {
+      navigate('/employees/attendance', { replace: true });
+    }
+  }, [isAdminUser, navigate]);
 
   // Calculate stats
   const stats = useMemo(() => {

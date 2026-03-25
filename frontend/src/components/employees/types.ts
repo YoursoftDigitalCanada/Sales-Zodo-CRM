@@ -77,6 +77,10 @@ export interface AttendanceRecord {
   notes?: string;
   location?: string;
   isRemote: boolean;
+  clockInLat?: number | null;
+  clockInLng?: number | null;
+  clockOutLat?: number | null;
+  clockOutLng?: number | null;
 }
 
 export interface LeaveRequest {

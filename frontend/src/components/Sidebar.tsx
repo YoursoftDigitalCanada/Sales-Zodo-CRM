@@ -74,6 +74,7 @@ interface SubMenuItem {
   path: string;
   featureId?: FeatureId | FeatureId[];
   permissionModule?: string;
+  adminOnly?: boolean;
   badge?: string | number;
   badgeColor?: "teal" | "gold" | "red" | "blue";
   isNew?: boolean;
@@ -85,6 +86,7 @@ interface NavigationItem {
   path?: string;
   featureId?: FeatureId | FeatureId[];
   permissionModule?: string;
+  adminOnly?: boolean;
   isHeader?: boolean;
   submenu?: SubMenuItem[];
   badge?: string | number;
@@ -295,10 +297,10 @@ const navigationItems: NavigationItem[] = [
     featureId: "team",
     permissionModule: "employees",
     submenu: [
-      { title: "All Employees", path: "/employees", featureId: "team" },
-      { title: "Departments", path: "/employees/departments", featureId: "team", isNew: true },
+      { title: "All Employees", path: "/employees", featureId: "team", adminOnly: true },
+      { title: "Departments", path: "/employees/departments", featureId: "team", isNew: true, adminOnly: true },
       { title: "Attendance", path: "/employees/attendance", featureId: "team" },
-      { title: "Leave Requests", path: "/employees/leave-requests", featureId: "team", badge: 2, badgeColor: "gold" },
+      { title: "Leave Requests", path: "/employees/leave-requests", featureId: "team", badge: 2, badgeColor: "gold", adminOnly: true },
     ]
   },
   {
@@ -433,6 +435,8 @@ const filterNavigationItems = (
         // Feature gate check
         if (!hasFeatureAccess(item.featureId, enabled)) return null;
 
+        if (!isOwnerOrAdmin && item.adminOnly) return null;
+
         // Permission check (Owner/Admin bypass)
         if (!isOwnerOrAdmin && !hasModulePermission(item.permissionModule, userPermissions)) return null;
 
@@ -443,6 +447,7 @@ const filterNavigationItems = (
         const submenu = item.submenu
           .filter((sub) => {
             if (!hasFeatureAccess(sub.featureId ?? item.featureId, enabled)) return false;
+            if (!isOwnerOrAdmin && sub.adminOnly) return false;
             // Check sub-item permission if it has its own permissionModule
             if (!isOwnerOrAdmin && sub.permissionModule && !hasModulePermission(sub.permissionModule, userPermissions)) return false;
             return true;

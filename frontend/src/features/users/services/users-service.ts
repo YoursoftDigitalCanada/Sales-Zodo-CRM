@@ -36,6 +36,10 @@ export interface AttendanceEntity {
     location?: string;
     isRemote: boolean;
     breakMinutes: number;
+    clockInLat?: number | null;
+    clockInLng?: number | null;
+    clockOutLat?: number | null;
+    clockOutLng?: number | null;
 }
 
 export interface AttendanceSummaryEntity {
@@ -114,10 +118,24 @@ export async function getAttendanceRecords(
     return extractApiArray<AttendanceEntity>(response.data);
 }
 
+export async function getMyAttendanceRecords(
+    params?: AttendanceQueryParams,
+): Promise<AttendanceEntity[]> {
+    const response = await api.get("/employees/attendance/my", { params });
+    return extractApiArray<AttendanceEntity>(response.data);
+}
+
 export async function getAttendanceSummary(
     params?: AttendanceQueryParams,
 ): Promise<AttendanceSummaryEntity> {
     const response = await api.get("/employees/attendance/summary", { params });
+    return extractApiData<AttendanceSummaryEntity>(response.data);
+}
+
+export async function getMyAttendanceSummary(
+    params?: AttendanceQueryParams,
+): Promise<AttendanceSummaryEntity> {
+    const response = await api.get("/employees/attendance/summary/my", { params });
     return extractApiData<AttendanceSummaryEntity>(response.data);
 }
 

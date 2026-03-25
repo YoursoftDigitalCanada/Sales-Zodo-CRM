@@ -25,6 +25,8 @@ const router = Router();
 router.use(authenticate);
 router.use(loadEmployee);
 
+router.get('/attendance/my', validate(attendanceQuerySchema), employeesController.getMyAttendance.bind(employeesController));
+router.get('/attendance/summary/my', validate(attendanceQuerySchema), employeesController.getMyAttendanceSummary.bind(employeesController));
 router.get('/', requirePermission(PERMISSIONS.EMPLOYEES_VIEW), validate(employeeQuerySchema), employeesController.getMany.bind(employeesController));
 router.post('/', requirePermission(PERMISSIONS.EMPLOYEES_CREATE), validate(createEmployeeSchema), employeesController.create.bind(employeesController));
 router.get('/attendance', requirePermission(PERMISSIONS.EMPLOYEES_VIEW), validate(attendanceQuerySchema), employeesController.getAttendance.bind(employeesController));

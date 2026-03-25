@@ -156,7 +156,15 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
                         )}
                       </TooltipTrigger>
                       <TooltipContent>
-                        {record.isRemote ? 'Working from home' : 'Working from office'}
+                        <div className="space-y-1">
+                          <p>{record.isRemote ? 'Working from home' : 'Working from office'}</p>
+                          {typeof record.clockInLat === 'number' && typeof record.clockInLng === 'number' && (
+                            <div className="flex items-center gap-1 text-xs">
+                              <MapPin className="h-3 w-3" />
+                              <span>{record.clockInLat.toFixed(6)}, {record.clockInLng.toFixed(6)}</span>
+                            </div>
+                          )}
+                        </div>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>

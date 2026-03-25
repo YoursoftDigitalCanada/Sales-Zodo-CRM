@@ -5,6 +5,7 @@ import {
   Download,
   Calendar as CalendarIcon,
   Clock,
+  MapPin,
   Users,
   BarChart3,
   Table as TableIcon,
@@ -38,7 +39,7 @@ import {
   CheckInOutCard,
   AttendanceRecord,
 } from '@/components/employees';
-import { getStoredEmployee } from '@/features/auth/lib/auth-storage';
+import { getStoredEmployee, isStoredEmployeeAdmin } from '@/features/auth/lib/auth-storage';
 import {
   AttendanceCurrentEntity,
   AttendanceEntity,
@@ -47,6 +48,8 @@ import {
   checkOutAttendance,
   endAttendanceBreak,
   getAttendanceRecords,
+  getMyAttendanceRecords,
+  getMyAttendanceSummary,
   getAttendanceSummary,
   getCurrentAttendance,
   getEmployees,
@@ -124,6 +127,10 @@ const toAttendanceRecord = (record: AttendanceEntity): AttendanceRecord => ({
   notes: record.notes || undefined,
   location: record.location,
   isRemote: record.isRemote,
+  clockInLat: typeof record.clockInLat === 'number' ? record.clockInLat : null,
+  clockInLng: typeof record.clockInLng === 'number' ? record.clockInLng : null,
+  clockOutLat: typeof record.clockOutLat === 'number' ? record.clockOutLat : null,
+  clockOutLng: typeof record.clockOutLng === 'number' ? record.clockOutLng : null,
 });
 
 const toEmployeeOption = (employee: ApiEmployee): EmployeeOption => ({
@@ -149,9 +156,70 @@ const buildIsoDateTime = (dateValue: string, timeValue: string): string => {
   return new Date(`${dateValue}T${normalizedTime}:00`).toISOString();
 };
 
+type AttendanceCoordinates = {
+  lat: number;
+  lng: number;
+};
+
+const getCurrentCoordinates = (required: boolean): Promise<AttendanceCoordinates | null> => new Promise((resolve, reject) => {
+  if (typeof navigator === 'undefined' || !navigator.geolocation) {
+    if (required) {
+      reject(new Error('Location access is required to check in from attendance.'));
+      return;
+    }
+
+    resolve(null);
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      resolve({
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+      });
+    },
+    (error) => {
+      if (!required) {
+        resolve(null);
+        return;
+      }
+
+      const message = error.code === error.PERMISSION_DENIED
+        ? 'Location access is required to check in. Please allow location and try again.'
+        : error.code === error.TIMEOUT
+          ? 'Location request timed out. Please try again in a place with better GPS signal.'
+          : 'Unable to get your current location. Please try again.';
+      reject(new Error(message));
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 0,
+    },
+  );
+});
+
+const formatCoordinates = (lat?: number | null, lng?: number | null): string | null => {
+  if (typeof lat !== 'number' || typeof lng !== 'number') {
+    return null;
+  }
+
+  return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+};
+
+const buildMapLink = (lat?: number | null, lng?: number | null): string | null => {
+  if (typeof lat !== 'number' || typeof lng !== 'number') {
+    return null;
+  }
+
+  return `https://www.google.com/maps?q=${lat},${lng}`;
+};
+
 const AttendancePage: React.FC = () => {
   const storedEmployee = getStoredEmployee();
   const currentEmployeeId = typeof storedEmployee?.id === 'string' ? storedEmployee.id : undefined;
+  const isAdminUser = isStoredEmployeeAdmin(storedEmployee);
 
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
@@ -163,7 +231,7 @@ const AttendancePage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState<string>('all');
   const [dateRange, setDateRange] = useState('today');
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(isAdminUser ? 'overview' : 'my-attendance');
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
@@ -173,10 +241,15 @@ const AttendancePage: React.FC = () => {
 
   const refreshCalendarData = useCallback(async (month: Date, showErrorToast = true) => {
     try {
-      const data = await getAttendanceRecords({
+      const params = {
         dateFrom: startOfDay(startOfMonth(month)).toISOString(),
         dateTo: endOfDay(endOfMonth(month)).toISOString(),
-      });
+      };
+      const data = isAdminUser
+        ? await getAttendanceRecords(params)
+        : currentEmployeeId
+          ? await getMyAttendanceRecords(params)
+          : [];
       setCalendarRecords(data.map(toAttendanceRecord));
     } catch (error) {
       console.error('Failed to load attendance calendar:', error);
@@ -184,7 +257,7 @@ const AttendancePage: React.FC = () => {
         toast.error(getErrorMessage(error, 'Failed to load attendance calendar'));
       }
     }
-  }, []);
+  }, [currentEmployeeId, isAdminUser]);
 
   const refreshData = useCallback(async (showErrorToast = true) => {
     try {
@@ -192,6 +265,32 @@ const AttendancePage: React.FC = () => {
       const monthStart = startOfMonth(now);
       const todayStart = startOfDay(now);
       const todayEnd = endOfDay(now);
+
+      if (!isAdminUser) {
+        const [myAttendanceData, currentAttendanceData, myMonthSummaryData] = await Promise.all([
+          currentEmployeeId
+            ? getMyAttendanceRecords({
+              dateFrom: startOfDay(subDays(now, 90)).toISOString(),
+              dateTo: todayEnd.toISOString(),
+            })
+            : Promise.resolve([]),
+          getCurrentAttendance(),
+          currentEmployeeId
+            ? getMyAttendanceSummary({
+              dateFrom: monthStart.toISOString(),
+              dateTo: todayEnd.toISOString(),
+            })
+            : Promise.resolve(EMPTY_SUMMARY),
+        ]);
+
+        setEmployees([]);
+        setRecords(myAttendanceData.map(toAttendanceRecord));
+        setTodaySummary(EMPTY_SUMMARY);
+        setTeamMonthlySummary(EMPTY_SUMMARY);
+        setMyMonthlySummary(myMonthSummaryData);
+        setCurrentStatus(currentAttendanceData);
+        return;
+      }
 
       const [
         employeeData,
@@ -236,7 +335,7 @@ const AttendancePage: React.FC = () => {
         toast.error(getErrorMessage(error, 'Failed to load attendance data'));
       }
     }
-  }, [currentEmployeeId]);
+  }, [currentEmployeeId, isAdminUser]);
 
   useEffect(() => {
     const load = async () => {
@@ -250,6 +349,12 @@ const AttendancePage: React.FC = () => {
   useEffect(() => {
     refreshCalendarData(calendarMonth, false);
   }, [calendarMonth, refreshCalendarData]);
+
+  useEffect(() => {
+    if (!isAdminUser && activeTab !== 'my-attendance') {
+      setActiveTab('my-attendance');
+    }
+  }, [activeTab, isAdminUser]);
 
   const filteredRecords = useMemo(() => {
     let nextRecords = [...records];
@@ -302,7 +407,7 @@ const AttendancePage: React.FC = () => {
     ? new Date(currentStatus.activeEntry.checkIn)
     : undefined;
 
-  const displayedMonthlySummary = currentEmployeeId ? myMonthlySummary : teamMonthlySummary;
+  const displayedMonthlySummary = !isAdminUser || currentEmployeeId ? myMonthlySummary : teamMonthlySummary;
 
   const exportRecords = () => {
     const headers = ['Employee', 'Date', 'Check In', 'Check Out', 'Work Hours', 'Overtime', 'Status', 'Location', 'Notes'];
@@ -341,7 +446,12 @@ const AttendancePage: React.FC = () => {
   const handleCheckIn = async (isRemote: boolean) => {
     setIsActionLoading(true);
     try {
-      const nextStatus = await checkInAttendance({ isRemote });
+      const coordinates = await getCurrentCoordinates(true);
+      const nextStatus = await checkInAttendance({
+        isRemote,
+        lat: coordinates?.lat,
+        lng: coordinates?.lng,
+      });
       setCurrentStatus(nextStatus);
       await refreshAfterMutation();
       toast.success(`Checked in successfully ${isRemote ? '(Remote)' : '(Office)'}`);
@@ -355,7 +465,11 @@ const AttendancePage: React.FC = () => {
   const handleCheckOut = async () => {
     setIsActionLoading(true);
     try {
-      const nextStatus = await checkOutAttendance();
+      const coordinates = await getCurrentCoordinates(false);
+      const nextStatus = await checkOutAttendance({
+        lat: coordinates?.lat,
+        lng: coordinates?.lng,
+      });
       setCurrentStatus(nextStatus);
       await refreshAfterMutation();
       toast.success('Checked out successfully');
@@ -436,7 +550,7 @@ const AttendancePage: React.FC = () => {
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Attendance</h1>
           <p className="text-[#475569] mt-1">
-            Track and manage employee attendance
+            {isAdminUser ? 'Track and manage employee attendance' : 'Check in with your live location and track your own attendance'}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -452,37 +566,42 @@ const AttendancePage: React.FC = () => {
         </div>
       </div>
 
-      <AttendanceStatsCards
-        presentToday={todaySummary.presentCount + todaySummary.halfDayCount}
-        absentToday={todaySummary.absentCount}
-        lateToday={todaySummary.lateCount}
-        onLeaveToday={todaySummary.onLeaveCount}
-        totalEmployees={todaySummary.totalEmployees}
-        averageCheckIn={todaySummary.averageCheckIn || undefined}
-        averageWorkHours={todaySummary.averageWorkHours}
-        overtimeHours={todaySummary.overtimeHours}
-      />
+      {isAdminUser && (
+        <AttendanceStatsCards
+          presentToday={todaySummary.presentCount + todaySummary.halfDayCount}
+          absentToday={todaySummary.absentCount}
+          lateToday={todaySummary.lateCount}
+          onLeaveToday={todaySummary.onLeaveCount}
+          totalEmployees={todaySummary.totalEmployees}
+          averageCheckIn={todaySummary.averageCheckIn || undefined}
+          averageWorkHours={todaySummary.averageWorkHours}
+          overtimeHours={todaySummary.overtimeHours}
+        />
+      )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="bg-white">
-          <TabsTrigger value="overview" className="gap-2">
-            <BarChart3 className="w-4 h-4" />
-            Overview
-          </TabsTrigger>
-          <TabsTrigger value="records" className="gap-2">
-            <TableIcon className="w-4 h-4" />
-            Records
-          </TabsTrigger>
-          <TabsTrigger value="calendar" className="gap-2">
-            <CalendarIcon className="w-4 h-4" />
-            Calendar
-          </TabsTrigger>
-          <TabsTrigger value="my-attendance" className="gap-2">
-            <Clock className="w-4 h-4" />
-            My Attendance
-          </TabsTrigger>
-        </TabsList>
+        {isAdminUser && (
+          <TabsList className="bg-white">
+            <TabsTrigger value="overview" className="gap-2">
+              <BarChart3 className="w-4 h-4" />
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="records" className="gap-2">
+              <TableIcon className="w-4 h-4" />
+              Records
+            </TabsTrigger>
+            <TabsTrigger value="calendar" className="gap-2">
+              <CalendarIcon className="w-4 h-4" />
+              Calendar
+            </TabsTrigger>
+            <TabsTrigger value="my-attendance" className="gap-2">
+              <Clock className="w-4 h-4" />
+              My Attendance
+            </TabsTrigger>
+          </TabsList>
+        )}
 
+        {isAdminUser && (
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <CheckInOutCard
@@ -520,7 +639,9 @@ const AttendancePage: React.FC = () => {
             />
           </div>
         </TabsContent>
+        )}
 
+        {isAdminUser && (
         <TabsContent value="records" className="space-y-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
@@ -568,7 +689,9 @@ const AttendancePage: React.FC = () => {
             onViewDetails={setDetailsRecord}
           />
         </TabsContent>
+        )}
 
+        {isAdminUser && (
         <TabsContent value="calendar" className="space-y-6">
           <div className="flex flex-col sm:flex-row gap-4 mb-4">
             <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
@@ -603,6 +726,7 @@ const AttendancePage: React.FC = () => {
             }}
           />
         </TabsContent>
+        )}
 
         <TabsContent value="my-attendance" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -629,6 +753,12 @@ const AttendancePage: React.FC = () => {
               />
             </div>
           </div>
+
+          {!isAdminUser && (
+            <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 text-sm text-[#475569]">
+              Your check-in requires live browser location so admins can review where your work started.
+            </div>
+          )}
 
           <AttendanceCalendar
             records={calendarRecords}
@@ -701,6 +831,51 @@ const AttendancePage: React.FC = () => {
                 <p className="mt-1 text-sm text-[#475569] whitespace-pre-wrap">
                   {detailsRecord.notes || 'No notes saved for this record.'}
                 </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="rounded-md border border-[rgba(15,23,42,0.06)] p-3">
+                  <p className="text-xs uppercase tracking-wide text-[#64748B]">Work Started From</p>
+                  <div className="mt-1 flex items-start gap-2">
+                    <MapPin className="mt-0.5 h-4 w-4 text-[#0891B2]" />
+                    <div>
+                      <p className="font-medium text-[#0F172A]">
+                        {formatCoordinates(detailsRecord.clockInLat, detailsRecord.clockInLng) || 'No start location saved'}
+                      </p>
+                      {buildMapLink(detailsRecord.clockInLat, detailsRecord.clockInLng) && (
+                        <a
+                          href={buildMapLink(detailsRecord.clockInLat, detailsRecord.clockInLng) || '#'}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-[#0891B2] hover:underline"
+                        >
+                          Open on map
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-md border border-[rgba(15,23,42,0.06)] p-3">
+                  <p className="text-xs uppercase tracking-wide text-[#64748B]">Check Out Location</p>
+                  <div className="mt-1 flex items-start gap-2">
+                    <MapPin className="mt-0.5 h-4 w-4 text-[#0891B2]" />
+                    <div>
+                      <p className="font-medium text-[#0F172A]">
+                        {formatCoordinates(detailsRecord.clockOutLat, detailsRecord.clockOutLng) || 'No check-out location saved'}
+                      </p>
+                      {buildMapLink(detailsRecord.clockOutLat, detailsRecord.clockOutLng) && (
+                        <a
+                          href={buildMapLink(detailsRecord.clockOutLat, detailsRecord.clockOutLng) || '#'}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-[#0891B2] hover:underline"
+                        >
+                          Open on map
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}

@@ -26,6 +26,7 @@ import {
   Department,
   Employee,
 } from '@/components/employees';
+import { getStoredEmployee, isStoredEmployeeAdmin } from '@/features/auth/lib/auth-storage';
 import {
   getDepartments as fetchDepartments,
   getEmployees,
@@ -139,6 +140,7 @@ const mapEmployeeData = (data: ApiEmployee[]): Employee[] =>
 
 const DepartmentsPage: React.FC = () => {
   const navigate = useNavigate();
+  const isAdminUser = isStoredEmployeeAdmin(getStoredEmployee());
   const [departments, setDepartments] = useState<Department[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -148,7 +150,17 @@ const DepartmentsPage: React.FC = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState<Department | undefined>();
 
+  useEffect(() => {
+    if (!isAdminUser) {
+      navigate('/employees/attendance', { replace: true });
+    }
+  }, [isAdminUser, navigate]);
+
   const refreshData = useCallback(async (showErrorToast = true) => {
+    if (!isAdminUser) {
+      return;
+    }
+
     try {
       const [departmentData, employeeData] = await Promise.all([
         fetchDepartments(),
@@ -162,16 +174,20 @@ const DepartmentsPage: React.FC = () => {
         toast.error('Failed to load departments');
       }
     }
-  }, []);
+  }, [isAdminUser]);
 
   useEffect(() => {
+    if (!isAdminUser) {
+      return;
+    }
+
     const load = async () => {
       setIsLoading(true);
       await refreshData(false);
       setIsLoading(false);
     };
     load();
-  }, [refreshData]);
+  }, [isAdminUser, refreshData]);
 
   const stats = useMemo(() => ({
     totalDepartments: departments.length,

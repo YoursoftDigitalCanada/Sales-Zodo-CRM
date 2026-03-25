@@ -354,27 +354,14 @@ export class SupportTicketsRepository {
         },
       });
 
-      const nextStatus =
-        existing.status === 'RESOLVED' || existing.status === 'CLOSED' || existing.status === 'WAITING'
-          ? 'OPEN'
-          : existing.status;
-
       await tx.supportTicket.update({
         where: { id },
         data: {
           messagesCount: { increment: 1 },
-          status: nextStatus,
-          resolvedAt: null,
+          status: existing.status,
+          resolvedAt: existing.resolvedAt,
         },
       });
-
-      if (nextStatus !== existing.status) {
-        await createSystemNote(
-          tx,
-          id,
-          `${data.sender} reopened the ticket with a new reply.`
-        );
-      }
 
       return tx.supportTicket.findUniqueOrThrow({
         where: { id },

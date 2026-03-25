@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticate, loadEmployee } from '../../common/middleware/auth.middleware';
 import { uploadMultiple } from '../../common/middleware/multer.config';
+import { requireAnyRole } from '../../common/middleware/permission.middleware';
 import { validate } from '../../common/middleware/validate.middleware';
 import { supportTicketsController } from './support-tickets.controller';
 import {
@@ -29,6 +30,7 @@ router.post(
 router.get('/:id', validate(supportTicketIdSchema), supportTicketsController.getTicketById.bind(supportTicketsController));
 router.patch(
   '/:id/status',
+  requireAnyRole(['Super Admin', 'SUPER_ADMIN']),
   validate(supportTicketIdSchema),
   validate(updateSupportTicketStatusSchema),
   supportTicketsController.updateStatus.bind(supportTicketsController)

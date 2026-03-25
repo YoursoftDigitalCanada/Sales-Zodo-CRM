@@ -78,6 +78,7 @@ import {
   type SupportTicket as ApiTicket,
 } from "@/services/supportTicketsService";
 import { createSupportTicketsRealtimeStream } from "@/services/supportTicketsRealtime";
+import { getStoredEmployee } from "@/features/auth/lib/auth-storage";
 
 // Map API ticket to frontend format
 const mapTicket = (t: ApiTicket): Ticket => ({
@@ -223,6 +224,20 @@ const SupportPage = () => {
   const [streamState, setStreamState] = useState<"connecting" | "live" | "reconnecting">("connecting");
   // Form state
   const currentRequester = useMemo(() => getCurrentRequester(), []);
+  const currentEmployee = useMemo(() => getStoredEmployee(), []);
+  const canManageTicketStatus = useMemo(() => {
+    const employeeRecord = currentEmployee as Record<string, unknown> | null;
+    const roleValue = employeeRecord?.role;
+    const roleName = typeof roleValue === "string"
+      ? roleValue
+      : typeof roleValue === "object" && roleValue !== null && typeof (roleValue as { name?: unknown }).name === "string"
+        ? String((roleValue as { name: string }).name)
+        : typeof employeeRecord?.roleName === "string"
+          ? String(employeeRecord.roleName)
+          : "";
+
+    return /^(super admin|super_admin)$/i.test(roleName.trim());
+  }, [currentEmployee]);
   const [formData, setFormData] = useState({ subject: "", description: "", priority: "medium" as Ticket["priority"], category: "Technical" });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -573,10 +588,14 @@ const SupportPage = () => {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48 rounded-md">
                               <DropdownMenuItem onClick={() => { setCurrentTicket(ticket); setIsDetailOpen(true); }} className="rounded-md"><Eye size={14} className="mr-2" />View</DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => updateTicketStatus(ticket.id, "in-progress")} className="rounded-md"><Clock size={14} className="mr-2" />Mark In Progress</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => updateTicketStatus(ticket.id, "resolved")} className="rounded-md"><CheckCircle2 size={14} className="mr-2" />Mark Resolved</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => updateTicketStatus(ticket.id, "closed")} className="rounded-md"><XCircle size={14} className="mr-2" />Close</DropdownMenuItem>
+                              {canManageTicketStatus && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem onClick={() => updateTicketStatus(ticket.id, "in-progress")} className="rounded-md"><Clock size={14} className="mr-2" />Mark In Progress</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => updateTicketStatus(ticket.id, "resolved")} className="rounded-md"><CheckCircle2 size={14} className="mr-2" />Mark Resolved</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => updateTicketStatus(ticket.id, "closed")} className="rounded-md"><XCircle size={14} className="mr-2" />Close</DropdownMenuItem>
+                                </>
+                              )}
                               <DropdownMenuSeparator />
                               <DropdownMenuItem onClick={() => setDeleteId(ticket.id)} className="rounded-md text-red-600"><Trash2 size={14} className="mr-2" />Delete</DropdownMenuItem>
                             </DropdownMenuContent>
@@ -782,16 +801,22 @@ const SupportPage = () => {
               </div>
               <div className="p-6 space-y-4">
                 {/* Status actions */}
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-[#94A3B8]">Update status:</span>
-                  {(["open", "in-progress", "waiting", "resolved", "closed"] as Ticket["status"][]).map(s => (
-                    <Button key={s} size="sm" variant={currentTicket.status === s ? "default" : "outline"}
-                      className={cn("h-7 text-xs rounded-md capitalize", currentTicket.status === s && "bg-[#0891B2] hover:bg-[#0891B2]/90 text-white")}
-                      onClick={() => { updateTicketStatus(currentTicket.id, s); setCurrentTicket(prev => prev ? { ...prev, status: s } : null); }}>
-                      {s.replace("-", " ")}
-                    </Button>
-                  ))}
-                </div>
+                {canManageTicketStatus ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-[#94A3B8]">Update status:</span>
+                    {(["open", "in-progress", "waiting", "resolved", "closed"] as Ticket["status"][]).map(s => (
+                      <Button key={s} size="sm" variant={currentTicket.status === s ? "default" : "outline"}
+                        className={cn("h-7 text-xs rounded-md capitalize", currentTicket.status === s && "bg-[#0891B2] hover:bg-[#0891B2]/90 text-white")}
+                        onClick={() => { updateTicketStatus(currentTicket.id, s); }}>
+                        {s.replace("-", " ")}
+                      </Button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-3 py-2 text-xs text-[#64748B]">
+                    Only Super Admin can change ticket status.
+                  </div>
+                )}
                 {/* Messages */}
                 <div className="space-y-3">
                   <p className="text-sm font-semibold text-[#0F172A]">Conversation ({currentTicket.messages.length})</p>

@@ -28,6 +28,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { NotificationBell } from "@/components/NotificationBell";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -1314,16 +1315,10 @@ const ClientContactListPage = () => {
                 <span>Add Contact</span>
               </motion.button>
 
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="p-2.5 rounded-md bg-white/5 text-[#475569] hover:bg-slate-200 transition-colors relative"
-              >
-                <Bell size={18} />
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-[#0F172A] text-[10px] font-bold rounded-full flex items-center justify-center">
-                  2
-                </span>
-              </motion.button>
+              <NotificationBell
+                buttonClassName="border-0 bg-white/5 p-2.5 text-[#475569] hover:bg-slate-200"
+                iconSize={18}
+              />
 
               <div className="flex items-center gap-3 pl-3 ml-3 border-l border-[rgba(15,23,42,0.06)]">
                 <div className="text-right hidden sm:block">

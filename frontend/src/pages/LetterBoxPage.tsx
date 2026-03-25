@@ -40,6 +40,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { NotificationBell } from "@/components/NotificationBell";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { sendEmail as apiSendEmail, getEmails as apiGetEmails, deleteEmail as apiDeleteEmail, markAsRead as apiMarkAsRead, getEmailConfigStatus, fetchEmailsNow, toggleStar as apiToggleStar, moveToFolder as apiMoveToFolder } from "@/features/emails/services/emails-service";
@@ -1755,16 +1756,11 @@ const LetterBoxPage = () => {
 
               {/* Header Actions */}
               <div className="flex items-center gap-3">
-                <div className="relative">
-                  <button className="p-2.5 rounded-md bg-white/5 hover:bg-slate-200 transition-colors relative">
-                    <Bell size={20} className="text-[#475569]" />
-                    {unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 bg-red-500 rounded-full text-[#0F172A] text-xs font-bold flex items-center justify-center">
-                        {unreadCount}
-                      </span>
-                    )}
-                  </button>
-                </div>
+                <NotificationBell
+                  buttonClassName="border-0 bg-white/5 p-2.5 hover:bg-slate-200"
+                  iconClassName="text-[#475569]"
+                  iconSize={20}
+                />
 
                 <div className="flex items-center gap-3 pl-3 border-l border-[rgba(15,23,42,0.06)]">
                   <div className="h-10 w-10 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] font-bold ">

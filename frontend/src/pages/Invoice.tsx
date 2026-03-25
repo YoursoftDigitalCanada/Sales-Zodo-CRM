@@ -30,6 +30,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { NotificationBell } from "@/components/NotificationBell";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -1446,18 +1447,11 @@ const InvoicePage = () => {
             </div>
 
             <div className="flex items-center gap-3">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="relative p-2 rounded-md hover:bg-white/10 text-[#475569] transition-colors"
-              >
-                <Bell size={20} />
-                {stats.overdueCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-[#0F172A] text-[10px] font-bold">
-                    {stats.overdueCount}
-                  </span>
-                )}
-              </motion.button>
+              <NotificationBell
+                buttonClassName="border-0 bg-transparent p-2 text-[#475569] hover:bg-white/10"
+                iconClassName="text-[#475569]"
+                iconSize={20}
+              />
 
               <div className="flex items-center gap-3 pl-3 border-l border-[rgba(15,23,42,0.06)]">
                 <div className="w-9 h-9 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] font-semibold text-sm">

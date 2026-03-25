@@ -32,6 +32,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { NotificationBell } from "@/components/NotificationBell";
 import {
   Table,
   TableBody,
@@ -2090,12 +2091,11 @@ const EcommercePage = () => {
                   Add Product
                 </Button>
 
-                <div className="relative">
-                  <button className="p-2.5 rounded-md bg-white/5 hover:bg-slate-200 transition-colors relative">
-                    <Bell size={20} className="text-[#475569]" />
-                    <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
-                  </button>
-                </div>
+                <NotificationBell
+                  buttonClassName="border-0 bg-white/5 p-2.5 hover:bg-slate-200"
+                  iconClassName="text-[#475569]"
+                  iconSize={20}
+                />
 
                 <div className="flex items-center gap-3 pl-3 border-l border-[rgba(15,23,42,0.06)]">
                   <div className="h-10 w-10 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] font-bold ">

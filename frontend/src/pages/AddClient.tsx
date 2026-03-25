@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
+import { NotificationBell } from "@/components/NotificationBell";
 import {
   Bell,
   Loader2,
@@ -698,16 +699,10 @@ const AddClientPage = () => {
 
             {/* Right Section - Actions */}
             <div className="flex items-center gap-3">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="p-2.5 rounded-md bg-white/5 text-[#475569] hover:bg-slate-200 transition-colors relative"
-              >
-                <Bell size={18} />
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-[#0F172A] text-[10px] font-bold rounded-full flex items-center justify-center">
-                  2
-                </span>
-              </motion.button>
+              <NotificationBell
+                buttonClassName="border-0 bg-white/5 p-2.5 text-[#475569] hover:bg-slate-200"
+                iconSize={18}
+              />
 
               <motion.button
                 whileHover={{ scale: 1.05 }}

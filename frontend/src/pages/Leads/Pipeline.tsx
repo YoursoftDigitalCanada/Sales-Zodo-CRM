@@ -1,9 +1,10 @@
 // src/pages/Leads/Pipeline.tsx
 
 import React, { useState, useCallback, useEffect, useRef } from "react";
-import { getLeads, deleteLead, updateLeadStatus, convertLead } from "@/features/leads";
+import { getLeads, createLead, deleteLead, updateLeadStatus, convertLead } from "@/features/leads";
 import { createCalendarEvent } from "@/features/calendar";
 import { autocompleteAddress } from "@/features/roof-estimator/services/roof-estimator-service";
+import { LeadFormDialog } from "@/pages/Leads/AllLeads";
 // import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -607,6 +608,8 @@ const Pipeline = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAddLeadDialogOpen, setIsAddLeadDialogOpen] = useState(false);
+  const [pendingAddStageId, setPendingAddStageId] = useState<string | null>(null);
 
   // ── Conversion dialog state ──
   const [convertingLead, setConvertingLead] = useState<{ lead: Lead; sourceStageId: string } | null>(null);
@@ -725,8 +728,133 @@ const Pipeline = () => {
     }
   };
 
+  const buildNewFieldsPayload = (data: Record<string, any>) => {
+    const opt = (value: any) => (value && value !== "" ? value : undefined);
+
+    return {
+      propertyAddress: opt(data.propertyAddress),
+      city: opt(data.city),
+      state: opt(data.state),
+      zipCode: opt(data.zipCode),
+      propertyType: opt(data.propertyType),
+      serviceType: opt(data.serviceType),
+      isInsuranceClaim: opt(data.isInsuranceClaim),
+      urgencyLevel: opt(data.urgencyLevel),
+      preferredContactMethod: opt(data.preferredContactMethod),
+      bestTimeToContact: opt(data.bestTimeToContact),
+      issueDescription: opt(data.issueDescription),
+      confirmedName: data.confirmedName || false,
+      confirmedPhone: data.confirmedPhone || false,
+      confirmedEmail: data.confirmedEmail || false,
+      confirmedAddress: data.confirmedAddress || false,
+      secondaryPhone: opt(data.secondaryPhone),
+      spouseCoOwnerName: opt(data.spouseCoOwnerName),
+      isHomeowner: opt(data.isHomeowner),
+      isDecisionMaker: opt(data.isDecisionMaker),
+      ownershipType: opt(data.ownershipType),
+      roofAge: opt(data.roofAge),
+      currentRoofMaterial: opt(data.currentRoofMaterial),
+      numberOfStories: opt(data.numberOfStories),
+      knownDamageType: Array.isArray(data.knownDamageType) && data.knownDamageType.length > 0 ? data.knownDamageType : undefined,
+      damageOccurrenceDate: opt(data.damageOccurrenceDate),
+      previousRoofWork: opt(data.previousRoofWork),
+      previousRoofWorkDetails: opt(data.previousRoofWorkDetails),
+      insuranceCompanyName: opt(data.insuranceCompanyName),
+      hasClaimBeenFiled: opt(data.hasClaimBeenFiled),
+      claimNumber: opt(data.claimNumber),
+      adjusterAssigned: opt(data.adjusterAssigned),
+      adjusterName: opt(data.adjusterName),
+      adjusterPhone: opt(data.adjusterPhone),
+      adjusterEmail: opt(data.adjusterEmail),
+      adjusterMeetingDate: opt(data.adjusterMeetingDate),
+      budgetRange: opt(data.budgetRange),
+      workTimeline: opt(data.workTimeline),
+      financingNeeded: opt(data.financingNeeded),
+      gettingOtherQuotes: opt(data.gettingOtherQuotes),
+      numberOfOtherQuotes: data.numberOfOtherQuotes || undefined,
+      topPriority: opt(data.topPriority),
+      isHOA: opt(data.isHOA),
+      hoaRestrictions: opt(data.hoaRestrictions),
+      leadScore: data.leadScore || undefined,
+      disqualifiedReason: opt(data.disqualifiedReason),
+      nextStep: opt(data.nextStep),
+      followUpDateTime: opt(data.followUpDateTime),
+      inspectionAppointmentDate: opt(data.inspectionAppointmentDate),
+      qualificationCallNotes: opt(data.qualificationCallNotes),
+    };
+  };
+
+  const openAddLeadDialog = (stageId?: string | null) => {
+    setPendingAddStageId(stageId ?? null);
+    setIsAddLeadDialogOpen(true);
+  };
+
+  const closeAddLeadDialog = () => {
+    setIsAddLeadDialogOpen(false);
+    setPendingAddStageId(null);
+  };
+
+  const handleCreateLeadFromDialog = async (data: any) => {
+    try {
+      const requestedStageStatus = pendingAddStageId ? stageIdToStatus[pendingAddStageId] : undefined;
+      const selectedStatus = data.status ? String(data.status).toUpperCase() : undefined;
+      const resolvedStatus = requestedStageStatus && (!selectedStatus || selectedStatus === "NEW")
+        ? requestedStageStatus
+        : (selectedStatus || "NEW");
+
+      const apiData: Record<string, any> = {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        phone: data.phone || undefined,
+        companyName: data.companyName,
+        jobTitle: data.jobTitle || undefined,
+        website: data.website && data.website.trim() ? data.website.trim() : undefined,
+        location: data.location || undefined,
+        status: resolvedStatus,
+        temperature: (data.temperature || "warm").toUpperCase(),
+        potentialValue: data.potentialValue || 0,
+        notes: data.notes || undefined,
+        ...buildNewFieldsPayload(data),
+      };
+
+      if (data.leadSourceId && data.leadSourceId !== "none" && data.leadSourceId !== "") {
+        apiData.leadSourceId = data.leadSourceId;
+      }
+
+      if (data.assignedToId && data.assignedToId !== "unassigned" && data.assignedToId !== "") {
+        apiData.assignedToId = data.assignedToId;
+      }
+
+      const responseData = await createLead(apiData);
+      const newLead = mapApiLeadToPipeline(responseData);
+      const targetStageId = statusToStageId[(newLead.status || "new").toUpperCase()] || "new";
+
+      setPipeline((prev) =>
+        prev.map((stage) =>
+          stage.id === targetStageId
+            ? { ...stage, leads: [newLead, ...stage.leads] }
+            : stage
+        )
+      );
+
+      const stageName = pipelineStageConfig.find((stage) => stage.id === targetStageId)?.name || "the pipeline";
+      toast({
+        title: "Lead Added",
+        description: `${newLead.firstName} ${newLead.lastName} was added to ${stageName}.`,
+      });
+    } catch (error: any) {
+      console.error("Failed to add lead from pipeline:", error);
+      toast({
+        title: "Error",
+        description: error?.response?.data?.message || "Failed to add lead.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleAddLead = (stageId: string) => {
-    navigate("/leads");
+    openAddLeadDialog(stageId);
   };
 
   // Drag & Drop: move lead to a new stage and update backend status
@@ -1002,7 +1130,10 @@ const Pipeline = () => {
                   Filter
                 </Button>
 
-                <Button className="bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-md gap-2">
+                <Button
+                  className="bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-md gap-2"
+                  onClick={() => openAddLeadDialog(null)}
+                >
                   <Plus size={18} />
                   Add Lead
                 </Button>
@@ -1070,6 +1201,13 @@ const Pipeline = () => {
           </>
         )}
       </AnimatePresence>
+
+      <LeadFormDialog
+        isOpen={isAddLeadDialogOpen}
+        onClose={closeAddLeadDialog}
+        lead={null}
+        onSubmit={handleCreateLeadFromDialog}
+      />
 
       {/* Convert Lead to Client Dialog */}
       <Dialog open={!!convertingLead} onOpenChange={(open) => { if (!open) handleConvertCancel(); }}>

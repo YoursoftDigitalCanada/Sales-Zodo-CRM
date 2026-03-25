@@ -928,7 +928,7 @@ const LeadRow = ({
 // ADD/EDIT LEAD DIALOG
 // ============================================
 
-const LeadFormDialog = ({
+export const LeadFormDialog = ({
   isOpen,
   onClose,
   lead,

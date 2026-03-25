@@ -79,6 +79,17 @@ const employeeFormSchema = z.object({
 
 type EmployeeFormValues = z.infer<typeof employeeFormSchema>;
 type EditableEmployee = Employee & { portalEmail?: string };
+type EmployeeFormStep = 'basic' | 'employment' | 'address' | 'emergency' | 'portal';
+
+const EMPLOYEE_FORM_STEPS: EmployeeFormStep[] = ['basic', 'employment', 'address', 'emergency', 'portal'];
+
+const STEP_FIELDS: Record<EmployeeFormStep, Array<keyof EmployeeFormValues>> = {
+  basic: ['firstName', 'lastName', 'email', 'phone'],
+  employment: ['position', 'departmentId', 'employmentType', 'status', 'joinDate', 'salary'],
+  address: ['street', 'city', 'state', 'zipCode', 'country'],
+  emergency: ['emergencyName', 'emergencyRelationship', 'emergencyPhone'],
+  portal: ['portalEmail', 'portalPassword'],
+};
 
 interface AddEmployeeDialogProps {
   open: boolean;
@@ -96,6 +107,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
   editingEmployee,
 }) => {
   const [showPortalPassword, setShowPortalPassword] = useState(false);
+  const [activeStep, setActiveStep] = useState<EmployeeFormStep>('basic');
   const form = useForm<EmployeeFormValues>({
     resolver: zodResolver(employeeFormSchema),
     defaultValues: {
@@ -151,12 +163,57 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
       portalEmail: editingEmployee?.portalEmail || '',
       portalPassword: '',
     });
+    setActiveStep('basic');
   }, [editingEmployee, form, open]);
 
   const handleSubmit = async (data: EmployeeFormValues) => {
     await onSubmit(data);
     form.reset();
+    setActiveStep('basic');
     onOpenChange(false);
+  };
+
+  const currentStepIndex = EMPLOYEE_FORM_STEPS.indexOf(activeStep);
+  const isLastStep = currentStepIndex === EMPLOYEE_FORM_STEPS.length - 1;
+
+  const validateStep = async (step: EmployeeFormStep) => form.trigger(STEP_FIELDS[step]);
+
+  const goToStep = async (nextStep: EmployeeFormStep) => {
+    if (nextStep === activeStep) {
+      return;
+    }
+
+    const nextIndex = EMPLOYEE_FORM_STEPS.indexOf(nextStep);
+    const currentIndex = EMPLOYEE_FORM_STEPS.indexOf(activeStep);
+
+    if (nextIndex <= currentIndex) {
+      setActiveStep(nextStep);
+      return;
+    }
+
+    const isCurrentStepValid = await validateStep(activeStep);
+    if (!isCurrentStepValid) {
+      return;
+    }
+
+    setActiveStep(nextStep);
+  };
+
+  const handleNextStep = async () => {
+    const isCurrentStepValid = await validateStep(activeStep);
+    if (!isCurrentStepValid || isLastStep) {
+      return;
+    }
+
+    setActiveStep(EMPLOYEE_FORM_STEPS[currentStepIndex + 1]);
+  };
+
+  const handlePreviousStep = () => {
+    if (currentStepIndex <= 0) {
+      return;
+    }
+
+    setActiveStep(EMPLOYEE_FORM_STEPS[currentStepIndex - 1]);
   };
 
   return (
@@ -170,7 +227,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-            <Tabs defaultValue="basic" className="w-full">
+            <Tabs value={activeStep} onValueChange={(value) => { void goToStep(value as EmployeeFormStep); }} className="w-full">
               <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="basic">Basic Info</TabsTrigger>
                 <TabsTrigger value="employment">Employment</TabsTrigger>
@@ -637,12 +694,31 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
               >
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white"
-              >
-                {editingEmployee ? 'Update Employee' : 'Add Employee'}
-              </Button>
+              {currentStepIndex > 0 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handlePreviousStep}
+                >
+                  Previous
+                </Button>
+              )}
+              {isLastStep ? (
+                <Button
+                  type="submit"
+                  className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white"
+                >
+                  {editingEmployee ? 'Update Employee' : 'Add Employee'}
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white"
+                  onClick={() => { void handleNextStep(); }}
+                >
+                  Next
+                </Button>
+              )}
             </div>
           </form>
         </Form>

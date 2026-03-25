@@ -4,6 +4,8 @@ import {
     authenticate,
     loadEmployee,
 } from '../../common/middleware/auth.middleware';
+import { loadDataAccess } from '../../common/middleware/data-access.middleware';
+import { requireAccessibleTask } from '../../common/middleware/entity-access.middleware';
 import { requirePermission } from '../../common/middleware/permission.middleware';
 import { validate } from '../../common/middleware/validate.middleware';
 import { PERMISSIONS } from '../../common/constants/permissions';
@@ -18,6 +20,7 @@ const router = Router();
 
 router.use(authenticate);
 router.use(loadEmployee);
+router.use(loadDataAccess);
 
 router.get(
     '/',
@@ -44,6 +47,8 @@ router.post(
     validate(createTaskSchema),
     tasksController.create.bind(tasksController)
 );
+
+router.use('/:id', requireAccessibleTask());
 
 router.get(
     '/:id',

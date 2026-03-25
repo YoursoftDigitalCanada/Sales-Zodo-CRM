@@ -8,6 +8,7 @@ import {
   NotFoundError,
 } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
+import { DataAccessContext } from '../../common/access/data-access';
 
 const NOT_FOUND_MESSAGES = new Set([
   'PROJECT_NOT_FOUND',
@@ -77,9 +78,9 @@ export class ProjectsService {
     });
   }
 
-  async getMany(tenantId: string, query: ProjectQueryDto) {
+  async getMany(tenantId: string, query: ProjectQueryDto, dataAccess?: DataAccessContext) {
     return this.guarded(async () => {
-      const { data, total } = await projectsRepository.findMany(tenantId, query);
+      const { data, total } = await projectsRepository.findMany(tenantId, query, dataAccess);
       const page = query.page ?? 1;
       const limit = query.limit ?? 20;
       const totalPages = Math.ceil(total / limit);
@@ -98,20 +99,20 @@ export class ProjectsService {
     });
   }
 
-  async getKanban(tenantId: string) {
-    return this.guarded(() => projectsRepository.getKanban(tenantId));
+  async getKanban(tenantId: string, dataAccess?: DataAccessContext) {
+    return this.guarded(() => projectsRepository.getKanban(tenantId, dataAccess));
   }
 
-  async getCalendar(tenantId: string) {
-    return this.guarded(() => projectsRepository.getCalendar(tenantId));
+  async getCalendar(tenantId: string, dataAccess?: DataAccessContext) {
+    return this.guarded(() => projectsRepository.getCalendar(tenantId, dataAccess));
   }
 
-  async getMap(tenantId: string) {
-    return this.guarded(() => projectsRepository.getMap(tenantId));
+  async getMap(tenantId: string, dataAccess?: DataAccessContext) {
+    return this.guarded(() => projectsRepository.getMap(tenantId, dataAccess));
   }
 
-  async getSummaryStats(tenantId: string) {
-    return this.guarded(() => projectsRepository.getSummaryStats(tenantId));
+  async getSummaryStats(tenantId: string, dataAccess?: DataAccessContext) {
+    return this.guarded(() => projectsRepository.getSummaryStats(tenantId, dataAccess));
   }
 
   async update(id: string, tenantId: string, data: Record<string, any>) {

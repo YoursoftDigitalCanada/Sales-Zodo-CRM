@@ -775,6 +775,7 @@ model User {
   auditLogs             AuditLog[]
   notifications         Notification[]
   userPreferences       UserPreferences?
+  mailboxEmails         Email[]        @relation("MailboxOwnerUser")
 
   @@index([email])
   @@index([tenantId])
@@ -3772,7 +3773,7 @@ model Email {
   id              String        @id @default(uuid())
   
   // Email metadata
-  messageId       String?       @unique // For external email systems
+  messageId       String?       // For external email systems
   threadId        String?       // For conversation threading
   
   // Sender/Recipients
@@ -3803,6 +3804,10 @@ model Email {
   // Sent by (if outgoing)
   sentById        String?
   sentBy          Employee?     @relation("SentByEmployee", fields: [sentById], references: [id], onDelete: SetNull)
+
+  // Mailbox owner (personal letter box)
+  mailboxOwnerUserId String?
+  mailboxOwnerUser   User?      @relation("MailboxOwnerUser", fields: [mailboxOwnerUserId], references: [id], onDelete: SetNull)
   
   // Entity links (optional — link emails to CRM entities)
   clientId        String?
@@ -3838,9 +3843,11 @@ model Email {
   attachments     EmailAttachment[]
 
   @@index([tenantId])
+  @@index([tenantId, mailboxOwnerUserId])
   @@index([folder])
   @@index([status])
   @@index([sentById])
+  @@index([messageId])
   @@index([threadId])
   @@index([isRead])
   @@index([deletedAt])
@@ -3849,6 +3856,7 @@ model Email {
   @@index([leadId])
   @@index([quoteId])
   @@index([projectId])
+  @@unique([tenantId, mailboxOwnerUserId, messageId])
 }
 
 model EmailLabelAssignment {

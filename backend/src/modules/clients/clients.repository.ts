@@ -1,5 +1,6 @@
 import { PrismaClient, Prisma, ClientType, ClientStatus } from '@prisma/client';
 import { CreateClientDto, UpdateClientDto, ClientQueryDto } from './clients.dto';
+import { DataAccessContext, buildClientAccessWhere, mergeWhereWithAccess } from '../../common/access/data-access';
 
 const prisma = new PrismaClient();
 const clientInclude = {
@@ -96,9 +97,9 @@ export class ClientsRepository {
         return prisma.client.findFirst({ where: { id, tenantId }, include: clientInclude });
     }
 
-    async findMany(tenantId: string, query: ClientQueryDto) {
+    async findMany(tenantId: string, query: ClientQueryDto, dataAccess?: DataAccessContext) {
         const { page = 1, limit = 20, search, clientType, status, assignedOwner, clientCategory, sortBy = 'createdAt', sortOrder = 'desc' } = query;
-        const where: Prisma.ClientWhereInput = {
+        const baseWhere: Prisma.ClientWhereInput = {
             tenantId,
             ...(clientType && { clientType }),
             ...(status && { status }),
@@ -112,6 +113,7 @@ export class ClientsRepository {
                 ],
             }),
         };
+        const where = mergeWhereWithAccess(baseWhere, buildClientAccessWhere(dataAccess));
         const [data, total] = await Promise.all([
             prisma.client.findMany({ where, include: clientInclude, orderBy: { [sortBy]: sortOrder }, skip: (page - 1) * limit, take: limit }),
             prisma.client.count({ where }),

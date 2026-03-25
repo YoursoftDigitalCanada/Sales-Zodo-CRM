@@ -39,3 +39,28 @@ export const emailQuerySchema = z.object({
 export const emailIdSchema = z.object({
     params: z.object({ id: z.string().uuid() }),
 });
+
+const emailEncryptionSchema = z.enum(['SSL/TLS', 'STARTTLS', 'NONE']);
+
+export const updateMailboxSettingsSchema = z.object({
+    body: z.object({
+        smtp: z.object({
+            host: z.string().trim().max(255).optional(),
+            port: z.coerce.number().int().min(1).max(65535).optional(),
+            username: z.string().trim().max(255).optional(),
+            password: z.string().max(255).optional(),
+            encryption: emailEncryptionSchema.optional(),
+            senderName: z.string().trim().max(255).optional(),
+            senderEmail: z.string().trim().email().optional(),
+        }).optional(),
+        imap: z.object({
+            host: z.string().trim().max(255).optional(),
+            port: z.coerce.number().int().min(1).max(65535).optional(),
+            username: z.string().trim().max(255).optional(),
+            password: z.string().max(255).optional(),
+            encryption: emailEncryptionSchema.optional(),
+        }).optional(),
+    }).refine((data) => Boolean(data.smtp || data.imap), {
+        message: 'Provide SMTP or IMAP mailbox settings to update',
+    }),
+});

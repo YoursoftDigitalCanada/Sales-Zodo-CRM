@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { projectsController } from './projects.controller';
 import { authenticate, loadEmployee } from '../../common/middleware/auth.middleware';
+import { loadDataAccess } from '../../common/middleware/data-access.middleware';
+import { requireAccessibleProject } from '../../common/middleware/entity-access.middleware';
 import { requirePermission } from '../../common/middleware/permission.middleware';
 import { validate } from '../../common/middleware/validate.middleware';
 import { PERMISSIONS } from '../../common/constants/permissions';
@@ -29,6 +31,7 @@ import {
 const router = Router();
 router.use(authenticate);
 router.use(loadEmployee);
+router.use(loadDataAccess);
 
 router.get('/', requirePermission(PERMISSIONS.PROJECTS_VIEW), validate(projectQuerySchema), projectsController.getMany.bind(projectsController));
 router.get('/kanban', requirePermission(PERMISSIONS.PROJECTS_VIEW), projectsController.getKanban.bind(projectsController));
@@ -38,6 +41,8 @@ router.get('/stats/summary', requirePermission(PERMISSIONS.PROJECTS_VIEW), proje
 
 router.post('/', requirePermission(PERMISSIONS.PROJECTS_CREATE), validate(createProjectSchema), projectsController.create.bind(projectsController));
 router.post('/from-quote/:quoteId', requirePermission(PERMISSIONS.PROJECTS_CREATE), validate(quoteIdSchema), projectsController.createFromQuote.bind(projectsController));
+
+router.use('/:id', requireAccessibleProject());
 
 router.get('/:id', requirePermission(PERMISSIONS.PROJECTS_VIEW), validate(projectIdSchema), projectsController.getById.bind(projectsController));
 router.put('/:id', requirePermission(PERMISSIONS.PROJECTS_UPDATE), validate(projectIdSchema), validate(updateProjectSchema), projectsController.update.bind(projectsController));

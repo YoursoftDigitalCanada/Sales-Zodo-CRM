@@ -63,7 +63,7 @@ class MailerService {
      * Send email using a specific SMTP config (per-tenant), falling back to default transporter.
      */
     async sendMailWithConfig(
-        smtpConfig: { host: string; port: number; user: string; pass: string; senderName?: string; senderEmail?: string },
+        smtpConfig: { host: string; port: number; user: string; pass: string; encryption?: string; senderName?: string; senderEmail?: string },
         opts: { to: string | string[]; subject: string; html: string; text?: string; attachments?: Array<{ filename: string; content: Buffer; contentType?: string }> }
     ): Promise<boolean> {
         const result = await this.sendMailWithConfigDetailed(smtpConfig, opts);
@@ -71,7 +71,7 @@ class MailerService {
     }
 
     async sendMailWithConfigDetailed(
-        smtpConfig: { host: string; port: number; user: string; pass: string; senderName?: string; senderEmail?: string },
+        smtpConfig: { host: string; port: number; user: string; pass: string; encryption?: string; senderName?: string; senderEmail?: string },
         opts: { to: string | string[]; subject: string; html: string; text?: string; attachments?: Array<{ filename: string; content: Buffer; contentType?: string }> }
     ): Promise<{ sent: boolean; error?: string }> {
         if (!nodemailer) {
@@ -80,10 +80,12 @@ class MailerService {
         }
         try {
             // Create a one-off transport for this tenant's SMTP config
+            const encryption = smtpConfig.encryption || ((smtpConfig.port || 587) === 465 ? 'SSL/TLS' : 'STARTTLS');
             const transport = nodemailer.createTransport({
                 host: smtpConfig.host,
                 port: smtpConfig.port || 587,
-                secure: (smtpConfig.port || 587) === 465,
+                secure: encryption === 'SSL/TLS',
+                requireTLS: encryption === 'STARTTLS',
                 auth: { user: smtpConfig.user, pass: smtpConfig.pass },
             });
 

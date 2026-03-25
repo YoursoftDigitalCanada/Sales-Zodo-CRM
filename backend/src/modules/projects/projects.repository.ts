@@ -1,6 +1,11 @@
-import { Prisma } from '@prisma/client';
+import { Prisma, ProjectStatus } from '@prisma/client';
 import { prisma } from '../../config/database';
 import { CreateProjectDto, ProjectQueryDto, toNumber, UpdateProjectDto } from './projects.dto';
+import {
+  DataAccessContext,
+  buildProjectAccessWhere,
+  mergeWhereWithAccess,
+} from '../../common/access/data-access';
 
 const projectDetailInclude = {
   client: { select: { id: true, clientName: true, primaryEmail: true, primaryPhone: true } },
@@ -190,7 +195,7 @@ export class ProjectsRepository {
     });
   }
 
-  async findMany(tenantId: string, query: ProjectQueryDto) {
+  async findMany(tenantId: string, query: ProjectQueryDto, dataAccess?: DataAccessContext) {
     const {
       page = 1,
       limit = 20,
@@ -207,7 +212,7 @@ export class ProjectsRepository {
       endDate,
     } = query;
 
-    const where: Prisma.ProjectWhereInput = {
+    const baseWhere: Prisma.ProjectWhereInput = {
       tenantId,
       deletedAt: null,
       ...(status && { status }),
@@ -245,6 +250,7 @@ export class ProjectsRepository {
         }
         : {}),
     };
+    const where = mergeWhereWithAccess(baseWhere, buildProjectAccessWhere(dataAccess));
 
     const allowedSortFields = new Set([
       'createdAt',
@@ -285,11 +291,15 @@ export class ProjectsRepository {
     return { data, total };
   }
 
-  async getKanban(tenantId: string) {
+  async getKanban(tenantId: string, dataAccess?: DataAccessContext) {
+    const projectWhere = mergeWhereWithAccess(
+      { tenantId, deletedAt: null },
+      buildProjectAccessWhere(dataAccess),
+    );
     const [stages, projects] = await Promise.all([
       prisma.projectStage.findMany({ where: { tenantId }, orderBy: { order: 'asc' } }),
       prisma.project.findMany({
-        where: { tenantId, deletedAt: null },
+        where: projectWhere,
         select: {
           id: true,
           projectNumber: true,
@@ -333,9 +343,13 @@ export class ProjectsRepository {
     });
   }
 
-  async getCalendar(tenantId: string) {
+  async getCalendar(tenantId: string, dataAccess?: DataAccessContext) {
+    const where = mergeWhereWithAccess(
+      { tenantId, deletedAt: null },
+      buildProjectAccessWhere(dataAccess),
+    );
     return prisma.project.findMany({
-      where: { tenantId, deletedAt: null },
+      where,
       select: {
         id: true,
         projectNumber: true,
@@ -352,9 +366,9 @@ export class ProjectsRepository {
     });
   }
 
-  async getMap(tenantId: string) {
-    return prisma.project.findMany({
-      where: {
+  async getMap(tenantId: string, dataAccess?: DataAccessContext) {
+    const where = mergeWhereWithAccess(
+      {
         tenantId,
         deletedAt: null,
         OR: [
@@ -363,6 +377,10 @@ export class ProjectsRepository {
           { jobSiteAddress: { not: null } },
         ],
       },
+      buildProjectAccessWhere(dataAccess),
+    );
+    return prisma.project.findMany({
+      where,
       select: {
         id: true,
         projectNumber: true,
@@ -381,7 +399,9 @@ export class ProjectsRepository {
     });
   }
 
-  async getSummaryStats(tenantId: string) {
+  async getSummaryStats(tenantId: string, dataAccess?: DataAccessContext) {
+    const accessibleWhere = buildProjectAccessWhere(dataAccess);
+    const activeStatuses: ProjectStatus[] = ['IN_PROGRESS', 'ACTIVE', 'SCHEDULED', 'APPROVED'];
     const [
       total,
       active,
@@ -391,13 +411,13 @@ export class ProjectsRepository {
       costAgg,
       byStatus,
     ] = await Promise.all([
-      prisma.project.count({ where: { tenantId, deletedAt: null } }),
-      prisma.project.count({ where: { tenantId, deletedAt: null, status: { in: ['IN_PROGRESS', 'ACTIVE', 'SCHEDULED', 'APPROVED'] } } }),
-      prisma.project.count({ where: { tenantId, deletedAt: null, status: 'COMPLETED' } }),
-      prisma.project.count({ where: { tenantId, deletedAt: null, status: 'ON_HOLD' } }),
-      prisma.project.aggregate({ where: { tenantId, deletedAt: null }, _sum: { contractValue: true } }),
-      prisma.project.aggregate({ where: { tenantId, deletedAt: null }, _sum: { actualCost: true } }),
-      prisma.project.groupBy({ by: ['status'], where: { tenantId, deletedAt: null }, _count: { status: true } }),
+      prisma.project.count({ where: mergeWhereWithAccess({ tenantId, deletedAt: null }, accessibleWhere) }),
+      prisma.project.count({ where: mergeWhereWithAccess({ tenantId, deletedAt: null, status: { in: activeStatuses } }, accessibleWhere) }),
+      prisma.project.count({ where: mergeWhereWithAccess({ tenantId, deletedAt: null, status: 'COMPLETED' as ProjectStatus }, accessibleWhere) }),
+      prisma.project.count({ where: mergeWhereWithAccess({ tenantId, deletedAt: null, status: 'ON_HOLD' as ProjectStatus }, accessibleWhere) }),
+      prisma.project.aggregate({ where: mergeWhereWithAccess({ tenantId, deletedAt: null }, accessibleWhere), _sum: { contractValue: true } }),
+      prisma.project.aggregate({ where: mergeWhereWithAccess({ tenantId, deletedAt: null }, accessibleWhere), _sum: { actualCost: true } }),
+      prisma.project.groupBy({ by: ['status'], where: mergeWhereWithAccess({ tenantId, deletedAt: null }, accessibleWhere), _count: { status: true } }),
     ]);
 
     const contractValue = toNumber(contractAgg._sum.contractValue);

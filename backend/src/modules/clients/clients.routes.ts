@@ -4,6 +4,8 @@ import {
     authenticate,
     loadEmployee,
 } from '../../common/middleware/auth.middleware';
+import { loadDataAccess } from '../../common/middleware/data-access.middleware';
+import { requireAccessibleClient } from '../../common/middleware/entity-access.middleware';
 import { requirePermission } from '../../common/middleware/permission.middleware';
 import { validate } from '../../common/middleware/validate.middleware';
 import { PERMISSIONS } from '../../common/constants/permissions';
@@ -19,6 +21,7 @@ const router = Router();
 // All routes require authentication and employee context
 router.use(authenticate);
 router.use(loadEmployee);
+router.use(loadDataAccess);
 
 /**
  * @swagger
@@ -51,6 +54,8 @@ router.post(
     validate(createClientSchema),
     clientsController.create.bind(clientsController)
 );
+
+router.use('/:id', requireAccessibleClient());
 
 /**
  * @swagger

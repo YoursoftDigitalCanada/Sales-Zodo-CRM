@@ -24,6 +24,7 @@ import { prisma } from '../../config/database';
 import { logger } from '../../common/utils/logger';
 import { clientLifecycleService } from '../../common/services/client-lifecycle.service';
 import { activityLogger } from '../../common/services/activity-logger.service';
+import { DataAccessContext } from '../../common/access/data-access';
 import {
   detectLeadSource,
   LeadSourceRequestMetadata,
@@ -234,9 +235,10 @@ export class LeadsService {
    */
   async getMany(
     tenantId: string,
-    query: LeadQueryDto
+    query: LeadQueryDto,
+    dataAccess?: DataAccessContext,
   ): Promise<LeadListResponseDto> {
-    const { data, total } = await leadsRepository.findMany(tenantId, query);
+    const { data, total } = await leadsRepository.findMany(tenantId, query, dataAccess);
     const page = query.page || 1;
     const limit = query.limit || 20;
     const totalPages = Math.ceil(total / limit);
@@ -750,9 +752,10 @@ export class LeadsService {
       assignedToId?: string;
       leadSourceId?: string;
       temperature?: LeadTemperature;
-    }
+    },
+    dataAccess?: DataAccessContext,
   ): Promise<LeadPipelineDto[]> {
-    const pipeline = await leadsRepository.getPipeline(tenantId, filters);
+    const pipeline = await leadsRepository.getPipeline(tenantId, filters, dataAccess);
 
     return pipeline.map((stage) => ({
       status: stage.status,
@@ -768,9 +771,10 @@ export class LeadsService {
   async getStatistics(
     tenantId: string,
     startDate?: Date,
-    endDate?: Date
+    endDate?: Date,
+    dataAccess?: DataAccessContext,
   ): Promise<LeadStatisticsDto> {
-    return leadsRepository.getStatistics(tenantId, startDate, endDate);
+    return leadsRepository.getStatistics(tenantId, startDate, endDate, dataAccess);
   }
 
   // ── ACCESS CONTROL ─────────────────────────────────────────────────────

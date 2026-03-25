@@ -1,23 +1,30 @@
 import { emailsRepository } from './emails.repository';
 import { EmailFolder } from '@prisma/client';
-import { SendEmailDto, EmailQueryDto, toEmailResponseDto } from './emails.dto';
+import {
+    SendEmailDto,
+    EmailQueryDto,
+    MailboxConfigStatusDto,
+    MailboxSettingsResponseDto,
+    UpdateMailboxSettingsDto,
+    toEmailResponseDto,
+} from './emails.dto';
 import { BadRequestError, NotFoundError, ServiceUnavailableError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
 import { activityLogger } from '../../common/services/activity-logger.service';
 import { mailerService } from '../../common/services/mailer.service';
-import { settingsRepository } from '../settings/settings.repository';
+import { mailboxRepository } from './mailbox.repository';
 import fs from 'fs/promises';
 import path from 'path';
 
 export class EmailsService {
-    async getEmailById(id: string, tenantId: string) {
-        const email = await emailsRepository.findById(id, tenantId);
+    async getEmailById(id: string, tenantId: string, mailboxOwnerUserId: string) {
+        const email = await emailsRepository.findById(id, tenantId, mailboxOwnerUserId);
         if (!email) throw new NotFoundError('Email not found', ErrorCodes.RESOURCE_NOT_FOUND);
         return toEmailResponseDto(email);
     }
 
-    async getEmails(tenantId: string, query: EmailQueryDto) {
-        const { data, total } = await emailsRepository.findMany(tenantId, query);
+    async getEmails(tenantId: string, mailboxOwnerUserId: string, query: EmailQueryDto) {
+        const { data, total } = await emailsRepository.findMany(tenantId, mailboxOwnerUserId, query);
         const page = query.page || 1, limit = query.limit || 20;
         return {
             data: data.map(toEmailResponseDto),
@@ -45,19 +52,51 @@ export class EmailsService {
         }));
     }
 
-    async sendEmail(tenantId: string, data: SendEmailDto, sentById?: string, files: Express.Multer.File[] = []) {
-        const smtpConfig = await settingsRepository.getSmtpConfig(tenantId);
-        const smtpConfigured = Boolean(smtpConfig?.host && smtpConfig?.user && smtpConfig?.pass);
+    async getMailboxSettings(userId: string): Promise<MailboxSettingsResponseDto> {
+        return mailboxRepository.getMailboxSettings(userId);
+    }
+
+    async updateMailboxSettings(userId: string, data: UpdateMailboxSettingsDto): Promise<MailboxSettingsResponseDto> {
+        return mailboxRepository.updateMailboxSettings(userId, data);
+    }
+
+    async getMailboxConfigStatus(userId: string): Promise<MailboxConfigStatusDto> {
+        return mailboxRepository.getConfigStatus(userId);
+    }
+
+    private async getRequiredMailboxConfig(userId: string) {
+        const mailboxConfig = await mailboxRepository.getRuntimeConfig(userId);
+
+        if (!mailboxConfig) {
+            throw new BadRequestError('Mailbox owner not found', ErrorCodes.RESOURCE_NOT_FOUND);
+        }
+
+        return mailboxConfig;
+    }
+
+    async sendEmail(
+        tenantId: string,
+        mailboxOwnerUserId: string,
+        data: SendEmailDto,
+        actor?: { employeeId?: string; userId?: string },
+        files: Express.Multer.File[] = [],
+    ) {
+        const mailboxConfig = await this.getRequiredMailboxConfig(mailboxOwnerUserId);
+        if (mailboxConfig.tenantId !== tenantId) {
+            await this.cleanupUploadedFiles(files);
+            throw new BadRequestError('Mailbox does not belong to this workspace', ErrorCodes.INVALID_INPUT);
+        }
+        const smtpConfigured = Boolean(mailboxConfig.smtp.host && mailboxConfig.smtp.user && mailboxConfig.smtp.pass);
 
         if (!smtpConfigured) {
             await this.cleanupUploadedFiles(files);
             throw new BadRequestError(
-                'Letter Box outgoing mail requires workspace SMTP settings. Configure Settings > Email > SMTP to send from your own mailbox.',
+                'Letter Box outgoing mail requires your personal SMTP settings. Open Letter Box and configure My Mailbox to send from your own email.',
             );
         }
 
-        const senderEmail = smtpConfig.senderEmail || smtpConfig.user;
-        const senderName = smtpConfig.senderName || 'ZODO CRM';
+        const senderEmail = mailboxConfig.smtp.senderEmail || mailboxConfig.smtp.user;
+        const senderName = mailboxConfig.smtp.senderName || 'ZODO CRM';
 
         const toAddresses = Array.isArray(data.toAddresses)
             ? data.toAddresses.map((a: any) => typeof a === 'string' ? a : a.email).filter(Boolean)
@@ -72,10 +111,11 @@ export class EmailsService {
 
         const delivery = await mailerService.sendMailWithConfigDetailed(
             {
-                host: smtpConfig.host,
-                port: smtpConfig.port,
-                user: smtpConfig.user,
-                pass: smtpConfig.pass,
+                host: mailboxConfig.smtp.host,
+                port: mailboxConfig.smtp.port,
+                user: mailboxConfig.smtp.user,
+                pass: mailboxConfig.smtp.pass,
+                encryption: mailboxConfig.smtp.encryption,
                 senderName,
                 senderEmail,
             },
@@ -105,12 +145,12 @@ export class EmailsService {
                 || normalizedError.includes('password')
             ) {
                 throw new BadRequestError(
-                    `Workspace SMTP delivery failed because the configured mailbox credentials were rejected. Letter Box did not fall back to the OTP mailbox. ${errorMessage}`,
+                    `Your personal SMTP delivery failed because the configured mailbox credentials were rejected. Letter Box did not fall back to the OTP mailbox. ${errorMessage}`,
                 );
             }
 
             throw new ServiceUnavailableError(
-                `Workspace SMTP delivery failed. Letter Box did not fall back to the OTP mailbox. ${errorMessage}`,
+                `Your personal SMTP delivery failed. Letter Box did not fall back to the OTP mailbox. ${errorMessage}`,
             );
         }
 
@@ -124,52 +164,56 @@ export class EmailsService {
                 size,
                 path: attachmentPath,
             })),
-        }, sentById);
+        }, {
+            sentByEmployeeId: actor?.employeeId,
+            mailboxOwnerUserId,
+        });
         const dto = toEmailResponseDto(email);
 
         activityLogger.log({
             tenantId, entityType: 'Email', entityId: dto.id,
             action: 'CREATE', module: 'emails',
             description: `Sent email "${data.subject || ''}"`,
-            userId: sentById,
+            userId: actor?.userId,
             metadata: { toAddresses: data.toAddresses, subject: data.subject },
         });
 
         return dto;
     }
 
-    async markAsRead(id: string, tenantId: string) {
-        const existing = await emailsRepository.findById(id, tenantId);
+    async markAsRead(id: string, tenantId: string, mailboxOwnerUserId: string) {
+        const existing = await emailsRepository.findById(id, tenantId, mailboxOwnerUserId);
         if (!existing) throw new NotFoundError('Email not found', ErrorCodes.RESOURCE_NOT_FOUND);
-        const email = await emailsRepository.markAsRead(id, tenantId);
+        const email = await emailsRepository.markAsRead(id, tenantId, mailboxOwnerUserId);
         return toEmailResponseDto(email);
     }
 
-    async toggleStar(id: string, tenantId: string, isStarred: boolean) {
-        const existing = await emailsRepository.findById(id, tenantId);
+    async toggleStar(id: string, tenantId: string, mailboxOwnerUserId: string, isStarred: boolean) {
+        const existing = await emailsRepository.findById(id, tenantId, mailboxOwnerUserId);
         if (!existing) throw new NotFoundError('Email not found', ErrorCodes.RESOURCE_NOT_FOUND);
-        const email = await emailsRepository.toggleStar(id, tenantId, isStarred);
+        const email = await emailsRepository.toggleStar(id, tenantId, mailboxOwnerUserId, isStarred);
         return toEmailResponseDto(email);
     }
 
-    async moveToFolder(id: string, tenantId: string, folder: EmailFolder) {
-        const existing = await emailsRepository.findById(id, tenantId);
+    async moveToFolder(id: string, tenantId: string, mailboxOwnerUserId: string, folder: EmailFolder) {
+        const existing = await emailsRepository.findById(id, tenantId, mailboxOwnerUserId);
         if (!existing) throw new NotFoundError('Email not found', ErrorCodes.RESOURCE_NOT_FOUND);
-        const email = await emailsRepository.moveToFolder(id, tenantId, folder);
+        const email = await emailsRepository.moveToFolder(id, tenantId, mailboxOwnerUserId, folder);
         return toEmailResponseDto(email);
     }
 
-    async deleteEmail(id: string, tenantId: string) {
-        const existing = await emailsRepository.findById(id, tenantId);
+    async deleteEmail(id: string, tenantId: string, mailboxOwnerUserId: string, actorUserId?: string) {
+        const existing = await emailsRepository.findById(id, tenantId, mailboxOwnerUserId);
         if (!existing) throw new NotFoundError('Email not found', ErrorCodes.RESOURCE_NOT_FOUND);
 
         activityLogger.log({
             tenantId, entityType: 'Email', entityId: id,
             action: 'DELETE', module: 'emails',
             description: `Deleted email "${(existing as any).subject || id}"`,
+            userId: actorUserId,
         });
 
-        await emailsRepository.delete(id, tenantId);
+        await emailsRepository.delete(id, tenantId, mailboxOwnerUserId);
     }
 }
 

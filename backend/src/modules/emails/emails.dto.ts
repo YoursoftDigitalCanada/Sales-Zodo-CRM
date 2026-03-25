@@ -1,5 +1,7 @@
 import { Email, EmailFolder, EmailStatus } from '@prisma/client';
 
+export type EmailEncryption = 'SSL/TLS' | 'STARTTLS' | 'NONE';
+
 // ============================================================================
 // EMAILS DTOs - Matching Prisma Schema
 // Email model fields: fromAddress, fromName, toAddresses(Json), ccAddresses(Json),
@@ -60,6 +62,61 @@ export interface EmailResponseDto {
     receivedAt: Date | null;
     sentAt: Date | null;
     createdAt: Date;
+}
+
+export interface MailboxSmtpSettingsDto {
+    host: string;
+    port: number;
+    username: string;
+    passwordMasked: string;
+    encryption: EmailEncryption;
+    senderName: string;
+    senderEmail: string;
+    configured: boolean;
+}
+
+export interface MailboxImapSettingsDto {
+    host: string;
+    port: number;
+    username: string;
+    passwordMasked: string;
+    encryption: EmailEncryption;
+    configured: boolean;
+}
+
+export interface MailboxSettingsResponseDto {
+    smtp: MailboxSmtpSettingsDto;
+    imap: MailboxImapSettingsDto;
+    mailboxAddress: string | null;
+}
+
+export interface MailboxConfigStatusDto {
+    smtpConfigured: boolean;
+    imapConfigured: boolean;
+    mailboxAddress: string | null;
+}
+
+export interface UpdateMailboxSmtpDto {
+    host?: string;
+    port?: number;
+    username?: string;
+    password?: string;
+    encryption?: EmailEncryption;
+    senderName?: string;
+    senderEmail?: string;
+}
+
+export interface UpdateMailboxImapDto {
+    host?: string;
+    port?: number;
+    username?: string;
+    password?: string;
+    encryption?: EmailEncryption;
+}
+
+export interface UpdateMailboxSettingsDto {
+    smtp?: UpdateMailboxSmtpDto;
+    imap?: UpdateMailboxImapDto;
 }
 
 type EmailWithRelations = Email & {

@@ -40,7 +40,7 @@ export class ProjectsController {
 
   async getMany(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const result = await projectsService.getMany(this.getTenantId(req), req.query as any);
+      const result = await projectsService.getMany(this.getTenantId(req), req.query as any, req.dataAccess);
       sendSuccess(res, result.data, undefined, 200, result.meta);
     } catch (error) {
       next(error);
@@ -49,7 +49,7 @@ export class ProjectsController {
 
   async getKanban(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const data = await projectsService.getKanban(this.getTenantId(req));
+      const data = await projectsService.getKanban(this.getTenantId(req), req.dataAccess);
       sendSuccess(res, data);
     } catch (error) {
       next(error);
@@ -58,7 +58,7 @@ export class ProjectsController {
 
   async getCalendar(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const data = await projectsService.getCalendar(this.getTenantId(req));
+      const data = await projectsService.getCalendar(this.getTenantId(req), req.dataAccess);
       sendSuccess(res, data);
     } catch (error) {
       next(error);
@@ -67,7 +67,7 @@ export class ProjectsController {
 
   async getMap(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const data = await projectsService.getMap(this.getTenantId(req));
+      const data = await projectsService.getMap(this.getTenantId(req), req.dataAccess);
       sendSuccess(res, data);
     } catch (error) {
       next(error);
@@ -76,7 +76,7 @@ export class ProjectsController {
 
   async getSummaryStats(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const data = await projectsService.getSummaryStats(this.getTenantId(req));
+      const data = await projectsService.getSummaryStats(this.getTenantId(req), req.dataAccess);
       sendSuccess(res, data);
     } catch (error) {
       next(error);

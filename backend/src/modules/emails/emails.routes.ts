@@ -4,7 +4,7 @@ import { authenticate, loadEmployee } from '../../common/middleware/auth.middlew
 import { requirePermission } from '../../common/middleware/permission.middleware';
 import { validate } from '../../common/middleware/validate.middleware';
 import { PERMISSIONS } from '../../common/constants/permissions';
-import { sendEmailSchema, emailQuerySchema, emailIdSchema } from './emails.validators';
+import { sendEmailSchema, emailQuerySchema, emailIdSchema, updateMailboxSettingsSchema } from './emails.validators';
 import { uploadEmailAttachments } from './emails-upload.middleware';
 import { cleanupUploadedEmailFilesOnError, normalizeSendEmailBody } from './emails-send.middleware';
 
@@ -12,7 +12,9 @@ const router = Router();
 router.use(authenticate);
 router.use(loadEmployee);
 
-router.get('/config-status', emailsController.getConfigStatus.bind(emailsController));
+router.get('/config-status', requirePermission(PERMISSIONS.EMAILS_VIEW), emailsController.getConfigStatus.bind(emailsController));
+router.get('/mailbox/settings', requirePermission(PERMISSIONS.EMAILS_VIEW), emailsController.getMailboxSettings.bind(emailsController));
+router.put('/mailbox/settings', requirePermission(PERMISSIONS.EMAILS_VIEW), validate(updateMailboxSettingsSchema), emailsController.updateMailboxSettings.bind(emailsController));
 router.get('/', requirePermission(PERMISSIONS.EMAILS_VIEW), validate(emailQuerySchema), emailsController.getEmails.bind(emailsController));
 router.post(
     '/send',

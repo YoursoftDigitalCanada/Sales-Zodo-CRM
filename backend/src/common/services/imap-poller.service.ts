@@ -1,8 +1,5 @@
-import { PrismaClient } from '@prisma/client';
 import { imapService } from './imap.service';
-import { settingsRepository } from '../../modules/settings/settings.repository';
-
-const prisma = new PrismaClient();
+import { mailboxRepository } from '../../modules/emails/mailbox.repository';
 
 class ImapPollerService {
     private interval: ReturnType<typeof setInterval> | null = null;
@@ -28,35 +25,26 @@ class ImapPollerService {
     }
 
     /**
-     * Poll all tenants that have IMAP configured.
+     * Poll all user mailboxes that have IMAP configured.
      */
     private async _pollAll() {
         if (this.polling) return; // Prevent concurrent polls
         this.polling = true;
 
         try {
-            // Find all tenant settings with IMAP configured
-            const allSettings = await prisma.tenantSettings.findMany({
-                select: { tenantId: true },
-            });
+            const mailboxes = await mailboxRepository.listUsersWithImapConfigured();
 
-            for (const settings of allSettings) {
-                const imapConfig = await settingsRepository.getImapConfig(settings.tenantId);
-                const imapHost = imapConfig.host;
-                const imapUser = imapConfig.user;
-                const imapPass = imapConfig.pass;
-
-                if (imapHost && imapUser && imapPass) {
-                    try {
-                        await imapService.fetchNewEmails(settings.tenantId, {
-                            host: imapHost,
-                            port: imapConfig.port || 993,
-                            user: imapUser,
-                            pass: imapPass,
-                        });
-                    } catch (err: any) {
-                        console.error(`⚠️ IMAP poll failed for tenant ${settings.tenantId}:`, err.message);
-                    }
+            for (const mailbox of mailboxes) {
+                try {
+                    await imapService.fetchNewEmails(mailbox.tenantId, mailbox.userId, {
+                        host: mailbox.imap.host,
+                        port: mailbox.imap.port || 993,
+                        user: mailbox.imap.user,
+                        pass: mailbox.imap.pass,
+                        encryption: mailbox.imap.encryption,
+                    });
+                } catch (err: any) {
+                    console.error(`⚠️ IMAP poll failed for user ${mailbox.userId}:`, err.message);
                 }
             }
         } catch (err: any) {
@@ -67,24 +55,22 @@ class ImapPollerService {
     }
 
     /**
-     * Trigger an immediate fetch for a specific tenant.
+     * Trigger an immediate fetch for the current user's mailbox.
      */
-    async fetchForTenant(tenantId: string) {
-        const imapConfig = await settingsRepository.getImapConfig(tenantId);
-        const imapHost = imapConfig.host;
-        const imapUser = imapConfig.user;
-        const imapPass = imapConfig.pass;
+    async fetchForUser(userId: string) {
+        const mailbox = await mailboxRepository.getRuntimeConfig(userId);
 
-        if (!imapHost || !imapUser || !imapPass) {
+        if (!mailbox?.imap.host || !mailbox.imap.user || !mailbox.imap.pass) {
             return { fetched: 0, error: 'IMAP not configured' };
         }
 
         try {
-            const fetched = await imapService.fetchNewEmails(tenantId, {
-                host: imapHost,
-                port: imapConfig.port || 993,
-                user: imapUser,
-                pass: imapPass,
+            const fetched = await imapService.fetchNewEmails(mailbox.tenantId, mailbox.userId, {
+                host: mailbox.imap.host,
+                port: mailbox.imap.port || 993,
+                user: mailbox.imap.user,
+                pass: mailbox.imap.pass,
+                encryption: mailbox.imap.encryption,
             });
             return { fetched, error: null };
         } catch (err: any) {

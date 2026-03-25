@@ -17,6 +17,7 @@ import { ErrorCodes } from '../../common/errors/errorCodes';
 import { TaskStatus } from '@prisma/client';
 import { eventBus } from '../../common/events/event-bus';
 import { activityLogger } from '../../common/services/activity-logger.service';
+import { DataAccessContext } from '../../common/access/data-access';
 
 export class TasksService {
     async create(tenantId: string, data: CreateTaskDto, createdById?: string): Promise<TaskResponseDto> {
@@ -56,8 +57,8 @@ export class TasksService {
         return toTaskResponseDto(task);
     }
 
-    async getMany(tenantId: string, query: TaskQueryDto): Promise<TaskListResponseDto> {
-        const { data, total } = await tasksRepository.findMany(tenantId, query);
+    async getMany(tenantId: string, query: TaskQueryDto, dataAccess?: DataAccessContext): Promise<TaskListResponseDto> {
+        const { data, total } = await tasksRepository.findMany(tenantId, query, dataAccess);
         const page = query.page || 1;
         const limit = query.limit || 20;
         const totalPages = Math.ceil(total / limit);
@@ -181,8 +182,8 @@ export class TasksService {
         return dto;
     }
 
-    async getKanban(tenantId: string, filters?: { assignedToId?: string; projectId?: string }): Promise<TaskKanbanDto[]> {
-        const kanban = await tasksRepository.getKanban(tenantId, filters);
+    async getKanban(tenantId: string, filters?: { assignedToId?: string; projectId?: string }, dataAccess?: DataAccessContext): Promise<TaskKanbanDto[]> {
+        const kanban = await tasksRepository.getKanban(tenantId, filters, dataAccess);
         return kanban.map((col) => ({
             status: col.status,
             tasks: col.tasks.map(toTaskResponseDto),
@@ -190,8 +191,8 @@ export class TasksService {
         }));
     }
 
-    async getStatistics(tenantId: string): Promise<TaskStatisticsDto> {
-        return tasksRepository.getStatistics(tenantId);
+    async getStatistics(tenantId: string, dataAccess?: DataAccessContext): Promise<TaskStatisticsDto> {
+        return tasksRepository.getStatistics(tenantId, dataAccess);
     }
 }
 

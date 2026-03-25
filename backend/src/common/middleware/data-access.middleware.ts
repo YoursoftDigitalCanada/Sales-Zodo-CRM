@@ -1,15 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../../config/database';
 import { logger } from '../utils/logger';
-
-/**
- * Data Access context attached to req.dataAccess
- */
-export interface DataAccessContext {
-    hasFullAccess: boolean;
-    allowedClientIds: string[];
-    allowedProjectIds: string[];
-}
+import { DataAccessContext, hasFullDataAccess } from '../access/data-access';
 
 /**
  * Load data-level access rules for the current employee.
@@ -32,12 +24,13 @@ export async function loadDataAccess(
         const employeeId = req.user?.employeeId;
         const tenantId = req.user?.tenantId;
 
-        // Owner and Admin bypass data-level restrictions
-        if (roleName === 'Owner' || roleName === 'Admin') {
+        if (hasFullDataAccess(roleName)) {
             (req as any).dataAccess = {
                 hasFullAccess: true,
                 allowedClientIds: [],
                 allowedProjectIds: [],
+                employeeId,
+                roleName,
             } as DataAccessContext;
             return next();
         }
@@ -47,6 +40,8 @@ export async function loadDataAccess(
                 hasFullAccess: false,
                 allowedClientIds: [],
                 allowedProjectIds: [],
+                employeeId,
+                roleName,
             } as DataAccessContext;
             return next();
         }
@@ -78,17 +73,17 @@ export async function loadDataAccess(
             }
         }
 
-        const hasFullAccess = accessRows.length === 0 && roleName !== 'Staff';
-
         (req as any).dataAccess = {
-            hasFullAccess,
+            hasFullAccess: false,
             allowedClientIds,
             allowedProjectIds,
+            employeeId,
+            roleName,
         } as DataAccessContext;
 
         logger.debug('Data access loaded', {
             employeeId,
-            hasFullAccess,
+            hasFullAccess: false,
             clientCount: allowedClientIds.length,
             projectCount: allowedProjectIds.length,
         });
@@ -125,8 +120,10 @@ export function buildDataFilter(
         orConditions.push({ [clientField]: { in: dataAccess.allowedClientIds } });
     }
 
+    const idField = options?.idField || 'id';
+
     if (dataAccess.allowedProjectIds.length > 0) {
-        orConditions.push({ id: { in: dataAccess.allowedProjectIds } });
+        orConditions.push({ [idField]: { in: dataAccess.allowedProjectIds } });
     }
 
     if (orConditions.length === 0) {

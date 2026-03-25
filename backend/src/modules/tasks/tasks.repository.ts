@@ -1,5 +1,10 @@
 import { PrismaClient, Prisma, TaskStatus, TaskPriority } from '@prisma/client';
 import { CreateTaskDto, UpdateTaskDto, TaskQueryDto } from './tasks.dto';
+import {
+    DataAccessContext,
+    buildTaskAccessWhere,
+    mergeWhereWithAccess,
+} from '../../common/access/data-access';
 
 const prisma = new PrismaClient();
 const taskInclude = {
@@ -33,9 +38,9 @@ export class TasksRepository {
         return prisma.task.findFirst({ where: { id, tenantId }, include: taskInclude });
     }
 
-    async findMany(tenantId: string, query: TaskQueryDto) {
+    async findMany(tenantId: string, query: TaskQueryDto, dataAccess?: DataAccessContext) {
         const { page = 1, limit = 20, search, status, priority, assignedToId, projectId, clientId, sortBy = 'createdAt', sortOrder = 'desc' } = query;
-        const where: Prisma.TaskWhereInput = {
+        const baseWhere: Prisma.TaskWhereInput = {
             tenantId,
             ...(status && { status }),
             ...(priority && { priority }),
@@ -44,6 +49,7 @@ export class TasksRepository {
             ...(clientId && { clientId }),
             ...(search && { title: { contains: search, mode: 'insensitive' as const } }),
         };
+        const where = mergeWhereWithAccess(baseWhere, buildTaskAccessWhere(dataAccess));
         const [data, total] = await Promise.all([
             prisma.task.findMany({ where, include: taskInclude, orderBy: { [sortBy]: sortOrder }, skip: (page - 1) * limit, take: limit }),
             prisma.task.count({ where }),
@@ -116,12 +122,13 @@ export class TasksRepository {
         });
     }
 
-    async getKanban(tenantId: string, filters?: { assignedToId?: string; projectId?: string }) {
-        const where: Prisma.TaskWhereInput = {
+    async getKanban(tenantId: string, filters?: { assignedToId?: string; projectId?: string }, dataAccess?: DataAccessContext) {
+        const baseWhere: Prisma.TaskWhereInput = {
             tenantId,
             ...(filters?.assignedToId && { assignedToId: filters.assignedToId }),
             ...(filters?.projectId && { projectId: filters.projectId }),
         };
+        const where = mergeWhereWithAccess(baseWhere, buildTaskAccessWhere(dataAccess));
         const tasks = await prisma.task.findMany({ where, include: taskInclude, orderBy: { createdAt: 'desc' } });
 
         const statuses: TaskStatus[] = ['TODO', 'IN_PROGRESS', 'REVIEW', 'DONE'];
@@ -132,14 +139,19 @@ export class TasksRepository {
         }));
     }
 
-    async getStatistics(tenantId: string) {
+    async getStatistics(tenantId: string, dataAccess?: DataAccessContext) {
+        const accessibleWhere = buildTaskAccessWhere(dataAccess);
+        const TODO_STATUS: TaskStatus = 'TODO';
+        const IN_PROGRESS_STATUS: TaskStatus = 'IN_PROGRESS';
+        const REVIEW_STATUS: TaskStatus = 'REVIEW';
+        const DONE_STATUS: TaskStatus = 'DONE';
         const [total, todo, inProgress, review, done, overdue] = await Promise.all([
-            prisma.task.count({ where: { tenantId } }),
-            prisma.task.count({ where: { tenantId, status: 'TODO' } }),
-            prisma.task.count({ where: { tenantId, status: 'IN_PROGRESS' } }),
-            prisma.task.count({ where: { tenantId, status: 'REVIEW' } }),
-            prisma.task.count({ where: { tenantId, status: 'DONE' } }),
-            prisma.task.count({ where: { tenantId, status: { not: 'DONE' }, dueDate: { lt: new Date() } } }),
+            prisma.task.count({ where: mergeWhereWithAccess({ tenantId }, accessibleWhere) }),
+            prisma.task.count({ where: mergeWhereWithAccess({ tenantId, status: TODO_STATUS }, accessibleWhere) }),
+            prisma.task.count({ where: mergeWhereWithAccess({ tenantId, status: IN_PROGRESS_STATUS }, accessibleWhere) }),
+            prisma.task.count({ where: mergeWhereWithAccess({ tenantId, status: REVIEW_STATUS }, accessibleWhere) }),
+            prisma.task.count({ where: mergeWhereWithAccess({ tenantId, status: DONE_STATUS }, accessibleWhere) }),
+            prisma.task.count({ where: mergeWhereWithAccess({ tenantId, status: { not: DONE_STATUS }, dueDate: { lt: new Date() } }, accessibleWhere) }),
         ]);
         return { total, todo, inProgress, review, done, overdue };
     }

@@ -4,6 +4,8 @@ import {
   authenticate,
   loadEmployee,
 } from '../../common/middleware/auth.middleware';
+import { loadDataAccess } from '../../common/middleware/data-access.middleware';
+import { requireAccessibleLead } from '../../common/middleware/entity-access.middleware';
 import {
   requirePermission,
   requireAnyPermission,
@@ -43,6 +45,7 @@ const router = Router();
 // All routes require authentication and employee context
 router.use(authenticate);
 router.use(loadEmployee);
+router.use(loadDataAccess);
 
 /**
  * @swagger
@@ -252,6 +255,7 @@ router.get(
   '/:id',
   requirePermission(PERMISSIONS.LEADS_VIEW),
   validate(leadIdSchema),
+  requireAccessibleLead(),
   leadsController.getById.bind(leadsController)
 );
 
@@ -268,6 +272,7 @@ router.get(
   '/:id/activities',
   requirePermission(PERMISSIONS.LEADS_VIEW),
   validate(leadIdSchema),
+  requireAccessibleLead(),
   leadsController.getActivities.bind(leadsController)
 );
 
@@ -285,6 +290,7 @@ router.put(
   requirePermission(PERMISSIONS.LEADS_UPDATE),
   validate(leadIdSchema),
   validate(updateLeadSchema),
+  requireAccessibleLead(),
   leadsController.update.bind(leadsController)
 );
 
@@ -301,6 +307,7 @@ router.patch(
   '/:id/status',
   requirePermission(PERMISSIONS.LEADS_UPDATE),
   validate(leadIdSchema),
+  requireAccessibleLead(),
   leadsController.updateStatus.bind(leadsController)
 );
 
@@ -317,6 +324,7 @@ router.patch(
   '/:id/assign',
   requirePermission(PERMISSIONS.LEADS_ASSIGN),
   validate(leadIdSchema),
+  requireAccessibleLead(),
   leadsController.assign.bind(leadsController)
 );
 
@@ -347,6 +355,7 @@ router.patch(
   '/:id/estimation-method',
   requirePermission(PERMISSIONS.LEADS_UPDATE),
   validate(setEstimationMethodSchema),
+  requireAccessibleLead(),
   leadsController.setEstimationMethod.bind(leadsController)
 );
 
@@ -363,6 +372,7 @@ router.post(
   '/:id/convert',
   requirePermission(PERMISSIONS.LEADS_CONVERT),
   validate(convertLeadSchema),
+  requireAccessibleLead(),
   leadsController.convert.bind(leadsController)
 );
 
@@ -379,6 +389,7 @@ router.delete(
   '/:id',
   requirePermission(PERMISSIONS.LEADS_DELETE),
   validate(leadIdSchema),
+  requireAccessibleLead(),
   leadsController.delete.bind(leadsController)
 );
 
@@ -395,6 +406,7 @@ router.post(
   '/:id/merge',
   requirePermission(PERMISSIONS.LEADS_UPDATE),
   validate(mergeLeadsSchema),
+  requireAccessibleLead(),
   leadsController.merge.bind(leadsController)
 );
 
@@ -420,6 +432,7 @@ router.get(
   '/:leadId/inspections',
   requirePermission(PERMISSIONS.LEADS_VIEW),
   validate(inspectionListSchema),
+  requireAccessibleLead('leadId'),
   inspectionsController.getByLeadId.bind(inspectionsController)
 );
 
@@ -431,6 +444,7 @@ router.post(
   '/:leadId/inspections',
   requirePermission(PERMISSIONS.LEADS_UPDATE),
   validate(createInspectionSchema),
+  requireAccessibleLead('leadId'),
   inspectionsController.create.bind(inspectionsController)
 );
 
@@ -442,6 +456,7 @@ router.get(
   '/:leadId/inspections/:inspectionId',
   requirePermission(PERMISSIONS.LEADS_VIEW),
   validate(inspectionIdSchema),
+  requireAccessibleLead('leadId'),
   inspectionsController.getById.bind(inspectionsController)
 );
 
@@ -453,6 +468,7 @@ router.put(
   '/:leadId/inspections/:inspectionId',
   requirePermission(PERMISSIONS.LEADS_UPDATE),
   validate(updateInspectionSchema),
+  requireAccessibleLead('leadId'),
   inspectionsController.update.bind(inspectionsController)
 );
 
@@ -464,6 +480,7 @@ router.delete(
   '/:leadId/inspections/:inspectionId',
   requirePermission(PERMISSIONS.LEADS_DELETE),
   validate(inspectionIdSchema),
+  requireAccessibleLead('leadId'),
   inspectionsController.delete.bind(inspectionsController)
 );
 
@@ -475,6 +492,7 @@ router.get(
   '/:leadId/insurance-claims',
   requirePermission(PERMISSIONS.LEADS_VIEW),
   validate(insuranceClaimListSchema),
+  requireAccessibleLead('leadId'),
   insuranceClaimsController.getByLeadId.bind(insuranceClaimsController)
 );
 
@@ -482,6 +500,7 @@ router.post(
   '/:leadId/insurance-claims',
   requirePermission(PERMISSIONS.LEADS_UPDATE),
   validate(createInsuranceClaimSchema),
+  requireAccessibleLead('leadId'),
   insuranceClaimsController.create.bind(insuranceClaimsController)
 );
 
@@ -489,6 +508,7 @@ router.get(
   '/:leadId/insurance-claims/:claimId',
   requirePermission(PERMISSIONS.LEADS_VIEW),
   validate(insuranceClaimIdSchema),
+  requireAccessibleLead('leadId'),
   insuranceClaimsController.getById.bind(insuranceClaimsController)
 );
 
@@ -496,6 +516,7 @@ router.put(
   '/:leadId/insurance-claims/:claimId',
   requirePermission(PERMISSIONS.LEADS_UPDATE),
   validate(updateInsuranceClaimSchema),
+  requireAccessibleLead('leadId'),
   insuranceClaimsController.update.bind(insuranceClaimsController)
 );
 
@@ -503,6 +524,7 @@ router.delete(
   '/:leadId/insurance-claims/:claimId',
   requirePermission(PERMISSIONS.LEADS_DELETE),
   validate(insuranceClaimIdSchema),
+  requireAccessibleLead('leadId'),
   insuranceClaimsController.delete.bind(insuranceClaimsController)
 );
 

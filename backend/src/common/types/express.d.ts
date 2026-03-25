@@ -1,5 +1,6 @@
 import { Employee, Tenant, User } from '@prisma/client';
 import { RequestContext, AuthContext, TenantContext } from './request-context';
+import { DataAccessContext } from '../access/data-access';
 
 declare global {
   namespace Express {
@@ -48,6 +49,12 @@ declare global {
        * Also available via `req.user.requestId` after auth middleware runs.
        */
       requestId?: string;
+
+      /**
+       * Data-level assignment scope for non-admin employees.
+       * Set by `loadDataAccess` middleware on scoped CRM modules.
+       */
+      dataAccess?: DataAccessContext;
 
       /**
        * Trusted tenant context — set by `tenantContext` middleware.

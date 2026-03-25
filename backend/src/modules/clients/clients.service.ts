@@ -14,6 +14,7 @@ import { eventBus } from '../../common/events/event-bus';
 import { activityLogger } from '../../common/services/activity-logger.service';
 import { clientLifecycleService } from '../../common/services/client-lifecycle.service';
 import { prisma } from '../../config/database';
+import { DataAccessContext } from '../../common/access/data-access';
 
 export class ClientsService {
     /**
@@ -81,8 +82,8 @@ export class ClientsService {
     /**
      * Get clients with filters and pagination
      */
-    async getMany(tenantId: string, query: ClientQueryDto) {
-        const { data, total } = await clientsRepository.findMany(tenantId, query);
+    async getMany(tenantId: string, query: ClientQueryDto, dataAccess?: DataAccessContext) {
+        const { data, total } = await clientsRepository.findMany(tenantId, query, dataAccess);
         const page = query.page || 1;
         const limit = query.limit || 20;
         const totalPages = Math.ceil(total / limit);

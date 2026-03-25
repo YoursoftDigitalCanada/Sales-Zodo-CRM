@@ -28,7 +28,7 @@ export class TasksController {
             const tenantId = req.context.tenantId;
             const query = req.query as any;
 
-            const result = await tasksService.getMany(tenantId, query);
+            const result = await tasksService.getMany(tenantId, query, req.dataAccess);
 
             sendSuccess(res, result.data, undefined, 200, result.meta);
         } catch (error) {
@@ -41,7 +41,7 @@ export class TasksController {
             const tenantId = req.context.tenantId;
             const { assignedToId, projectId } = req.query as any;
 
-            const kanban = await tasksService.getKanban(tenantId, { assignedToId, projectId });
+            const kanban = await tasksService.getKanban(tenantId, { assignedToId, projectId }, req.dataAccess);
 
             sendSuccess(res, kanban);
         } catch (error) {
@@ -53,7 +53,7 @@ export class TasksController {
         try {
             const tenantId = req.context.tenantId;
 
-            const statistics = await tasksService.getStatistics(tenantId);
+            const statistics = await tasksService.getStatistics(tenantId, req.dataAccess);
 
             sendSuccess(res, statistics);
         } catch (error) {

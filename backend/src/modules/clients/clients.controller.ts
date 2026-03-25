@@ -35,7 +35,7 @@ export class ClientsController {
             const tenantId = req.context.tenantId;
             const query = req.query as any;
 
-            const result = await clientsService.getMany(tenantId, query);
+            const result = await clientsService.getMany(tenantId, query, req.dataAccess);
 
             sendSuccess(res, result.data, undefined, 200, result.meta);
         } catch (error) {

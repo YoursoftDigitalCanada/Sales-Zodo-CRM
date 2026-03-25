@@ -1,6 +1,11 @@
 import { prisma } from '../../config/database';
 import { LeadStatus, LeadTemperature, Prisma } from '@prisma/client';
 import { CreateLeadDto, UpdateLeadDto, LeadQueryDto } from './leads.dto';
+import {
+  DataAccessContext,
+  buildLeadAccessWhere,
+  mergeWhereWithAccess,
+} from '../../common/access/data-access';
 
 export class LeadsRepository {
   // Default includes for lead queries
@@ -79,7 +84,7 @@ export class LeadsRepository {
   /**
    * Find leads with filters and pagination
    */
-  async findMany(tenantId: string, query: LeadQueryDto) {
+  async findMany(tenantId: string, query: LeadQueryDto, dataAccess?: DataAccessContext) {
     const {
       page: rawPage = 1,
       limit: rawLimit = 20,
@@ -99,7 +104,7 @@ export class LeadsRepository {
     const page = Number(rawPage) || 1;
     const limit = Number(rawLimit) || 20;
 
-    const where: Prisma.LeadWhereInput = {
+    const baseWhere: Prisma.LeadWhereInput = {
       tenantId,
       ...(status && { status }),
       ...(temperature && { temperature }),
@@ -134,6 +139,7 @@ export class LeadsRepository {
         ],
       }),
     };
+    const where = mergeWhereWithAccess(baseWhere, buildLeadAccessWhere(dataAccess));
 
     // Build orderBy
     let orderBy: Prisma.LeadOrderByWithRelationInput = {};
@@ -292,13 +298,14 @@ export class LeadsRepository {
     assignedToId?: string;
     leadSourceId?: string;
     temperature?: LeadTemperature;
-  }) {
-    const where: Prisma.LeadWhereInput = {
+  }, dataAccess?: DataAccessContext) {
+    const baseWhere: Prisma.LeadWhereInput = {
       tenantId,
       ...(filters?.assignedToId && { assignedToId: filters.assignedToId }),
       ...(filters?.leadSourceId && { leadSourceId: filters.leadSourceId }),
       ...(filters?.temperature && { temperature: filters.temperature }),
     };
+    const where = mergeWhereWithAccess(baseWhere, buildLeadAccessWhere(dataAccess));
 
     const statuses: LeadStatus[] = ['NEW', 'CONTACTED', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATION', 'WON', 'LOST'];
 
@@ -332,7 +339,7 @@ export class LeadsRepository {
   /**
    * Get lead statistics
    */
-  async getStatistics(tenantId: string, startDate?: Date, endDate?: Date) {
+  async getStatistics(tenantId: string, startDate?: Date, endDate?: Date, dataAccess?: DataAccessContext) {
     const dateFilter = startDate || endDate
       ? {
         createdAt: {
@@ -342,7 +349,10 @@ export class LeadsRepository {
       }
       : {};
 
-    const baseWhere = { tenantId, ...dateFilter };
+    const baseWhere = mergeWhereWithAccess(
+      { tenantId, ...dateFilter },
+      buildLeadAccessWhere(dataAccess),
+    );
 
     const [
       total,

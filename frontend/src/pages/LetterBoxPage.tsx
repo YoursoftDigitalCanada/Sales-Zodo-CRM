@@ -43,7 +43,19 @@ import {
 import { NotificationBell } from "@/components/NotificationBell";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
-import { sendEmail as apiSendEmail, getEmails as apiGetEmails, deleteEmail as apiDeleteEmail, markAsRead as apiMarkAsRead, getEmailConfigStatus, fetchEmailsNow, toggleStar as apiToggleStar, moveToFolder as apiMoveToFolder } from "@/features/emails/services/emails-service";
+import {
+  sendEmail as apiSendEmail,
+  getEmails as apiGetEmails,
+  markAsRead as apiMarkAsRead,
+  getEmailConfigStatus,
+  fetchEmailsNow,
+  toggleStar as apiToggleStar,
+  moveToFolder as apiMoveToFolder,
+  getMailboxSettings as apiGetMailboxSettings,
+  updateMailboxSettings as apiUpdateMailboxSettings,
+  type MailboxSettings,
+  type UpdateMailboxSettingsPayload,
+} from "@/features/emails/services/emails-service";
 import { API_ORIGIN } from "@/services/api";
 import {
   Bell,
@@ -1366,6 +1378,172 @@ const EmailDetailView = ({
 // MAIN LETTERBOX PAGE COMPONENT
 // ============================================
 
+type MailboxFormState = {
+  smtpHost: string;
+  smtpPort: string;
+  smtpUsername: string;
+  smtpPassword: string;
+  smtpEncryption: "SSL/TLS" | "STARTTLS" | "NONE";
+  senderName: string;
+  senderEmail: string;
+  imapHost: string;
+  imapPort: string;
+  imapUsername: string;
+  imapPassword: string;
+  imapEncryption: "SSL/TLS" | "STARTTLS" | "NONE";
+};
+
+const EMPTY_MAILBOX_FORM: MailboxFormState = {
+  smtpHost: "",
+  smtpPort: "587",
+  smtpUsername: "",
+  smtpPassword: "",
+  smtpEncryption: "STARTTLS",
+  senderName: "",
+  senderEmail: "",
+  imapHost: "",
+  imapPort: "993",
+  imapUsername: "",
+  imapPassword: "",
+  imapEncryption: "SSL/TLS",
+};
+
+function mapMailboxSettingsToForm(settings: MailboxSettings | null): MailboxFormState {
+  if (!settings) {
+    return { ...EMPTY_MAILBOX_FORM };
+  }
+
+  return {
+    smtpHost: settings.smtp.host || "",
+    smtpPort: String(settings.smtp.port || 587),
+    smtpUsername: settings.smtp.username || "",
+    smtpPassword: settings.smtp.passwordMasked || "",
+    smtpEncryption: settings.smtp.encryption || "STARTTLS",
+    senderName: settings.smtp.senderName || "",
+    senderEmail: settings.smtp.senderEmail || "",
+    imapHost: settings.imap.host || "",
+    imapPort: String(settings.imap.port || 993),
+    imapUsername: settings.imap.username || "",
+    imapPassword: settings.imap.passwordMasked || "",
+    imapEncryption: settings.imap.encryption || "SSL/TLS",
+  };
+}
+
+type MailboxSettingsDialogProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  form: MailboxFormState;
+  onFormChange: (updater: (current: MailboxFormState) => MailboxFormState) => void;
+  onSave: () => void;
+  saving: boolean;
+};
+
+const MailboxSettingsDialog = ({
+  open,
+  onOpenChange,
+  form,
+  onFormChange,
+  onSave,
+  saving,
+}: MailboxSettingsDialogProps) => (
+  <Dialog open={open} onOpenChange={onOpenChange}>
+    <DialogContent className="sm:max-w-2xl">
+      <DialogHeader>
+        <DialogTitle>My Mailbox</DialogTitle>
+        <DialogDescription>
+          Configure the mailbox this employee will use inside Letter Box.
+        </DialogDescription>
+      </DialogHeader>
+      <div className="grid gap-6 py-2 md:grid-cols-2">
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-sm font-semibold text-[#0F172A]">SMTP</h3>
+            <p className="text-xs text-[#64748B]">Used for sending emails from your own mailbox.</p>
+          </div>
+          <div className="space-y-2">
+            <Label>SMTP Host</Label>
+            <Input value={form.smtpHost} onChange={(event) => onFormChange((current) => ({ ...current, smtpHost: event.target.value }))} />
+          </div>
+          <div className="space-y-2">
+            <Label>SMTP Port</Label>
+            <Input type="number" value={form.smtpPort} onChange={(event) => onFormChange((current) => ({ ...current, smtpPort: event.target.value }))} />
+          </div>
+          <div className="space-y-2">
+            <Label>SMTP Username</Label>
+            <Input value={form.smtpUsername} onChange={(event) => onFormChange((current) => ({ ...current, smtpUsername: event.target.value }))} />
+          </div>
+          <div className="space-y-2">
+            <Label>SMTP Password</Label>
+            <Input type="password" value={form.smtpPassword} onChange={(event) => onFormChange((current) => ({ ...current, smtpPassword: event.target.value }))} />
+          </div>
+          <div className="space-y-2">
+            <Label>SMTP Encryption</Label>
+            <Select value={form.smtpEncryption} onValueChange={(value) => onFormChange((current) => ({ ...current, smtpEncryption: value as MailboxFormState["smtpEncryption"] }))}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="SSL/TLS">SSL/TLS</SelectItem>
+                <SelectItem value="STARTTLS">STARTTLS</SelectItem>
+                <SelectItem value="NONE">NONE</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Sender Name</Label>
+            <Input value={form.senderName} onChange={(event) => onFormChange((current) => ({ ...current, senderName: event.target.value }))} />
+          </div>
+          <div className="space-y-2">
+            <Label>Sender Email</Label>
+            <Input value={form.senderEmail} onChange={(event) => onFormChange((current) => ({ ...current, senderEmail: event.target.value }))} />
+          </div>
+        </div>
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-sm font-semibold text-[#0F172A]">IMAP</h3>
+            <p className="text-xs text-[#64748B]">Used for fetching incoming mail for this employee only.</p>
+          </div>
+          <div className="space-y-2">
+            <Label>IMAP Host</Label>
+            <Input value={form.imapHost} onChange={(event) => onFormChange((current) => ({ ...current, imapHost: event.target.value }))} />
+          </div>
+          <div className="space-y-2">
+            <Label>IMAP Port</Label>
+            <Input type="number" value={form.imapPort} onChange={(event) => onFormChange((current) => ({ ...current, imapPort: event.target.value }))} />
+          </div>
+          <div className="space-y-2">
+            <Label>IMAP Username</Label>
+            <Input value={form.imapUsername} onChange={(event) => onFormChange((current) => ({ ...current, imapUsername: event.target.value }))} />
+          </div>
+          <div className="space-y-2">
+            <Label>IMAP Password</Label>
+            <Input type="password" value={form.imapPassword} onChange={(event) => onFormChange((current) => ({ ...current, imapPassword: event.target.value }))} />
+          </div>
+          <div className="space-y-2">
+            <Label>IMAP Encryption</Label>
+            <Select value={form.imapEncryption} onValueChange={(value) => onFormChange((current) => ({ ...current, imapEncryption: value as MailboxFormState["imapEncryption"] }))}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="SSL/TLS">SSL/TLS</SelectItem>
+                <SelectItem value="STARTTLS">STARTTLS</SelectItem>
+                <SelectItem value="NONE">NONE</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+        <Button type="button" onClick={onSave} disabled={saving}>
+          {saving ? "Saving..." : "Save Mailbox"}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+);
+
 const LetterBoxPage = () => {
   const { toast } = useToast();
 
@@ -1379,18 +1557,37 @@ const LetterBoxPage = () => {
   const [replyToEmail, setReplyToEmail] = useState<Email | undefined>(undefined);
   const [forwardEmail, setForwardEmail] = useState<Email | undefined>(undefined);
   const [emailsLoading, setEmailsLoading] = useState(true);
-  const [emailConfigured, setEmailConfigured] = useState<{ smtp: boolean; imap: boolean } | null>(null);
+  const [emailConfigured, setEmailConfigured] = useState<{ smtp: boolean; imap: boolean; mailboxAddress: string | null } | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showMailboxSettings, setShowMailboxSettings] = useState(false);
+  const [mailboxSettings, setMailboxSettings] = useState<MailboxSettings | null>(null);
+  const [mailboxForm, setMailboxForm] = useState<MailboxFormState>({ ...EMPTY_MAILBOX_FORM });
+  const [mailboxSaving, setMailboxSaving] = useState(false);
   const autoSyncAttemptedRef = useRef(false);
 
-  // Check email config status
-  useEffect(() => {
-    getEmailConfigStatus().then((status) => {
-      setEmailConfigured({ smtp: status.smtpConfigured, imap: status.imapConfigured });
-    }).catch(() => {
-      setEmailConfigured({ smtp: false, imap: false });
-    });
+  const refreshMailboxState = useCallback(async () => {
+    try {
+      const [status, settings] = await Promise.all([
+        getEmailConfigStatus(),
+        apiGetMailboxSettings(),
+      ]);
+      setEmailConfigured({
+        smtp: status.smtpConfigured,
+        imap: status.imapConfigured,
+        mailboxAddress: status.mailboxAddress,
+      });
+      setMailboxSettings(settings);
+      setMailboxForm(mapMailboxSettingsToForm(settings));
+    } catch {
+      setEmailConfigured({ smtp: false, imap: false, mailboxAddress: null });
+      setMailboxSettings(null);
+      setMailboxForm({ ...EMPTY_MAILBOX_FORM });
+    }
   }, []);
+
+  useEffect(() => {
+    void refreshMailboxState();
+  }, [refreshMailboxState]);
 
   // Fetch emails from API
   const loadEmails = useCallback(async (silent = false) => {
@@ -1692,6 +1889,72 @@ const LetterBoxPage = () => {
     }
   };
 
+  const handleSaveMailboxSettings = async () => {
+    const smtpHost = mailboxForm.smtpHost.trim();
+    const smtpUsername = mailboxForm.smtpUsername.trim();
+    const senderEmail = mailboxForm.senderEmail.trim();
+    const imapHost = mailboxForm.imapHost.trim();
+    const imapUsername = mailboxForm.imapUsername.trim();
+
+    if (!smtpHost || !smtpUsername || !senderEmail || !imapHost || !imapUsername) {
+      toast({
+        title: "Missing Mailbox Fields",
+        description: "SMTP and IMAP host, username, and sender email are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setMailboxSaving(true);
+    try {
+      const payload: UpdateMailboxSettingsPayload = {
+        smtp: {
+          host: smtpHost,
+          port: Number(mailboxForm.smtpPort || 587),
+          username: smtpUsername,
+          password: mailboxForm.smtpPassword,
+          encryption: mailboxForm.smtpEncryption,
+          senderName: mailboxForm.senderName.trim(),
+          senderEmail,
+        },
+        imap: {
+          host: imapHost,
+          port: Number(mailboxForm.imapPort || 993),
+          username: imapUsername,
+          password: mailboxForm.imapPassword,
+          encryption: mailboxForm.imapEncryption,
+        },
+      };
+
+      const settings = await apiUpdateMailboxSettings(payload);
+      setMailboxSettings(settings);
+      setMailboxForm(mapMailboxSettingsToForm(settings));
+      setEmailConfigured({
+        smtp: settings.smtp.configured,
+        imap: settings.imap.configured,
+        mailboxAddress: settings.mailboxAddress,
+      });
+      autoSyncAttemptedRef.current = false;
+      setShowMailboxSettings(false);
+      if (settings.imap.configured) {
+        await fetchEmailsNow();
+      }
+      toast({
+        title: "Mailbox Connected",
+        description: "Your personal Letter Box settings were saved successfully.",
+      });
+      await loadEmails(true);
+    } catch (err: any) {
+      toast({
+        title: "Mailbox Save Failed",
+        description: err?.response?.data?.message || err?.message || "Could not save mailbox settings.",
+        variant: "destructive",
+      });
+    } finally {
+      setMailboxSaving(false);
+    }
+  };
+
   // Config guard: show setup prompt if email not configured
   if (emailConfigured && !emailConfigured.smtp && !emailConfigured.imap) {
     return (
@@ -1705,9 +1968,9 @@ const LetterBoxPage = () => {
             <div className="w-16 h-16 bg-[#0891B2]/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Settings size={28} className="text-[#0891B2]" />
             </div>
-            <h2 className="text-xl font-bold text-[#0F172A] mb-2">Configure Email Settings</h2>
+            <h2 className="text-xl font-bold text-[#0F172A] mb-2">Set Up Your Mailbox</h2>
             <p className="text-[#64748B] text-sm mb-6">
-              To use the Letterbox, please configure your SMTP (for sending) and IMAP (for receiving) settings in the Settings page.
+              Each employee uses their own mailbox in Letter Box. Connect your personal SMTP and IMAP settings here to send and receive only your own email.
             </p>
             <div className="space-y-3 text-left mb-6">
               <div className="flex items-center gap-3 px-4 py-3 bg-[#FF7B36]/5 rounded-lg border border-[#FF7B36]/20 text-sm text-[#FF7B36]">
@@ -1719,15 +1982,24 @@ const LetterBoxPage = () => {
                 <span>IMAP not configured — cannot receive emails</span>
               </div>
             </div>
-            <a
-              href="/settings"
+            <button
+              type="button"
+              onClick={() => setShowMailboxSettings(true)}
               className="inline-flex items-center gap-2 px-6 py-3 bg-[#0891B2] text-white rounded-xl font-medium text-sm hover:bg-[#0891B2]/90 transition-colors"
             >
               <Settings size={16} />
-              Go to Settings
-            </a>
+              Set Up My Mailbox
+            </button>
           </div>
         </motion.div>
+        <MailboxSettingsDialog
+          open={showMailboxSettings}
+          onOpenChange={setShowMailboxSettings}
+          form={mailboxForm}
+          onFormChange={(updater) => setMailboxForm((current) => updater(current))}
+          onSave={() => void handleSaveMailboxSettings()}
+          saving={mailboxSaving}
+        />
       </div>
     );
   }
@@ -1756,6 +2028,21 @@ const LetterBoxPage = () => {
 
               {/* Header Actions */}
               <div className="flex items-center gap-3">
+                {emailConfigured?.mailboxAddress ? (
+                  <Badge variant="outline" className="hidden md:inline-flex border-[rgba(15,23,42,0.08)] bg-white text-[#0F172A]">
+                    {emailConfigured.mailboxAddress}
+                  </Badge>
+                ) : null}
+
+                <Button
+                  variant="outline"
+                  onClick={() => setShowMailboxSettings(true)}
+                  className="hidden sm:inline-flex rounded-md border-[rgba(15,23,42,0.08)] bg-white text-[#0F172A] hover:text-[#0891B2]"
+                >
+                  <Settings size={16} className="mr-2" />
+                  My Mailbox
+                </Button>
+
                 <NotificationBell
                   buttonClassName="border-0 bg-white/5 p-2.5 hover:bg-slate-200"
                   iconClassName="text-[#475569]"
@@ -2150,6 +2437,15 @@ const LetterBoxPage = () => {
           </AnimatePresence>
         </div>
       </main>
+
+      <MailboxSettingsDialog
+        open={showMailboxSettings}
+        onOpenChange={setShowMailboxSettings}
+        form={mailboxForm}
+        onFormChange={(updater) => setMailboxForm((current) => updater(current))}
+        onSave={() => void handleSaveMailboxSettings()}
+        saving={mailboxSaving}
+      />
 
       {/* Compose Email Dialog */}
       <ComposeEmailDialog

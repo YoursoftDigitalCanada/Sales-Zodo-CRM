@@ -53,7 +53,7 @@ export class LeadsController {
       const tenantId = req.context.tenantId;
       const query = req.query as any;
 
-      const result = await leadsService.getMany(tenantId, query);
+      const result = await leadsService.getMany(tenantId, query, req.dataAccess);
 
       sendSuccess(res, result.data, undefined, 200, result.meta);
     } catch (error) {
@@ -74,7 +74,7 @@ export class LeadsController {
         assignedToId,
         leadSourceId,
         temperature,
-      });
+      }, req.dataAccess);
 
       sendSuccess(res, pipeline);
     } catch (error) {
@@ -94,7 +94,8 @@ export class LeadsController {
       const statistics = await leadsService.getStatistics(
         tenantId,
         startDate ? new Date(startDate) : undefined,
-        endDate ? new Date(endDate) : undefined
+        endDate ? new Date(endDate) : undefined,
+        req.dataAccess,
       );
 
       sendSuccess(res, statistics);

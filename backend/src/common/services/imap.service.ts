@@ -16,7 +16,7 @@ export interface ImapConfig {
     port: number;
     user: string;
     pass: string;
-    tls?: boolean;
+    encryption?: 'SSL/TLS' | 'STARTTLS' | 'NONE';
 }
 
 class ImapService {
@@ -52,7 +52,7 @@ class ImapService {
      * Fetch new (unseen) emails from IMAP server and store them in DB.
      * Uses messageId for deduplication.
      */
-    async fetchNewEmails(tenantId: string, config: ImapConfig): Promise<number> {
+    async fetchNewEmails(tenantId: string, mailboxOwnerUserId: string, config: ImapConfig): Promise<number> {
         if (!config.host || !config.user || !config.pass) {
             return 0;
         }
@@ -60,7 +60,8 @@ class ImapService {
         const client = new ImapFlow({
             host: config.host,
             port: config.port || 993,
-            secure: config.tls !== false, // default true for port 993
+            secure: config.encryption !== 'STARTTLS' && config.encryption !== 'NONE',
+            doSTARTTLS: config.encryption === 'STARTTLS',
             auth: { user: config.user, pass: config.pass },
             logger: false as any,
         });
@@ -69,7 +70,7 @@ class ImapService {
 
         try {
             const existingEmailCount = await prisma.email.count({
-                where: { tenantId, deletedAt: null },
+                where: { tenantId, mailboxOwnerUserId, deletedAt: null },
             });
 
             await client.connect();
@@ -80,9 +81,9 @@ class ImapService {
                 // looking at the last few days. This prevents an apparently empty inbox
                 // when the user connects an existing mailbox that already has older mail.
                 if (existingEmailCount === 0) {
-                    fetched += await this._backfillInitialHistory(client, tenantId, config.user);
+                    fetched += await this._backfillInitialHistory(client, tenantId, mailboxOwnerUserId, config.user);
                 } else {
-                    fetched += await this._fetchIncrementalHistory(client, tenantId, config.user);
+                    fetched += await this._fetchIncrementalHistory(client, tenantId, mailboxOwnerUserId, config.user);
                 }
             } finally {
                 lock.release();
@@ -101,7 +102,7 @@ class ImapService {
         return fetched;
     }
 
-    private async _backfillInitialHistory(client: ImapFlow, tenantId: string, imapUser: string): Promise<number> {
+    private async _backfillInitialHistory(client: ImapFlow, tenantId: string, mailboxOwnerUserId: string, imapUser: string): Promise<number> {
         const uidList = await client.search({ all: true }, { uid: true });
 
         if (!uidList || uidList.length === 0) {
@@ -114,7 +115,7 @@ class ImapService {
         for await (const msg of client.fetch(latestUids, { source: true, envelope: true, uid: true }, { uid: true })) {
             try {
                 const parsed = await simpleParser(msg.source);
-                fetched += await this._storeEmail(tenantId, parsed, imapUser);
+                fetched += await this._storeEmail(tenantId, mailboxOwnerUserId, parsed, imapUser);
             } catch (parseErr: any) {
                 console.error(`⚠️ Failed to parse initial-sync email UID ${msg.uid}:`, parseErr.message);
             }
@@ -123,7 +124,7 @@ class ImapService {
         return fetched;
     }
 
-    private async _fetchIncrementalHistory(client: ImapFlow, tenantId: string, imapUser: string): Promise<number> {
+    private async _fetchIncrementalHistory(client: ImapFlow, tenantId: string, mailboxOwnerUserId: string, imapUser: string): Promise<number> {
         let fetched = 0;
 
         const unseenSince = new Date();
@@ -137,7 +138,7 @@ class ImapService {
         for await (const msg of unseenMessages) {
             try {
                 const parsed = await simpleParser(msg.source);
-                fetched += await this._storeEmail(tenantId, parsed, imapUser);
+                fetched += await this._storeEmail(tenantId, mailboxOwnerUserId, parsed, imapUser);
             } catch (parseErr: any) {
                 console.error(`⚠️ Failed to parse email UID ${msg.uid}:`, parseErr.message);
             }
@@ -154,7 +155,7 @@ class ImapService {
         for await (const msg of seenMessages) {
             try {
                 const parsed = await simpleParser(msg.source);
-                fetched += await this._storeEmail(tenantId, parsed, imapUser);
+                fetched += await this._storeEmail(tenantId, mailboxOwnerUserId, parsed, imapUser);
             } catch (parseErr: any) {
                 console.error(`⚠️ Failed to parse seen email UID ${msg.uid}:`, parseErr.message);
             }
@@ -167,13 +168,13 @@ class ImapService {
      * Store a parsed email in the database, deduplicating by messageId.
      * Returns 1 if stored, 0 if skipped (duplicate).
      */
-    private async _storeEmail(tenantId: string, parsed: any, imapUser: string): Promise<number> {
+    private async _storeEmail(tenantId: string, mailboxOwnerUserId: string, parsed: any, imapUser: string): Promise<number> {
         const messageId = parsed.messageId || null;
 
         // Deduplicate by messageId
         if (messageId) {
-            const existing = await prisma.email.findUnique({
-                where: { messageId },
+            const existing = await prisma.email.findFirst({
+                where: { tenantId, mailboxOwnerUserId, messageId },
             });
             if (existing) return 0; // Already stored
         }
@@ -198,6 +199,7 @@ class ImapService {
         await prisma.email.create({
             data: {
                 tenantId,
+                mailboxOwnerUserId,
                 messageId: messageId || undefined,
                 threadId: parsed.inReplyTo || undefined,
                 fromAddress: fromAddr?.address || '',

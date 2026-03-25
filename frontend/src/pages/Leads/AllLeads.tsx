@@ -838,13 +838,6 @@ const LeadRow = ({
         </span>
       </TableCell>
       <TableCell>
-        <div className="flex flex-wrap gap-1">
-          {getLeadInsights(lead).map((type) => (
-            <AiInsightBadge key={type} type={type} size="sm" />
-          ))}
-        </div>
-      </TableCell>
-      <TableCell>
         {lead.assignedTo ? (
           <div className="flex items-center gap-2">
             <Avatar className="h-6 w-6">

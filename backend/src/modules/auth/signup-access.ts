@@ -147,7 +147,7 @@ export const PLAN_FEATURES: Record<SignupPlan, SignupPlanDefinition> = {
       'AI Roof Estimator',
       'Advanced Analytics',
       'Reports',
-      'Ask Experts (AI)',
+      'Ask Zodo AI',
     ],
   },
 };

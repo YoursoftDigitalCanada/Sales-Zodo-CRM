@@ -82,7 +82,7 @@ const quickActions: QuickAction[] = [
   { title: "New Project", icon: FolderKanban, color: "teal", path: "/projects/add", description: "Create a new project" },
   { title: "Add Client", icon: Users, color: "gold", path: "/client-list/add", description: "Add a new client" },
   { title: "Create Invoice", icon: DollarSign, color: "navy", path: "/invoice/create", description: "Generate invoice" },
-  { title: "Ask Experts", icon: Sparkles, color: "purple", path: "__copilot__", description: "AI assistant" },
+  { title: "Ask Zodo AI", icon: Sparkles, color: "purple", path: "__copilot__", description: "AI assistant" },
 ];
 
 // Map API notification type → icon & color for the bell dropdown
@@ -438,7 +438,7 @@ const Index = () => {
               </div>
               <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 flex-shrink-0">
                 <button onClick={() => setShowCopilot(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0891B2]/8 text-[#0891B2] text-xs font-medium rounded-md hover:bg-[#0891B2]/14 transition-colors border border-[#0891B2]/15">
-                  <Sparkles size={14} /><span className="hidden sm:inline">Ask Experts</span>
+                  <Sparkles size={14} /><span className="hidden sm:inline">Ask Zodo AI</span>
                 </button>
                 <button onClick={() => navigate("/projects/add")} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0891B2] text-white text-xs font-medium rounded-md hover:bg-[#0891B2]/90 transition-colors">
                   <Plus size={14} /><span className="hidden sm:inline">New</span>

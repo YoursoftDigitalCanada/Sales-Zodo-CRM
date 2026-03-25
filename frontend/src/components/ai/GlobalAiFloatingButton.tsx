@@ -90,7 +90,7 @@ export function GlobalAiFloatingButton() {
                                         transition={{ duration: 0.2 }}
                                         className="text-sm font-semibold whitespace-nowrap overflow-hidden"
                                     >
-                                        Ask Experts
+                                        Ask Zodo AI
                                     </motion.span>
                                 )}
                             </AnimatePresence>

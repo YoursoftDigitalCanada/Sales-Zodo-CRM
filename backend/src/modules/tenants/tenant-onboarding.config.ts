@@ -112,7 +112,7 @@ export const ONBOARDING_MODULE_GROUPS = {
         featureIds: ['reports'],
     },
     aiAssistant: {
-        label: 'Ask Experts (AI)',
+        label: 'Ask Zodo AI',
         description: 'AI copilots and guided expert assistance.',
         plans: ['premium'],
         moduleSlugs: ['ai-assistant'],

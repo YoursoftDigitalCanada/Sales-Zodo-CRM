@@ -110,7 +110,7 @@ interface ChangelogEntry {
 const quickStartCards: QuickStartCard[] = [
     { id: "getting-started", title: "Getting Started", description: "Quick setup guide for new users", icon: Zap, color: "text-[#0891B2]", bgColor: "bg-[#0891B2]/8", articles: 12 },
     { id: "crm-basics", title: "CRM Basics", description: "Leads, contacts, and pipeline management", icon: Target, color: "text-[#16A34A]", bgColor: "bg-[#16A34A]/8", articles: 18 },
-    { id: "ai-features", title: "AI Features", description: "Ask Experts, AI insights, and smart automation", icon: Sparkles, color: "text-[#7C3AED]", bgColor: "bg-[#7C3AED]/8", articles: 8 },
+    { id: "ai-features", title: "AI Features", description: "Ask Zodo AI, AI insights, and smart automation", icon: Sparkles, color: "text-[#7C3AED]", bgColor: "bg-[#7C3AED]/8", articles: 8 },
     { id: "integrations", title: "Integrations", description: "Connect with third-party tools and APIs", icon: Plug, color: "text-[#EA580C]", bgColor: "bg-[#EA580C]/8", articles: 15 },
     { id: "billing", title: "Billing & Plans", description: "Subscription management and invoicing", icon: CreditCard, color: "text-[#D97706]", bgColor: "bg-[#D97706]/8", articles: 9 },
     { id: "security", title: "Security & Privacy", description: "Data protection, 2FA, and compliance", icon: Shield, color: "text-[#DC2626]", bgColor: "bg-[#DC2626]/8", articles: 11 },
@@ -130,7 +130,7 @@ const kbArticles: KBArticle[] = [
     { id: "kb7", title: "Client 360° view explained", content: "The Client 360° view consolidates all interactions, invoices, projects, notes, attachments, and timeline history for a single client. Access it by clicking any client name in the Client List.", category: "CRM" },
     { id: "kb8", title: "Managing contacts and companies", content: "Contacts are individuals; Companies are organizations. Link contacts to companies, track interaction history, and set up contact groups for segmented communication campaigns.", category: "CRM" },
     // AI
-    { id: "kb9", title: "Using the Ask Experts AI assistant", content: "Click the Sparkles icon in the header or use the floating AI button. Ask contextual questions about candidates, jobs, pipelines, or any CRM data. Responses include confidence scores and suggested actions.", category: "AI" },
+    { id: "kb9", title: "Using Ask Zodo AI", content: "Click the Sparkles icon in the header or use the floating AI button. Ask contextual questions about candidates, jobs, pipelines, or any CRM data. Responses include confidence scores and suggested actions.", category: "AI" },
     { id: "kb10", title: "AI-powered lead scoring", content: "Our ML model analyzes lead behavior, engagement patterns, and historical conversion data to assign a score from 0-100. View scores on the Leads page and sort by highest probability of conversion.", category: "AI" },
     { id: "kb11", title: "Smart AI suggestions and insights", content: "The AI engine continuously monitors your pipeline and surfaces actionable insights: stalled leads, revenue forecasts, follow-up reminders, and optimal contact timing recommendations.", category: "AI" },
     // Invoicing
@@ -151,7 +151,7 @@ const faqItems: FAQItem[] = [
     { id: "faq1", question: "How do I reset my password?", answer: "Click 'Forgot Password' on the login page and enter your registered email. You'll receive a reset link valid for 24 hours. If you're logged in, go to Settings → Security → Change Password." },
     { id: "faq2", question: "Can I customize the dashboard widgets?", answer: "Yes! The dashboard uses an intelligent layout that adapts to your role. You can pin/unpin widgets, rearrange cards, and configure which AI insights to display from the dashboard settings gear icon." },
     { id: "faq3", question: "How do I import leads from a CSV file?", answer: "Navigate to Leads → All Leads, click the 'Import' button in the header. Upload your CSV file, map columns to CRM fields (name, email, phone, source, etc.), preview the data, and confirm the import." },
-    { id: "faq4", question: "What AI features are included in my plan?", answer: "All plans include AI Lead Scoring, AI Daily Summaries, and the Ask Experts assistant. Pro plans unlock Advanced Analytics, Custom AI Reports, and AI-powered email suggestions. Enterprise adds custom model training." },
+    { id: "faq4", question: "What AI features are included in my plan?", answer: "All plans include AI Lead Scoring, AI Daily Summaries, and Ask Zodo AI. Pro plans unlock Advanced Analytics, Custom AI Reports, and AI-powered email suggestions. Enterprise adds custom model training." },
     { id: "faq5", question: "How does the pipeline automation work?", answer: "Set up automation rules under Settings → Pipeline → Automation. Trigger actions when leads move between stages: auto-send emails, assign tasks, update fields, create calendar events, or notify team members via Slack/Teams." },
     { id: "faq6", question: "Can I integrate with my existing email provider?", answer: "Yes, we support Gmail, Outlook 365, and any SMTP/IMAP provider. Go to Settings → Email Settings to connect. All sent and received emails are automatically logged in the relevant contact's timeline." },
     { id: "faq7", question: "How do I generate reports?", answer: "Navigate to Analytics → Reports. Choose from pre-built templates (Sales, Revenue, Expense) or create custom reports. Export as PDF, CSV, or Excel. Schedule recurring reports to be emailed to stakeholders." },
@@ -165,7 +165,7 @@ const faqItems: FAQItem[] = [
 const videoTutorials: VideoTutorial[] = [
     { id: "vid1", title: "Getting Started with ZODO CRM", duration: "8:30", description: "Complete onboarding walkthrough", icon: Zap, category: "Basics" },
     { id: "vid2", title: "Mastering Pipeline Management", duration: "12:15", description: "Drag-and-drop pipeline and automation", icon: Target, category: "CRM" },
-    { id: "vid3", title: "Using the AI Assistant", duration: "6:45", description: "Ask Experts and AI-powered insights", icon: Sparkles, category: "AI" },
+    { id: "vid3", title: "Using the AI Assistant", duration: "6:45", description: "Ask Zodo AI and AI-powered insights", icon: Sparkles, category: "AI" },
     { id: "vid4", title: "Professional Invoicing", duration: "10:20", description: "Create, send, and track invoices", icon: Receipt, category: "Finance" },
     { id: "vid5", title: "Employee Management", duration: "9:10", description: "Departments, attendance, and leave", icon: UserCog, category: "Team" },
     { id: "vid6", title: "Reports & Analytics", duration: "11:40", description: "Build custom dashboards and reports", icon: BarChart3, category: "Analytics" },
@@ -194,7 +194,7 @@ const keyboardShortcuts: ShortcutItem[] = [
 ];
 
 const changelogEntries: ChangelogEntry[] = [
-    { version: "3.8.0", date: "Feb 18, 2026", title: "AI-Powered Recruiter Assistant", type: "feature", description: "Introducing Ask Experts — an enterprise-grade, RBAC-aware AI assistant for contextual CRM intelligence." },
+    { version: "3.8.0", date: "Feb 18, 2026", title: "AI-Powered Recruiter Assistant", type: "feature", description: "Introducing Ask Zodo AI — an enterprise-grade, RBAC-aware AI assistant for contextual CRM intelligence." },
     { version: "3.7.2", date: "Feb 12, 2026", title: "Calendar Attendees Fix", type: "fix", description: "Fixed the attendees picker to correctly fetch team members from the employees API." },
     { version: "3.7.0", date: "Feb 10, 2026", title: "Candidate 360° View", type: "feature", description: "Full candidate profile with timeline, notes, applications, and resume management in a unified view." },
     { version: "3.6.0", date: "Feb 5, 2026", title: "Resume Import & Parsing", type: "improvement", description: "Upload resumes and auto-parse candidate data using AI for instant profile creation." },

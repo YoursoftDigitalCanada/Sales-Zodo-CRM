@@ -71,7 +71,7 @@ export const ONBOARDING_MODULES = {
     highlight: true,
   },
   aiAssistant: {
-    label: "Ask Experts (AI)",
+    label: "Ask Zodo AI",
     description: "AI copilots and guided expert support.",
     plans: ["premium"],
     featureIds: ["aiAssistant"],

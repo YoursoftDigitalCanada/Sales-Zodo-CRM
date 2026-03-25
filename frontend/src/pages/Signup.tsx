@@ -164,7 +164,7 @@ const PLAN_CARDS: Array<{
       "AI Roof Estimator",
       "Advanced Analytics",
       "Reports",
-      "Ask Experts (AI)",
+      "Ask Zodo AI",
     ],
   },
 ];

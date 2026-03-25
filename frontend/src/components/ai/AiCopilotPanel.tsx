@@ -262,7 +262,7 @@ export function AiCopilotPanel({ isOpen, onClose }: AiCopilotPanelProps) {
                                 </div>
                                 <div>
                                     <h3 className="text-sm font-semibold text-[#0F172A]">
-                                        Ask Experts
+                                        Ask Zodo AI
                                     </h3>
                                     <div className="flex items-center gap-1.5">
                                         <div className="ai-live-dot" />

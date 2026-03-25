@@ -939,6 +939,8 @@ const LeadFormDialog = ({
   lead: Lead | null;
   onSubmit: (data: Partial<Lead>) => Promise<void>;
 }) => {
+  type LeadFormTab = "basic" | "property" | "service" | "qualification" | "insurance" | "assessment" | "details";
+
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -1017,8 +1019,211 @@ const LeadFormDialog = ({
   });
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [employees, setEmployees] = useState<{ id: string; name: string }[]>([]);
   const [leadSourceOptions, setLeadSourceOptions] = useState<{ id: string; name: string }[]>([]);
+
+  const tabOrder = useMemo<LeadFormTab[]>(
+    () => (
+      formData.isInsuranceClaim === "Yes"
+        ? ["basic", "property", "service", "qualification", "insurance", "assessment", "details"]
+        : ["basic", "property", "service", "qualification", "assessment", "details"]
+    ),
+    [formData.isInsuranceClaim]
+  );
+  const activeTabIndex = tabOrder.indexOf(activeTab as LeadFormTab);
+  const isLastTab = activeTabIndex === tabOrder.length - 1;
+
+  const getTabErrorFields = useCallback((tab: LeadFormTab) => {
+    switch (tab) {
+      case "basic":
+        return ["firstName", "lastName", "phone", "email"];
+      case "property":
+        return ["propertyAddress"];
+      case "service":
+        return ["serviceType", "issueDescription"];
+      case "qualification":
+        return ["numberOfOtherQuotes"];
+      case "insurance":
+        return ["insuranceCompanyName", "adjusterEmail"];
+      case "assessment":
+        return ["leadScore", "qualificationCallNotes"];
+      case "details":
+        return ["potentialValue", "website"];
+      default:
+        return [];
+    }
+  }, []);
+
+  const setFieldValue = useCallback((field: string, value: any) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    setErrors((prev) => {
+      const fieldsToClear = [field];
+
+      if (field === "isInsuranceClaim" && value !== "Yes") {
+        fieldsToClear.push("insuranceCompanyName", "adjusterEmail");
+      }
+
+      if (field === "gettingOtherQuotes" && value !== "Yes") {
+        fieldsToClear.push("numberOfOtherQuotes");
+      }
+
+      if (field === "adjusterAssigned" && value !== "Yes") {
+        fieldsToClear.push("adjusterEmail");
+      }
+
+      if (!fieldsToClear.some((item) => prev[item])) {
+        return prev;
+      }
+
+      const next = { ...prev };
+      fieldsToClear.forEach((item) => {
+        delete next[item];
+      });
+      return next;
+    });
+  }, []);
+
+  const getFieldErrorClass = useCallback(
+    (field: string) => (errors[field] ? "border-red-500 focus-visible:ring-red-500 focus:ring-red-500" : ""),
+    [errors]
+  );
+
+  const validateTab = useCallback((tab: LeadFormTab) => {
+    const nextErrors: Record<string, string> = {};
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    switch (tab) {
+      case "basic":
+        if (!formData.firstName.trim()) {
+          nextErrors.firstName = "First name is required.";
+        }
+        if (!formData.lastName.trim()) {
+          nextErrors.lastName = "Last name is required.";
+        }
+        if (!formData.phone.trim()) {
+          nextErrors.phone = "Phone number is required.";
+        }
+        if (formData.email.trim() && !emailRegex.test(formData.email.trim())) {
+          nextErrors.email = "Enter a valid email address.";
+        }
+        break;
+      case "property":
+        if (!formData.propertyAddress.trim()) {
+          nextErrors.propertyAddress = "Property address is required.";
+        }
+        break;
+      case "service":
+        if (!formData.serviceType.trim()) {
+          nextErrors.serviceType = "Select the requested service.";
+        }
+        if (formData.issueDescription.trim().length > 500) {
+          nextErrors.issueDescription = "Issue description must be 500 characters or less.";
+        }
+        break;
+      case "qualification":
+        if (formData.gettingOtherQuotes === "Yes") {
+          const quoteCount = Number(formData.numberOfOtherQuotes);
+          if (!formData.numberOfOtherQuotes.trim()) {
+            nextErrors.numberOfOtherQuotes = "Enter how many other quotes the lead is getting.";
+          } else if (!Number.isInteger(quoteCount) || quoteCount < 1 || quoteCount > 10) {
+            nextErrors.numberOfOtherQuotes = "Other quotes must be a whole number between 1 and 10.";
+          }
+        }
+        break;
+      case "insurance":
+        if (formData.isInsuranceClaim === "Yes" && !formData.insuranceCompanyName.trim()) {
+          nextErrors.insuranceCompanyName = "Insurance company name is required.";
+        }
+        if (formData.adjusterEmail.trim() && !emailRegex.test(formData.adjusterEmail.trim())) {
+          nextErrors.adjusterEmail = "Enter a valid adjuster email address.";
+        }
+        break;
+      case "assessment":
+        if (formData.leadScore.trim()) {
+          const leadScore = Number(formData.leadScore);
+          if (!Number.isInteger(leadScore) || leadScore < 1 || leadScore > 10) {
+            nextErrors.leadScore = "Lead score must be a whole number between 1 and 10.";
+          }
+        }
+        if (!formData.qualificationCallNotes.trim()) {
+          nextErrors.qualificationCallNotes = "Qualification notes are required.";
+        }
+        break;
+      case "details":
+        if (formData.potentialValue.trim()) {
+          const potentialValue = Number(formData.potentialValue);
+          if (Number.isNaN(potentialValue) || potentialValue < 0) {
+            nextErrors.potentialValue = "Potential value must be zero or greater.";
+          }
+        }
+        if (formData.website.trim()) {
+          try {
+            new URL(formData.website);
+          } catch {
+            nextErrors.website = "Enter a valid website URL, including http:// or https://";
+          }
+        }
+        break;
+    }
+
+    return nextErrors;
+  }, [formData]);
+
+  const validateAndSetTabErrors = useCallback((tab: LeadFormTab) => {
+    const tabErrors = validateTab(tab);
+
+    setErrors((prev) => {
+      const next = { ...prev };
+      getTabErrorFields(tab).forEach((field) => {
+        delete next[field];
+      });
+      return { ...next, ...tabErrors };
+    });
+
+    return Object.keys(tabErrors).length === 0;
+  }, [getTabErrorFields, validateTab]);
+
+  const handleNext = useCallback(() => {
+    const currentTab = tabOrder[activeTabIndex];
+    const nextTab = tabOrder[activeTabIndex + 1];
+
+    if (!currentTab || !nextTab) {
+      return;
+    }
+
+    if (validateAndSetTabErrors(currentTab)) {
+      setActiveTab(nextTab);
+    }
+  }, [activeTabIndex, tabOrder, validateAndSetTabErrors]);
+
+  const handlePrevious = useCallback(() => {
+    const previousTab = tabOrder[activeTabIndex - 1];
+    if (previousTab) {
+      setActiveTab(previousTab);
+    }
+  }, [activeTabIndex, tabOrder]);
+
+  const handleTabChange = useCallback((nextValue: string) => {
+    const nextTab = nextValue as LeadFormTab;
+    const nextTabIndex = tabOrder.indexOf(nextTab);
+
+    if (nextTabIndex === -1 || nextTab === activeTab) {
+      return;
+    }
+
+    if (nextTabIndex < activeTabIndex) {
+      setActiveTab(nextTab);
+      return;
+    }
+
+    const currentTab = tabOrder[activeTabIndex];
+    const immediateNextTab = tabOrder[activeTabIndex + 1];
+
+    if (currentTab && immediateNextTab && validateAndSetTabErrors(currentTab)) {
+      setActiveTab(immediateNextTab);
+    }
+  }, [activeTab, activeTabIndex, tabOrder, validateAndSetTabErrors]);
 
   // Fetch employees for the Assigned To dropdown
   useEffect(() => {
@@ -1139,11 +1344,38 @@ const LeadFormDialog = ({
       });
     }
     setActiveTab("basic");
+    setErrors({});
   }, [lead, isOpen]);
+
+  useEffect(() => {
+    if (formData.isInsuranceClaim !== "Yes" && activeTab === "insurance") {
+      setActiveTab("assessment");
+    }
+  }, [activeTab, formData.isInsuranceClaim]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.firstName || !formData.lastName) {
+
+    if (!isLastTab) {
+      handleNext();
+      return;
+    }
+
+    const combinedErrors: Record<string, string> = {};
+    let firstInvalidTab: LeadFormTab | null = null;
+
+    tabOrder.forEach((tab) => {
+      const tabErrors = validateTab(tab);
+      if (!firstInvalidTab && Object.keys(tabErrors).length > 0) {
+        firstInvalidTab = tab;
+      }
+      Object.assign(combinedErrors, tabErrors);
+    });
+
+    setErrors(combinedErrors);
+
+    if (firstInvalidTab) {
+      setActiveTab(firstInvalidTab);
       return;
     }
 
@@ -1190,7 +1422,7 @@ const LeadFormDialog = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             <TabsList className="bg-white/5 rounded-md p-1 mb-6 flex flex-wrap gap-1">
               <TabsTrigger value="basic" className="rounded-md data-[state=active]:bg-white text-xs sm:text-sm">
                 Basic Info
@@ -1226,11 +1458,12 @@ const LeadFormDialog = ({
                   </Label>
                   <Input
                     value={formData.firstName}
-                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                    onChange={(e) => setFieldValue("firstName", e.target.value)}
                     placeholder="John"
                     required
-                    className="h-11 rounded-md"
+                    className={cn("h-11 rounded-md", getFieldErrorClass("firstName"))}
                   />
+                  {errors.firstName && <p className="text-xs text-red-500">{errors.firstName}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-[#475569]">
@@ -1238,11 +1471,12 @@ const LeadFormDialog = ({
                   </Label>
                   <Input
                     value={formData.lastName}
-                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    onChange={(e) => setFieldValue("lastName", e.target.value)}
                     placeholder="Doe"
                     required
-                    className="h-11 rounded-md"
+                    className={cn("h-11 rounded-md", getFieldErrorClass("lastName"))}
                   />
+                  {errors.lastName && <p className="text-xs text-red-500">{errors.lastName}</p>}
                 </div>
               </div>
 
@@ -1253,11 +1487,12 @@ const LeadFormDialog = ({
                   <Input
                     type="email"
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={(e) => setFieldValue("email", e.target.value)}
                     placeholder="john@company.com"
-                    className="h-11 pl-10 rounded-md"
+                    className={cn("h-11 pl-10 rounded-md", getFieldErrorClass("email"))}
                   />
                 </div>
+                {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -1269,11 +1504,12 @@ const LeadFormDialog = ({
                     <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                     <Input
                       value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      onChange={(e) => setFieldValue("phone", e.target.value)}
                       placeholder="+1 (416) 555-0123"
-                      className="h-11 pl-10 rounded-md"
+                      className={cn("h-11 pl-10 rounded-md", getFieldErrorClass("phone"))}
                     />
                   </div>
+                  {errors.phone && <p className="text-xs text-red-500">{errors.phone}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-[#475569]">Secondary Phone</Label>
@@ -1320,11 +1556,12 @@ const LeadFormDialog = ({
                   <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                   <Input
                     value={formData.propertyAddress}
-                    onChange={(e) => setFormData({ ...formData, propertyAddress: e.target.value })}
+                    onChange={(e) => setFieldValue("propertyAddress", e.target.value)}
                     placeholder="123 Main Street"
-                    className="h-11 pl-10 rounded-md"
+                    className={cn("h-11 pl-10 rounded-md", getFieldErrorClass("propertyAddress"))}
                   />
                 </div>
+                {errors.propertyAddress && <p className="text-xs text-red-500">{errors.propertyAddress}</p>}
               </div>
 
               <div className="grid grid-cols-3 gap-4">
@@ -1396,9 +1633,9 @@ const LeadFormDialog = ({
                 </Label>
                 <Select
                   value={formData.serviceType}
-                  onValueChange={(val) => setFormData({ ...formData, serviceType: val })}
+                  onValueChange={(val) => setFieldValue("serviceType", val)}
                 >
-                  <SelectTrigger className="h-11 rounded-md">
+                  <SelectTrigger className={cn("h-11 rounded-md", getFieldErrorClass("serviceType"))}>
                     <SelectValue placeholder="Select service type" />
                   </SelectTrigger>
                   <SelectContent className="rounded-md">
@@ -1408,13 +1645,14 @@ const LeadFormDialog = ({
                       ))}
                   </SelectContent>
                 </Select>
+                {errors.serviceType && <p className="text-xs text-red-500">{errors.serviceType}</p>}
               </div>
 
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#475569]">Is This an Insurance Claim?</Label>
                 <Select
                   value={formData.isInsuranceClaim}
-                  onValueChange={(val) => setFormData({ ...formData, isInsuranceClaim: val })}
+                  onValueChange={(val) => setFieldValue("isInsuranceClaim", val)}
                 >
                   <SelectTrigger className="h-11 rounded-md">
                     <SelectValue placeholder="Select" />
@@ -1484,11 +1722,12 @@ const LeadFormDialog = ({
                 <Label className="text-sm font-medium text-[#475569]">Describe the Issue</Label>
                 <Textarea
                   value={formData.issueDescription}
-                  onChange={(e) => setFormData({ ...formData, issueDescription: e.target.value })}
+                  onChange={(e) => setFieldValue("issueDescription", e.target.value)}
                   placeholder="Describe what you're seeing — leaks, missing shingles, storm damage, etc."
                   rows={3}
-                  className="rounded-md resize-none"
+                  className={cn("rounded-md resize-none", getFieldErrorClass("issueDescription"))}
                 />
+                {errors.issueDescription && <p className="text-xs text-red-500">{errors.issueDescription}</p>}
                 <p className="text-xs text-[#94A3B8]">Max 500 characters</p>
               </div>
 
@@ -1705,7 +1944,7 @@ const LeadFormDialog = ({
                   </div>
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-[#475569]">Getting Other Quotes?</Label>
-                    <Select value={formData.gettingOtherQuotes} onValueChange={(val) => setFormData({ ...formData, gettingOtherQuotes: val })}>
+                    <Select value={formData.gettingOtherQuotes} onValueChange={(val) => setFieldValue("gettingOtherQuotes", val)}>
                       <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
                       <SelectContent className="rounded-md">
                         <SelectItem value="Yes" className="rounded-md">Yes</SelectItem>
@@ -1734,10 +1973,11 @@ const LeadFormDialog = ({
                       min={1}
                       max={10}
                       value={formData.numberOfOtherQuotes}
-                      onChange={(e) => setFormData({ ...formData, numberOfOtherQuotes: e.target.value })}
+                      onChange={(e) => setFieldValue("numberOfOtherQuotes", e.target.value)}
                       placeholder="1-10"
-                      className="h-11 rounded-md w-32"
+                      className={cn("h-11 rounded-md w-32", getFieldErrorClass("numberOfOtherQuotes"))}
                     />
+                    {errors.numberOfOtherQuotes && <p className="text-xs text-red-500">{errors.numberOfOtherQuotes}</p>}
                   </div>
                 )}
               </div>
@@ -1780,10 +2020,11 @@ const LeadFormDialog = ({
                   </Label>
                   <Input
                     value={formData.insuranceCompanyName}
-                    onChange={(e) => setFormData({ ...formData, insuranceCompanyName: e.target.value })}
+                    onChange={(e) => setFieldValue("insuranceCompanyName", e.target.value)}
                     placeholder="e.g., State Farm, Allstate, USAA..."
-                    className="h-11 rounded-md"
+                    className={cn("h-11 rounded-md", getFieldErrorClass("insuranceCompanyName"))}
                   />
+                  {errors.insuranceCompanyName && <p className="text-xs text-red-500">{errors.insuranceCompanyName}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -1810,7 +2051,7 @@ const LeadFormDialog = ({
 
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-[#475569]">Adjuster Assigned?</Label>
-                  <Select value={formData.adjusterAssigned} onValueChange={(val) => setFormData({ ...formData, adjusterAssigned: val })}>
+                  <Select value={formData.adjusterAssigned} onValueChange={(val) => setFieldValue("adjusterAssigned", val)}>
                     <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
                     <SelectContent className="rounded-md">
                       <SelectItem value="Yes" className="rounded-md">Yes</SelectItem>
@@ -1847,10 +2088,11 @@ const LeadFormDialog = ({
                       <Input
                         type="email"
                         value={formData.adjusterEmail}
-                        onChange={(e) => setFormData({ ...formData, adjusterEmail: e.target.value })}
+                        onChange={(e) => setFieldValue("adjusterEmail", e.target.value)}
                         placeholder="adjuster@insurance.com"
-                        className="h-11 rounded-md"
+                        className={cn("h-11 rounded-md", getFieldErrorClass("adjusterEmail"))}
                       />
+                      {errors.adjusterEmail && <p className="text-xs text-red-500">{errors.adjusterEmail}</p>}
                     </div>
                   </>
                 )}
@@ -1877,10 +2119,11 @@ const LeadFormDialog = ({
                     min={1}
                     max={10}
                     value={formData.leadScore}
-                    onChange={(e) => setFormData({ ...formData, leadScore: e.target.value })}
+                    onChange={(e) => setFieldValue("leadScore", e.target.value)}
                     placeholder="1-10"
-                    className="h-11 rounded-md"
+                    className={cn("h-11 rounded-md", getFieldErrorClass("leadScore"))}
                   />
+                  {errors.leadScore && <p className="text-xs text-red-500">{errors.leadScore}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-[#475569]">Next Step</Label>
@@ -1934,11 +2177,12 @@ const LeadFormDialog = ({
                 </Label>
                 <Textarea
                   value={formData.qualificationCallNotes}
-                  onChange={(e) => setFormData({ ...formData, qualificationCallNotes: e.target.value })}
+                  onChange={(e) => setFieldValue("qualificationCallNotes", e.target.value)}
                   placeholder="Notes from the call or visit..."
                   rows={4}
-                  className="rounded-md resize-none"
+                  className={cn("rounded-md resize-none", getFieldErrorClass("qualificationCallNotes"))}
                 />
+                {errors.qualificationCallNotes && <p className="text-xs text-red-500">{errors.qualificationCallNotes}</p>}
               </div>
             </TabsContent>
 
@@ -2007,11 +2251,12 @@ const LeadFormDialog = ({
                   <Input
                     type="number"
                     value={formData.potentialValue}
-                    onChange={(e) => setFormData({ ...formData, potentialValue: e.target.value })}
+                    onChange={(e) => setFieldValue("potentialValue", e.target.value)}
                     placeholder="50000"
-                    className="h-11 pl-10 rounded-md"
+                    className={cn("h-11 pl-10 rounded-md", getFieldErrorClass("potentialValue"))}
                   />
                 </div>
+                {errors.potentialValue && <p className="text-xs text-red-500">{errors.potentialValue}</p>}
               </div>
 
               <div className="space-y-2">
@@ -2097,11 +2342,12 @@ const LeadFormDialog = ({
                     <Globe size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                     <Input
                       value={formData.website}
-                      onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                      onChange={(e) => setFieldValue("website", e.target.value)}
                       placeholder="https://company.com"
-                      className="h-11 pl-10 rounded-md"
+                      className={cn("h-11 pl-10 rounded-md", getFieldErrorClass("website"))}
                     />
                   </div>
+                  {errors.website && <p className="text-xs text-red-500">{errors.website}</p>}
                 </div>
               </div>
 
@@ -2118,19 +2364,30 @@ const LeadFormDialog = ({
             </TabsContent>
           </Tabs>
 
-          <DialogFooter className="pt-6 gap-3">
+          <DialogFooter className="pt-6 gap-3 sm:justify-between">
             <Button type="button" variant="outline" onClick={onClose} className="rounded-md">
               Cancel
             </Button>
+            {activeTabIndex > 0 && (
+              <Button type="button" variant="outline" onClick={handlePrevious} className="rounded-md">
+                Previous
+              </Button>
+            )}
             <Button
-              type="submit"
-              disabled={saving || !formData.firstName || !formData.lastName}
+              type={isLastTab ? "submit" : "button"}
+              onClick={isLastTab ? undefined : handleNext}
+              disabled={saving}
               className="bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-md"
             >
               {saving ? (
                 <>
                   <RefreshCw size={16} className="mr-2 animate-spin" />
                   Saving...
+                </>
+              ) : !isLastTab ? (
+                <>
+                  Next
+                  <ArrowRight size={16} className="ml-2" />
                 </>
               ) : (
                 <>

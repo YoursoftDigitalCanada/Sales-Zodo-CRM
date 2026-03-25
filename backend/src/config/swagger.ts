@@ -33,7 +33,7 @@ All protected endpoints require a Bearer token in the Authorization header.
 Authorization: Bearer <access_token>
 \`\`\`
 
-Access tokens expire after 15 minutes. Use the refresh token endpoint to obtain a new access token.
+Access tokens expire after 7 days. Use the refresh token endpoint to obtain a new access token.
 
 ## Multi-Tenancy
 This API is multi-tenant. Each user belongs to one or more tenants (organizations).

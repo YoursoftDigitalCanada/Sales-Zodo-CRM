@@ -1,7 +1,6 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Sidebar } from "@/components/Sidebar";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { ProjectsChart } from "@/components/dashboard/ProjectsChart";
 import { CalendarWidget } from "@/components/dashboard/CalendarWidget";
@@ -28,6 +27,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import useIsMobile from "@/hooks/useIsMobile";
+import { canAccessFeature, canAccessModule } from "@/lib/access-control";
 import logo from "../Images/Logo/logo.png";
 
 // ============================================
@@ -84,6 +84,17 @@ const quickActions: QuickAction[] = [
   { title: "Create Invoice", icon: DollarSign, color: "navy", path: "/invoice/create", description: "Generate invoice" },
   { title: "Ask Zodo AI", icon: Sparkles, color: "purple", path: "__copilot__", description: "AI assistant" },
 ];
+
+const dashboardWidgetConfig = {
+  dashboard: { permissionModule: "dashboard" },
+  leads: { featureId: "leads" as const, permissionModule: "leads" },
+  invoices: { featureId: "finance" as const, permissionModule: "invoices" },
+  clients: { featureId: "clients" as const, permissionModule: "clients" },
+  projects: { featureId: "projects" as const, permissionModule: "projects" },
+  tasks: { featureId: "tasks" as const, permissionModule: "tasks" },
+  calendar: { featureId: "calendar" as const, permissionModule: "calendar" },
+  aiAssistant: { featureId: "aiAssistant" as const },
+} as const;
 
 // Map API notification type → icon & color for the bell dropdown
 const bellTypeConfig: Record<string, { icon: React.ElementType; color: ThemeColor }> = {
@@ -180,7 +191,7 @@ function buildAlerts(leads: LeadItem[], invoices: InvoiceItem[], projects: Proje
   const overdue = invoices.filter((i) => i.status === "overdue");
   if (overdue.length > 0) {
     const total = overdue.reduce((s, i) => s + i.amount, 0);
-    alerts.push({ id: "a-overdue", type: "danger", title: `${overdue.length} Invoice${overdue.length > 1 ? "s" : ""} Overdue`, message: `$${total.toLocaleString()} in overdue payments need immediate attention`, action: "View Invoices", actionPath: "/invoices" });
+    alerts.push({ id: "a-overdue", type: "danger", title: `${overdue.length} Invoice${overdue.length > 1 ? "s" : ""} Overdue`, message: `$${total.toLocaleString()} in overdue payments need immediate attention`, action: "View Invoices", actionPath: "/invoice" });
   }
   const stalled = leads.filter((l) => l.status === "stalled");
   if (stalled.length > 0) {
@@ -205,6 +216,15 @@ const Index = () => {
   const navigate = useNavigate();
   const { isMobile } = useIsMobile();
   const { toast } = useToast();
+  const dashboardAccess = useMemo(() => ({
+    canViewLeads: canAccessFeature(dashboardWidgetConfig.leads.featureId) && canAccessModule(dashboardWidgetConfig.leads.permissionModule),
+    canViewInvoices: canAccessFeature(dashboardWidgetConfig.invoices.featureId) && canAccessModule(dashboardWidgetConfig.invoices.permissionModule),
+    canViewClients: canAccessFeature(dashboardWidgetConfig.clients.featureId) && canAccessModule(dashboardWidgetConfig.clients.permissionModule),
+    canViewProjects: canAccessFeature(dashboardWidgetConfig.projects.featureId) && canAccessModule(dashboardWidgetConfig.projects.permissionModule),
+    canViewTasks: canAccessFeature(dashboardWidgetConfig.tasks.featureId) && canAccessModule(dashboardWidgetConfig.tasks.permissionModule),
+    canViewCalendar: canAccessFeature(dashboardWidgetConfig.calendar.featureId) && canAccessModule(dashboardWidgetConfig.calendar.permissionModule),
+    canViewAiAssistant: canAccessFeature(dashboardWidgetConfig.aiAssistant.featureId),
+  }), []);
 
   // Existing state
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -254,12 +274,18 @@ const Index = () => {
     const loadDashboard = async () => {
       setIsLoading(true);
       try {
-        const data = await fetchDashboardData();
+        const data = await fetchDashboardData({
+          canViewLeads: dashboardAccess.canViewLeads,
+          canViewInvoices: dashboardAccess.canViewInvoices,
+          canViewProjects: dashboardAccess.canViewProjects,
+          canViewClients: dashboardAccess.canViewClients,
+          canViewTasks: dashboardAccess.canViewTasks,
+        });
         setStats({
-          projectsCount: data.projectsCount || 0,
-          clientsCount: data.clientsCount || 0,
-          earnings: data.totalEarnings || 0,
-          pendingTasks: data.pendingTasks || 0,
+          projectsCount: dashboardAccess.canViewProjects ? (data.projectsCount || 0) : 0,
+          clientsCount: dashboardAccess.canViewClients ? (data.clientsCount || 0) : 0,
+          earnings: dashboardAccess.canViewInvoices ? (data.totalEarnings || 0) : 0,
+          pendingTasks: dashboardAccess.canViewTasks ? (data.pendingTasks || 0) : 0,
         });
         setLeads(data.leads.map(mapLead));
         setInvoices(data.invoices.map(mapInvoice));
@@ -270,10 +296,11 @@ const Index = () => {
         data.projects.slice(0, 2).forEach((p, i) => acts.push({ id: `p-${p.id}`, type: "project", message: `Project '${p.name}' — ${p.status.toLowerCase().replace("_", " ")}`, time: new Date(p.startDate || p.endDate || Date.now()).toLocaleDateString(), icon: FolderKanban, color: "teal" }));
         data.invoices.filter((inv) => inv.status === "PAID").slice(0, 1).forEach((inv) => acts.push({ id: `inv-${inv.id}`, type: "payment", message: `Payment received — $${Number(inv.total).toLocaleString()}`, time: inv.paidAt ? new Date(inv.paidAt).toLocaleDateString() : "Recently", icon: DollarSign, color: "green" }));
         data.leads.slice(0, 1).forEach((l) => acts.push({ id: `l-${l.id}`, type: "lead", message: `Lead '${l.firstName} ${l.lastName}' added`, time: new Date(l.createdAt).toLocaleDateString(), icon: Users, color: "gold" }));
-        setRecentActivity(acts.length ? acts : [{ id: "empty", type: "info", message: "No recent activity", time: "Now", icon: CheckCircle2, color: "blue" }]);
+        setRecentActivity(acts);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
         setStats({ projectsCount: 0, clientsCount: 0, earnings: 0, pendingTasks: 0 });
+        setRecentActivity([]);
       } finally { setIsLoading(false); }
     };
     loadDashboard();
@@ -288,7 +315,7 @@ const Index = () => {
       }
     };
     loadNotifications();
-  }, []);
+  }, [dashboardAccess.canViewClients, dashboardAccess.canViewInvoices, dashboardAccess.canViewLeads, dashboardAccess.canViewProjects, dashboardAccess.canViewTasks]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -327,11 +354,35 @@ const Index = () => {
   const handleLogout = () => { localStorage.removeItem("user"); localStorage.removeItem("token"); navigate("/login"); };
   const unreadNotificationsCount = notifications.filter((n) => !n.read).length;
 
+  const visibleQuickActions = quickActions.filter((action) => {
+    if (action.path === "__copilot__") {
+      return dashboardAccess.canViewAiAssistant;
+    }
+
+    if (action.path.startsWith("/projects")) {
+      return dashboardAccess.canViewProjects;
+    }
+
+    if (action.path.startsWith("/client-list")) {
+      return dashboardAccess.canViewClients;
+    }
+
+    if (action.path.startsWith("/invoice")) {
+      return dashboardAccess.canViewInvoices;
+    }
+
+    return true;
+  });
+
   const handleDismissAlert = (id: string) => { setDismissedAlerts((p) => [...p, id]); toast({ title: "Alert Dismissed", description: "You can view dismissed alerts in notifications." }); };
   const handleFollowUpLead = (lead: LeadItem) => { toast({ title: "Follow-up Initiated", description: `Email queued for ${lead.name} at ${lead.company}.` }); };
   const handleSendReminder = (inv: InvoiceItem) => { toast({ title: "Reminder Sent", description: `Payment reminder sent for ${inv.invoiceNo} to ${inv.client}.` }); };
 
-  const smartAlerts = buildAlerts(leads, invoices, projects);
+  const smartAlerts = buildAlerts(
+    dashboardAccess.canViewLeads ? leads : [],
+    dashboardAccess.canViewInvoices ? invoices : [],
+    dashboardAccess.canViewProjects ? projects : [],
+  );
   const visibleAlerts = smartAlerts.filter((a) => !dismissedAlerts.includes(a.id));
   const stalledLeads = leads.filter((l) => l.status === "stalled");
   const hotLeads = leads.filter((l) => l.status === "hot");
@@ -340,21 +391,28 @@ const Index = () => {
   const pendingInvoices = invoices.filter((i) => i.status === "pending");
   const totalOverdue = overdueInvoices.reduce((s, i) => s + i.amount, 0);
   const atRiskProjects = projects.filter((p) => p.status === "at-risk" || p.status === "delayed");
-  const hotPipelineValue = hotLeads.reduce((sum, lead) => sum + lead.value, 0);
-  const pendingInvoiceValue = pendingInvoices.reduce((sum, invoice) => sum + invoice.amount, 0);
-  const weightedWarmPipelineValue = Math.round(warmLeads.reduce((sum, lead) => sum + lead.value, 0) * 0.35);
+  const hotPipelineValue = dashboardAccess.canViewLeads ? hotLeads.reduce((sum, lead) => sum + lead.value, 0) : 0;
+  const pendingInvoiceValue = dashboardAccess.canViewInvoices ? pendingInvoices.reduce((sum, invoice) => sum + invoice.amount, 0) : 0;
+  const weightedWarmPipelineValue = dashboardAccess.canViewLeads ? Math.round(warmLeads.reduce((sum, lead) => sum + lead.value, 0) * 0.35) : 0;
   const forecastValue = hotPipelineValue + pendingInvoiceValue + weightedWarmPipelineValue;
   const hasForecastSignals = forecastValue > 0;
+  const priorityActionsCount =
+    (dashboardAccess.canViewTasks ? stats.pendingTasks : 0) +
+    (dashboardAccess.canViewInvoices ? overdueInvoices.length : 0) +
+    (dashboardAccess.canViewLeads ? stalledLeads.length : 0) +
+    (dashboardAccess.canViewProjects ? atRiskProjects.length : 0);
   const hasBusinessData =
-    leads.length > 0 ||
-    invoices.length > 0 ||
-    projects.length > 0 ||
-    stats.pendingTasks > 0 ||
-    stats.clientsCount > 0 ||
-    stats.earnings > 0;
-  const pipelineHealthLabel = leads.length === 0 ? "No Pipeline Yet" : stalledLeads.length > 0 ? "Medium Risk" : "Healthy";
+    (dashboardAccess.canViewLeads && leads.length > 0) ||
+    (dashboardAccess.canViewInvoices && invoices.length > 0) ||
+    (dashboardAccess.canViewProjects && projects.length > 0) ||
+    (dashboardAccess.canViewTasks && stats.pendingTasks > 0) ||
+    (dashboardAccess.canViewClients && stats.clientsCount > 0) ||
+    (dashboardAccess.canViewInvoices && stats.earnings > 0);
+  const pipelineHealthLabel = !dashboardAccess.canViewLeads ? "Not Available" : leads.length === 0 ? "No Pipeline Yet" : stalledLeads.length > 0 ? "Medium Risk" : "Healthy";
   const pipelineHealthText =
-    leads.length === 0
+    !dashboardAccess.canViewLeads
+      ? "Lead access is restricted for this account"
+      : leads.length === 0
       ? "Add leads to start pipeline monitoring"
       : `${stalledLeads.length} leads stalled >5 days`;
   const forecastSupportText = hasForecastSignals
@@ -365,15 +423,92 @@ const Index = () => {
   const dailyAiSummary = !hasBusinessData
     ? "Your workspace is fresh. Add leads, projects, or invoices to unlock AI forecasting, pipeline insights, and action summaries."
     : [
-        overdueInvoices.length > 0 ? `${`$${totalOverdue.toLocaleString()}`} in overdue invoices.` : "",
-        stalledLeads.length > 0 ? `${stalledLeads.length} stalled lead${stalledLeads.length > 1 ? "s" : ""} need follow-up.` : "",
-        hotLeads.length > 0 ? `${hotLeads.length} hot lead${hotLeads.length > 1 ? "s" : ""} worth $${hotPipelineValue.toLocaleString()} are ready to close.` : "",
-        atRiskProjects.length > 0 ? `${atRiskProjects.length} project${atRiskProjects.length > 1 ? "s" : ""} need attention.` : "",
-        stats.pendingTasks > 0 ? `${stats.pendingTasks} task${stats.pendingTasks > 1 ? "s" : ""} pending.` : "All tasks on track.",
-        stats.projectsCount > 0 ? `${stats.projectsCount} active project${stats.projectsCount > 1 ? "s" : ""}.` : "",
+        dashboardAccess.canViewInvoices && overdueInvoices.length > 0 ? `${`$${totalOverdue.toLocaleString()}`} in overdue invoices.` : "",
+        dashboardAccess.canViewLeads && stalledLeads.length > 0 ? `${stalledLeads.length} stalled lead${stalledLeads.length > 1 ? "s" : ""} need follow-up.` : "",
+        dashboardAccess.canViewLeads && hotLeads.length > 0 ? `${hotLeads.length} hot lead${hotLeads.length > 1 ? "s" : ""} worth $${hotPipelineValue.toLocaleString()} are ready to close.` : "",
+        dashboardAccess.canViewProjects && atRiskProjects.length > 0 ? `${atRiskProjects.length} project${atRiskProjects.length > 1 ? "s" : ""} need attention.` : "",
+        dashboardAccess.canViewTasks && stats.pendingTasks > 0 ? `${stats.pendingTasks} task${stats.pendingTasks > 1 ? "s" : ""} pending.` : dashboardAccess.canViewTasks ? "All tasks on track." : "",
+        dashboardAccess.canViewProjects && stats.projectsCount > 0 ? `${stats.projectsCount} active project${stats.projectsCount > 1 ? "s" : ""}.` : "",
       ]
         .filter(Boolean)
         .join(" ");
+  const visibleStatCards = [
+    dashboardAccess.canViewProjects ? { icon: FolderKanban, color: "#0891B2", title: "Active Projects", value: `${stats.projectsCount}`, sub: stats.projectsCount > 0 ? `${stats.projectsCount}, on track` : "none", path: "/projects" } : null,
+    dashboardAccess.canViewInvoices ? { icon: DollarSign, color: "#01C44A", title: "Total Earnings", value: `$${stats.earnings.toLocaleString()}`, sub: "paid invoices", path: "/invoice" } : null,
+    dashboardAccess.canViewClients ? { icon: Users, color: "#D97706", title: "Total Clients", value: `${stats.clientsCount}`, sub: stats.clientsCount > 0 ? `${stats.clientsCount}, active` : "none", path: "/client-list" } : null,
+    dashboardAccess.canViewTasks ? { icon: Clock, color: "#FF7B36", title: "Pending Tasks", value: `${stats.pendingTasks}`, sub: stats.pendingTasks > 0 ? `${stats.pendingTasks}, needs action` : "all done", path: "/tasks" } : null,
+  ].filter(Boolean) as Array<{ icon: React.ElementType; color: string; title: string; value: string; sub: string; path: string }>;
+  const aiOverviewCards = [
+    dashboardAccess.canViewLeads ? (
+      <div key="pipeline-health" className="px-5 py-4">
+        <div className="flex items-center gap-1.5 mb-2"><Activity size={12} className="text-[#94A3B8]" /><span className="metric-label">Pipeline Health</span></div>
+        <div className="flex items-center gap-2 mb-1"><span className="text-lg font-bold text-[#0F172A] tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>{pipelineHealthLabel}</span></div>
+        <p className="text-[11px] text-[#475569] leading-relaxed">
+          {leads.length === 0 ? (
+            pipelineHealthText
+          ) : (
+            <>
+              <span className="text-[#FF7B36] font-medium">{stalledLeads.length} leads</span> stalled &gt;5 days
+            </>
+          )}
+        </p>
+      </div>
+    ) : null,
+    (dashboardAccess.canViewLeads || dashboardAccess.canViewInvoices) ? (
+      <div key="revenue-forecast" className="px-5 py-4">
+        <div className="flex items-center gap-1.5 mb-2"><TrendingUp size={12} className="text-[#94A3B8]" /><span className="metric-label">Revenue Forecast</span></div>
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-lg font-bold text-[#0F172A] tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>
+            ${forecastValue.toLocaleString()}
+          </span>
+          {hasForecastSignals ? <span className="text-[11px] text-[#01C44A] font-medium">projected</span> : null}
+        </div>
+        <p className="text-[11px] text-[#475569]">{forecastSupportText}</p>
+      </div>
+    ) : null,
+    dashboardAccess.canViewInvoices ? (
+      <div key="overdue-amount" className="px-5 py-4">
+        <div className="flex items-center gap-1.5 mb-2"><DollarSign size={12} className="text-[#94A3B8]" /><span className="metric-label">Overdue Amount</span></div>
+        <div className="flex items-center gap-2 mb-1"><span className="text-lg font-bold text-[#DC2626] tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>${totalOverdue.toLocaleString()}</span></div>
+        <p className="text-[11px] text-[#475569]">{overdueInvoices.length} invoices past due</p>
+      </div>
+    ) : null,
+    (dashboardAccess.canViewTasks || dashboardAccess.canViewInvoices || dashboardAccess.canViewLeads || dashboardAccess.canViewProjects) ? (
+      <div key="priority-actions" className="px-5 py-4">
+        <div className="flex items-center gap-1.5 mb-2"><AlertCircle size={12} className="text-[#94A3B8]" /><span className="metric-label">Priority Actions</span></div>
+        <div className="flex items-center gap-2 mb-1"><span className="text-lg font-bold text-[#FF7B36] tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>{priorityActionsCount}</span><span className="text-[11px] text-[#94A3B8] font-medium">items</span></div>
+        <p className="text-[11px] text-[#475569]">Require immediate attention</p>
+      </div>
+    ) : null,
+    dashboardAccess.canViewLeads ? (
+      <div key="hot-pipeline" className="px-5 py-4">
+        <div className="flex items-center gap-1.5 mb-2"><Target size={12} className="text-[#94A3B8]" /><span className="metric-label">Hot Pipeline</span></div>
+        <div className="flex items-center gap-2 mb-1"><span className="text-lg font-bold text-[#01C44A] tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>${hotPipelineValue.toLocaleString()}</span></div>
+        <p className="text-[11px] text-[#475569]">{hotLeads.length} leads ready to close</p>
+      </div>
+    ) : null,
+  ].filter(Boolean) as React.ReactNode[];
+  const aiOverviewGridClass = cn(
+    "grid divide-x divide-y md:divide-y-0 divide-[rgba(15,23,42,0.06)]",
+    aiOverviewCards.length <= 1
+      ? "grid-cols-1"
+      : aiOverviewCards.length === 2
+      ? "grid-cols-1 md:grid-cols-2"
+      : aiOverviewCards.length === 3
+      ? "grid-cols-1 md:grid-cols-3"
+      : aiOverviewCards.length === 4
+      ? "grid-cols-2 md:grid-cols-2 lg:grid-cols-4"
+      : "grid-cols-2 md:grid-cols-3 lg:grid-cols-5",
+  );
+  const canShowAiOverview = aiOverviewCards.length > 0;
+  const hasAnyDashboardModuleAccess =
+    dashboardAccess.canViewLeads ||
+    dashboardAccess.canViewInvoices ||
+    dashboardAccess.canViewProjects ||
+    dashboardAccess.canViewTasks ||
+    dashboardAccess.canViewClients ||
+    dashboardAccess.canViewCalendar ||
+    dashboardAccess.canViewAiAssistant;
 
   // ============================================
   // RENDER
@@ -437,12 +572,16 @@ const Index = () => {
                 </div>
               </div>
               <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 flex-shrink-0">
+                {dashboardAccess.canViewAiAssistant && (
                 <button onClick={() => setShowCopilot(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0891B2]/8 text-[#0891B2] text-xs font-medium rounded-md hover:bg-[#0891B2]/14 transition-colors border border-[#0891B2]/15">
                   <Sparkles size={14} /><span className="hidden sm:inline">Ask Zodo AI</span>
                 </button>
+                )}
+                {dashboardAccess.canViewProjects && (
                 <button onClick={() => navigate("/projects/add")} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0891B2] text-white text-xs font-medium rounded-md hover:bg-[#0891B2]/90 transition-colors">
                   <Plus size={14} /><span className="hidden sm:inline">New</span>
                 </button>
+                )}
                 <button onClick={toggleDarkMode} className="p-2 rounded-md bg-white border border-[rgba(15,23,42,0.06)] text-[#94A3B8] hover:text-[#475569] transition-colors">
                   {isDarkMode ? <Sun size={15} /> : <Moon size={15} />}
                 </button>
@@ -514,6 +653,15 @@ const Index = () => {
             </div>
           </div>
 
+          {!hasAnyDashboardModuleAccess && (
+            <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] px-5 py-4">
+              <h2 className="text-sm font-semibold text-[#0F172A]">Dashboard Access Limited</h2>
+              <p className="mt-1 text-sm text-[#475569]">
+                This account can access the dashboard shell, but all module widgets are currently hidden by permissions.
+              </p>
+            </div>
+          )}
+
           {/* ===== SMART ALERTS ===== */}
           {visibleAlerts.length > 0 && (
             <div className="space-y-2">
@@ -532,6 +680,7 @@ const Index = () => {
           )}
 
           {/* ===== AI BUSINESS OVERVIEW ===== */}
+          {canShowAiOverview && (
           <div className="bg-white rounded-md border-l-[3px] border-l-[#0891B2] p-0 overflow-hidden ai-hero-pulse" style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.04), 0 8px 20px rgba(15,23,42,0.05)' }}>
             <div className="flex items-center justify-between px-5 pt-4 pb-3">
               <div className="flex items-center gap-3">
@@ -545,49 +694,12 @@ const Index = () => {
                 <span className="ai-tag">AI</span>
               </div>
             </div>
-            <div className={cn("grid divide-x divide-y md:divide-y-0 divide-[rgba(15,23,42,0.06)]", isMobile ? "grid-cols-3" : "grid-cols-2 md:grid-cols-3 lg:grid-cols-5")}>
-              <div className="px-5 py-4">
-                <div className="flex items-center gap-1.5 mb-2"><Activity size={12} className="text-[#94A3B8]" /><span className="metric-label">Pipeline Health</span></div>
-                <div className="flex items-center gap-2 mb-1"><span className="text-lg font-bold text-[#0F172A] tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>{pipelineHealthLabel}</span></div>
-                <p className="text-[11px] text-[#475569] leading-relaxed">
-                  {leads.length === 0 ? (
-                    pipelineHealthText
-                  ) : (
-                    <>
-                      <span className="text-[#FF7B36] font-medium">{stalledLeads.length} leads</span> stalled &gt;5 days
-                    </>
-                  )}
-                </p>
-              </div>
-              <div className="px-5 py-4">
-                <div className="flex items-center gap-1.5 mb-2"><TrendingUp size={12} className="text-[#94A3B8]" /><span className="metric-label">Revenue Forecast</span></div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-lg font-bold text-[#0F172A] tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                    ${forecastValue.toLocaleString()}
-                  </span>
-                  {hasForecastSignals ? <span className="text-[11px] text-[#01C44A] font-medium">projected</span> : null}
-                </div>
-                <p className="text-[11px] text-[#475569]">{forecastSupportText}</p>
-              </div>
-              <div className="px-5 py-4">
-                <div className="flex items-center gap-1.5 mb-2"><DollarSign size={12} className="text-[#94A3B8]" /><span className="metric-label">Overdue Amount</span></div>
-                <div className="flex items-center gap-2 mb-1"><span className="text-lg font-bold text-[#DC2626] tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>${totalOverdue.toLocaleString()}</span></div>
-                <p className="text-[11px] text-[#475569]">{overdueInvoices.length} invoices past due</p>
-              </div>
-              <div className="px-5 py-4">
-                <div className="flex items-center gap-1.5 mb-2"><AlertCircle size={12} className="text-[#94A3B8]" /><span className="metric-label">Priority Actions</span></div>
-                <div className="flex items-center gap-2 mb-1"><span className="text-lg font-bold text-[#FF7B36] tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>{stats.pendingTasks + overdueInvoices.length + stalledLeads.length}</span><span className="text-[11px] text-[#94A3B8] font-medium">items</span></div>
-                <p className="text-[11px] text-[#475569]">Require immediate attention</p>
-              </div>
-              <div className="px-5 py-4">
-                <div className="flex items-center gap-1.5 mb-2"><Target size={12} className="text-[#94A3B8]" /><span className="metric-label">Hot Pipeline</span></div>
-                <div className="flex items-center gap-2 mb-1"><span className="text-lg font-bold text-[#01C44A] tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>${hotPipelineValue.toLocaleString()}</span></div>
-                <p className="text-[11px] text-[#475569]">{hotLeads.length} leads ready to close</p>
-              </div>
-            </div>
+            <div className={aiOverviewGridClass}>{aiOverviewCards}</div>
           </div>
+          )}
 
           {/* ===== AI DAILY SUMMARY ===== */}
+          {canShowAiOverview && (
           <div className="ai-insight-enter" style={{ animationDelay: '200ms' }}>
             <div className="flex items-center gap-2 px-1 mb-3"><Sparkles size={13} className="text-[#0891B2]" /><span className="text-xs font-semibold text-[#0F172A]">Daily AI Summary</span><span className="ai-tag">AI</span></div>
             <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] px-5 py-3" style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.03)' }}>
@@ -597,12 +709,13 @@ const Index = () => {
               </p>
             </div>
           </div>
+          )}
 
           {/* ===== QUICK ACTIONS ===== */}
-          {isMobile ? (
+          {visibleQuickActions.length > 0 && (isMobile ? (
             /* Mobile: compact icon grid matching screenshot */
             <div className="grid grid-cols-4 gap-2">
-              {quickActions.map((action, index) => (
+              {visibleQuickActions.map((action, index) => (
                 <motion.button key={index} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 * index }} whileTap={{ scale: 0.95 }} onClick={() => handleQuickAction(action.path)} className="flex flex-col items-center gap-1.5 py-3 bg-white rounded-md border border-[rgba(15,23,42,0.06)] active:bg-[#F1F5F9] transition-colors">
                   <div className="w-9 h-9 rounded-md bg-[#F1F5F9] flex items-center justify-center"><action.icon size={18} className="text-[#475569]" /></div>
                   <span className="text-[10px] font-medium text-[#475569] leading-tight text-center px-1">{action.title}</span>
@@ -612,7 +725,7 @@ const Index = () => {
           ) : (
             /* Desktop: full cards */
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-              {quickActions.map((action, index) => {
+              {visibleQuickActions.map((action, index) => {
                 const colors = getColorClasses(action.color); return (
                   <motion.button key={index} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 * index }} whileHover={{ scale: 1.01, y: -2 }} whileTap={{ scale: 0.99 }} onClick={() => handleQuickAction(action.path)} className="flex items-center gap-4 p-4 bg-white rounded-md card-shadow hover:shadow-md transition-all group">
                     <div className="w-10 h-10 rounded-md bg-[#F1F5F9] flex items-center justify-center"><action.icon size={20} className="text-[#475569]" /></div>
@@ -622,17 +735,13 @@ const Index = () => {
                 );
               })}
             </div>
-          )}
+          ))}
 
           {/* ===== STAT CARDS ===== */}
-          {isMobile ? (
+          {visibleStatCards.length > 0 && (isMobile ? (
             /* Mobile: list-style stat rows with chevrons */
             <div className="bg-white rounded-md card-shadow divide-y divide-[rgba(15,23,42,0.04)] overflow-hidden">
-              {[
-                { icon: FolderKanban, color: "#0891B2", bg: "#0891B2/10", title: "Active Projects", value: `${stats.projectsCount}`, sub: stats.projectsCount > 0 ? `${stats.projectsCount}, on track` : "none", path: "/projects" },
-                { icon: DollarSign, color: "#01C44A", bg: "#01C44A/10", title: "Total Earnings", value: `$${stats.earnings.toLocaleString()}`, sub: "paid invoices", path: "/invoice" },
-                { icon: Clock, color: "#FF7B36", bg: "#FF7B36/10", title: "Pending Tasks", value: `${stats.pendingTasks}`, sub: stats.pendingTasks > 0 ? `${stats.pendingTasks}, needs action` : "all done", path: "/tasks" },
-              ].map((s, i) => (
+              {visibleStatCards.map((s, i) => (
                 <button key={i} onClick={() => navigate(s.path)} className="flex items-center gap-3 px-4 py-3 w-full text-left active:bg-[#F7F7FB] transition-colors">
                   <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${s.color}15` }}><s.icon size={18} style={{ color: s.color }} /></div>
                   <div className="flex-1 min-w-0">
@@ -644,19 +753,20 @@ const Index = () => {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 stagger-enter">
-              <StatCard title="Active Projects" value={stats.projectsCount} subtitle="Total projects" trend={0} comparison="Current" icon={FolderKanban} color="cyan" isLoading={isLoading} lastUpdated="Updated just now" aiInsight={stats.projectsCount > 0 ? "Delivery pace on track" : undefined} />
-              <StatCard title="Total Earnings" value={`$${stats.earnings.toLocaleString()}`} subtitle="Paid invoices" trend={0} comparison="Current" icon={DollarSign} color="orange" isLoading={isLoading} lastUpdated="Updated just now" aiInsight={stats.earnings > 0 ? "From paid invoices" : undefined} />
-              <StatCard title="Total Clients" value={stats.clientsCount} subtitle="Active clients" trend={0} comparison="Current" icon={Users} color="green" isLoading={isLoading} lastUpdated="Updated just now" aiInsight={stats.clientsCount > 0 ? `${stats.clientsCount} active` : undefined} />
-              <StatCard title="Pending Tasks" value={stats.pendingTasks} subtitle="Needs action" trend={0} comparison="Current" icon={Clock} color="purple" isLoading={isLoading} lastUpdated="Updated just now" aiInsight={stats.pendingTasks > 5 ? "Prioritize overdue items" : "On track"} />
+            <div className={cn("grid gap-3 md:gap-4 stagger-enter", visibleStatCards.length === 1 ? "grid-cols-1" : visibleStatCards.length === 2 ? "grid-cols-2" : "grid-cols-2 lg:grid-cols-4")}>
+              {dashboardAccess.canViewProjects && <StatCard title="Active Projects" value={stats.projectsCount} subtitle="Total projects" trend={0} comparison="Current" icon={FolderKanban} color="cyan" isLoading={isLoading} lastUpdated="Updated just now" aiInsight={stats.projectsCount > 0 ? "Delivery pace on track" : undefined} />}
+              {dashboardAccess.canViewInvoices && <StatCard title="Total Earnings" value={`$${stats.earnings.toLocaleString()}`} subtitle="Paid invoices" trend={0} comparison="Current" icon={DollarSign} color="orange" isLoading={isLoading} lastUpdated="Updated just now" aiInsight={stats.earnings > 0 ? "From paid invoices" : undefined} />}
+              {dashboardAccess.canViewClients && <StatCard title="Total Clients" value={stats.clientsCount} subtitle="Active clients" trend={0} comparison="Current" icon={Users} color="green" isLoading={isLoading} lastUpdated="Updated just now" aiInsight={stats.clientsCount > 0 ? `${stats.clientsCount} active` : undefined} />}
+              {dashboardAccess.canViewTasks && <StatCard title="Pending Tasks" value={stats.pendingTasks} subtitle="Needs action" trend={0} comparison="Current" icon={Clock} color="purple" isLoading={isLoading} lastUpdated="Updated just now" aiInsight={stats.pendingTasks > 5 ? "Prioritize overdue items" : "On track"} />}
             </div>
-          )}
+          ))}
 
           {/* ===== LEADS & INVOICES ROW ===== */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+          {(dashboardAccess.canViewLeads || dashboardAccess.canViewInvoices) && (
+          <div className={cn("grid grid-cols-1 gap-4 md:gap-6", dashboardAccess.canViewLeads && dashboardAccess.canViewInvoices ? "lg:grid-cols-2" : "lg:grid-cols-1")}>
 
             {/* Leads Tracker */}
-            <div className="bg-white rounded-md card-shadow overflow-hidden">
+            {dashboardAccess.canViewLeads && <div className="bg-white rounded-md card-shadow overflow-hidden">
               <div className="p-5 border-b border-[rgba(15,23,42,0.06)]">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -689,17 +799,17 @@ const Index = () => {
                   </div>
                 ))}
               </div>
-            </div>
+            </div>}
 
             {/* Invoices Tracker */}
-            <div className="bg-white rounded-md card-shadow overflow-hidden">
+            {dashboardAccess.canViewInvoices && <div className="bg-white rounded-md card-shadow overflow-hidden">
               <div className="p-5 border-b border-[rgba(15,23,42,0.06)]">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-md bg-[#FF7B36]/10 flex items-center justify-center"><FileText size={16} className="text-[#FF7B36]" /></div>
                     <div><h3 className="font-semibold text-sm text-[#0F172A]">Invoice Tracker</h3><p className="text-[11px] text-[#94A3B8]">{overdueInvoices.length} overdue · {pendingInvoices.length} pending</p></div>
                   </div>
-                  <button onClick={() => navigate("/invoices")} className="text-xs text-[#0891B2] font-medium hover:underline flex items-center gap-1">View All <ArrowUpRight size={12} /></button>
+                  <button onClick={() => navigate("/invoice")} className="text-xs text-[#0891B2] font-medium hover:underline flex items-center gap-1">View All <ArrowUpRight size={12} /></button>
                 </div>
               </div>
               <div className="divide-y divide-[rgba(15,23,42,0.04)] max-h-[320px] overflow-y-auto">
@@ -725,10 +835,12 @@ const Index = () => {
                   </div>
                 ))}
               </div>
-            </div>
+            </div>}
           </div>
+          )}
 
           {/* ===== PROJECTS OVERVIEW ===== */}
+          {dashboardAccess.canViewProjects && (
           <div className="bg-white rounded-md card-shadow overflow-hidden">
             <div className="p-5 border-b border-[rgba(15,23,42,0.06)]">
               <div className="flex items-center justify-between">
@@ -773,15 +885,19 @@ const Index = () => {
               </table>
             </div>
           </div>
+          )}
 
           {/* ===== CHARTS & CALENDAR ===== */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="lg:col-span-2"><ProjectsChart /></motion.div>
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}><CalendarWidget /></motion.div>
+          {(dashboardAccess.canViewProjects || dashboardAccess.canViewCalendar) && (
+          <div className={cn("grid grid-cols-1 gap-4 md:gap-6", dashboardAccess.canViewProjects && dashboardAccess.canViewCalendar ? "lg:grid-cols-3" : "lg:grid-cols-1")}>
+            {dashboardAccess.canViewProjects && <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className={dashboardAccess.canViewCalendar ? "lg:col-span-2" : "lg:col-span-1"}><ProjectsChart /></motion.div>}
+            {dashboardAccess.canViewCalendar && <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}><CalendarWidget /></motion.div>}
           </div>
+          )}
 
           {/* ===== ACTIVITY & PROJECTS TABLE ===== */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+          {(recentActivity.length > 0 || dashboardAccess.canViewProjects) && (
+          <div className={cn("grid grid-cols-1 gap-4 md:gap-6", dashboardAccess.canViewProjects ? "lg:grid-cols-3" : "lg:grid-cols-1")}>
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="bg-white border border-[rgba(15,23,42,0.06)] rounded-md overflow-hidden">
               <div className="p-6 border-b border-[rgba(15,23,42,0.06)]">
                 <div className="flex items-center justify-between">
@@ -802,8 +918,9 @@ const Index = () => {
                 })}
               </div>
             </motion.div>
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} className="lg:col-span-2"><ProjectsTable /></motion.div>
+            {dashboardAccess.canViewProjects && <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} className="lg:col-span-2"><ProjectsTable /></motion.div>}
           </div>
+          )}
         </div>
 
         {/* Footer — hidden on mobile (bottom tab bar takes over) */}
@@ -831,7 +948,7 @@ const Index = () => {
               </div>
               <div className="p-4">
                 <p className="text-xs font-medium text-[#475569] uppercase tracking-wider mb-3">Quick Actions</p>
-                <div className="space-y-1">{quickActions.map((action, index) => {
+                <div className="space-y-1">{visibleQuickActions.map((action, index) => {
                   const colors = getColorClasses(action.color); return (
                     <button key={index} onClick={() => { handleQuickAction(action.path); setShowSearchModal(false); }} className="w-full flex items-center gap-3 p-3 rounded-md hover:bg-white transition-colors group">
                       <div className={cn("w-10 h-10 rounded-md flex items-center justify-center", colors.light)}><action.icon size={18} className={colors.text} /></div>

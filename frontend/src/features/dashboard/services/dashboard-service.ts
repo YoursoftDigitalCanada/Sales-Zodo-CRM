@@ -54,6 +54,14 @@ export interface DashboardPayload {
   totalEarnings: number;
 }
 
+export interface DashboardAccessOptions {
+  canViewLeads?: boolean;
+  canViewInvoices?: boolean;
+  canViewProjects?: boolean;
+  canViewClients?: boolean;
+  canViewTasks?: boolean;
+}
+
 // ── Helper: safe request that returns [] on failure ─────────────────────
 async function safeGet<T>(url: string, params?: Record<string, unknown>): Promise<T[]> {
   try {
@@ -67,13 +75,25 @@ async function safeGet<T>(url: string, params?: Record<string, unknown>): Promis
 
 // ── Fetch everything in parallel (resilient — one failure won't crash all) ──
 
-export async function fetchDashboardData(): Promise<DashboardPayload> {
+export async function fetchDashboardData(
+  access: DashboardAccessOptions = {},
+): Promise<DashboardPayload> {
   const [leads, invoices, projects, clients, tasks] = await Promise.all([
-    safeGet<DashboardLead>("/leads", { limit: 20, sortBy: "createdAt", sortOrder: "desc" }),
-    safeGet<DashboardInvoice>("/invoices", { limit: 20, sortBy: "issueDate", sortOrder: "desc" }),
-    safeGet<DashboardProject>("/projects", { limit: 20 }),
-    safeGet<unknown>("/clients"),
-    safeGet<DashboardTask>("/tasks"),
+    access.canViewLeads === false
+      ? Promise.resolve([])
+      : safeGet<DashboardLead>("/leads", { limit: 20, sortBy: "createdAt", sortOrder: "desc" }),
+    access.canViewInvoices === false
+      ? Promise.resolve([])
+      : safeGet<DashboardInvoice>("/invoices", { limit: 20, sortBy: "issueDate", sortOrder: "desc" }),
+    access.canViewProjects === false
+      ? Promise.resolve([])
+      : safeGet<DashboardProject>("/projects", { limit: 20 }),
+    access.canViewClients === false
+      ? Promise.resolve([])
+      : safeGet<unknown>("/clients"),
+    access.canViewTasks === false
+      ? Promise.resolve([])
+      : safeGet<DashboardTask>("/tasks"),
   ]);
 
   const pendingTasks = tasks.filter(

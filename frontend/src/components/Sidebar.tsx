@@ -3,6 +3,13 @@ import { Link, useLocation } from "react-router-dom";
 import useIsMobile from "@/hooks/useIsMobile";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { getTasks, type TaskEntity } from "@/features/tasks/services/tasks-service";
+import { getNotificationCounts } from "@/features/notifications";
+import { getEmails } from "@/features/emails/services/emails-service";
+import { getTicketStats } from "@/services/supportTicketsService";
+import { getLeaveRequests, getMyLeaveRequests } from "@/features/users/services/users-service";
+import { getLeads, type LeadEntity } from "@/features/leads/services/leads-service";
+import { getConversations } from "@/features/chat";
 import {
   getEnabledFeatures,
   subscribeEnabledFeatures,
@@ -103,7 +110,96 @@ interface SidebarProps {
   setMobileOpen?: (value: boolean) => void;
 }
 
+interface MobileTabItem {
+  icon: LucideIcon;
+  label: string;
+  path: string;
+  featureId?: FeatureId;
+  permissionModule?: string;
+}
+
+type BadgeColor = NonNullable<NavigationItem["badgeColor"]>;
+
+interface SidebarRuntimeMetaEntry {
+  badge?: string | number;
+  badgeColor?: BadgeColor;
+  isNew?: boolean;
+}
+
+type SidebarRuntimeMeta = Record<string, SidebarRuntimeMetaEntry>;
+
 export const SidebarSuppressionContext = createContext<boolean>(false);
+
+const SIDEBAR_META_KEYS = {
+  tasks: "/tasks",
+  pipeline: "/leads/pipeline",
+  letterbox: "/letterbox",
+  chats: "/chats",
+  tickets: "/support/tickets",
+  notifications: "/notifications",
+  leaveRequests: "/employees/leave-requests",
+} as const;
+
+const RECENT_LEAD_WINDOW_MS = 1000 * 60 * 60 * 24 * 3;
+
+function applyRuntimeMeta(items: NavigationItem[], runtimeMeta: SidebarRuntimeMeta): NavigationItem[] {
+  return items.map((item) => {
+    const itemKey = item.path;
+    const itemMeta = itemKey ? runtimeMeta[itemKey] : undefined;
+
+    return {
+      ...item,
+      ...(itemMeta ? itemMeta : {}),
+      submenu: item.submenu?.map((subItem) => {
+        const subMeta = runtimeMeta[subItem.path];
+        return subMeta ? { ...subItem, ...subMeta } : subItem;
+      }),
+    };
+  });
+}
+
+function isPendingTask(task: TaskEntity): boolean {
+  const status = String(task.status || "").toUpperCase();
+  return status !== "DONE" && status !== "COMPLETED" && status !== "CANCELLED";
+}
+
+function isRecentLead(lead: LeadEntity): boolean {
+  const createdAt = new Date(String(lead.createdAt || ""));
+  if (Number.isNaN(createdAt.getTime())) {
+    return false;
+  }
+
+  return Date.now() - createdAt.getTime() <= RECENT_LEAD_WINDOW_MS;
+}
+
+function readStoredPermissions(): string[] | null {
+  try {
+    const storedPerms = localStorage.getItem("permissions");
+    if (!storedPerms) {
+      return null;
+    }
+
+    const perms = JSON.parse(storedPerms);
+    return Array.isArray(perms) ? perms : null;
+  } catch {
+    return null;
+  }
+}
+
+function readStoredOwnerOrAdmin(): boolean {
+  try {
+    const storedEmployee = localStorage.getItem("employee");
+    if (!storedEmployee) {
+      return true;
+    }
+
+    const employee = JSON.parse(storedEmployee);
+    const roleName = employee?.role?.name || employee?.roleName || "";
+    return ["Owner", "Admin", "Super Admin"].includes(roleName);
+  } catch {
+    return true;
+  }
+}
 
 // ============================================
 // NAVIGATION CONFIGURATION
@@ -132,8 +228,6 @@ const navigationItems: NavigationItem[] = [
     path: "/tasks",
     featureId: "tasks",
     permissionModule: "tasks",
-    badge: 5,
-    badgeColor: "red",
   },
 
   // ===== CRM =====
@@ -145,7 +239,7 @@ const navigationItems: NavigationItem[] = [
     permissionModule: "leads",
     submenu: [
       { title: "All Leads", path: "/leads", featureId: "leads" },
-      { title: "Pipeline", path: "/leads/pipeline", featureId: "leads", isNew: true },
+      { title: "Pipeline", path: "/leads/pipeline", featureId: "leads" },
       { title: "Lead Sources", path: "/leads/sources", featureId: "leads", permissionModule: "lead-sources" },
     ]
   },
@@ -258,8 +352,6 @@ const navigationItems: NavigationItem[] = [
     path: "/letterbox",
     featureId: "letterbox",
     permissionModule: "emails",
-    badge: 12,
-    badgeColor: "teal",
   },
   {
     title: "Chats",
@@ -267,15 +359,13 @@ const navigationItems: NavigationItem[] = [
     path: "/chats",
     featureId: "chat",
     permissionModule: "chat",
-    badge: "●",
-    badgeColor: "teal",
   },
   {
     title: "Support",
     icon: Headphones,
     featureId: "support",
     submenu: [
-      { title: "Tickets", path: "/support/tickets", featureId: "support", badge: 4, badgeColor: "red" },
+      { title: "Tickets", path: "/support/tickets", featureId: "support" },
       { title: "Knowledge Base", path: "/support/knowledge-base", featureId: "support" },
       { title: "FAQ", path: "/support/faq", featureId: "support" },
     ]
@@ -286,8 +376,6 @@ const navigationItems: NavigationItem[] = [
     path: "/notifications",
     featureId: "letterbox",
     permissionModule: "notifications",
-    badge: 7,
-    badgeColor: "red",
   },
   // ===== TEAM =====
   { title: "Team", isHeader: true },
@@ -299,7 +387,7 @@ const navigationItems: NavigationItem[] = [
       { title: "All Employees", path: "/employees", featureId: "team", permissionModule: "employees", adminOnly: true },
       { title: "Departments", path: "/employees/departments", featureId: "team", permissionModule: "employees", isNew: true, adminOnly: true },
       { title: "Attendance", path: "/employees/attendance", featureId: "team" },
-      { title: "Leave Requests", path: "/employees/leave-requests", featureId: "team", badge: 2, badgeColor: "gold" },
+      { title: "Leave Requests", path: "/employees/leave-requests", featureId: "team" },
     ]
   },
   {
@@ -554,8 +642,9 @@ export function Sidebar({
   const [user, setUser] = useState<{ firstName: string; lastName: string; email?: string } | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [upgradeDismissed, setUpgradeDismissed] = useState(false);
-  const [userPermissions, setUserPermissions] = useState<string[] | null>(null);
-  const [isOwnerOrAdmin, setIsOwnerOrAdmin] = useState(true);
+  const [userPermissions, setUserPermissions] = useState<string[] | null>(() => readStoredPermissions());
+  const [isOwnerOrAdmin, setIsOwnerOrAdmin] = useState(() => readStoredOwnerOrAdmin());
+  const [runtimeNavigationMeta, setRuntimeNavigationMeta] = useState<SidebarRuntimeMeta>({});
 
   useEffect(() => {
     return subscribeEnabledFeatures(() =>
@@ -567,21 +656,8 @@ export function Sidebar({
   useEffect(() => {
     const loadPermissions = () => {
       try {
-        const storedPerms = localStorage.getItem("permissions");
-        const storedEmployee = localStorage.getItem("employee");
-        if (storedPerms) {
-          const perms = JSON.parse(storedPerms);
-          setUserPermissions(Array.isArray(perms) ? perms : null);
-        }
-        // Check if user is Owner or Admin (bypass permission filtering)
-        if (storedEmployee) {
-          const emp = JSON.parse(storedEmployee);
-          const roleName = emp?.role?.name || emp?.roleName || "";
-          setIsOwnerOrAdmin(["Owner", "Admin", "Super Admin"].includes(roleName));
-        } else {
-          // If no employee record, user is likely the tenant owner
-          setIsOwnerOrAdmin(true);
-        }
+        setUserPermissions(readStoredPermissions());
+        setIsOwnerOrAdmin(readStoredOwnerOrAdmin());
       } catch (e) {
         console.error("Failed to parse permissions");
       }
@@ -596,10 +672,179 @@ export function Sidebar({
     [enabledFeatures]
   );
 
-  const visibleNavigationItems = useMemo(
-    () => filterNavigationItems(navigationItems, enabledFeatureSet, userPermissions, isOwnerOrAdmin),
-    [enabledFeatureSet, userPermissions, isOwnerOrAdmin]
+  const runtimeNavigationItems = useMemo(
+    () => applyRuntimeMeta(navigationItems, runtimeNavigationMeta),
+    [runtimeNavigationMeta]
   );
+
+  const visibleNavigationItems = useMemo(
+    () => filterNavigationItems(runtimeNavigationItems, enabledFeatureSet, userPermissions, isOwnerOrAdmin),
+    [enabledFeatureSet, runtimeNavigationItems, userPermissions, isOwnerOrAdmin]
+  );
+
+  const mobileNavigationTabs = useMemo<MobileTabItem[]>(
+    () => [
+      { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard", permissionModule: "dashboard" },
+      { icon: Target, label: "Pipeline", path: "/leads/pipeline", featureId: "leads", permissionModule: "leads" },
+      { icon: Briefcase, label: "Projects", path: "/projects", featureId: "projects", permissionModule: "projects" },
+      { icon: Receipt, label: "Finance", path: "/invoice", featureId: "finance", permissionModule: "invoices" },
+      { icon: MessageSquare, label: "Chats", path: "/chats", featureId: "chat", permissionModule: "chat" },
+    ].filter((tab) => {
+      if (!hasFeatureAccess(tab.featureId, enabledFeatureSet)) {
+        return false;
+      }
+
+      if (!isOwnerOrAdmin && !hasModulePermission(tab.permissionModule, userPermissions)) {
+        return false;
+      }
+
+      return true;
+    }),
+    [enabledFeatureSet, isOwnerOrAdmin, userPermissions]
+  );
+
+  useEffect(() => {
+    const canAccessItem = (featureId?: FeatureId, permissionModule?: string) =>
+      hasFeatureAccess(featureId, enabledFeatureSet) &&
+      (isOwnerOrAdmin || hasModulePermission(permissionModule, userPermissions));
+
+    const loadSidebarMeta = async () => {
+      const requests: Array<Promise<SidebarRuntimeMeta>> = [];
+
+      if (canAccessItem("tasks", "tasks")) {
+        requests.push(
+          getTasks({ limit: 200 })
+            .then((tasks) => {
+              const pendingCount = tasks.filter(isPendingTask).length;
+              return pendingCount > 0
+                ? {
+                    [SIDEBAR_META_KEYS.tasks]: {
+                      badge: pendingCount,
+                      badgeColor: "red",
+                    },
+                  }
+                : {};
+            })
+            .catch(() => ({}))
+        );
+      }
+
+      if (canAccessItem("leads", "leads")) {
+        requests.push(
+          getLeads({ limit: 20, sortBy: "createdAt", sortOrder: "desc" })
+            .then((leads) => ({
+              [SIDEBAR_META_KEYS.pipeline]: {
+                isNew: leads.some(isRecentLead),
+              },
+            }))
+            .catch(() => ({}))
+        );
+      }
+
+      if (canAccessItem("letterbox", "emails")) {
+        requests.push(
+          getEmails({ folder: "INBOX", limit: 200 })
+            .then((emails) => {
+              const unreadCount = emails.filter((email) => !email.isRead).length;
+              return unreadCount > 0
+                ? {
+                    [SIDEBAR_META_KEYS.letterbox]: {
+                      badge: unreadCount,
+                      badgeColor: "teal",
+                    },
+                  }
+                : {};
+            })
+            .catch(() => ({}))
+        );
+      }
+
+      if (canAccessItem("chat", "chat")) {
+        requests.push(
+          getConversations()
+            .then((conversations) => {
+              const unreadCount = conversations.reduce((total, conversation) => total + Number(conversation.unreadCount || 0), 0);
+              return unreadCount > 0
+                ? {
+                    [SIDEBAR_META_KEYS.chats]: {
+                      badge: unreadCount,
+                      badgeColor: "teal",
+                    },
+                  }
+                : {};
+            })
+            .catch(() => ({}))
+        );
+      }
+
+      if (hasFeatureAccess("support", enabledFeatureSet)) {
+        requests.push(
+          getTicketStats()
+            .then((stats) => {
+              const activeTickets = Number(stats.open || 0) + Number(stats.inProgress || 0) + Number(stats.waiting || 0);
+              return activeTickets > 0
+                ? {
+                    [SIDEBAR_META_KEYS.tickets]: {
+                      badge: activeTickets,
+                      badgeColor: "red",
+                    },
+                  }
+                : {};
+            })
+            .catch(() => ({}))
+        );
+      }
+
+      if (canAccessItem("letterbox", "notifications")) {
+        requests.push(
+          getNotificationCounts()
+            .then((counts) => {
+              const unreadCount = Number(counts.unread || 0);
+              return unreadCount > 0
+                ? {
+                    [SIDEBAR_META_KEYS.notifications]: {
+                      badge: unreadCount,
+                      badgeColor: "red",
+                    },
+                  }
+                : {};
+            })
+            .catch(() => ({}))
+        );
+      }
+
+      if (hasFeatureAccess("team", enabledFeatureSet)) {
+        requests.push(
+          (isOwnerOrAdmin ? getLeaveRequests() : getMyLeaveRequests())
+            .then((requestsList) => {
+              const pendingCount = requestsList.filter((request) => request.status === "pending").length;
+              return pendingCount > 0
+                ? {
+                    [SIDEBAR_META_KEYS.leaveRequests]: {
+                      badge: pendingCount,
+                      badgeColor: "gold",
+                    },
+                  }
+                : {};
+            })
+            .catch(() => ({}))
+        );
+      }
+
+      const results = await Promise.all(requests);
+      setRuntimeNavigationMeta(Object.assign({}, ...results));
+    };
+
+    void loadSidebarMeta();
+
+    const intervalId = window.setInterval(() => {
+      void loadSidebarMeta();
+    }, 60000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [enabledFeatureSet, isOwnerOrAdmin, location.pathname, userPermissions]);
 
   // Auto-open submenu if current path is inside it
   useEffect(() => {
@@ -1193,16 +1438,10 @@ export function Sidebar({
       )}
 
       {/* ─── Mobile Bottom Tab Bar ─── */}
-      {isMobile && (
+      {isMobile && mobileNavigationTabs.length > 0 && (
         <nav className="fixed bottom-0 left-0 right-0 z-[60] bg-white/98 backdrop-blur-lg border-t border-[rgba(15,23,42,0.08)]" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
           <div className="flex items-center justify-around h-14">
-            {[
-              { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-              { icon: Target, label: "Pipeline", path: "/leads/pipeline" },
-              { icon: Briefcase, label: "Projects", path: "/projects" },
-              { icon: Receipt, label: "Finance", path: "/invoice" },
-              { icon: MessageSquare, label: "Chats", path: "/chats" },
-            ].map((tab) => {
+            {mobileNavigationTabs.map((tab) => {
               const active = location.pathname === tab.path || location.pathname.startsWith(tab.path + "/");
               return (
                 <Link

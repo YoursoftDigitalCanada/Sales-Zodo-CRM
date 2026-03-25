@@ -10,6 +10,7 @@ import { BrowserRouter, Navigate, Routes, Route, useLocation } from "react-route
 import { CopilotContextProvider } from "@/contexts/CopilotContext";
 import { Sidebar, SidebarSuppressionContext } from "@/components/Sidebar";
 import { getAccessToken } from "@/features/auth/lib/auth-storage";
+import { canAccessModule, getDefaultAuthorizedRoute } from "@/lib/access-control";
 import { isOnboardingRequired } from "@/lib/enabled-features";
 
 // Layout
@@ -149,7 +150,14 @@ const AppRoutes = () => {
         <Route path="/quote/:token" element={<PublicQuoteView />} />
 
         {/* ========== DASHBOARD ========== */}
-        <Route path="/dashboard" element={<Index />} />
+        <Route
+          path="/dashboard"
+          element={
+            canAccessModule("dashboard")
+              ? <Index />
+              : <Navigate to={getDefaultAuthorizedRoute()} replace state={{ from: "/dashboard" }} />
+          }
+        />
         <Route
           path="/tasks"
           element={

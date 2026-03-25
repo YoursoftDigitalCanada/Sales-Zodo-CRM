@@ -278,11 +278,11 @@ export const EmployeeDetailPanel: React.FC<EmployeeDetailPanelProps> = ({
                         Address
                       </h3>
                       <div className="bg-white/5 rounded-md p-4">
-                        <p className="text-slate-200">{employee.address.street}</p>
-                        <p className="text-slate-200">
+                        <p className="text-[#0F172A]">{employee.address.street}</p>
+                        <p className="text-[#0F172A]">
                           {employee.address.city}, {employee.address.state} {employee.address.zipCode}
                         </p>
-                        <p className="text-slate-200">{employee.address.country}</p>
+                        <p className="text-[#0F172A]">{employee.address.country}</p>
                       </div>
                     </div>
 

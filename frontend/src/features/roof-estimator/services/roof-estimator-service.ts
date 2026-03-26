@@ -431,8 +431,9 @@ export async function updateEstimate(id: string, payload: Partial<SaveEstimatePa
 // ── EagleView Measurement Order API ──────────────────────────────────────
 
 export interface EagleViewReport {
-    reportId: number;
-    status: string;
+    reportId?: number;
+    jobId?: string;
+    status?: string;
     displayStatus?: string;
     street?: string;
     city?: string;
@@ -451,6 +452,7 @@ export interface EagleViewReport {
     reportDownloadLink?: string;
     imageUrl?: string;
     imageDataUrl?: string;
+    roofType?: string;
     imageFileTypeId?: number;
     imageType?: string;
     imageCaptureDate?: string;
@@ -470,12 +472,17 @@ export interface EagleViewAddressInput {
 
 /**
  * POST /eagleview/orders/instant
- * Send a full address string or structured address — server places order + polls for report.
- * Returns EagleView measurements plus preview metadata when available.
+ * Send a full address string or structured address.
+ * Sandbox uses property lookup only; production keeps the order/report flow.
  */
 export async function requestEagleViewInstant(address: string | EagleViewAddressInput): Promise<EagleViewReport> {
-    const res = await api.post("/eagleview/orders/instant", { address });
-    return res.data?.data;
+    try {
+        const res = await api.post("/eagleview/orders/instant", { address });
+        return res.data?.data;
+    } catch (error: any) {
+        const message = error?.response?.data?.message || error?.message || 'Unable to fetch roof data from EagleView.';
+        throw new Error(message);
+    }
 }
 
 export async function deleteEstimate(id: string): Promise<void> {

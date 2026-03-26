@@ -167,8 +167,8 @@ const DEFAULT_DATA: WizardData = {
   clientName: "", clientEmail: "", clientPhone: "", clientCompany: "",
   sourceType: "manual", leadId: "",
   address: "", placeId: "", latitude: 0, longitude: 0, satelliteImageUrl: "", eagleViewReportUrl: "",
-  roofAreaSqft: 0, confidence: 0, processingTimeSec: 0, aiModel: "yolov8n-seg-cpu",
-  pitch: "6/12", roofType: "gable", stories: 1, layers: 1, wastePercent: 10,
+  roofAreaSqft: 0, confidence: 0, processingTimeSec: 0, aiModel: "",
+  pitch: "", roofType: "gable", stories: 1, layers: 1, wastePercent: 10,
   measurementSource: "", tearOffRequired: false,
   shingleType: "Architectural Shingles",
   shingleQty: 1, shinglePricePerSq: 0,
@@ -298,6 +298,7 @@ export default function RoofEstimatorWizard() {
   const [satelliteLoading, setSatelliteLoading] = useState(false);
   const [eagleViewLoading, setEagleViewLoading] = useState(false);
   const [eagleViewStatus, setEagleViewStatus] = useState<string>("");
+  const [eagleViewError, setEagleViewError] = useState<string>("");
 
   // Wallet balance
   const [walletBalance, setWalletBalance] = useState<number | null>(null);;
@@ -305,6 +306,21 @@ export default function RoofEstimatorWizard() {
   // Update helper
   const up = useCallback(<K extends keyof WizardData>(key: K, val: WizardData[K]) => {
     setData((prev) => ({ ...prev, [key]: val }));
+  }, []);
+
+  const resetEagleViewMeasurement = useCallback((updates: Partial<WizardData> = {}) => {
+    setData((prev) => ({
+      ...prev,
+      satelliteImageUrl: "",
+      eagleViewReportUrl: "",
+      roofAreaSqft: 0,
+      confidence: 0,
+      processingTimeSec: 0,
+      aiModel: "",
+      pitch: "",
+      measurementSource: "",
+      ...updates,
+    }));
   }, []);
 
   // Load clients + leads + wallet on mount
@@ -338,8 +354,8 @@ export default function RoofEstimatorWizard() {
             longitude: est.longitude || 0, satelliteImageUrl: previewSource.imageUrl,
             eagleViewReportUrl: previewSource.reportUrl,
             roofAreaSqft: est.roofAreaSqft || 0, confidence: est.confidence || 0,
-            processingTimeSec: est.processingTimeSec || 0, aiModel: est.aiModel || "yolov8n-seg-cpu",
-            pitch: est.pitch || "6/12", roofType: est.roofType || "gable",
+            processingTimeSec: est.processingTimeSec || 0, aiModel: est.aiModel || "",
+            pitch: est.pitch || "", roofType: est.roofType || "gable",
             stories: est.stories || 1, layers: est.layers || 1,
             wastePercent: est.wastePercent ?? 10, measurementSource: est.measurementSource || "",
             tearOffRequired: est.tearOffRequired || false,
@@ -406,11 +422,22 @@ export default function RoofEstimatorWizard() {
   const finalPrice = preTotal + taxAmount;
   const roofSquares = data.roofAreaSqft / 100;
   const pricePerSquare = roofSquares > 0 ? finalPrice / roofSquares : 0;
+  const hasValidEagleViewMeasurement =
+    data.measurementSource === "eagleview"
+    && data.roofAreaSqft > 0
+    && Boolean(data.pitch.trim());
+  const canGenerateEstimate = hasValidEagleViewMeasurement && !saving && !eagleViewLoading;
 
   /* ── Address autocomplete ─────────────────────── */
 
   const handleAddressInput = useCallback(async (val: string) => {
-    up("address", val);
+    resetEagleViewMeasurement({
+      address: val,
+      placeId: "",
+      latitude: 0,
+      longitude: 0,
+    });
+    setEagleViewError("");
     if (val.length < 3) { setAddressSuggestions([]); return; }
     setAddressLoading(true);
     try {
@@ -418,24 +445,38 @@ export default function RoofEstimatorWizard() {
       setAddressSuggestions(results);
     } catch { /* silent */ }
     finally { setAddressLoading(false); }
-  }, [up]);
+  }, [resetEagleViewMeasurement]);
 
   const selectAddress = useCallback(async (desc: string, placeId: string) => {
-    up("address", desc);
-    up("placeId", placeId);
+    resetEagleViewMeasurement({
+      address: desc,
+      placeId,
+      latitude: 0,
+      longitude: 0,
+    });
     setAddressSuggestions([]);
-    up("satelliteImageUrl", "");
-    up("eagleViewReportUrl", "");
+    setEagleViewError("");
 
     // Resolve the selected place into a precise structured address before ordering.
     setSatelliteLoading(true);
     let details: Awaited<ReturnType<typeof getPlaceDetails>> | null = null;
     try {
       details = await getPlaceDetails(placeId);
-      up("address", details.formattedAddress || desc);
-      up("latitude", details.lat);
-      up("longitude", details.lng);
+      setData((prev) => ({
+        ...prev,
+        address: details?.formattedAddress || desc,
+        placeId,
+        latitude: details?.lat || 0,
+        longitude: details?.lng || 0,
+      }));
     } catch {
+      resetEagleViewMeasurement({
+        address: desc,
+        placeId: "",
+        latitude: 0,
+        longitude: 0,
+      });
+      setEagleViewError("Could not load the selected property details.");
       toast({ title: "Warning", description: "Could not load the selected property details" });
     } finally { setSatelliteLoading(false); }
 
@@ -456,71 +497,87 @@ export default function RoofEstimatorWizard() {
         longitude: details.lng,
       });
 
-        if (report.status === "Completed" || report.area) {
-          const roofArea = parseMeasurementNumber(report.area);
-          const pitch = normalizePitch(report);
-          const previewSource = splitPreviewSource(report.imageDataUrl || report.imageUrl || "");
-
-          if (roofArea !== null && roofArea > 0) {
-            up("roofAreaSqft", roofArea);
-          }
-          if (pitch) {
-            up("pitch", pitch);
-          }
-          up("satelliteImageUrl", previewSource.imageUrl);
-          up("eagleViewReportUrl", "");
-
-          up("measurementSource", "eagleview");
-          up("confidence", 100);
-          up("aiModel", "eagleview");
-
-          toast({
-            title: "📡 EagleView Data Loaded",
-            description: `Area: ${report.area || "N/A"} | Pitch: ${pitch || "N/A"} | Image: ${previewSource.imageUrl ? "Loaded" : "Unavailable"}`,
-          });
-      } else {
-        toast({ title: "EagleView", description: `Status: ${report.status} — data may still be processing` });
+      const roofArea = parseMeasurementNumber(report.area);
+      const pitch = normalizePitch(report);
+      if (roofArea === null || roofArea <= 0 || !pitch) {
+        throw new Error("EagleView lookup failed: Missing roof data");
       }
+
+      const previewSource = splitPreviewSource(report.imageDataUrl || report.imageUrl || "");
+      setData((prev) => ({
+        ...prev,
+        address: details?.formattedAddress || desc,
+        placeId,
+        latitude: details?.lat || 0,
+        longitude: details?.lng || 0,
+        roofAreaSqft: roofArea,
+        pitch,
+        roofType: report.roofType || prev.roofType,
+        satelliteImageUrl: previewSource.imageUrl,
+        eagleViewReportUrl: "",
+        measurementSource: "eagleview",
+        aiModel: "eagleview",
+      }));
+      setEagleViewError("");
+
+      toast({
+        title: "📡 EagleView Data Loaded",
+        description: `Area: ${report.area} | Pitch: ${pitch}${previewSource.imageUrl ? " | Image: Loaded" : ""}`,
+      });
     } catch (err: any) {
+      resetEagleViewMeasurement({
+        address: details.formattedAddress || desc,
+        placeId,
+        latitude: details.lat,
+        longitude: details.lng,
+      });
+      const message = err?.message || "Unable to fetch roof data from EagleView.";
+      setEagleViewError(message);
       toast({
         title: "EagleView Error",
-        description: err?.response?.data?.message || err?.message || "Could not fetch measurement data",
+        description: message,
         variant: "destructive",
       });
     } finally {
       setEagleViewLoading(false);
       setEagleViewStatus("");
     }
-  }, [up, toast]);
+  }, [resetEagleViewMeasurement, toast]);
 
   // runAiDetection removed — using EagleView only
 
   /* ── Save Draft / Create ──────────────────────── */
 
-  const buildPayload = useCallback((): SaveEstimatePayload => ({
-    address: data.address, latitude: data.latitude, longitude: data.longitude,
-    satelliteImageUrl: data.satelliteImageUrl, roofAreaSqft: data.roofAreaSqft || 1,
-    confidence: data.confidence, processingTimeSec: data.processingTimeSec,
-    aiModel: data.aiModel, pricePerSqft: data.roofAreaSqft > 0 ? finalPrice / data.roofAreaSqft : 0,
-    manualAdjustment: 0, totalEstimate: finalPrice,
-    snowMode: false, notes: data.notes || undefined,
-    clientId: data.clientId || undefined,
-    pitch: data.pitch, roofType: data.roofType, stories: data.stories, layers: data.layers,
-    measurementSource: data.measurementSource || undefined, tearOffRequired: data.tearOffRequired,
-    wastePercent: data.wastePercent,
-    shingleType: data.shingleType, shinglePricePerSq: data.shinglePricePerSq,
-    underlaymentCost: data.underlaymentCost, iceWaterShieldCost: data.iceWaterShieldCost,
-    ridgeCapCost: data.ridgeCapCost, starterStripCost: data.starterStripCost,
-    flashingCostWizard: data.flashingCostWizard, ventCostWizard: data.ventCostWizard,
-    nailsAccessoriesCost: data.nailsAccessoriesCost, totalMaterialCost,
-    laborCostPerSquare: data.laborCostPerSquare, numberOfLaborers: data.numberOfLaborers,
-    daysRequired: data.daysRequired, laborRatePerWorker: data.laborRatePerWorker, totalLaborCost,
-    dumpsterCost: data.dumpsterCost, permitCost: data.permitCost, deliveryFee: data.deliveryFee,
-    equipmentRentalCost: data.equipmentRentalCost, disposalFee: data.disposalFee, totalEquipmentCost,
-    overheadPercent: data.overheadPercent, profitMarginPercent: data.profitMarginPercent,
-    taxPercent: data.taxPercent, overheadAmount, profitAmount, taxAmount,
-    finalEstimatePrice: finalPrice, currentStep: 7, status: "draft",
-  }), [data, finalPrice, totalMaterialCost, totalLaborCost, totalEquipmentCost, overheadAmount, profitAmount, taxAmount]);
+  const buildPayload = useCallback((): SaveEstimatePayload => {
+    if (!hasValidEagleViewMeasurement) {
+      throw new Error("Valid EagleView roof area and pitch are required before saving this estimate.");
+    }
+
+    return {
+      address: data.address, latitude: data.latitude, longitude: data.longitude,
+      satelliteImageUrl: data.satelliteImageUrl, roofAreaSqft: data.roofAreaSqft,
+      confidence: data.confidence, processingTimeSec: data.processingTimeSec,
+      aiModel: data.aiModel, pricePerSqft: data.roofAreaSqft > 0 ? finalPrice / data.roofAreaSqft : 0,
+      manualAdjustment: 0, totalEstimate: finalPrice,
+      snowMode: false, notes: data.notes || undefined,
+      clientId: data.clientId || undefined,
+      pitch: data.pitch, roofType: data.roofType, stories: data.stories, layers: data.layers,
+      measurementSource: data.measurementSource || undefined, tearOffRequired: data.tearOffRequired,
+      wastePercent: data.wastePercent,
+      shingleType: data.shingleType, shinglePricePerSq: data.shinglePricePerSq,
+      underlaymentCost: data.underlaymentCost, iceWaterShieldCost: data.iceWaterShieldCost,
+      ridgeCapCost: data.ridgeCapCost, starterStripCost: data.starterStripCost,
+      flashingCostWizard: data.flashingCostWizard, ventCostWizard: data.ventCostWizard,
+      nailsAccessoriesCost: data.nailsAccessoriesCost, totalMaterialCost,
+      laborCostPerSquare: data.laborCostPerSquare, numberOfLaborers: data.numberOfLaborers,
+      daysRequired: data.daysRequired, laborRatePerWorker: data.laborRatePerWorker, totalLaborCost,
+      dumpsterCost: data.dumpsterCost, permitCost: data.permitCost, deliveryFee: data.deliveryFee,
+      equipmentRentalCost: data.equipmentRentalCost, disposalFee: data.disposalFee, totalEquipmentCost,
+      overheadPercent: data.overheadPercent, profitMarginPercent: data.profitMarginPercent,
+      taxPercent: data.taxPercent, overheadAmount, profitAmount, taxAmount,
+      finalEstimatePrice: finalPrice, currentStep: 7, status: "draft",
+    };
+  }, [data, finalPrice, hasValidEagleViewMeasurement, totalMaterialCost, totalLaborCost, totalEquipmentCost, overheadAmount, profitAmount, taxAmount]);
 
   const handleSaveDraft = useCallback(async () => {
     setSaving(true);
@@ -539,6 +596,15 @@ export default function RoofEstimatorWizard() {
   }, [buildPayload, estimateId, toast]);
 
   const handleComplete = useCallback(async () => {
+    if (!hasValidEagleViewMeasurement) {
+      toast({
+        title: "EagleView Data Required",
+        description: eagleViewError || "Load valid EagleView roof measurements before generating the estimate.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSaving(true);
     try {
       // Check wallet balance first
@@ -685,7 +751,7 @@ export default function RoofEstimatorWizard() {
     } catch (e: any) {
       toast({ title: "Error", description: e?.message || "Could not complete estimate", variant: "destructive" });
     } finally { setSaving(false); }
-  }, [buildPayload, estimateId, data, toast, navigate, totalMaterialCost, totalLaborCost, totalEquipmentCost, overheadAmount, profitAmount, taxAmount, finalPrice]);
+  }, [buildPayload, eagleViewError, estimateId, data, toast, navigate, totalMaterialCost, totalLaborCost, totalEquipmentCost, overheadAmount, profitAmount, taxAmount, finalPrice, hasValidEagleViewMeasurement]);
 
   const previewImageUrl = !isLikelyPdfUrl(data.satelliteImageUrl) ? data.satelliteImageUrl : "";
   const sectionStyle: React.CSSProperties = {
@@ -834,6 +900,7 @@ export default function RoofEstimatorWizard() {
                         satelliteLoading={satelliteLoading}
                         eagleViewLoading={eagleViewLoading}
                         eagleViewStatus={eagleViewStatus}
+                        eagleViewError={eagleViewError}
                         hideHeader
                       />
                     )}
@@ -893,6 +960,11 @@ export default function RoofEstimatorWizard() {
             marginTop: 28, paddingTop: 20, borderTop: "1px solid #E2E8F0",
             gap: 10,
           }}>
+            {!hasValidEagleViewMeasurement && (
+              <div style={{ marginRight: "auto", fontSize: 12, color: eagleViewError ? "#DC2626" : "#64748B" }}>
+                {eagleViewError || "Load valid EagleView roof area and pitch before generating the estimate."}
+              </div>
+            )}
             <button onClick={handleSaveDraft} disabled={saving} style={{
               padding: "10px 20px", borderRadius: 8, border: "1px solid #CBD5E1",
               background: "#fff", color: "#475569", fontSize: 13, fontWeight: 600,
@@ -901,12 +973,12 @@ export default function RoofEstimatorWizard() {
               {saving ? "Saving…" : "Save Draft"}
             </button>
 
-            <button onClick={handleComplete} disabled={saving} style={{
+            <button onClick={handleComplete} disabled={!canGenerateEstimate} style={{
               padding: "10px 22px", borderRadius: 8, border: "none",
               background: "linear-gradient(135deg,#10B981,#059669)", color: "#fff",
-              fontSize: 13, fontWeight: 700, cursor: "pointer",
+              fontSize: 13, fontWeight: 700, cursor: canGenerateEstimate ? "pointer" : "not-allowed",
               display: "flex", alignItems: "center", gap: 6,
-              boxShadow: "0 2px 8px rgba(16,185,129,.25)", opacity: saving ? 0.7 : 1,
+              boxShadow: "0 2px 8px rgba(16,185,129,.25)", opacity: canGenerateEstimate ? 1 : 0.55,
             }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
               Generate AI Estimate
@@ -1171,7 +1243,7 @@ function Step1ClientInfo({ data, up, clients, leads, clientSearchQ, setClientSea
 
 /* ─── Step 2: Address & Roof Measurement ─────────────────── */
 
-function Step2Address({ data, up, suggestions, addressLoading, onAddressInput, onSelectAddress, satelliteLoading, eagleViewLoading, eagleViewStatus, hideHeader = false }: {
+function Step2Address({ data, up, suggestions, addressLoading, onAddressInput, onSelectAddress, satelliteLoading, eagleViewLoading, eagleViewStatus, eagleViewError, hideHeader = false }: {
   data: WizardData;
   up: <K extends keyof WizardData>(key: K, val: WizardData[K]) => void;
   suggestions: { description: string; placeId: string }[];
@@ -1181,6 +1253,7 @@ function Step2Address({ data, up, suggestions, addressLoading, onAddressInput, o
   satelliteLoading: boolean;
   eagleViewLoading: boolean;
   eagleViewStatus: string;
+  eagleViewError: string;
   hideHeader?: boolean;
 }) {
   return (
@@ -1238,6 +1311,21 @@ function Step2Address({ data, up, suggestions, addressLoading, onAddressInput, o
         </div>
       )}
 
+      {eagleViewError && (
+        <div style={{
+          padding: "12px 16px",
+          background: "rgba(220,38,38,.06)",
+          borderRadius: 10,
+          marginBottom: 16,
+          border: "1px solid rgba(220,38,38,.18)",
+          fontSize: 13,
+          color: "#B91C1C",
+          fontWeight: 500,
+        }}>
+          {eagleViewError}
+        </div>
+      )}
+
       {/* Measurement source badge */}
       {data.measurementSource && (
         <div style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 6 }}>
@@ -1258,6 +1346,7 @@ function Step2Address({ data, up, suggestions, addressLoading, onAddressInput, o
         </Field>
         <Field label="Pitch">
           <select value={data.pitch} onChange={(e) => up("pitch", e.target.value)} style={inputStyle}>
+            <option value="">Select pitch</option>
             {["3/12","4/12","5/12","6/12","7/12","8/12","9/12","10/12","11/12","12/12"].map((p) => (
               <option key={p} value={p}>{p}</option>
             ))}

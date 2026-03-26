@@ -72,6 +72,8 @@ const envSchema = z.object({
   ATTOM_API_KEY: z.string().optional(),
 
   // EagleView integration
+  EAGLEVIEW_ENV: z.enum(['sandbox', 'production']).default('sandbox'),
+  EAGLEVIEW_API_KEY: z.string().optional(),
   EAGLEVIEW_CLIENT_ID: z.string().optional(),
   EAGLEVIEW_CLIENT_SECRET: z.string().optional(),
   EAGLEVIEW_BASE_URL: z.string().default('https://sandbox.apis.eagleview.com'),
@@ -169,6 +171,8 @@ export const config = {
     nearmapApiKey: parsed.data.NEARMAP_API_KEY,
     attomApiKey: parsed.data.ATTOM_API_KEY,
     eagleview: {
+      environment: parsed.data.EAGLEVIEW_ENV,
+      apiKey: parsed.data.EAGLEVIEW_API_KEY,
       clientId: parsed.data.EAGLEVIEW_CLIENT_ID,
       clientSecret: parsed.data.EAGLEVIEW_CLIENT_SECRET,
       baseUrl: parsed.data.EAGLEVIEW_BASE_URL,

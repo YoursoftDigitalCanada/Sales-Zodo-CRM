@@ -3,19 +3,26 @@
  *
  * Endpoints:
  *   POST   /eagleview/orders                - Place measurement order
- *   POST   /eagleview/orders/instant         - Place order + wait for report
+ *   POST   /eagleview/orders/instant         - Sandbox property lookup or production order flow
  *   GET    /eagleview/orders/:orderId       - Get report data
  *   GET    /eagleview/health                - Health check
  */
 
 import { Request, Response, NextFunction } from 'express';
+import { ServiceUnavailableError } from '../../common/errors/HttpErrors';
 import { logger } from '../../common/utils/logger';
 import { sendSuccess } from '../../common/utils/responseFormatter';
 import { config } from '../../config';
 import { eagleViewAuthService } from './eagleview-auth.service';
 import { eagleViewMeasurementService, type OrderAddress } from './eagleview-measurement.service';
 
+const SANDBOX_LOOKUP_FAILURE_MESSAGE =
+    'Unable to fetch roof data from EagleView sandbox. Ensure the address is within the supported Omaha area.';
+
 class EagleViewController {
+    private isSandboxMode(): boolean {
+        return config.integrations.eagleview.environment === 'sandbox';
+    }
 
     /**
      * POST /eagleview/orders
@@ -30,6 +37,14 @@ class EagleViewController {
             }
 
             const orderAddress = this.normalizeAddress(address);
+
+            if (this.isSandboxMode()) {
+                res.status(503).json({
+                    success: false,
+                    message: 'EagleView sandbox only supports property data requests. Order creation is unavailable in sandbox.',
+                });
+                return;
+            }
 
             const result = await eagleViewMeasurementService.placeOrder(orderAddress, referenceId);
             sendSuccess(res, result, 'EagleView order placed');
@@ -65,15 +80,34 @@ class EagleViewController {
 
             logger.info('[EagleView] Instant order request', { address: orderAddress });
 
-            const report = await eagleViewMeasurementService.placeOrderAndWait(orderAddress);
-            const aerialImage = await eagleViewMeasurementService.getPrimaryAerialImageDataUrl(report.reportId, report);
-            const { reportDownloadLink: _reportDownloadLink, ...reportData } = report;
+            try {
+                const report = await eagleViewMeasurementService.getInstantMeasurement(orderAddress);
+                const aerialImage = !this.isSandboxMode() && report.reportId
+                    ? await eagleViewMeasurementService.getPrimaryAerialImageDataUrl(report.reportId, report)
+                    : null;
+                const { reportDownloadLink: _reportDownloadLink, ...reportData } = report;
 
-            sendSuccess(res, {
-                ...reportData,
-                imageDataUrl: aerialImage?.dataUrl,
-                imageFileTypeId: aerialImage?.fileTypeId,
-            }, 'EagleView report retrieved');
+                sendSuccess(res, {
+                    ...reportData,
+                    ...(aerialImage
+                        ? {
+                            imageDataUrl: aerialImage.dataUrl,
+                            imageFileTypeId: aerialImage.fileTypeId,
+                        }
+                        : {}),
+                }, this.isSandboxMode() ? 'EagleView lookup retrieved' : 'EagleView report retrieved');
+            } catch (error) {
+                if (this.isSandboxMode()) {
+                    logger.error('[EagleView] Sandbox lookup request failed', {
+                        message: error instanceof Error ? error.message : String(error),
+                        address: orderAddress,
+                    });
+                    next(new ServiceUnavailableError(SANDBOX_LOOKUP_FAILURE_MESSAGE));
+                    return;
+                }
+
+                next(error);
+            }
         } catch (error) {
             next(error);
         }
@@ -119,11 +153,9 @@ class EagleViewController {
             data: {
                 configured,
                 authenticated: tokenOk,
-                apiType: 'Measurement Order API',
+                apiType: this.isSandboxMode() ? 'Property Data API' : 'Measurement Order API',
                 baseUrl: config.integrations.eagleview.baseUrl,
-                environment: (config.integrations.eagleview.baseUrl || '').includes('sandbox')
-                    ? 'sandbox'
-                    : 'production',
+                environment: config.integrations.eagleview.environment,
             },
         });
     }

@@ -34,6 +34,14 @@ const PREFERRED_DELIVERY_MATCHERS = [/quick/i, /regular/i, /express/i, /3\s*hour
 
 type PathSegment = string | number;
 type UnknownRecord = Record<string, unknown>;
+type CardinalDirection = 'north' | 'east' | 'south' | 'west';
+
+const SANDBOX_OBLIQUE_DIRECTIONS: Array<{ direction: CardinalDirection; label: string }> = [
+    { direction: 'north', label: 'North View' },
+    { direction: 'east', label: 'East View' },
+    { direction: 'south', label: 'South View' },
+    { direction: 'west', label: 'West View' },
+];
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -50,6 +58,11 @@ export interface OrderAddress {
 export interface PlaceOrderResponse {
     orderId: number;
     reportIds: number[];
+}
+
+export interface ReportImage {
+    label: string;
+    url: string;
 }
 
 export interface ReportData {
@@ -75,6 +88,7 @@ export interface ReportData {
     imageUrl?: string;
     imageDataUrl?: string;
     roofType?: string;
+    obliqueImages?: ReportImage[];
     pitchTable?: Array<{ Pitch: string; RoofArea: string; PercentageRoofArea: string }>;
     measurementByStructure?: any[];
     deliveryFilesAvailable?: Array<{ deliveryFileTypeId: number; effectiveDate?: string }>;
@@ -105,6 +119,14 @@ interface SelectedOrderProduct {
     deliveryProductId: number;
     deliveryProductName: string;
     measurementInstructionType: number;
+}
+
+interface SandboxImageCandidate {
+    token: string;
+    view: string;
+    masked: boolean;
+    shotDate: number;
+    direction: CardinalDirection | undefined;
 }
 
 // ── Service ──────────────────────────────────────────────────────────────
@@ -355,6 +377,53 @@ class EagleViewMeasurementService {
         return Number.isFinite(parsed) ? parsed : 0;
     }
 
+    private collectSandboxImageCandidates(payload: unknown, structure: UnknownRecord): SandboxImageCandidate[] {
+        const imagery = this.toRecord(this.getValueAtPath(payload, ['imagery']));
+        if (!imagery) {
+            throw new Error('EagleView lookup failed: Missing aerial image');
+        }
+
+        const candidateReferenceSets = [
+            this.getValueAtPath(structure, ['structure_images', 'image_references']),
+            this.getValueAtPath(payload, ['property_images', 'image_references']),
+        ];
+
+        const seenTokens = new Set<string>();
+
+        const candidates = candidateReferenceSets
+            .flatMap((referenceSet) => Array.isArray(referenceSet) ? referenceSet : [])
+            .map((reference) => typeof reference === 'string' ? reference : '')
+            .filter(Boolean)
+            .map((reference) => {
+                const image = this.toRecord(imagery[reference]);
+                const metadata = this.toRecord(image?.metadata);
+                const token = typeof image?.image_token === 'string' ? image.image_token.trim() : '';
+                if (!token || !metadata || seenTokens.has(token)) {
+                    return null;
+                }
+
+                seenTokens.add(token);
+
+                const view = typeof metadata.view === 'string' ? metadata.view.toLowerCase() : '';
+                const directionValue = typeof metadata.cardinal_direction === 'string'
+                    ? metadata.cardinal_direction.toLowerCase()
+                    : '';
+                const direction = SANDBOX_OBLIQUE_DIRECTIONS.some((entry) => entry.direction === directionValue)
+                    ? directionValue as CardinalDirection
+                    : undefined;
+
+                return {
+                    token,
+                    view,
+                    masked: metadata.masked === true,
+                    shotDate: this.parseSandboxShotDate(metadata.shot_date),
+                    direction,
+                } satisfies SandboxImageCandidate;
+            });
+
+        return candidates.filter((image): image is SandboxImageCandidate => image !== null);
+    }
+
     private pickSandboxPrimaryStructure(payload: unknown): UnknownRecord {
         const structuresValue = this.getValueAtPath(payload, ['structures']);
         if (!Array.isArray(structuresValue) || structuresValue.length === 0) {
@@ -382,58 +451,43 @@ class EagleViewMeasurementService {
         return selectedStructure;
     }
 
-    private pickSandboxImageToken(payload: unknown, structure: UnknownRecord): string {
-        const imagery = this.toRecord(this.getValueAtPath(payload, ['imagery']));
-        if (!imagery) {
+    private pickSandboxImages(payload: unknown, structure: UnknownRecord): {
+        orthoToken: string;
+        obliqueTokens: Array<{ label: string; token: string }>;
+    } {
+        const candidates = this.collectSandboxImageCandidates(payload, structure);
+        if (!candidates.length) {
             throw new Error('EagleView lookup failed: Missing aerial image');
         }
 
-        const candidateReferenceSets = [
-            this.getValueAtPath(structure, ['structure_images', 'image_references']),
-            this.getValueAtPath(payload, ['property_images', 'image_references']),
-        ];
+        const orthoToken = [...candidates]
+            .filter((candidate) => candidate.view === 'ortho')
+            .sort((left, right) => (
+                Number(right.masked === false) - Number(left.masked === false)
+                || right.shotDate - left.shotDate
+            ))[0]?.token;
 
-        const rankedImages = candidateReferenceSets
-            .flatMap((referenceSet) => Array.isArray(referenceSet) ? referenceSet : [])
-            .map((reference) => typeof reference === 'string' ? reference : '')
-            .filter(Boolean)
-            .map((reference) => {
-                const image = this.toRecord(imagery[reference]);
-                const metadata = this.toRecord(image?.metadata);
-                const token = typeof image?.image_token === 'string' ? image.image_token.trim() : '';
-                if (!token || !metadata) {
-                    return null;
-                }
+        if (!orthoToken) {
+            throw new Error('EagleView lookup failed: Missing aerial image');
+        }
 
-                const view = typeof metadata.view === 'string' ? metadata.view.toLowerCase() : '';
-                const masked = metadata.masked === true;
-                const score = [
-                    view === 'ortho' ? 100 : 0,
-                    !masked ? 20 : 0,
-                    this.parseSandboxShotDate(metadata.shot_date),
-                ];
+        const obliqueTokens = SANDBOX_OBLIQUE_DIRECTIONS
+            .map(({ direction, label }) => {
+                const candidate = [...candidates]
+                    .filter((image) => image.view === 'oblique' && image.direction === direction)
+                    .sort((left, right) => (
+                        Number(right.masked === false) - Number(left.masked === false)
+                        || right.shotDate - left.shotDate
+                    ))[0];
 
-                return {
-                    token,
-                    score,
-                };
+                return candidate ? { label, token: candidate.token } : null;
             })
-            .filter((image): image is { token: string; score: number[] } => Boolean(image))
-            .sort((left, right) => {
-                for (let index = 0; index < left.score.length; index += 1) {
-                    if (left.score[index] !== right.score[index]) {
-                        return right.score[index] - left.score[index];
-                    }
-                }
+            .filter((image): image is { label: string; token: string } => Boolean(image));
 
-                return 0;
-            });
-
-        if (!rankedImages.length) {
-            throw new Error('EagleView lookup failed: Missing aerial image');
-        }
-
-        return rankedImages[0].token;
+        return {
+            orthoToken,
+            obliqueTokens,
+        };
     }
 
     private async fetchSandboxImageDataUrl(imageToken: string): Promise<string> {
@@ -451,7 +505,16 @@ class EagleViewMeasurementService {
         return `data:${contentType};base64,${Buffer.from(response.data).toString('base64')}`;
     }
 
-    private mapSandboxResultPayload(payload: unknown, imageDataUrl: string): ReportData {
+    private async fetchSandboxLabeledImages(images: Array<{ label: string; token: string }>): Promise<ReportImage[]> {
+        const resolvedImages = await Promise.all(images.map(async (image) => ({
+            label: image.label,
+            url: await this.fetchSandboxImageDataUrl(image.token),
+        })));
+
+        return resolvedImages.filter((image) => Boolean(image.url));
+    }
+
+    private mapSandboxResultPayload(payload: unknown, imageDataUrl: string, obliqueImages: ReportImage[] = []): ReportData {
         const responseAddress = this.toRecord(this.getValueAtPath(payload, ['response_address']));
         const responseCoordinates = this.toRecord(this.getValueAtPath(payload, ['response_coordinates']));
         const request = this.toRecord(this.getValueAtPath(payload, ['request']));
@@ -478,6 +541,7 @@ class EagleViewMeasurementService {
             roofType,
             imageDataUrl,
             imageUrl: imageDataUrl,
+            obliqueImages,
             totalRoofFacets: roofFacetCount !== undefined ? String(roofFacetCount) : undefined,
             measurementByStructure: Array.isArray(this.getValueAtPath(payload, ['structures']))
                 ? this.getValueAtPath(payload, ['structures']) as any[]
@@ -546,15 +610,19 @@ class EagleViewMeasurementService {
 
                 if (/complete/i.test(latestStatus)) {
                     const structure = this.pickSandboxPrimaryStructure(latestPayload);
-                    const imageToken = this.pickSandboxImageToken(latestPayload, structure);
-                    const imageDataUrl = await this.fetchSandboxImageDataUrl(imageToken);
-                    const report = this.mapSandboxResultPayload(latestPayload, imageDataUrl);
+                    const { orthoToken, obliqueTokens } = this.pickSandboxImages(latestPayload, structure);
+                    const [imageDataUrl, obliqueImages] = await Promise.all([
+                        this.fetchSandboxImageDataUrl(orthoToken),
+                        this.fetchSandboxLabeledImages(obliqueTokens),
+                    ]);
+                    const report = this.mapSandboxResultPayload(latestPayload, imageDataUrl, obliqueImages);
 
                     logger.info('[EagleView] Sandbox property result completed', {
                         jobId,
                         area: report.area,
                         pitch: report.pitch,
                         roofType: report.roofType,
+                        obliqueImages: report.obliqueImages?.length || 0,
                     });
 
                     return report;

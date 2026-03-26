@@ -35,7 +35,7 @@ export interface RoofEstimate {
     measurementSource: string | null;
     tearOffRequired: boolean;
     damageReport: any;
-    photoUrls: string[] | null;
+    photoUrls: Array<string | EstimatePhoto> | null;
     publicToken: string | null;
     takeoffs?: RoofTakeoff[];
     // Segmentation fields
@@ -175,7 +175,7 @@ export interface SaveEstimatePayload {
     rakeLengthFt?: number;
     measurementSource?: string;
     tearOffRequired?: boolean;
-    photoUrls?: string[];
+    photoUrls?: Array<string | EstimatePhoto>;
     // Wizard workflow fields
     status?: string;
     currentStep?: number;
@@ -453,11 +453,17 @@ export interface EagleViewReport {
     imageUrl?: string;
     imageDataUrl?: string;
     roofType?: string;
+    obliqueImages?: EstimatePhoto[];
     imageFileTypeId?: number;
     imageType?: string;
     imageCaptureDate?: string;
     imageResolution?: string;
     pitchTable?: Array<{ Pitch: string; RoofArea: string; PercentageRoofArea: string }>;
+}
+
+export interface EstimatePhoto {
+    label: string;
+    url: string;
 }
 
 export interface EagleViewAddressInput {

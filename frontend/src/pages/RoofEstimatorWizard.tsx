@@ -11,6 +11,7 @@ import {
   requestEagleViewInstant,
   type SaveEstimatePayload,
   type EagleViewReport,
+  type EstimatePhoto,
 } from "@/features/roof-estimator/services/roof-estimator-service";
 import { useToast } from "@/hooks/use-toast";
 import { generateEstimatePDF, downloadPDFBlob } from "@/features/roof-estimator/utils/generate-estimate-pdf";
@@ -81,6 +82,8 @@ const normalizePitch = (report: Pick<EagleViewReport, "pitch" | "pitchTable">): 
 const isLikelyPdfUrl = (url?: string | null): boolean =>
   Boolean(url && /(?:\.pdf(?:$|[?#]))|getreportfile|reportdownload/i.test(url));
 
+const DEFAULT_OBLIQUE_VIEW_LABELS = ["North View", "East View", "South View", "West View"] as const;
+
 const splitPreviewSource = (url?: string | null) => {
   if (!url || isLikelyPdfUrl(url)) return { imageUrl: "", reportUrl: "" };
   return { imageUrl: url, reportUrl: "" };
@@ -88,6 +91,31 @@ const splitPreviewSource = (url?: string | null) => {
 
 const isValidEmail = (value: string): boolean =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+
+const normalizeEstimatePhotos = (
+  photos?: Array<string | EstimatePhoto> | null,
+): EstimatePhoto[] => (Array.isArray(photos) ? photos : [])
+  .map((photo, index) => {
+    if (typeof photo === "string") {
+      const url = photo.trim();
+      if (!url) return null;
+      return {
+        label: DEFAULT_OBLIQUE_VIEW_LABELS[index] || `View ${index + 1}`,
+        url,
+      } satisfies EstimatePhoto;
+    }
+
+    if (!photo || typeof photo !== "object") return null;
+    const label = String(photo.label || "").trim();
+    const url = String(photo.url || "").trim();
+    if (!url) return null;
+
+    return {
+      label: label || DEFAULT_OBLIQUE_VIEW_LABELS[index] || `View ${index + 1}`,
+      url,
+    } satisfies EstimatePhoto;
+  })
+  .filter((photo): photo is EstimatePhoto => Boolean(photo));
 
 /* ─── WizardData type ────────────────────────────────────── */
 
@@ -106,6 +134,7 @@ interface WizardData {
   longitude: number;
   satelliteImageUrl: string;
   eagleViewReportUrl: string;
+  photoUrls: EstimatePhoto[];
   roofAreaSqft: number;
   confidence: number;
   processingTimeSec: number;
@@ -169,7 +198,7 @@ type SectionId =
 const DEFAULT_DATA: WizardData = {
   clientName: "", clientEmail: "", clientPhone: "", clientCompany: "",
   sourceType: "manual", leadId: "",
-  address: "", placeId: "", latitude: 0, longitude: 0, satelliteImageUrl: "", eagleViewReportUrl: "",
+  address: "", placeId: "", latitude: 0, longitude: 0, satelliteImageUrl: "", eagleViewReportUrl: "", photoUrls: [],
   roofAreaSqft: 0, confidence: 0, processingTimeSec: 0, aiModel: "",
   pitch: "", roofType: "gable", stories: 1, layers: 1, wastePercent: 10,
   measurementSource: "", tearOffRequired: false,
@@ -316,6 +345,7 @@ export default function RoofEstimatorWizard() {
       ...prev,
       satelliteImageUrl: "",
       eagleViewReportUrl: "",
+      photoUrls: [],
       roofAreaSqft: 0,
       confidence: 0,
       processingTimeSec: 0,
@@ -356,6 +386,7 @@ export default function RoofEstimatorWizard() {
             leadId: "", address: est.address || "", placeId: "", latitude: est.latitude || 0,
             longitude: est.longitude || 0, satelliteImageUrl: previewSource.imageUrl,
             eagleViewReportUrl: previewSource.reportUrl,
+            photoUrls: normalizeEstimatePhotos(est.photoUrls),
             roofAreaSqft: est.roofAreaSqft || 0, confidence: est.confidence || 0,
             processingTimeSec: est.processingTimeSec || 0, aiModel: est.aiModel || "",
             pitch: est.pitch || "", roofType: est.roofType || "gable",
@@ -636,6 +667,7 @@ export default function RoofEstimatorWizard() {
         roofType: report.roofType || prev.roofType,
         satelliteImageUrl: previewSource.imageUrl,
         eagleViewReportUrl: "",
+        photoUrls: normalizeEstimatePhotos(report.obliqueImages),
         measurementSource: "eagleview",
         aiModel: "eagleview",
       }));
@@ -684,6 +716,7 @@ export default function RoofEstimatorWizard() {
       clientId: data.clientId || undefined,
       pitch: data.pitch, roofType: data.roofType, stories: data.stories, layers: data.layers,
       measurementSource: data.measurementSource || undefined, tearOffRequired: data.tearOffRequired,
+      photoUrls: data.photoUrls.length > 0 ? data.photoUrls : undefined,
       wastePercent: data.wastePercent,
       shingleType: data.shingleType, shinglePricePerSq: data.shinglePricePerSq,
       underlaymentCost: data.underlaymentCost, iceWaterShieldCost: data.iceWaterShieldCost,
@@ -758,6 +791,7 @@ export default function RoofEstimatorWizard() {
         tearOffRequired: data.tearOffRequired,
         confidence: data.confidence,
         satelliteImageUrl: data.satelliteImageUrl,
+        photoUrls: data.photoUrls,
         // Materials (qty × unit price)
         shingleType: data.shingleType,
         shingleQty: data.shingleQty,
@@ -859,6 +893,7 @@ export default function RoofEstimatorWizard() {
   }, [buildPayload, eagleViewError, estimateId, data, toast, navigate, totalMaterialCost, totalLaborCost, totalEquipmentCost, overheadAmount, profitAmount, taxAmount, finalPrice, hasValidEagleViewMeasurement]);
 
   const previewImageUrl = !isLikelyPdfUrl(data.satelliteImageUrl) ? data.satelliteImageUrl : "";
+  const obliquePreviewImages = normalizeEstimatePhotos(data.photoUrls);
   const activeSectionConfig = ESTIMATE_SECTIONS.find((section) => section.id === activeSection) || ESTIMATE_SECTIONS[0];
   const activeSectionIndex = ESTIMATE_SECTIONS.findIndex((section) => section.id === activeSection);
   const sectionSummaries: Record<SectionId, string> = {
@@ -1292,15 +1327,40 @@ export default function RoofEstimatorWizard() {
             </span>
           </div>
           <div style={{
-            height: 240, background: "#F1F5F9", display: "flex", alignItems: "center",
-            justifyContent: "center", overflow: "hidden",
+            padding: 14, background: "#F8FAFC", display: "grid", gap: 12,
+            borderBottom: "1px solid #E2E8F0",
           }}>
-          {previewImageUrl ? (
-              <img src={previewImageUrl} alt="Satellite" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            {previewImageUrl || obliquePreviewImages.length > 0 ? (
+              <>
+                {previewImageUrl && (
+                  <PreviewImageCard
+                    label="Ortho View"
+                    imageUrl={previewImageUrl}
+                    minHeight={210}
+                  />
+                )}
+                {obliquePreviewImages.length > 0 && (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    {obliquePreviewImages.map((photo) => (
+                      <PreviewImageCard
+                        key={`${photo.label}-${photo.url.slice(0, 24)}`}
+                        label={photo.label}
+                        imageUrl={photo.url}
+                        minHeight={108}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
             ) : (
-              <div style={{ textAlign: "center", color: "#94A3B8" }}>
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                <div style={{ fontSize: 12, marginTop: 6 }}>Enter address to load EagleView aerial image</div>
+              <div style={{
+                minHeight: 240, display: "flex", alignItems: "center", justifyContent: "center",
+                textAlign: "center", color: "#94A3B8", borderRadius: 16, background: "#F1F5F9", border: "1px dashed #CBD5E1",
+              }}>
+                <div>
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                  <div style={{ fontSize: 12, marginTop: 6 }}>Enter address to load EagleView ortho and directional views</div>
+                </div>
               </div>
             )}
           </div>
@@ -1383,6 +1443,50 @@ export default function RoofEstimatorWizard() {
 }
 
 /* ─── Mini Stat (sidebar) ────────────────────────────────── */
+
+function PreviewImageCard({ label, imageUrl, minHeight }: { label: string; imageUrl: string; minHeight: number }) {
+  return (
+    <div style={{
+      borderRadius: 16,
+      background: "#FFFFFF",
+      border: "1px solid #E2E8F0",
+      overflow: "hidden",
+      boxShadow: "0 6px 18px rgba(15,23,42,.06)",
+    }}>
+      <div style={{
+        padding: "10px 12px",
+        borderBottom: "1px solid #E2E8F0",
+        fontSize: 11,
+        fontWeight: 800,
+        letterSpacing: ".04em",
+        textTransform: "uppercase",
+        color: "#475569",
+      }}>
+        {label}
+      </div>
+      <div style={{
+        minHeight,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "#F8FAFC",
+        padding: 10,
+      }}>
+        <img
+          src={imageUrl}
+          alt={label}
+          style={{
+            display: "block",
+            width: "100%",
+            height: "100%",
+            maxHeight: minHeight - 20,
+            objectFit: "contain",
+          }}
+        />
+      </div>
+    </div>
+  );
+}
 
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (

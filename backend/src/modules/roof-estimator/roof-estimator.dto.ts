@@ -13,6 +13,11 @@ export interface DetectRoofDto {
     longitude: number;
 }
 
+export interface EstimatePhotoDto {
+    label: string;
+    url: string;
+}
+
 // ── Manual Entry ──────────────────────────────────────────────────────────
 
 export interface ManualEntryDto {
@@ -62,7 +67,7 @@ export interface CreateEstimateDto {
     rakeLengthFt?: number;
     measurementSource?: string;
     tearOffRequired?: boolean;
-    photoUrls?: string[];
+    photoUrls?: Array<string | EstimatePhotoDto>;
     // Stage 3: Estimator Request Fields
     desiredNewMaterial?: string;
     preferredManufacturer?: string;
@@ -161,6 +166,7 @@ export interface UpdateEstimateDto {
     processingTimeSec?: number;
     aiModel?: string;
     measurementSource?: string;
+    photoUrls?: Array<string | EstimatePhotoDto>;
 }
 
 export interface EstimateQueryDto {

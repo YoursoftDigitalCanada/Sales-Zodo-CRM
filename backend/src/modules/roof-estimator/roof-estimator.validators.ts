@@ -4,6 +4,10 @@ import { z } from 'zod';
 const pitchSchema = z.string().regex(/^\d{1,2}(\.\d+)?\/12$/, 'Pitch must be in X/12 format').optional();
 const roofTypeSchema = z.enum(['gable', 'hip', 'flat', 'mansard', 'gambrel', 'shed']).optional();
 const materialTypeSchema = z.enum(['asphalt', 'metal', 'tile', 'tpo', 'cedar']);
+const estimatePhotoSchema = z.object({
+    label: z.string().min(1).max(100),
+    url: z.string().min(1),
+});
 const materialCategorySchema = z.enum([
     'shingles', 'underlayment', 'starter', 'cap', 'drip_edge',
     'flashing', 'ice_shield', 'vent', 'nails', 'boot', 'snow_guard',
@@ -89,7 +93,7 @@ export const createEstimateSchema = z.object({
         rakeLengthFt: z.number().min(0).optional(),
         measurementSource: z.union([z.enum(['ai_satellite', 'ai_photo', 'eagleview', 'manual', 'ai_segmented']), z.literal('')]).optional().transform(v => v === '' ? undefined : v),
         tearOffRequired: z.boolean().optional(),
-        photoUrls: z.array(z.string().url()).max(10).optional(),
+        photoUrls: z.array(z.union([z.string().min(1), estimatePhotoSchema])).max(10).optional(),
         // Wizard fields
         ...wizardFieldsSchema,
     }),
@@ -123,6 +127,7 @@ export const updateEstimateSchema = z.object({
         rakeLengthFt: z.number().min(0).optional(),
         tearOffRequired: z.boolean().optional(),
         measurementSource: z.union([z.enum(['ai_satellite', 'ai_photo', 'eagleview', 'manual', 'ai_segmented']), z.literal('')]).optional().transform(v => v === '' ? undefined : v),
+        photoUrls: z.array(z.union([z.string().min(1), estimatePhotoSchema])).max(10).optional(),
         // Wizard fields
         ...wizardFieldsSchema,
     }),

@@ -44,7 +44,9 @@ export class RoofEstimatorRepository {
                 trueSurfaceAreaSqft: trueSurface,
                 measurementSource: data.measurementSource || null,
                 tearOffRequired: data.tearOffRequired || false,
-                photoUrls: data.photoUrls ? data.photoUrls : Prisma.JsonNull,
+                photoUrls: data.photoUrls && data.photoUrls.length > 0
+                    ? data.photoUrls as Prisma.InputJsonValue
+                    : Prisma.JsonNull,
                 // Pricing
                 pricePerSqft: data.pricePerSqft,
                 manualAdjustment: data.manualAdjustment || 0,
@@ -157,6 +159,11 @@ export class RoofEstimatorRepository {
                 ...(data.processingTimeSec !== undefined && { processingTimeSec: data.processingTimeSec }),
                 ...(data.aiModel !== undefined && { aiModel: data.aiModel }),
                 ...(data.measurementSource !== undefined && { measurementSource: data.measurementSource }),
+                ...(data.photoUrls !== undefined && {
+                    photoUrls: data.photoUrls.length > 0
+                        ? data.photoUrls as Prisma.InputJsonValue
+                        : Prisma.JsonNull,
+                }),
                 ...(data.pricePerSqft !== undefined && { pricePerSqft: data.pricePerSqft }),
                 ...(data.manualAdjustment !== undefined && { manualAdjustment: data.manualAdjustment }),
                 ...(data.totalEstimate !== undefined && { totalEstimate: data.totalEstimate }),

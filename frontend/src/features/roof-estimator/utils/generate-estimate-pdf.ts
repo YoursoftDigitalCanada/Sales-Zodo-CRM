@@ -10,6 +10,11 @@ interface OtherMaterialPdf {
   cost: number;
 }
 
+interface EstimatePhotoPdf {
+  label: string;
+  url: string;
+}
+
 interface ReportData {
   // Client / Lead
   clientName?: string;
@@ -30,6 +35,7 @@ interface ReportData {
   tearOffRequired: boolean;
   confidence: number;
   satelliteImageUrl: string;
+  photoUrls?: Array<string | EstimatePhotoPdf>;
 
   // Materials (qty × unit price)
   shingleType: string;
@@ -85,9 +91,15 @@ interface ReportData {
 const fmt = (n: number) =>
   `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+const DEFAULT_OBLIQUE_VIEW_LABELS = ["North View", "East View", "South View", "West View"] as const;
+
 // Load image as base64 data URL
 async function loadImageAsBase64(url: string): Promise<string | null> {
   try {
+    if (url.startsWith("data:image/")) {
+      return url;
+    }
+
     const res = await fetch(url, { mode: "cors" });
     const blob = await res.blob();
     return new Promise((resolve) => {
@@ -99,6 +111,38 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+function normalizeReportPhotos(photos?: Array<string | EstimatePhotoPdf>): EstimatePhotoPdf[] {
+  return (Array.isArray(photos) ? photos : [])
+    .map((photo, index) => {
+      if (typeof photo === "string") {
+        const url = photo.trim();
+        if (!url) return null;
+        return {
+          label: DEFAULT_OBLIQUE_VIEW_LABELS[index] || `View ${index + 1}`,
+          url,
+        } satisfies EstimatePhotoPdf;
+      }
+
+      if (!photo || typeof photo !== "object") return null;
+      const label = String(photo.label || "").trim();
+      const url = String(photo.url || "").trim();
+      if (!url) return null;
+
+      return {
+        label: label || DEFAULT_OBLIQUE_VIEW_LABELS[index] || `View ${index + 1}`,
+        url,
+      } satisfies EstimatePhotoPdf;
+    })
+    .filter((photo): photo is EstimatePhotoPdf => Boolean(photo));
+}
+
+function getImageFormat(dataUrl: string): "JPEG" | "PNG" | "WEBP" {
+  const mimeType = dataUrl.match(/^data:image\/([a-zA-Z0-9+.-]+);/i)?.[1]?.toLowerCase();
+  if (mimeType === "png") return "PNG";
+  if (mimeType === "webp") return "WEBP";
+  return "JPEG";
 }
 
 export async function generateEstimatePDF(data: ReportData): Promise<Blob> {
@@ -121,6 +165,46 @@ export async function generateEstimatePDF(data: ReportData): Promise<Blob> {
       doc.addPage();
       y = 15;
     }
+  };
+
+  const drawContainedImage = (imageData: string, x: number, yPos: number, maxWidth: number, maxHeight: number) => {
+    const imageProps = doc.getImageProperties(imageData);
+    const scale = Math.min(maxWidth / imageProps.width, maxHeight / imageProps.height);
+    const renderWidth = imageProps.width * scale;
+    const renderHeight = imageProps.height * scale;
+    const offsetX = x + ((maxWidth - renderWidth) / 2);
+    const offsetY = yPos + ((maxHeight - renderHeight) / 2);
+
+    doc.addImage(imageData, getImageFormat(imageData), offsetX, offsetY, renderWidth, renderHeight);
+  };
+
+  const drawImageCard = async (
+    label: string,
+    imageUrl: string,
+    x: number,
+    yPos: number,
+    width: number,
+    height: number,
+  ) => {
+    doc.setFillColor(...lightBg);
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(x, yPos, width, height, 2, 2, "FD");
+
+    doc.setFontSize(8);
+    doc.setTextColor(...gray);
+    doc.setFont("helvetica", "bold");
+    doc.text(label, x + 4, yPos + 6);
+    doc.setFont("helvetica", "normal");
+
+    const imageData = await loadImageAsBase64(imageUrl);
+    if (!imageData) {
+      doc.setFontSize(8);
+      doc.setTextColor(...gray);
+      doc.text("Image unavailable", x + width / 2, yPos + (height / 2), { align: "center" });
+      return;
+    }
+
+    drawContainedImage(imageData, x + 3, yPos + 9, width - 6, height - 12);
   };
 
   // ── Logo ────────────────────────────────────────
@@ -218,28 +302,52 @@ export async function generateEstimatePDF(data: ReportData): Promise<Blob> {
   doc.setFont("helvetica", "normal");
   y += 6;
 
-  // ── Satellite / House Photo ─────────────────────
-  if (data.satelliteImageUrl) {
-    try {
-      const satImg = await loadImageAsBase64(data.satelliteImageUrl);
-      if (satImg) {
-        const imgW = contentW;
-        const imgH = 70;   // larger image for better visibility
-        doc.setFillColor(...lightBg);
-        doc.roundedRect(margin, y, imgW, imgH, 2, 2, "F");
-        doc.addImage(satImg, "JPEG", margin + 1, y + 1, imgW - 2, imgH - 2);
-        y += imgH + 4;
+  // ── EagleView Image Section ─────────────────────
+  const obliqueImages = normalizeReportPhotos(data.photoUrls);
+  if (data.satelliteImageUrl || obliqueImages.length > 0) {
+    ensureSpace(data.satelliteImageUrl && obliqueImages.length > 0 ? 170 : 105);
 
-        // Caption
-        doc.setFontSize(7);
-        doc.setTextColor(...gray);
-        const srcLabel = data.measurementSource === "eagleview" ? "EagleView" :
-          data.measurementSource === "ai_satellite" ? "AI Satellite" :
-          data.measurementSource === "ai_segmented" ? "AI Segmented" : "Satellite";
-        doc.text(`Source: ${srcLabel} | Confidence: ${data.confidence ? `${data.confidence.toFixed(0)}%` : "N/A"}`, margin, y);
-        y += 5;
+    doc.setFontSize(10);
+    doc.setTextColor(...dark);
+    doc.setFont("helvetica", "bold");
+    doc.text("EagleView Imagery", margin, y);
+    doc.setFont("helvetica", "normal");
+    y += 6;
+
+    if (data.satelliteImageUrl) {
+      await drawImageCard("Ortho View", data.satelliteImageUrl, margin, y, contentW, 76);
+      y += 82;
+    }
+
+    if (obliqueImages.length > 0) {
+      const imageGap = 4;
+      const cardWidth = (contentW - imageGap) / 2;
+      const cardHeight = 48;
+
+      for (let index = 0; index < obliqueImages.length; index += 1) {
+        if (index > 0 && index % 4 === 0) {
+          y += 2 * (cardHeight + imageGap) + 4;
+          ensureSpace(108);
+        }
+
+        const row = Math.floor((index % 4) / 2);
+        const col = index % 2;
+        const x = margin + (col * (cardWidth + imageGap));
+        const yOffset = y + (row * (cardHeight + imageGap));
+        const image = obliqueImages[index];
+        await drawImageCard(image.label, image.url, x, yOffset, cardWidth, cardHeight);
       }
-    } catch { /* skip satellite */ }
+
+      y += (Math.ceil(Math.min(obliqueImages.length, 4) / 2) * (48 + 4));
+    }
+
+    doc.setFontSize(7);
+    doc.setTextColor(...gray);
+    const srcLabel = data.measurementSource === "eagleview" ? "EagleView" :
+      data.measurementSource === "ai_satellite" ? "AI Satellite" :
+      data.measurementSource === "ai_segmented" ? "AI Segmented" : "Satellite";
+    doc.text(`Source: ${srcLabel} | Confidence: ${data.confidence ? `${data.confidence.toFixed(0)}%` : "N/A"}`, margin, y + 1);
+    y += 7;
   }
 
   // ── Property Details ────────────────────────────

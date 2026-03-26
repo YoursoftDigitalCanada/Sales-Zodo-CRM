@@ -74,7 +74,7 @@ const envSchema = z.object({
   // EagleView integration
   EAGLEVIEW_CLIENT_ID: z.string().optional(),
   EAGLEVIEW_CLIENT_SECRET: z.string().optional(),
-  EAGLEVIEW_BASE_URL: z.string().default('https://sandbox.apicenter.eagleview.com'),
+  EAGLEVIEW_BASE_URL: z.string().default('https://sandbox.apis.eagleview.com'),
   EAGLEVIEW_TOKEN_URL: z.string().default('https://apicenter.eagleview.com/oauth2/v1/token'),
   EAGLEVIEW_WEBHOOK_SECRET: z.string().optional(),
 

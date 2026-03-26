@@ -1,14 +1,14 @@
 /**
  * EagleView Measurement Service
  *
- * Uses the Measurement Order API (apicenter.eagleview.com):
+ * Uses the EagleView Measurement Order API:
  *   POST /v2/Order/PlaceOrder        — Place measurement order
  *   GET  /v3/Report/GetReport        — Get report data (area, pitch, lengths)
  *   GET  /v1/File/GetReportFile      — Download report file (PDF/image)
  *
  * Base URL:
- *   Sandbox:    https://sandbox.apicenter.eagleview.com
- *   Production: https://apicenter.eagleview.com
+ *   Sandbox:    https://sandbox.apis.eagleview.com
+ *   Production: https://apis.eagleview.com
  */
 
 import axios from 'axios';
@@ -17,7 +17,7 @@ import { logger } from '../../common/utils/logger';
 import { ServiceUnavailableError } from '../../common/errors/HttpErrors';
 import { eagleViewAuthService } from './eagleview-auth.service';
 
-const BASE_URL = config.integrations.eagleview.baseUrl || 'https://sandbox.apicenter.eagleview.com';
+const BASE_URL = config.integrations.eagleview.baseUrl || 'https://sandbox.apis.eagleview.com';
 const PREFERRED_IMAGE_FILE_TYPES = [6, 22, 24, 25, 23];
 const PREFERRED_MEASUREMENT_TYPES = [3, 1, 2, 5];
 const PREFERRED_PRODUCT_MATCHERS = [

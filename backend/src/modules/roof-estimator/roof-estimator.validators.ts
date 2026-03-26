@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 // ── Pitch pattern (e.g. "6/12", "10/12") ──────────────────────────────────
 const pitchSchema = z.string().regex(/^\d{1,2}(\.\d+)?\/12$/, 'Pitch must be in X/12 format').optional();
-const roofTypeSchema = z.enum(['gable', 'hip', 'flat', 'mansard', 'gambrel', 'shed']).optional();
+const roofTypeSchema = z.string().trim().min(1).max(50).optional();
 const materialTypeSchema = z.enum(['asphalt', 'metal', 'tile', 'tpo', 'cedar']);
 const estimatePhotoSchema = z.object({
     label: z.string().min(1).max(100),

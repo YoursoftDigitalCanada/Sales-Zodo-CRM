@@ -27,6 +27,7 @@ export class FilesService {
             extension: path.extname(file.originalname).toLowerCase() || null,
             folderId: opts?.folderId || null,
             projectId: opts?.projectId || null,
+            clientId: opts?.clientId || null,
             checksum,
         };
 

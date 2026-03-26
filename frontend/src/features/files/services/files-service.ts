@@ -114,13 +114,14 @@ export async function getStorageAnalytics(): Promise<StorageAnalytics> {
 // Upload with progress callback
 export async function uploadFile(
     file: File,
-    opts?: { folderId?: string; projectId?: string },
+    opts?: { folderId?: string; projectId?: string; clientId?: string },
     onProgress?: (pct: number) => void,
 ): Promise<FileResponse> {
     const formData = new FormData();
     formData.append("file", file);
     if (opts?.folderId) formData.append("folderId", opts.folderId);
     if (opts?.projectId) formData.append("projectId", opts.projectId);
+    if (opts?.clientId) formData.append("clientId", opts.clientId);
 
     const res = await api.post("/files", formData, {
         headers: { "Content-Type": "multipart/form-data" },

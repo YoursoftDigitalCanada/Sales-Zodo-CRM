@@ -15,6 +15,7 @@ import {
 } from "@/features/roof-estimator/services/roof-estimator-service";
 import { useToast } from "@/hooks/use-toast";
 import { generateEstimatePDF, downloadPDFBlob } from "@/features/roof-estimator/utils/generate-estimate-pdf";
+import { buildEstimateSummaryPdf } from "@/features/roof-estimator/utils/generate-estimate-summary-pdf";
 import { getClients, type ClientEntity } from "@/features/clients/services/clients-service";
 import { getLeads, type LeadEntity } from "@/features/leads/services/leads-service";
 import {
@@ -24,6 +25,7 @@ import {
 } from "@/features/wallet/services/wallet-service";
 import { uploadFile } from "@/features/files/services/files-service";
 import { getProjects } from "@/features/projects/services/projects-service";
+import { getCompanyProfile, type CompanyProfile } from "@/features/settings/services/settings-service";
 
 interface OtherMaterial { name: string; qty: number; cost: number; }
 
@@ -116,6 +118,9 @@ const normalizeEstimatePhotos = (
     } satisfies EstimatePhoto;
   })
   .filter((photo): photo is EstimatePhoto => Boolean(photo));
+
+const createEstimateDocumentNumber = (estimateId: string): string =>
+  `EST-${estimateId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 8).toUpperCase() || "DRAFT"}`;
 
 /* ─── WizardData type ────────────────────────────────────── */
 
@@ -334,6 +339,7 @@ export default function RoofEstimatorWizard() {
 
   // Wallet balance
   const [walletBalance, setWalletBalance] = useState<number | null>(null);;
+  const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
 
   // Update helper
   const up = useCallback(<K extends keyof WizardData>(key: K, val: WizardData[K]) => {
@@ -369,6 +375,10 @@ export default function RoofEstimatorWizard() {
         const w = await getWallet();
         setWalletBalance(w.balance);
       } catch { /* silent — wallet may not exist yet */ }
+      try {
+        const profile = await getCompanyProfile();
+        setCompanyProfile(profile);
+      } catch { /* silent — branding is optional */ }
     })();
   }, []);
 
@@ -770,9 +780,12 @@ export default function RoofEstimatorWizard() {
         setEstimateId(result.id);
       }
 
-      // Generate PDF
-      toast({ title: "Generating Report…", description: "Building your estimate PDF" });
-      const pdfBlob = await generateEstimatePDF({
+      const estimateDocumentNumber = createEstimateDocumentNumber(savedId || "NEW");
+      const safeName = data.address.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 40) || estimateDocumentNumber;
+
+      // Generate PDFs
+      toast({ title: "Generating Reports…", description: "Building your estimate documents" });
+      const estimatePdfBlob = await generateEstimatePDF({
         // Client / Lead
         clientName: data.clientName,
         clientEmail: data.clientEmail,
@@ -839,16 +852,60 @@ export default function RoofEstimatorWizard() {
         notes: data.notes || undefined,
       });
 
-      // Download PDF locally
-      const safeName = data.address.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 40);
-      downloadPDFBlob(pdfBlob, `Roof_Estimate_${safeName}.pdf`);
+      const summaryPdfResult = await buildEstimateSummaryPdf({
+        estimateNumber: estimateDocumentNumber,
+        createdAt: new Date().toISOString(),
+        branding: {
+          companyName: companyProfile?.companyName || "ZODO CRM",
+          companyLogoUrl: companyProfile?.logoUrl || null,
+          companyPhone: companyProfile?.phone || null,
+          companyEmail: companyProfile?.email || null,
+          companyAddress: companyProfile?.address || null,
+        },
+        client: {
+          name: data.clientName || "Client",
+          company: data.clientCompany || "",
+          email: data.clientEmail || "",
+          phone: data.clientPhone || "",
+        },
+        property: {
+          address: data.address,
+          roofAreaSqft: data.roofAreaSqft,
+          roofSquares,
+          pitch: data.pitch || "—",
+          roofType: data.roofType || "—",
+          stories: data.stories,
+          layers: data.layers,
+          shingleType: data.shingleType,
+        },
+        pricing: {
+          materials: totalMaterialCost,
+          labor: totalLaborCost,
+          equipment: totalEquipmentCost,
+          overheadLabel: `Overhead (${data.overheadPercent}%)`,
+          overheadAmount,
+          profitLabel: `Profit (${data.profitMarginPercent}%)`,
+          profitAmount,
+          taxLabel: `Tax (${data.taxPercent}%)`,
+          taxAmount,
+          total: finalPrice,
+          pricePerSquare,
+        },
+        imagery: {
+          orthoUrl: data.satelliteImageUrl,
+          obliqueImages: data.photoUrls,
+        },
+        notes: data.notes || undefined,
+      });
 
-      // Upload PDF to File Manager (with projectId + clientId)
+      const estimatePdfFileName = `Roof_Estimate_${safeName}.pdf`;
+
+      // Download PDFs locally
+      downloadPDFBlob(estimatePdfBlob, estimatePdfFileName);
+      downloadPDFBlob(summaryPdfResult.blob, summaryPdfResult.fileName);
+
+      // Upload PDFs to File Manager (with projectId + clientId)
       try {
-        const safeName = data.address.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 40);
-        const pdfFileName = `Roof_Estimate_${safeName}.pdf`;
-        const pdfFile = new File([pdfBlob], pdfFileName, { type: "application/pdf" });
-
         // Find the client's project (if a client was selected)
         let projectId: string | undefined;
         if (data.clientId) {
@@ -862,19 +919,33 @@ export default function RoofEstimatorWizard() {
           }
         }
 
-        // Upload via proper /files endpoint with clientId and projectId
-        const uploadedFile = await uploadFile(pdfFile, { projectId });
-        const pdfUrl = uploadedFile?.path || uploadedFile?.id;
+        const uploadOptions = {
+          projectId,
+          clientId: data.clientId || undefined,
+        };
+
+        const estimatePdfFile = new File([estimatePdfBlob], estimatePdfFileName, { type: "application/pdf" });
+        const summaryPdfFile = new File([summaryPdfResult.blob], summaryPdfResult.fileName, { type: "application/pdf" });
+
+        const [uploadedEstimatePdf, uploadedSummaryPdf] = await Promise.all([
+          uploadFile(estimatePdfFile, uploadOptions),
+          uploadFile(summaryPdfFile, uploadOptions),
+        ]);
+
+        const pdfUrl = uploadedEstimatePdf?.path || uploadedEstimatePdf?.id;
 
         if (pdfUrl && savedId) {
           await updateEstimate(savedId, { pdfUrl } as any);
         }
 
-        toast({ title: "📁 PDF Saved", description: projectId
-          ? "Estimate PDF saved to File Manager and linked to client project"
-          : "Estimate PDF saved to File Manager" });
+        toast({
+          title: "📁 PDFs Saved",
+          description: projectId
+            ? `Both PDFs saved to File Manager and linked to the client project (${uploadedSummaryPdf.name})`
+            : "Both PDFs saved to File Manager for the selected client",
+        });
       } catch {
-        // PDF upload failed silently — user already has the download
+        // PDF upload failed silently — user already has the downloads
       }
 
       // Charge wallet $20 for the estimate
@@ -885,12 +956,12 @@ export default function RoofEstimatorWizard() {
         // Wallet charge failed silently — estimate is already saved
       }
 
-      toast({ title: "Estimate Completed", description: "Report generated and downloaded" });
+      toast({ title: "Estimate Completed", description: "Both PDFs generated, downloaded, and saved" });
       navigate("/roof-estimator");
     } catch (e: any) {
       toast({ title: "Error", description: e?.message || "Could not complete estimate", variant: "destructive" });
     } finally { setSaving(false); }
-  }, [buildPayload, eagleViewError, estimateId, data, toast, navigate, totalMaterialCost, totalLaborCost, totalEquipmentCost, overheadAmount, profitAmount, taxAmount, finalPrice, hasValidEagleViewMeasurement]);
+  }, [buildPayload, companyProfile, eagleViewError, estimateId, data, toast, navigate, totalMaterialCost, totalLaborCost, totalEquipmentCost, overheadAmount, profitAmount, taxAmount, finalPrice, hasValidEagleViewMeasurement, pricePerSquare, roofSquares]);
 
   const previewImageUrl = !isLikelyPdfUrl(data.satelliteImageUrl) ? data.satelliteImageUrl : "";
   const obliquePreviewImages = normalizeEstimatePhotos(data.photoUrls);

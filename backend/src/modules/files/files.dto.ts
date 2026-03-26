@@ -13,6 +13,7 @@ export interface UploadFileDto {
     extension?: string | null;
     folderId?: string | null;
     projectId?: string | null;
+    clientId?: string | null;
     applicationId?: string | null;
     checksum?: string | null;
     fromAddress?: string;

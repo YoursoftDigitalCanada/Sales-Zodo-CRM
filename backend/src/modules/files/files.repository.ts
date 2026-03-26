@@ -22,6 +22,7 @@ export class FilesRepository {
                 extension: data.extension,
                 folderId: data.folderId,
                 projectId: data.projectId,
+                clientId: data.clientId,
                 applicationId: data.applicationId,
                 checksum: data.checksum,
             },

@@ -667,7 +667,7 @@ export default function RoofEstimatorWizard() {
 
   // runAiDetection removed — using EagleView only
 
-  /* ── Save Draft / Create ──────────────────────── */
+  /* ── Create Estimate ──────────────────────────── */
 
   const buildPayload = useCallback((): SaveEstimatePayload => {
     if (!hasValidEagleViewMeasurement) {
@@ -699,22 +699,6 @@ export default function RoofEstimatorWizard() {
       finalEstimatePrice: finalPrice, currentStep: 7, status: "draft",
     };
   }, [data, finalPrice, hasValidEagleViewMeasurement, totalMaterialCost, totalLaborCost, totalEquipmentCost, overheadAmount, profitAmount, taxAmount]);
-
-  const handleSaveDraft = useCallback(async () => {
-    setSaving(true);
-    try {
-      const payload = buildPayload();
-      if (estimateId) {
-        await updateEstimate(estimateId, payload);
-      } else {
-        const result = await saveEstimate(payload);
-        setEstimateId(result.id);
-      }
-      toast({ title: "Draft Saved", description: "Your estimate has been saved as a draft" });
-    } catch (e: any) {
-      toast({ title: "Save failed", description: e?.message || "Could not save estimate", variant: "destructive" });
-    } finally { setSaving(false); }
-  }, [buildPayload, estimateId, toast]);
 
   const handleComplete = useCallback(async () => {
     if (!hasValidEagleViewMeasurement) {
@@ -1266,14 +1250,6 @@ export default function RoofEstimatorWizard() {
             )}
             {activeSection === "summary" ? (
               <>
-                <button onClick={handleSaveDraft} disabled={saving} style={{
-                  padding: "10px 20px", borderRadius: 8, border: "1px solid #CBD5E1",
-                  background: "#fff", color: "#475569", fontSize: 13, fontWeight: 600,
-                  cursor: "pointer", opacity: saving ? 0.7 : 1,
-                }}>
-                  {saving ? "Saving…" : "Save Draft"}
-                </button>
-
                 <button onClick={handleComplete} disabled={!canGenerateEstimate} style={{
                   padding: "10px 22px", borderRadius: 8, border: "none",
                   background: "linear-gradient(135deg,#10B981,#059669)", color: "#fff",

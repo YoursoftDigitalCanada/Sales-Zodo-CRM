@@ -262,7 +262,6 @@ export default function RoofEstimatorWizard() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
 
-  const [step, setStep] = useState(1);
   const [data, setData] = useState<WizardData>(DEFAULT_DATA);
   const [saving, setSaving] = useState(false);
   const [estimateId, setEstimateId] = useState<string | null>(id || null);
@@ -312,7 +311,6 @@ export default function RoofEstimatorWizard() {
           const est = await getEstimateById(id);
           const previewSource = splitPreviewSource(est.satelliteImageUrl || "");
           setEstimateId(est.id);
-          setStep(est.currentStep || 1);
           setData({
             clientName: est.client?.clientName || "", clientEmail: "", clientPhone: "",
             clientCompany: est.client?.companyName || "", sourceType: est.clientId ? "client" : "manual",
@@ -501,8 +499,8 @@ export default function RoofEstimatorWizard() {
     equipmentRentalCost: data.equipmentRentalCost, disposalFee: data.disposalFee, totalEquipmentCost,
     overheadPercent: data.overheadPercent, profitMarginPercent: data.profitMarginPercent,
     taxPercent: data.taxPercent, overheadAmount, profitAmount, taxAmount,
-    finalEstimatePrice: finalPrice, currentStep: step, status: "draft",
-  }), [data, finalPrice, totalMaterialCost, totalLaborCost, totalEquipmentCost, overheadAmount, profitAmount, taxAmount, step]);
+    finalEstimatePrice: finalPrice, currentStep: 7, status: "draft",
+  }), [data, finalPrice, totalMaterialCost, totalLaborCost, totalEquipmentCost, overheadAmount, profitAmount, taxAmount]);
 
   const handleSaveDraft = useCallback(async () => {
     setSaving(true);
@@ -669,38 +667,11 @@ export default function RoofEstimatorWizard() {
     } finally { setSaving(false); }
   }, [buildPayload, estimateId, data, toast, navigate, totalMaterialCost, totalLaborCost, totalEquipmentCost, overheadAmount, profitAmount, taxAmount, finalPrice]);
 
-  const goNext = () => { if (step < 7) setStep(step + 1); };
-  const goBack = () => { if (step > 1) setStep(step - 1); };
-
-  /* ─── Render Steps ─────────────────────────────── */
-
   const previewImageUrl = !isLikelyPdfUrl(data.satelliteImageUrl) ? data.satelliteImageUrl : "";
-
-  const renderStep = () => {
-    switch (step) {
-      case 1: return <Step1ClientInfo data={data} up={up}
-        clients={clients} leads={leads}
-        clientSearchQ={clientSearchQ} setClientSearchQ={setClientSearchQ} />;
-      case 2: return <Step2Address data={data} up={up}
-        suggestions={addressSuggestions} addressLoading={addressLoading}
-        onAddressInput={handleAddressInput} onSelectAddress={selectAddress}
-        satelliteLoading={satelliteLoading}
-        eagleViewLoading={eagleViewLoading} eagleViewStatus={eagleViewStatus} />;
-      case 3: return <Step3Materials data={data} up={up} total={totalMaterialCost}
-        otherMaterials={data.otherMaterials}
-        onOtherMaterialsChange={(mats) => up("otherMaterials", mats)} />;
-      case 4: return <Step4Labor data={data} up={up} total={totalLaborCost} />;
-      case 5: return <Step5Extras data={data} up={up} total={totalEquipmentCost} />;
-      case 6: return <Step6Profit data={data} up={up} subtotal={subtotal}
-        overheadAmount={overheadAmount} profitAmount={profitAmount} taxAmount={taxAmount} finalPrice={finalPrice} />;
-      case 7: return <Step7Final data={data}
-        totalMaterialCost={totalMaterialCost} totalLaborCost={totalLaborCost}
-        totalEquipmentCost={totalEquipmentCost} overheadAmount={overheadAmount}
-        profitAmount={profitAmount} taxAmount={taxAmount} finalPrice={finalPrice}
-        roofSquares={roofSquares} pricePerSquare={pricePerSquare}
-        walletBalance={walletBalance} />;
-      default: return null;
-    }
+  const sectionStyle: React.CSSProperties = {
+    paddingBottom: 28,
+    marginBottom: 28,
+    borderBottom: "1px solid #E2E8F0",
   };
 
   return (
@@ -719,11 +690,8 @@ export default function RoofEstimatorWizard() {
         {estimateId ? "Edit Estimate" : "Create AI Estimate"}
       </h1>
       <p style={{ color: "#64748B", fontSize: 13, marginBottom: 20 }}>
-        Complete each step to build your roof estimate.
+        Fill out the full estimate in one place and generate it when everything looks right.
       </p>
-
-      {/* Step Indicator */}
-      <StepIndicator current={step} />
 
       {/* Main content: two-column layout (form left 60%, preview right 40%) */}
       <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
@@ -734,56 +702,101 @@ export default function RoofEstimatorWizard() {
           border: "1px solid #E2E8F0", boxShadow: "0 1px 4px rgba(0,0,0,.06)",
           padding: "28px 32px",
         }}>
-          {renderStep()}
+          <div style={sectionStyle}>
+            <Step1ClientInfo
+              data={data}
+              up={up}
+              clients={clients}
+              leads={leads}
+              clientSearchQ={clientSearchQ}
+              setClientSearchQ={setClientSearchQ}
+            />
+          </div>
 
-          {/* Navigation */}
+          <div style={sectionStyle}>
+            <Step2Address
+              data={data}
+              up={up}
+              suggestions={addressSuggestions}
+              addressLoading={addressLoading}
+              onAddressInput={handleAddressInput}
+              onSelectAddress={selectAddress}
+              satelliteLoading={satelliteLoading}
+              eagleViewLoading={eagleViewLoading}
+              eagleViewStatus={eagleViewStatus}
+            />
+          </div>
+
+          <div style={sectionStyle}>
+            <Step3Materials
+              data={data}
+              up={up}
+              total={totalMaterialCost}
+              otherMaterials={data.otherMaterials}
+              onOtherMaterialsChange={(mats) => up("otherMaterials", mats)}
+            />
+          </div>
+
+          <div style={sectionStyle}>
+            <Step4Labor data={data} up={up} total={totalLaborCost} />
+          </div>
+
+          <div style={sectionStyle}>
+            <Step5Extras data={data} up={up} total={totalEquipmentCost} />
+          </div>
+
+          <div style={sectionStyle}>
+            <Step6Profit
+              data={data}
+              up={up}
+              subtotal={subtotal}
+              overheadAmount={overheadAmount}
+              profitAmount={profitAmount}
+              taxAmount={taxAmount}
+              finalPrice={finalPrice}
+            />
+          </div>
+
+          <div>
+            <Step7Final
+              data={data}
+              totalMaterialCost={totalMaterialCost}
+              totalLaborCost={totalLaborCost}
+              totalEquipmentCost={totalEquipmentCost}
+              overheadAmount={overheadAmount}
+              profitAmount={profitAmount}
+              taxAmount={taxAmount}
+              finalPrice={finalPrice}
+              roofSquares={roofSquares}
+              pricePerSquare={pricePerSquare}
+              walletBalance={walletBalance}
+            />
+          </div>
+
+          {/* Actions */}
           <div style={{
-            display: "flex", justifyContent: "space-between", alignItems: "center",
+            display: "flex", justifyContent: "flex-end", alignItems: "center",
             marginTop: 28, paddingTop: 20, borderTop: "1px solid #E2E8F0",
+            gap: 10,
           }}>
-            <button onClick={goBack} disabled={step === 1} style={{
+            <button onClick={handleSaveDraft} disabled={saving} style={{
               padding: "10px 20px", borderRadius: 8, border: "1px solid #CBD5E1",
-              background: "#fff", color: step === 1 ? "#CBD5E1" : "#475569",
-              fontSize: 13, fontWeight: 600, cursor: step === 1 ? "not-allowed" : "pointer",
-              display: "flex", alignItems: "center", gap: 6,
+              background: "#fff", color: "#475569", fontSize: 13, fontWeight: 600,
+              cursor: "pointer", opacity: saving ? 0.7 : 1,
             }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
-              Back
+              {saving ? "Saving…" : "Save Draft"}
             </button>
 
-            <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={handleSaveDraft} disabled={saving} style={{
-                padding: "10px 20px", borderRadius: 8, border: "1px solid #CBD5E1",
-                background: "#fff", color: "#475569", fontSize: 13, fontWeight: 600,
-                cursor: "pointer", opacity: saving ? 0.7 : 1,
-              }}>
-                {saving ? "Saving…" : "Save Draft"}
-              </button>
-
-              {step < 7 ? (
-                <button onClick={goNext} style={{
-                  padding: "10px 22px", borderRadius: 8, border: "none",
-                  background: "linear-gradient(135deg,#6637F4,#5429D9)", color: "#fff",
-                  fontSize: 13, fontWeight: 700, cursor: "pointer",
-                  display: "flex", alignItems: "center", gap: 6,
-                  boxShadow: "0 2px 8px rgba(102,55,244,.25)",
-                }}>
-                  Next
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
-                </button>
-              ) : (
-                <button onClick={handleComplete} disabled={saving} style={{
-                  padding: "10px 22px", borderRadius: 8, border: "none",
-                  background: "linear-gradient(135deg,#10B981,#059669)", color: "#fff",
-                  fontSize: 13, fontWeight: 700, cursor: "pointer",
-                  display: "flex", alignItems: "center", gap: 6,
-                  boxShadow: "0 2px 8px rgba(16,185,129,.25)", opacity: saving ? 0.7 : 1,
-                }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                  Complete Estimate
-                </button>
-              )}
-            </div>
+            <button onClick={handleComplete} disabled={saving} style={{
+              padding: "10px 22px", borderRadius: 8, border: "none",
+              background: "linear-gradient(135deg,#10B981,#059669)", color: "#fff",
+              fontSize: 13, fontWeight: 700, cursor: "pointer",
+              display: "flex", alignItems: "center", gap: 6,
+              boxShadow: "0 2px 8px rgba(16,185,129,.25)", opacity: saving ? 0.7 : 1,
+            }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              Generate AI Estimate
+            </button>
           </div>
         </div>
         {/* Right: Sticky Preview (40%) */}

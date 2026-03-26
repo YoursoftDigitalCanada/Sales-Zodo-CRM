@@ -154,6 +154,15 @@ interface WizardData {
   otherMaterials: OtherMaterial[];
 }
 
+type SectionId =
+  | "client"
+  | "address"
+  | "materials"
+  | "labor"
+  | "extras"
+  | "profit"
+  | "summary";
+
 const DEFAULT_DATA: WizardData = {
   clientName: "", clientEmail: "", clientPhone: "", clientCompany: "",
   sourceType: "manual", leadId: "",
@@ -176,6 +185,16 @@ const DEFAULT_DATA: WizardData = {
   notes: "", clientId: "",
   otherMaterials: [],
 };
+
+const ESTIMATE_SECTIONS: { id: SectionId; title: string; shortLabel: string; icon: string; description: string }[] = [
+  { id: "client", title: "Client / Lead Information", shortLabel: "Client", icon: "👤", description: "Search or enter contact details." },
+  { id: "address", title: "Address & Roof Measurement", shortLabel: "Address", icon: "📍", description: "Property address and EagleView data." },
+  { id: "materials", title: "Material Pricing", shortLabel: "Materials", icon: "🧱", description: "Shingles, accessories, and extras." },
+  { id: "labor", title: "Labor Inputs", shortLabel: "Labor", icon: "👷", description: "Crew size, days, and labor rate." },
+  { id: "extras", title: "Equipment & Extra Costs", shortLabel: "Extras", icon: "🔧", description: "Dumpsters, permits, and rentals." },
+  { id: "profit", title: "Profit & Overhead", shortLabel: "Profit", icon: "💰", description: "Margins, overhead, and tax." },
+  { id: "summary", title: "Estimate Summary", shortLabel: "Summary", icon: "📋", description: "Final review and generation." },
+];
 
 /* ─── Styled Input ───────────────────────────────────────── */
 
@@ -265,6 +284,7 @@ export default function RoofEstimatorWizard() {
   const [data, setData] = useState<WizardData>(DEFAULT_DATA);
   const [saving, setSaving] = useState(false);
   const [estimateId, setEstimateId] = useState<string | null>(id || null);
+  const [activeSection, setActiveSection] = useState<SectionId>("client");
 
   // Step 1: Client/Lead
   const [clients, setClients] = useState<ClientEntity[]>([]);
@@ -669,9 +689,11 @@ export default function RoofEstimatorWizard() {
 
   const previewImageUrl = !isLikelyPdfUrl(data.satelliteImageUrl) ? data.satelliteImageUrl : "";
   const sectionStyle: React.CSSProperties = {
-    paddingBottom: 28,
-    marginBottom: 28,
-    borderBottom: "1px solid #E2E8F0",
+    border: "1px solid #E2E8F0",
+    borderRadius: 14,
+    background: "#fff",
+    overflow: "hidden",
+    marginBottom: 14,
   };
 
   return (
@@ -702,76 +724,168 @@ export default function RoofEstimatorWizard() {
           border: "1px solid #E2E8F0", boxShadow: "0 1px 4px rgba(0,0,0,.06)",
           padding: "28px 32px",
         }}>
-          <div style={sectionStyle}>
-            <Step1ClientInfo
-              data={data}
-              up={up}
-              clients={clients}
-              leads={leads}
-              clientSearchQ={clientSearchQ}
-              setClientSearchQ={setClientSearchQ}
-            />
+          <div style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 8,
+            marginBottom: 20,
+            paddingBottom: 16,
+            borderBottom: "1px solid #E2E8F0",
+            position: "sticky",
+            top: 0,
+            background: "#fff",
+            zIndex: 2,
+          }}>
+            {ESTIMATE_SECTIONS.map((section) => {
+              const isActive = section.id === activeSection;
+              return (
+                <button
+                  key={section.id}
+                  onClick={() => setActiveSection(section.id)}
+                  style={{
+                    border: isActive ? "1px solid #6637F4" : "1px solid #E2E8F0",
+                    background: isActive ? "rgba(102,55,244,.08)" : "#fff",
+                    color: isActive ? "#6637F4" : "#475569",
+                    borderRadius: 999,
+                    padding: "8px 12px",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  <span>{section.icon}</span>
+                  <span>{section.shortLabel}</span>
+                </button>
+              );
+            })}
           </div>
 
-          <div style={sectionStyle}>
-            <Step2Address
-              data={data}
-              up={up}
-              suggestions={addressSuggestions}
-              addressLoading={addressLoading}
-              onAddressInput={handleAddressInput}
-              onSelectAddress={selectAddress}
-              satelliteLoading={satelliteLoading}
-              eagleViewLoading={eagleViewLoading}
-              eagleViewStatus={eagleViewStatus}
-            />
-          </div>
+          {ESTIMATE_SECTIONS.map((section) => {
+            const isOpen = section.id === activeSection;
 
-          <div style={sectionStyle}>
-            <Step3Materials
-              data={data}
-              up={up}
-              total={totalMaterialCost}
-              otherMaterials={data.otherMaterials}
-              onOtherMaterialsChange={(mats) => up("otherMaterials", mats)}
-            />
-          </div>
+            return (
+              <div key={section.id} style={sectionStyle}>
+                <button
+                  onClick={() => setActiveSection(section.id)}
+                  style={{
+                    width: "100%",
+                    border: "none",
+                    background: "transparent",
+                    padding: "18px 20px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    cursor: "pointer",
+                    textAlign: "left",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 12,
+                      background: isOpen ? "rgba(102,55,244,.10)" : "#F8FAFC",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 18,
+                    }}>
+                      {section.icon}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: "#0F172A" }}>{section.title}</div>
+                      <div style={{ fontSize: 12, color: "#64748B", marginTop: 2 }}>{section.description}</div>
+                    </div>
+                  </div>
+                  <div style={{
+                    fontSize: 18,
+                    color: isOpen ? "#6637F4" : "#94A3B8",
+                    transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+                    transition: "transform .2s ease",
+                  }}>
+                    ▾
+                  </div>
+                </button>
 
-          <div style={sectionStyle}>
-            <Step4Labor data={data} up={up} total={totalLaborCost} />
-          </div>
-
-          <div style={sectionStyle}>
-            <Step5Extras data={data} up={up} total={totalEquipmentCost} />
-          </div>
-
-          <div style={sectionStyle}>
-            <Step6Profit
-              data={data}
-              up={up}
-              subtotal={subtotal}
-              overheadAmount={overheadAmount}
-              profitAmount={profitAmount}
-              taxAmount={taxAmount}
-              finalPrice={finalPrice}
-            />
-          </div>
-
-          <div>
-            <Step7Final
-              data={data}
-              totalMaterialCost={totalMaterialCost}
-              totalLaborCost={totalLaborCost}
-              totalEquipmentCost={totalEquipmentCost}
-              overheadAmount={overheadAmount}
-              profitAmount={profitAmount}
-              taxAmount={taxAmount}
-              finalPrice={finalPrice}
-              roofSquares={roofSquares}
-              pricePerSquare={pricePerSquare}
-              walletBalance={walletBalance}
-            />
-          </div>
+                {isOpen && (
+                  <div style={{ padding: "0 20px 20px" }}>
+                    {section.id === "client" && (
+                      <Step1ClientInfo
+                        data={data}
+                        up={up}
+                        clients={clients}
+                        leads={leads}
+                        clientSearchQ={clientSearchQ}
+                        setClientSearchQ={setClientSearchQ}
+                        hideHeader
+                      />
+                    )}
+                    {section.id === "address" && (
+                      <Step2Address
+                        data={data}
+                        up={up}
+                        suggestions={addressSuggestions}
+                        addressLoading={addressLoading}
+                        onAddressInput={handleAddressInput}
+                        onSelectAddress={selectAddress}
+                        satelliteLoading={satelliteLoading}
+                        eagleViewLoading={eagleViewLoading}
+                        eagleViewStatus={eagleViewStatus}
+                        hideHeader
+                      />
+                    )}
+                    {section.id === "materials" && (
+                      <Step3Materials
+                        data={data}
+                        up={up}
+                        total={totalMaterialCost}
+                        otherMaterials={data.otherMaterials}
+                        onOtherMaterialsChange={(mats) => up("otherMaterials", mats)}
+                        hideHeader
+                      />
+                    )}
+                    {section.id === "labor" && (
+                      <Step4Labor data={data} up={up} total={totalLaborCost} hideHeader />
+                    )}
+                    {section.id === "extras" && (
+                      <Step5Extras data={data} up={up} total={totalEquipmentCost} hideHeader />
+                    )}
+                    {section.id === "profit" && (
+                      <Step6Profit
+                        data={data}
+                        up={up}
+                        subtotal={subtotal}
+                        overheadAmount={overheadAmount}
+                        profitAmount={profitAmount}
+                        taxAmount={taxAmount}
+                        finalPrice={finalPrice}
+                        hideHeader
+                      />
+                    )}
+                    {section.id === "summary" && (
+                      <Step7Final
+                        data={data}
+                        totalMaterialCost={totalMaterialCost}
+                        totalLaborCost={totalLaborCost}
+                        totalEquipmentCost={totalEquipmentCost}
+                        overheadAmount={overheadAmount}
+                        profitAmount={profitAmount}
+                        taxAmount={taxAmount}
+                        finalPrice={finalPrice}
+                        roofSquares={roofSquares}
+                        pricePerSquare={pricePerSquare}
+                        walletBalance={walletBalance}
+                        hideHeader
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
 
           {/* Actions */}
           <div style={{
@@ -903,13 +1017,14 @@ function MiniStat({ label, value }: { label: string; value: string }) {
 
 /* ─── Step 1: Client / Lead Selection ────────────────────── */
 
-function Step1ClientInfo({ data, up, clients, leads, clientSearchQ, setClientSearchQ }: {
+function Step1ClientInfo({ data, up, clients, leads, clientSearchQ, setClientSearchQ, hideHeader = false }: {
   data: WizardData;
   up: <K extends keyof WizardData>(key: K, val: WizardData[K]) => void;
   clients: ClientEntity[];
   leads: LeadEntity[];
   clientSearchQ: string;
   setClientSearchQ: (q: string) => void;
+  hideHeader?: boolean;
 }) {
   const q = clientSearchQ.toLowerCase();
 
@@ -954,8 +1069,12 @@ function Step1ClientInfo({ data, up, clients, leads, clientSearchQ, setClientSea
 
   return (
     <div>
-      <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A", marginBottom: 4 }}>👤 Client / Lead Information</h2>
-      <p style={{ fontSize: 13, color: "#64748B", marginBottom: 20 }}>Select an existing client or lead, or enter details manually.</p>
+      {!hideHeader && (
+        <>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A", marginBottom: 4 }}>👤 Client / Lead Information</h2>
+          <p style={{ fontSize: 13, color: "#64748B", marginBottom: 20 }}>Select an existing client or lead, or enter details manually.</p>
+        </>
+      )}
 
       {/* Search */}
       <Field label="Search Client or Lead">
@@ -1052,7 +1171,7 @@ function Step1ClientInfo({ data, up, clients, leads, clientSearchQ, setClientSea
 
 /* ─── Step 2: Address & Roof Measurement ─────────────────── */
 
-function Step2Address({ data, up, suggestions, addressLoading, onAddressInput, onSelectAddress, satelliteLoading, eagleViewLoading, eagleViewStatus }: {
+function Step2Address({ data, up, suggestions, addressLoading, onAddressInput, onSelectAddress, satelliteLoading, eagleViewLoading, eagleViewStatus, hideHeader = false }: {
   data: WizardData;
   up: <K extends keyof WizardData>(key: K, val: WizardData[K]) => void;
   suggestions: { description: string; placeId: string }[];
@@ -1062,11 +1181,16 @@ function Step2Address({ data, up, suggestions, addressLoading, onAddressInput, o
   satelliteLoading: boolean;
   eagleViewLoading: boolean;
   eagleViewStatus: string;
+  hideHeader?: boolean;
 }) {
   return (
     <div>
-      <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A", marginBottom: 4 }}>📍 Address & Roof Measurement</h2>
-      <p style={{ fontSize: 13, color: "#64748B", marginBottom: 20 }}>Enter the property address — EagleView will provide roof measurements.</p>
+      {!hideHeader && (
+        <>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A", marginBottom: 4 }}>📍 Address & Roof Measurement</h2>
+          <p style={{ fontSize: 13, color: "#64748B", marginBottom: 20 }}>Enter the property address — EagleView will provide roof measurements.</p>
+        </>
+      )}
 
       {/* Address input with autocomplete */}
       <Field label="Property Address">
@@ -1171,12 +1295,13 @@ function Step2Address({ data, up, suggestions, addressLoading, onAddressInput, o
 
 /* ─── Step 2: Material Pricing ───────────────────────────── */
 
-function Step3Materials({ data, up, total, otherMaterials, onOtherMaterialsChange }: {
+function Step3Materials({ data, up, total, otherMaterials, onOtherMaterialsChange, hideHeader = false }: {
   data: WizardData;
   up: <K extends keyof WizardData>(key: K, val: WizardData[K]) => void;
   total: number;
   otherMaterials: OtherMaterial[];
   onOtherMaterialsChange: (mats: OtherMaterial[]) => void;
+  hideHeader?: boolean;
 }) {
   const addMaterial = () => onOtherMaterialsChange([...otherMaterials, { name: "", qty: 1, cost: 0 }]);
   const removeMaterial = (idx: number) => onOtherMaterialsChange(otherMaterials.filter((_, i) => i !== idx));
@@ -1204,8 +1329,12 @@ function Step3Materials({ data, up, total, otherMaterials, onOtherMaterialsChang
 
   return (
     <div>
-      <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A", marginBottom: 4 }}>🧱 Material Pricing</h2>
-      <p style={{ fontSize: 13, color: "#64748B", marginBottom: 20 }}>Enter quantity and unit price for each material. Line totals auto-calculate.</p>
+      {!hideHeader && (
+        <>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A", marginBottom: 4 }}>🧱 Material Pricing</h2>
+          <p style={{ fontSize: 13, color: "#64748B", marginBottom: 20 }}>Enter quantity and unit price for each material. Line totals auto-calculate.</p>
+        </>
+      )}
 
       <Field label="Shingle Type">
         <input value={data.shingleType} onChange={(e) => up("shingleType", e.target.value)} style={inputStyle} placeholder="e.g. Architectural Shingles" />
@@ -1295,15 +1424,20 @@ function Step3Materials({ data, up, total, otherMaterials, onOtherMaterialsChang
 
 /* ─── Step 3: Labor Inputs ───────────────────────────────── */
 
-function Step4Labor({ data, up, total }: {
+function Step4Labor({ data, up, total, hideHeader = false }: {
   data: WizardData;
   up: <K extends keyof WizardData>(key: K, val: WizardData[K]) => void;
   total: number;
+  hideHeader?: boolean;
 }) {
   return (
     <div>
-      <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A", marginBottom: 4 }}>👷 Labor Inputs</h2>
-      <p style={{ fontSize: 13, color: "#64748B", marginBottom: 20 }}>Enter labor details. Total = Workers × Days × Rate.</p>
+      {!hideHeader && (
+        <>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A", marginBottom: 4 }}>👷 Labor Inputs</h2>
+          <p style={{ fontSize: 13, color: "#64748B", marginBottom: 20 }}>Enter labor details. Total = Workers × Days × Rate.</p>
+        </>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         <Field label="Cost Per Square (optional)"><NumberInput value={data.laborCostPerSquare} onChange={(v) => up("laborCostPerSquare", v)} prefix="$" /></Field>
@@ -1330,15 +1464,20 @@ function Step4Labor({ data, up, total }: {
 
 /* ─── Step 4: Equipment & Extras ─────────────────────────── */
 
-function Step5Extras({ data, up, total }: {
+function Step5Extras({ data, up, total, hideHeader = false }: {
   data: WizardData;
   up: <K extends keyof WizardData>(key: K, val: WizardData[K]) => void;
   total: number;
+  hideHeader?: boolean;
 }) {
   return (
     <div>
-      <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A", marginBottom: 4 }}>🔧 Equipment & Extra Costs</h2>
-      <p style={{ fontSize: 13, color: "#64748B", marginBottom: 20 }}>Add any additional costs for equipment, permits, and disposal.</p>
+      {!hideHeader && (
+        <>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A", marginBottom: 4 }}>🔧 Equipment & Extra Costs</h2>
+          <p style={{ fontSize: 13, color: "#64748B", marginBottom: 20 }}>Add any additional costs for equipment, permits, and disposal.</p>
+        </>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         <Field label="Dumpster"><NumberInput value={data.dumpsterCost} onChange={(v) => up("dumpsterCost", v)} prefix="$" /></Field>
@@ -1362,15 +1501,20 @@ function Step5Extras({ data, up, total }: {
 
 /* ─── Step 5: Profit & Overhead ──────────────────────────── */
 
-function Step6Profit({ data, up, subtotal, overheadAmount, profitAmount, taxAmount, finalPrice }: {
+function Step6Profit({ data, up, subtotal, overheadAmount, profitAmount, taxAmount, finalPrice, hideHeader = false }: {
   data: WizardData;
   up: <K extends keyof WizardData>(key: K, val: WizardData[K]) => void;
   subtotal: number; overheadAmount: number; profitAmount: number; taxAmount: number; finalPrice: number;
+  hideHeader?: boolean;
 }) {
   return (
     <div>
-      <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A", marginBottom: 4 }}>💰 Profit & Overhead</h2>
-      <p style={{ fontSize: 13, color: "#64748B", marginBottom: 20 }}>Set your overhead, profit margin, and tax percentages.</p>
+      {!hideHeader && (
+        <>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A", marginBottom: 4 }}>💰 Profit & Overhead</h2>
+          <p style={{ fontSize: 13, color: "#64748B", marginBottom: 20 }}>Set your overhead, profit margin, and tax percentages.</p>
+        </>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
         <Field label="Overhead %"><NumberInput value={data.overheadPercent} onChange={(v) => up("overheadPercent", v)} suffix="%" /></Field>
@@ -1413,17 +1557,22 @@ function Step6Profit({ data, up, subtotal, overheadAmount, profitAmount, taxAmou
 /* ─── Step 6: Final Summary ──────────────────────────────── */
 
 function Step7Final({ data, totalMaterialCost, totalLaborCost, totalEquipmentCost,
-  overheadAmount, profitAmount, taxAmount, finalPrice, roofSquares, pricePerSquare, walletBalance }: {
+  overheadAmount, profitAmount, taxAmount, finalPrice, roofSquares, pricePerSquare, walletBalance, hideHeader = false }: {
   data: WizardData;
   totalMaterialCost: number; totalLaborCost: number; totalEquipmentCost: number;
   overheadAmount: number; profitAmount: number; taxAmount: number;
   finalPrice: number; roofSquares: number; pricePerSquare: number;
   walletBalance: number | null;
+  hideHeader?: boolean;
 }) {
   return (
     <div>
-      <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A", marginBottom: 4 }}>📋 Estimate Summary</h2>
-      <p style={{ fontSize: 13, color: "#64748B", marginBottom: 20 }}>Review your complete estimate before finalizing.</p>
+      {!hideHeader && (
+        <>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A", marginBottom: 4 }}>📋 Estimate Summary</h2>
+          <p style={{ fontSize: 13, color: "#64748B", marginBottom: 20 }}>Review your complete estimate before finalizing.</p>
+        </>
+      )}
 
       {/* Client Info */}
       <div style={{

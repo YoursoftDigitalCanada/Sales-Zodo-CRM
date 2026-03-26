@@ -754,16 +754,182 @@ export default function RoofEstimatorWizard() {
   }, [buildPayload, eagleViewError, estimateId, data, toast, navigate, totalMaterialCost, totalLaborCost, totalEquipmentCost, overheadAmount, profitAmount, taxAmount, finalPrice, hasValidEagleViewMeasurement]);
 
   const previewImageUrl = !isLikelyPdfUrl(data.satelliteImageUrl) ? data.satelliteImageUrl : "";
-  const sectionStyle: React.CSSProperties = {
-    border: "1px solid #E2E8F0",
-    borderRadius: 14,
-    background: "#fff",
-    overflow: "hidden",
-    marginBottom: 14,
+  const activeSectionConfig = ESTIMATE_SECTIONS.find((section) => section.id === activeSection) || ESTIMATE_SECTIONS[0];
+  const activeSectionIndex = ESTIMATE_SECTIONS.findIndex((section) => section.id === activeSection);
+  const sectionSummaries: Record<SectionId, string> = {
+    client: data.clientName || data.clientEmail || "Search or enter contact details",
+    address: hasValidEagleViewMeasurement
+      ? `${roofSquares.toFixed(1)} squares loaded`
+      : data.address || "Enter property address",
+    materials: totalMaterialCost > 0 ? fmt(totalMaterialCost) : "Set material pricing",
+    labor: totalLaborCost > 0 ? fmt(totalLaborCost) : "Add crew and labor rates",
+    extras: totalEquipmentCost > 0 ? fmt(totalEquipmentCost) : "Optional permits and equipment",
+    profit: finalPrice > 0 ? fmt(finalPrice) : "Set margins and tax",
+    summary: canGenerateEstimate ? "Ready to generate" : "Waiting for roof data",
+  };
+  const sectionReady: Record<SectionId, boolean> = {
+    client: Boolean(data.clientName || data.clientEmail || data.clientPhone),
+    address: hasValidEagleViewMeasurement,
+    materials: totalMaterialCost > 0 || data.shinglePricePerSq > 0 || data.otherMaterials.length > 0,
+    labor: totalLaborCost > 0,
+    extras: totalEquipmentCost > 0,
+    profit: finalPrice > 0,
+    summary: hasValidEagleViewMeasurement,
+  };
+
+  const renderActiveSection = () => {
+    switch (activeSection) {
+      case "client":
+        return (
+          <Step1ClientInfo
+            data={data}
+            up={up}
+            clients={clients}
+            leads={leads}
+            clientSearchQ={clientSearchQ}
+            setClientSearchQ={setClientSearchQ}
+            hideHeader
+          />
+        );
+      case "address":
+        return (
+          <Step2Address
+            data={data}
+            up={up}
+            suggestions={addressSuggestions}
+            addressLoading={addressLoading}
+            onAddressInput={handleAddressInput}
+            onSelectAddress={selectAddress}
+            satelliteLoading={satelliteLoading}
+            eagleViewLoading={eagleViewLoading}
+            eagleViewStatus={eagleViewStatus}
+            eagleViewError={eagleViewError}
+            hideHeader
+          />
+        );
+      case "materials":
+        return (
+          <Step3Materials
+            data={data}
+            up={up}
+            total={totalMaterialCost}
+            otherMaterials={data.otherMaterials}
+            onOtherMaterialsChange={(mats) => up("otherMaterials", mats)}
+            hideHeader
+          />
+        );
+      case "labor":
+        return <Step4Labor data={data} up={up} total={totalLaborCost} hideHeader />;
+      case "extras":
+        return <Step5Extras data={data} up={up} total={totalEquipmentCost} hideHeader />;
+      case "profit":
+        return (
+          <Step6Profit
+            data={data}
+            up={up}
+            subtotal={subtotal}
+            overheadAmount={overheadAmount}
+            profitAmount={profitAmount}
+            taxAmount={taxAmount}
+            finalPrice={finalPrice}
+            hideHeader
+          />
+        );
+      case "summary":
+        return (
+          <Step7Final
+            data={data}
+            totalMaterialCost={totalMaterialCost}
+            totalLaborCost={totalLaborCost}
+            totalEquipmentCost={totalEquipmentCost}
+            overheadAmount={overheadAmount}
+            profitAmount={profitAmount}
+            taxAmount={taxAmount}
+            finalPrice={finalPrice}
+            roofSquares={roofSquares}
+            pricePerSquare={pricePerSquare}
+            walletBalance={walletBalance}
+            hideHeader
+          />
+        );
+      default:
+        return null;
+    }
   };
 
   return (
-    <div style={{ padding: "24px 32px", maxWidth: 1200, margin: "0 auto", fontFamily: "'Inter',sans-serif" }}>
+    <div style={{ padding: "24px 24px 40px", maxWidth: 1440, margin: "0 auto", fontFamily: "'Inter',sans-serif" }}>
+      <style>{`
+        .roof-estimator-shell {
+          display: grid;
+          grid-template-columns: minmax(220px, 250px) minmax(0, 1fr) 360px;
+          gap: 24px;
+          align-items: start;
+        }
+
+        .roof-estimator-nav {
+          position: sticky;
+          top: 24px;
+        }
+
+        .roof-estimator-nav-list {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .roof-estimator-main {
+          min-width: 0;
+        }
+
+        .roof-estimator-preview {
+          position: sticky;
+          top: 24px;
+        }
+
+        .roof-estimator-action-bar {
+          display: flex;
+          justify-content: flex-end;
+          align-items: center;
+          gap: 10px;
+        }
+
+        @media (max-width: 1240px) {
+          .roof-estimator-shell {
+            grid-template-columns: minmax(220px, 240px) minmax(0, 1fr);
+          }
+
+          .roof-estimator-preview {
+            grid-column: 1 / -1;
+            position: static;
+          }
+        }
+
+        @media (max-width: 860px) {
+          .roof-estimator-shell {
+            grid-template-columns: 1fr;
+          }
+
+          .roof-estimator-nav {
+            position: static;
+          }
+
+          .roof-estimator-nav-list {
+            flex-direction: row;
+            overflow-x: auto;
+            padding-bottom: 6px;
+          }
+
+          .roof-estimator-nav-list > button {
+            min-width: 220px;
+          }
+
+          .roof-estimator-action-bar {
+            flex-direction: column;
+            align-items: stretch;
+          }
+        }
+      `}</style>
       {/* Back to list */}
       <button onClick={() => navigate("/roof-estimator")} style={{
         display: "flex", alignItems: "center", gap: 6, background: "none", border: "none",
@@ -774,34 +940,86 @@ export default function RoofEstimatorWizard() {
         Back to Estimates
       </button>
 
-      <h1 style={{ fontSize: 22, fontWeight: 800, color: "#0F172A", marginBottom: 4 }}>
-        {estimateId ? "Edit Estimate" : "Create AI Estimate"}
-      </h1>
-      <p style={{ color: "#64748B", fontSize: 13, marginBottom: 20 }}>
-        Fill out the full estimate in one place and generate it when everything looks right.
-      </p>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 20, alignItems: "flex-start", flexWrap: "wrap", marginBottom: 24 }}>
+        <div style={{ flex: 1, minWidth: 280 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+            <span style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              padding: "6px 12px", borderRadius: 999, background: "rgba(15,23,42,.04)",
+              border: "1px solid #E2E8F0", color: "#334155", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em",
+            }}>
+              {estimateId ? "Editing Estimate" : "AI Estimate Workspace"}
+            </span>
+            {data.measurementSource === "eagleview" && (
+              <span style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                padding: "6px 12px", borderRadius: 999, background: "rgba(16,185,129,.08)",
+                border: "1px solid rgba(16,185,129,.15)", color: "#047857", fontSize: 11, fontWeight: 700,
+              }}>
+                EagleView Connected
+              </span>
+            )}
+          </div>
 
-      {/* Main content: two-column layout (form left 60%, preview right 40%) */}
-      <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
+          <h1 style={{ fontSize: 28, fontWeight: 900, color: "#0F172A", marginBottom: 6, letterSpacing: "-0.03em" }}>
+            {estimateId ? "Edit AI Estimate" : "Create AI Estimate"}
+          </h1>
+          <p style={{ color: "#64748B", fontSize: 14, maxWidth: 760, lineHeight: 1.6, marginBottom: 14 }}>
+            Capture contact details, pull EagleView roof measurements, price the job, and generate the estimate from one cleaner workspace.
+          </p>
 
-        {/* Left: Step form (60%) */}
-        <div style={{
-          flex: 1, background: "#fff", borderRadius: 14,
-          border: "1px solid #E2E8F0", boxShadow: "0 1px 4px rgba(0,0,0,.06)",
-          padding: "28px 32px",
-        }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+            {[
+              { label: "Client", value: data.clientName || "Not selected" },
+              { label: "Property", value: data.address || "Waiting for address" },
+              { label: "Roof Area", value: hasValidEagleViewMeasurement ? `${data.roofAreaSqft.toLocaleString()} sq ft` : "No measurement yet" },
+              { label: "Live Total", value: fmt(finalPrice) },
+            ].map((chip) => (
+              <div key={chip.label} style={{
+                padding: "10px 12px", borderRadius: 12, background: "#fff",
+                border: "1px solid #E2E8F0", boxShadow: "0 1px 3px rgba(15,23,42,.04)",
+                minWidth: 150,
+              }}>
+                <div style={{ fontSize: 10, color: "#94A3B8", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 4 }}>
+                  {chip.label}
+                </div>
+                <div style={{ fontSize: 13, color: "#0F172A", fontWeight: 700 }}>{chip.value}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {walletBalance !== null && (
           <div style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 8,
-            marginBottom: 20,
-            paddingBottom: 16,
-            borderBottom: "1px solid #E2E8F0",
-            position: "sticky",
-            top: 0,
-            background: "#fff",
-            zIndex: 2,
+            minWidth: 240, maxWidth: 280, background: "#fff", borderRadius: 16,
+            border: "1px solid #E2E8F0", boxShadow: "0 8px 28px rgba(15,23,42,.06)",
+            padding: "16px 18px",
           }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: "#94A3B8", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 6 }}>
+              Wallet Check
+            </div>
+            <div style={{ fontSize: 20, fontWeight: 900, color: walletBalance >= 20 ? "#047857" : "#B91C1C", marginBottom: 4 }}>
+              ${walletBalance.toFixed(2)}
+            </div>
+            <div style={{ fontSize: 12, color: "#64748B", lineHeight: 1.5 }}>
+              {walletBalance >= 20 ? "Ready to charge $20.00 when you generate this estimate." : "Add funds before generating the final estimate."}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="roof-estimator-shell">
+        <aside className="roof-estimator-nav" style={{
+          background: "#fff",
+          borderRadius: 18,
+          border: "1px solid #E2E8F0",
+          boxShadow: "0 10px 30px rgba(15,23,42,.05)",
+          padding: 16,
+        }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: "#94A3B8", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 12 }}>
+            Estimator Sections
+          </div>
+          <div className="roof-estimator-nav-list">
             {ESTIMATE_SECTIONS.map((section) => {
               const isActive = section.id === activeSection;
               return (
@@ -809,156 +1027,107 @@ export default function RoofEstimatorWizard() {
                   key={section.id}
                   onClick={() => setActiveSection(section.id)}
                   style={{
-                    border: isActive ? "1px solid #6637F4" : "1px solid #E2E8F0",
-                    background: isActive ? "rgba(102,55,244,.08)" : "#fff",
-                    color: isActive ? "#6637F4" : "#475569",
-                    borderRadius: 999,
-                    padding: "8px 12px",
-                    fontSize: 12,
-                    fontWeight: 700,
+                    border: isActive ? "1px solid rgba(102,55,244,.32)" : "1px solid #E2E8F0",
+                    background: isActive ? "linear-gradient(135deg, rgba(102,55,244,.10), rgba(102,55,244,.03))" : "#fff",
+                    color: isActive ? "#4C1D95" : "#334155",
+                    borderRadius: 16,
+                    padding: "12px 14px",
                     cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
+                    display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+                    textAlign: "left",
+                    boxShadow: isActive ? "0 8px 24px rgba(102,55,244,.10)" : "none",
                   }}
                 >
-                  <span>{section.icon}</span>
-                  <span>{section.shortLabel}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+                    <div style={{
+                      width: 38, height: 38, borderRadius: 12,
+                      background: isActive ? "#6637F4" : "#F8FAFC",
+                      color: isActive ? "#fff" : "#64748B",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 18, flexShrink: 0,
+                    }}>
+                      {section.icon}
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: isActive ? "#4C1D95" : "#0F172A" }}>{section.shortLabel}</div>
+                      <div style={{ fontSize: 11, color: "#64748B", marginTop: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {sectionSummaries[section.id]}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{
+                    width: 18, height: 18, borderRadius: "50%",
+                    background: sectionReady[section.id] ? "#10B981" : isActive ? "#E9D5FF" : "#E2E8F0",
+                    color: "#fff", fontSize: 11, fontWeight: 800,
+                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                  }}>
+                    {sectionReady[section.id] ? "✓" : activeSectionIndex >= 0 && ESTIMATE_SECTIONS[activeSectionIndex].id === section.id ? "•" : ""}
+                  </div>
                 </button>
               );
             })}
           </div>
+        </aside>
 
-          {ESTIMATE_SECTIONS.map((section) => {
-            const isOpen = section.id === activeSection;
-
-            return (
-              <div key={section.id} style={sectionStyle}>
-                <button
-                  onClick={() => setActiveSection(section.id)}
-                  style={{
-                    width: "100%",
-                    border: "none",
-                    background: "transparent",
-                    padding: "18px 20px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    cursor: "pointer",
-                    textAlign: "left",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div style={{
-                      width: 38,
-                      height: 38,
-                      borderRadius: 12,
-                      background: isOpen ? "rgba(102,55,244,.10)" : "#F8FAFC",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 18,
-                    }}>
-                      {section.icon}
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 15, fontWeight: 700, color: "#0F172A" }}>{section.title}</div>
-                      <div style={{ fontSize: 12, color: "#64748B", marginTop: 2 }}>{section.description}</div>
-                    </div>
-                  </div>
-                  <div style={{
-                    fontSize: 18,
-                    color: isOpen ? "#6637F4" : "#94A3B8",
-                    transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
-                    transition: "transform .2s ease",
-                  }}>
-                    ▾
-                  </div>
-                </button>
-
-                {isOpen && (
-                  <div style={{ padding: "0 20px 20px" }}>
-                    {section.id === "client" && (
-                      <Step1ClientInfo
-                        data={data}
-                        up={up}
-                        clients={clients}
-                        leads={leads}
-                        clientSearchQ={clientSearchQ}
-                        setClientSearchQ={setClientSearchQ}
-                        hideHeader
-                      />
-                    )}
-                    {section.id === "address" && (
-                      <Step2Address
-                        data={data}
-                        up={up}
-                        suggestions={addressSuggestions}
-                        addressLoading={addressLoading}
-                        onAddressInput={handleAddressInput}
-                        onSelectAddress={selectAddress}
-                        satelliteLoading={satelliteLoading}
-                        eagleViewLoading={eagleViewLoading}
-                        eagleViewStatus={eagleViewStatus}
-                        eagleViewError={eagleViewError}
-                        hideHeader
-                      />
-                    )}
-                    {section.id === "materials" && (
-                      <Step3Materials
-                        data={data}
-                        up={up}
-                        total={totalMaterialCost}
-                        otherMaterials={data.otherMaterials}
-                        onOtherMaterialsChange={(mats) => up("otherMaterials", mats)}
-                        hideHeader
-                      />
-                    )}
-                    {section.id === "labor" && (
-                      <Step4Labor data={data} up={up} total={totalLaborCost} hideHeader />
-                    )}
-                    {section.id === "extras" && (
-                      <Step5Extras data={data} up={up} total={totalEquipmentCost} hideHeader />
-                    )}
-                    {section.id === "profit" && (
-                      <Step6Profit
-                        data={data}
-                        up={up}
-                        subtotal={subtotal}
-                        overheadAmount={overheadAmount}
-                        profitAmount={profitAmount}
-                        taxAmount={taxAmount}
-                        finalPrice={finalPrice}
-                        hideHeader
-                      />
-                    )}
-                    {section.id === "summary" && (
-                      <Step7Final
-                        data={data}
-                        totalMaterialCost={totalMaterialCost}
-                        totalLaborCost={totalLaborCost}
-                        totalEquipmentCost={totalEquipmentCost}
-                        overheadAmount={overheadAmount}
-                        profitAmount={profitAmount}
-                        taxAmount={taxAmount}
-                        finalPrice={finalPrice}
-                        roofSquares={roofSquares}
-                        pricePerSquare={pricePerSquare}
-                        walletBalance={walletBalance}
-                        hideHeader
-                      />
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-
-          {/* Actions */}
+        <div className="roof-estimator-main">
           <div style={{
-            display: "flex", justifyContent: "flex-end", alignItems: "center",
-            marginTop: 28, paddingTop: 20, borderTop: "1px solid #E2E8F0",
-            gap: 10,
+            background: "#fff",
+            borderRadius: 20,
+            border: "1px solid #E2E8F0",
+            boxShadow: "0 16px 36px rgba(15,23,42,.05)",
+            overflow: "hidden",
+          }}>
+            <div style={{
+              padding: "22px 24px 18px",
+              borderBottom: "1px solid #E2E8F0",
+              background: "linear-gradient(180deg, rgba(248,250,252,1) 0%, rgba(255,255,255,1) 100%)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              gap: 16,
+              flexWrap: "wrap",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                <div style={{
+                  width: 48, height: 48, borderRadius: 16,
+                  background: "linear-gradient(135deg,#6637F4,#4F46E5)",
+                  color: "#fff",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 22,
+                  boxShadow: "0 10px 24px rgba(102,55,244,.22)",
+                }}>
+                  {activeSectionConfig.icon}
+                </div>
+                <div>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: "#0F172A", letterSpacing: "-0.02em" }}>
+                    {activeSectionConfig.title}
+                  </div>
+                  <div style={{ fontSize: 13, color: "#64748B", marginTop: 4, lineHeight: 1.5 }}>
+                    {activeSectionConfig.description}
+                  </div>
+                </div>
+              </div>
+              <div style={{
+                padding: "10px 12px", borderRadius: 12,
+                background: "#fff", border: "1px solid #E2E8F0",
+                minWidth: 132,
+              }}>
+                <div style={{ fontSize: 10, fontWeight: 800, color: "#94A3B8", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>
+                  Current Focus
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: "#0F172A" }}>
+                  Section {activeSectionIndex + 1} of {ESTIMATE_SECTIONS.length}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ padding: "24px" }}>
+              {renderActiveSection()}
+            </div>
+          </div>
+
+          <div className="roof-estimator-action-bar" style={{
+            marginTop: 18, paddingTop: 18, borderTop: "1px solid #E2E8F0",
           }}>
             {!hasValidEagleViewMeasurement && (
               <div style={{ marginRight: "auto", fontSize: 12, color: eagleViewError ? "#DC2626" : "#64748B" }}>
@@ -985,20 +1154,24 @@ export default function RoofEstimatorWizard() {
             </button>
           </div>
         </div>
-        {/* Right: Sticky Preview (40%) */}
-        <div style={{
-          flex: "0 0 380px", background: "#fff", borderRadius: 14,
-          border: "1px solid #E2E8F0", boxShadow: "0 1px 4px rgba(0,0,0,.06)",
-          overflow: "hidden", position: "sticky", top: 24,
+
+        <aside className="roof-estimator-preview" style={{
+          background: "#fff", borderRadius: 20,
+          border: "1px solid #E2E8F0", boxShadow: "0 16px 36px rgba(15,23,42,.05)",
+          overflow: "hidden",
         }}>
           <div style={{
-            padding: "14px 18px", borderBottom: "1px solid #E2E8F0",
-            fontSize: 14, fontWeight: 700, color: "#0F172A",
+            padding: "16px 18px", borderBottom: "1px solid #E2E8F0",
+            fontSize: 14, fontWeight: 800, color: "#0F172A",
+            display: "flex", alignItems: "center", justifyContent: "space-between",
           }}>
-            📊 Estimate Preview
+            <span>📊 Live Estimate Preview</span>
+            <span style={{ fontSize: 11, color: hasValidEagleViewMeasurement ? "#047857" : "#94A3B8", fontWeight: 700 }}>
+              {hasValidEagleViewMeasurement ? "Roof data ready" : "Awaiting roof data"}
+            </span>
           </div>
           <div style={{
-            height: 220, background: "#F1F5F9", display: "flex", alignItems: "center",
+            height: 240, background: "#F1F5F9", display: "flex", alignItems: "center",
             justifyContent: "center", overflow: "hidden",
           }}>
           {previewImageUrl ? (
@@ -1011,6 +1184,20 @@ export default function RoofEstimatorWizard() {
             )}
           </div>
           <div style={{ padding: "16px 18px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+              <div style={{
+                padding: "10px 12px", borderRadius: 12, background: "#F8FAFC", border: "1px solid #E2E8F0",
+              }}>
+                <div style={{ fontSize: 10, color: "#94A3B8", textTransform: "uppercase", fontWeight: 800, marginBottom: 4 }}>Client</div>
+                <div style={{ fontSize: 13, color: "#0F172A", fontWeight: 700 }}>{data.clientName || "Not selected"}</div>
+              </div>
+              <div style={{
+                padding: "10px 12px", borderRadius: 12, background: "#F8FAFC", border: "1px solid #E2E8F0",
+              }}>
+                <div style={{ fontSize: 10, color: "#94A3B8", textTransform: "uppercase", fontWeight: 800, marginBottom: 4 }}>Company</div>
+                <div style={{ fontSize: 13, color: "#0F172A", fontWeight: 700 }}>{data.clientCompany || "—"}</div>
+              </div>
+            </div>
             {data.address && (
               <div style={{ fontSize: 13, color: "#0F172A", fontWeight: 600, marginBottom: 10 }}>{data.address}</div>
             )}
@@ -1018,7 +1205,7 @@ export default function RoofEstimatorWizard() {
               <MiniStat label="Roof Area" value={`${data.roofAreaSqft.toLocaleString()} sq ft`} />
               <MiniStat label="Squares" value={roofSquares.toFixed(1)} />
               <MiniStat label="Pitch" value={data.pitch || "—"} />
-              <MiniStat label="Confidence" value={data.confidence ? `${data.confidence.toFixed(0)}%` : "—"} />
+              <MiniStat label="Roof Type" value={data.roofType ? data.roofType.charAt(0).toUpperCase() + data.roofType.slice(1) : "—"} />
             </div>
             {/* Running totals */}
             <div style={{ marginTop: 14, borderTop: "1px solid #E2E8F0", paddingTop: 14 }}>
@@ -1068,7 +1255,7 @@ export default function RoofEstimatorWizard() {
               </div>
             </div>
           </div>
-        </div>
+        </aside>
       </div>
     </div>
   );

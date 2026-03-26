@@ -13,7 +13,11 @@ const DEFAULT_STORAGE_LIMIT = 10 * 1024 * 1024 * 1024;
 
 export class FilesService {
     // ── UPLOAD ──
-    async upload(tenantId: string, file: Express.Multer.File, opts?: { folderId?: string; projectId?: string; clientId?: string }) {
+    async upload(
+        tenantId: string,
+        file: Express.Multer.File,
+        opts?: { folderId?: string; projectId?: string; clientId?: string; leadId?: string; quoteId?: string },
+    ) {
         // Compute checksum
         const fileBuffer = fs.readFileSync(file.path);
         const checksum = crypto.createHash('sha256').update(fileBuffer).digest('hex');
@@ -28,6 +32,8 @@ export class FilesService {
             folderId: opts?.folderId || null,
             projectId: opts?.projectId || null,
             clientId: opts?.clientId || null,
+            leadId: opts?.leadId || null,
+            quoteId: opts?.quoteId || null,
             checksum,
         };
 

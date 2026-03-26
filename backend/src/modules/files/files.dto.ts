@@ -14,6 +14,8 @@ export interface UploadFileDto {
     folderId?: string | null;
     projectId?: string | null;
     clientId?: string | null;
+    leadId?: string | null;
+    quoteId?: string | null;
     applicationId?: string | null;
     checksum?: string | null;
     fromAddress?: string;
@@ -53,6 +55,8 @@ export interface FileQueryDto {
     folderId?: string;
     clientId?: string;
     projectId?: string;
+    leadId?: string;
+    quoteId?: string;
     mimeType?: string;
     tag?: string;
     sortBy?: 'name' | 'createdAt' | 'size';

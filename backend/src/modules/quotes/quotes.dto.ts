@@ -53,6 +53,7 @@ export interface QuoteResponseDto {
     quoteNumber: string;
     status: QuoteStatus;
     client: { id: string; clientName: string } | null;
+    lead: { id: string; firstName: string; lastName: string; companyName: string | null } | null;
     leadId: string | null;
     issueDate: Date;
     validUntil: Date;
@@ -79,6 +80,7 @@ export interface QuoteResponseDto {
 
 type QuoteWithRelations = Quote & {
     client?: { id: string; clientName: string } | null;
+    lead?: { id: string; firstName: string; lastName: string; companyName: string | null } | null;
     items?: { id: string; description: string; quantity: Decimal; unitPrice: Decimal; total: Decimal; sortOrder: number }[];
 };
 
@@ -88,6 +90,14 @@ export function toQuoteResponseDto(q: QuoteWithRelations): QuoteResponseDto {
         quoteNumber: q.quoteNumber,
         status: q.status,
         client: q.client ? { id: q.client.id, clientName: q.client.clientName } : null,
+        lead: q.lead
+            ? {
+                id: q.lead.id,
+                firstName: q.lead.firstName,
+                lastName: q.lead.lastName,
+                companyName: q.lead.companyName || null,
+            }
+            : null,
         leadId: q.leadId,
         issueDate: q.issueDate,
         validUntil: q.validUntil,

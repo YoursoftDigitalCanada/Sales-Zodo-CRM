@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { getLeadById, convertLead, getInspectionsByLeadId, createInspection, updateInspection, deleteInspection, getInsuranceClaimsByLeadId, createInsuranceClaim, updateInsuranceClaim, deleteInsuranceClaim } from "@/features/leads";
+import { getFiles, getDownloadUrl } from "@/features/files/services/files-service";
 import { WhatsAppActionButton } from "@/features/whatsapp/components/WhatsAppActionButton";
 import { ActivityTimeline } from "@/components/ActivityTimeline";
 import {
@@ -26,7 +27,7 @@ import {
     FileText, MessageSquare, CheckSquare, Activity, MoreHorizontal,
     UserPlus, ArrowRightLeft, Star, Pencil, Send, ExternalLink, Flame, Search, Plus, Trash2, Eye,
     Snowflake, Zap, X, CheckCircle2, Home, Wrench, Shield, HardHat,
-    ClipboardList, Banknote, AlertTriangle
+    ClipboardList, Banknote, AlertTriangle, FolderOpen, Download
 } from "lucide-react";
 
 // ── Interfaces ──────────────────────────────────────────────────────────
@@ -381,6 +382,8 @@ const LeadDetailPage = () => {
     const [claimsLoading, setClaimsLoading] = useState(false);
     const [showClaimDialog, setShowClaimDialog] = useState(false);
     const [editingClaim, setEditingClaim] = useState<any | null>(null);
+    const [documents, setDocuments] = useState<any[]>([]);
+    const [loadingDocs, setLoadingDocs] = useState(false);
 
     const fetchLead = useCallback(async () => {
         try {
@@ -461,6 +464,21 @@ const LeadDetailPage = () => {
     }, [id]);
 
     useEffect(() => { fetchClaims(); }, [fetchClaims]);
+
+    const fetchDocuments = useCallback(async () => {
+        if (!id) return;
+        try {
+            setLoadingDocs(true);
+            const data = await getFiles({ leadId: id, limit: 100 });
+            setDocuments(Array.isArray(data) ? data : []);
+        } catch {
+            console.error("Failed to fetch lead documents");
+        } finally {
+            setLoadingDocs(false);
+        }
+    }, [id]);
+
+    useEffect(() => { fetchDocuments(); }, [fetchDocuments]);
 
     const handleSaveClaim = async (data: Record<string, unknown>) => {
         try {
@@ -752,6 +770,30 @@ const LeadDetailPage = () => {
                     </div>
 
                     {/* CARD 7: Notes */}
+                    <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 680ms both' }}>
+                        <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#F1F5F9]">
+                            <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#EDE9FE] flex items-center justify-center"><FolderOpen size={14} className="text-[#7C3AED]" /></div><h3 className="text-sm font-semibold text-[#111827]">Documents</h3><span className="text-xs bg-[#F1F5F9] text-[#6B7280] px-2 py-0.5 rounded-full font-medium">{documents.length}</span></div>
+                        </div>
+                        {loadingDocs ? <div className="flex justify-center py-8"><Loader2 className="animate-spin text-[#14B8A6]" size={20} /></div> :
+                            documents.length === 0 ? <div className="text-center py-8"><FolderOpen size={24} className="text-[#D1D5DB] mx-auto mb-2" /><p className="text-xs text-[#9CA3AF]">No documents linked to this lead yet</p></div> :
+                                <div className="space-y-2">{documents.slice(0, 4).map((doc: any) => {
+                                    const ext = doc.extension || doc.name?.split('.').pop() || '';
+                                    const sizeKb = doc.size ? (Number(doc.size) / 1024).toFixed(1) : '—';
+                                    return (
+                                        <div key={doc.id} className="flex items-center gap-3 py-2 px-2 rounded-lg hover:bg-[#F9FAFB] transition-colors">
+                                            <div className="w-8 h-8 rounded-lg bg-[#EDE9FE] flex items-center justify-center flex-shrink-0">
+                                                <FileText size={14} className="text-[#7C3AED]" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-medium text-[#111827] truncate">{doc.originalName || doc.name}</p>
+                                                <p className="text-[10px] text-[#9CA3AF]">{sizeKb} KB · {String(ext).toUpperCase()} · {doc.createdAt ? new Date(doc.createdAt).toLocaleDateString() : ''}</p>
+                                            </div>
+                                            <a href={getDownloadUrl(doc.id)} target="_blank" rel="noreferrer" className="text-[#14B8A6] hover:text-[#0D9488] p-1"><Download size={14} /></a>
+                                        </div>
+                                    );
+                                })}</div>}
+                    </div>
+
                     <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 680ms both' }}>
                         <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#F1F5F9]">
                             <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#FEF9C3] flex items-center justify-center"><FileText size={14} className="text-[#CA8A04]" /></div><h3 className="text-sm font-semibold text-[#111827]">Notes</h3></div>

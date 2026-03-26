@@ -26,6 +26,12 @@ import {
 import { uploadFile } from "@/features/files/services/files-service";
 import { getProjects } from "@/features/projects/services/projects-service";
 import { getCompanyProfile, type CompanyProfile } from "@/features/settings/services/settings-service";
+import {
+  createQuote,
+  getQuotes,
+  updateQuote as updateLinkedQuote,
+  type QuoteEntity,
+} from "@/features/quotes/services/quotes-service";
 
 interface OtherMaterial { name: string; qty: number; cost: number; }
 
@@ -121,6 +127,11 @@ const normalizeEstimatePhotos = (
 
 const createEstimateDocumentNumber = (estimateId: string): string =>
   `EST-${estimateId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 8).toUpperCase() || "DRAFT"}`;
+
+const parseCustomQuoteNumber = (quoteNumber?: string | null): number => {
+  const match = String(quoteNumber || "").match(/^Quote-(\d+)$/i);
+  return match ? Number(match[1]) : 0;
+};
 
 /* ─── WizardData type ────────────────────────────────────── */
 
@@ -781,7 +792,70 @@ export default function RoofEstimatorWizard() {
       }
 
       const estimateDocumentNumber = createEstimateDocumentNumber(savedId || "NEW");
-      const safeName = data.address.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 40) || estimateDocumentNumber;
+      const linkedLeadId = data.sourceType === "lead" && data.leadId ? data.leadId : undefined;
+      const linkedClientId = data.clientId || undefined;
+
+      let linkedQuote: QuoteEntity | null = null;
+      try {
+        const relatedQuoteParams = linkedLeadId
+          ? { leadId: linkedLeadId, limit: 100 }
+          : linkedClientId
+            ? { clientId: linkedClientId, limit: 100 }
+            : { limit: 100 };
+
+        const existingQuotes = await getQuotes(relatedQuoteParams);
+        linkedQuote = existingQuotes.data.find((quote) => quote.roofEstimateId === savedId) || null;
+
+        let nextQuoteNumber = linkedQuote?.quoteNumber || "";
+        if (!nextQuoteNumber) {
+          const customQuotes = await getQuotes({
+            search: "Quote-",
+            sortBy: "quoteNumber",
+            sortOrder: "desc",
+            limit: 100,
+          });
+          const maxCustomQuote = customQuotes.data.reduce(
+            (currentMax, quote) => Math.max(currentMax, parseCustomQuoteNumber(quote.quoteNumber)),
+            0,
+          );
+          const nextQuoteIndex = Math.max(maxCustomQuote, customQuotes.meta.total) + 1;
+          nextQuoteNumber = `Quote-${String(nextQuoteIndex).padStart(2, "0")}`;
+        }
+
+        const quotePayload: Record<string, unknown> = {
+          clientId: linkedClientId || null,
+          leadId: linkedLeadId || null,
+          validUntil: new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)).toISOString(),
+          currency: "CAD",
+          taxRate: 0,
+          discountAmount: 0,
+          notes: data.notes?.trim() || `Generated from roof estimate ${estimateDocumentNumber}`,
+          terms: "See attached AI Estimate Report for EagleView measurements and estimate context.",
+          items: [
+            {
+              description: `Roofing quote for ${data.address}`,
+              quantity: 1,
+              unitPrice: finalPrice,
+              total: finalPrice,
+              sortOrder: 0,
+            },
+          ],
+          roofEstimateId: savedId || null,
+        };
+
+        linkedQuote = linkedQuote
+          ? await updateLinkedQuote(linkedQuote.id, quotePayload)
+          : await createQuote({
+            quoteNumber: nextQuoteNumber,
+            ...quotePayload,
+          });
+      } catch (quoteError) {
+        console.error("Failed to create linked quote for roof estimate", quoteError);
+        throw new Error("Could not create the linked quote record.");
+      }
+
+      const estimatePdfFileName = "AI Estimate Report.pdf";
+      const quotePdfFileName = `${linkedQuote.quoteNumber}.pdf`;
 
       // Generate PDFs
       toast({ title: "Generating Reports…", description: "Building your estimate documents" });
@@ -853,7 +927,7 @@ export default function RoofEstimatorWizard() {
       });
 
       const summaryPdfResult = await buildEstimateSummaryPdf({
-        estimateNumber: estimateDocumentNumber,
+        estimateNumber: linkedQuote.quoteNumber,
         createdAt: new Date().toISOString(),
         branding: {
           companyName: companyProfile?.companyName || "ZODO CRM",
@@ -898,34 +972,33 @@ export default function RoofEstimatorWizard() {
         notes: data.notes || undefined,
       });
 
-      const estimatePdfFileName = `Roof_Estimate_${safeName}.pdf`;
-
       // Download PDFs locally
       downloadPDFBlob(estimatePdfBlob, estimatePdfFileName);
-      downloadPDFBlob(summaryPdfResult.blob, summaryPdfResult.fileName);
+      downloadPDFBlob(summaryPdfResult.blob, quotePdfFileName);
 
-      // Upload PDFs to File Manager (with projectId + clientId)
+      // Upload PDFs to File Manager and link them to the related records.
       try {
-        // Find the client's project (if a client was selected)
         let projectId: string | undefined;
-        if (data.clientId) {
+        if (linkedClientId) {
           try {
-            const projects = await getProjects({ clientId: data.clientId, limit: 1 });
+            const projects = await getProjects({ clientId: linkedClientId, limit: 1 });
             if (projects.length > 0) {
               projectId = String(projects[0].id);
             }
           } catch {
-            // No project found — upload without projectId
+            // Upload without a project link if the client has no project yet.
           }
         }
 
         const uploadOptions = {
           projectId,
-          clientId: data.clientId || undefined,
+          clientId: linkedClientId,
+          leadId: linkedLeadId,
+          quoteId: linkedQuote.id,
         };
 
         const estimatePdfFile = new File([estimatePdfBlob], estimatePdfFileName, { type: "application/pdf" });
-        const summaryPdfFile = new File([summaryPdfResult.blob], summaryPdfResult.fileName, { type: "application/pdf" });
+        const summaryPdfFile = new File([summaryPdfResult.blob], quotePdfFileName, { type: "application/pdf" });
 
         const [uploadedEstimatePdf, uploadedSummaryPdf] = await Promise.all([
           uploadFile(estimatePdfFile, uploadOptions),
@@ -941,11 +1014,13 @@ export default function RoofEstimatorWizard() {
         toast({
           title: "📁 PDFs Saved",
           description: projectId
-            ? `Both PDFs saved to File Manager and linked to the client project (${uploadedSummaryPdf.name})`
-            : "Both PDFs saved to File Manager for the selected client",
+            ? `Both PDFs saved to File Manager and linked to the project as ${uploadedSummaryPdf.name}`
+            : linkedLeadId
+              ? "Both PDFs saved to File Manager and linked to the selected lead"
+              : "Both PDFs saved to File Manager and linked to the selected client",
         });
       } catch {
-        // PDF upload failed silently — user already has the downloads
+        // The user still receives both downloads even if the upload step fails.
       }
 
       // Charge wallet $20 for the estimate
@@ -956,7 +1031,7 @@ export default function RoofEstimatorWizard() {
         // Wallet charge failed silently — estimate is already saved
       }
 
-      toast({ title: "Estimate Completed", description: "Both PDFs generated, downloaded, and saved" });
+      toast({ title: "Estimate Completed", description: `AI Estimate Report and ${linkedQuote.quoteNumber} are ready.` });
       navigate("/roof-estimator");
     } catch (e: any) {
       toast({ title: "Error", description: e?.message || "Could not complete estimate", variant: "destructive" });

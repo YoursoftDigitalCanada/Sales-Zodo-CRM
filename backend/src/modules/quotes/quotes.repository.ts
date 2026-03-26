@@ -4,6 +4,7 @@ import { CreateQuoteDto, UpdateQuoteDto, QuoteQueryDto } from './quotes.dto';
 const prisma = new PrismaClient();
 const quoteInclude = {
     client: { select: { id: true, clientName: true } },
+    lead: { select: { id: true, firstName: true, lastName: true, companyName: true } },
     items: true,
 };
 

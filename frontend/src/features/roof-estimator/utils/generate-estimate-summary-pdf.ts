@@ -210,45 +210,23 @@ export async function buildEstimateSummaryPdf(input: EstimateSummaryPdfInput): P
 
   y = (doc as any).lastAutoTable.finalY + 8;
 
-  autoTable(doc, {
-    startY: y,
-    theme: "striped",
-    styles: {
-      fontSize: 9,
-      textColor: slate,
-      cellPadding: 4,
-      lineColor: border,
-      lineWidth: 0.4,
-    },
-    headStyles: {
-      fillColor: slate,
-      textColor: [248, 250, 252],
-      fontStyle: "bold",
-    },
-    columnStyles: {
-      0: { cellWidth: contentWidth * 0.65 },
-      1: { cellWidth: contentWidth * 0.35, halign: "right" },
-    },
-    head: [["Cost Breakdown", "Amount"]],
-    body: [
-      ["Materials", money(input.pricing.materials)],
-      ["Labor", money(input.pricing.labor)],
-      ["Equipment & Extras", money(input.pricing.equipment)],
-      [input.pricing.overheadLabel, money(input.pricing.overheadAmount)],
-      [input.pricing.profitLabel, money(input.pricing.profitAmount)],
-      [input.pricing.taxLabel, money(input.pricing.taxAmount)],
-      ["Price per Square", money(input.pricing.pricePerSquare)],
-      ["Total Estimate", money(input.pricing.total)],
-    ],
-    didParseCell: (hookData) => {
-      if (hookData.section === "body" && hookData.row.index === 7) {
-        hookData.cell.styles.fontStyle = "bold";
-        hookData.cell.styles.fillColor = [239, 246, 255];
-      }
-    },
-  });
+  doc.setFillColor(...light);
+  doc.setDrawColor(...border);
+  doc.roundedRect(margin, y, contentWidth, 18, 4, 4, "FD");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(...slate);
+  doc.text("Quoted Amount", margin + 6, y + 7);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(...muted);
+  doc.text(
+    "This summary shows the final quoted amount only. See the detailed estimate report for full pricing breakdown.",
+    margin + 6,
+    y + 13,
+  );
 
-  y = (doc as any).lastAutoTable.finalY + 8;
+  y += 24;
 
   const orthoUrl = input.imagery?.orthoUrl;
   const obliqueImages = Array.isArray(input.imagery?.obliqueImages) ? input.imagery?.obliqueImages.slice(0, 4) : [];
@@ -345,4 +323,3 @@ export async function buildEstimateSummaryPdf(input: EstimateSummaryPdfInput): P
     blob: doc.output("blob") as Blob,
   };
 }
-

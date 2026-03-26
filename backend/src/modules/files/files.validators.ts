@@ -7,6 +7,8 @@ export const uploadFileSchema = z.object({
         description: z.string().max(500).optional().nullable(),
         clientId: z.string().uuid().optional().nullable(),
         projectId: z.string().uuid().optional().nullable(),
+        leadId: z.string().uuid().optional().nullable(),
+        quoteId: z.string().uuid().optional().nullable(),
     }),
 });
 
@@ -58,6 +60,8 @@ export const fileQuerySchema = z.object({
         folderId: z.string().uuid().optional().nullable(),
         clientId: z.string().uuid().optional(),
         projectId: z.string().uuid().optional(),
+        leadId: z.string().uuid().optional(),
+        quoteId: z.string().uuid().optional(),
         mimeType: z.string().optional(),
         tag: z.string().optional(),
         sortBy: z.enum(['name', 'createdAt', 'size']).default('createdAt'),

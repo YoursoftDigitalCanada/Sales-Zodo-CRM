@@ -15,6 +15,8 @@ export class FilesController {
                     folderId: req.body.folderId || null,
                     projectId: req.body.projectId || null,
                     clientId: req.body.clientId || null,
+                    leadId: req.body.leadId || null,
+                    quoteId: req.body.quoteId || null,
                 });
                 sendCreated(res, file, 'File uploaded');
             } else {

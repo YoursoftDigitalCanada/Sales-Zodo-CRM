@@ -15,6 +15,7 @@ export interface QuoteEntity {
     quoteNumber: string;
     status: string;
     client: { id: string; clientName: string } | null;
+    lead?: { id: string; firstName: string; lastName: string; companyName: string | null } | null;
     leadId: string | null;
     issueDate: string;
     validUntil: string;

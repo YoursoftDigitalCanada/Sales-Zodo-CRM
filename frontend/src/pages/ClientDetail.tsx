@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { getClientById, updateClient } from "@/services/clientService";
 import { getTasks, createTask, updateTask } from "@/features/tasks/services/tasks-service";
 import { getProjects } from "@/features/projects/services/projects-service";
-import { getFiles } from "@/features/files/services/files-service";
+import { getFiles, getDownloadUrl } from "@/features/files/services/files-service";
 import { getEmails } from "@/features/emails/services/emails-service";
 import { getInvoices } from "@/features/invoices/services/invoice-service";
 import { WhatsAppActionButton } from "@/features/whatsapp/components/WhatsAppActionButton";
@@ -666,7 +666,7 @@ const ClientDetailPage = () => {
                         <p className="text-sm font-medium text-[#111827] truncate">{doc.originalName || doc.name}</p>
                         <p className="text-[10px] text-[#9CA3AF]">{sizeKb} KB · {ext.toUpperCase()} · {doc.createdAt ? new Date(doc.createdAt).toLocaleDateString() : ''}</p>
                       </div>
-                      <a href={doc.path} target="_blank" rel="noreferrer" className="text-[#14B8A6] hover:text-[#0D9488] p-1"><Download size={14} /></a>
+                      <a href={getDownloadUrl(doc.id)} target="_blank" rel="noreferrer" className="text-[#14B8A6] hover:text-[#0D9488] p-1"><Download size={14} /></a>
                     </div>
                   );
                 })}

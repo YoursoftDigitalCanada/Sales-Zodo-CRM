@@ -23,6 +23,8 @@ export class FilesRepository {
                 folderId: data.folderId,
                 projectId: data.projectId,
                 clientId: data.clientId,
+                leadId: data.leadId,
+                quoteId: data.quoteId,
                 applicationId: data.applicationId,
                 checksum: data.checksum,
             },
@@ -40,13 +42,28 @@ export class FilesRepository {
     }
 
     async findMany(tenantId: string, query: FileQueryDto) {
-        const { page = 1, limit = 20, search, folderId, clientId, projectId, mimeType, tag, sortBy = 'createdAt', sortOrder = 'desc' } = query;
+        const {
+            page = 1,
+            limit = 20,
+            search,
+            folderId,
+            clientId,
+            projectId,
+            leadId,
+            quoteId,
+            mimeType,
+            tag,
+            sortBy = 'createdAt',
+            sortOrder = 'desc',
+        } = query;
         const where: Prisma.FileWhereInput = {
             tenantId,
             deletedAt: null,
             ...(folderId !== undefined && { folderId: folderId || null }),
             ...(clientId && { clientId }),
             ...(projectId && { projectId }),
+            ...(leadId && { leadId }),
+            ...(quoteId && { quoteId }),
             ...(mimeType && { mimeType: { contains: mimeType } }),
             ...(search && { name: { contains: search, mode: 'insensitive' as const } }),
             ...(tag && { tags: { some: { tag: { name: { equals: tag, mode: 'insensitive' as const } } } } }),

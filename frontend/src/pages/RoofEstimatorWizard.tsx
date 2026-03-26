@@ -86,6 +86,9 @@ const splitPreviewSource = (url?: string | null) => {
   return { imageUrl: url, reportUrl: "" };
 };
 
+const isValidEmail = (value: string): boolean =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+
 /* ─── WizardData type ────────────────────────────────────── */
 
 interface WizardData {
@@ -428,6 +431,124 @@ export default function RoofEstimatorWizard() {
     && Boolean(data.pitch.trim());
   const canGenerateEstimate = hasValidEagleViewMeasurement && !saving && !eagleViewLoading;
 
+  const getSectionValidation = useCallback((sectionId: SectionId): { valid: boolean; message: string } => {
+    switch (sectionId) {
+      case "client":
+        if (!data.clientName.trim()) {
+          return { valid: false, message: "Enter the client or contact name to continue." };
+        }
+        if (data.clientEmail.trim() && !isValidEmail(data.clientEmail)) {
+          return { valid: false, message: "Enter a valid client email address to continue." };
+        }
+        return { valid: true, message: "" };
+      case "address":
+        if (!data.address.trim()) {
+          return { valid: false, message: "Select the property address first." };
+        }
+        if (!hasValidEagleViewMeasurement) {
+          return {
+            valid: false,
+            message: eagleViewError || "Load valid EagleView roof area and pitch before continuing.",
+          };
+        }
+        return { valid: true, message: "" };
+      case "materials":
+        if (!data.shingleType.trim()) {
+          return { valid: false, message: "Enter the shingle type to continue." };
+        }
+        return { valid: true, message: "" };
+      case "labor":
+        if (data.numberOfLaborers <= 0) {
+          return { valid: false, message: "Number of laborers must be greater than 0." };
+        }
+        if (data.daysRequired <= 0) {
+          return { valid: false, message: "Days required must be greater than 0." };
+        }
+        if (data.laborRatePerWorker <= 0) {
+          return { valid: false, message: "Rate per worker / day must be greater than 0." };
+        }
+        return { valid: true, message: "" };
+      case "extras":
+        return { valid: true, message: "" };
+      case "profit":
+        if (data.overheadPercent < 0 || data.overheadPercent > 100) {
+          return { valid: false, message: "Overhead must be between 0% and 100%." };
+        }
+        if (data.profitMarginPercent < 0 || data.profitMarginPercent > 100) {
+          return { valid: false, message: "Profit margin must be between 0% and 100%." };
+        }
+        if (data.taxPercent < 0 || data.taxPercent > 100) {
+          return { valid: false, message: "Tax must be between 0% and 100%." };
+        }
+        return { valid: true, message: "" };
+      case "summary":
+        if (!hasValidEagleViewMeasurement) {
+          return {
+            valid: false,
+            message: eagleViewError || "Load valid EagleView roof area and pitch before generating the estimate.",
+          };
+        }
+        return { valid: true, message: "" };
+      default:
+        return { valid: true, message: "" };
+    }
+  }, [data, eagleViewError, hasValidEagleViewMeasurement]);
+
+  const currentSectionValidation = getSectionValidation(activeSection);
+
+  const moveToSection = useCallback((targetSectionId: SectionId) => {
+    const targetIndex = ESTIMATE_SECTIONS.findIndex((section) => section.id === targetSectionId);
+    const currentIndex = ESTIMATE_SECTIONS.findIndex((section) => section.id === activeSection);
+
+    if (targetIndex <= currentIndex) {
+      setActiveSection(targetSectionId);
+      return;
+    }
+
+    for (let index = 0; index < targetIndex; index += 1) {
+      const section = ESTIMATE_SECTIONS[index];
+      const validation = getSectionValidation(section.id);
+      if (!validation.valid) {
+        setActiveSection(section.id);
+        toast({
+          title: "Complete This Section First",
+          description: validation.message,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    setActiveSection(targetSectionId);
+  }, [activeSection, getSectionValidation, toast]);
+
+  const handleNextSection = useCallback(() => {
+    const currentIndex = ESTIMATE_SECTIONS.findIndex((section) => section.id === activeSection);
+    const currentValidation = getSectionValidation(activeSection);
+
+    if (!currentValidation.valid) {
+      toast({
+        title: "Section Incomplete",
+        description: currentValidation.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const nextSection = ESTIMATE_SECTIONS[currentIndex + 1];
+    if (nextSection) {
+      setActiveSection(nextSection.id);
+    }
+  }, [activeSection, getSectionValidation, toast]);
+
+  const handlePreviousSection = useCallback(() => {
+    const currentIndex = ESTIMATE_SECTIONS.findIndex((section) => section.id === activeSection);
+    const previousSection = ESTIMATE_SECTIONS[currentIndex - 1];
+    if (previousSection) {
+      setActiveSection(previousSection.id);
+    }
+  }, [activeSection]);
+
   /* ── Address autocomplete ─────────────────────── */
 
   const handleAddressInput = useCallback(async (val: string) => {
@@ -768,13 +889,13 @@ export default function RoofEstimatorWizard() {
     summary: canGenerateEstimate ? "Ready to generate" : "Waiting for roof data",
   };
   const sectionReady: Record<SectionId, boolean> = {
-    client: Boolean(data.clientName || data.clientEmail || data.clientPhone),
-    address: hasValidEagleViewMeasurement,
-    materials: totalMaterialCost > 0 || data.shinglePricePerSq > 0 || data.otherMaterials.length > 0,
-    labor: totalLaborCost > 0,
-    extras: totalEquipmentCost > 0,
-    profit: finalPrice > 0,
-    summary: hasValidEagleViewMeasurement,
+    client: getSectionValidation("client").valid,
+    address: getSectionValidation("address").valid,
+    materials: getSectionValidation("materials").valid,
+    labor: getSectionValidation("labor").valid,
+    extras: getSectionValidation("extras").valid,
+    profit: getSectionValidation("profit").valid,
+    summary: getSectionValidation("summary").valid,
   };
 
   const renderActiveSection = () => {
@@ -1025,7 +1146,7 @@ export default function RoofEstimatorWizard() {
               return (
                 <button
                   key={section.id}
-                  onClick={() => setActiveSection(section.id)}
+                  onClick={() => moveToSection(section.id)}
                   style={{
                     border: isActive ? "1px solid rgba(102,55,244,.32)" : "1px solid #E2E8F0",
                     background: isActive ? "linear-gradient(135deg, rgba(102,55,244,.10), rgba(102,55,244,.03))" : "#fff",
@@ -1129,29 +1250,53 @@ export default function RoofEstimatorWizard() {
           <div className="roof-estimator-action-bar" style={{
             marginTop: 18, paddingTop: 18, borderTop: "1px solid #E2E8F0",
           }}>
-            {!hasValidEagleViewMeasurement && (
-              <div style={{ marginRight: "auto", fontSize: 12, color: eagleViewError ? "#DC2626" : "#64748B" }}>
-                {eagleViewError || "Load valid EagleView roof area and pitch before generating the estimate."}
+            {!currentSectionValidation.valid && (
+              <div style={{ marginRight: "auto", fontSize: 12, color: activeSection === "address" || activeSection === "summary" ? "#DC2626" : "#64748B" }}>
+                {currentSectionValidation.message}
               </div>
             )}
-            <button onClick={handleSaveDraft} disabled={saving} style={{
-              padding: "10px 20px", borderRadius: 8, border: "1px solid #CBD5E1",
-              background: "#fff", color: "#475569", fontSize: 13, fontWeight: 600,
-              cursor: "pointer", opacity: saving ? 0.7 : 1,
-            }}>
-              {saving ? "Saving…" : "Save Draft"}
-            </button>
+            {activeSection !== "client" && (
+              <button onClick={handlePreviousSection} disabled={saving} style={{
+                padding: "10px 18px", borderRadius: 8, border: "1px solid #CBD5E1",
+                background: "#fff", color: "#475569", fontSize: 13, fontWeight: 600,
+                cursor: "pointer", opacity: saving ? 0.7 : 1,
+              }}>
+                Previous
+              </button>
+            )}
+            {activeSection === "summary" ? (
+              <>
+                <button onClick={handleSaveDraft} disabled={saving} style={{
+                  padding: "10px 20px", borderRadius: 8, border: "1px solid #CBD5E1",
+                  background: "#fff", color: "#475569", fontSize: 13, fontWeight: 600,
+                  cursor: "pointer", opacity: saving ? 0.7 : 1,
+                }}>
+                  {saving ? "Saving…" : "Save Draft"}
+                </button>
 
-            <button onClick={handleComplete} disabled={!canGenerateEstimate} style={{
-              padding: "10px 22px", borderRadius: 8, border: "none",
-              background: "linear-gradient(135deg,#10B981,#059669)", color: "#fff",
-              fontSize: 13, fontWeight: 700, cursor: canGenerateEstimate ? "pointer" : "not-allowed",
-              display: "flex", alignItems: "center", gap: 6,
-              boxShadow: "0 2px 8px rgba(16,185,129,.25)", opacity: canGenerateEstimate ? 1 : 0.55,
-            }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-              Generate AI Estimate
-            </button>
+                <button onClick={handleComplete} disabled={!canGenerateEstimate} style={{
+                  padding: "10px 22px", borderRadius: 8, border: "none",
+                  background: "linear-gradient(135deg,#10B981,#059669)", color: "#fff",
+                  fontSize: 13, fontWeight: 700, cursor: canGenerateEstimate ? "pointer" : "not-allowed",
+                  display: "flex", alignItems: "center", gap: 6,
+                  boxShadow: "0 2px 8px rgba(16,185,129,.25)", opacity: canGenerateEstimate ? 1 : 0.55,
+                }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  Generate AI Estimate
+                </button>
+              </>
+            ) : (
+              <button onClick={handleNextSection} disabled={saving} style={{
+                padding: "10px 22px", borderRadius: 8, border: "none",
+                background: "linear-gradient(135deg,#6637F4,#4F46E5)", color: "#fff",
+                fontSize: 13, fontWeight: 700, cursor: "pointer",
+                display: "flex", alignItems: "center", gap: 6,
+                boxShadow: "0 2px 8px rgba(102,55,244,.25)", opacity: saving ? 0.7 : 1,
+              }}>
+                Next
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            )}
           </div>
         </div>
 

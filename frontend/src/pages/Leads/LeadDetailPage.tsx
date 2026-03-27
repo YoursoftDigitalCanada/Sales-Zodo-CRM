@@ -23,6 +23,7 @@ import { getProjects } from "@/features/projects/services/projects-service";
 import { getTasks } from "@/features/tasks/services/tasks-service";
 import { getQuotes } from "@/features/quotes/services/quotes-service";
 import { getEmails } from "@/features/emails/services/emails-service";
+import { ComposeEmailSheet } from "@/features/emails/components/ComposeEmailSheet";
 import { WhatsAppActionButton } from "@/features/whatsapp/components/WhatsAppActionButton";
 import { ActivityTimeline } from "@/components/ActivityTimeline";
 import {
@@ -411,6 +412,7 @@ const LeadDetailPage = () => {
     const [loadingQuotes, setLoadingQuotes] = useState(false);
     const [emails, setEmails] = useState<any[]>([]);
     const [loadingEmails, setLoadingEmails] = useState(false);
+    const [showComposeEmail, setShowComposeEmail] = useState(false);
 
     const fetchLead = useCallback(async () => {
         try {
@@ -689,7 +691,7 @@ const LeadDetailPage = () => {
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                         {lead.phone && <a href={`tel:${lead.phone}`} className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#E5E7EB] text-xs font-medium text-[#374151] hover:bg-[#F9FAFB] transition-all"><Phone size={14} className="text-[#14B8A6]" />Call</a>}
-                        {lead.email && <a href={`mailto:${lead.email}`} className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#E5E7EB] text-xs font-medium text-[#374151] hover:bg-[#F9FAFB] transition-all"><Mail size={14} className="text-[#14B8A6]" />Email</a>}
+                        {lead.email && <button type="button" onClick={() => setShowComposeEmail(true)} className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#E5E7EB] text-xs font-medium text-[#374151] hover:bg-[#F9FAFB] transition-all"><Mail size={14} className="text-[#14B8A6]" />Email</button>}
                         <WhatsAppActionButton
                             contactName={fullName}
                             phoneNumber={lead.phone}
@@ -1040,6 +1042,15 @@ const LeadDetailPage = () => {
             {showClaimDialog && (
                 <InsuranceClaimFormDialog open={showClaimDialog} onClose={() => { setShowClaimDialog(false); setEditingClaim(null); }} onSave={handleSaveClaim} claim={editingClaim} />
             )}
+
+            <ComposeEmailSheet
+                isOpen={showComposeEmail}
+                onClose={() => setShowComposeEmail(false)}
+                defaultRecipientEmail={lead.email}
+                defaultRecipientName={fullName}
+                leadId={lead.id}
+                onSent={fetchEmails}
+            />
         </div>
     );
 };

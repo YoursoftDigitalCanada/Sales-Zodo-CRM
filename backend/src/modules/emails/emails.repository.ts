@@ -29,6 +29,8 @@ export class EmailsRepository {
                 bodyHtml: data.bodyHtml,
                 fromName: data.fromName || null,
                 fromAddress: data.fromAddress || '',
+                clientId: data.clientId || null,
+                leadId: data.leadId || null,
                 toAddresses: data.toAddresses as unknown as Prisma.InputJsonValue,
                 ccAddresses: data.ccAddresses as unknown as Prisma.InputJsonValue,
                 bccAddresses: data.bccAddresses as unknown as Prisma.InputJsonValue,

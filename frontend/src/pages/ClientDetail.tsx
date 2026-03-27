@@ -15,6 +15,7 @@ import { getFiles, getDownloadUrl } from "@/features/files/services/files-servic
 import { getEmails } from "@/features/emails/services/emails-service";
 import { getInvoices } from "@/features/invoices/services/invoice-service";
 import { getLeads } from "@/features/leads";
+import { ComposeEmailSheet } from "@/features/emails/components/ComposeEmailSheet";
 import { WhatsAppActionButton } from "@/features/whatsapp/components/WhatsAppActionButton";
 import { ActivityTimeline } from "@/components/ActivityTimeline";
 import { useToast } from "@/hooks/use-toast";
@@ -198,9 +199,13 @@ function EmptyState({ icon, title, subtitle, cta, onCta }: {
   );
 }
 
-function InfoField({ label, value, icon: Icon, href }: { label: string; value?: string | null; icon?: any; href?: string }) {
+function InfoField({ label, value, icon: Icon, href, onClick }: { label: string; value?: string | null; icon?: any; href?: string; onClick?: () => void }) {
   if (!value) return null;
-  const content = href ? (
+  const content = onClick ? (
+    <button type="button" onClick={onClick} className="text-sm text-[#14B8A6] hover:underline font-medium break-all text-left">
+      {value}
+    </button>
+  ) : href ? (
     <a href={href} className="text-sm text-[#14B8A6] hover:underline font-medium break-all">{value}</a>
   ) : (
     <p className="text-sm font-medium text-[#111827] break-words">{value}</p>
@@ -255,6 +260,7 @@ const ClientDetailPage = () => {
 
   // More actions dropdown
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showComposeEmail, setShowComposeEmail] = useState(false);
 
   // ── Data Fetching ───────────────────────────────────────────────
   const fetchClient = useCallback(async () => {
@@ -475,9 +481,9 @@ const ClientDetailPage = () => {
                 <PhoneCall size={14} className="text-[#14B8A6]" />Call
               </a>
             )}
-            <a href={`mailto:${client.primaryEmail}`} className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#E5E7EB] text-xs font-medium text-[#374151] hover:bg-[#F9FAFB] hover:border-[#D1D5DB] transition-all hover:scale-[1.02]">
+            <button type="button" onClick={() => setShowComposeEmail(true)} className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#E5E7EB] text-xs font-medium text-[#374151] hover:bg-[#F9FAFB] hover:border-[#D1D5DB] transition-all hover:scale-[1.02]">
               <Mail size={14} className="text-[#14B8A6]" />Email
-            </a>
+            </button>
             <WhatsAppActionButton
               contactName={client.clientName}
               phoneNumber={client.primaryPhone}
@@ -554,7 +560,7 @@ const ClientDetailPage = () => {
               action={() => navigate(`/client-list/${id}/edit`)}
             />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-0.5">
-              <InfoField label="Primary Email" value={client.primaryEmail} icon={Mail} href={`mailto:${client.primaryEmail}`} />
+              <InfoField label="Primary Email" value={client.primaryEmail} icon={Mail} onClick={() => setShowComposeEmail(true)} />
               <InfoField label="Contact Person" value={client.contactName} icon={User} />
               <InfoField label="Primary Phone" value={fmtPhone(client.primaryPhone)} icon={Phone} href={`tel:${client.primaryPhone}`} />
               <InfoField label="Direct Line" value={fmtPhone(client.directPhone)} icon={Phone} href={client.directPhone ? `tel:${client.directPhone}` : undefined} />
@@ -861,6 +867,15 @@ const ClientDetailPage = () => {
           </div>
         </div>
       )}
+
+      <ComposeEmailSheet
+        isOpen={showComposeEmail}
+        onClose={() => setShowComposeEmail(false)}
+        defaultRecipientEmail={client.primaryEmail}
+        defaultRecipientName={client.clientName}
+        clientId={client.id}
+        onSent={fetchEmails}
+      />
     </div>
   );
 };

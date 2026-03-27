@@ -7,6 +7,8 @@ export interface SendEmailPayload {
     subject: string;
     bodyHtml?: string;
     bodyText?: string;
+    clientId?: string;
+    leadId?: string;
     attachments?: File[];
 }
 
@@ -161,6 +163,14 @@ function buildEmailFormData(payload: SendEmailPayload): FormData {
 
     if (typeof payload.bodyText === "string") {
         formData.append("bodyText", payload.bodyText);
+    }
+
+    if (typeof payload.clientId === "string") {
+        formData.append("clientId", payload.clientId);
+    }
+
+    if (typeof payload.leadId === "string") {
+        formData.append("leadId", payload.leadId);
     }
 
     for (const file of payload.attachments || []) {

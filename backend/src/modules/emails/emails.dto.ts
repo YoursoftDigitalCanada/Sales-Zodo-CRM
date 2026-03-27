@@ -18,6 +18,8 @@ export interface SendEmailDto {
     bodyHtml?: string;
     fromName?: string;
     fromAddress?: string;
+    clientId?: string;
+    leadId?: string;
     attachments?: {
         filename: string;
         mimeType: string;

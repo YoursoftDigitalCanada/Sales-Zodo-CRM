@@ -13,6 +13,8 @@ export const sendEmailSchema = z.object({
         subject: z.string().min(1).max(500),
         bodyText: z.string().optional(),
         bodyHtml: z.string().optional(),
+        clientId: z.string().uuid().optional(),
+        leadId: z.string().uuid().optional(),
         attachmentsCount: z.number().int().min(0).optional().default(0),
     }).refine((data) => {
         const hasBodyText = Boolean(data.bodyText?.trim());

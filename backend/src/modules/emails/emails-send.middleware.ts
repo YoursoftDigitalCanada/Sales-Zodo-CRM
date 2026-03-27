@@ -57,6 +57,8 @@ export function normalizeSendEmailBody(req: Request, _res: Response, next: NextF
         subject: parseOptionalString(req.body?.subject) || '',
         bodyText: parseOptionalString(req.body?.bodyText),
         bodyHtml: parseOptionalString(req.body?.bodyHtml),
+        clientId: parseOptionalString(req.body?.clientId),
+        leadId: parseOptionalString(req.body?.leadId),
         attachmentsCount: files.length,
     };
 

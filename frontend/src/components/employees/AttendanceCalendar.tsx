@@ -67,7 +67,7 @@ export const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
       return dayRecords[0];
     }
 
-    const priority: AttendanceStatus[] = ['late', 'half-day', 'present', 'absent', 'holiday', 'weekend'];
+    const priority: AttendanceStatus[] = ['late', 'half-day', 'on-leave', 'present', 'absent', 'holiday', 'weekend'];
     return [...dayRecords].sort(
       (a, b) => priority.indexOf(a.status) - priority.indexOf(b.status),
     )[0];
@@ -88,6 +88,7 @@ export const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
       absent: 'bg-red-500',
       late: 'bg-amber-500',
       'half-day': 'bg-orange-500',
+      'on-leave': 'bg-blue-500',
       holiday: 'bg-blue-500',
       weekend: 'bg-gray-300',
     };
@@ -181,6 +182,9 @@ export const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
                       {employeeId || dayRecords.length === 1 ? (
                         <>
                           <p className="font-medium">{getAttendanceStatusConfig(record.status).label}</p>
+                          {record.notes && (
+                            <p className="text-[#94A3B8] max-w-[220px]">{record.notes}</p>
+                          )}
                           {record.checkIn && (
                             <p className="text-[#94A3B8]">
                               In: {format(record.checkIn, 'h:mm a')}
@@ -204,6 +208,9 @@ export const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
                           <p className="text-[#94A3B8]">
                             Half Day: {dayRecords.filter((item) => item.status === 'half-day').length}
                           </p>
+                          <p className="text-[#94A3B8]">
+                            On Leave: {dayRecords.filter((item) => item.status === 'on-leave').length}
+                          </p>
                         </>
                       )}
                     </div>
@@ -217,7 +224,7 @@ export const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
 
       {/* Legend */}
       <div className="flex flex-wrap gap-4 mt-6 pt-4 border-t border-[rgba(15,23,42,0.06)]">
-        {(['present', 'absent', 'late', 'half-day', 'holiday'] as AttendanceStatus[]).map((status) => {
+        {(['present', 'absent', 'late', 'half-day', 'on-leave', 'holiday'] as AttendanceStatus[]).map((status) => {
           const config = getAttendanceStatusConfig(status);
           return (
             <div key={status} className="flex items-center gap-2">

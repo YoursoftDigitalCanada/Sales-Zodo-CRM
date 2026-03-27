@@ -55,7 +55,7 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({
 
   const getRequestsForDate = (date: Date): LeaveRequest[] => {
     return leaveRequests.filter((request) => {
-      if (request.status === 'rejected' || request.status === 'cancelled') {
+      if (request.status !== 'approved') {
         return false;
       }
       return isWithinInterval(date, {

@@ -35,6 +35,7 @@ export const getAttendanceStatusConfig = (status: AttendanceStatus) => {
     absent: { label: 'Absent', color: 'bg-red-100 text-red-700', icon: '✗' },
     late: { label: 'Late', color: 'bg-amber-100 text-amber-700', icon: '!' },
     'half-day': { label: 'Half Day', color: 'bg-orange-100 text-orange-700', icon: '½' },
+    'on-leave': { label: 'On Leave', color: 'bg-blue-100 text-blue-700', icon: '☾' },
     holiday: { label: 'Holiday', color: 'bg-blue-100 text-blue-700', icon: '★' },
     weekend: { label: 'Weekend', color: 'bg-gray-100 text-gray-700', icon: '—' },
   };

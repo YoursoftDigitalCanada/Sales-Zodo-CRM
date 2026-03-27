@@ -77,6 +77,10 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
           {records.map((record) => {
             const statusConfig = getAttendanceStatusConfig(record.status);
             const nameParts = record.employeeName.split(' ');
+            const isLeaveRecord = record.status === 'on-leave';
+            const locationLabel = isLeaveRecord
+              ? record.location || 'On Leave'
+              : record.location || (record.isRemote ? 'Remote' : 'Office');
 
             return (
               <TableRow key={record.id}>
@@ -143,7 +147,12 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger>
-                        {record.isRemote ? (
+                        {isLeaveRecord ? (
+                          <div className="flex items-center gap-1.5 text-blue-600">
+                            <FileText className="w-4 h-4" />
+                            <span className="text-sm">{locationLabel}</span>
+                          </div>
+                        ) : record.isRemote ? (
                           <div className="flex items-center gap-1.5 text-blue-600">
                             <Home className="w-4 h-4" />
                             <span className="text-sm">Remote</span>
@@ -157,8 +166,14 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
                       </TooltipTrigger>
                       <TooltipContent>
                         <div className="space-y-1">
-                          <p>{record.isRemote ? 'Working from home' : 'Working from office'}</p>
-                          {typeof record.clockInLat === 'number' && typeof record.clockInLng === 'number' && (
+                          <p>
+                            {isLeaveRecord
+                              ? 'Approved leave day'
+                              : record.isRemote
+                                ? 'Working from home'
+                                : 'Working from office'}
+                          </p>
+                          {!isLeaveRecord && typeof record.clockInLat === 'number' && typeof record.clockInLng === 'number' && (
                             <div className="flex items-center gap-1 text-xs">
                               <MapPin className="h-3 w-3" />
                               <span>{record.clockInLat.toFixed(6)}, {record.clockInLng.toFixed(6)}</span>
@@ -181,10 +196,12 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
                         <FileText className="mr-2 h-4 w-4" />
                         View Details
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onEdit?.(record)}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit Record
-                      </DropdownMenuItem>
+                      {!isLeaveRecord && (
+                        <DropdownMenuItem onClick={() => onEdit?.(record)}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit Record
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>

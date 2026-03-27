@@ -1,6 +1,6 @@
 export type EmployeeStatus = 'active' | 'inactive' | 'on-leave' | 'probation';
 export type EmploymentType = 'full-time' | 'part-time' | 'contract' | 'intern';
-export type AttendanceStatus = 'present' | 'absent' | 'late' | 'half-day' | 'holiday' | 'weekend';
+export type AttendanceStatus = 'present' | 'absent' | 'late' | 'half-day' | 'on-leave' | 'holiday' | 'weekend';
 export type LeaveType = 'annual' | 'sick' | 'personal' | 'maternity' | 'paternity' | 'unpaid' | 'bereavement';
 export type LeaveStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 

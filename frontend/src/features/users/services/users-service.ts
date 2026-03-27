@@ -29,7 +29,7 @@ export interface AttendanceEntity {
     date: string;
     checkIn?: string;
     checkOut?: string;
-    status: "present" | "absent" | "late" | "half-day";
+    status: "present" | "absent" | "late" | "half-day" | "on-leave";
     workHours: number;
     overtime: number;
     notes?: string | null;

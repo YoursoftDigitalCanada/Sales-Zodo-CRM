@@ -38,6 +38,7 @@ import {
   AttendanceCalendar,
   CheckInOutCard,
   AttendanceRecord,
+  getAttendanceStatusConfig,
 } from '@/components/employees';
 import { getStoredEmployee, isStoredEmployeeAdmin } from '@/features/auth/lib/auth-storage';
 import {
@@ -215,6 +216,10 @@ const buildMapLink = (lat?: number | null, lng?: number | null): string | null =
 
   return `https://www.google.com/maps?q=${lat},${lng}`;
 };
+
+const isLeaveAttendanceRecord = (record: AttendanceRecord | null | undefined): record is AttendanceRecord => (
+  Boolean(record && record.status === 'on-leave')
+);
 
 const AttendancePage: React.FC = () => {
   const storedEmployee = getStoredEmployee();
@@ -509,6 +514,11 @@ const AttendancePage: React.FC = () => {
   };
 
   const handleEditRecord = (record: AttendanceRecord) => {
+    if (isLeaveAttendanceRecord(record)) {
+      toast.info('Approved leave days are generated from leave requests and cannot be edited here.');
+      return;
+    }
+
     setEditingRecord(record);
     setEditForm(buildEditFormState(record));
   };
@@ -800,7 +810,9 @@ const AttendancePage: React.FC = () => {
                 </div>
                 <div className="rounded-md border border-[rgba(15,23,42,0.06)] p-3">
                   <p className="text-xs uppercase tracking-wide text-[#64748B]">Status</p>
-                  <p className="mt-1 font-medium text-[#0F172A] capitalize">{detailsRecord.status}</p>
+                  <p className="mt-1 font-medium text-[#0F172A]">
+                    {getAttendanceStatusConfig(detailsRecord.status).label}
+                  </p>
                 </div>
                 <div className="rounded-md border border-[rgba(15,23,42,0.06)] p-3">
                   <p className="text-xs uppercase tracking-wide text-[#64748B]">Check In</p>
@@ -821,7 +833,9 @@ const AttendancePage: React.FC = () => {
                 <div className="rounded-md border border-[rgba(15,23,42,0.06)] p-3">
                   <p className="text-xs uppercase tracking-wide text-[#64748B]">Location</p>
                   <p className="mt-1 font-medium text-[#0F172A]">
-                    {detailsRecord.location || (detailsRecord.isRemote ? 'Remote' : 'Office')}
+                    {isLeaveAttendanceRecord(detailsRecord)
+                      ? detailsRecord.location || 'On Leave'
+                      : detailsRecord.location || (detailsRecord.isRemote ? 'Remote' : 'Office')}
                   </p>
                 </div>
               </div>
@@ -833,50 +847,59 @@ const AttendancePage: React.FC = () => {
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="rounded-md border border-[rgba(15,23,42,0.06)] p-3">
-                  <p className="text-xs uppercase tracking-wide text-[#64748B]">Work Started From</p>
-                  <div className="mt-1 flex items-start gap-2">
-                    <MapPin className="mt-0.5 h-4 w-4 text-[#0891B2]" />
-                    <div>
-                      <p className="font-medium text-[#0F172A]">
-                        {formatCoordinates(detailsRecord.clockInLat, detailsRecord.clockInLng) || 'No start location saved'}
-                      </p>
-                      {buildMapLink(detailsRecord.clockInLat, detailsRecord.clockInLng) && (
-                        <a
-                          href={buildMapLink(detailsRecord.clockInLat, detailsRecord.clockInLng) || '#'}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-xs text-[#0891B2] hover:underline"
-                        >
-                          Open on map
-                        </a>
-                      )}
+              {isLeaveAttendanceRecord(detailsRecord) ? (
+                <div className="rounded-md border border-blue-100 bg-blue-50 p-4">
+                  <p className="text-sm font-medium text-[#0F172A]">Approved leave day</p>
+                  <p className="mt-1 text-sm text-[#475569]">
+                    This calendar entry was created automatically from an approved leave request, so there is no check-in or work location for this day.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="rounded-md border border-[rgba(15,23,42,0.06)] p-3">
+                    <p className="text-xs uppercase tracking-wide text-[#64748B]">Work Started From</p>
+                    <div className="mt-1 flex items-start gap-2">
+                      <MapPin className="mt-0.5 h-4 w-4 text-[#0891B2]" />
+                      <div>
+                        <p className="font-medium text-[#0F172A]">
+                          {formatCoordinates(detailsRecord.clockInLat, detailsRecord.clockInLng) || 'No start location saved'}
+                        </p>
+                        {buildMapLink(detailsRecord.clockInLat, detailsRecord.clockInLng) && (
+                          <a
+                            href={buildMapLink(detailsRecord.clockInLat, detailsRecord.clockInLng) || '#'}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs text-[#0891B2] hover:underline"
+                          >
+                            Open on map
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="rounded-md border border-[rgba(15,23,42,0.06)] p-3">
+                    <p className="text-xs uppercase tracking-wide text-[#64748B]">Check Out Location</p>
+                    <div className="mt-1 flex items-start gap-2">
+                      <MapPin className="mt-0.5 h-4 w-4 text-[#0891B2]" />
+                      <div>
+                        <p className="font-medium text-[#0F172A]">
+                          {formatCoordinates(detailsRecord.clockOutLat, detailsRecord.clockOutLng) || 'No check-out location saved'}
+                        </p>
+                        {buildMapLink(detailsRecord.clockOutLat, detailsRecord.clockOutLng) && (
+                          <a
+                            href={buildMapLink(detailsRecord.clockOutLat, detailsRecord.clockOutLng) || '#'}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs text-[#0891B2] hover:underline"
+                          >
+                            Open on map
+                          </a>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-                <div className="rounded-md border border-[rgba(15,23,42,0.06)] p-3">
-                  <p className="text-xs uppercase tracking-wide text-[#64748B]">Check Out Location</p>
-                  <div className="mt-1 flex items-start gap-2">
-                    <MapPin className="mt-0.5 h-4 w-4 text-[#0891B2]" />
-                    <div>
-                      <p className="font-medium text-[#0F172A]">
-                        {formatCoordinates(detailsRecord.clockOutLat, detailsRecord.clockOutLng) || 'No check-out location saved'}
-                      </p>
-                      {buildMapLink(detailsRecord.clockOutLat, detailsRecord.clockOutLng) && (
-                        <a
-                          href={buildMapLink(detailsRecord.clockOutLat, detailsRecord.clockOutLng) || '#'}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-xs text-[#0891B2] hover:underline"
-                        >
-                          Open on map
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
           )}
 

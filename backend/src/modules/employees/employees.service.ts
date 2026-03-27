@@ -108,6 +108,24 @@ type LeaveRequestRow = {
     } | null;
 };
 
+type AttendanceLeaveRequestRow = {
+    id: string;
+    type: LeaveRequestRow['type'];
+    startDate: Date;
+    endDate: Date;
+    reason: string | null;
+    employeeId: string;
+    employee: {
+        department: string | null;
+        position: string | null;
+        user: {
+            firstName: string;
+            lastName: string;
+            avatar: string | null;
+        };
+    };
+};
+
 const DEPARTMENTS_SETTINGS_KEY = 'employeeDepartments';
 const DEFAULT_DEPARTMENT_COLORS = ['#22D3EE', '#8B5CF6', '#F59E0B', '#EC4899', '#10B981', '#3B82F6', '#EF4444', '#FBBF24'];
 const ATTENDANCE_META_PREFIX = '__attendance_meta__:';
@@ -835,34 +853,71 @@ export class EmployeesService {
 
     async getAttendance(tenantId: string, query: AttendanceQueryDto): Promise<AttendanceRecordDto[]> {
         const { dateFrom, dateTo, employeeId } = this.resolveAttendanceRange(query);
-        const entries = await prisma.timeEntry.findMany({
-            where: {
-                tenantId,
-                ...(employeeId ? { employeeId } : {}),
-                startTime: {
-                    gte: dateFrom,
-                    lte: dateTo,
+        const [entries, leaveRequests] = await Promise.all([
+            prisma.timeEntry.findMany({
+                where: {
+                    tenantId,
+                    ...(employeeId ? { employeeId } : {}),
+                    startTime: {
+                        gte: dateFrom,
+                        lte: dateTo,
+                    },
                 },
-            },
-            include: {
-                employee: {
-                    select: {
-                        user: {
-                            select: {
-                                firstName: true,
-                                lastName: true,
-                                avatar: true,
+                include: {
+                    employee: {
+                        select: {
+                            user: {
+                                select: {
+                                    firstName: true,
+                                    lastName: true,
+                                    avatar: true,
+                                },
                             },
                         },
                     },
                 },
-            },
-            orderBy: {
-                startTime: 'desc',
-            },
-        });
+                orderBy: {
+                    startTime: 'desc',
+                },
+            }),
+            prisma.leaveRequest.findMany({
+                where: {
+                    tenantId,
+                    ...(employeeId ? { employeeId } : {}),
+                    status: 'APPROVED',
+                    startDate: { lte: dateTo },
+                    endDate: { gte: dateFrom },
+                },
+                select: {
+                    id: true,
+                    type: true,
+                    startDate: true,
+                    endDate: true,
+                    reason: true,
+                    employeeId: true,
+                    employee: {
+                        select: {
+                            department: true,
+                            position: true,
+                            user: {
+                                select: {
+                                    firstName: true,
+                                    lastName: true,
+                                    avatar: true,
+                                },
+                            },
+                        },
+                    },
+                },
+            }),
+        ]);
 
-        return entries.map(mapTimeEntryToAttendanceRecord);
+        const attendanceRecords = entries.map(mapTimeEntryToAttendanceRecord);
+        const leaveRecords = this.buildApprovedLeaveAttendanceRecords(leaveRequests, entries, dateFrom, dateTo);
+
+        return [...attendanceRecords, ...leaveRecords].sort(
+            (a, b) => b.date.getTime() - a.date.getTime() || a.employeeName.localeCompare(b.employeeName),
+        );
     }
 
     async getAttendanceSummary(tenantId: string, query: AttendanceQueryDto): Promise<AttendanceSummaryDto> {
@@ -1810,6 +1865,59 @@ export class EmployeesService {
         }
 
         return leaveDayKeys;
+    }
+
+    private buildApprovedLeaveAttendanceRecords(
+        leaveRequests: AttendanceLeaveRequestRow[],
+        entries: AttendanceTimeEntryRow[],
+        dateFrom: Date,
+        dateTo: Date,
+    ): AttendanceRecordDto[] {
+        const existingAttendanceKeys = new Set(
+            entries.map((entry) => `${entry.employeeId}:${getDayKey(entry.startTime)}`),
+        );
+        const leaveRecords: AttendanceRecordDto[] = [];
+
+        for (const leaveRequest of leaveRequests) {
+            const current = new Date(Math.max(leaveRequest.startDate.getTime(), dateFrom.getTime()));
+            const end = new Date(Math.min(leaveRequest.endDate.getTime(), dateTo.getTime()));
+            current.setHours(0, 0, 0, 0);
+            end.setHours(0, 0, 0, 0);
+
+            while (current.getTime() <= end.getTime()) {
+                const dayKey = `${leaveRequest.employeeId}:${getDayKey(current)}`;
+                if (!isWeekend(current) && !existingAttendanceKeys.has(dayKey)) {
+                    const leaveTypeLabel = mapLeaveTypeToDto(leaveRequest.type)
+                        .replace(/(^\w)|-\w/g, (segment) => segment.replace('-', ' ').toUpperCase())
+                        .replace(/\b\w/g, (char) => char.toUpperCase());
+
+                    leaveRecords.push({
+                        id: `leave-${leaveRequest.id}-${getDayKey(current)}`,
+                        employeeId: leaveRequest.employeeId,
+                        employeeName: `${leaveRequest.employee.user.firstName} ${leaveRequest.employee.user.lastName}`.trim(),
+                        employeeAvatar: leaveRequest.employee.user.avatar,
+                        date: new Date(current),
+                        status: 'on-leave',
+                        workHours: 0,
+                        overtime: 0,
+                        notes: leaveRequest.reason?.trim()
+                            ? `Approved ${leaveTypeLabel}: ${leaveRequest.reason.trim()}`
+                            : `Approved ${leaveTypeLabel}`,
+                        location: 'On Leave',
+                        isRemote: false,
+                        breakMinutes: 0,
+                        clockInLat: null,
+                        clockInLng: null,
+                        clockOutLat: null,
+                        clockOutLng: null,
+                    });
+                }
+
+                current.setDate(current.getDate() + 1);
+            }
+        }
+
+        return leaveRecords;
     }
 
     private countBusinessDays(start: Date, end: Date): number {

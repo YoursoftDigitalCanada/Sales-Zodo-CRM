@@ -14,6 +14,7 @@ import { getProjects } from "@/features/projects/services/projects-service";
 import { getFiles, getDownloadUrl } from "@/features/files/services/files-service";
 import { getEmails } from "@/features/emails/services/emails-service";
 import { getInvoices } from "@/features/invoices/services/invoice-service";
+import { getLeads } from "@/features/leads";
 import { WhatsAppActionButton } from "@/features/whatsapp/components/WhatsAppActionButton";
 import { ActivityTimeline } from "@/components/ActivityTimeline";
 import { useToast } from "@/hooks/use-toast";
@@ -106,6 +107,21 @@ const fmtPhone = (p?: string) => {
   if (digits.length === 11 && digits[0] === '1') return `(${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
   return p;
 };
+
+const dedupeById = <T extends { id: string }>(items: T[]) => {
+  const seen = new Map<string, T>();
+  for (const item of items) {
+    seen.set(item.id, item);
+  }
+  return Array.from(seen.values());
+};
+
+const sortByNewest = <T extends Record<string, any>>(items: T[], ...fields: string[]) =>
+  [...items].sort((a, b) => {
+    const aTime = fields.map((field) => a?.[field]).find(Boolean);
+    const bTime = fields.map((field) => b?.[field]).find(Boolean);
+    return new Date(bTime || 0).getTime() - new Date(aTime || 0).getTime();
+  });
 
 // ── Animated Counter ────────────────────────────────────────────────
 function AnimatedNumber({ value, prefix = "", suffix = "" }: { value: number; prefix?: string; suffix?: string }) {
@@ -207,6 +223,8 @@ const ClientDetailPage = () => {
   const { toast } = useToast();
   const [client, setClient] = useState<ClientData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [relatedLeadId, setRelatedLeadId] = useState<string | null>(null);
+  const [relatedLeadConvertedAt, setRelatedLeadConvertedAt] = useState<string | null>(null);
 
   // Notes
   const [internalNotes, setInternalNotes] = useState("");
@@ -248,33 +266,82 @@ const ClientDetailPage = () => {
     finally { setIsLoading(false); }
   }, [id]);
 
+  const fetchRelatedLead = useCallback(async () => {
+    try {
+      const leads = await getLeads({ convertedToClientId: id!, limit: 1, sortBy: "createdAt", sortOrder: "desc" }) as any[];
+      const relatedLead = Array.isArray(leads) ? leads[0] : null;
+      setRelatedLeadId(relatedLead?.id || null);
+      setRelatedLeadConvertedAt(relatedLead?.convertedAt || null);
+    } catch {
+      setRelatedLeadId(null);
+      setRelatedLeadConvertedAt(null);
+    }
+  }, [id]);
+
   const fetchTasks = useCallback(async () => {
     try {
       setLoadingTasks(true);
-      const data = await getTasks({ clientId: id!, limit: 100 }) as any[];
-      setTasks(data.map((t: any) => ({
+      const [directTasks, projectTasks] = await Promise.all([
+        getTasks({ clientId: id!, limit: 100 }) as Promise<any[]>,
+        Promise.all(
+          deals
+            .map((deal) => deal?.id)
+            .filter(Boolean)
+            .map((projectId) => getTasks({ projectId, limit: 100 }) as Promise<any[]>),
+        ),
+      ]);
+
+      const data = dedupeById([...(Array.isArray(directTasks) ? directTasks : []), ...projectTasks.flat()]);
+      const sortedTasks = [...data].sort((a: any, b: any) => {
+        const aTime = a?.dueDate || a?.updatedAt || a?.createdAt;
+        const bTime = b?.dueDate || b?.updatedAt || b?.createdAt;
+        return new Date(aTime || 0).getTime() - new Date(bTime || 0).getTime();
+      });
+
+      setTasks(sortedTasks.map((t: any) => ({
         id: t.id, title: t.title,
         dueDate: t.dueDate ? new Date(t.dueDate).toLocaleDateString() : "No Date",
         completed: t.status === "DONE" || t.status === "COMPLETED",
         priority: mapPriority(t.priority),
       })));
     } catch { } finally { setLoadingTasks(false); }
-  }, [id]);
+  }, [deals, id]);
 
   const fetchDeals = useCallback(async () => {
-    try { setLoadingDeals(true); const data = await getProjects({ clientId: id!, limit: 100 }); setDeals(data); }
+    try {
+      setLoadingDeals(true);
+      const [clientProjects, leadProjects] = await Promise.all([
+        getProjects({ clientId: id!, limit: 100 }),
+        relatedLeadId ? getProjects({ leadId: relatedLeadId, limit: 100 }) : Promise.resolve([]),
+      ]);
+      setDeals(sortByNewest(dedupeById([...(clientProjects || []), ...(leadProjects || [])]), "updatedAt", "createdAt"));
+    }
     catch { } finally { setLoadingDeals(false); }
-  }, [id]);
+  }, [id, relatedLeadId]);
 
   const fetchDocuments = useCallback(async () => {
-    try { setLoadingDocs(true); const data = await getFiles({ clientId: id!, limit: 100 }); setDocuments(Array.isArray(data) ? data : []); }
+    try {
+      setLoadingDocs(true);
+      const [clientDocs, leadDocs] = await Promise.all([
+        getFiles({ clientId: id!, limit: 100 }),
+        relatedLeadId ? getFiles({ leadId: relatedLeadId, limit: 100 }) : Promise.resolve([]),
+      ]);
+      setDocuments(sortByNewest(dedupeById([...(Array.isArray(clientDocs) ? clientDocs : []), ...(Array.isArray(leadDocs) ? leadDocs : [])]), "createdAt", "updatedAt"));
+    }
     catch { } finally { setLoadingDocs(false); }
-  }, [id]);
+  }, [id, relatedLeadId]);
 
   const fetchEmails = useCallback(async () => {
-    try { setLoadingEmails(true); const data = await getEmails({ clientId: id!, limit: 50 }); setEmails(Array.isArray(data) ? data : []); }
+    try {
+      setLoadingEmails(true);
+      const [clientEmails, leadEmails] = await Promise.all([
+        getEmails({ clientId: id!, limit: 50 }),
+        relatedLeadId ? getEmails({ leadId: relatedLeadId, limit: 50 }) : Promise.resolve([]),
+      ]);
+      setEmails(sortByNewest(dedupeById([...(Array.isArray(clientEmails) ? clientEmails : []), ...(Array.isArray(leadEmails) ? leadEmails : [])]), "sentAt", "receivedAt", "createdAt"));
+    }
     catch { } finally { setLoadingEmails(false); }
-  }, [id]);
+  }, [id, relatedLeadId]);
 
   const fetchInvoices = useCallback(async () => {
     try { setLoadingInvoices(true); const data = await getInvoices({ clientId: id! }); setInvoices(Array.isArray(data) ? data : []); }
@@ -282,8 +349,20 @@ const ClientDetailPage = () => {
   }, [id]);
 
   useEffect(() => {
-    fetchClient(); fetchTasks(); fetchDeals(); fetchDocuments(); fetchEmails(); fetchInvoices();
-  }, [fetchClient, fetchTasks, fetchDeals, fetchDocuments, fetchEmails, fetchInvoices]);
+    fetchClient();
+    fetchRelatedLead();
+  }, [fetchClient, fetchRelatedLead]);
+
+  useEffect(() => {
+    fetchDeals();
+    fetchDocuments();
+    fetchEmails();
+    fetchInvoices();
+  }, [fetchDeals, fetchDocuments, fetchEmails, fetchInvoices]);
+
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
 
   // ── Actions ─────────────────────────────────────────────────────
   const handleAddNote = async () => {
@@ -689,7 +768,7 @@ const ClientDetailPage = () => {
                 { label: "Budget Range", value: client.budgetRange || "—" },
                 { label: "Urgency Level", value: client.urgencyLevel || "—" },
                 { label: "Lifecycle Stage", value: client.lifecycleStage || "—" },
-                { label: "Conversion Date", value: fmtDate(client.createdAt) },
+                { label: "Conversion Date", value: fmtDate(relatedLeadConvertedAt || client.createdAt) },
               ].map((row, i) => (
                 <div key={i} className={`flex items-center justify-between py-2.5 ${i < 5 ? 'border-b border-dashed border-[#F1F5F9]' : ''}`}>
                   <span className="text-xs text-[#6B7280]">{row.label}</span>

@@ -30,6 +30,7 @@ export const emailQuerySchema = z.object({
         search: z.string().optional(),
         folder: z.enum(['INBOX', 'SENT', 'DRAFTS', 'TRASH', 'SPAM', 'ARCHIVE']).optional(),
         clientId: z.string().uuid().optional(),
+        leadId: z.string().uuid().optional(),
         labelId: z.string().uuid().optional(),
         sortBy: z.enum(['receivedAt', 'subject']).default('receivedAt'),
         sortOrder: z.enum(['asc', 'desc']).default('desc'),

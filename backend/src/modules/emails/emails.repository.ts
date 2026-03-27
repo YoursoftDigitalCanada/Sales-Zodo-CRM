@@ -64,12 +64,13 @@ export class EmailsRepository {
     }
 
     async findMany(tenantId: string, mailboxOwnerUserId: string, query: EmailQueryDto) {
-        const { page = 1, limit = 20, search, folder, clientId, labelId, sortBy = 'receivedAt', sortOrder = 'desc' } = query;
+        const { page = 1, limit = 20, search, folder, clientId, leadId, labelId, sortBy = 'receivedAt', sortOrder = 'desc' } = query;
         const where: Prisma.EmailWhereInput = {
             ...this.ownerWhere(tenantId, mailboxOwnerUserId),
             deletedAt: null,
             ...(folder && { folder }),
             ...(clientId && { clientId }),
+            ...(leadId && { leadId }),
             ...(labelId && { labels: { some: { labelId } } }),
             ...(search && {
                 OR: [

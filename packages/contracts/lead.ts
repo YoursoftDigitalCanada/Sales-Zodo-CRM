@@ -98,6 +98,7 @@ export const LeadQuerySchema = z.object({
   temperature: LeadTemperatureSchema.optional(),
   assignedToId: z.string().uuid().optional(),
   leadSourceId: z.string().uuid().optional(),
+  convertedToClientId: z.string().uuid().optional(),
   sortBy: z.enum(["firstName", "createdAt", "potentialValue", "companyName"]).default("createdAt"),
   sortOrder: SortOrderSchema.default("desc"),
 });

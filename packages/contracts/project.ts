@@ -57,6 +57,7 @@ export const ProjectQuerySchema = z
     priority: ProjectPrioritySchema.optional(),
     stageId: z.string().uuid().optional(),
     clientId: z.string().uuid().optional(),
+    leadId: z.string().uuid().optional(),
     projectManagerId: z.string().optional(),
     sortBy: z.string().default("createdAt"),
     sortOrder: SortOrderSchema.default("desc"),

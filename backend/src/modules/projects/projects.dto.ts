@@ -9,6 +9,7 @@ export interface ProjectQueryDto {
   projectType?: ProjectType;
   stageId?: string;
   clientId?: string;
+  leadId?: string;
   projectManagerId?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
@@ -118,4 +119,3 @@ export function normalizeProjectDto(input: Record<string, any>): CreateProjectDt
 
   return data as CreateProjectDto;
 }
-

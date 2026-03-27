@@ -95,6 +95,7 @@ export class LeadsRepository {
       temperature,
       leadSourceId,
       assignedToId,
+      convertedToClientId,
       startDate,
       endDate,
       minValue,
@@ -110,6 +111,7 @@ export class LeadsRepository {
       ...(temperature && { temperature }),
       ...(leadSourceId && { leadSourceId }),
       ...(assignedToId && { assignedToId }),
+      ...(convertedToClientId && { convertedToClientId }),
       ...(startDate || endDate
         ? {
           createdAt: {

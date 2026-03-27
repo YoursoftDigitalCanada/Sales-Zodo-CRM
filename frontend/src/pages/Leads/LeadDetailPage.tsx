@@ -19,6 +19,10 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { getLeadById, convertLead, getInspectionsByLeadId, createInspection, updateInspection, deleteInspection, getInsuranceClaimsByLeadId, createInsuranceClaim, updateInsuranceClaim, deleteInsuranceClaim } from "@/features/leads";
 import { getFiles, getDownloadUrl } from "@/features/files/services/files-service";
+import { getProjects } from "@/features/projects/services/projects-service";
+import { getTasks } from "@/features/tasks/services/tasks-service";
+import { getQuotes } from "@/features/quotes/services/quotes-service";
+import { getEmails } from "@/features/emails/services/emails-service";
 import { WhatsAppActionButton } from "@/features/whatsapp/components/WhatsAppActionButton";
 import { ActivityTimeline } from "@/components/ActivityTimeline";
 import {
@@ -180,6 +184,21 @@ const timeAgo = (d: string | null | undefined) => {
 
 const getInitials = (first: string, last: string) =>
     `${(first || "")[0] || ""}${(last || "")[0] || ""}`.toUpperCase() || "LD";
+
+const dedupeById = <T extends { id: string }>(items: T[]) => {
+    const seen = new Map<string, T>();
+    for (const item of items) {
+        seen.set(item.id, item);
+    }
+    return Array.from(seen.values());
+};
+
+const sortByNewest = <T extends Record<string, any>>(items: T[], ...fields: string[]) =>
+    [...items].sort((a, b) => {
+        const aTime = fields.map((field) => a?.[field]).find(Boolean);
+        const bTime = fields.map((field) => b?.[field]).find(Boolean);
+        return new Date(bTime || 0).getTime() - new Date(aTime || 0).getTime();
+    });
 
 // ── Pipeline Progress ───────────────────────────────────────────────────
 
@@ -384,6 +403,14 @@ const LeadDetailPage = () => {
     const [editingClaim, setEditingClaim] = useState<any | null>(null);
     const [documents, setDocuments] = useState<any[]>([]);
     const [loadingDocs, setLoadingDocs] = useState(false);
+    const [relatedProjects, setRelatedProjects] = useState<any[]>([]);
+    const [loadingProjects, setLoadingProjects] = useState(false);
+    const [relatedTasks, setRelatedTasks] = useState<any[]>([]);
+    const [loadingTasks, setLoadingTasks] = useState(false);
+    const [quotes, setQuotes] = useState<any[]>([]);
+    const [loadingQuotes, setLoadingQuotes] = useState(false);
+    const [emails, setEmails] = useState<any[]>([]);
+    const [loadingEmails, setLoadingEmails] = useState(false);
 
     const fetchLead = useCallback(async () => {
         try {
@@ -480,6 +507,83 @@ const LeadDetailPage = () => {
 
     useEffect(() => { fetchDocuments(); }, [fetchDocuments]);
 
+    const fetchProjects = useCallback(async () => {
+        if (!id) return;
+        try {
+            setLoadingProjects(true);
+            const data = await getProjects({ leadId: id, limit: 100 });
+            setRelatedProjects(sortByNewest(Array.isArray(data) ? data : [], "updatedAt", "createdAt"));
+        } catch {
+            console.error("Failed to fetch lead projects");
+        } finally {
+            setLoadingProjects(false);
+        }
+    }, [id]);
+
+    useEffect(() => { fetchProjects(); }, [fetchProjects]);
+
+    const fetchTasks = useCallback(async () => {
+        if (!relatedProjects.length) {
+            setRelatedTasks([]);
+            setLoadingTasks(false);
+            return;
+        }
+
+        try {
+            setLoadingTasks(true);
+            const taskLists = await Promise.all(
+                relatedProjects
+                    .map((project) => project?.id)
+                    .filter(Boolean)
+                    .map((projectId) => getTasks({ projectId, limit: 100 }) as Promise<any[]>),
+            );
+            const merged = dedupeById(taskLists.flat());
+            setRelatedTasks(
+                [...merged].sort((a, b) => {
+                    const aTime = a?.dueDate || a?.updatedAt || a?.createdAt;
+                    const bTime = b?.dueDate || b?.updatedAt || b?.createdAt;
+                    return new Date(aTime || 0).getTime() - new Date(bTime || 0).getTime();
+                }),
+            );
+        } catch {
+            console.error("Failed to fetch lead tasks");
+        } finally {
+            setLoadingTasks(false);
+        }
+    }, [relatedProjects]);
+
+    useEffect(() => { fetchTasks(); }, [fetchTasks]);
+
+    const fetchQuotes = useCallback(async () => {
+        if (!id) return;
+        try {
+            setLoadingQuotes(true);
+            const data = await getQuotes({ leadId: id, limit: 100 });
+            setQuotes(sortByNewest(Array.isArray(data?.data) ? data.data : [], "updatedAt", "createdAt"));
+        } catch {
+            console.error("Failed to fetch lead quotes");
+        } finally {
+            setLoadingQuotes(false);
+        }
+    }, [id]);
+
+    useEffect(() => { fetchQuotes(); }, [fetchQuotes]);
+
+    const fetchEmails = useCallback(async () => {
+        if (!id) return;
+        try {
+            setLoadingEmails(true);
+            const data = await getEmails({ leadId: id, limit: 50 });
+            setEmails(sortByNewest(Array.isArray(data) ? data : [], "sentAt", "receivedAt", "createdAt"));
+        } catch {
+            console.error("Failed to fetch lead emails");
+        } finally {
+            setLoadingEmails(false);
+        }
+    }, [id]);
+
+    useEffect(() => { fetchEmails(); }, [fetchEmails]);
+
     const handleSaveClaim = async (data: Record<string, unknown>) => {
         try {
             if (editingClaim) {
@@ -542,6 +646,7 @@ const LeadDetailPage = () => {
         : "Unassigned";
     const leadAge = Math.floor((Date.now() - new Date(lead.createdAt).getTime()) / 86400000);
     const propertyAddr = [lead.propertyAddress, lead.city, lead.state, lead.zipCode].filter(Boolean).join(", ");
+    const openRelatedTasks = relatedTasks.filter((task) => !["DONE", "COMPLETED"].includes(String(task.status || "").toUpperCase())).length;
 
     // ── Render ────────────────────────────────────────────────────────────
 
@@ -731,8 +836,102 @@ const LeadDetailPage = () => {
                         {lead.qualificationCallNotes && <div className="mt-3 pt-3 border-t border-[#F1F5F9]"><p className="text-[10px] text-[#9CA3AF] uppercase tracking-wider font-medium mb-1">Qualification Notes</p><p className="text-sm text-[#111827] bg-[#F9FAFB] p-3 rounded-lg whitespace-pre-wrap">{lead.qualificationCallNotes}</p></div>}
                     </div>
 
-                    {/* CARD 5: Inspections */}
+                    {/* CARD 5: Related Deals */}
                     <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 520ms both' }}>
+                        <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#F1F5F9]">
+                            <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#CCFBF1] flex items-center justify-center"><DollarSign size={14} className="text-[#0D9488]" /></div><h3 className="text-sm font-semibold text-[#111827]">Related Deals</h3><span className="text-xs bg-[#F1F5F9] text-[#6B7280] px-2 py-0.5 rounded-full font-medium">{relatedProjects.length}</span></div>
+                            <button onClick={() => navigate('/projects')} className="text-xs font-medium text-[#14B8A6] hover:text-[#0D9488]">View All →</button>
+                        </div>
+                        {loadingProjects ? <div className="flex justify-center py-8"><Loader2 className="animate-spin text-[#14B8A6]" size={20} /></div> :
+                            relatedProjects.length === 0 ? <div className="text-center py-8"><DollarSign size={24} className="text-[#D1D5DB] mx-auto mb-2" /><p className="text-xs text-[#9CA3AF]">No projects linked to this lead yet</p></div> :
+                                <div className="space-y-2">{relatedProjects.slice(0, 4).map((project: any) => {
+                                    const status = String(project.status || 'PENDING').toUpperCase();
+                                    const statusColor = status === 'COMPLETED' ? 'bg-[#DCFCE7] text-[#166534]' : status === 'ON_HOLD' ? 'bg-[#FEF3C7] text-[#92400E]' : status === 'CANCELLED' ? 'bg-[#FEE2E2] text-[#991B1B]' : 'bg-[#DBEAFE] text-[#1E40AF]';
+                                    const value = Number(project.contractValue || project.budget || 0);
+                                    return (
+                                        <div key={project.id} className="flex items-center justify-between py-2 px-2 rounded-lg hover:bg-[#F9FAFB] transition-colors cursor-pointer" onClick={() => navigate(`/projects/${project.id}`)}>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-sm font-medium text-[#111827] truncate">{project.name}</p>
+                                                <div className="flex items-center gap-2 mt-1 text-xs text-[#6B7280]">
+                                                    {project.projectNumber && <span>{project.projectNumber}</span>}
+                                                    {value > 0 && <span>{formatCurrency(value)}</span>}
+                                                    {project._count?.projectTasks ? <span>{project._count.projectTasks} tasks</span> : null}
+                                                </div>
+                                            </div>
+                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusColor}`}>{status.replace(/_/g, ' ')}</span>
+                                        </div>
+                                    );
+                                })}</div>}
+                    </div>
+
+                    {/* CARD 6: Related Tasks */}
+                    <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 600ms both' }}>
+                        <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#F1F5F9]">
+                            <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#FFF7ED] flex items-center justify-center"><CheckSquare size={14} className="text-[#EA580C]" /></div><h3 className="text-sm font-semibold text-[#111827]">Project Tasks</h3><span className="text-xs bg-[#F1F5F9] text-[#6B7280] px-2 py-0.5 rounded-full font-medium">{relatedTasks.length}</span></div>
+                            <button onClick={() => navigate('/tasks')} className="text-xs font-medium text-[#14B8A6] hover:text-[#0D9488]">{openRelatedTasks} open</button>
+                        </div>
+                        {loadingTasks ? <div className="flex justify-center py-8"><Loader2 className="animate-spin text-[#14B8A6]" size={20} /></div> :
+                            relatedTasks.length === 0 ? <div className="text-center py-8"><CheckSquare size={24} className="text-[#D1D5DB] mx-auto mb-2" /><p className="text-xs text-[#9CA3AF]">No project tasks linked to this lead yet</p></div> :
+                                <div className="space-y-2">{relatedTasks.slice(0, 4).map((task: any) => (
+                                    <div key={task.id} className="py-2 px-2 rounded-lg hover:bg-[#F9FAFB] transition-colors">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <p className="text-sm font-medium text-[#111827] truncate">{task.title}</p>
+                                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${String(task.status || '').toUpperCase() === 'DONE' ? 'bg-[#DCFCE7] text-[#166534]' : 'bg-[#DBEAFE] text-[#1E40AF]'}`}>{String(task.status || 'TODO').replace(/_/g, ' ')}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 mt-1 text-xs text-[#6B7280]">
+                                            {task.project?.name && <span>{task.project.name}</span>}
+                                            {task.dueDate && <span>Due {formatDate(task.dueDate)}</span>}
+                                        </div>
+                                    </div>
+                                ))}</div>}
+                    </div>
+
+                    {/* CARD 7: Quotes */}
+                    <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 680ms both' }}>
+                        <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#F1F5F9]">
+                            <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#FEF9C3] flex items-center justify-center"><FileText size={14} className="text-[#CA8A04]" /></div><h3 className="text-sm font-semibold text-[#111827]">Quotes</h3><span className="text-xs bg-[#F1F5F9] text-[#6B7280] px-2 py-0.5 rounded-full font-medium">{quotes.length}</span></div>
+                            <button onClick={() => navigate('/quotes')} className="text-xs font-medium text-[#14B8A6] hover:text-[#0D9488]">View All →</button>
+                        </div>
+                        {loadingQuotes ? <div className="flex justify-center py-8"><Loader2 className="animate-spin text-[#14B8A6]" size={20} /></div> :
+                            quotes.length === 0 ? <div className="text-center py-8"><FileText size={24} className="text-[#D1D5DB] mx-auto mb-2" /><p className="text-xs text-[#9CA3AF]">No quotes linked to this lead yet</p></div> :
+                                <div className="space-y-2">{quotes.slice(0, 4).map((quote: any) => (
+                                    <div key={quote.id} className="flex items-center justify-between py-2 px-2 rounded-lg hover:bg-[#F9FAFB] transition-colors cursor-pointer" onClick={() => navigate('/quotes')}>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-sm font-medium text-[#111827] truncate">{quote.quoteNumber}</p>
+                                            <div className="flex items-center gap-2 mt-1 text-xs text-[#6B7280]">
+                                                <span>{formatCurrency(quote.total)}</span>
+                                                {quote.validUntil && <span>Valid until {formatDate(quote.validUntil)}</span>}
+                                            </div>
+                                        </div>
+                                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#EDE9FE] text-[#7C3AED]">{String(quote.status || 'DRAFT').replace(/_/g, ' ')}</span>
+                                    </div>
+                                ))}</div>}
+                    </div>
+
+                    {/* CARD 8: Emails */}
+                    <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 760ms both' }}>
+                        <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#F1F5F9]">
+                            <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#EFF6FF] flex items-center justify-center"><Mail size={14} className="text-[#2563EB]" /></div><h3 className="text-sm font-semibold text-[#111827]">Emails</h3><span className="text-xs bg-[#F1F5F9] text-[#6B7280] px-2 py-0.5 rounded-full font-medium">{emails.length}</span></div>
+                            <button onClick={() => navigate('/letterbox')} className="text-xs font-medium text-[#14B8A6] hover:text-[#0D9488]">Open Letter Box →</button>
+                        </div>
+                        {loadingEmails ? <div className="flex justify-center py-8"><Loader2 className="animate-spin text-[#14B8A6]" size={20} /></div> :
+                            emails.length === 0 ? <div className="text-center py-8"><Mail size={24} className="text-[#D1D5DB] mx-auto mb-2" /><p className="text-xs text-[#9CA3AF]">No mailbox emails linked to this lead yet</p></div> :
+                                <div className="space-y-2">{emails.slice(0, 4).map((email: any) => (
+                                    <div key={email.id} className="py-2 px-2 rounded-lg hover:bg-[#F9FAFB] transition-colors">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <p className="text-sm font-medium text-[#111827] truncate">{email.subject || "(No subject)"}</p>
+                                            {!email.isRead && <span className="w-2 h-2 rounded-full bg-[#14B8A6] flex-shrink-0" />}
+                                        </div>
+                                        <div className="flex items-center gap-2 mt-1 text-xs text-[#6B7280]">
+                                            <span className="truncate">{email.fromAddress || email.fromName || "Unknown sender"}</span>
+                                            <span>{timeAgo(email.sentAt || email.receivedAt || email.createdAt)}</span>
+                                        </div>
+                                    </div>
+                                ))}</div>}
+                    </div>
+
+                    {/* CARD 9: Inspections */}
+                    <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 840ms both' }}>
                         <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#F1F5F9]">
                             <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#FFF7ED] flex items-center justify-center"><ClipboardList size={14} className="text-[#FF7B36]" /></div><h3 className="text-sm font-semibold text-[#111827]">Inspections</h3><span className="text-xs bg-[#F1F5F9] text-[#6B7280] px-2 py-0.5 rounded-full font-medium">{inspections.length}</span></div>
                             <button onClick={() => { setEditingInspection(null); setShowInspectionDialog(true); }} className="text-xs font-medium text-[#14B8A6] hover:text-[#0D9488]">+ New</button>
@@ -750,8 +949,8 @@ const LeadDetailPage = () => {
                                 ))}</div>}
                     </div>
 
-                    {/* CARD 6: Insurance Claims */}
-                    <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 600ms both' }}>
+                    {/* CARD 10: Insurance Claims */}
+                    <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 920ms both' }}>
                         <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#F1F5F9]">
                             <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#EDE9FE] flex items-center justify-center"><Shield size={14} className="text-[#7C3AED]" /></div><h3 className="text-sm font-semibold text-[#111827]">Insurance Claims</h3><span className="text-xs bg-[#F1F5F9] text-[#6B7280] px-2 py-0.5 rounded-full font-medium">{insuranceClaims.length}</span></div>
                             <button onClick={() => { setEditingClaim(null); setShowClaimDialog(true); }} className="text-xs font-medium text-[#14B8A6] hover:text-[#0D9488]">+ New</button>
@@ -769,8 +968,8 @@ const LeadDetailPage = () => {
                                 ))}</div>}
                     </div>
 
-                    {/* CARD 7: Notes */}
-                    <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 680ms both' }}>
+                    {/* CARD 11: Documents */}
+                    <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 1000ms both' }}>
                         <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#F1F5F9]">
                             <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#EDE9FE] flex items-center justify-center"><FolderOpen size={14} className="text-[#7C3AED]" /></div><h3 className="text-sm font-semibold text-[#111827]">Documents</h3><span className="text-xs bg-[#F1F5F9] text-[#6B7280] px-2 py-0.5 rounded-full font-medium">{documents.length}</span></div>
                         </div>
@@ -794,7 +993,8 @@ const LeadDetailPage = () => {
                                 })}</div>}
                     </div>
 
-                    <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 680ms both' }}>
+                    {/* CARD 12: Notes */}
+                    <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 1080ms both' }}>
                         <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#F1F5F9]">
                             <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#FEF9C3] flex items-center justify-center"><FileText size={14} className="text-[#CA8A04]" /></div><h3 className="text-sm font-semibold text-[#111827]">Notes</h3></div>
                         </div>
@@ -808,8 +1008,8 @@ const LeadDetailPage = () => {
                             ))}</div>}
                     </div>
 
-                    {/* CARD 8: Activity Timeline */}
-                    <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 760ms both' }}>
+                    {/* CARD 13: Activity Timeline */}
+                    <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 1160ms both' }}>
                         <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#F1F5F9]">
                             <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#EFF6FF] flex items-center justify-center"><Clock size={14} className="text-[#2563EB]" /></div><h3 className="text-sm font-semibold text-[#111827]">Recent Activity</h3></div>
                         </div>

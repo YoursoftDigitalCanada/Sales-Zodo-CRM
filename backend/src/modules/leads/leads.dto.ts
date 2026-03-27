@@ -238,6 +238,7 @@ export interface LeadQueryDto {
   temperature?: LeadTemperature;
   leadSourceId?: string;
   assignedToId?: string;
+  convertedToClientId?: string;
   startDate?: Date;
   endDate?: Date;
   minValue?: number;

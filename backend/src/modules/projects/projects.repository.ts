@@ -205,6 +205,7 @@ export class ProjectsRepository {
       projectType,
       stageId,
       clientId,
+      leadId,
       projectManagerId,
       sortBy = 'createdAt',
       sortOrder = 'desc',
@@ -220,6 +221,7 @@ export class ProjectsRepository {
       ...(projectType && { projectType }),
       ...(stageId && { stageId }),
       ...(clientId && { clientId }),
+      ...(leadId && { leadId }),
       ...(projectManagerId && { projectManagerId }),
       ...(startDate || endDate
         ? {

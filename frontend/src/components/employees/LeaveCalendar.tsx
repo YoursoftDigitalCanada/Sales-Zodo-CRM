@@ -13,37 +13,49 @@ import {
   endOfWeek,
   isToday,
   isWithinInterval,
+  isWeekend,
+  startOfDay,
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { LeaveRequest } from './types';
+import { AttendanceRecord, LeaveRequest } from './types';
 import { getLeaveTypeConfig, getLeaveStatusConfig, getInitials } from './utils';
 
 interface LeaveCalendarProps {
   leaveRequests: LeaveRequest[];
+  attendanceRecords?: AttendanceRecord[];
+  showAbsences?: boolean;
+  month?: Date;
+  onMonthChange?: (month: Date) => void;
   onDateClick?: (date: Date, requests: LeaveRequest[]) => void;
   onRequestClick?: (request: LeaveRequest) => void;
 }
 
 export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({
   leaveRequests,
+  attendanceRecords = [],
+  showAbsences = false,
+  month,
+  onMonthChange,
   onDateClick,
   onRequestClick,
 }) => {
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [internalMonth, setInternalMonth] = useState(new Date());
+  const currentMonth = month || internalMonth;
+
+  const setCurrentMonth = (value: Date) => {
+    if (!month) {
+      setInternalMonth(value);
+    }
+    onMonthChange?.(value);
+  };
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -52,6 +64,7 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({
 
   const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const today = startOfDay(new Date());
 
   const getRequestsForDate = (date: Date): LeaveRequest[] => {
     return leaveRequests.filter((request) => {
@@ -65,6 +78,10 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({
     });
   };
 
+  const getAttendanceForDate = (date: Date): AttendanceRecord[] => (
+    attendanceRecords.filter((record) => isSameDay(new Date(record.date), date))
+  );
+
   const getColorForLeaveType = (leaveType: string): string => {
     const colors: Record<string, string> = {
       annual: '#22D3EE',
@@ -76,6 +93,38 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({
       bereavement: '#475569',
     };
     return colors[leaveType] || '#22D3EE';
+  };
+
+  const getDayState = (date: Date) => {
+    const requests = getRequestsForDate(date);
+    const dailyAttendance = getAttendanceForDate(date);
+    const hasLeave = requests.length > 0 || dailyAttendance.some((record) => record.status === 'on-leave');
+    const hasExplicitAbsent = dailyAttendance.some((record) => record.status === 'absent');
+    const hasWorked = dailyAttendance.some((record) => ['present', 'late', 'half-day'].includes(record.status));
+    const isPastWorkday = !isWeekend(date) && date.getTime() < today.getTime();
+    const isAbsent = showAbsences && !hasLeave && (hasExplicitAbsent || (isPastWorkday && !hasWorked));
+
+    if (hasLeave) {
+      return {
+        status: 'leave' as const,
+        requests,
+        label: 'Leave',
+      };
+    }
+
+    if (isAbsent) {
+      return {
+        status: 'absent' as const,
+        requests,
+        label: 'Absent',
+      };
+    }
+
+    return {
+      status: null,
+      requests,
+      label: null,
+    };
   };
 
   return (
@@ -129,10 +178,13 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({
       {/* Calendar Grid */}
       <div className="grid grid-cols-7 gap-1">
         {days.map((day, index) => {
-          const requests = getRequestsForDate(day);
+          const dayState = getDayState(day);
+          const requests = dayState.requests;
           const isCurrentMonth = isSameMonth(day, currentMonth);
           const isCurrentDay = isToday(day);
-          const hasRequests = requests.length > 0;
+          const hasLeave = dayState.status === 'leave';
+          const isAbsent = dayState.status === 'absent';
+          const isMarkedDay = hasLeave || isAbsent;
 
           return (
             <Popover key={index}>
@@ -143,44 +195,35 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({
                   onClick={() => onDateClick?.(day, requests)}
                   className={`
                     relative min-h-[80px] p-2 rounded-md text-left transition-colors
-                    ${!isCurrentMonth ? 'bg-white/5 text-gray-300' : 'hover:bg-white/5'}
+                    ${!isCurrentMonth ? 'bg-slate-50 text-gray-300' : 'hover:bg-slate-50'}
                     ${isCurrentDay ? 'ring-2 ring-[#22D3EE] ring-offset-1' : ''}
-                    ${hasRequests && isCurrentMonth ? 'bg-white/5' : ''}
+                    ${isMarkedDay && isCurrentMonth ? 'bg-slate-50' : ''}
                   `}
                 >
                   <span
                     className={`
                       text-sm font-medium
                       ${isCurrentDay ? 'text-[#0891B2] font-bold' : ''}
-                      ${!isCurrentMonth ? 'text-gray-300' : 'text-slate-200'}
+                      ${!isCurrentMonth ? 'text-gray-300' : 'text-[#0F172A]'}
                     `}
                   >
                     {format(day, 'd')}
                   </span>
 
-                  {/* Leave indicators */}
-                  {hasRequests && isCurrentMonth && (
+                  {isMarkedDay && isCurrentMonth && (
                     <div className="mt-1 space-y-1">
-                      {requests.slice(0, 2).map((request) => (
-                        <div
-                          key={request.id}
-                          className="flex items-center gap-1 text-xs truncate"
-                          style={{
-                            backgroundColor: `${getColorForLeaveType(request.leaveType)}20`,
-                            color: getColorForLeaveType(request.leaveType),
-                            padding: '2px 4px',
-                            borderRadius: '4px',
-                            borderLeft: `2px solid ${getColorForLeaveType(request.leaveType)}`,
-                          }}
-                        >
-                          <span className="truncate">
-                            {request.employeeName.split(' ')[0]}
-                          </span>
-                        </div>
-                      ))}
-                      {requests.length > 2 && (
-                        <div className="text-xs text-[#475569] pl-1">
-                          +{requests.length - 2} more
+                      <div
+                        className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium ${
+                          hasLeave
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-slate-200 text-slate-700'
+                        }`}
+                      >
+                        <span className="truncate">{dayState.label}</span>
+                      </div>
+                      {hasLeave && requests.length > 1 && (
+                        <div className="text-[11px] text-[#64748B] pl-1">
+                          +{requests.length - 1} more
                         </div>
                       )}
                     </div>
@@ -188,67 +231,81 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({
                 </motion.button>
               </PopoverTrigger>
 
-              {hasRequests && isCurrentMonth && (
+              {isMarkedDay && isCurrentMonth && (
                 <PopoverContent className="w-80 p-0" align="start">
                   <div className="p-4 border-b border-[rgba(15,23,42,0.06)]">
                     <h4 className="font-semibold text-[#0F172A]">
                       {format(day, 'EEEE, MMMM d, yyyy')}
                     </h4>
-                    <p className="text-sm text-[#475569]">
-                      {requests.length} employee{requests.length !== 1 ? 's' : ''} on leave
-                    </p>
+                    {hasLeave ? (
+                      <p className="text-sm text-[#475569]">
+                        {requests.length > 0
+                          ? `${requests.length} employee${requests.length !== 1 ? 's' : ''} on leave`
+                          : 'Approved leave'}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-[#475569]">
+                        No approved leave or attendance was found for this working day, so it is marked absent.
+                      </p>
+                    )}
                   </div>
-                  <div className="max-h-64 overflow-y-auto">
-                    {requests.map((request) => {
-                      const leaveConfig = getLeaveTypeConfig(request.leaveType);
-                      const statusConfig = getLeaveStatusConfig(request.status);
-                      const nameParts = request.employeeName.split(' ');
+                  {hasLeave ? (
+                    <div className="max-h-64 overflow-y-auto">
+                      {requests.map((request) => {
+                        const leaveConfig = getLeaveTypeConfig(request.leaveType);
+                        const statusConfig = getLeaveStatusConfig(request.status);
+                        const nameParts = request.employeeName.split(' ');
 
-                      return (
-                        <div
-                          key={request.id}
-                          className="p-3 hover:bg-white/5 cursor-pointer border-b border-gray-50 last:border-0"
-                          onClick={() => onRequestClick?.(request)}
-                        >
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10">
-                              <AvatarImage src={request.employeeAvatar} />
-                              <AvatarFallback
-                                style={{
-                                  backgroundColor: `${getColorForLeaveType(request.leaveType)}20`,
-                                  color: getColorForLeaveType(request.leaveType),
-                                }}
-                              >
-                                {getInitials(nameParts[0], nameParts[1] || '')}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-[#0F172A] truncate">
-                                {request.employeeName}
-                              </p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <Badge
-                                  className={`${leaveConfig.color} border-0 text-xs`}
+                        return (
+                          <div
+                            key={request.id}
+                            className="p-3 hover:bg-white/5 cursor-pointer border-b border-gray-50 last:border-0"
+                            onClick={() => onRequestClick?.(request)}
+                          >
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-10 w-10">
+                                <AvatarImage src={request.employeeAvatar} />
+                                <AvatarFallback
+                                  style={{
+                                    backgroundColor: `${getColorForLeaveType(request.leaveType)}20`,
+                                    color: getColorForLeaveType(request.leaveType),
+                                  }}
                                 >
-                                  {leaveConfig.icon} {leaveConfig.label}
-                                </Badge>
-                                <Badge
-                                  variant="outline"
-                                  className={`${statusConfig.color} text-xs`}
-                                >
-                                  {statusConfig.label}
-                                </Badge>
+                                  {getInitials(nameParts[0], nameParts[1] || '')}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-[#0F172A] truncate">
+                                  {request.employeeName}
+                                </p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Badge
+                                    className={`${leaveConfig.color} border-0 text-xs`}
+                                  >
+                                    {leaveConfig.icon} {leaveConfig.label}
+                                  </Badge>
+                                  <Badge
+                                    variant="outline"
+                                    className={`${statusConfig.color} text-xs`}
+                                  >
+                                    {statusConfig.label}
+                                  </Badge>
+                                </div>
                               </div>
                             </div>
+                            <div className="mt-2 text-xs text-[#475569]">
+                              {format(new Date(request.startDate), 'MMM d')} -{' '}
+                              {format(new Date(request.endDate), 'MMM d')} ({request.totalDays} days)
+                            </div>
                           </div>
-                          <div className="mt-2 text-xs text-[#475569]">
-                            {format(new Date(request.startDate), 'MMM d')} -{' '}
-                            {format(new Date(request.endDate), 'MMM d')} ({request.totalDays} days)
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="p-4">
+                      <Badge className="bg-slate-200 text-slate-700 border-0">Absent</Badge>
+                    </div>
+                  )}
                 </PopoverContent>
               )}
             </Popover>
@@ -258,18 +315,16 @@ export const LeaveCalendar: React.FC<LeaveCalendarProps> = ({
 
       {/* Legend */}
       <div className="flex flex-wrap gap-4 mt-6 pt-4 border-t border-[rgba(15,23,42,0.06)]">
-        {['annual', 'sick', 'personal', 'maternity', 'paternity'].map((type) => {
-          const config = getLeaveTypeConfig(type as any);
-          return (
-            <div key={type} className="flex items-center gap-2">
-              <span
-                className="w-3 h-3 rounded-full"
-                style={{ backgroundColor: getColorForLeaveType(type) }}
-              />
-              <span className="text-sm text-[#475569]">{config.label}</span>
-            </div>
-          );
-        })}
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full bg-red-500" />
+          <span className="text-sm text-[#475569]">Leave</span>
+        </div>
+        {showAbsences && (
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-slate-500" />
+            <span className="text-sm text-[#475569]">Absent</span>
+          </div>
+        )}
       </div>
     </motion.div>
   );

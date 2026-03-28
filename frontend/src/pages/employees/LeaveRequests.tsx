@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
+import { endOfDay, endOfMonth, startOfDay, startOfMonth } from 'date-fns';
 import {
   Plus,
   Search,
@@ -31,6 +32,7 @@ import {
   LeaveBalanceCard,
   LeaveCalendar,
   AddLeaveRequestDialog,
+  AttendanceRecord,
   LeaveBalance,
   LeaveRequest,
   LeaveStatus,
@@ -38,8 +40,10 @@ import {
 } from '@/components/employees';
 import { getStoredEmployee, isStoredEmployeeAdmin } from '@/features/auth/lib/auth-storage';
 import {
+  AttendanceEntity,
   LeaveRequestEntity,
   createLeaveRequest,
+  getMyAttendanceRecords,
   getLeaveRequests,
   getMyLeaveRequests,
   reviewLeaveRequest,
@@ -102,6 +106,26 @@ const toLeaveRequest = (request: LeaveRequestEntity): LeaveRequest => ({
   rejectionReason: request.rejectionReason,
 });
 
+const toAttendanceRecord = (record: AttendanceEntity): AttendanceRecord => ({
+  id: record.id,
+  employeeId: record.employeeId,
+  employeeName: record.employeeName,
+  employeeAvatar: record.employeeAvatar || undefined,
+  date: new Date(record.date),
+  checkIn: record.checkIn ? new Date(record.checkIn) : undefined,
+  checkOut: record.checkOut ? new Date(record.checkOut) : undefined,
+  status: record.status,
+  workHours: Number(record.workHours || 0),
+  overtime: Number(record.overtime || 0),
+  notes: record.notes || undefined,
+  location: record.location,
+  isRemote: record.isRemote,
+  clockInLat: typeof record.clockInLat === 'number' ? record.clockInLat : null,
+  clockInLng: typeof record.clockInLng === 'number' ? record.clockInLng : null,
+  clockOutLat: typeof record.clockOutLat === 'number' ? record.clockOutLat : null,
+  clockOutLng: typeof record.clockOutLng === 'number' ? record.clockOutLng : null,
+});
+
 const deriveLeaveBalances = (requests: LeaveRequest[]): LeaveBalance[] => (
   SUPPORTED_LEAVE_TYPES.map((type) => {
     const used = requests
@@ -136,6 +160,8 @@ const LeaveRequestsPage: React.FC = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [calendarAttendance, setCalendarAttendance] = useState<AttendanceRecord[]>([]);
 
   const refreshData = useCallback(async (showErrorToast = true) => {
     try {
@@ -151,6 +177,26 @@ const LeaveRequestsPage: React.FC = () => {
     }
   }, [isAdminUser]);
 
+  const refreshCalendarAttendance = useCallback(async (month: Date, showErrorToast = true) => {
+    if (isAdminUser || !currentEmployeeId) {
+      setCalendarAttendance([]);
+      return;
+    }
+
+    try {
+      const data = await getMyAttendanceRecords({
+        dateFrom: startOfDay(startOfMonth(month)).toISOString(),
+        dateTo: endOfDay(endOfMonth(month)).toISOString(),
+      });
+      setCalendarAttendance(data.map(toAttendanceRecord));
+    } catch (error) {
+      console.error('Failed to load leave calendar attendance:', error);
+      if (showErrorToast) {
+        toast.error(getErrorMessage(error, 'Failed to load leave calendar attendance'));
+      }
+    }
+  }, [currentEmployeeId, isAdminUser]);
+
   useEffect(() => {
     const load = async () => {
       setIsLoading(true);
@@ -160,6 +206,10 @@ const LeaveRequestsPage: React.FC = () => {
 
     load();
   }, [refreshData]);
+
+  useEffect(() => {
+    refreshCalendarAttendance(calendarMonth, false);
+  }, [calendarMonth, refreshCalendarAttendance]);
 
   const myLeaveRequests = useMemo(() => {
     if (!currentEmployeeId) {
@@ -505,6 +555,10 @@ const LeaveRequestsPage: React.FC = () => {
             </h3>
             <LeaveCalendar
               leaveRequests={leaveRequests}
+              attendanceRecords={calendarAttendance}
+              showAbsences={!isAdminUser}
+              month={calendarMonth}
+              onMonthChange={setCalendarMonth}
               onRequestClick={handleViewDetails}
             />
           </div>

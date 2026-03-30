@@ -29,19 +29,20 @@ import {
   LayoutGrid, List, ChevronDown, ChevronLeft, ChevronRight, Download, Upload,
   RefreshCw, X, Sparkles, Copy, Send, Mail, Printer, CheckCircle2, XCircle,
   AlertCircle, Clock3, FileText, DollarSign, TrendingUp, TrendingDown,
-  ArrowUp, ArrowDown, Activity, Zap, Receipt, FileDown, FilePlus, AlertTriangle,
+  ArrowUp, ArrowDown, Activity, Zap, FileDown, FilePlus, AlertTriangle,
   Hash, Calendar, CalendarDays, Target, Users, ArrowRight, FileStack,
   type LucideIcon,
 } from "lucide-react";
 import {
   Quote, QuoteItem, quoteStatusOptions, dateFilterOptions,
   getInitials, formatCurrency, formatDate, getRelativeTime, getDaysUntilExpiry,
-  isExpired, getStatusConfig, getAiInsights,
+  isExpired, getStatusConfig, getAiInsights, isSignedQuote, isRejectedQuote, canSendForSignature,
 } from "./quotes-data";
 import {
   getQuotes, createQuote, updateQuote, deleteQuote as deleteQuoteApi,
-  updateQuoteStatus, sendQuoteEmail, type QuoteEntity,
+  sendQuoteEmail, type QuoteEntity,
 } from "@/features/quotes";
+import { createProjectFromQuote } from "@/features/projects";
 import { getClients, type ClientEntity } from "@/features/clients/services/clients-service";
 import { getLeads, type LeadEntity } from "@/features/leads/services/leads-service";
 import { getEstimates, type RoofEstimate } from "@/features/roof-estimator";
@@ -139,7 +140,7 @@ const QuoteRow = ({ quote, isSelected, onSelect, onView, onEdit, onDelete, onSen
           <CalendarDays size={14} className={expired ? "text-red-400" : "text-[#475569]"} />
           <div>
             <p className="text-sm">{formatDate(quote.validUntil)}</p>
-            {daysLeft !== null && !["accepted", "converted", "declined"].includes(quote.status) && (
+            {daysLeft !== null && !isSignedQuote(quote.status) && !isRejectedQuote(quote.status) && (
               <p className={cn("text-xs", expired ? "text-red-500 font-semibold" : "text-[#475569]")}>
                 {expired ? `Expired ${Math.abs(daysLeft)} days ago` : daysLeft === 0 ? "Expires today" : `${daysLeft} days left`}
               </p>
@@ -149,10 +150,10 @@ const QuoteRow = ({ quote, isSelected, onSelect, onView, onEdit, onDelete, onSen
       </td>
       <td className="py-4 px-4">
         <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold",
-          expired && !["accepted", "converted", "declined"].includes(quote.status) ? "bg-amber-100 text-amber-600" : statusConfig.bg,
-          expired && !["accepted", "converted", "declined"].includes(quote.status) ? "" : statusConfig.text)}>
-          {expired && !["accepted", "converted", "declined"].includes(quote.status) ? <AlertTriangle size={12} /> : <StatusIcon size={12} />}
-          {expired && !["accepted", "converted", "declined"].includes(quote.status) ? "Expired" : quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
+          expired && !isSignedQuote(quote.status) && !isRejectedQuote(quote.status) ? "bg-amber-100 text-amber-600" : statusConfig.bg,
+          expired && !isSignedQuote(quote.status) && !isRejectedQuote(quote.status) ? "" : statusConfig.text)}>
+          {expired && !isSignedQuote(quote.status) && !isRejectedQuote(quote.status) ? <AlertTriangle size={12} /> : <StatusIcon size={12} />}
+          {expired && !isSignedQuote(quote.status) && !isRejectedQuote(quote.status) ? "Expired" : quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
         </span>
       </td>
       <td className="py-4 px-4 text-right">
@@ -161,16 +162,16 @@ const QuoteRow = ({ quote, isSelected, onSelect, onView, onEdit, onDelete, onSen
       </td>
       <td className="py-4 px-4" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          {quote.status === "draft" && (
+          {canSendForSignature(quote.status) && (
             <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={onSend}
-              className="p-2 rounded-md hover:bg-[#0891B2]/10 text-[#0891B2] transition-colors" title="Send Quote">
+              className="p-2 rounded-md hover:bg-[#0891B2]/10 text-[#0891B2] transition-colors" title="Send for Signature">
               <Send size={16} />
             </motion.button>
           )}
-          {quote.status === "accepted" && !quote.linkedInvoiceId && (
+          {isSignedQuote(quote.status) && !quote.linkedProjectId && (
             <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={onConvert}
-              className="p-2 rounded-md hover:bg-green-100 text-green-600 transition-colors" title="Convert to Invoice">
-              <Receipt size={16} />
+              className="p-2 rounded-md hover:bg-green-100 text-green-600 transition-colors" title="Convert to Job">
+              <ArrowRight size={16} />
             </motion.button>
           )}
           <DropdownMenu>
@@ -179,14 +180,14 @@ const QuoteRow = ({ quote, isSelected, onSelect, onView, onEdit, onDelete, onSen
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48 rounded-md">
               <DropdownMenuItem onClick={onView} className="rounded-md"><Eye size={14} className="mr-2" />View Quote</DropdownMenuItem>
-              <DropdownMenuItem onClick={onEdit} className="rounded-md"><Pencil size={14} className="mr-2" />Edit Quote</DropdownMenuItem>
+              {!isSignedQuote(quote.status) && <DropdownMenuItem onClick={onEdit} className="rounded-md"><Pencil size={14} className="mr-2" />Edit Quote</DropdownMenuItem>}
               <DropdownMenuItem onClick={onDuplicate} className="rounded-md"><Copy size={14} className="mr-2" />Duplicate</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onSend} className="rounded-md"><Send size={14} className="mr-2" />{quote.leadId ? "Send to Lead" : "Send to Client"}</DropdownMenuItem>
+              <DropdownMenuItem onClick={onSend} className="rounded-md"><Send size={14} className="mr-2" />Send for Signature</DropdownMenuItem>
               <DropdownMenuItem className="rounded-md"><FileDown size={14} className="mr-2" />Download PDF</DropdownMenuItem>
               <DropdownMenuItem className="rounded-md"><Printer size={14} className="mr-2" />Print</DropdownMenuItem>
-              {quote.status === "accepted" && !quote.linkedInvoiceId && (
-                <><DropdownMenuSeparator /><DropdownMenuItem onClick={onConvert} className="rounded-md text-green-600"><Receipt size={14} className="mr-2" />Convert to Invoice</DropdownMenuItem></>
+              {isSignedQuote(quote.status) && !quote.linkedProjectId && (
+                <><DropdownMenuSeparator /><DropdownMenuItem onClick={onConvert} className="rounded-md text-green-600"><ArrowRight size={14} className="mr-2" />Convert to Job</DropdownMenuItem></>
               )}
               <DropdownMenuSeparator />
               <DropdownMenuItem className="rounded-md text-red-600 focus:text-red-600 focus:bg-red-50" onClick={onDelete}>
@@ -235,10 +236,10 @@ const QuoteCard = ({ quote, isSelected, onSelect, onView, onEdit, onDelete, onSe
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48 rounded-md">
               <DropdownMenuItem onClick={onView} className="rounded-md"><Eye size={14} className="mr-2" />View</DropdownMenuItem>
-              <DropdownMenuItem onClick={onEdit} className="rounded-md"><Pencil size={14} className="mr-2" />Edit</DropdownMenuItem>
-              <DropdownMenuItem onClick={onSend} className="rounded-md"><Send size={14} className="mr-2" />Send</DropdownMenuItem>
-              {quote.status === "accepted" && !quote.linkedInvoiceId && (
-                <DropdownMenuItem onClick={onConvert} className="rounded-md text-green-600"><Receipt size={14} className="mr-2" />Convert</DropdownMenuItem>
+              {!isSignedQuote(quote.status) && <DropdownMenuItem onClick={onEdit} className="rounded-md"><Pencil size={14} className="mr-2" />Edit</DropdownMenuItem>}
+              <DropdownMenuItem onClick={onSend} className="rounded-md"><Send size={14} className="mr-2" />Send for Signature</DropdownMenuItem>
+              {isSignedQuote(quote.status) && !quote.linkedProjectId && (
+                <DropdownMenuItem onClick={onConvert} className="rounded-md text-green-600"><ArrowRight size={14} className="mr-2" />Convert to Job</DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
               <DropdownMenuItem className="rounded-md text-red-600" onClick={onDelete}><Trash2 size={14} className="mr-2" />Delete</DropdownMenuItem>
@@ -249,10 +250,10 @@ const QuoteCard = ({ quote, isSelected, onSelect, onView, onEdit, onDelete, onSe
           <div className="flex items-center gap-2 mb-1">
             <h3 className="font-bold text-[#0F172A] group-hover:text-[#0891B2] transition-colors">{quote.quoteNumber}</h3>
             <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold",
-              expired && !["accepted", "converted", "declined"].includes(quote.status) ? "bg-amber-100 text-amber-600" : statusConfig.bg,
-              expired && !["accepted", "converted", "declined"].includes(quote.status) ? "" : statusConfig.text)}>
-              {expired && !["accepted", "converted", "declined"].includes(quote.status) ? <AlertTriangle size={10} /> : <StatusIcon size={10} />}
-              {expired && !["accepted", "converted", "declined"].includes(quote.status) ? "Expired" : quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
+              expired && !isSignedQuote(quote.status) && !isRejectedQuote(quote.status) ? "bg-amber-100 text-amber-600" : statusConfig.bg,
+              expired && !isSignedQuote(quote.status) && !isRejectedQuote(quote.status) ? "" : statusConfig.text)}>
+              {expired && !isSignedQuote(quote.status) && !isRejectedQuote(quote.status) ? <AlertTriangle size={10} /> : <StatusIcon size={10} />}
+              {expired && !isSignedQuote(quote.status) && !isRejectedQuote(quote.status) ? "Expired" : quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
             </span>
           </div>
           <p className="text-xs text-[#475569] truncate">{quote.title}</p>
@@ -274,22 +275,28 @@ const QuoteCard = ({ quote, isSelected, onSelect, onView, onEdit, onDelete, onSe
           </div>
         </div>
         <div className="flex gap-2 mt-4 pt-4 border-t border-[rgba(15,23,42,0.06)]" onClick={e => e.stopPropagation()}>
-          {quote.status === "draft" ? (
+          {canSendForSignature(quote.status) ? (
             <Button size="sm" onClick={onSend} className="flex-1 bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md h-9">
-              <Send size={14} className="mr-1.5" />Send
+              <Send size={14} className="mr-1.5" />Send for Signature
             </Button>
-          ) : quote.status === "accepted" && !quote.linkedInvoiceId ? (
+          ) : isSignedQuote(quote.status) && !quote.linkedProjectId ? (
             <Button size="sm" onClick={onConvert} className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-md h-9">
-              <Receipt size={14} className="mr-1.5" />Convert
+              <ArrowRight size={14} className="mr-1.5" />Convert to Job
             </Button>
           ) : (
             <Button size="sm" onClick={onView} className="flex-1 bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md h-9">
               <Eye size={14} className="mr-1.5" />View
             </Button>
           )}
-          <Button size="sm" variant="outline" onClick={onEdit} className="flex-1 rounded-md h-9 border-[rgba(15,23,42,0.06)]">
-            <Pencil size={14} className="mr-1.5" />Edit
-          </Button>
+          {!isSignedQuote(quote.status) ? (
+            <Button size="sm" variant="outline" onClick={onEdit} className="flex-1 rounded-md h-9 border-[rgba(15,23,42,0.06)]">
+              <Pencil size={14} className="mr-1.5" />Edit
+            </Button>
+          ) : (
+            <Button size="sm" variant="outline" onClick={onView} className="flex-1 rounded-md h-9 border-[rgba(15,23,42,0.06)]">
+              <Eye size={14} className="mr-1.5" />View
+            </Button>
+          )}
         </div>
       </div>
     </motion.div>
@@ -714,7 +721,16 @@ const QuoteDetailDialog = ({ isOpen, onClose, quote, onEdit, onDelete, onSend, o
               <p className={cn("text-sm font-medium", expired ? "text-amber-600" : "text-[#0F172A]")}>{formatDate(quote.validUntil)}</p>
             </div>
             {quote.sentAt && <div className="p-3 bg-[#F8FAFC] rounded-md"><p className="text-xs text-[#94A3B8]">Sent</p><p className="text-sm font-medium text-[#0F172A]">{formatDate(quote.sentAt)}</p></div>}
+            {quote.viewCount !== undefined && quote.viewCount > 0 && <div className="p-3 bg-[#F8FAFC] rounded-md"><p className="text-xs text-[#94A3B8]">Viewed</p><p className="text-sm font-medium text-[#0F172A]">{quote.viewCount} time{quote.viewCount === 1 ? "" : "s"}</p></div>}
+            {quote.lastViewedAt && <div className="p-3 bg-[#F8FAFC] rounded-md"><p className="text-xs text-[#94A3B8]">Last Viewed</p><p className="text-sm font-medium text-[#0F172A]">{formatDate(quote.lastViewedAt)}</p></div>}
+            {quote.signedAt && <div className="p-3 bg-[#F8FAFC] rounded-md"><p className="text-xs text-[#94A3B8]">Signed On</p><p className="text-sm font-medium text-[#0F172A]">{formatDate(quote.signedAt)}</p></div>}
           </div>
+          {(quote.publicToken || quote.signedBy) && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              {quote.publicToken && <div className="p-3 bg-[#F8FAFC] rounded-md"><p className="text-xs text-[#94A3B8]">Share Link</p><p className="text-sm font-medium text-[#0F172A] break-all">{`${window.location.origin}/estimate/sign/${quote.publicToken}`}</p></div>}
+              {quote.signedBy && <div className="p-3 bg-[#F8FAFC] rounded-md"><p className="text-xs text-[#94A3B8]">Signed By</p><p className="text-sm font-medium text-[#0F172A]">{quote.signedBy}</p></div>}
+            </div>
+          )}
           {/* Line Items */}
           <div>
             <p className="text-sm font-semibold text-[#0F172A] mb-2">Line Items ({quote.items.length})</p>
@@ -759,9 +775,9 @@ const QuoteDetailDialog = ({ isOpen, onClose, quote, onEdit, onDelete, onSend, o
             <Trash2 size={16} className="mr-2" />Delete
           </Button>
           <div className="flex-1" />
-          {quote.status === "draft" && <Button onClick={onSend} className="rounded-md bg-[#0891B2] hover:bg-[#0891B2]/90 text-white"><Send size={16} className="mr-2" />{quote.leadId ? "Send to Lead" : "Send to Client"}</Button>}
-          {quote.status === "accepted" && !quote.linkedInvoiceId && <Button onClick={onConvert} className="rounded-md bg-green-600 hover:bg-green-700 text-white"><Receipt size={16} className="mr-2" />Convert to Invoice</Button>}
-          <Button onClick={onEdit} className="rounded-md bg-[#0891B2] hover:bg-[#0891B2]/90 text-white"><Pencil size={16} className="mr-2" />Edit</Button>
+          {canSendForSignature(quote.status) && <Button onClick={onSend} className="rounded-md bg-[#0891B2] hover:bg-[#0891B2]/90 text-white"><Send size={16} className="mr-2" />Send for Signature</Button>}
+          {isSignedQuote(quote.status) && !quote.linkedProjectId && <Button onClick={onConvert} className="rounded-md bg-green-600 hover:bg-green-700 text-white"><ArrowRight size={16} className="mr-2" />Convert to Job</Button>}
+          {!isSignedQuote(quote.status) && <Button onClick={onEdit} className="rounded-md bg-[#0891B2] hover:bg-[#0891B2]/90 text-white"><Pencil size={16} className="mr-2" />Edit</Button>}
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -774,7 +790,13 @@ const QuoteDetailDialog = ({ isOpen, onClose, quote, onEdit, onDelete, onSend, o
 // Helper: map backend QuoteEntity to frontend Quote type
 function mapApiQuote(q: QuoteEntity): Quote {
   const clientName = q.client?.clientName || "";
-  const leadName = (q as any).lead?.contactName || (q as any).lead?.companyName || "";
+  const lead = (q as any).lead;
+  const leadName = [lead?.firstName, lead?.lastName].filter(Boolean).join(" ").trim() || lead?.companyName || "";
+  const normalizedStatus = q.status.toLowerCase() === "accepted"
+    ? "signed"
+    : q.status.toLowerCase() === "rejected"
+      ? "rejected"
+      : q.status.toLowerCase();
   return {
     id: q.id,
     quoteNumber: q.quoteNumber,
@@ -795,13 +817,23 @@ function mapApiQuote(q: QuoteEntity): Quote {
     tax: q.taxAmount,
     discount: q.discountAmount,
     total: q.total,
-    status: q.status.toLowerCase() as Quote["status"],
+    status: normalizedStatus as Quote["status"],
     priority: "medium",
     validUntil: q.validUntil,
     createdAt: q.createdAt,
     updatedAt: q.updatedAt,
     sentAt: q.sentAt || undefined,
     acceptedAt: q.acceptedAt || undefined,
+    publicToken: q.publicToken || undefined,
+    viewCount: q.viewCount ?? 0,
+    firstViewedAt: q.firstViewedAt || undefined,
+    lastViewedAt: q.lastViewedAt || undefined,
+    signedAt: q.signedAt || q.acceptedAt || undefined,
+    signedBy: q.signedBy || undefined,
+    signatureType: q.signatureType || undefined,
+    isContract: q.isContract ?? false,
+    linkedProjectId: q.linkedProjectId || undefined,
+    signedPdfFileId: q.signedPdfFileId || undefined,
     notes: q.notes || undefined,
     terms: q.terms || undefined,
     currency: q.currency || "CAD",
@@ -847,11 +879,14 @@ const QuotesPage = () => {
   // Stats
   const stats = useMemo(() => {
     const totalValue = quotes.reduce((s, q) => s + q.total, 0);
-    const acceptedValue = quotes.filter(q => q.status === "accepted" || q.status === "converted").reduce((s, q) => s + q.total, 0);
+    const acceptedValue = quotes.filter(q => isSignedQuote(q.status)).reduce((s, q) => s + q.total, 0);
     const pendingValue = quotes.filter(q => ["draft", "sent", "viewed"].includes(q.status)).reduce((s, q) => s + q.total, 0);
-    const conversionRate = quotes.length > 0 ? Math.round(((quotes.filter(q => q.status === "accepted" || q.status === "converted").length) / quotes.length) * 100) : 0;
+    const conversionRate = quotes.length > 0 ? Math.round(((quotes.filter(q => isSignedQuote(q.status)).length) / quotes.length) * 100) : 0;
     const avgValue = quotes.length > 0 ? totalValue / quotes.length : 0;
-    const expiringSoonCount = quotes.filter(q => { const d = getDaysUntilExpiry(q.validUntil); return d !== null && d >= 0 && d <= 7 && !["accepted", "declined", "converted", "expired"].includes(q.status); }).length;
+    const expiringSoonCount = quotes.filter(q => {
+      const d = getDaysUntilExpiry(q.validUntil);
+      return d !== null && d >= 0 && d <= 7 && !isSignedQuote(q.status) && !isRejectedQuote(q.status) && q.status !== "expired";
+    }).length;
     return { totalValue, acceptedValue, pendingValue, conversionRate, avgValue, expiringSoonCount, totalCount: quotes.length };
   }, [quotes]);
 
@@ -962,24 +997,24 @@ const QuotesPage = () => {
   const handleSendQuote = async (quoteId: string) => {
     try {
       await sendQuoteEmail(quoteId);
-      setQuotes(prev => prev.map(q => q.id === quoteId ? { ...q, status: "sent" as const, sentAt: new Date().toISOString() } : q));
-      toast({ title: "Quote Sent", description: "Quote has been emailed to the recipient." });
+      await fetchQuotes();
+      toast({ title: "Signature Request Sent", description: "Estimate link has been emailed to the recipient." });
     } catch (err: any) {
       console.error("Failed to send quote:", err);
-      const msg = err?.response?.data?.message || "Failed to send quote";
+      const msg = err?.response?.data?.message || "Failed to send signature request";
       toast({ title: "Error", description: msg, variant: "destructive" });
     }
   };
 
-  const handleConvertToInvoice = async (quoteId: string) => {
+  const handleConvertToJob = async (quoteId: string) => {
     try {
-      await updateQuoteStatus(quoteId, "CONVERTED");
-      setQuotes(prev => prev.map(q => q.id === quoteId ? { ...q, status: "converted" as const, linkedInvoiceId: `inv-${Date.now()}` } : q));
-      toast({ title: "Converted to Invoice", description: "Quote has been converted to an invoice." });
-      navigate("/invoice");
+      const project = await createProjectFromQuote(quoteId);
+      setQuotes(prev => prev.map(q => q.id === quoteId ? { ...q, linkedProjectId: project.id } : q));
+      toast({ title: "Converted to Job", description: "Signed estimate has been converted into a job." });
+      navigate(`/projects/${project.id}`);
     } catch (err) {
-      console.error("Failed to convert quote:", err);
-      toast({ title: "Error", description: "Failed to convert quote", variant: "destructive" });
+      console.error("Failed to convert estimate into job:", err);
+      toast({ title: "Error", description: "Failed to convert estimate into a job", variant: "destructive" });
     }
   };
 
@@ -1024,15 +1059,15 @@ const QuotesPage = () => {
   };
 
   const handleBulkSend = async () => {
-    const draftIds = Array.from(selectedQuotes).filter(id => quotes.find(q => q.id === id)?.status === "draft");
+    const sendableIds = Array.from(selectedQuotes).filter(id => canSendForSignature(quotes.find(q => q.id === id)?.status));
     try {
-      await Promise.allSettled(draftIds.map(id => updateQuoteStatus(id, "SENT")));
-      setQuotes(prev => prev.map(q => selectedQuotes.has(q.id) && q.status === "draft" ? { ...q, status: "sent" as const, sentAt: new Date().toISOString() } : q));
-      toast({ title: "Quotes Sent", description: "Selected draft quotes have been sent." });
+      await Promise.allSettled(sendableIds.map(id => sendQuoteEmail(id)));
+      await fetchQuotes();
+      toast({ title: "Signature Requests Sent", description: "Selected estimates have been sent for signature." });
       setSelectedQuotes(new Set());
     } catch (err) {
       console.error("Failed to bulk send:", err);
-      toast({ title: "Error", description: "Failed to send some quotes", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to send some signature requests", variant: "destructive" });
     }
   };
 
@@ -1118,7 +1153,7 @@ const QuotesPage = () => {
           {/* Stats Cards */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
             <StatCard title="Total Pipeline" value={formatCurrency(stats.totalValue)} subtitle={`${stats.totalCount} quotes`} icon={DollarSign} color="teal" trend={{ value: 12, positive: true }} delay={0} />
-            <StatCard title="Won Value" value={formatCurrency(stats.acceptedValue)} subtitle="Accepted & converted" icon={CheckCircle2} color="green" trend={{ value: 8, positive: true }} delay={0.05} />
+            <StatCard title="Signed Value" value={formatCurrency(stats.acceptedValue)} subtitle="Contracts ready to convert" icon={CheckCircle2} color="green" trend={{ value: 8, positive: true }} delay={0.05} />
             <StatCard title="Pending" value={formatCurrency(stats.pendingValue)} subtitle="Awaiting response" icon={Clock3} color="gold" delay={0.1} />
             <StatCard title="Win Rate" value={`${stats.conversionRate}%`} subtitle="Conversion rate" icon={Target} color="purple" trend={{ value: 3, positive: true }} delay={0.15} />
             <StatCard title="Avg. Value" value={formatCurrency(stats.avgValue)} subtitle="Per quote" icon={TrendingUp} color="blue" delay={0.2} />
@@ -1167,7 +1202,7 @@ const QuotesPage = () => {
                   className="flex items-center gap-3 mt-3 pt-3 border-t border-[rgba(15,23,42,0.06)]">
                   <span className="text-sm text-[#475569]">{selectedQuotes.size} selected</span>
                   <Button size="sm" variant="outline" className="rounded-md h-8 text-xs" onClick={handleBulkSend}>
-                    <Send size={14} className="mr-1" />Send Selected
+                    <Send size={14} className="mr-1" />Send for Signature
                   </Button>
                   <Button size="sm" variant="outline" className="rounded-md h-8 text-xs text-red-600 border-red-200 hover:bg-red-50" onClick={handleBulkDelete}>
                     <Trash2 size={14} className="mr-1" />Delete Selected
@@ -1231,7 +1266,7 @@ const QuotesPage = () => {
                           onDelete={() => setDeleteQuoteId(q.id)}
                           onSend={() => handleSendQuote(q.id)}
                           onDuplicate={() => handleDuplicate(q.id)}
-                          onConvert={() => handleConvertToInvoice(q.id)} />
+                          onConvert={() => handleConvertToJob(q.id)} />
                       ))}
                     </AnimatePresence>
                   </tbody>
@@ -1270,7 +1305,7 @@ const QuotesPage = () => {
                     onEdit={() => { setCurrentQuote(q); setIsFormOpen(true); }}
                     onDelete={() => setDeleteQuoteId(q.id)}
                     onSend={() => handleSendQuote(q.id)}
-                    onConvert={() => handleConvertToInvoice(q.id)} />
+                    onConvert={() => handleConvertToJob(q.id)} />
                 ))}
               </AnimatePresence>
             </div>
@@ -1286,7 +1321,7 @@ const QuotesPage = () => {
         onEdit={() => { setIsDetailOpen(false); setIsFormOpen(true); }}
         onDelete={() => { setIsDetailOpen(false); if (currentQuote) setDeleteQuoteId(currentQuote.id); }}
         onSend={() => { if (currentQuote) handleSendQuote(currentQuote.id); setIsDetailOpen(false); }}
-        onConvert={() => { if (currentQuote) handleConvertToInvoice(currentQuote.id); }} />
+        onConvert={() => { if (currentQuote) handleConvertToJob(currentQuote.id); }} />
 
       <AlertDialog open={!!deleteQuoteId} onOpenChange={() => setDeleteQuoteId(null)}>
         <AlertDialogContent className="rounded-md">

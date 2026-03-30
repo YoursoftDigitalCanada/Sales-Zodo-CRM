@@ -74,11 +74,23 @@ export class QuotesController {
     async respondPublic(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const { action } = req.body;
-            if (!action || !['accept', 'reject'].includes(action)) {
-                res.status(400).json({ success: false, message: 'Invalid action. Must be "accept" or "reject".' });
+            if (!action || !['accept', 'sign', 'reject'].includes(action)) {
+                res.status(400).json({ success: false, message: 'Invalid action. Must be "sign" or "reject".' });
                 return;
             }
-            const result = await quotesService.respondToQuote(req.params.token, action);
+            const forwardedFor = req.headers['x-forwarded-for'];
+            const ipAddress = Array.isArray(forwardedFor)
+                ? forwardedFor[0]
+                : typeof forwardedFor === 'string'
+                    ? forwardedFor.split(',')[0]?.trim()
+                    : req.ip;
+            const result = await quotesService.respondToQuote(req.params.token, action, {
+                signedByName: req.body.signedByName,
+                signatureData: req.body.signatureData,
+                signatureType: req.body.signatureType,
+                ipAddress,
+                userAgent: req.get('user-agent') || undefined,
+            });
             res.json(result);
         } catch (e) { next(e); }
     }

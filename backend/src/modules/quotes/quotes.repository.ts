@@ -6,6 +6,11 @@ const quoteInclude = {
     client: { select: { id: true, clientName: true } },
     lead: { select: { id: true, firstName: true, lastName: true, companyName: true } },
     items: true,
+    projects: {
+        select: { id: true },
+        orderBy: { createdAt: 'desc' as const },
+        take: 1,
+    },
 };
 
 function calculateTotals(items: { quantity: number; unitPrice: number; total: number }[], taxRate?: number | null, discountAmount = 0) {
@@ -42,6 +47,9 @@ export class QuotesRepository {
                 terms: data.terms,
                 sourceEventId: data.sourceEventId || null,
                 roofEstimateId: data.roofEstimateId || null,
+                paymentScheduleType: data.paymentScheduleType || null,
+                warrantySelected: data.warrantySelected || null,
+                validDays: data.validDays ?? 30,
                 subtotal,
                 taxAmount,
                 total,
@@ -95,9 +103,7 @@ export class QuotesRepository {
             totals = calculateTotals(data.items, data.taxRate, data.discountAmount);
         }
 
-        return prisma.quote.update({
-            where: { id },
-            data: {
+        const updatePayload: any = {
                 ...(data.quoteNumber !== undefined && { quoteNumber: data.quoteNumber }),
                 ...(data.clientId !== undefined && { clientId: data.clientId }),
                 ...(data.leadId !== undefined && { leadId: data.leadId }),
@@ -109,7 +115,29 @@ export class QuotesRepository {
                 ...(data.discountAmount !== undefined && { discountAmount: data.discountAmount }),
                 ...(data.notes !== undefined && { notes: data.notes }),
                 ...(data.terms !== undefined && { terms: data.terms }),
+                ...(data.sourceEventId !== undefined && { sourceEventId: data.sourceEventId || null }),
                 ...(data.roofEstimateId !== undefined && { roofEstimateId: data.roofEstimateId || null }),
+                ...(data.paymentScheduleType !== undefined && { paymentScheduleType: data.paymentScheduleType || null }),
+                ...(data.warrantySelected !== undefined && { warrantySelected: data.warrantySelected || null }),
+                ...(data.validDays !== undefined && { validDays: data.validDays }),
+                ...(data.publicToken !== undefined && { publicToken: data.publicToken || null }),
+                ...(data.isContract !== undefined && { isContract: data.isContract }),
+                ...(data.contractVersion !== undefined && { contractVersion: data.contractVersion }),
+                ...(data.viewCount !== undefined && { viewCount: data.viewCount }),
+                ...(data.firstViewedAt !== undefined && { firstViewedAt: data.firstViewedAt ? new Date(data.firstViewedAt) : null }),
+                ...(data.lastViewedAt !== undefined && { lastViewedAt: data.lastViewedAt ? new Date(data.lastViewedAt) : null }),
+                ...(data.sentAt !== undefined && { sentAt: data.sentAt ? new Date(data.sentAt) : null }),
+                ...(data.acceptedAt !== undefined && { acceptedAt: data.acceptedAt ? new Date(data.acceptedAt) : null }),
+                ...(data.signedAt !== undefined && { signedAt: data.signedAt ? new Date(data.signedAt) : null }),
+                ...(data.signedBy !== undefined && { signedBy: data.signedBy || null }),
+                ...(data.signatureType !== undefined && { signatureType: data.signatureType || null }),
+                ...(data.signatureData !== undefined && { signatureData: data.signatureData || null }),
+                ...(data.signerIpAddress !== undefined && { signerIpAddress: data.signerIpAddress || null }),
+                ...(data.signerUserAgent !== undefined && { signerUserAgent: data.signerUserAgent || null }),
+                ...(data.contractSnapshot !== undefined && { contractSnapshot: data.contractSnapshot as Prisma.InputJsonValue | null }),
+                ...(data.auditTrail !== undefined && { auditTrail: data.auditTrail as Prisma.InputJsonValue | null }),
+                ...(data.signedPdfFileId !== undefined && { signedPdfFileId: data.signedPdfFileId || null }),
+                ...(data.rejectedAt !== undefined && { rejectedAt: data.rejectedAt ? new Date(data.rejectedAt) : null }),
                 ...totals,
                 ...(data.items && {
                     items: {
@@ -122,7 +150,11 @@ export class QuotesRepository {
                         })),
                     },
                 }),
-            },
+        };
+
+        return prisma.quote.update({
+            where: { id },
+            data: updatePayload,
             include: quoteInclude,
         });
     }

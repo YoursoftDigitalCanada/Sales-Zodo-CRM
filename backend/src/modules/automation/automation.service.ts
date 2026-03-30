@@ -67,6 +67,7 @@ import { leadAutomationService } from '../leads/lead-automation.service';
 import { stage3WorkflowService } from '../proposals/stage3-workflow.service';
 import { stage4SendWorkflowService } from '../proposals/stage4-send-workflow.service';
 import { proposalReminderService } from '../proposals/proposal-reminder.service';
+import { quoteSignatureReminderService } from '../quotes/quote-signature-reminder.service';
 import { stage5ConversionWorkflowService } from '../proposals/stage5-conversion-workflow.service';
 import { stage6ProjectWorkflowService } from '../projects/stage6-project-workflow.service';
 import { seedProjectStages } from '../projects/seed-project-stages';
@@ -132,6 +133,7 @@ export class AutomationService {
         stage3WorkflowService.initialize();
         stage4SendWorkflowService.initialize();
         proposalReminderService.initialize();
+        quoteSignatureReminderService.initialize();
         stage5ConversionWorkflowService.initialize();
         stage6ProjectWorkflowService.initialize();
 

@@ -4471,7 +4471,9 @@ model WalletTransaction {
 enum QuoteStatus {
   DRAFT
   SENT
+  VIEWED
   ACCEPTED
+  SIGNED
   REJECTED
   EXPIRED
 }
@@ -4533,7 +4535,22 @@ model Quote {
   
   // Public access token for email link
   publicToken       String?         @unique
-  
+  isContract        Boolean         @default(false)
+  contractVersion   Int             @default(0)
+  viewCount         Int             @default(0)
+  firstViewedAt     DateTime?
+  lastViewedAt      DateTime?
+  signedAt          DateTime?
+  signedBy          String?
+  signatureType     String?
+  signatureData     String?         @db.Text
+  signerIpAddress   String?
+  signerUserAgent   String?         @db.Text
+  contractSnapshot  Json?
+  auditTrail        Json?
+  signedPdfFileId   String?
+  rejectedAt        DateTime?
+
   // Timestamps
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt

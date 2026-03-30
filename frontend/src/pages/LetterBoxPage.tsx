@@ -1408,24 +1408,49 @@ const EMPTY_MAILBOX_FORM: MailboxFormState = {
   imapEncryption: "SSL/TLS",
 };
 
+function normalizeSmtpEncryption(portValue: string | number, encryption: MailboxFormState["smtpEncryption"]): MailboxFormState["smtpEncryption"] {
+  const port = Number(portValue || 0);
+  if (port === 465) {
+    return "SSL/TLS";
+  }
+  if (port === 587 || port === 25) {
+    return encryption === "NONE" ? "NONE" : "STARTTLS";
+  }
+  return encryption;
+}
+
+function normalizeImapEncryption(portValue: string | number, encryption: MailboxFormState["imapEncryption"]): MailboxFormState["imapEncryption"] {
+  const port = Number(portValue || 0);
+  if (port === 993) {
+    return "SSL/TLS";
+  }
+  if (port === 143) {
+    return encryption === "NONE" ? "NONE" : "STARTTLS";
+  }
+  return encryption;
+}
+
 function mapMailboxSettingsToForm(settings: MailboxSettings | null): MailboxFormState {
   if (!settings) {
     return { ...EMPTY_MAILBOX_FORM };
   }
 
+  const smtpPort = String(settings.smtp.port || 587);
+  const imapPort = String(settings.imap.port || 993);
+
   return {
     smtpHost: settings.smtp.host || "",
-    smtpPort: String(settings.smtp.port || 587),
+    smtpPort,
     smtpUsername: settings.smtp.username || "",
     smtpPassword: settings.smtp.passwordMasked || "",
-    smtpEncryption: settings.smtp.encryption || "STARTTLS",
+    smtpEncryption: normalizeSmtpEncryption(smtpPort, settings.smtp.encryption || "STARTTLS"),
     senderName: settings.smtp.senderName || "",
     senderEmail: settings.smtp.senderEmail || "",
     imapHost: settings.imap.host || "",
-    imapPort: String(settings.imap.port || 993),
+    imapPort,
     imapUsername: settings.imap.username || "",
     imapPassword: settings.imap.passwordMasked || "",
-    imapEncryption: settings.imap.encryption || "SSL/TLS",
+    imapEncryption: normalizeImapEncryption(imapPort, settings.imap.encryption || "SSL/TLS"),
   };
 }
 
@@ -1466,7 +1491,15 @@ const MailboxSettingsDialog = ({
           </div>
           <div className="space-y-2">
             <Label>SMTP Port</Label>
-            <Input type="number" value={form.smtpPort} onChange={(event) => onFormChange((current) => ({ ...current, smtpPort: event.target.value }))} />
+            <Input
+              type="number"
+              value={form.smtpPort}
+              onChange={(event) => onFormChange((current) => ({
+                ...current,
+                smtpPort: event.target.value,
+                smtpEncryption: normalizeSmtpEncryption(event.target.value, current.smtpEncryption),
+              }))}
+            />
           </div>
           <div className="space-y-2">
             <Label>SMTP Username</Label>
@@ -1509,7 +1542,15 @@ const MailboxSettingsDialog = ({
           </div>
           <div className="space-y-2">
             <Label>IMAP Port</Label>
-            <Input type="number" value={form.imapPort} onChange={(event) => onFormChange((current) => ({ ...current, imapPort: event.target.value }))} />
+            <Input
+              type="number"
+              value={form.imapPort}
+              onChange={(event) => onFormChange((current) => ({
+                ...current,
+                imapPort: event.target.value,
+                imapEncryption: normalizeImapEncryption(event.target.value, current.imapEncryption),
+              }))}
+            />
           </div>
           <div className="space-y-2">
             <Label>IMAP Username</Label>
@@ -1907,22 +1948,24 @@ const LetterBoxPage = () => {
 
     setMailboxSaving(true);
     try {
+      const smtpPort = Number(mailboxForm.smtpPort || 587);
+      const imapPort = Number(mailboxForm.imapPort || 993);
       const payload: UpdateMailboxSettingsPayload = {
         smtp: {
           host: smtpHost,
-          port: Number(mailboxForm.smtpPort || 587),
+          port: smtpPort,
           username: smtpUsername,
           password: mailboxForm.smtpPassword,
-          encryption: mailboxForm.smtpEncryption,
+          encryption: normalizeSmtpEncryption(smtpPort, mailboxForm.smtpEncryption),
           senderName: mailboxForm.senderName.trim(),
           senderEmail,
         },
         imap: {
           host: imapHost,
-          port: Number(mailboxForm.imapPort || 993),
+          port: imapPort,
           username: imapUsername,
           password: mailboxForm.imapPassword,
-          encryption: mailboxForm.imapEncryption,
+          encryption: normalizeImapEncryption(imapPort, mailboxForm.imapEncryption),
         },
       };
 

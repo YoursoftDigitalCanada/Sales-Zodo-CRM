@@ -35,7 +35,7 @@ export interface Quote {
     tax: number;
     discount: number;
     total: number;
-    status: "draft" | "sent" | "viewed" | "accepted" | "declined" | "expired" | "converted";
+    status: "draft" | "sent" | "viewed" | "signed" | "rejected" | "expired";
     priority: "low" | "medium" | "high";
     validUntil: string;
     createdAt: string;
@@ -47,7 +47,16 @@ export interface Quote {
     currency: string;
     createdBy: string;
     tags?: string[];
-    linkedInvoiceId?: string;
+    linkedProjectId?: string;
+    publicToken?: string;
+    viewCount?: number;
+    firstViewedAt?: string;
+    lastViewedAt?: string;
+    signedAt?: string;
+    signedBy?: string;
+    signatureType?: string;
+    isContract?: boolean;
+    signedPdfFileId?: string;
     roofEstimateId?: string;
 }
 
@@ -60,10 +69,9 @@ export const quoteStatusOptions: { value: string; label: string; icon: LucideIco
     { value: "draft", label: "Draft", icon: FileText, color: "slate" },
     { value: "sent", label: "Sent", icon: Send, color: "blue" },
     { value: "viewed", label: "Viewed", icon: Eye, color: "purple" },
-    { value: "accepted", label: "Accepted", icon: CheckCircle2, color: "green" },
-    { value: "declined", label: "Declined", icon: XCircle, color: "red" },
+    { value: "signed", label: "Signed", icon: CheckCircle2, color: "green" },
+    { value: "rejected", label: "Rejected", icon: XCircle, color: "red" },
     { value: "expired", label: "Expired", icon: Clock3, color: "amber" },
-    { value: "converted", label: "Converted", icon: CheckCircle2, color: "teal" },
 ];
 
 export const dateFilterOptions = [
@@ -78,6 +86,10 @@ export const dateFilterOptions = [
 // ============================================
 // UTILITY FUNCTIONS
 // ============================================
+
+export const isSignedQuote = (status?: string) => ["signed", "accepted"].includes(String(status || "").toLowerCase());
+export const isRejectedQuote = (status?: string) => ["rejected", "declined"].includes(String(status || "").toLowerCase());
+export const canSendForSignature = (status?: string) => !isSignedQuote(status) && !["expired"].includes(String(status || "").toLowerCase());
 
 export const getInitials = (name: string) => {
     if (!name) return "??";
@@ -117,7 +129,7 @@ export const getDaysUntilExpiry = (validUntil?: string) => {
 };
 
 export const isExpired = (validUntil?: string, status?: string) => {
-    if (!validUntil || status === "accepted" || status === "converted" || status === "declined") return false;
+    if (!validUntil || isSignedQuote(status) || isRejectedQuote(status)) return false;
     return new Date(validUntil) < new Date();
 };
 
@@ -126,10 +138,11 @@ export const getStatusConfig = (status: string) => {
         draft: { bg: "bg-white/5", text: "text-[#475569]", dot: "bg-slate-400", icon: FileText },
         sent: { bg: "bg-blue-100", text: "text-[#0891B2]", dot: "bg-[#0891B2]", icon: Send },
         viewed: { bg: "bg-purple-100", text: "text-purple-600", dot: "bg-purple-500", icon: Eye },
+        signed: { bg: "bg-green-100", text: "text-green-600", dot: "bg-green-500", icon: CheckCircle2 },
         accepted: { bg: "bg-green-100", text: "text-green-600", dot: "bg-green-500", icon: CheckCircle2 },
+        rejected: { bg: "bg-red-100", text: "text-red-600", dot: "bg-red-500", icon: XCircle },
         declined: { bg: "bg-red-100", text: "text-red-600", dot: "bg-red-500", icon: XCircle },
         expired: { bg: "bg-amber-100", text: "text-amber-600", dot: "bg-amber-500", icon: AlertTriangle },
-        converted: { bg: "bg-[#0891B2]/10", text: "text-[#0891B2]", dot: "bg-[#0891B2]", icon: CheckCircle2 },
     };
     return configs[status?.toLowerCase()] || configs.draft;
 };
@@ -164,7 +177,7 @@ export const mockQuotes: Quote[] = [
             { id: "i5", description: "iOS Development", quantity: 120, rate: 150, amount: 18000 },
             { id: "i6", description: "QA & Testing", quantity: 40, rate: 100, amount: 4000 },
         ],
-        subtotal: 30000, tax: 3900, discount: 0, total: 33900, status: "accepted", priority: "high",
+        subtotal: 30000, tax: 3900, discount: 0, total: 33900, status: "signed", priority: "high",
         validUntil: daysFromNow(7), createdAt: daysAgo(10), sentAt: daysAgo(9), acceptedAt: daysAgo(5),
         currency: "CAD", createdBy: "Admin User", tags: ["mobile", "ios"],
     },
@@ -210,7 +223,7 @@ export const mockQuotes: Quote[] = [
             { id: "i15", description: "Custom Theme Development", quantity: 1, rate: 7000, amount: 7000 },
             { id: "i16", description: "Payment Integration", quantity: 1, rate: 3000, amount: 3000 },
         ],
-        subtotal: 15000, tax: 1950, discount: 0, total: 16950, status: "declined", priority: "medium",
+        subtotal: 15000, tax: 1950, discount: 0, total: 16950, status: "rejected", priority: "medium",
         validUntil: daysAgo(1), createdAt: daysAgo(20), sentAt: daysAgo(18), currency: "CAD",
         createdBy: "Admin User", tags: ["ecommerce"],
     },
@@ -221,9 +234,9 @@ export const mockQuotes: Quote[] = [
             { id: "i17", description: "Dashboard Design", quantity: 1, rate: 4500, amount: 4500 },
             { id: "i18", description: "Backend API Development", quantity: 80, rate: 140, amount: 11200 },
         ],
-        subtotal: 15700, tax: 2041, discount: 200, total: 17541, status: "converted", priority: "high",
-        validUntil: daysFromNow(5), createdAt: daysAgo(15), sentAt: daysAgo(14), acceptedAt: daysAgo(8),
-        currency: "CAD", createdBy: "Admin User", tags: ["analytics"], linkedInvoiceId: "inv-123",
+        subtotal: 15700, tax: 2041, discount: 200, total: 17541, status: "signed", priority: "high",
+        validUntil: daysFromNow(5), createdAt: daysAgo(15), sentAt: daysAgo(14), signedAt: daysAgo(8),
+        currency: "CAD", createdBy: "Admin User", tags: ["analytics"], linkedProjectId: "proj-123",
     },
     {
         id: "q8", quoteNumber: "QT-2026-008", clientName: "Tundra Consulting", clientEmail: "biz@tundra.ca",
@@ -253,7 +266,7 @@ export const getAiInsights = (quotes: Quote[]): AiInsight[] => {
     const insights: AiInsight[] = [];
     const expiringSoon = quotes.filter(q => {
         const days = getDaysUntilExpiry(q.validUntil);
-        return days !== null && days >= 0 && days <= 7 && !["accepted", "declined", "converted", "expired"].includes(q.status);
+        return days !== null && days >= 0 && days <= 7 && ![ "signed", "rejected", "expired" ].includes(q.status);
     });
     if (expiringSoon.length > 0) {
         insights.push({ id: "expiring", type: "warning", title: "Expiring Soon", message: `${expiringSoon.length} quote${expiringSoon.length > 1 ? 's' : ''} expiring within 7 days` });

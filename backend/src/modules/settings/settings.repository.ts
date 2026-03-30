@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../config/database';
+import { normalizeImapTransportConfig, normalizeSmtpTransportConfig } from '../../common/utils/email-transport';
 import { decryptSecret, encryptSecret, isMaskedSecret } from '../../common/utils/secret-crypto';
 import {
   DEFAULT_EMAIL_TEMPLATES,
@@ -231,8 +232,7 @@ export class SettingsRepository {
   async getSmtpConfig(tenantId: string) {
     const settings = await this.ensure(tenantId);
     const integrations = toObject(settings.integrations);
-
-    return {
+    const normalized = normalizeSmtpTransportConfig({
       host: String(integrations.smtpHost ?? ''),
       port: Number(integrations.smtpPort ?? 587),
       user: decryptSecret(String(integrations.smtpUser ?? '')),
@@ -240,6 +240,16 @@ export class SettingsRepository {
       encryption: String(integrations.smtpEncryption ?? 'STARTTLS') as EmailEncryption,
       senderName: String(integrations.senderName ?? ''),
       senderEmail: String(integrations.senderEmail ?? ''),
+    });
+
+    return {
+      host: normalized.host,
+      port: normalized.port,
+      user: normalized.user,
+      pass: normalized.pass,
+      encryption: normalized.encryption as EmailEncryption,
+      senderName: normalized.senderName,
+      senderEmail: normalized.senderEmail,
       signature: settings.emailSignature || '',
     };
   }
@@ -247,13 +257,20 @@ export class SettingsRepository {
   async getImapConfig(tenantId: string) {
     const settings = await this.ensure(tenantId);
     const integrations = toObject(settings.integrations);
-
-    return {
+    const normalized = normalizeImapTransportConfig({
       host: String(integrations.imapHost ?? ''),
       port: Number(integrations.imapPort ?? 993),
       user: decryptSecret(String(integrations.imapUser ?? '')),
       pass: decryptSecret(String(integrations.imapPass ?? '')),
       encryption: String(integrations.imapEncryption ?? 'SSL/TLS') as EmailEncryption,
+    });
+
+    return {
+      host: normalized.host,
+      port: normalized.port,
+      user: normalized.user,
+      pass: normalized.pass,
+      encryption: normalized.encryption as EmailEncryption,
     };
   }
 

@@ -183,6 +183,10 @@ export class ProjectsRepository {
       throw new Error('QUOTE_NOT_FOUND');
     }
 
+    if (!['SIGNED', 'ACCEPTED'].includes(String(quote.status))) {
+      throw new Error('Only signed estimates can be converted into jobs');
+    }
+
     const name = quote.client?.clientName
       ? `${quote.client.clientName} - Roofing Project`
       : `Quote ${quote.quoteNumber} - Roofing Project`;
@@ -217,6 +221,13 @@ export class ProjectsRepository {
           unitCost: item.unitPrice,
           totalCost: item.total,
         })),
+      });
+    }
+
+    if ((quote as any).signedPdfFileId) {
+      await prisma.file.updateMany({
+        where: { id: (quote as any).signedPdfFileId, tenantId },
+        data: { projectId: project.id },
       });
     }
 

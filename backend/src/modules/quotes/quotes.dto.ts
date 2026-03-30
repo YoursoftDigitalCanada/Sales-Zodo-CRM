@@ -35,6 +35,24 @@ export interface CreateQuoteDto {
 
 export interface UpdateQuoteDto extends Partial<CreateQuoteDto> {
     status?: QuoteStatus;
+    publicToken?: string | null;
+    isContract?: boolean;
+    contractVersion?: number;
+    viewCount?: number;
+    firstViewedAt?: Date | string | null;
+    lastViewedAt?: Date | string | null;
+    sentAt?: Date | string | null;
+    acceptedAt?: Date | string | null;
+    signedAt?: Date | string | null;
+    signedBy?: string | null;
+    signatureType?: string | null;
+    signatureData?: string | null;
+    signerIpAddress?: string | null;
+    signerUserAgent?: string | null;
+    contractSnapshot?: Record<string, unknown> | null;
+    auditTrail?: Record<string, unknown> | null;
+    signedPdfFileId?: string | null;
+    rejectedAt?: Date | string | null;
 }
 
 export interface QuoteQueryDto {
@@ -72,6 +90,19 @@ export interface QuoteResponseDto {
     updatedAt: Date;
     sentAt: Date | null;
     acceptedAt: Date | null;
+    publicToken: string | null;
+    isContract: boolean;
+    contractVersion: number;
+    viewCount: number;
+    firstViewedAt: Date | null;
+    lastViewedAt: Date | null;
+    signedAt: Date | null;
+    signedBy: string | null;
+    signatureType: string | null;
+    signedPdfFileId: string | null;
+    rejectedAt: Date | null;
+    linkedProjectId: string | null;
+    auditTrail: Record<string, unknown> | null;
     // Stage 3 fields
     paymentScheduleType: string | null;
     warrantySelected: string | null;
@@ -82,6 +113,7 @@ type QuoteWithRelations = Quote & {
     client?: { id: string; clientName: string } | null;
     lead?: { id: string; firstName: string; lastName: string; companyName: string | null } | null;
     items?: { id: string; description: string; quantity: Decimal; unitPrice: Decimal; total: Decimal; sortOrder: number }[];
+    projects?: { id: string }[];
 };
 
 export function toQuoteResponseDto(q: QuoteWithRelations): QuoteResponseDto {
@@ -122,6 +154,19 @@ export function toQuoteResponseDto(q: QuoteWithRelations): QuoteResponseDto {
         updatedAt: q.updatedAt,
         sentAt: q.sentAt,
         acceptedAt: q.acceptedAt,
+        publicToken: q.publicToken || null,
+        isContract: (q as any).isContract ?? false,
+        contractVersion: (q as any).contractVersion ?? 0,
+        viewCount: (q as any).viewCount ?? 0,
+        firstViewedAt: (q as any).firstViewedAt ?? null,
+        lastViewedAt: (q as any).lastViewedAt ?? null,
+        signedAt: (q as any).signedAt ?? null,
+        signedBy: (q as any).signedBy ?? null,
+        signatureType: (q as any).signatureType ?? null,
+        signedPdfFileId: (q as any).signedPdfFileId ?? null,
+        rejectedAt: (q as any).rejectedAt ?? null,
+        linkedProjectId: (q as any).projects?.[0]?.id ?? null,
+        auditTrail: ((q as any).auditTrail as Record<string, unknown> | null) ?? null,
         paymentScheduleType: (q as any).paymentScheduleType || null,
         warrantySelected: (q as any).warrantySelected || null,
         validDays: (q as any).validDays ?? 30,

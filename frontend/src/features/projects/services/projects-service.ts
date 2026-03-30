@@ -220,6 +220,11 @@ export async function updateProject(projectId: string | number, data: UpdateProj
   return extractApiData<ProjectEntity>(response.data);
 }
 
+export async function createProjectFromQuote(quoteId: string): Promise<ProjectEntity> {
+  const response = await api.post(`/projects/from-quote/${quoteId}`);
+  return extractApiData<ProjectEntity>(response.data);
+}
+
 export async function updateProjectStatus(projectId: string | number, status: ProjectStatus): Promise<ProjectEntity> {
   const response = await api.patch(`/projects/${projectId}/status`, { status });
   return extractApiData<ProjectEntity>(response.data);

@@ -1,4 +1,5 @@
 import { config } from '../../config';
+import { getSmtpTransportGuidance, normalizeSmtpTransportConfig } from '../utils/email-transport';
 
 // Dynamic import to prevent crash if nodemailer is not installed
 let nodemailer: any;
@@ -79,18 +80,25 @@ class MailerService {
             return { sent: false, error: 'nodemailer is not installed' };
         }
         try {
-            // Create a one-off transport for this tenant's SMTP config
-            const encryption = smtpConfig.encryption || ((smtpConfig.port || 587) === 465 ? 'SSL/TLS' : 'STARTTLS');
+            const normalizedConfig = normalizeSmtpTransportConfig(smtpConfig);
+            const encryption = normalizedConfig.encryption;
             const transport = nodemailer.createTransport({
-                host: smtpConfig.host,
-                port: smtpConfig.port || 587,
+                host: normalizedConfig.host,
+                port: normalizedConfig.port || 587,
                 secure: encryption === 'SSL/TLS',
                 requireTLS: encryption === 'STARTTLS',
-                auth: { user: smtpConfig.user, pass: smtpConfig.pass },
+                ignoreTLS: encryption === 'NONE',
+                auth: { user: normalizedConfig.user, pass: normalizedConfig.pass },
+                connectionTimeout: 30000,
+                greetingTimeout: 30000,
+                dnsTimeout: 30000,
+                tls: {
+                    servername: normalizedConfig.host,
+                },
             });
 
-            const fromName = smtpConfig.senderName || 'ZODO CRM';
-            const fromEmail = smtpConfig.senderEmail || smtpConfig.user;
+            const fromName = normalizedConfig.senderName || 'ZODO CRM';
+            const fromEmail = normalizedConfig.senderEmail || normalizedConfig.user;
 
             const info = await transport.sendMail({
                 from: `"${fromName}" <${fromEmail}>`,
@@ -108,7 +116,11 @@ class MailerService {
             return { sent: true };
         } catch (err: any) {
             const errorMessage = this.formatErrorMessage(err);
+            const guidance = getSmtpTransportGuidance(normalizeSmtpTransportConfig(smtpConfig).port || 587);
             console.error('❌ Email send failed:', errorMessage);
+            if (/greeting never received|etimedout/i.test(errorMessage)) {
+                return { sent: false, error: `${errorMessage}. ${guidance}` };
+            }
             return { sent: false, error: errorMessage };
         }
     }

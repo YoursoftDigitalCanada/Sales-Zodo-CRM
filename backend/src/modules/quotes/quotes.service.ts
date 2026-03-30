@@ -6,12 +6,325 @@ import { activityLogger } from '../../common/services/activity-logger.service';
 import { eventBus } from '../../common/events/event-bus';
 import { mailerService } from '../../common/services/mailer.service';
 import { config } from '../../config';
-import { PrismaClient } from '@prisma/client';
-import { randomUUID } from 'crypto';
+import { prisma } from '../../config/database';
+import { createHash, randomUUID } from 'crypto';
+import { filesRepository } from '../files/files.repository';
+import { notificationsService } from '../notifications/notifications.service';
+import { generateQuoteContractPdfBuffer } from './quote-contract-pdf';
+import { quoteSignatureReminderService } from './quote-signature-reminder.service';
+import fs from 'fs';
+import path from 'path';
 
-const prisma = new PrismaClient();
+type QuoteContractRecord = any;
+type QuoteStatusValue = 'DRAFT' | 'SENT' | 'VIEWED' | 'ACCEPTED' | 'SIGNED' | 'REJECTED' | 'EXPIRED';
+
+interface CompanyProfile {
+    companyName: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    logoUrl?: string | null;
+}
+
+interface RecipientProfile {
+    name: string;
+    email?: string;
+    phone?: string;
+    company?: string;
+    address?: string;
+}
 
 export class QuotesService {
+    private buildPublicLink(token: string) {
+        const frontendUrl = config.frontend.url.replace(/\/$/, '');
+        return `${frontendUrl}/estimate/sign/${token}`;
+    }
+
+    private formatCurrency(value: number | string, currency = 'CAD') {
+        const amount = typeof value === 'string' ? Number.parseFloat(value) : value;
+        return new Intl.NumberFormat('en-CA', { style: 'currency', currency }).format(Number.isFinite(amount) ? amount : 0);
+    }
+
+    private joinAddress(parts: Array<string | null | undefined>) {
+        return parts.map((part) => String(part || '').trim()).filter(Boolean).join(', ');
+    }
+
+    private async getCompanyProfile(tenantId: string): Promise<CompanyProfile> {
+        const settings = await prisma.tenantSettings.findUnique({
+            where: { tenantId },
+            include: { tenant: { select: { name: true, logo: true } } },
+        });
+
+        const integrations = settings?.integrations && typeof settings.integrations === 'object'
+            ? (settings.integrations as Record<string, unknown>)
+            : {};
+
+        return {
+            companyName: String(integrations.companyName ?? settings?.tenant?.name ?? 'ZODO'),
+            email: String(integrations.companyEmail ?? '') || undefined,
+            phone: String(integrations.companyPhone ?? '') || undefined,
+            address: String(integrations.companyAddress ?? '') || undefined,
+            logoUrl: settings?.tenant?.logo || null,
+        };
+    }
+
+    private resolveRecipientProfile(quote: QuoteContractRecord): RecipientProfile {
+        const client = quote.client;
+        const lead = quote.lead;
+        const leadName = [lead?.firstName, lead?.lastName].filter(Boolean).join(' ').trim();
+
+        return {
+            name: client?.clientName || leadName || lead?.companyName || 'Client',
+            email: client?.primaryEmail || lead?.email || undefined,
+            phone: client?.primaryPhone || lead?.phone || undefined,
+            company: client?.companyName || lead?.companyName || undefined,
+            address: quote.roofEstimate?.address
+                || lead?.propertyAddress
+                || this.joinAddress([
+                    client?.streetAddress,
+                    client?.city,
+                    client?.province,
+                    client?.postalCode,
+                    client?.country,
+                ])
+                || undefined,
+        };
+    }
+
+    private buildContractSnapshot(
+        quote: QuoteContractRecord,
+        company: CompanyProfile,
+        recipient: RecipientProfile,
+        contractVersion: number,
+    ) {
+        const issueDate = new Date(quote.issueDate).toISOString();
+        const validUntil = new Date(quote.validUntil).toISOString();
+        const items = (quote.items || []).map((item: any) => ({
+            description: item.description,
+            quantity: Number(item.quantity),
+            unitPrice: Number(item.unitPrice),
+            total: Number(item.total),
+        }));
+
+        return {
+            contractVersion,
+            quoteId: quote.id,
+            quoteNumber: quote.quoteNumber,
+            issueDate,
+            validUntil,
+            currency: quote.currency || 'CAD',
+            company,
+            client: {
+                name: recipient.name,
+                email: recipient.email || null,
+                phone: recipient.phone || null,
+                company: recipient.company || null,
+                address: recipient.address || null,
+            },
+            project: {
+                title: quote.quoteNumber,
+                address: quote.roofEstimate?.address || recipient.address || null,
+                jobType: quote.roofEstimate?.roofType || 'Roofing Service',
+                recipientType: quote.leadId ? 'lead' : 'client',
+            },
+            scopeOfWork: quote.notes || null,
+            items,
+            subtotal: Number(quote.subtotal),
+            taxRate: quote.taxRate ? Number(quote.taxRate) : 0,
+            taxAmount: Number(quote.taxAmount),
+            discountAmount: Number(quote.discountAmount),
+            total: Number(quote.total),
+            notes: quote.notes || null,
+            terms: quote.terms || null,
+        };
+    }
+
+    private buildPublicPayload(
+        quote: QuoteContractRecord,
+        company: CompanyProfile,
+        recipient: RecipientProfile,
+    ) {
+        const snapshot = quote.contractSnapshot && typeof quote.contractSnapshot === 'object'
+            ? quote.contractSnapshot as Record<string, any>
+            : null;
+
+        const sourceCompany = snapshot?.company ?? company;
+        const sourceClient = snapshot?.client ?? {
+            name: recipient.name,
+            email: recipient.email || null,
+            phone: recipient.phone || null,
+            company: recipient.company || null,
+            address: recipient.address || null,
+        };
+        const sourceProject = snapshot?.project ?? {
+            title: quote.quoteNumber,
+            address: quote.roofEstimate?.address || recipient.address || null,
+            jobType: quote.roofEstimate?.roofType || 'Roofing Service',
+            recipientType: quote.leadId ? 'lead' : 'client',
+        };
+        const sourceItems = snapshot?.items ?? (quote.items || []).map((item: any) => ({
+            description: item.description,
+            quantity: Number(item.quantity),
+            unitPrice: Number(item.unitPrice),
+            total: Number(item.total),
+        }));
+
+        return {
+            id: quote.id,
+            quoteNumber: snapshot?.quoteNumber || quote.quoteNumber,
+            status: quote.status,
+            company: sourceCompany,
+            client: sourceClient,
+            project: sourceProject,
+            issueDate: snapshot?.issueDate || quote.issueDate,
+            validUntil: snapshot?.validUntil || quote.validUntil,
+            currency: snapshot?.currency || quote.currency,
+            subtotal: snapshot?.subtotal ?? Number(quote.subtotal),
+            taxRate: snapshot?.taxRate ?? (quote.taxRate ? Number(quote.taxRate) : 0),
+            taxAmount: snapshot?.taxAmount ?? Number(quote.taxAmount),
+            discountAmount: snapshot?.discountAmount ?? Number(quote.discountAmount),
+            total: snapshot?.total ?? Number(quote.total),
+            scopeOfWork: snapshot?.scopeOfWork ?? quote.notes ?? null,
+            notes: snapshot?.notes ?? quote.notes ?? null,
+            terms: snapshot?.terms ?? quote.terms ?? null,
+            items: sourceItems,
+            viewCount: quote.viewCount ?? 0,
+            firstViewedAt: quote.firstViewedAt ?? null,
+            lastViewedAt: quote.lastViewedAt ?? null,
+            signedAt: quote.signedAt ?? quote.acceptedAt ?? null,
+            signedBy: quote.signedBy ?? null,
+            signatureType: quote.signatureType ?? null,
+            isContract: Boolean(quote.isContract),
+            contractVersion: quote.contractVersion ?? snapshot?.contractVersion ?? 0,
+            signedPdfFileId: quote.signedPdfFileId ?? null,
+            canSign: ['SENT', 'VIEWED'].includes(quote.status),
+            canReject: ['SENT', 'VIEWED'].includes(quote.status),
+        };
+    }
+
+    private async loadQuoteContractRecord(where: Record<string, unknown>) {
+        return prisma.quote.findFirst({
+            where,
+            include: {
+                client: {
+                    select: {
+                        id: true,
+                        clientName: true,
+                        companyName: true,
+                        primaryEmail: true,
+                        primaryPhone: true,
+                        streetAddress: true,
+                        city: true,
+                        province: true,
+                        postalCode: true,
+                        country: true,
+                    },
+                },
+                lead: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        companyName: true,
+                        email: true,
+                        phone: true,
+                        propertyAddress: true,
+                    },
+                },
+                items: { orderBy: { sortOrder: 'asc' } },
+                roofEstimate: {
+                    select: {
+                        id: true,
+                        address: true,
+                        roofType: true,
+                    },
+                },
+                projects: {
+                    select: { id: true },
+                    orderBy: { createdAt: 'desc' },
+                    take: 1,
+                },
+            },
+        });
+    }
+
+    private async createSignedPdfFile(
+        quote: QuoteContractRecord,
+        tenantId: string,
+        snapshot: Record<string, any>,
+        signature: { signedBy: string; signatureType?: string | null; signatureData?: string | null; signedAt: Date },
+    ) {
+        const { buffer, fileName } = generateQuoteContractPdfBuffer({
+            companyName: String(snapshot.company?.companyName || 'ZODO'),
+            companyEmail: snapshot.company?.email || undefined,
+            companyPhone: snapshot.company?.phone || undefined,
+            companyAddress: snapshot.company?.address || undefined,
+            quoteNumber: String(snapshot.quoteNumber || quote.quoteNumber),
+            issueDate: new Date(snapshot.issueDate || quote.issueDate).toLocaleDateString('en-CA'),
+            signedAt: signature.signedAt.toLocaleDateString('en-CA'),
+            clientName: String(snapshot.client?.name || 'Client'),
+            clientEmail: snapshot.client?.email || undefined,
+            clientPhone: snapshot.client?.phone || undefined,
+            clientAddress: snapshot.client?.address || undefined,
+            propertyAddress: snapshot.project?.address || undefined,
+            jobType: snapshot.project?.jobType || undefined,
+            scopeOfWork: snapshot.scopeOfWork || undefined,
+            currency: String(snapshot.currency || quote.currency || 'CAD'),
+            items: Array.isArray(snapshot.items) ? snapshot.items : [],
+            subtotal: Number(snapshot.subtotal || quote.subtotal || 0),
+            taxRate: Number(snapshot.taxRate || quote.taxRate || 0) || undefined,
+            taxAmount: Number(snapshot.taxAmount || quote.taxAmount || 0),
+            discountAmount: Number(snapshot.discountAmount || quote.discountAmount || 0),
+            total: Number(snapshot.total || quote.total || 0),
+            notes: snapshot.notes || undefined,
+            terms: snapshot.terms || undefined,
+            signedBy: signature.signedBy,
+            signatureType: signature.signatureType || undefined,
+            signatureData: signature.signatureData || undefined,
+        });
+
+        const uploadDir = path.join(process.cwd(), 'uploads', tenantId, 'quotes', 'contracts');
+        fs.mkdirSync(uploadDir, { recursive: true });
+
+        const storedName = `${randomUUID()}-${fileName}`;
+        const filePath = path.join(uploadDir, storedName);
+        fs.writeFileSync(filePath, buffer);
+
+        const savedFile = await filesRepository.create(tenantId, {
+            name: fileName,
+            originalName: fileName,
+            mimeType: 'application/pdf',
+            size: buffer.length,
+            path: filePath,
+            extension: '.pdf',
+            quoteId: quote.id,
+            clientId: quote.clientId || null,
+            leadId: quote.leadId || null,
+            checksum: createHash('sha256').update(buffer).digest('hex'),
+        });
+
+        return savedFile.id;
+    }
+
+    private async notifyQuoteSigner(quote: QuoteContractRecord, signerName: string) {
+        if (!quote.createdById) return;
+        const owner = await prisma.employee.findUnique({
+            where: { id: quote.createdById },
+            select: { userId: true },
+        });
+        if (!owner?.userId) return;
+
+        await notificationsService.create({
+            title: 'Estimate Signed',
+            message: `${signerName} signed ${quote.quoteNumber}. You can now convert it to a job.`,
+            type: 'SUCCESS',
+            userId: owner.userId,
+            tenantId: quote.tenantId,
+            actionUrl: `/quotes`,
+            actionLabel: 'View Estimate',
+        });
+    }
+
     async create(tenantId: string, data: CreateQuoteDto, createdById?: string) {
         const quote = await quotesRepository.create(tenantId, data, createdById);
         const dto = toQuoteResponseDto(quote);
@@ -54,6 +367,10 @@ export class QuotesService {
     async update(id: string, tenantId: string, data: UpdateQuoteDto) {
         const existing = await quotesRepository.findById(id, tenantId);
         if (!existing) throw new NotFoundError('Quote not found', ErrorCodes.RESOURCE_NOT_FOUND);
+        const existingStatus = String((existing as any).status || '');
+        if (['SIGNED', 'ACCEPTED'].includes(existingStatus)) {
+            throw new BadRequestError('Signed contracts cannot be edited');
+        }
         const quote = await quotesRepository.update(id, tenantId, data);
         const dto = toQuoteResponseDto(quote);
 
@@ -84,11 +401,19 @@ export class QuotesService {
         if (!existing) throw new NotFoundError('Quote not found', ErrorCodes.RESOURCE_NOT_FOUND);
 
         const oldStatus = (existing as any).status;
+        if (['SIGNED', 'ACCEPTED'].includes(String(oldStatus)) && status !== oldStatus) {
+            throw new BadRequestError('Signed contracts cannot change status');
+        }
 
         // Build update data with semantic timestamps
         const updateData: any = { status };
         if (status === 'SENT' && !(existing as any).sentAt) updateData.sentAt = new Date();
         if (status === 'ACCEPTED' && !(existing as any).acceptedAt) updateData.acceptedAt = new Date();
+        if (status === 'SIGNED' && !(existing as any).signedAt) {
+            updateData.signedAt = new Date();
+            updateData.isContract = true;
+        }
+        if (status === 'REJECTED' && !(existing as any).rejectedAt) updateData.rejectedAt = new Date();
 
         const quote = await quotesRepository.update(id, tenantId, updateData);
         const dto = toQuoteResponseDto(quote);
@@ -117,70 +442,66 @@ export class QuotesService {
         return dto;
     }
 
-    // ── Send quote via email ────────────────────────────────────────────────
+    // ── Send quote via email / signature link ───────────────────────────────
     async sendQuote(id: string, tenantId: string, actorEmployeeId?: string) {
-        const quote = await quotesRepository.findById(id, tenantId);
+        const quote = await this.loadQuoteContractRecord({ id, tenantId });
         if (!quote) throw new NotFoundError('Quote not found', ErrorCodes.RESOURCE_NOT_FOUND);
 
-        const q = quote as any;
-
-        // Resolve recipient email
-        let recipientEmail: string | undefined;
-        let recipientName = 'there';
-        let recipientCompany: string | undefined;
-        let recipientPhone: string | undefined;
-
-        if (q.leadId) {
-            const lead = await prisma.lead.findUnique({ where: { id: q.leadId } });
-            if (lead) {
-                recipientEmail = lead.email || undefined;
-                recipientName = [lead.firstName, lead.lastName].filter(Boolean).join(' ') || lead.companyName || 'there';
-                recipientCompany = lead.companyName || undefined;
-                recipientPhone = lead.phone || undefined;
-            }
-        } else if (q.clientId) {
-            const client = await prisma.client.findUnique({ where: { id: q.clientId } });
-            if (client) {
-                recipientEmail = client.primaryEmail || undefined;
-                recipientName = client.clientName || 'there';
-                recipientCompany = client.companyName || undefined;
-                recipientPhone = client.primaryPhone || undefined;
-            }
+        const q = quote as QuoteContractRecord;
+        if (['SIGNED', 'ACCEPTED'].includes(String(q.status))) {
+            throw new BadRequestError('This estimate has already been signed');
         }
 
-        if (!recipientEmail) {
+        const recipient = this.resolveRecipientProfile(q);
+        if (!recipient.email) {
             throw new BadRequestError('No email address found for the recipient');
         }
 
-        // Generate public token if not already present
-        const publicToken = q.publicToken || randomUUID();
+        const company = await this.getCompanyProfile(tenantId);
+        const publicToken = randomUUID();
+        const contractVersion = Math.max(Number(q.contractVersion || 0) + 1, 1);
+        const sentAt = new Date();
+        const contractSnapshot = this.buildContractSnapshot(q, company, recipient, contractVersion);
 
-        // Update status to SENT
-        const updateData: any = { status: 'SENT', sentAt: new Date(), publicToken };
+        const updateData: any = {
+            status: 'SENT',
+            sentAt,
+            publicToken,
+            isContract: false,
+            contractVersion,
+            contractSnapshot,
+            viewCount: 0,
+            firstViewedAt: null,
+            lastViewedAt: null,
+            signedAt: null,
+            signedBy: null,
+            signatureType: null,
+            signatureData: null,
+            signerIpAddress: null,
+            signerUserAgent: null,
+            auditTrail: {
+                contractVersion,
+                sentAt: sentAt.toISOString(),
+                publicToken,
+            },
+            signedPdfFileId: null,
+            rejectedAt: null,
+            acceptedAt: null,
+        };
         const updated = await quotesRepository.update(id, tenantId, updateData);
         const dto = toQuoteResponseDto(updated);
 
-        // Build the public link
-        const frontendUrl = config.frontend.url.replace(/\/$/, '');
-        const publicLink = `${frontendUrl}/quote/${publicToken}`;
+        const publicLink = this.buildPublicLink(publicToken);
+        const validDate = new Date(q.validUntil).toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' });
 
-        // Format currency helper
-        const fmtCurrency = (val: number | string) => {
-            const n = typeof val === 'string' ? parseFloat(val) : val;
-            return new Intl.NumberFormat('en-CA', { style: 'currency', currency: q.currency || 'CAD' }).format(n);
-        };
-
-        // Build items HTML
         const itemsHtml = (q.items || []).map((item: any) =>
             `<tr>
                 <td style="padding:10px 16px;border-bottom:1px solid #E2E8F0;font-size:14px;color:#334155;">${item.description}</td>
                 <td style="padding:10px 16px;border-bottom:1px solid #E2E8F0;font-size:14px;color:#334155;text-align:center;">${item.quantity}</td>
-                <td style="padding:10px 16px;border-bottom:1px solid #E2E8F0;font-size:14px;color:#334155;text-align:right;">${fmtCurrency(item.unitPrice)}</td>
-                <td style="padding:10px 16px;border-bottom:1px solid #E2E8F0;font-size:14px;color:#334155;text-align:right;">${fmtCurrency(item.total)}</td>
+                <td style="padding:10px 16px;border-bottom:1px solid #E2E8F0;font-size:14px;color:#334155;text-align:right;">${this.formatCurrency(Number(item.unitPrice), q.currency || 'CAD')}</td>
+                <td style="padding:10px 16px;border-bottom:1px solid #E2E8F0;font-size:14px;color:#334155;text-align:right;">${this.formatCurrency(Number(item.total), q.currency || 'CAD')}</td>
             </tr>`
         ).join('');
-
-        const validDate = new Date(q.validUntil).toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' });
 
         // ── Generate roof estimate PDF attachment (if linked) ────────────
         const emailAttachments: Array<{ filename: string; content: Buffer; contentType: string }> = [];
@@ -201,11 +522,11 @@ export class QuotesService {
                     const { generateRoofEstimatePdfBuffer } = await import('../roof-estimator/roof-estimate-pdf');
                     const { buffer, fileName } = generateRoofEstimatePdfBuffer({
                         companyName: settings?.companyName || 'Zodo Roofing',
-                        recipientName,
+                        recipientName: recipient.name,
                         recipientType: q.leadId ? 'lead' : 'client',
-                        recipientCompany,
-                        recipientEmail,
-                        recipientPhone,
+                        recipientCompany: recipient.company,
+                        recipientEmail: recipient.email,
+                        recipientPhone: recipient.phone,
                         address: estimate.address,
                         latitude: estimate.latitude,
                         longitude: estimate.longitude,
@@ -247,24 +568,19 @@ export class QuotesService {
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background:#F1F5F9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
 <div style="max-width:640px;margin:0 auto;padding:40px 20px;">
-  <!-- Header -->
   <div style="background:linear-gradient(135deg,#0891B2,#0E7490);border-radius:16px 16px 0 0;padding:32px;text-align:center;">
-    <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700;letter-spacing:-0.5px;">ZODO</h1>
-    <p style="margin:8px 0 0;color:rgba(255,255,255,0.85);font-size:14px;">Professional Quote</p>
+    <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700;letter-spacing:-0.5px;">${company.companyName}</h1>
+    <p style="margin:8px 0 0;color:rgba(255,255,255,0.85);font-size:14px;">Estimate Ready for Signature</p>
   </div>
-
-  <!-- Body -->
   <div style="background:#fff;padding:32px;border-radius:0 0 16px 16px;box-shadow:0 4px 24px rgba(0,0,0,0.06);">
-    <p style="margin:0 0 8px;font-size:16px;color:#0F172A;">Hi ${recipientName},</p>
+    <p style="margin:0 0 8px;font-size:16px;color:#0F172A;">Hi ${recipient.name},</p>
     <p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.6;">
-      You've received a new quote from <strong>ZODO</strong>. Please review the details below and click the button to accept or decline.
+      Your roofing estimate is ready. Review the scope, totals, and terms, then sign the contract online to approve the work.
     </p>
-
-    <!-- Quote Summary -->
     <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;padding:20px;margin-bottom:24px;">
       <table style="width:100%;border-collapse:collapse;">
         <tr>
-          <td style="padding:4px 0;font-size:13px;color:#64748B;">Quote Number</td>
+          <td style="padding:4px 0;font-size:13px;color:#64748B;">Estimate Number</td>
           <td style="padding:4px 0;font-size:13px;color:#0F172A;font-weight:600;text-align:right;">${q.quoteNumber}</td>
         </tr>
         <tr>
@@ -273,12 +589,10 @@ export class QuotesService {
         </tr>
         <tr>
           <td style="padding:4px 0;font-size:13px;color:#64748B;">Total Amount</td>
-          <td style="padding:4px 0;font-size:18px;color:#0891B2;font-weight:700;text-align:right;">${fmtCurrency(q.total)}</td>
+          <td style="padding:4px 0;font-size:18px;color:#0891B2;font-weight:700;text-align:right;">${this.formatCurrency(Number(q.total), q.currency || 'CAD')}</td>
         </tr>
       </table>
     </div>
-
-    <!-- Line Items -->
     <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
       <thead>
         <tr style="background:#F1F5F9;">
@@ -292,45 +606,49 @@ export class QuotesService {
     </table>
 
     ${attachmentNote}
-
-    <!-- CTA Button -->
     <div style="text-align:center;margin:32px 0;">
       <a href="${publicLink}" style="display:inline-block;background:linear-gradient(135deg,#0891B2,#0E7490);color:#fff;text-decoration:none;padding:14px 40px;border-radius:10px;font-size:16px;font-weight:600;letter-spacing:0.3px;box-shadow:0 4px 14px rgba(8,145,178,0.4);">
-        View &amp; Respond to Quote
+        Review &amp; Sign Estimate
       </a>
     </div>
-
     <p style="margin:24px 0 0;font-size:12px;color:#94A3B8;text-align:center;line-height:1.5;">
-      This quote is valid until ${validDate}. If you have any questions, please contact us directly.
+      This estimate is valid until ${validDate}. If you have any questions, reply to this email and we will help right away.
     </p>
   </div>
-
-  <!-- Footer -->
   <div style="text-align:center;padding:24px;color:#94A3B8;font-size:12px;">
-    <p style="margin:0;">© ${new Date().getFullYear()} ZODO · All rights reserved</p>
+    <p style="margin:0;">© ${new Date().getFullYear()} ${company.companyName} · All rights reserved</p>
   </div>
 </div>
 </body>
 </html>`;
 
         await mailerService.sendMail({
-            to: recipientEmail,
-            subject: `Quote ${q.quoteNumber} from ZODO`,
+            to: recipient.email,
+            subject: `Estimate ${q.quoteNumber} ready for signature`,
             html,
-            text: `Hi ${recipientName}, you've received quote ${q.quoteNumber} for ${fmtCurrency(q.total)}. View and respond: ${publicLink}`,
+            text: `Hi ${recipient.name}, your estimate ${q.quoteNumber} for ${this.formatCurrency(Number(q.total), q.currency || 'CAD')} is ready to review and sign: ${publicLink}`,
             attachments: emailAttachments.length > 0 ? emailAttachments : undefined,
+        });
+
+        quoteSignatureReminderService.cancelReminder(dto.id);
+        quoteSignatureReminderService.scheduleReminder({
+            tenantId,
+            quoteId: dto.id,
+            recipientName: recipient.name,
+            recipientEmail: recipient.email,
+            publicLink,
+            sentAt,
         });
 
         // Log activity
         activityLogger.log({
             tenantId, entityType: 'Quote', entityId: dto.id,
             action: 'STATUS_CHANGE', module: 'quotes',
-            description: `Quote "${dto.quoteNumber}" sent to ${recipientEmail}${emailAttachments.length > 0 ? ' (with roof estimate PDF)' : ''}`,
+            description: `Estimate "${dto.quoteNumber}" sent for signature to ${recipient.email}${emailAttachments.length > 0 ? ' (with roof estimate PDF)' : ''}`,
             userId: actorEmployeeId,
-            metadata: { recipientEmail, publicToken, hasRoofEstimatePdf: emailAttachments.length > 0 },
+            metadata: { recipientEmail: recipient.email, publicToken, publicLink, hasRoofEstimatePdf: emailAttachments.length > 0, contractVersion },
         });
 
-        // Emit event
         eventBus.emit('quote.statusChanged', {
             tenantId, quoteId: dto.id, quoteNumber: dto.quoteNumber,
             oldStatus: (quote as any).status, newStatus: 'SENT',
@@ -342,118 +660,195 @@ export class QuotesService {
         return dto;
     }
 
-    // ── Public: get quote by token (no auth) ────────────────────────────────
+    // ── Public: get quote by token (tracks views) ───────────────────────────
     async getByPublicToken(token: string) {
-        const quote = await prisma.quote.findFirst({
-            where: { publicToken: token } as any,
-            include: {
-                client: { select: { id: true, clientName: true } },
-                items: { orderBy: { sortOrder: 'asc' } },
-                tenant: { select: { id: true } },
+        const quote = await this.loadQuoteContractRecord({ publicToken: token });
+        if (!quote) throw new NotFoundError('Quote not found or link has expired');
+
+        const now = new Date();
+        const nextViewCount = Number((quote as any).viewCount || 0) + 1;
+        const isFirstView = !quote.firstViewedAt;
+        const nextStatus: QuoteStatusValue = quote.status === 'SENT' ? 'VIEWED' : quote.status;
+
+        const updated = await prisma.quote.update({
+            where: { id: quote.id },
+            data: {
+                status: nextStatus,
+                viewCount: nextViewCount,
+                firstViewedAt: quote.firstViewedAt || now,
+                lastViewedAt: now,
+                auditTrail: {
+                    ...(quote.auditTrail && typeof quote.auditTrail === 'object' ? quote.auditTrail as Record<string, unknown> : {}),
+                    viewCount: nextViewCount,
+                    firstViewedAt: (quote.firstViewedAt || now).toISOString(),
+                    lastViewedAt: now.toISOString(),
+                } as any,
             },
         });
-        if (!quote) throw new NotFoundError('Quote not found or link has expired');
 
-        // Also resolve lead name if present
-        let leadName: string | undefined;
-        if (quote.leadId) {
-            const lead = await prisma.lead.findUnique({ where: { id: quote.leadId } });
-            if (lead) {
-                leadName = [lead.firstName, lead.lastName].filter(Boolean).join(' ') || lead.companyName || undefined;
-            }
+        const effectiveQuote = {
+            ...quote,
+            status: updated.status,
+            viewCount: nextViewCount,
+            firstViewedAt: quote.firstViewedAt || now,
+            lastViewedAt: now,
+        };
+
+        if (isFirstView) {
+            activityLogger.log({
+                tenantId: quote.tenantId,
+                entityType: 'Quote',
+                entityId: quote.id,
+                action: 'STATUS_CHANGE',
+                module: 'quotes',
+                description: `Estimate "${quote.quoteNumber}" viewed via public link`,
+                metadata: { viewCount: nextViewCount },
+            });
         }
 
-        return {
-            id: quote.id,
-            quoteNumber: quote.quoteNumber,
-            status: quote.status,
-            clientName: (quote as any).client?.clientName || leadName || 'Unknown',
-            recipientType: quote.leadId ? 'lead' : 'client',
-            issueDate: quote.issueDate,
-            validUntil: quote.validUntil,
-            currency: quote.currency,
-            subtotal: Number(quote.subtotal),
-            taxRate: quote.taxRate ? Number(quote.taxRate) : 0,
-            taxAmount: Number(quote.taxAmount),
-            discountAmount: Number(quote.discountAmount),
-            total: Number(quote.total),
-            notes: quote.notes,
-            terms: quote.terms,
-            items: ((quote as any).items || []).map((i: any) => ({
-                description: i.description,
-                quantity: i.quantity,
-                unitPrice: Number(i.unitPrice),
-                total: Number(i.total),
-            })),
-        };
+        const company = await this.getCompanyProfile(quote.tenantId);
+        const recipient = this.resolveRecipientProfile(quote);
+        return this.buildPublicPayload(effectiveQuote, company, recipient);
     }
 
-    // ── Public: accept or reject quote by token ─────────────────────────────
-    async respondToQuote(token: string, action: 'accept' | 'reject') {
-        const quote = await prisma.quote.findFirst({ where: { publicToken: token } as any });
+    // ── Public: sign or reject quote by token ───────────────────────────────
+    async respondToQuote(
+        token: string,
+        action: 'accept' | 'sign' | 'reject',
+        payload?: { signedByName?: string; signatureData?: string; signatureType?: string; ipAddress?: string; userAgent?: string },
+    ) {
+        const quote = await this.loadQuoteContractRecord({ publicToken: token });
         if (!quote) throw new NotFoundError('Quote not found or link has expired');
 
-        if (quote.status !== 'SENT') {
+        if (!['SENT', 'VIEWED'].includes(String(quote.status))) {
             throw new BadRequestError(`This quote has already been ${quote.status.toLowerCase()}`);
         }
 
-        const newStatus = action === 'accept' ? 'ACCEPTED' : 'DECLINED';
-        const updateData: any = { status: newStatus };
-        if (action === 'accept') updateData.acceptedAt = new Date();
+        if (action === 'reject') {
+            const rejectedAt = new Date();
+            await prisma.quote.update({
+                where: { id: quote.id },
+                data: {
+                    status: 'REJECTED',
+                    rejectedAt,
+                    auditTrail: {
+                        ...(quote.auditTrail && typeof quote.auditTrail === 'object' ? quote.auditTrail as Record<string, unknown> : {}),
+                        rejectedAt: rejectedAt.toISOString(),
+                    } as any,
+                },
+            });
 
-        // ── Auto-convert lead → client on acceptance ────────────────────────
-        let convertedClientId: string | undefined;
+            activityLogger.log({
+                tenantId: quote.tenantId,
+                entityType: 'Quote',
+                entityId: quote.id,
+                action: 'STATUS_CHANGE',
+                module: 'quotes',
+                description: `Estimate "${quote.quoteNumber}" rejected via public link`,
+                metadata: { action: 'reject' },
+            });
 
-        if (action === 'accept' && quote.leadId && !quote.clientId) {
-            try {
-                // Check if lead was already converted
-                const lead = await prisma.lead.findUnique({ where: { id: quote.leadId } });
+            eventBus.emit('quote.statusChanged', {
+                tenantId: quote.tenantId,
+                quoteId: quote.id,
+                quoteNumber: quote.quoteNumber,
+                oldStatus: String(quote.status),
+                newStatus: 'REJECTED',
+                clientId: quote.clientId || undefined,
+                leadId: quote.leadId || undefined,
+                total: Number(quote.total),
+                items: (quote.items || []).map((item: any) => ({
+                    description: item.description,
+                    quantity: Number(item.quantity),
+                    unitPrice: Number(item.unitPrice),
+                    total: Number(item.total),
+                })),
+            });
 
-                if (lead && lead.status === 'WON' && lead.convertedToClientId) {
-                    // Lead already converted — just link the quote to the existing client
-                    convertedClientId = lead.convertedToClientId;
-                    updateData.clientId = convertedClientId;
-                } else if (lead) {
-                    // Convert lead to client
-                    const { leadsService } = await import('../leads/leads.service');
-                    const result = await leadsService.convertToClient(
-                        quote.leadId,
-                        quote.tenantId,
-                        { clientType: lead.companyName ? 'COMPANY' : 'INDIVIDUAL', createContact: !!lead.companyName },
-                    );
-                    convertedClientId = result.clientId;
-                    updateData.clientId = convertedClientId;
-                }
-            } catch (convErr: any) {
-                // Log but don't fail the acceptance — the quote accept is more important
-                console.error('⚠️ Lead-to-client conversion failed during quote accept:', convErr.message);
-            }
+            quoteSignatureReminderService.cancelReminder(quote.id);
+
+            return { success: true, status: 'REJECTED', quoteNumber: quote.quoteNumber };
         }
 
-        await prisma.quote.update({ where: { id: quote.id }, data: updateData });
+        const signedByName = String(payload?.signedByName || '').trim();
+        if (!signedByName) {
+            throw new BadRequestError('Full name is required to sign the estimate');
+        }
 
-        // Log & emit event
-        const conversionNote = convertedClientId ? ` (lead auto-converted to client ${convertedClientId})` : '';
+        const signedAt = new Date();
+        const company = await this.getCompanyProfile(quote.tenantId);
+        const recipient = this.resolveRecipientProfile(quote);
+        const contractVersion = Math.max(Number(quote.contractVersion || 0), 1);
+        const contractSnapshot = this.buildContractSnapshot(quote, company, recipient, contractVersion);
+        const signedPdfFileId = await this.createSignedPdfFile(quote, quote.tenantId, contractSnapshot, {
+            signedBy: signedByName,
+            signatureType: payload?.signatureType || null,
+            signatureData: payload?.signatureData || null,
+            signedAt,
+        });
+
+        const auditTrail = {
+            ...(quote.auditTrail && typeof quote.auditTrail === 'object' ? quote.auditTrail as Record<string, unknown> : {}),
+            contractVersion,
+            signedBy: signedByName,
+            signedAt: signedAt.toISOString(),
+            ipAddress: payload?.ipAddress || null,
+            userAgent: payload?.userAgent || null,
+            viewCount: quote.viewCount || 0,
+            firstViewedAt: quote.firstViewedAt ? quote.firstViewedAt.toISOString() : null,
+            lastViewedAt: quote.lastViewedAt ? quote.lastViewedAt.toISOString() : null,
+            signedPdfFileId,
+        };
+
+        await prisma.quote.update({
+            where: { id: quote.id },
+            data: {
+                status: 'SIGNED',
+                isContract: true,
+                signedAt,
+                acceptedAt: signedAt,
+                signedBy: signedByName,
+                signatureType: payload?.signatureType || null,
+                signatureData: payload?.signatureData || null,
+                signerIpAddress: payload?.ipAddress || null,
+                signerUserAgent: payload?.userAgent || null,
+                contractSnapshot: contractSnapshot as any,
+                auditTrail: auditTrail as any,
+                signedPdfFileId,
+            },
+        });
+
         activityLogger.log({
-            tenantId: quote.tenantId, entityType: 'Quote', entityId: quote.id,
-            action: 'STATUS_CHANGE', module: 'quotes',
-            description: `Quote "${quote.quoteNumber}" ${newStatus.toLowerCase()} via public link${conversionNote}`,
-            metadata: { action, newStatus, convertedClientId },
+            tenantId: quote.tenantId,
+            entityType: 'Quote',
+            entityId: quote.id,
+            action: 'STATUS_CHANGE',
+            module: 'quotes',
+            description: `Estimate "${quote.quoteNumber}" signed by ${signedByName}`,
+            metadata: { action: 'sign', signedByName, signatureType: payload?.signatureType || null, signedPdfFileId },
         });
 
         eventBus.emit('quote.statusChanged', {
             tenantId: quote.tenantId,
             quoteId: quote.id,
             quoteNumber: quote.quoteNumber,
-            oldStatus: 'SENT',
-            newStatus,
-            clientId: quote.clientId || convertedClientId || undefined,
+            oldStatus: String(quote.status),
+            newStatus: 'SIGNED',
+            clientId: quote.clientId || undefined,
             leadId: quote.leadId || undefined,
             total: Number(quote.total),
-            items: [],
+            items: (quote.items || []).map((item: any) => ({
+                description: item.description,
+                quantity: Number(item.quantity),
+                unitPrice: Number(item.unitPrice),
+                total: Number(item.total),
+            })),
         });
 
-        return { success: true, status: newStatus, quoteNumber: quote.quoteNumber, convertedClientId };
+        quoteSignatureReminderService.cancelReminder(quote.id);
+        await this.notifyQuoteSigner(quote, signedByName);
+
+        return { success: true, status: 'SIGNED', quoteNumber: quote.quoteNumber, signedPdfFileId };
     }
 }
 

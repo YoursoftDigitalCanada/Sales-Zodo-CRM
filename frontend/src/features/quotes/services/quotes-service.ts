@@ -33,6 +33,18 @@ export interface QuoteEntity {
     updatedAt: string;
     sentAt: string | null;
     acceptedAt: string | null;
+    publicToken: string | null;
+    isContract: boolean;
+    contractVersion: number;
+    viewCount: number;
+    firstViewedAt: string | null;
+    lastViewedAt: string | null;
+    signedAt: string | null;
+    signedBy: string | null;
+    signatureType: string | null;
+    signedPdfFileId: string | null;
+    rejectedAt: string | null;
+    linkedProjectId: string | null;
     roofEstimateId: string | null;
     [key: string]: unknown;
 }

@@ -120,6 +120,9 @@ const isPublicPath = (pathname: string): boolean => {
   if (pathname.startsWith("/quote/")) {
     return true;
   }
+  if (pathname.startsWith("/estimate/sign/")) {
+    return true;
+  }
   return false;
 };
 
@@ -148,6 +151,7 @@ const AppRoutes = () => {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/quote/:token" element={<PublicQuoteView />} />
+        <Route path="/estimate/sign/:token" element={<PublicQuoteView />} />
 
         {/* ========== DASHBOARD ========== */}
         <Route

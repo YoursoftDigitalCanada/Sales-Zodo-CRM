@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowRight, Menu, X, Play, Check,
-  Upload, Brain, Ruler, FileText,
+  MapPin, Brain, Ruler, FileText,
   LayoutGrid, Receipt, Calendar, Users, DollarSign, CreditCard,
   Twitter, Facebook, Linkedin, Instagram,
   Sparkles, Zap, TrendingUp, Shield,
@@ -274,7 +274,7 @@ export default function LandingPage() {
                 </h1>
 
                 <p className="text-[17px] leading-[1.7] max-w-[480px]" style={{ color: T.textSecondary }}>
-                  Upload a roof image and get instant, accurate estimates—no manual measurements, no guesswork.
+                  Enter a property address and get instant, accurate estimates—no manual measurements, no guesswork.
                 </p>
 
                 <div className="flex flex-wrap items-center gap-4 pt-2">
@@ -311,29 +311,35 @@ export default function LandingPage() {
                     <span className="text-[11px] font-bold px-2.5 py-1 rounded-md" style={{ background: `${T.primary}12`, color: T.primary }}>LIVE</span>
                   </div>
 
-                  {/* Roof Image Mockup */}
+                  {/* Address Input + Roof Overlay */}
                   <div className="relative px-5 pt-4">
-                    <div className="relative rounded-xl overflow-hidden" style={{ background: '#E0F7FA', height: '220px' }}>
+                    {/* Simulated Address Input */}
+                    <div className="flex items-center gap-2.5 bg-white rounded-lg px-3.5 py-2.5 mb-3" style={{ border: `1px solid ${T.border}`, boxShadow: T.shadowSoft }}>
+                      <MapPin size={16} style={{ color: T.primary }} />
+                      <span className="text-[13px] font-medium" style={{ color: T.textPrimary }}>742 Evergreen Terrace, Springfield</span>
+                      <div className="ml-auto px-2.5 py-1 rounded-md text-[11px] font-bold text-white" style={{ background: T.primary }}>Search</div>
+                    </div>
+                    <div className="relative rounded-xl overflow-hidden" style={{ background: '#E0F7FA', height: '180px' }}>
                       {/* Simulated aerial roof view with measurement overlays */}
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <svg viewBox="0 0 400 220" className="w-full h-full">
+                        <svg viewBox="0 0 400 180" className="w-full h-full">
                           {/* House outline */}
-                          <polygon points="200,20 350,100 350,200 50,200 50,100" fill="#A5F3FC" opacity="0.4" stroke={T.primary} strokeWidth="2" />
-                          <polygon points="200,20 350,100 200,80 50,100" fill="#22D3EE" opacity="0.25" stroke={T.primary} strokeWidth="1.5" />
+                          <polygon points="200,10 350,80 350,170 50,170 50,80" fill="#A5F3FC" opacity="0.4" stroke={T.primary} strokeWidth="2" />
+                          <polygon points="200,10 350,80 200,60 50,80" fill="#22D3EE" opacity="0.25" stroke={T.primary} strokeWidth="1.5" />
                           {/* Roof sections */}
-                          <polygon points="200,20 280,65 200,80 120,65" fill={T.primary} opacity="0.25" stroke={T.primary} strokeWidth="1" />
-                          <polygon points="280,65 350,100 280,120 200,80" fill="#06B6D4" opacity="0.3" stroke={T.primary} strokeWidth="1" />
-                          <polygon points="120,65 200,80 120,120 50,100" fill="#0E7490" opacity="0.2" stroke={T.primary} strokeWidth="1" />
+                          <polygon points="200,10 280,50 200,60 120,50" fill={T.primary} opacity="0.25" stroke={T.primary} strokeWidth="1" />
+                          <polygon points="280,50 350,80 280,100 200,60" fill="#06B6D4" opacity="0.3" stroke={T.primary} strokeWidth="1" />
+                          <polygon points="120,50 200,60 120,100 50,80" fill="#0E7490" opacity="0.2" stroke={T.primary} strokeWidth="1" />
                           {/* Measurement lines */}
-                          <line x1="60" y1="105" x2="340" y2="105" stroke={T.primary} strokeWidth="1" strokeDasharray="4,3" opacity="0.5" />
-                          <line x1="200" y1="25" x2="200" y2="195" stroke={T.primary} strokeWidth="1" strokeDasharray="4,3" opacity="0.5" />
+                          <line x1="60" y1="85" x2="340" y2="85" stroke={T.primary} strokeWidth="1" strokeDasharray="4,3" opacity="0.5" />
+                          <line x1="200" y1="15" x2="200" y2="165" stroke={T.primary} strokeWidth="1" strokeDasharray="4,3" opacity="0.5" />
                           {/* Labels */}
-                          <rect x="150" y="30" width="100" height="22" rx="4" fill={T.primary} />
-                          <text x="200" y="45" textAnchor="middle" fill="white" fontSize="11" fontWeight="600">Main Ridge</text>
-                          <rect x="290" y="75" width="70" height="22" rx="4" fill="#0E7490" />
-                          <text x="325" y="90" textAnchor="middle" fill="white" fontSize="10" fontWeight="600">Section A</text>
-                          <rect x="40" y="75" width="70" height="22" rx="4" fill="#06B6D4" />
-                          <text x="75" y="90" textAnchor="middle" fill="white" fontSize="10" fontWeight="600">Section B</text>
+                          <rect x="150" y="20" width="100" height="20" rx="4" fill={T.primary} />
+                          <text x="200" y="34" textAnchor="middle" fill="white" fontSize="10" fontWeight="600">Main Ridge</text>
+                          <rect x="290" y="60" width="60" height="20" rx="4" fill="#0E7490" />
+                          <text x="320" y="74" textAnchor="middle" fill="white" fontSize="9" fontWeight="600">Section A</text>
+                          <rect x="50" y="60" width="60" height="20" rx="4" fill="#06B6D4" />
+                          <text x="80" y="74" textAnchor="middle" fill="white" fontSize="9" fontWeight="600">Section B</text>
                         </svg>
                       </div>
                     </div>
@@ -390,13 +396,13 @@ export default function LandingPage() {
       <Section id="ai-estimator" bg={T.surface}>
         <SectionHeader
           title="AI Roof Estimator That Works Like a Pro"
-          subtitle="From photo to estimate in under 60 seconds"
+          subtitle="From address to estimate in under 60 seconds"
         />
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
-            { step: 1, icon: Upload, title: 'Upload Image', desc: 'Drop any aerial roof photo or satellite image' },
-            { step: 2, icon: Brain, title: 'AI Detects Roof', desc: 'Automatically identifies roof planes and edges' },
+            { step: 1, icon: MapPin, title: 'Enter Address', desc: 'Type in any property address to get started' },
+            { step: 2, icon: Brain, title: 'AI Analyzes Roof', desc: 'Automatically pulls satellite imagery and detects roof structure' },
             { step: 3, icon: Ruler, title: 'Generates Measurements', desc: 'Calculates area, pitch, and dimensions instantly' },
             { step: 4, icon: FileText, title: 'Builds Estimate', desc: 'Creates a professional quote with accurate pricing' },
           ].map((s, i) => (
@@ -474,7 +480,7 @@ export default function LandingPage() {
               <div className="space-y-4">
                 {[
                   'AI-powered remote measurements in seconds',
-                  'Instant automated estimates from photos',
+                  'Instant automated estimates from any address',
                   'Send quotes in minutes, not days',
                   'Auto-generated invoices from every job',
                 ].map((s, i) => (
@@ -510,7 +516,7 @@ export default function LandingPage() {
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {[
-            { icon: Brain, title: 'AI Roof Estimator', desc: 'Upload a photo, get instant measurements and pricing', highlight: true, badge: 'AI POWERED' },
+            { icon: Brain, title: 'AI Roof Estimator', desc: 'Enter an address, get instant measurements and pricing', highlight: true, badge: 'AI POWERED' },
             { icon: LayoutGrid, title: 'Job Pipeline', desc: 'Track every job from lead to completion with drag-and-drop Kanban', highlight: false },
             { icon: Receipt, title: 'Auto Invoice Builder', desc: 'Generate professional invoices directly from completed jobs', highlight: false },
             { icon: Calendar, title: 'Site Visit Scheduling', desc: 'Book and manage site visits with integrated calendar', highlight: false },

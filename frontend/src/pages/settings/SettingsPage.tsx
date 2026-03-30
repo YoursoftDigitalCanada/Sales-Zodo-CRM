@@ -467,8 +467,16 @@ export default function SettingsPage() {
         senderEmail: emailSettings.smtp.senderEmail,
         signature: emailSettings.smtp.signature,
       });
+      // connectionTest may be returned alongside the settings
+      const connectionTest = (next as any).connectionTest as { ok: boolean; error?: string } | undefined;
       setEmailSettings(next);
-      toast({ title: "SMTP settings updated", description: "Your personal outgoing mailbox configuration was saved." });
+      if (connectionTest?.ok) {
+        toast({ title: "SMTP verified ✅", description: "Settings saved and connection test passed. Your mailbox is ready to send." });
+      } else if (connectionTest && !connectionTest.ok) {
+        toast({ title: "SMTP saved, but connection failed", description: connectionTest.error || "Could not verify SMTP. Check credentials and try again.", variant: "destructive" });
+      } else {
+        toast({ title: "SMTP settings updated", description: "Your personal outgoing mailbox configuration was saved." });
+      }
     } catch (error) {
       toast({ title: "Save failed", description: getErrorMessage(error), variant: "destructive" });
     } finally {

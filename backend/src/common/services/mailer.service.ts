@@ -79,6 +79,12 @@ class MailerService {
             console.warn('⚠️ Skipping email — nodemailer not available');
             return { sent: false, error: 'nodemailer is not installed' };
         }
+
+        // Diagnostic logging (never log actual credentials)
+        if (!smtpConfig.host) console.warn('⚠️ SMTP send attempt with empty host');
+        if (!smtpConfig.user) console.warn('⚠️ SMTP send attempt with empty username — possible decryption failure');
+        if (!smtpConfig.pass) console.warn('⚠️ SMTP send attempt with empty password — possible decryption failure');
+
         try {
             const normalizedConfig = normalizeSmtpTransportConfig(smtpConfig);
             const encryption = normalizedConfig.encryption;
@@ -122,6 +128,56 @@ class MailerService {
                 return { sent: false, error: `${errorMessage}. ${guidance}` };
             }
             return { sent: false, error: errorMessage };
+        }
+    }
+
+    /**
+     * Test SMTP connection by verifying transport without sending an email.
+     * Returns { ok: true } on success, or { ok: false, error: '...' } on failure.
+     */
+    async testSmtpConnection(
+        smtpConfig: { host: string; port: number; user: string; pass: string; encryption?: string }
+    ): Promise<{ ok: boolean; error?: string }> {
+        if (!nodemailer) {
+            return { ok: false, error: 'nodemailer is not installed' };
+        }
+        if (!smtpConfig.host || !smtpConfig.user || !smtpConfig.pass) {
+            const missing = [
+                !smtpConfig.host && 'host',
+                !smtpConfig.user && 'username',
+                !smtpConfig.pass && 'password',
+            ].filter(Boolean).join(', ');
+            return { ok: false, error: `Missing SMTP credentials: ${missing}. If you just entered a password, please re-enter it and save again.` };
+        }
+        try {
+            const normalizedConfig = normalizeSmtpTransportConfig(smtpConfig);
+            const encryption = normalizedConfig.encryption;
+            const transport = nodemailer.createTransport({
+                host: normalizedConfig.host,
+                port: normalizedConfig.port || 587,
+                secure: encryption === 'SSL/TLS',
+                requireTLS: encryption === 'STARTTLS',
+                ignoreTLS: encryption === 'NONE',
+                auth: { user: normalizedConfig.user, pass: normalizedConfig.pass },
+                connectionTimeout: 15000,
+                greetingTimeout: 15000,
+                dnsTimeout: 10000,
+                tls: { servername: normalizedConfig.host },
+            });
+            await transport.verify();
+            console.log('✅ SMTP connection test passed —', smtpConfig.user);
+            return { ok: true };
+        } catch (err: any) {
+            const errorMessage = this.formatErrorMessage(err);
+            const guidance = getSmtpTransportGuidance(normalizeSmtpTransportConfig(smtpConfig).port || 587);
+            console.warn('❌ SMTP connection test failed:', errorMessage);
+            if (/greeting never received|etimedout/i.test(errorMessage)) {
+                return { ok: false, error: `${errorMessage}. ${guidance}` };
+            }
+            if (/authentication|535|invalid login|username|password/i.test(errorMessage)) {
+                return { ok: false, error: `${errorMessage}. Tip: If you use Gmail with 2FA, you need an App Password instead of your regular password.` };
+            }
+            return { ok: false, error: errorMessage };
         }
     }
 

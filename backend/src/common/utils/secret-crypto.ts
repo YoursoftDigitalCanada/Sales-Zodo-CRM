@@ -54,7 +54,8 @@ export function decryptSecret(value?: string | null): string {
     ]);
 
     return decrypted.toString('utf8');
-  } catch {
+  } catch (err: any) {
+    console.warn('⚠️ Secret decryption failed — the encryption key may have changed since this value was stored.', err?.message || '');
     return '';
   }
 }

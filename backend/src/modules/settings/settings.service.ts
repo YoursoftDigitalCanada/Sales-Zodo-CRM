@@ -145,7 +145,22 @@ export class SettingsService {
       },
     });
 
-    return this.buildEmailSettingsResponse(tenantId, userId);
+    const emailSettings = await this.buildEmailSettingsResponse(tenantId, userId);
+
+    // Test SMTP connection after saving
+    const mailbox = await mailboxRepository.getRuntimeConfig(userId);
+    let connectionTest: { ok: boolean; error?: string } = { ok: false, error: 'SMTP credentials are incomplete' };
+    if (mailbox?.smtp.host && mailbox.smtp.user && mailbox.smtp.pass) {
+      connectionTest = await mailerService.testSmtpConnection({
+        host: mailbox.smtp.host,
+        port: mailbox.smtp.port,
+        user: mailbox.smtp.user,
+        pass: mailbox.smtp.pass,
+        encryption: mailbox.smtp.encryption,
+      });
+    }
+
+    return { ...emailSettings, connectionTest };
   }
 
   async updateImapSettings(tenantId: string, userId: string, data: UpdateImapSettingsDto) {

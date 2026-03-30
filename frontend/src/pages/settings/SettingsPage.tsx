@@ -76,7 +76,7 @@ const settingsTabs: SettingsTabItem[] = [
   { id: "general", label: "General", description: "Workspace preferences", icon: Settings },
   { id: "company", label: "Company Profile", description: "Branding and contact info", icon: Building2 },
   { id: "billing", label: "Billing & Plans", description: "Plan limits and usage", icon: CreditCard },
-  { id: "email", label: "Email Settings", description: "SMTP, IMAP, and templates", icon: Mail },
+  { id: "email", label: "Email Settings", description: "Personal mailbox, sync, and templates", icon: Mail },
   { id: "security", label: "Security", description: "Sessions, policies, and audit", icon: Shield },
   { id: "notifications", label: "Notifications", description: "Workspace alerts", icon: Bell },
   { id: "team", label: "Team Management", description: "Invite and manage workspace members", icon: Users },
@@ -347,9 +347,7 @@ export default function SettingsPage() {
     if (billingInvoicesResult.status === "fulfilled") setBillingInvoices(billingInvoicesResult.value);
     if (emailResult.status === "fulfilled") {
       setEmailSettings(emailResult.value);
-      if (emailResult.value.smtp.senderEmail) {
-        setTestEmailAddress(emailResult.value.smtp.senderEmail);
-      }
+      setTestEmailAddress(emailResult.value.smtp.senderEmail || emailResult.value.smtp.username || emailResult.value.mailboxAddress || "");
     }
     if (securityResult.status === "fulfilled") setSecurity(securityResult.value);
     if (notificationResult.status === "fulfilled") setNotifications(notificationResult.value);
@@ -470,7 +468,7 @@ export default function SettingsPage() {
         signature: emailSettings.smtp.signature,
       });
       setEmailSettings(next);
-      toast({ title: "SMTP settings updated", description: "Outgoing email configuration was saved." });
+      toast({ title: "SMTP settings updated", description: "Your personal outgoing mailbox configuration was saved." });
     } catch (error) {
       toast({ title: "Save failed", description: getErrorMessage(error), variant: "destructive" });
     } finally {
@@ -490,7 +488,7 @@ export default function SettingsPage() {
         encryption: emailSettings.imap.encryption,
       });
       setEmailSettings(next);
-      toast({ title: "IMAP settings updated", description: "Incoming email configuration was saved." });
+      toast({ title: "IMAP settings updated", description: "Your personal incoming mailbox configuration was saved." });
     } catch (error) {
       toast({ title: "Save failed", description: getErrorMessage(error), variant: "destructive" });
     } finally {
@@ -891,7 +889,24 @@ export default function SettingsPage() {
             emailSettings ? (
               <div className="space-y-6">
                 <div className={cardClass}>
-                  <SectionHeader title="SMTP Configuration" description="Configure the outbound email gateway used for sends and invitations." />
+                  <div className="flex items-start gap-3 rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-4">
+                    <Mail size={18} className="mt-0.5 text-[#0891B2]" />
+                    <div className="space-y-1">
+                      <p className="font-medium text-[#0F172A]">Your personal mailbox powers all email actions</p>
+                      <p className="text-sm text-[#64748B]">
+                        The SMTP and IMAP settings below are tied to your user account. Letter Box, lead/client quick-send, and test email all use this same mailbox.
+                      </p>
+                      <p className="text-xs text-[#64748B]">
+                        {emailSettings.mailboxAddress
+                          ? `Currently connected as ${emailSettings.mailboxAddress}.`
+                          : "No personal mailbox is connected yet."}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className={cardClass}>
+                  <SectionHeader title="Personal SMTP Configuration" description="Use your own mailbox for Letter Box sends, lead/client quick-send, and test email delivery." />
                   <div className="mt-6 grid gap-5 lg:grid-cols-2">
                     <Field label="SMTP host">
                       <input className={fieldClass} value={emailSettings.smtp.host} onChange={(event) => setEmailSettings({ ...emailSettings, smtp: { ...emailSettings.smtp, host: event.target.value } })} />
@@ -920,21 +935,21 @@ export default function SettingsPage() {
                     <Field label="Sender email">
                       <input className={fieldClass} type="email" value={emailSettings.smtp.senderEmail} onChange={(event) => setEmailSettings({ ...emailSettings, smtp: { ...emailSettings.smtp, senderEmail: event.target.value } })} />
                     </Field>
-                    <Field label="Signature" hint="Used in invitation and reminder templates.">
+                    <Field label="Signature" hint="Stored with your mailbox profile for future personal email defaults.">
                       <textarea className={cn(fieldClass, "min-h-[120px]")} value={emailSettings.smtp.signature} onChange={(event) => setEmailSettings({ ...emailSettings, smtp: { ...emailSettings.smtp, signature: event.target.value } })} />
                     </Field>
                   </div>
                   <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
                     <div className="inline-flex items-center gap-2 rounded-full bg-[#F8FAFC] px-3 py-1 text-xs font-medium text-[#475569]">
                       {emailSettings.smtp.configured ? <CheckCircle2 size={14} className="text-[#16A34A]" /> : <AlertTriangle size={14} className="text-[#D97706]" />}
-                      {emailSettings.smtp.configured ? "SMTP configured" : "SMTP incomplete"}
+                      {emailSettings.smtp.configured ? "SMTP configured for your account" : "SMTP incomplete for your account"}
                     </div>
                     <SaveButton onClick={handleSaveSmtp} loading={savingSection === "smtp"} />
                   </div>
                 </div>
 
                 <div className={cardClass}>
-                  <SectionHeader title="IMAP Configuration" description="Connect mailbox sync for incoming messages." />
+                  <SectionHeader title="Personal IMAP Configuration" description="Connect your mailbox for Letter Box inbox sync. Each user must connect their own mailbox." />
                   <div className="mt-6 grid gap-5 lg:grid-cols-2">
                     <Field label="IMAP host">
                       <input className={fieldClass} value={emailSettings.imap.host} onChange={(event) => setEmailSettings({ ...emailSettings, imap: { ...emailSettings.imap, host: event.target.value } })} />
@@ -961,14 +976,14 @@ export default function SettingsPage() {
                   <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
                     <div className="inline-flex items-center gap-2 rounded-full bg-[#F8FAFC] px-3 py-1 text-xs font-medium text-[#475569]">
                       {emailSettings.imap.configured ? <CheckCircle2 size={14} className="text-[#16A34A]" /> : <AlertTriangle size={14} className="text-[#D97706]" />}
-                      {emailSettings.imap.configured ? "IMAP configured" : "IMAP incomplete"}
+                      {emailSettings.imap.configured ? "IMAP configured for your account" : "IMAP incomplete for your account"}
                     </div>
                     <SaveButton onClick={handleSaveImap} loading={savingSection === "imap"} />
                   </div>
                 </div>
 
                 <div className={cardClass}>
-                  <SectionHeader title="Test Email & Templates" description="Verify delivery and keep reusable email content up to date." />
+                  <SectionHeader title="Test Email & Templates" description="Verify your own mailbox delivery and manage workspace email templates." />
                   <div className="mt-6 grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
                     <div className="space-y-4 rounded-md bg-[#F8FAFC] p-4">
                       <Field label="Send a test email">

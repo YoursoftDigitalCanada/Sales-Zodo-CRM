@@ -80,6 +80,7 @@ export interface ImapSettingsDto {
 export interface EmailSettingsResponseDto {
   smtp: SmtpSettingsDto;
   imap: ImapSettingsDto;
+  mailboxAddress: string | null;
   templates: EmailTemplateDto[];
 }
 
@@ -297,6 +298,7 @@ export function toEmailSettingsDto(record: WorkspaceSettingsRecord): EmailSettin
       encryption: String(integrations.imapEncryption ?? 'SSL/TLS') as EmailEncryption,
       configured: Boolean(imapHost && imapUser && imapPass),
     },
+    mailboxAddress: String(integrations.senderEmail ?? '').trim() || smtpUser || imapUser || null,
     templates: getEmailTemplates(record),
   };
 }

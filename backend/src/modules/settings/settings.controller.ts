@@ -101,7 +101,7 @@ export class SettingsController {
 
   async getEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const emailSettings = await settingsService.getEmailSettings(req.context.tenantId);
+      const emailSettings = await settingsService.getEmailSettings(req.context.tenantId, req.context.userId);
       sendSuccess(res, emailSettings);
     } catch (error) {
       next(error);
@@ -110,7 +110,7 @@ export class SettingsController {
 
   async updateSmtp(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const emailSettings = await settingsService.updateSmtpSettings(req.context.tenantId, sanitizeBody(req.body));
+      const emailSettings = await settingsService.updateSmtpSettings(req.context.tenantId, req.context.userId, sanitizeBody(req.body));
       await auditService.logWithContext(req, AuditAction.UPDATE, 'settings', 'Updated SMTP settings');
       sendSuccess(res, emailSettings, 'SMTP settings updated');
     } catch (error) {
@@ -120,7 +120,7 @@ export class SettingsController {
 
   async updateImap(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const emailSettings = await settingsService.updateImapSettings(req.context.tenantId, sanitizeBody(req.body));
+      const emailSettings = await settingsService.updateImapSettings(req.context.tenantId, req.context.userId, sanitizeBody(req.body));
       await auditService.logWithContext(req, AuditAction.UPDATE, 'settings', 'Updated IMAP settings');
       sendSuccess(res, emailSettings, 'IMAP settings updated');
     } catch (error) {
@@ -140,7 +140,7 @@ export class SettingsController {
 
   async sendTestEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const result = await settingsService.sendTestEmail(req.context.tenantId, sanitizeBody(req.body).toEmail);
+      const result = await settingsService.sendTestEmail(req.context.userId, sanitizeBody(req.body).toEmail);
       sendSuccess(res, result, 'Test email sent');
     } catch (error) {
       next(error);

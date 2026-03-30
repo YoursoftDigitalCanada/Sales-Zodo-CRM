@@ -75,6 +75,7 @@ export interface MailboxSmtpSettingsDto {
     encryption: EmailEncryption;
     senderName: string;
     senderEmail: string;
+    signature: string;
     configured: boolean;
 }
 
@@ -107,6 +108,7 @@ export interface UpdateMailboxSmtpDto {
     encryption?: EmailEncryption;
     senderName?: string;
     senderEmail?: string;
+    signature?: string;
 }
 
 export interface UpdateMailboxImapDto {

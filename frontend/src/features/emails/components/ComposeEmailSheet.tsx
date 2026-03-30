@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,8 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
-import { sendEmail as apiSendEmail } from "@/features/emails/services/emails-service";
-import { Bold, Italic, Link2, List, ListOrdered, Mail, Paperclip, Send, Smile, Underline, X } from "lucide-react";
+import { getEmailConfigStatus, sendEmail as apiSendEmail } from "@/features/emails/services/emails-service";
+import { AlertTriangle, Bold, Italic, Link2, List, ListOrdered, Mail, Paperclip, Send, Settings, Smile, Underline, X } from "lucide-react";
 
 function plainTextToHtml(value: string) {
   return value
@@ -44,6 +45,7 @@ export function ComposeEmailSheet({
   onSent?: () => void;
 }) {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const editorRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -55,6 +57,12 @@ export function ComposeEmailSheet({
   const [showCc, setShowCc] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [isEditorFocused, setIsEditorFocused] = useState(false);
+  const [mailboxStatus, setMailboxStatus] = useState<{
+    smtpConfigured: boolean;
+    imapConfigured: boolean;
+    mailboxAddress: string | null;
+  } | null>(null);
+  const [isCheckingMailbox, setIsCheckingMailbox] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -74,6 +82,36 @@ export function ComposeEmailSheet({
     });
   }, [defaultRecipientEmail, defaultRecipientName, isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    let cancelled = false;
+    setIsCheckingMailbox(true);
+
+    getEmailConfigStatus()
+      .then((status) => {
+        if (!cancelled) {
+          setMailboxStatus(status);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setMailboxStatus(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsCheckingMailbox(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
+
   const syncEditorState = useCallback(() => {
     setBodyHtml(editorRef.current?.innerHTML || "");
   }, []);
@@ -85,6 +123,15 @@ export function ComposeEmailSheet({
   }, [syncEditorState]);
 
   const handleSend = async () => {
+    if (mailboxStatus && !mailboxStatus.smtpConfigured) {
+      toast({
+        title: "Mailbox Not Configured",
+        description: "Set up your personal mailbox in Settings > Email before sending from lead, client, or Letter Box screens.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!to.trim() || !subject.trim()) {
       toast({
         title: "Missing Fields",
@@ -162,11 +209,40 @@ export function ComposeEmailSheet({
             </SheetTitle>
             <SheetDescription>
               {defaultRecipientName
-                ? `Send an email to ${defaultRecipientName} from your configured mailbox.`
-                : "Send an email from your configured mailbox."}
+                ? `Send an email to ${defaultRecipientName} from your configured mailbox${mailboxStatus?.mailboxAddress ? ` (${mailboxStatus.mailboxAddress})` : ""}.`
+                : `Send an email from your configured mailbox${mailboxStatus?.mailboxAddress ? ` (${mailboxStatus.mailboxAddress})` : ""}.`}
             </SheetDescription>
           </div>
         </SheetHeader>
+
+        {!isCheckingMailbox && mailboxStatus && !mailboxStatus.smtpConfigured ? (
+          <div className="mx-6 mt-4 rounded-md border border-[#FECACA] bg-[#FEF2F2] p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <AlertTriangle size={18} className="mt-0.5 text-[#DC2626]" />
+                <div>
+                  <p className="text-sm font-medium text-[#991B1B]">Your personal mailbox is not configured</p>
+                  <p className="mt-1 text-sm text-[#B91C1C]">
+                    Letter Box, lead/client quick-send, and manual email composer all use the same personal mailbox settings.
+                  </p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="shrink-0"
+                onClick={() => {
+                  onClose();
+                  navigate("/settings/email");
+                }}
+              >
+                <Settings size={14} className="mr-1" />
+                Open Settings
+              </Button>
+            </div>
+          </div>
+        ) : null}
 
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
           <div className="flex items-center gap-3">
@@ -348,7 +424,12 @@ export function ComposeEmailSheet({
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="button" className="bg-[#14B8A6] hover:bg-[#0D9488] text-white gap-2" onClick={handleSend} disabled={isSending}>
+            <Button
+              type="button"
+              className="bg-[#14B8A6] hover:bg-[#0D9488] text-white gap-2"
+              onClick={handleSend}
+              disabled={isSending || (!isCheckingMailbox && Boolean(mailboxStatus) && !mailboxStatus.smtpConfigured)}
+            >
               <Send size={15} />
               {isSending ? "Sending..." : "Send Email"}
             </Button>

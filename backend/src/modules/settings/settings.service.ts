@@ -1,8 +1,10 @@
 import { BadRequestError } from '../../common/errors/HttpErrors';
 import { mailerService } from '../../common/services/mailer.service';
+import { mailboxRepository } from '../emails/mailbox.repository';
 import { settingsManager } from './settings.manager';
 import { settingsRepository } from './settings.repository';
 import {
+  type EmailSettingsResponseDto,
   toBillingResponseDto,
   toCompanyProfileDto,
   toEmailSettingsDto,
@@ -19,6 +21,36 @@ import {
 } from './settings.dto';
 
 export class SettingsService {
+  private async buildEmailSettingsResponse(tenantId: string, userId: string): Promise<EmailSettingsResponseDto> {
+    const settings = await settingsRepository.ensure(tenantId);
+    const workspaceEmail = toEmailSettingsDto(settings);
+    const mailboxSettings = await mailboxRepository.getMailboxSettings(userId);
+
+    return {
+      smtp: {
+        host: mailboxSettings.smtp.host,
+        port: mailboxSettings.smtp.port,
+        username: mailboxSettings.smtp.username,
+        passwordMasked: mailboxSettings.smtp.passwordMasked,
+        encryption: mailboxSettings.smtp.encryption,
+        senderName: mailboxSettings.smtp.senderName,
+        senderEmail: mailboxSettings.smtp.senderEmail,
+        signature: mailboxSettings.smtp.signature || workspaceEmail.smtp.signature || '',
+        configured: mailboxSettings.smtp.configured,
+      },
+      imap: {
+        host: mailboxSettings.imap.host,
+        port: mailboxSettings.imap.port,
+        username: mailboxSettings.imap.username,
+        passwordMasked: mailboxSettings.imap.passwordMasked,
+        encryption: mailboxSettings.imap.encryption,
+        configured: mailboxSettings.imap.configured,
+      },
+      mailboxAddress: mailboxSettings.mailboxAddress,
+      templates: workspaceEmail.templates,
+    };
+  }
+
   async get(tenantId: string) {
     const settings = await settingsRepository.ensure(tenantId);
     return toWorkspaceSettingsResponseDto(settings);
@@ -95,26 +127,47 @@ export class SettingsService {
     return invoices;
   }
 
-  async getEmailSettings(tenantId: string) {
-    const settings = await settingsRepository.ensure(tenantId);
-    return toEmailSettingsDto(settings);
+  async getEmailSettings(tenantId: string, userId: string) {
+    return this.buildEmailSettingsResponse(tenantId, userId);
   }
 
-  async updateSmtpSettings(tenantId: string, data: UpdateSmtpSettingsDto) {
-    const settings = await settingsRepository.update(tenantId, { smtp: data });
-    return toEmailSettingsDto(settings);
+  async updateSmtpSettings(tenantId: string, userId: string, data: UpdateSmtpSettingsDto) {
+    await mailboxRepository.updateMailboxSettings(userId, {
+      smtp: {
+        host: data.host,
+        port: data.port,
+        username: data.username,
+        password: data.password,
+        encryption: data.encryption,
+        senderName: data.senderName,
+        senderEmail: data.senderEmail,
+        signature: data.signature,
+      },
+    });
+
+    return this.buildEmailSettingsResponse(tenantId, userId);
   }
 
-  async updateImapSettings(tenantId: string, data: UpdateImapSettingsDto) {
-    const settings = await settingsRepository.update(tenantId, { imap: data });
-    return toEmailSettingsDto(settings);
+  async updateImapSettings(tenantId: string, userId: string, data: UpdateImapSettingsDto) {
+    await mailboxRepository.updateMailboxSettings(userId, {
+      imap: {
+        host: data.host,
+        port: data.port,
+        username: data.username,
+        password: data.password,
+        encryption: data.encryption,
+      },
+    });
+
+    return this.buildEmailSettingsResponse(tenantId, userId);
   }
 
-  async sendTestEmail(tenantId: string, toEmail: string) {
-    const smtp = await settingsRepository.getSmtpConfig(tenantId);
+  async sendTestEmail(userId: string, toEmail: string) {
+    const mailbox = await mailboxRepository.getRuntimeConfig(userId);
+    const smtp = mailbox?.smtp;
 
-    if (!smtp.host || !smtp.user || !smtp.pass) {
-      throw new BadRequestError('SMTP must be configured before sending a test email');
+    if (!smtp?.host || !smtp.user || !smtp.pass) {
+      throw new BadRequestError('Configure your personal SMTP mailbox before sending a test email');
     }
 
     const delivery = await mailerService.sendMailWithConfigDetailed(
@@ -123,6 +176,7 @@ export class SettingsService {
         port: smtp.port,
         user: smtp.user,
         pass: smtp.pass,
+        encryption: smtp.encryption,
         senderName: smtp.senderName,
         senderEmail: smtp.senderEmail || smtp.user,
       },
@@ -136,7 +190,7 @@ export class SettingsService {
 
     if (!delivery.sent) {
       throw new BadRequestError(
-        `Unable to send test email with the configured SMTP server. ${delivery.error || 'Check the SMTP username, password, host, and port.'}`,
+        `Unable to send test email with your personal SMTP mailbox. ${delivery.error || 'Check the SMTP username, password, host, and port.'}`,
       );
     }
 

@@ -73,6 +73,7 @@ export interface ImapSettings {
 export interface EmailSettings {
   smtp: SmtpSettings;
   imap: ImapSettings;
+  mailboxAddress: string | null;
   templates: EmailTemplate[];
 }
 

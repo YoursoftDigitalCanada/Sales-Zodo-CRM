@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate, loadEmployee } from '../../common/middleware/auth.middleware';
-import { requireAnyRole, requirePermission } from '../../common/middleware/permission.middleware';
+import { requireAnyPermission, requireAnyRole, requirePermission } from '../../common/middleware/permission.middleware';
 import { validate } from '../../common/middleware/validate.middleware';
 import { PERMISSIONS } from '../../common/constants/permissions';
 import { settingsController } from './settings.controller';
@@ -35,11 +35,30 @@ router.post('/company/logo', requirePermission(PERMISSIONS.SETTINGS_UPDATE), upl
 router.get('/billing', requirePermission(PERMISSIONS.SETTINGS_VIEW), settingsController.getBilling.bind(settingsController));
 router.get('/invoices', requirePermission(PERMISSIONS.SETTINGS_VIEW), settingsController.getBillingInvoices.bind(settingsController));
 
-router.get('/email', requirePermission(PERMISSIONS.SETTINGS_VIEW), settingsController.getEmail.bind(settingsController));
-router.post('/email/smtp', requirePermission(PERMISSIONS.SETTINGS_MANAGE_INTEGRATIONS), validate(updateSmtpSettingsSchema), settingsController.updateSmtp.bind(settingsController));
-router.post('/email/imap', requirePermission(PERMISSIONS.SETTINGS_MANAGE_INTEGRATIONS), validate(updateImapSettingsSchema), settingsController.updateImap.bind(settingsController));
+router.get(
+  '/email',
+  requireAnyPermission([PERMISSIONS.SETTINGS_VIEW, PERMISSIONS.SETTINGS_MANAGE_INTEGRATIONS, PERMISSIONS.EMAILS_VIEW, PERMISSIONS.EMAILS_SEND]),
+  settingsController.getEmail.bind(settingsController),
+);
+router.post(
+  '/email/smtp',
+  requireAnyPermission([PERMISSIONS.SETTINGS_MANAGE_INTEGRATIONS, PERMISSIONS.EMAILS_VIEW, PERMISSIONS.EMAILS_SEND]),
+  validate(updateSmtpSettingsSchema),
+  settingsController.updateSmtp.bind(settingsController),
+);
+router.post(
+  '/email/imap',
+  requireAnyPermission([PERMISSIONS.SETTINGS_MANAGE_INTEGRATIONS, PERMISSIONS.EMAILS_VIEW, PERMISSIONS.EMAILS_SEND]),
+  validate(updateImapSettingsSchema),
+  settingsController.updateImap.bind(settingsController),
+);
 router.put('/email/templates', requirePermission(PERMISSIONS.SETTINGS_MANAGE_INTEGRATIONS), validate(updateEmailTemplatesSchema), settingsController.updateTemplates.bind(settingsController));
-router.post('/email/test', requirePermission(PERMISSIONS.SETTINGS_MANAGE_INTEGRATIONS), validate(sendTestEmailSchema), settingsController.sendTestEmail.bind(settingsController));
+router.post(
+  '/email/test',
+  requireAnyPermission([PERMISSIONS.SETTINGS_MANAGE_INTEGRATIONS, PERMISSIONS.EMAILS_VIEW, PERMISSIONS.EMAILS_SEND]),
+  validate(sendTestEmailSchema),
+  settingsController.sendTestEmail.bind(settingsController),
+);
 
 router.get('/notifications', requirePermission(PERMISSIONS.NOTIFICATIONS_VIEW), settingsController.getNotifications.bind(settingsController));
 router.put('/notifications', requirePermission(PERMISSIONS.NOTIFICATIONS_MANAGE), validate(updateNotificationSettingsSchema), settingsController.updateNotifications.bind(settingsController));

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   format, 
@@ -22,7 +22,13 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { AttendanceRecord, AttendanceStatus } from './types';
-import { getAttendanceStatusConfig } from './utils';
+import {
+  buildAttendanceDailyTotals,
+  formatMinutesAsDuration,
+  formatWorkHours,
+  getAttendanceDayKey,
+  getAttendanceStatusConfig,
+} from './utils';
 
 interface AttendanceCalendarProps {
   records: AttendanceRecord[];
@@ -45,6 +51,7 @@ export const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
   const filteredRecords = employeeId 
     ? records.filter(r => r.employeeId === employeeId)
     : records;
+  const dailyTotals = useMemo(() => buildAttendanceDailyTotals(filteredRecords), [filteredRecords]);
 
   const setCurrentMonth = (value: Date) => {
     if (!month) {
@@ -146,6 +153,9 @@ export const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
           const dayRecords = getRecordsForDate(day);
           const isCurrentMonth = isSameMonth(day, currentMonth);
           const isCurrentDay = isToday(day);
+          const daySummary = record
+            ? dailyTotals.get(getAttendanceDayKey(record.employeeId, day))
+            : undefined;
 
           return (
             <TooltipProvider key={index}>
@@ -185,15 +195,45 @@ export const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
                           {record.notes && (
                             <p className="text-[#94A3B8] max-w-[220px]">{record.notes}</p>
                           )}
-                          {record.checkIn && (
+                          {(daySummary?.firstCheckIn || record.checkIn) && (
                             <p className="text-[#94A3B8]">
-                              In: {format(record.checkIn, 'h:mm a')}
+                              In: {format(daySummary?.firstCheckIn || record.checkIn || day, 'h:mm a')}
                             </p>
                           )}
-                          {record.checkOut && (
+                          {(daySummary?.lastCheckOut || record.checkOut) && (
                             <p className="text-[#94A3B8]">
-                              Out: {format(record.checkOut, 'h:mm a')}
+                              Out: {format(daySummary?.lastCheckOut || record.checkOut || day, 'h:mm a')}
                             </p>
+                          )}
+                          {!employeeId && daySummary && daySummary.sessionCount > 1 && (
+                            <p className="text-[#94A3B8]">
+                              Sessions: {daySummary.sessionCount}
+                            </p>
+                          )}
+                          {!employeeId && daySummary && (
+                            <>
+                              <p className="text-[#94A3B8]">
+                                Worked: {formatWorkHours(daySummary.workHours)}
+                              </p>
+                              <p className="text-[#94A3B8]">
+                                Break: {formatMinutesAsDuration(daySummary.breakMinutes)}
+                              </p>
+                            </>
+                          )}
+                          {employeeId && daySummary && (
+                            <>
+                              <p className="text-[#94A3B8]">
+                                Worked: {formatWorkHours(daySummary.workHours)}
+                              </p>
+                              <p className="text-[#94A3B8]">
+                                Break: {formatMinutesAsDuration(daySummary.breakMinutes)}
+                              </p>
+                              {daySummary.sessionCount > 1 && (
+                                <p className="text-[#94A3B8]">
+                                  Sessions: {daySummary.sessionCount}
+                                </p>
+                              )}
+                            </>
                           )}
                         </>
                       ) : (

@@ -1,3 +1,4 @@
+import { format } from 'date-fns';
 import { 
   EmployeeStatus, 
   EmploymentType, 
@@ -78,6 +79,84 @@ export const formatWorkHours = (hours: number): string => {
   const h = Math.floor(hours);
   const m = Math.round((hours - h) * 60);
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
+};
+
+export const formatMinutesAsDuration = (minutes: number): string => {
+  const safeMinutes = Math.max(0, Math.round(minutes));
+  const h = Math.floor(safeMinutes / 60);
+  const m = safeMinutes % 60;
+
+  if (h > 0 && m > 0) {
+    return `${h}h ${m}m`;
+  }
+
+  if (h > 0) {
+    return `${h}h`;
+  }
+
+  return `${m}m`;
+};
+
+export type AttendanceDailyTotals = {
+  workHours: number;
+  breakMinutes: number;
+  sessionCount: number;
+  firstCheckIn?: Date;
+  lastCheckOut?: Date;
+};
+
+export const getAttendanceDayKey = (employeeId: string, date: Date): string => (
+  `${employeeId}:${format(date, 'yyyy-MM-dd')}`
+);
+
+export const buildAttendanceDailyTotals = (records: AttendanceRecord[]): Map<string, AttendanceDailyTotals> => {
+  const totals = new Map<string, {
+    workMinutes: number;
+    breakMinutes: number;
+    sessionCount: number;
+    firstCheckIn?: Date;
+    lastCheckOut?: Date;
+  }>();
+
+  records.forEach((record) => {
+    if (record.status === 'on-leave') {
+      return;
+    }
+
+    const key = getAttendanceDayKey(record.employeeId, record.date);
+    const existing = totals.get(key) || {
+      workMinutes: 0,
+      breakMinutes: 0,
+      sessionCount: 0,
+    };
+
+    existing.workMinutes += Math.max(0, Math.round(record.workHours * 60));
+    existing.breakMinutes += Math.max(0, record.breakMinutes || 0);
+    existing.sessionCount += 1;
+
+    if (record.checkIn && (!existing.firstCheckIn || record.checkIn.getTime() < existing.firstCheckIn.getTime())) {
+      existing.firstCheckIn = record.checkIn;
+    }
+
+    if (record.checkOut && (!existing.lastCheckOut || record.checkOut.getTime() > existing.lastCheckOut.getTime())) {
+      existing.lastCheckOut = record.checkOut;
+    }
+
+    totals.set(key, existing);
+  });
+
+  return new Map(
+    [...totals.entries()].map(([key, value]) => [
+      key,
+      {
+        workHours: Math.round((value.workMinutes / 60) * 10) / 10,
+        breakMinutes: value.breakMinutes,
+        sessionCount: value.sessionCount,
+        firstCheckIn: value.firstCheckIn,
+        lastCheckOut: value.lastCheckOut,
+      },
+    ]),
+  );
 };
 
 export const calculateLeaveBalance = (

@@ -18,6 +18,8 @@ import { Label } from '@/components/ui/label';
 interface CheckInOutCardProps {
   isCheckedIn: boolean;
   checkInTime?: Date;
+  workedHours?: number;
+  breakMinutes?: number;
   onCheckIn: (isRemote: boolean) => void;
   onCheckOut: () => void;
   onBreakStart?: () => void;
@@ -29,6 +31,8 @@ interface CheckInOutCardProps {
 export const CheckInOutCard: React.FC<CheckInOutCardProps> = ({
   isCheckedIn,
   checkInTime,
+  workedHours = 0,
+  breakMinutes = 0,
   onCheckIn,
   onCheckOut,
   onBreakStart,
@@ -39,24 +43,68 @@ export const CheckInOutCard: React.FC<CheckInOutCardProps> = ({
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isRemote, setIsRemote] = useState(false);
   const [elapsedTime, setElapsedTime] = useState('00:00:00');
+  const [breakDuration, setBreakDuration] = useState('0m');
+  const [syncedAt, setSyncedAt] = useState(new Date());
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-      
-      if (isCheckedIn && checkInTime) {
-        const diff = new Date().getTime() - checkInTime.getTime();
-        const hours = Math.floor(diff / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-        setElapsedTime(
-          `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
-        );
+    setSyncedAt(new Date());
+  }, [breakMinutes, isCheckedIn, isOnBreak, workedHours]);
+
+  useEffect(() => {
+    const formatClockDuration = (milliseconds: number) => {
+      const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    };
+
+    const formatMinuteDuration = (milliseconds: number) => {
+      const totalMinutes = Math.max(0, Math.round(milliseconds / 60000));
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+
+      if (hours > 0 && minutes > 0) {
+        return `${hours}h ${minutes}m`;
       }
+
+      if (hours > 0) {
+        return `${hours}h`;
+      }
+
+      return `${minutes}m`;
+    };
+
+    const tick = () => {
+      const now = new Date();
+      setCurrentTime(now);
+
+      const baseWorkedMs = Math.max(0, workedHours) * 60 * 60 * 1000;
+      const baseBreakMs = Math.max(0, breakMinutes) * 60 * 1000;
+
+      if (!isCheckedIn) {
+        setElapsedTime(formatClockDuration(baseWorkedMs));
+        setBreakDuration(formatMinuteDuration(baseBreakMs));
+        return;
+      }
+
+      const elapsedSinceSyncMs = Math.max(0, now.getTime() - syncedAt.getTime());
+      const liveWorkedMs = isOnBreak ? baseWorkedMs : baseWorkedMs + elapsedSinceSyncMs;
+      const liveBreakMs = isOnBreak ? baseBreakMs + elapsedSinceSyncMs : baseBreakMs;
+
+      setElapsedTime(formatClockDuration(liveWorkedMs));
+      setBreakDuration(formatMinuteDuration(liveBreakMs));
+    };
+
+    tick();
+
+    const timer = setInterval(() => {
+      tick();
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isCheckedIn, checkInTime]);
+  }, [breakMinutes, checkInTime, isCheckedIn, isOnBreak, syncedAt, workedHours]);
 
   return (
     <motion.div
@@ -86,14 +134,27 @@ export const CheckInOutCard: React.FC<CheckInOutCardProps> = ({
         <div className={`text-4xl font-mono font-bold ${isCheckedIn ? 'text-white' : 'text-[#0F172A]'}`}>
           {isCheckedIn ? elapsedTime : format(currentTime, 'HH:mm:ss')}
         </div>
-        
+
         <p className={`text-sm mt-2 ${isCheckedIn ? 'text-white/80' : 'text-[#475569]'}`}>
-          {format(currentTime, 'EEEE, MMMM d, yyyy')}
+          {isCheckedIn ? 'Net worked time for today' : format(currentTime, 'EEEE, MMMM d, yyyy')}
         </p>
       </div>
 
       {/* Actions */}
       <div className="p-6 space-y-4">
+        {(workedHours > 0 || breakMinutes > 0 || isCheckedIn) && (
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-slate-50 p-3">
+              <p className="text-xs uppercase tracking-wide text-[#64748B]">Worked Today</p>
+              <p className="mt-1 font-semibold text-[#0F172A]">{elapsedTime}</p>
+            </div>
+            <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-slate-50 p-3">
+              <p className="text-xs uppercase tracking-wide text-[#64748B]">Break Time</p>
+              <p className="mt-1 font-semibold text-[#0F172A]">{breakDuration}</p>
+            </div>
+          </div>
+        )}
+
         {!isCheckedIn ? (
           <>
             {/* Remote Toggle */}

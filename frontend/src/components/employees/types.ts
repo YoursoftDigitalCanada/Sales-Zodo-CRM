@@ -74,6 +74,7 @@ export interface AttendanceRecord {
   status: AttendanceStatus;
   workHours: number;
   overtime: number;
+  breakMinutes?: number;
   notes?: string;
   location?: string;
   isRemote: boolean;

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { format } from 'date-fns';
 import { 
   Clock, 
@@ -33,7 +33,14 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { AttendanceRecord } from './types';
-import { getAttendanceStatusConfig, getInitials, formatWorkHours } from './utils';
+import {
+  buildAttendanceDailyTotals,
+  formatMinutesAsDuration,
+  formatWorkHours,
+  getAttendanceDayKey,
+  getAttendanceStatusConfig,
+  getInitials,
+} from './utils';
 
 interface AttendanceTableProps {
   records: AttendanceRecord[];
@@ -46,6 +53,8 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
   onEdit,
   onViewDetails,
 }) => {
+  const dailyTotals = useMemo(() => buildAttendanceDailyTotals(records), [records]);
+
   if (records.length === 0) {
     return (
       <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-10 text-center">
@@ -81,6 +90,7 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
             const locationLabel = isLeaveRecord
               ? record.location || 'On Leave'
               : record.location || (record.isRemote ? 'Remote' : 'Office');
+            const dayTotals = dailyTotals.get(getAttendanceDayKey(record.employeeId, record.date));
 
             return (
               <TableRow key={record.id}>
@@ -122,11 +132,28 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
                 </TableCell>
                 <TableCell>
                   {record.workHours > 0 ? (
-                    <span className="font-medium text-[#0F172A]">
-                      {formatWorkHours(record.workHours)}
-                    </span>
+                    <div className="space-y-1">
+                      <p className="font-medium text-[#0F172A]">
+                        Session: {formatWorkHours(record.workHours)}
+                      </p>
+                      {dayTotals && (
+                        <p className="text-xs text-[#64748B]">
+                          Day total: {formatWorkHours(dayTotals.workHours)}
+                        </p>
+                      )}
+                      <p className="text-xs text-[#64748B]">
+                        Break: {formatMinutesAsDuration(record.breakMinutes || 0)}
+                      </p>
+                    </div>
                   ) : (
-                    <span className="text-[#94A3B8]">—</span>
+                    <div className="space-y-1">
+                      <span className="text-[#94A3B8]">—</span>
+                      {!isLeaveRecord && (
+                        <p className="text-xs text-[#64748B]">
+                          Break: {formatMinutesAsDuration(record.breakMinutes || 0)}
+                        </p>
+                      )}
+                    </div>
                   )}
                 </TableCell>
                 <TableCell>

@@ -38,6 +38,10 @@ import {
   AttendanceCalendar,
   CheckInOutCard,
   AttendanceRecord,
+  buildAttendanceDailyTotals,
+  formatMinutesAsDuration,
+  formatWorkHours,
+  getAttendanceDayKey,
   getAttendanceStatusConfig,
 } from '@/components/employees';
 import { getStoredEmployee, isStoredEmployeeAdmin } from '@/features/auth/lib/auth-storage';
@@ -125,6 +129,7 @@ const toAttendanceRecord = (record: AttendanceEntity): AttendanceRecord => ({
   status: record.status,
   workHours: Number(record.workHours || 0),
   overtime: Number(record.overtime || 0),
+  breakMinutes: Number(record.breakMinutes || 0),
   notes: record.notes || undefined,
   location: record.location,
   isRemote: record.isRemote,
@@ -220,6 +225,19 @@ const buildMapLink = (lat?: number | null, lng?: number | null): string | null =
 const isLeaveAttendanceRecord = (record: AttendanceRecord | null | undefined): record is AttendanceRecord => (
   Boolean(record && record.status === 'on-leave')
 );
+
+const mergeActiveAttendanceRecord = (
+  sourceRecords: AttendanceRecord[],
+  activeEntry: AttendanceEntity | null | undefined,
+): AttendanceRecord[] => {
+  if (!activeEntry) {
+    return sourceRecords;
+  }
+
+  const liveRecord = toAttendanceRecord(activeEntry);
+  const nextRecords = sourceRecords.filter((record) => record.id !== liveRecord.id);
+  return [liveRecord, ...nextRecords];
+};
 
 const AttendancePage: React.FC = () => {
   const storedEmployee = getStoredEmployee();
@@ -361,8 +379,38 @@ const AttendancePage: React.FC = () => {
     }
   }, [activeTab, isAdminUser]);
 
+  useEffect(() => {
+    if (!currentStatus?.isCheckedIn) {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      getCurrentAttendance()
+        .then((nextStatus) => {
+          setCurrentStatus(nextStatus);
+        })
+        .catch((error) => {
+          console.error('Failed to refresh current attendance:', error);
+        });
+    }, 30000);
+
+    return () => window.clearInterval(intervalId);
+  }, [currentStatus?.isCheckedIn]);
+
+  const displayRecords = useMemo(
+    () => mergeActiveAttendanceRecord(records, currentStatus?.activeEntry),
+    [currentStatus?.activeEntry, records],
+  );
+
+  const displayCalendarRecords = useMemo(
+    () => mergeActiveAttendanceRecord(calendarRecords, currentStatus?.activeEntry),
+    [calendarRecords, currentStatus?.activeEntry],
+  );
+
+  const dailyTotals = useMemo(() => buildAttendanceDailyTotals(displayRecords), [displayRecords]);
+
   const filteredRecords = useMemo(() => {
-    let nextRecords = [...records];
+    let nextRecords = [...displayRecords];
     const today = new Date();
 
     switch (dateRange) {
@@ -399,34 +447,66 @@ const AttendancePage: React.FC = () => {
 
     nextRecords.sort((a, b) => b.date.getTime() - a.date.getTime());
     return nextRecords;
-  }, [dateRange, records, searchQuery, selectedEmployee]);
+  }, [dateRange, displayRecords, searchQuery, selectedEmployee]);
 
   const todaysRecords = useMemo(() => {
     const todayKey = format(new Date(), 'yyyy-MM-dd');
-    return records
+    return displayRecords
       .filter((record) => format(record.date, 'yyyy-MM-dd') === todayKey)
       .sort((a, b) => b.date.getTime() - a.date.getTime());
-  }, [records]);
+  }, [displayRecords]);
 
   const currentCheckInTime = currentStatus?.activeEntry?.checkIn
     ? new Date(currentStatus.activeEntry.checkIn)
     : undefined;
 
+  const currentDayTotals = useMemo(() => {
+    if (!currentEmployeeId) {
+      return undefined;
+    }
+
+    return dailyTotals.get(getAttendanceDayKey(currentEmployeeId, new Date()));
+  }, [currentEmployeeId, dailyTotals]);
+
+  const resolvedDetailsRecord = useMemo(() => {
+    if (!detailsRecord) {
+      return null;
+    }
+
+    return displayRecords.find((record) => record.id === detailsRecord.id)
+      || displayCalendarRecords.find((record) => record.id === detailsRecord.id)
+      || detailsRecord;
+  }, [detailsRecord, displayCalendarRecords, displayRecords]);
+
+  const detailsDayTotals = useMemo(() => {
+    if (!resolvedDetailsRecord) {
+      return undefined;
+    }
+
+    return dailyTotals.get(getAttendanceDayKey(resolvedDetailsRecord.employeeId, resolvedDetailsRecord.date));
+  }, [dailyTotals, resolvedDetailsRecord]);
+
   const displayedMonthlySummary = !isAdminUser || currentEmployeeId ? myMonthlySummary : teamMonthlySummary;
 
   const exportRecords = () => {
-    const headers = ['Employee', 'Date', 'Check In', 'Check Out', 'Work Hours', 'Overtime', 'Status', 'Location', 'Notes'];
-    const rows = filteredRecords.map((record) => [
+    const headers = ['Employee', 'Date', 'Check In', 'Check Out', 'Session Hours', 'Daily Hours', 'Break Time', 'Overtime', 'Status', 'Location', 'Notes'];
+    const rows = filteredRecords.map((record) => {
+      const dayTotals = dailyTotals.get(getAttendanceDayKey(record.employeeId, record.date));
+
+      return [
       record.employeeName,
       format(record.date, 'yyyy-MM-dd'),
       record.checkIn ? format(record.checkIn, 'HH:mm') : '',
       record.checkOut ? format(record.checkOut, 'HH:mm') : '',
       record.workHours.toFixed(1),
+      (dayTotals?.workHours || record.workHours).toFixed(1),
+      formatMinutesAsDuration(record.breakMinutes || 0),
       record.overtime.toFixed(1),
       record.status,
       record.location || (record.isRemote ? 'Remote' : 'Office'),
       record.notes || '',
-    ]);
+      ];
+    });
 
     const csvContent = [headers, ...rows]
       .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
@@ -617,6 +697,8 @@ const AttendancePage: React.FC = () => {
             <CheckInOutCard
               isCheckedIn={currentStatus?.isCheckedIn === true}
               checkInTime={currentCheckInTime}
+              workedHours={currentDayTotals?.workHours || 0}
+              breakMinutes={currentDayTotals?.breakMinutes || 0}
               onCheckIn={handleCheckIn}
               onCheckOut={handleCheckOut}
               onBreakStart={handleBreakStart}
@@ -643,7 +725,7 @@ const AttendancePage: React.FC = () => {
               Today's Attendance
             </h3>
             <AttendanceTable
-              records={todaysRecords.slice(0, 10)}
+              records={todaysRecords}
               onEdit={handleEditRecord}
               onViewDetails={setDetailsRecord}
             />
@@ -721,12 +803,12 @@ const AttendancePage: React.FC = () => {
           </div>
 
           <AttendanceCalendar
-            records={calendarRecords}
+            records={displayCalendarRecords}
             employeeId={selectedEmployee !== 'all' ? selectedEmployee : undefined}
             month={calendarMonth}
             onMonthChange={setCalendarMonth}
             onDateClick={(date) => {
-              const clickedRecords = calendarRecords.filter((record) =>
+              const clickedRecords = displayCalendarRecords.filter((record) =>
                 format(record.date, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
                 && (selectedEmployee === 'all' || record.employeeId === selectedEmployee),
               );
@@ -743,6 +825,8 @@ const AttendancePage: React.FC = () => {
             <CheckInOutCard
               isCheckedIn={currentStatus?.isCheckedIn === true}
               checkInTime={currentCheckInTime}
+              workedHours={currentDayTotals?.workHours || 0}
+              breakMinutes={currentDayTotals?.breakMinutes || 0}
               onCheckIn={handleCheckIn}
               onCheckOut={handleCheckOut}
               onBreakStart={handleBreakStart}
@@ -771,12 +855,12 @@ const AttendancePage: React.FC = () => {
           )}
 
           <AttendanceCalendar
-            records={calendarRecords}
+            records={displayCalendarRecords}
             employeeId={currentEmployeeId}
             month={calendarMonth}
             onMonthChange={setCalendarMonth}
             onDateClick={(date) => {
-              const clickedRecord = calendarRecords.find((record) =>
+              const clickedRecord = displayCalendarRecords.find((record) =>
                 record.employeeId === currentEmployeeId
                 && format(record.date, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'),
               );
@@ -801,41 +885,53 @@ const AttendancePage: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
 
-          {detailsRecord && (
+          {resolvedDetailsRecord && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="rounded-md border border-[rgba(15,23,42,0.06)] p-3">
                   <p className="text-xs uppercase tracking-wide text-[#64748B]">Employee</p>
-                  <p className="mt-1 font-medium text-[#0F172A]">{detailsRecord.employeeName}</p>
+                  <p className="mt-1 font-medium text-[#0F172A]">{resolvedDetailsRecord.employeeName}</p>
                 </div>
                 <div className="rounded-md border border-[rgba(15,23,42,0.06)] p-3">
                   <p className="text-xs uppercase tracking-wide text-[#64748B]">Status</p>
                   <p className="mt-1 font-medium text-[#0F172A]">
-                    {getAttendanceStatusConfig(detailsRecord.status).label}
+                    {getAttendanceStatusConfig(resolvedDetailsRecord.status).label}
                   </p>
                 </div>
                 <div className="rounded-md border border-[rgba(15,23,42,0.06)] p-3">
                   <p className="text-xs uppercase tracking-wide text-[#64748B]">Check In</p>
                   <p className="mt-1 font-medium text-[#0F172A]">
-                    {detailsRecord.checkIn ? format(detailsRecord.checkIn, 'MMM d, yyyy h:mm a') : '—'}
+                    {resolvedDetailsRecord.checkIn ? format(resolvedDetailsRecord.checkIn, 'MMM d, yyyy h:mm a') : '—'}
                   </p>
                 </div>
                 <div className="rounded-md border border-[rgba(15,23,42,0.06)] p-3">
                   <p className="text-xs uppercase tracking-wide text-[#64748B]">Check Out</p>
                   <p className="mt-1 font-medium text-[#0F172A]">
-                    {detailsRecord.checkOut ? format(detailsRecord.checkOut, 'MMM d, yyyy h:mm a') : '—'}
+                    {resolvedDetailsRecord.checkOut ? format(resolvedDetailsRecord.checkOut, 'MMM d, yyyy h:mm a') : '—'}
                   </p>
                 </div>
                 <div className="rounded-md border border-[rgba(15,23,42,0.06)] p-3">
-                  <p className="text-xs uppercase tracking-wide text-[#64748B]">Work Hours</p>
-                  <p className="mt-1 font-medium text-[#0F172A]">{detailsRecord.workHours.toFixed(1)}h</p>
+                  <p className="text-xs uppercase tracking-wide text-[#64748B]">Session Hours</p>
+                  <p className="mt-1 font-medium text-[#0F172A]">{formatWorkHours(resolvedDetailsRecord.workHours)}</p>
+                </div>
+                <div className="rounded-md border border-[rgba(15,23,42,0.06)] p-3">
+                  <p className="text-xs uppercase tracking-wide text-[#64748B]">Daily Hours</p>
+                  <p className="mt-1 font-medium text-[#0F172A]">
+                    {detailsDayTotals ? formatWorkHours(detailsDayTotals.workHours) : '—'}
+                  </p>
+                </div>
+                <div className="rounded-md border border-[rgba(15,23,42,0.06)] p-3">
+                  <p className="text-xs uppercase tracking-wide text-[#64748B]">Break Time</p>
+                  <p className="mt-1 font-medium text-[#0F172A]">
+                    {formatMinutesAsDuration(resolvedDetailsRecord.breakMinutes || 0)}
+                  </p>
                 </div>
                 <div className="rounded-md border border-[rgba(15,23,42,0.06)] p-3">
                   <p className="text-xs uppercase tracking-wide text-[#64748B]">Location</p>
                   <p className="mt-1 font-medium text-[#0F172A]">
-                    {isLeaveAttendanceRecord(detailsRecord)
-                      ? detailsRecord.location || 'On Leave'
-                      : detailsRecord.location || (detailsRecord.isRemote ? 'Remote' : 'Office')}
+                    {isLeaveAttendanceRecord(resolvedDetailsRecord)
+                      ? resolvedDetailsRecord.location || 'On Leave'
+                      : resolvedDetailsRecord.location || (resolvedDetailsRecord.isRemote ? 'Remote' : 'Office')}
                   </p>
                 </div>
               </div>
@@ -843,11 +939,11 @@ const AttendancePage: React.FC = () => {
               <div className="rounded-md border border-[rgba(15,23,42,0.06)] p-3">
                 <p className="text-xs uppercase tracking-wide text-[#64748B]">Notes</p>
                 <p className="mt-1 text-sm text-[#475569] whitespace-pre-wrap">
-                  {detailsRecord.notes || 'No notes saved for this record.'}
+                  {resolvedDetailsRecord.notes || 'No notes saved for this record.'}
                 </p>
               </div>
 
-              {isLeaveAttendanceRecord(detailsRecord) ? (
+              {isLeaveAttendanceRecord(resolvedDetailsRecord) ? (
                 <div className="rounded-md border border-blue-100 bg-blue-50 p-4">
                   <p className="text-sm font-medium text-[#0F172A]">Approved leave day</p>
                   <p className="mt-1 text-sm text-[#475569]">
@@ -862,11 +958,11 @@ const AttendancePage: React.FC = () => {
                       <MapPin className="mt-0.5 h-4 w-4 text-[#0891B2]" />
                       <div>
                         <p className="font-medium text-[#0F172A]">
-                          {formatCoordinates(detailsRecord.clockInLat, detailsRecord.clockInLng) || 'No start location saved'}
+                          {formatCoordinates(resolvedDetailsRecord.clockInLat, resolvedDetailsRecord.clockInLng) || 'No start location saved'}
                         </p>
-                        {buildMapLink(detailsRecord.clockInLat, detailsRecord.clockInLng) && (
+                        {buildMapLink(resolvedDetailsRecord.clockInLat, resolvedDetailsRecord.clockInLng) && (
                           <a
-                            href={buildMapLink(detailsRecord.clockInLat, detailsRecord.clockInLng) || '#'}
+                            href={buildMapLink(resolvedDetailsRecord.clockInLat, resolvedDetailsRecord.clockInLng) || '#'}
                             target="_blank"
                             rel="noreferrer"
                             className="text-xs text-[#0891B2] hover:underline"
@@ -883,11 +979,11 @@ const AttendancePage: React.FC = () => {
                       <MapPin className="mt-0.5 h-4 w-4 text-[#0891B2]" />
                       <div>
                         <p className="font-medium text-[#0F172A]">
-                          {formatCoordinates(detailsRecord.clockOutLat, detailsRecord.clockOutLng) || 'No check-out location saved'}
+                          {formatCoordinates(resolvedDetailsRecord.clockOutLat, resolvedDetailsRecord.clockOutLng) || 'No check-out location saved'}
                         </p>
-                        {buildMapLink(detailsRecord.clockOutLat, detailsRecord.clockOutLng) && (
+                        {buildMapLink(resolvedDetailsRecord.clockOutLat, resolvedDetailsRecord.clockOutLng) && (
                           <a
-                            href={buildMapLink(detailsRecord.clockOutLat, detailsRecord.clockOutLng) || '#'}
+                            href={buildMapLink(resolvedDetailsRecord.clockOutLat, resolvedDetailsRecord.clockOutLng) || '#'}
                             target="_blank"
                             rel="noreferrer"
                             className="text-xs text-[#0891B2] hover:underline"

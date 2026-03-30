@@ -80,7 +80,7 @@ interface SubMenuItem {
   title: string;
   path: string;
   featureId?: FeatureId | FeatureId[];
-  permissionModule?: string;
+  permissionModule?: string | string[];
   adminOnly?: boolean;
   badge?: string | number;
   badgeColor?: "teal" | "gold" | "red" | "blue";
@@ -92,7 +92,7 @@ interface NavigationItem {
   icon?: LucideIcon;
   path?: string;
   featureId?: FeatureId | FeatureId[];
-  permissionModule?: string;
+  permissionModule?: string | string[];
   adminOnly?: boolean;
   isHeader?: boolean;
   submenu?: SubMenuItem[];
@@ -115,7 +115,7 @@ interface MobileTabItem {
   label: string;
   path: string;
   featureId?: FeatureId;
-  permissionModule?: string;
+  permissionModule?: string | string[];
 }
 
 type BadgeColor = NonNullable<NavigationItem["badgeColor"]>;
@@ -433,14 +433,13 @@ const navigationItems: NavigationItem[] = [
   {
     title: "Settings",
     icon: Settings,
-    permissionModule: "settings",
     submenu: [
-      { title: "General", path: "/settings/general" },
-      { title: "Company Profile", path: "/settings/company" },
-      { title: "Billing", path: "/settings/billing" },
-      { title: "Email Settings", path: "/settings/email" },
-      { title: "Security", path: "/settings/security" },
-      { title: "Integrations", path: "/settings/integrations/whatsapp" },
+      { title: "General", path: "/settings/general", permissionModule: "settings" },
+      { title: "Company Profile", path: "/settings/company", permissionModule: "settings" },
+      { title: "Billing", path: "/settings/billing", permissionModule: "settings" },
+      { title: "Email Settings", path: "/settings/email", permissionModule: ["settings", "emails"] },
+      { title: "Security", path: "/settings/security", permissionModule: "settings" },
+      { title: "Integrations", path: "/settings/integrations/whatsapp", permissionModule: "settings" },
     ]
   },
   {
@@ -476,11 +475,14 @@ const hasFeatureAccess = (
 
 /** Check if user has ANY permission for a given module */
 const hasModulePermission = (
-  permissionModule: string | undefined,
+  permissionModule: string | string[] | undefined,
   userPermissions: string[] | null
 ): boolean => {
   // No permissionModule defined = always visible (e.g. Help Center)
   if (!permissionModule) return true;
+  if (Array.isArray(permissionModule)) {
+    return permissionModule.some((module) => hasModulePermission(module, userPermissions));
+  }
   // No permissions loaded = show everything (Owner/Admin or legacy user)
   if (!userPermissions) return true;
   // Permission codes use dot notation: "module.action" (e.g. "leads.view", "invoices.create")

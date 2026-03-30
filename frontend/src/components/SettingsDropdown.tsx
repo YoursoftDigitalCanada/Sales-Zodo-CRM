@@ -64,31 +64,31 @@ export const SettingsDropdown: React.FC<SettingsDropdownProps> = ({
       icon: Settings2,
       label: "General Settings",
       description: "Language, timezone, notifications",
-      path: "/settings?section=general",
+      path: "/settings/general",
     },
     {
       icon: Building2,
       label: "Company Profile",
       description: "Organization info and branding",
-      path: "/settings?section=company",
+      path: "/settings/company",
     },
     {
       icon: CreditCard,
       label: "Billing & Plans",
       description: "Subscription and payments",
-      path: "/settings?section=billing",
+      path: "/settings/billing",
     },
     {
       icon: Mail,
       label: "Email Settings",
-      description: "SMTP and email templates",
-      path: "/settings?section=email",
+      description: "Personal mailbox, sync, and templates",
+      path: "/settings/email",
     },
     {
       icon: Shield,
       label: "Security",
       description: "Password and 2FA settings",
-      path: "/settings?section=security",
+      path: "/settings/security",
     },
     {
       icon: Plug,
@@ -144,7 +144,7 @@ export const SettingsDropdown: React.FC<SettingsDropdownProps> = ({
           </button>
           <button
             className="flex flex-col items-center gap-1 p-3 rounded-md hover:bg-white/5 transition-colors"
-            onClick={() => navigate("/settings?section=general")}
+            onClick={() => navigate("/settings/notifications")}
           >
             <div className="w-10 h-10 bg-purple-100 rounded-md flex items-center justify-center">
               <Bell size={18} className="text-purple-600" />

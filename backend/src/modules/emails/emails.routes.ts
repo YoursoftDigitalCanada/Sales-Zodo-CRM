@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { emailsController } from './emails.controller';
 import { authenticate, loadEmployee } from '../../common/middleware/auth.middleware';
-import { requirePermission } from '../../common/middleware/permission.middleware';
+import { requireAnyPermission, requirePermission } from '../../common/middleware/permission.middleware';
 import { validate } from '../../common/middleware/validate.middleware';
 import { PERMISSIONS } from '../../common/constants/permissions';
 import { sendEmailSchema, emailQuerySchema, emailIdSchema, updateMailboxSettingsSchema } from './emails.validators';
@@ -12,9 +12,22 @@ const router = Router();
 router.use(authenticate);
 router.use(loadEmployee);
 
-router.get('/config-status', requirePermission(PERMISSIONS.EMAILS_VIEW), emailsController.getConfigStatus.bind(emailsController));
-router.get('/mailbox/settings', requirePermission(PERMISSIONS.EMAILS_VIEW), emailsController.getMailboxSettings.bind(emailsController));
-router.put('/mailbox/settings', requirePermission(PERMISSIONS.EMAILS_VIEW), validate(updateMailboxSettingsSchema), emailsController.updateMailboxSettings.bind(emailsController));
+router.get(
+    '/config-status',
+    requireAnyPermission([PERMISSIONS.EMAILS_VIEW, PERMISSIONS.EMAILS_SEND]),
+    emailsController.getConfigStatus.bind(emailsController),
+);
+router.get(
+    '/mailbox/settings',
+    requireAnyPermission([PERMISSIONS.EMAILS_VIEW, PERMISSIONS.EMAILS_SEND]),
+    emailsController.getMailboxSettings.bind(emailsController),
+);
+router.put(
+    '/mailbox/settings',
+    requireAnyPermission([PERMISSIONS.EMAILS_VIEW, PERMISSIONS.EMAILS_SEND]),
+    validate(updateMailboxSettingsSchema),
+    emailsController.updateMailboxSettings.bind(emailsController),
+);
 router.get('/', requirePermission(PERMISSIONS.EMAILS_VIEW), validate(emailQuerySchema), emailsController.getEmails.bind(emailsController));
 router.post(
     '/send',

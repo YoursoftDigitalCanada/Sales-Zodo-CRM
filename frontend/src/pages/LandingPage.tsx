@@ -596,7 +596,7 @@ export default function LandingPage() {
         />
 
         <FadeIn>
-          <div className="rounded-2xl overflow-hidden" style={{ boxShadow: '0 32px 80px rgba(102,55,244,0.10)', border: `1px solid ${T.border}` }}>
+          <div className="rounded-2xl overflow-hidden" style={{ boxShadow: '0 32px 80px rgba(8,145,178,0.10)', border: `1px solid ${T.border}` }}>
             {/* Browser Chrome */}
             <div className="flex items-center gap-2 px-5 py-3" style={{ background: T.surfaceTint, borderBottom: `1px solid ${T.border}` }}>
               <div className="flex gap-1.5">
@@ -610,12 +610,14 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
-            <img
-              src={dashboardMockup}
-              alt="ZODO CRM Dashboard Preview"
-              className="w-full"
-              style={{ objectFit: 'cover', maxHeight: '520px' }}
-            />
+            <div style={{ background: T.surfaceTint }}>
+              <img
+                src={dashboardMockup}
+                alt="ZODO CRM Dashboard Preview"
+                className="w-full block"
+                style={{ objectFit: 'contain' }}
+              />
+            </div>
           </div>
         </FadeIn>
 

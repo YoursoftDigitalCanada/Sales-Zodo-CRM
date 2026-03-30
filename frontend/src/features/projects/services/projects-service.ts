@@ -70,6 +70,29 @@ export interface ProjectEntity {
   client?: {
     id: string;
     clientName?: string | null;
+    primaryEmail?: string | null;
+    primaryPhone?: string | null;
+    streetAddress?: string | null;
+    city?: string | null;
+    province?: string | null;
+    postalCode?: string | null;
+    country?: string | null;
+    gstHstNumber?: string | null;
+    paymentTerms?: string | null;
+    currency?: string | null;
+  } | null;
+  quote?: {
+    id: string;
+    quoteNumber?: string | null;
+    total?: number | string | null;
+    subtotal?: number | string | null;
+    taxRate?: number | string | null;
+    taxAmount?: number | string | null;
+    discountAmount?: number | string | null;
+    status?: string | null;
+    notes?: string | null;
+    terms?: string | null;
+    currency?: string | null;
   } | null;
   stage?: {
     id: string;

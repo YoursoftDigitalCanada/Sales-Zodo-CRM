@@ -7,23 +7,33 @@ const invoiceInclude = {
     items: true,
 };
 
-function calculateTotals(items: { quantity: number; unitPrice: number; amount: number }[], taxRate?: number | null) {
-    const subtotal = items.reduce((sum, item) => sum + item.amount, 0);
-    const taxAmount = taxRate ? (subtotal * taxRate) / 100 : 0;
-    const total = subtotal + taxAmount;
+function calculateTotals(
+    items: { quantity: number; unitPrice: number; amount: number }[],
+    taxRate?: number | null,
+    discountAmount?: number | null,
+) {
+    const subtotal = items.reduce((sum, item) => sum + Number(item.amount), 0);
+    const safeTaxRate = taxRate ? Number(taxRate) : 0;
+    const taxAmount = safeTaxRate ? (subtotal * safeTaxRate) / 100 : 0;
+    const safeDiscount = discountAmount ? Number(discountAmount) : 0;
+    const total = subtotal + taxAmount - safeDiscount;
     return { subtotal, taxAmount, total, amountDue: total };
 }
 
 export class InvoicesRepository {
     async create(tenantId: string, data: CreateInvoiceDto) {
-        const { subtotal, taxAmount, total, amountDue } = calculateTotals(data.items as any, data.taxRate as any);
+        const { subtotal, taxAmount, total, amountDue } = calculateTotals(
+            data.items as any,
+            data.taxRate as any,
+            data.discountAmount as any,
+        );
 
         return prisma.invoice.create({
             data: {
                 tenantId,
                 invoiceNumber: data.invoiceNumber,
                 clientId: data.clientId || undefined,
-                issueDate: data.issueDate ? new Date(data.issueDate) : new Date(),
+                issueDate: data.issueDate ? new Date(data.issueDate) : data.invoiceDate ? new Date(data.invoiceDate as any) : new Date(),
                 dueDate: new Date(data.dueDate),
                 currency: data.currency || 'USD',
                 status: 'DRAFT',
@@ -32,6 +42,7 @@ export class InvoicesRepository {
                 terms: data.terms,
                 subtotal,
                 taxAmount,
+                discountAmount: data.discountAmount ?? 0,
                 total,
                 amountPaid: 0,
                 amountDue,
@@ -81,16 +92,36 @@ export class InvoicesRepository {
         if (!existing) throw new Error('Invoice not found or access denied');
 
         let totals = {};
-        if (data.items) {
-            await prisma.invoiceItem.deleteMany({ where: { invoiceId: id } });
-            totals = calculateTotals(data.items as any, data.taxRate as any);
+        if (data.items || data.taxRate !== undefined || data.discountAmount !== undefined) {
+            const itemsForTotals = data.items
+                ? (data.items as any)
+                : await prisma.invoiceItem.findMany({
+                    where: { invoiceId: id },
+                    select: { quantity: true, unitPrice: true, amount: true },
+                });
+
+            if (data.items) {
+                await prisma.invoiceItem.deleteMany({ where: { invoiceId: id } });
+            }
+
+            const calculated = calculateTotals(
+                itemsForTotals as any,
+                data.taxRate !== undefined ? (data.taxRate as any) : (existing as any).taxRate,
+                data.discountAmount !== undefined ? (data.discountAmount as any) : (existing as any).discountAmount,
+            );
+            totals = {
+                ...calculated,
+                amountDue: Math.max(calculated.total - Number((existing as any).amountPaid || 0), 0),
+            };
         }
 
         return prisma.invoice.update({
             where: { id },
             data: {
                 ...(data.invoiceNumber !== undefined && { invoiceNumber: data.invoiceNumber }),
-                ...(data.issueDate !== undefined && { issueDate: new Date(data.issueDate) }),
+                ...((data.issueDate !== undefined || (data as any).invoiceDate !== undefined) && {
+                    issueDate: new Date((data.issueDate ?? (data as any).invoiceDate) as any),
+                }),
                 ...(data.dueDate !== undefined && { dueDate: new Date(data.dueDate) }),
                 ...(data.currency !== undefined && { currency: data.currency }),
                 ...(data.status !== undefined && { status: data.status }),
@@ -98,6 +129,7 @@ export class InvoicesRepository {
                 ...(data.clientId !== undefined && { clientId: data.clientId }),
                 ...(data.notes !== undefined && { notes: data.notes }),
                 ...(data.terms !== undefined && { terms: data.terms }),
+                ...(data.discountAmount !== undefined && { discountAmount: data.discountAmount }),
                 ...totals,
                 ...(data.items && {
                     items: {

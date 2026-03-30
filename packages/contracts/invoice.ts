@@ -35,10 +35,12 @@ export const CanonicalInvoiceItemSchema = z.object({
 export const CreateInvoiceSchema = z.object({
   invoiceNumber: z.string().min(1).max(50),
   invoiceDate: dateTimeString.optional(),
+  issueDate: dateTimeString.optional(),
   paymentTerms: z.string().max(50).optional().nullable(),
   dueDate: dateTimeString,
   currency: CurrencySchema.default("CAD"),
   taxProvince: z.string().max(50).optional().nullable(),
+  taxRate: z.number().min(0).max(100).optional().nullable(),
   taxRates: z
     .array(
       z.object({
@@ -58,8 +60,10 @@ export const CreateInvoiceSchema = z.object({
   clientPhone: z.string().max(30).optional().nullable(),
   clientAddress: InvoiceAddressSchema.optional(),
   clientGstHstNumber: z.string().max(50).optional().nullable(),
+  discountAmount: z.number().min(0).optional().nullable(),
   items: z.array(InvoiceItemSchema).min(1),
   notes: z.string().optional().nullable(),
+  terms: z.string().optional().nullable(),
 });
 
 export const UpdateInvoiceSchema = CreateInvoiceSchema.partial().extend({

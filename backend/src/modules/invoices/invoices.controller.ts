@@ -41,6 +41,17 @@ export class InvoicesController {
         } catch (e) { next(e); }
     }
 
+    async send(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const invoice = await invoicesService.sendInvoice(
+                req.params.id,
+                req.context.tenantId,
+                sanitizeBody(req.body)?.recipientEmail,
+            );
+            sendSuccess(res, invoice, 'Invoice sent');
+        } catch (e) { next(e); }
+    }
+
     async markAsPaid(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const invoice = await invoicesService.markAsPaid(req.params.id, req.context.tenantId, req.user?.userId);

@@ -156,6 +156,40 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+function getLiveProjectInvoice(project: ProjectEntity | null): Record<string, unknown> | null {
+  if (!project || !Array.isArray(project.invoices) || project.invoices.length === 0) return null;
+  const invoices = project.invoices as Array<Record<string, unknown>>;
+  return invoices.find((invoice) => readText(invoice.status).toUpperCase() === "DRAFT") ?? invoices[0] ?? null;
+}
+
+function getInvoiceItems(invoice: Record<string, unknown> | null) {
+  if (!invoice || !Array.isArray(invoice.items)) return [] as Array<Record<string, unknown>>;
+  return [...(invoice.items as Array<Record<string, unknown>>)].sort(
+    (left, right) => toNumber(left.sortOrder) - toNumber(right.sortOrder),
+  );
+}
+
+function textHasKeyword(value: string, keywords: string[]) {
+  const haystack = value.toLowerCase();
+  return keywords.some((keyword) => haystack.includes(keyword));
+}
+
+function buildProjectBillingSearchText(project: ProjectEntity, invoiceItems: Array<Record<string, unknown>>) {
+  const sourceRows = [
+    ...(Array.isArray(project.projectMaterials) ? project.projectMaterials : []),
+    ...(Array.isArray(project.projectExpenses) ? project.projectExpenses : []),
+    ...(Array.isArray(project.projectLaborEntries) ? project.projectLaborEntries : []),
+    ...invoiceItems,
+  ];
+
+  return sourceRows
+    .map((row) =>
+      [readText(row.name), readText(row.description), readText(row.vendor), readText(row.workerName)].filter(Boolean).join(" "),
+    )
+    .join(" ")
+    .toLowerCase();
+}
+
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -363,6 +397,60 @@ export default function ProjectDetailPage() {
     ? project.projectExpenses.reduce((sum, item) => sum + toNumber(item.amount ?? item.totalCost), 0)
     : 0;
   const currencyCode = project.currency || "USD";
+  const liveInvoice = getLiveProjectInvoice(project);
+  const liveInvoiceItems = getInvoiceItems(liveInvoice);
+  const liveInvoiceStatus = readText(liveInvoice?.status).toUpperCase() || "DRAFT";
+  const liveInvoiceSubtotal = toNumber(liveInvoice?.subtotal);
+  const liveInvoiceTaxAmount = toNumber(liveInvoice?.taxAmount);
+  const liveInvoiceTotal = toNumber(liveInvoice?.total);
+  const liveInvoiceAmountPaid = toNumber(liveInvoice?.amountPaid);
+  const liveInvoiceAmountDue = toNumber(liveInvoice?.amountDue);
+  const liveInvoiceTaxRate = toNumber(liveInvoice?.taxRate ?? project.quote?.taxRate);
+  const isCompletedJob = readText(project.status).toUpperCase() === "COMPLETED" || Boolean(project.isCompleted);
+  const billingSearchText = buildProjectBillingSearchText(project, liveInvoiceItems);
+  const missedBillingAmount = (() => {
+    const labor = Array.isArray(project.projectLaborEntries)
+      ? project.projectLaborEntries
+          .filter((entry) => entry.isBillable === false)
+          .reduce((sum, entry) => sum + toNumber(entry.totalCost), 0)
+      : 0;
+    const addons = Array.isArray(project.projectExpenses)
+      ? project.projectExpenses
+          .filter((expense) => expense.billableToClient !== true)
+          .reduce((sum, expense) => sum + toNumber(expense.amount ?? expense.totalAmount), 0)
+      : 0;
+    return labor + addons;
+  })();
+  const missedBillingRows = (() => {
+    const rows: Array<{ label: string; value: number }> = [];
+    const skippedLabor = Array.isArray(project.projectLaborEntries)
+      ? project.projectLaborEntries
+          .filter((entry) => entry.isBillable === false)
+          .reduce((sum, entry) => sum + toNumber(entry.totalCost), 0)
+      : 0;
+    const skippedAddons = Array.isArray(project.projectExpenses)
+      ? project.projectExpenses
+          .filter((expense) => expense.billableToClient !== true)
+          .reduce((sum, expense) => sum + toNumber(expense.amount ?? expense.totalAmount), 0)
+      : 0;
+
+    if (skippedLabor > 0) rows.push({ label: "Labor not marked billable", value: skippedLabor });
+    if (skippedAddons > 0) rows.push({ label: "Add-ons not included yet", value: skippedAddons });
+    return rows;
+  })();
+  const invoiceSuggestions = (() => {
+    const suggestions: string[] = [];
+    if (!textHasKeyword(billingSearchText, ["disposal", "dump", "haul"])) {
+      suggestions.push("Add disposal fee?");
+    }
+    if (Array.isArray(project.projectInspections) && project.projectInspections.length > 0 && !textHasKeyword(billingSearchText, ["inspection"])) {
+      suggestions.push("Include inspection charge?");
+    }
+    if (permit.label !== "Not Required" && !textHasKeyword(billingSearchText, ["permit"])) {
+      suggestions.push("Bill permit fee?");
+    }
+    return suggestions.slice(0, 3);
+  })();
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] pb-10">
@@ -480,6 +568,180 @@ export default function ProjectDetailPage() {
                 <DetailRow label="Labor Cost" value={formatCurrency(laborCost, currencyCode)} />
                 <DetailRow label="Other Expenses" value={formatCurrency(expenseCost, currencyCode)} />
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="mt-6 rounded-md border-[rgba(15,23,42,0.08)] shadow-sm hover:shadow-lg transition-all">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-semibold text-[#0F172A]">Invoice Preview</CardTitle>
+            <p className="text-sm text-[#64748B]">
+              This job continuously builds the invoice draft in the background so billing is ready when the roof is done.
+            </p>
+          </CardHeader>
+          <CardContent className="grid gap-4 xl:grid-cols-[0.9fr,1.1fr]">
+            <div className="space-y-4">
+              <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-4 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#64748B]">Draft Status</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <Badge className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white px-2.5 py-1 text-xs font-medium text-[#334155]">
+                        {liveInvoice ? liveInvoiceStatus.replace(/_/g, " ") : "Draft pending"}
+                      </Badge>
+                      <Badge className="rounded-md border border-[#BBF7D0] bg-[#F0FDF4] px-2.5 py-1 text-xs font-medium text-[#166534]">
+                        {isCompletedJob ? "Ready for review" : "Auto-sync active"}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {isCompletedJob && liveInvoice ? (
+                    <Button
+                      className="rounded-md"
+                      onClick={() =>
+                        navigate(
+                          `/invoice/create?projectId=${encodeURIComponent(project.id)}&invoiceId=${encodeURIComponent(readText(liveInvoice.id))}&mode=review`,
+                        )
+                      }
+                    >
+                      <FileText className="mr-2 h-4 w-4" />
+                      Review & Send Invoice
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      className="rounded-md"
+                      onClick={() => navigate(`/projects/${id}/edit`)}
+                    >
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Update Job Costs
+                    </Button>
+                  )}
+                </div>
+
+                <div className="mt-4 space-y-1">
+                  <DetailRow label="Client" value={getProjectClientName(project)} />
+                  <DetailRow label="Job Site" value={getProjectSite(project)} />
+                  <DetailRow label="Linked Quote" value={readText(project.quote?.quoteNumber) || "No estimate linked"} />
+                  <DetailRow label="Sync Mode" value={isCompletedJob ? "Locked on completion" : "Live with every job update"} />
+                </div>
+              </div>
+
+              {missedBillingAmount > 0 ? (
+                <div className="rounded-md border border-[#FDE68A] bg-[#FFFBEB] p-4 shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-md bg-white text-[#92400E] shadow-sm">
+                      <AlertCircle className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-[#0F172A]">You forgot to bill {formatCurrency(missedBillingAmount, currencyCode)}</p>
+                      <p className="mt-1 text-sm text-[#64748B]">
+                        Some labor or add-ons are still outside the live invoice draft.
+                      </p>
+                      <div className="mt-3 space-y-2">
+                        {missedBillingRows.map((row) => (
+                          <div
+                            key={row.label}
+                            className="flex items-center justify-between rounded-md border border-[rgba(15,23,42,0.06)] bg-white px-3 py-2 text-sm"
+                          >
+                            <span className="text-[#64748B]">{row.label}</span>
+                            <span className="font-medium text-[#0F172A]">{formatCurrency(row.value, currencyCode)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-md border border-[#BBF7D0] bg-[#F0FDF4] p-4 shadow-sm">
+                  <p className="text-sm font-semibold text-[#0F172A]">Billing coverage looks clean</p>
+                  <p className="mt-1 text-sm text-[#64748B]">
+                    Materials, billable labor, and selected add-ons are flowing into the invoice draft automatically.
+                  </p>
+                </div>
+              )}
+
+              {invoiceSuggestions.length > 0 ? (
+                <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#64748B]">Smart Suggestions</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {invoiceSuggestions.map((suggestion) => (
+                      <Button
+                        key={suggestion}
+                        type="button"
+                        variant="outline"
+                        className="rounded-md"
+                        onClick={() => navigate(`/projects/${id}/edit`)}
+                      >
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        {suggestion}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm">
+              {!liveInvoice ? (
+                <div className="rounded-md border border-dashed border-[#D7E3EA] bg-[#F8FAFC] px-6 py-12 text-center">
+                  <FileText className="mx-auto h-8 w-8 text-[#94A3B8]" />
+                  <h3 className="mt-4 text-lg font-semibold text-[#0F172A]">Invoice draft is being prepared</h3>
+                  <p className="mt-2 text-sm text-[#64748B]">
+                    Link this job to a client estimate and the invoice preview will appear here automatically.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-[#0F172A]">{readText(liveInvoice.invoiceNumber) || "Draft invoice"}</p>
+                      <p className="mt-1 text-xs text-[#64748B]">
+                        {isCompletedJob ? "Final values are locked and ready for client review." : "Updates as materials, labor, and add-ons change."}
+                      </p>
+                    </div>
+                    <Badge className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-2.5 py-1 text-xs font-medium text-[#334155]">
+                      {formatCurrency(liveInvoiceTotal, currencyCode)}
+                    </Badge>
+                  </div>
+
+                  <div className="mt-4 overflow-hidden rounded-md border border-[rgba(15,23,42,0.06)]">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]">
+                          <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.16em] text-[#64748B]">Line Item</th>
+                          <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-[0.16em] text-[#64748B]">Qty</th>
+                          <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-[0.16em] text-[#64748B]">Rate</th>
+                          <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-[0.16em] text-[#64748B]">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {liveInvoiceItems.map((item, index) => (
+                          <tr key={`${readText(item.description)}-${index}`} className="border-b border-[rgba(15,23,42,0.06)] last:border-b-0">
+                            <td className="px-3 py-3">
+                              <p className="text-sm font-medium text-[#0F172A]">{readText(item.description) || "Line item"}</p>
+                            </td>
+                            <td className="px-3 py-3 text-right text-sm text-[#475569]">{toNumber(item.quantity).toFixed(2)}</td>
+                            <td className="px-3 py-3 text-right text-sm text-[#475569]">{formatCurrency(toNumber(item.unitPrice), currencyCode)}</td>
+                            <td className="px-3 py-3 text-right text-sm font-medium text-[#0F172A]">{formatCurrency(toNumber(item.amount), currencyCode)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="mt-4 rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-4 shadow-sm">
+                    <DetailRow label="Subtotal" value={formatCurrency(liveInvoiceSubtotal, currencyCode)} />
+                    <DetailRow
+                      label={liveInvoiceTaxRate > 0 ? `Taxes (${liveInvoiceTaxRate.toFixed(1)}%)` : "Taxes"}
+                      value={formatCurrency(liveInvoiceTaxAmount, currencyCode)}
+                    />
+                    <DetailRow label="Paid" value={formatCurrency(liveInvoiceAmountPaid, currencyCode)} />
+                    <DetailRow label="Amount Due" value={formatCurrency(liveInvoiceAmountDue || liveInvoiceTotal, currencyCode)} />
+                    <DetailRow label="Profit Margin" value={`${profitMargin.toFixed(1)}%`} />
+                  </div>
+                </>
+              )}
             </div>
           </CardContent>
         </Card>

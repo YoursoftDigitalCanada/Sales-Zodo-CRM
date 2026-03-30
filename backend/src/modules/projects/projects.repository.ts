@@ -8,8 +8,37 @@ import {
 } from '../../common/access/data-access';
 
 const projectDetailInclude = {
-  client: { select: { id: true, clientName: true, primaryEmail: true, primaryPhone: true } },
-  quote: { select: { id: true, quoteNumber: true, total: true, status: true } },
+  client: {
+    select: {
+      id: true,
+      clientName: true,
+      primaryEmail: true,
+      primaryPhone: true,
+      streetAddress: true,
+      city: true,
+      province: true,
+      postalCode: true,
+      country: true,
+      gstHstNumber: true,
+      paymentTerms: true,
+      currency: true,
+    },
+  },
+  quote: {
+    select: {
+      id: true,
+      quoteNumber: true,
+      total: true,
+      status: true,
+      subtotal: true,
+      taxRate: true,
+      taxAmount: true,
+      discountAmount: true,
+      notes: true,
+      terms: true,
+      currency: true,
+    },
+  },
   lead: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
   stage: true,
   projectTasks: { orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }], take: 200 },
@@ -25,7 +54,13 @@ const projectDetailInclude = {
   projectPhotos: { orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }], take: 500 },
   projectDocuments: { orderBy: { addedAt: 'desc' }, take: 300 },
   projectStageHistory: { orderBy: { enteredAt: 'desc' }, take: 300, include: { stage: true } },
-  invoices: { orderBy: { createdAt: 'desc' } },
+  invoices: {
+    include: {
+      client: { select: { id: true, clientName: true } },
+      items: { orderBy: { sortOrder: 'asc' } },
+    },
+    orderBy: { createdAt: 'desc' },
+  },
   payments: { orderBy: { paymentDate: 'desc' } },
   _count: {
     select: {

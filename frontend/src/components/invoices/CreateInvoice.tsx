@@ -1,6 +1,6 @@
 // src/pages/CreateInvoice.tsx
 import React, { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useForm, FormProvider, useFieldArray, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -99,15 +99,16 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { createInvoice } from "@/services/invoiceService";
+import { createInvoice, sendInvoice, updateInvoice } from "@/services/invoiceService";
 import { getClients } from "@/features/clients/services/clients-service";
+import { getProjectById, type ProjectEntity } from "@/features/projects/services/projects-service";
 
 // ============================================
 // TYPES
 // ============================================
 
 interface Client {
-  id: number;
+  id: string | number;
   businessName: string;
   email: string;
   phone: string;
@@ -290,6 +291,77 @@ const calculateDueDate = (invoiceDate: string, days: number) => {
   return date.toISOString().split("T")[0];
 };
 
+const readText = (value: unknown) => {
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "number") return String(value);
+  return "";
+};
+
+const toNumber = (value: unknown) => {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+};
+
+const toDateInputValue = (value: unknown) => {
+  const text = readText(value);
+  if (!text) return new Date().toISOString().split("T")[0];
+  const date = new Date(text);
+  return Number.isNaN(date.getTime()) ? new Date().toISOString().split("T")[0] : date.toISOString().split("T")[0];
+};
+
+const getProvinceCode = (value: unknown) => {
+  const text = readText(value).toUpperCase();
+  if (canadianProvinces.some((province) => province.code === text)) return text;
+  const province = canadianProvinces.find((entry) => entry.name.toUpperCase() === text);
+  return province?.code || "ON";
+};
+
+const getProjectInvoice = (project: ProjectEntity, invoiceId?: string | null) => {
+  if (!Array.isArray(project.invoices) || project.invoices.length === 0) return null;
+  const invoices = project.invoices as Array<Record<string, unknown>>;
+  if (invoiceId) {
+    const exact = invoices.find((invoice) => readText(invoice.id) === invoiceId);
+    if (exact) return exact;
+  }
+  return invoices.find((invoice) => readText(invoice.status).toUpperCase() === "DRAFT") ?? invoices[0] ?? null;
+};
+
+const mapInvoiceItemsToFormItems = (
+  items: Array<Record<string, unknown>>,
+  taxRates: { gst: number; pst: number; hst: number },
+): LineItem[] =>
+  items.map((item, index) => {
+    const quantity = toNumber(item.quantity) || 1;
+    const rate = toNumber(item.unitPrice);
+    const amount = quantity * rate;
+    return {
+      id: readText(item.id) || crypto.randomUUID(),
+      name: readText(item.description) || `Line Item ${index + 1}`,
+      description: readText(item.description),
+      quantity,
+      rate,
+      taxType: taxRates.hst > 0 ? "HST" : taxRates.pst > 0 ? "GST+PST" : "GST",
+      amount,
+      gst: taxRates.hst > 0 ? 0 : (amount * taxRates.gst) / 100,
+      pst: (amount * taxRates.pst) / 100,
+      hst: (amount * taxRates.hst) / 100,
+      total: amount + (taxRates.hst > 0 ? (amount * taxRates.hst) / 100 : ((amount * taxRates.gst) / 100) + ((amount * taxRates.pst) / 100)),
+    };
+  });
+
+const inferPaymentTerms = (invoiceDate: string, dueDate: string) => {
+  const invoiceTime = new Date(invoiceDate).getTime();
+  const dueTime = new Date(dueDate).getTime();
+  if (Number.isNaN(invoiceTime) || Number.isNaN(dueTime)) return "net_30";
+  const diffInDays = Math.round((dueTime - invoiceTime) / (1000 * 60 * 60 * 24));
+  const exact = paymentTermsOptions.find((option) => option.days === diffInDays);
+  return exact?.value || "custom";
+};
+
 const numberToWords = (num: number): string => {
   if (num === 0) return "Zero Dollars";
 
@@ -382,6 +454,7 @@ const AddressBlock = ({
   onSelectClient,
   showClientSelector = false,
   clients = [],
+  disabled = false,
 }: {
   title: string;
   prefix: "billedBy" | "billedTo";
@@ -391,6 +464,7 @@ const AddressBlock = ({
   onSelectClient?: (client: Client) => void;
   showClientSelector?: boolean;
   clients?: Client[];
+  disabled?: boolean;
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -412,7 +486,7 @@ const AddressBlock = ({
         {showClientSelector && (
           <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="rounded-md text-xs">
+              <Button variant="outline" size="sm" className="rounded-md text-xs" disabled={disabled}>
                 <Search size={12} className="mr-1" />
                 Select Client
               </Button>
@@ -470,6 +544,7 @@ const AddressBlock = ({
             <Input
               {...register(`${prefix}.businessName`)}
               placeholder="Business Name"
+              disabled={disabled}
               className={cn(
                 "h-10 pl-9 rounded-md border-[rgba(15,23,42,0.06)] text-sm",
                 errors?.[prefix]?.businessName && "border-red-500"
@@ -489,6 +564,7 @@ const AddressBlock = ({
               {...register(`${prefix}.email`)}
               type="email"
               placeholder="email@example.com"
+              disabled={disabled}
               className="h-10 pl-9 rounded-md border-[rgba(15,23,42,0.06)] text-sm"
             />
           </div>
@@ -501,6 +577,7 @@ const AddressBlock = ({
             <Input
               {...register(`${prefix}.phone`)}
               placeholder="+1 (000) 000-0000"
+              disabled={disabled}
               className="h-10 pl-9 rounded-md border-[rgba(15,23,42,0.06)] text-sm"
             />
           </div>
@@ -513,6 +590,7 @@ const AddressBlock = ({
             <Input
               {...register(`${prefix}.address`)}
               placeholder="Street Address"
+              disabled={disabled}
               className="h-10 pl-9 rounded-md border-[rgba(15,23,42,0.06)] text-sm"
             />
           </div>
@@ -523,6 +601,7 @@ const AddressBlock = ({
           <Input
             {...register(`${prefix}.city`)}
             placeholder="City"
+            disabled={disabled}
             className="h-10 rounded-md border-[rgba(15,23,42,0.06)] text-sm"
           />
         </div>
@@ -533,7 +612,7 @@ const AddressBlock = ({
             name={`${prefix}.province`}
             control={control}
             render={({ field }) => (
-              <Select value={field.value} onValueChange={field.onChange}>
+              <Select value={field.value} onValueChange={field.onChange} disabled={disabled}>
                 <SelectTrigger className="h-10 rounded-md border-[rgba(15,23,42,0.06)] text-sm">
                   <SelectValue placeholder="Select Province" />
                 </SelectTrigger>
@@ -554,6 +633,7 @@ const AddressBlock = ({
           <Input
             {...register(`${prefix}.postalCode`)}
             placeholder="A1A 1A1"
+            disabled={disabled}
             className="h-10 rounded-md border-[rgba(15,23,42,0.06)] text-sm"
           />
         </div>
@@ -563,6 +643,7 @@ const AddressBlock = ({
           <Input
             {...register(`${prefix}.gstNumber`)}
             placeholder="123456789RT0001"
+            disabled={disabled}
             className="h-10 rounded-md border-[rgba(15,23,42,0.06)] text-sm"
           />
         </div>
@@ -1033,14 +1114,22 @@ const InvoicePreview = ({
 
 const CreateInvoicePage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  const linkedProjectId = searchParams.get("projectId");
+  const requestedInvoiceId = searchParams.get("invoiceId");
+  const isProjectReviewMode = Boolean(linkedProjectId);
 
   // State
   const [user, setUser] = useState<AppUser | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingLinkedInvoice, setIsLoadingLinkedInvoice] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
   const [clients, setClients] = useState<Client[]>([]);
+  const [linkedProjectName, setLinkedProjectName] = useState("");
+  const [linkedInvoiceId, setLinkedInvoiceId] = useState<string | null>(requestedInvoiceId);
+  const selectedClientIdRef = React.useRef<string | null>(null);
 
   // Form
   const methods = useForm<InvoiceFormData>({
@@ -1106,6 +1195,7 @@ const CreateInvoicePage = () => {
     watch,
     setValue,
     getValues,
+    reset,
     formState: { errors },
   } = methods;
 
@@ -1166,6 +1256,89 @@ const CreateInvoicePage = () => {
     }
   }, [setValue]);
 
+  useEffect(() => {
+    if (!linkedProjectId) return;
+
+    let cancelled = false;
+    setIsLoadingLinkedInvoice(true);
+
+    getProjectById(linkedProjectId)
+      .then((project) => {
+        if (cancelled) return;
+
+        const invoice = getProjectInvoice(project, requestedInvoiceId);
+        const provinceCode = getProvinceCode(project.client?.province || project.jobSiteState);
+        const provinceTax = canadianProvinces.find((entry) => entry.code === provinceCode) || canadianProvinces.find((entry) => entry.code === "ON")!;
+        const invoiceDateValue = invoice ? toDateInputValue(invoice.issueDate) : new Date().toISOString().split("T")[0];
+        const dueDateValue = invoice ? toDateInputValue(invoice.dueDate) : calculateDueDate(invoiceDateValue, 30);
+        const reviewItems = mapInvoiceItemsToFormItems(
+          Array.isArray(invoice?.items) ? (invoice.items as Array<Record<string, unknown>>) : [],
+          { gst: provinceTax.gst, pst: provinceTax.pst, hst: provinceTax.hst },
+        );
+
+        selectedClientIdRef.current = readText(project.client?.id) || null;
+        setLinkedProjectName(readText(project.name) || "Roofing Job");
+        setLinkedInvoiceId(readText(invoice?.id) || requestedInvoiceId || null);
+
+        const currentValues = getValues();
+        reset({
+          ...currentValues,
+          invoiceNumber: readText(invoice?.invoiceNumber) || currentValues.invoiceNumber,
+          invoiceDate: invoiceDateValue,
+          dueDate: dueDateValue,
+          paymentTerms: inferPaymentTerms(invoiceDateValue, dueDateValue),
+          currency:
+            readText(invoice?.currency) ||
+            readText(project.currency) ||
+            readText(project.quote?.currency) ||
+            currentValues.currency,
+          clientProvince: provinceCode,
+          billedBy: {
+            ...currentValues.billedBy,
+            province: getProvinceCode(currentValues.billedBy.province),
+          },
+          billedTo: {
+            businessName: readText(project.client?.clientName) || currentValues.billedTo.businessName,
+            email: readText(project.client?.primaryEmail) || currentValues.billedTo.email,
+            phone: readText(project.client?.primaryPhone) || currentValues.billedTo.phone,
+            address: readText(project.client?.streetAddress) || readText(project.jobSiteAddress) || currentValues.billedTo.address,
+            city: readText(project.client?.city) || readText(project.jobSiteCity) || currentValues.billedTo.city,
+            province: provinceCode,
+            postalCode: readText(project.client?.postalCode) || readText(project.jobSiteZip) || currentValues.billedTo.postalCode,
+            country: readText(project.client?.country) || currentValues.billedTo.country,
+            gstNumber: readText(project.client?.gstHstNumber) || currentValues.billedTo.gstNumber,
+          },
+          items: reviewItems.length > 0 ? reviewItems : currentValues.items,
+          notes: readText(invoice?.notes) || readText(project.description) || currentValues.notes || "",
+          terms: readText(invoice?.terms) || readText(project.quote?.terms) || currentValues.terms || "",
+          discount: toNumber(invoice?.discountAmount),
+          discountType: "fixed",
+          sendReminder: currentValues.sendReminder ?? true,
+          isRecurring: false,
+          recurringFrequency: currentValues.recurringFrequency || "monthly",
+        });
+      })
+      .catch((error) => {
+        console.error("Failed to load linked project invoice:", error);
+        if (!cancelled) {
+          toast({
+            title: "Invoice review unavailable",
+            description: "The linked job invoice could not be loaded right now.",
+            variant: "destructive",
+          });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoadingLinkedInvoice(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [getValues, linkedProjectId, requestedInvoiceId, reset, toast]);
+
   // Fetch real clients from API
   useEffect(() => {
     const fetchClients = async () => {
@@ -1200,8 +1373,6 @@ const CreateInvoicePage = () => {
   }, [paymentTerms, invoiceDate, setValue]);
 
   // Handlers
-  const selectedClientIdRef = React.useRef<string | null>(null);
-
   const handleSelectClient = (client: Client) => {
     selectedClientIdRef.current = String(client.id);
     setValue("billedTo.businessName", client.businessName);
@@ -1215,67 +1386,88 @@ const CreateInvoicePage = () => {
     setValue("clientProvince", client.province);
   };
 
-  const onSave = async (data: InvoiceFormData) => {
+  const buildInvoicePayload = (data: InvoiceFormData) => {
+    const effectiveTaxRate = taxRates.hst > 0 ? taxRates.hst : taxRates.gst + taxRates.pst;
+    return {
+      invoiceNumber: data.invoiceNumber,
+      invoiceDate: new Date(data.invoiceDate).toISOString(),
+      dueDate: new Date(data.dueDate).toISOString(),
+      currency: data.currency,
+      taxRate: effectiveTaxRate,
+      discountAmount: totals.discount,
+      paymentTerms: data.paymentTerms,
+      businessName: data.billedBy.businessName,
+      businessEmail: data.billedBy.email || null,
+      businessPhone: data.billedBy.phone || null,
+      businessAddress: {
+        address: data.billedBy.address || null,
+        city: data.billedBy.city || null,
+        province: data.billedBy.province || null,
+        postalCode: data.billedBy.postalCode || null,
+      },
+      businessGstHstNumber: data.billedBy.gstNumber || null,
+      clientId: selectedClientIdRef.current || null,
+      clientBusinessName: data.billedTo.businessName || null,
+      clientEmail: data.billedTo.email || null,
+      clientPhone: data.billedTo.phone || null,
+      clientAddress: {
+        address: data.billedTo.address || null,
+        city: data.billedTo.city || null,
+        province: data.billedTo.province || null,
+        postalCode: data.billedTo.postalCode || null,
+      },
+      clientGstHstNumber: data.billedTo.gstNumber || null,
+      items: data.items.map((item) => ({
+        itemName: item.name,
+        description: item.description || null,
+        quantity: item.quantity,
+        rate: item.rate,
+        taxApplied: (item.gst || 0) > 0 || (item.pst || 0) > 0 || (item.hst || 0) > 0,
+        lineTotal: item.amount || item.quantity * item.rate,
+      })),
+      notes: data.notes || null,
+      terms: data.terms || null,
+    };
+  };
+
+  const persistInvoice = async (data: InvoiceFormData, options?: { send?: boolean }) => {
     setIsSaving(true);
     try {
-      const apiPayload = {
-        invoiceNumber: data.invoiceNumber,
-        invoiceDate: new Date(data.invoiceDate).toISOString(),
-        dueDate: new Date(data.dueDate).toISOString(),
-        currency: data.currency,
-        // Business (Billed By)
-        businessName: data.billedBy.businessName,
-        businessEmail: data.billedBy.email || null,
-        businessPhone: data.billedBy.phone || null,
-        businessAddress: {
-          address: data.billedBy.address || null,
-          city: data.billedBy.city || null,
-          province: data.billedBy.province || null,
-          postalCode: data.billedBy.postalCode || null,
-        },
-        businessGstHstNumber: data.billedBy.gstNumber || null,
-        // Client (Billed To)
-        clientId: selectedClientIdRef.current || null,
-        clientBusinessName: data.billedTo.businessName || null,
-        clientEmail: data.billedTo.email || null,
-        clientPhone: data.billedTo.phone || null,
-        clientAddress: {
-          address: data.billedTo.address || null,
-          city: data.billedTo.city || null,
-          province: data.billedTo.province || null,
-          postalCode: data.billedTo.postalCode || null,
-        },
-        clientGstHstNumber: data.billedTo.gstNumber || null,
-        // Items
-        items: data.items.map((item) => ({
-          itemName: item.name,
-          description: item.description || null,
-          quantity: item.quantity,
-          rate: item.rate,
-          taxApplied: (item.gst || 0) > 0 || (item.pst || 0) > 0 || (item.hst || 0) > 0,
-          lineTotal: item.total || item.quantity * item.rate,
-        })),
-        notes: data.notes || null,
-      };
+      const apiPayload = buildInvoicePayload(data);
+      const response = linkedInvoiceId
+        ? await updateInvoice(linkedInvoiceId, apiPayload)
+        : await createInvoice(apiPayload);
+      const savedInvoice = response?.data || response;
+      const savedInvoiceId = readText(savedInvoice?.id) || linkedInvoiceId;
 
-      await createInvoice(apiPayload);
+      if (options?.send && savedInvoiceId) {
+        await sendInvoice(savedInvoiceId, data.billedTo.email || undefined);
+      }
 
       toast({
-        title: "Invoice Created!",
-        description: `Invoice ${data.invoiceNumber} has been saved successfully.`,
+        title: options?.send ? "Invoice Sent!" : linkedInvoiceId ? "Invoice Updated!" : "Invoice Created!",
+        description: options?.send
+          ? `Invoice ${data.invoiceNumber} was reviewed and sent successfully.`
+          : linkedInvoiceId
+            ? `Invoice ${data.invoiceNumber} has been updated successfully.`
+            : `Invoice ${data.invoiceNumber} has been saved successfully.`,
       });
 
-      navigate("/invoice");
+      navigate(linkedProjectId ? `/projects/${linkedProjectId}` : "/invoice");
     } catch (error) {
       console.error("Save Error:", error);
       toast({
         title: "Error",
-        description: "Failed to save invoice. Please try again.",
+        description: options?.send ? "Failed to send invoice. Please try again." : "Failed to save invoice. Please try again.",
         variant: "destructive",
       });
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const onSave = async (data: InvoiceFormData) => {
+    await persistInvoice(data);
   };
 
   const handleSaveAndSend = async () => {
@@ -1288,9 +1480,7 @@ const CreateInvoicePage = () => {
       });
       return;
     }
-    // Save first, then send
-    await onSave(data);
-    // Implement send logic here
+    await persistInvoice(data, { send: true });
   };
 
   const handleDownloadPDF = () => {
@@ -1330,7 +1520,7 @@ const CreateInvoicePage = () => {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => navigate("/invoice")}
+                onClick={() => navigate(linkedProjectId ? `/projects/${linkedProjectId}` : "/invoice")}
                 className="p-2 rounded-md hover:bg-white/10 text-[#475569] transition-colors"
               >
                 <ArrowLeft size={20} />
@@ -1339,7 +1529,7 @@ const CreateInvoicePage = () => {
               <div className="flex items-center gap-2 text-sm">
                 <span className="text-[#475569]">Invoices</span>
                 <ChevronRight size={16} className="text-[#475569]" />
-                <span className="font-medium text-[#0F172A]">Create Invoice</span>
+                <span className="font-medium text-[#0F172A]">{isProjectReviewMode ? "Review Job Invoice" : "Create Invoice"}</span>
               </div>
             </div>
 
@@ -1349,6 +1539,7 @@ const CreateInvoicePage = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setShowPreview(!showPreview)}
+                disabled={isLoadingLinkedInvoice}
                 className={cn(
                   "flex items-center gap-2 px-4 py-2 rounded-md border transition-colors",
                   showPreview
@@ -1365,6 +1556,7 @@ const CreateInvoicePage = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleDownloadPDF}
+                disabled={isLoadingLinkedInvoice}
                 className="flex items-center gap-2 px-4 py-2 rounded-md border border-[rgba(15,23,42,0.06)] text-[#475569] hover:bg-white/5 transition-colors"
               >
                 <Download size={18} />
@@ -1376,7 +1568,7 @@ const CreateInvoicePage = () => {
                 type="button"
                 variant="outline"
                 onClick={handleSubmit(onSave)}
-                disabled={isSaving}
+                disabled={isSaving || isLoadingLinkedInvoice}
                 className="rounded-md border-[rgba(15,23,42,0.06)]"
               >
                 {isSaving ? (
@@ -1384,18 +1576,18 @@ const CreateInvoicePage = () => {
                 ) : (
                   <Save size={16} className="mr-2" />
                 )}
-                Save Draft
+                {isProjectReviewMode ? "Save Changes" : "Save Draft"}
               </Button>
 
               {/* Save & Send */}
               <Button
                 type="button"
                 onClick={handleSaveAndSend}
-                disabled={isSaving}
+                disabled={isSaving || isLoadingLinkedInvoice}
                 className="bg-[#F1F5F9]/90 hover:from-[#22D3EE]/90 hover:to-[#22D3EE] text-[#0F172A] rounded-md "
               >
                 <Send size={16} className="mr-2" />
-                Save & Send
+                {isProjectReviewMode ? "Review & Send" : "Save & Send"}
               </Button>
             </div>
           </div>
@@ -1410,6 +1602,16 @@ const CreateInvoicePage = () => {
               <div className={cn("grid gap-6", showPreview ? "grid-cols-2" : "grid-cols-1")}>
                 {/* Form Section */}
                 <div className="space-y-6">
+                  {isProjectReviewMode ? (
+                    <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-4 shadow-sm">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#64748B]">Live Job Invoice</p>
+                      <p className="mt-2 text-sm font-semibold text-[#0F172A]">{linkedProjectName || "Linked roofing job"}</p>
+                      <p className="mt-1 text-sm text-[#64748B]">
+                        Core job values are locked here. You can review line items, adjust tax, add a discount, and update notes before sending.
+                      </p>
+                    </div>
+                  ) : null}
+
                   {/* Page Title */}
                   <motion.div
                     initial={{ opacity: 0, y: -20 }}
@@ -1420,8 +1622,12 @@ const CreateInvoicePage = () => {
                       <FilePlus size={24} className="text-[#0F172A]" />
                     </div>
                     <div>
-                      <h1 className="text-lg sm:text-2xl font-bold text-[#0F172A]">Create Invoice</h1>
-                      <p className="text-[#94A3B8]">Fill in the details to generate a new roofing invoice</p>
+                      <h1 className="text-lg sm:text-2xl font-bold text-[#0F172A]">{isProjectReviewMode ? "Review Job Invoice" : "Create Invoice"}</h1>
+                      <p className="text-[#94A3B8]">
+                        {isProjectReviewMode
+                          ? "The job already built this invoice draft. Review it here and send when ready."
+                          : "Fill in the details to generate a new roofing invoice"}
+                      </p>
                     </div>
                   </motion.div>
 
@@ -1435,6 +1641,7 @@ const CreateInvoicePage = () => {
                           <Hash size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                           <Input
                             {...register("invoiceNumber")}
+                            disabled={isProjectReviewMode}
                             className="h-10 pl-9 rounded-md border-[rgba(15,23,42,0.06)] text-sm font-medium"
                           />
                         </div>
@@ -1448,6 +1655,7 @@ const CreateInvoicePage = () => {
                           <Input
                             type="date"
                             {...register("invoiceDate")}
+                            disabled={isProjectReviewMode}
                             className="h-10 pl-9 rounded-md border-[rgba(15,23,42,0.06)] text-sm"
                           />
                         </div>
@@ -1460,7 +1668,7 @@ const CreateInvoicePage = () => {
                           name="paymentTerms"
                           control={control}
                           render={({ field }) => (
-                            <Select value={field.value} onValueChange={field.onChange}>
+                            <Select value={field.value} onValueChange={field.onChange} disabled={isProjectReviewMode}>
                               <SelectTrigger className="h-10 rounded-md border-[rgba(15,23,42,0.06)] text-sm">
                                 <SelectValue />
                               </SelectTrigger>
@@ -1484,6 +1692,7 @@ const CreateInvoicePage = () => {
                           <Input
                             type="date"
                             {...register("dueDate")}
+                            disabled={isProjectReviewMode}
                             className="h-10 pl-9 rounded-md border-[rgba(15,23,42,0.06)] text-sm"
                           />
                         </div>
@@ -1496,7 +1705,7 @@ const CreateInvoicePage = () => {
                           name="currency"
                           control={control}
                           render={({ field }) => (
-                            <Select value={field.value} onValueChange={field.onChange}>
+                            <Select value={field.value} onValueChange={field.onChange} disabled={isProjectReviewMode}>
                               <SelectTrigger className="h-10 rounded-md border-[rgba(15,23,42,0.06)] text-sm">
                                 <SelectValue />
                               </SelectTrigger>
@@ -1584,6 +1793,7 @@ const CreateInvoicePage = () => {
                         control={control}
                         register={register}
                         errors={errors}
+                        disabled={isProjectReviewMode}
                       />
                     </SectionCard>
 
@@ -1591,7 +1801,7 @@ const CreateInvoicePage = () => {
                     <SectionCard
                       title="Client Details"
                       icon={Users}
-                      headerAction={
+                      headerAction={!isProjectReviewMode ? (
                         <Button
                           type="button"
                           variant="ghost"
@@ -1602,7 +1812,7 @@ const CreateInvoicePage = () => {
                           <PlusCircle size={14} className="mr-1" />
                           New Client
                         </Button>
-                      }
+                      ) : undefined}
                     >
                       <AddressBlock
                         title="Billed To"
@@ -1610,9 +1820,10 @@ const CreateInvoicePage = () => {
                         control={control}
                         register={register}
                         errors={errors}
-                        showClientSelector
+                        showClientSelector={!isProjectReviewMode}
                         clients={clients}
                         onSelectClient={handleSelectClient}
+                        disabled={isProjectReviewMode}
                       />
                     </SectionCard>
                   </div>
@@ -1749,125 +1960,129 @@ const CreateInvoicePage = () => {
                     </SectionCard>
                   </div>
 
-                  {/* Additional Options */}
-                  <SectionCard title="Additional Options" icon={Settings}>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Send Reminder */}
-                      <div className="flex items-center justify-between p-4 bg-white/5 rounded-md">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-md bg-[#D97706]/10 flex items-center justify-center">
-                            <Bell size={18} className="text-[#D97706]" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-[#0F172A] text-sm">Payment Reminders</p>
-                            <p className="text-xs text-[#94A3B8]">Send automatic reminders before due date</p>
-                          </div>
-                        </div>
-                        <Controller
-                          name="sendReminder"
-                          control={control}
-                          render={({ field }) => (
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                              className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
-                            />
-                          )}
-                        />
-                      </div>
-
-                      {/* Recurring Invoice */}
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between p-4 bg-white/5 rounded-md">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-md bg-purple-500/10 flex items-center justify-center">
-                              <Repeat size={18} className="text-purple-500" />
+                  {!isProjectReviewMode ? (
+                    <>
+                      {/* Additional Options */}
+                      <SectionCard title="Additional Options" icon={Settings}>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {/* Send Reminder */}
+                          <div className="flex items-center justify-between p-4 bg-white/5 rounded-md">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-md bg-[#D97706]/10 flex items-center justify-center">
+                                <Bell size={18} className="text-[#D97706]" />
+                              </div>
+                              <div>
+                                <p className="font-medium text-[#0F172A] text-sm">Payment Reminders</p>
+                                <p className="text-xs text-[#94A3B8]">Send automatic reminders before due date</p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="font-medium text-[#0F172A] text-sm">Recurring Invoice</p>
-                              <p className="text-xs text-[#94A3B8]">Automatically generate this invoice</p>
-                            </div>
-                          </div>
-                          <Controller
-                            name="isRecurring"
-                            control={control}
-                            render={({ field }) => (
-                              <Checkbox
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                                className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
-                              />
-                            )}
-                          />
-                        </div>
-
-                        {watch("isRecurring") && (
-                          <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: "auto" }}
-                            exit={{ opacity: 0, height: 0 }}
-                            className="space-y-1 pl-4"
-                          >
-                            <Label className="text-xs text-[#94A3B8]">Frequency</Label>
                             <Controller
-                              name="recurringFrequency"
+                              name="sendReminder"
                               control={control}
                               render={({ field }) => (
-                                <Select value={field.value} onValueChange={field.onChange}>
-                                  <SelectTrigger className="h-10 rounded-md border-[rgba(15,23,42,0.06)] text-sm">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent className="rounded-md">
-                                    <SelectItem value="weekly" className="rounded-md">Weekly</SelectItem>
-                                    <SelectItem value="biweekly" className="rounded-md">Bi-weekly</SelectItem>
-                                    <SelectItem value="monthly" className="rounded-md">Monthly</SelectItem>
-                                    <SelectItem value="quarterly" className="rounded-md">Quarterly</SelectItem>
-                                    <SelectItem value="yearly" className="rounded-md">Yearly</SelectItem>
-                                  </SelectContent>
-                                </Select>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                  className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
+                                />
                               )}
                             />
-                          </motion.div>
-                        )}
-                      </div>
-                    </div>
-                  </SectionCard>
+                          </div>
 
-                  {/* Signature Section */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-6"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-[#0F172A] mb-1">Digital Signature</h3>
-                        <p className="text-xs text-[#94A3B8]">
-                          Add your signature to make this invoice official
-                        </p>
-                      </div>
-                      <div className="w-64">
-                        <div className="h-20 border-b-2 border-dashed border-slate-300 mb-2 flex items-end justify-center pb-2">
-                          <span className="text-[#475569] text-sm italic">Sign here</span>
+                          {/* Recurring Invoice */}
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between p-4 bg-white/5 rounded-md">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-md bg-purple-500/10 flex items-center justify-center">
+                                  <Repeat size={18} className="text-purple-500" />
+                                </div>
+                                <div>
+                                  <p className="font-medium text-[#0F172A] text-sm">Recurring Invoice</p>
+                                  <p className="text-xs text-[#94A3B8]">Automatically generate this invoice</p>
+                                </div>
+                              </div>
+                              <Controller
+                                name="isRecurring"
+                                control={control}
+                                render={({ field }) => (
+                                  <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
+                                  />
+                                )}
+                              />
+                            </div>
+
+                            {watch("isRecurring") && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: "auto" }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="space-y-1 pl-4"
+                              >
+                                <Label className="text-xs text-[#94A3B8]">Frequency</Label>
+                                <Controller
+                                  name="recurringFrequency"
+                                  control={control}
+                                  render={({ field }) => (
+                                    <Select value={field.value} onValueChange={field.onChange}>
+                                      <SelectTrigger className="h-10 rounded-md border-[rgba(15,23,42,0.06)] text-sm">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent className="rounded-md">
+                                        <SelectItem value="weekly" className="rounded-md">Weekly</SelectItem>
+                                        <SelectItem value="biweekly" className="rounded-md">Bi-weekly</SelectItem>
+                                        <SelectItem value="monthly" className="rounded-md">Monthly</SelectItem>
+                                        <SelectItem value="quarterly" className="rounded-md">Quarterly</SelectItem>
+                                        <SelectItem value="yearly" className="rounded-md">Yearly</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  )}
+                                />
+                              </motion.div>
+                            )}
+                          </div>
                         </div>
-                        <p className="text-xs text-[#94A3B8] text-right">Authorized Signature</p>
-                      </div>
-                    </div>
-                  </motion.div>
+                      </SectionCard>
+
+                      {/* Signature Section */}
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-6"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-[#0F172A] mb-1">Digital Signature</h3>
+                            <p className="text-xs text-[#94A3B8]">
+                              Add your signature to make this invoice official
+                            </p>
+                          </div>
+                          <div className="w-64">
+                            <div className="h-20 border-b-2 border-dashed border-slate-300 mb-2 flex items-end justify-center pb-2">
+                              <span className="text-[#475569] text-sm italic">Sign here</span>
+                            </div>
+                            <p className="text-xs text-[#94A3B8] text-right">Authorized Signature</p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    </>
+                  ) : null}
 
                   {/* Action Buttons (Mobile) */}
                   <div className="flex gap-3 md:hidden">
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => navigate("/invoice")}
+                      onClick={() => navigate(linkedProjectId ? `/projects/${linkedProjectId}` : "/invoice")}
                       className="flex-1 rounded-md"
                     >
                       Cancel
                     </Button>
                     <Button
                       type="submit"
-                      disabled={isSaving}
+                      disabled={isSaving || isLoadingLinkedInvoice}
                       className="flex-1 bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
                     >
                       {isSaving ? (
@@ -1875,7 +2090,7 @@ const CreateInvoicePage = () => {
                       ) : (
                         <Save size={16} className="mr-2" />
                       )}
-                      Save Invoice
+                      {isProjectReviewMode ? "Save Review" : "Save Invoice"}
                     </Button>
                   </div>
                 </div>

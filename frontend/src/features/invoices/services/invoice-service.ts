@@ -22,6 +22,11 @@ export async function updateInvoice(id: number | string, data: UpdateInvoiceDto)
   return response.data;
 }
 
+export async function sendInvoice(id: number | string, recipientEmail?: string) {
+  const response = await api.post(`/invoices/${id}/send`, { recipientEmail });
+  return response.data;
+}
+
 export async function deleteInvoice(id: number | string): Promise<void> {
   await api.delete(`/invoices/${id}`);
 }

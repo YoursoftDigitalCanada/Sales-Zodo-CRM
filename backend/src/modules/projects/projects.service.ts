@@ -9,6 +9,7 @@ import {
 } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
 import { DataAccessContext } from '../../common/access/data-access';
+import { liveInvoiceSyncService } from './live-invoice-sync.service';
 
 const NOT_FOUND_MESSAGES = new Set([
   'PROJECT_NOT_FOUND',
@@ -59,22 +60,58 @@ export class ProjectsService {
     }
   }
 
+  private async syncProjectRevenueState(
+    projectId: string,
+    tenantId: string,
+    options?: { allowCompletedSync?: boolean },
+  ) {
+    const current = await projectsRepository.findById(projectId, tenantId);
+    const isCompleted = (current as any)?.status === 'COMPLETED' || Boolean((current as any)?.isCompleted);
+    if (isCompleted && !options?.allowCompletedSync) {
+      return;
+    }
+
+    await projectsRepository.recalculateFinancials(projectId, tenantId);
+    await liveInvoiceSyncService.syncProjectInvoiceDraft(tenantId, projectId, options);
+  }
+
+  private async getProjectDetailOrThrow(projectId: string, tenantId: string) {
+    const project = await projectsRepository.findById(projectId, tenantId);
+    if (!project) {
+      throw new NotFoundError('Project not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    }
+    return project;
+  }
+
   async create(tenantId: string, data: Record<string, any>, createdById?: string) {
     const dto = normalizeProjectDto(data);
-    return this.guarded(() => projectsRepository.create(tenantId, dto, createdById));
+    return this.guarded(async () => {
+      const project = await projectsRepository.create(tenantId, dto, createdById);
+      await this.syncProjectRevenueState(project.id, tenantId);
+      return this.getProjectDetailOrThrow(project.id, tenantId);
+    });
   }
 
   async createFromQuote(tenantId: string, quoteId: string, userId?: string) {
-    return this.guarded(() => projectsRepository.createFromQuote(tenantId, quoteId, userId));
+    return this.guarded(async () => {
+      const project = await projectsRepository.createFromQuote(tenantId, quoteId, userId);
+      const projectId = (project as any)?.id;
+      if (!projectId) {
+        throw new NotFoundError('Project not found', ErrorCodes.RESOURCE_NOT_FOUND);
+      }
+      await this.syncProjectRevenueState(projectId, tenantId);
+      return this.getProjectDetailOrThrow(projectId, tenantId);
+    });
   }
 
   async getById(id: string, tenantId: string) {
     return this.guarded(async () => {
-      const project = await projectsRepository.findById(id, tenantId);
-      if (!project) {
-        throw new NotFoundError('Project not found', ErrorCodes.RESOURCE_NOT_FOUND);
+      const current = await this.getProjectDetailOrThrow(id, tenantId);
+      const isCompleted = (current as any)?.status === 'COMPLETED' || Boolean((current as any)?.isCompleted);
+      if (!isCompleted) {
+        await liveInvoiceSyncService.syncProjectInvoiceDraft(tenantId, id);
       }
-      return project;
+      return this.getProjectDetailOrThrow(id, tenantId);
     });
   }
 
@@ -117,7 +154,11 @@ export class ProjectsService {
 
   async update(id: string, tenantId: string, data: Record<string, any>) {
     const dto = normalizeProjectDto(data);
-    return this.guarded(() => projectsRepository.update(id, tenantId, dto));
+    return this.guarded(async () => {
+      const project = await projectsRepository.update(id, tenantId, dto);
+      await this.syncProjectRevenueState(project.id, tenantId);
+      return this.getProjectDetailOrThrow(project.id, tenantId);
+    });
   }
 
   async updateStage(id: string, tenantId: string, stageId: string, changedById?: string, notes?: string) {
@@ -153,7 +194,12 @@ export class ProjectsService {
   }
 
   async updateStatus(id: string, tenantId: string, status: string) {
-    return this.guarded(() => projectsRepository.updateStatus(id, tenantId, status));
+    return this.guarded(async () => {
+      const project = await projectsRepository.updateStatus(id, tenantId, status);
+      const allowCompletedSync = status === 'COMPLETED';
+      await this.syncProjectRevenueState(project.id, tenantId, { allowCompletedSync });
+      return this.getProjectDetailOrThrow(project.id, tenantId);
+    });
   }
 
   async assignProjectManager(id: string, tenantId: string, projectManagerId?: string | null) {
@@ -198,7 +244,11 @@ export class ProjectsService {
   }
 
   async recalculateFinancials(id: string, tenantId: string) {
-    return this.guarded(() => projectsRepository.recalculateFinancials(id, tenantId));
+    return this.guarded(async () => {
+      const result = await projectsRepository.recalculateFinancials(id, tenantId);
+      await liveInvoiceSyncService.syncProjectInvoiceDraft(tenantId, id);
+      return result;
+    });
   }
 
   async getTasks(projectId: string, tenantId: string) {
@@ -226,19 +276,35 @@ export class ProjectsService {
   }
 
   async addMaterial(projectId: string, tenantId: string, data: Record<string, any>) {
-    return this.guarded(() => projectsRepository.addMaterial(projectId, tenantId, data));
+    return this.guarded(async () => {
+      const material = await projectsRepository.addMaterial(projectId, tenantId, data);
+      await this.syncProjectRevenueState(projectId, tenantId);
+      return material;
+    });
   }
 
   async updateMaterial(projectId: string, materialId: string, tenantId: string, data: Record<string, any>) {
-    return this.guarded(() => projectsRepository.updateMaterial(projectId, materialId, tenantId, data));
+    return this.guarded(async () => {
+      const material = await projectsRepository.updateMaterial(projectId, materialId, tenantId, data);
+      await this.syncProjectRevenueState(projectId, tenantId);
+      return material;
+    });
   }
 
   async deleteMaterial(projectId: string, materialId: string, tenantId: string) {
-    return this.guarded(() => projectsRepository.deleteMaterial(projectId, materialId, tenantId));
+    return this.guarded(async () => {
+      const deleted = await projectsRepository.deleteMaterial(projectId, materialId, tenantId);
+      await this.syncProjectRevenueState(projectId, tenantId);
+      return deleted;
+    });
   }
 
   async importMaterialsFromQuote(projectId: string, tenantId: string) {
-    return this.guarded(() => projectsRepository.importMaterialsFromQuote(projectId, tenantId));
+    return this.guarded(async () => {
+      const result = await projectsRepository.importMaterialsFromQuote(projectId, tenantId);
+      await this.syncProjectRevenueState(projectId, tenantId);
+      return result;
+    });
   }
 
   async getLabor(projectId: string, tenantId: string) {
@@ -246,15 +312,27 @@ export class ProjectsService {
   }
 
   async addLabor(projectId: string, tenantId: string, data: Record<string, any>, userId?: string) {
-    return this.guarded(() => projectsRepository.addLabor(projectId, tenantId, data, userId));
+    return this.guarded(async () => {
+      const labor = await projectsRepository.addLabor(projectId, tenantId, data, userId);
+      await this.syncProjectRevenueState(projectId, tenantId);
+      return labor;
+    });
   }
 
   async updateLabor(projectId: string, laborId: string, tenantId: string, data: Record<string, any>) {
-    return this.guarded(() => projectsRepository.updateLabor(projectId, laborId, tenantId, data));
+    return this.guarded(async () => {
+      const labor = await projectsRepository.updateLabor(projectId, laborId, tenantId, data);
+      await this.syncProjectRevenueState(projectId, tenantId);
+      return labor;
+    });
   }
 
   async deleteLabor(projectId: string, laborId: string, tenantId: string) {
-    return this.guarded(() => projectsRepository.deleteLabor(projectId, laborId, tenantId));
+    return this.guarded(async () => {
+      const deleted = await projectsRepository.deleteLabor(projectId, laborId, tenantId);
+      await this.syncProjectRevenueState(projectId, tenantId);
+      return deleted;
+    });
   }
 
   async getLaborSummary(projectId: string, tenantId: string) {
@@ -266,15 +344,27 @@ export class ProjectsService {
   }
 
   async addExpense(projectId: string, tenantId: string, data: Record<string, any>, userId?: string) {
-    return this.guarded(() => projectsRepository.addExpense(projectId, tenantId, data, userId));
+    return this.guarded(async () => {
+      const expense = await projectsRepository.addExpense(projectId, tenantId, data, userId);
+      await this.syncProjectRevenueState(projectId, tenantId);
+      return expense;
+    });
   }
 
   async updateExpense(projectId: string, expenseId: string, tenantId: string, data: Record<string, any>) {
-    return this.guarded(() => projectsRepository.updateExpense(projectId, expenseId, tenantId, data));
+    return this.guarded(async () => {
+      const expense = await projectsRepository.updateExpense(projectId, expenseId, tenantId, data);
+      await this.syncProjectRevenueState(projectId, tenantId);
+      return expense;
+    });
   }
 
   async deleteExpense(projectId: string, expenseId: string, tenantId: string) {
-    return this.guarded(() => projectsRepository.deleteExpense(projectId, expenseId, tenantId));
+    return this.guarded(async () => {
+      const deleted = await projectsRepository.deleteExpense(projectId, expenseId, tenantId);
+      await this.syncProjectRevenueState(projectId, tenantId);
+      return deleted;
+    });
   }
 
   async getCrewAssignments(projectId: string, tenantId: string) {

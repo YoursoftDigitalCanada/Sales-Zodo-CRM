@@ -256,14 +256,14 @@ const navigationItems: NavigationItem[] = [
   },
 
   // ===== PROJECT MANAGEMENT =====
-  { title: "Projects", isHeader: true },
+  { title: "Jobs", isHeader: true },
   {
-    title: "All Projects",
+    title: "All Jobs",
     icon: Briefcase,
     featureId: "projects",
     permissionModule: "projects",
     submenu: [
-      { title: "Active Projects", path: "/projects", featureId: "projects" },
+      { title: "Active Jobs", path: "/projects", featureId: "projects" },
       { title: "Archived", path: "javascript:void(0)", featureId: "projects" },
       { title: "Templates", path: "javascript:void(0)", featureId: "projects" },
     ]
@@ -297,7 +297,7 @@ const navigationItems: NavigationItem[] = [
     ]
   },
   {
-    title: "Quotes",
+    title: "Estimates",
     icon: FileStack,
     path: "/quotes",
     featureId: "finance",
@@ -328,7 +328,7 @@ const navigationItems: NavigationItem[] = [
     badgeColor: "teal",
   },
   {
-    title: "Inspections",
+    title: "Site Visits",
     icon: CheckSquare,
     path: "/inspections",
     featureId: "leads",
@@ -686,7 +686,7 @@ export function Sidebar({
     () => [
       { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard", permissionModule: "dashboard" },
       { icon: Target, label: "Pipeline", path: "/leads/pipeline", featureId: "leads", permissionModule: "leads" },
-      { icon: Briefcase, label: "Projects", path: "/projects", featureId: "projects", permissionModule: "projects" },
+      { icon: Briefcase, label: "Jobs", path: "/projects", featureId: "projects", permissionModule: "projects" },
       { icon: Receipt, label: "Finance", path: "/invoice", featureId: "finance", permissionModule: "invoices" },
       { icon: MessageSquare, label: "Chats", path: "/chats", featureId: "chat", permissionModule: "chat" },
     ].filter((tab) => {

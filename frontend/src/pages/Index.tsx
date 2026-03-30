@@ -1,217 +1,484 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useMemo, useRef, useState, type DragEvent, type ElementType } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/dashboard/StatCard";
-import { ProjectsChart } from "@/components/dashboard/ProjectsChart";
-import { CalendarWidget } from "@/components/dashboard/CalendarWidget";
-import { ProjectsTable } from "@/components/dashboard/ProjectsTable";
 import {
   fetchDashboardData,
+  type DashboardClient,
+  type DashboardInspection,
   type DashboardLead,
   type DashboardInvoice,
   type DashboardProject,
+  type DashboardQuote,
 } from "@/features/dashboard";
-import { AiCopilotPanel } from "@/components/ai/AiCopilotPanel";
 import { useToast } from "@/hooks/use-toast";
 import {
   getNotifications,
   markAllAsRead as markAllNotificationsRead,
   type NotificationEntity,
 } from "@/features/notifications";
+import { updateLeadStatus } from "@/features/leads";
 import {
-  FolderKanban, DollarSign, Users, Bell, Search, ChevronDown,
-  Sun, Moon, Plus, TrendingUp, ArrowUpRight, Sparkles, Target,
-  Clock, CheckCircle2, Calendar, MessageSquare, Zap, X, Command,
-  Activity, AlertCircle, FileText, AlertTriangle, Briefcase,
-  Eye, Send, ExternalLink, MoreHorizontal, RefreshCw,
+  AlertCircle,
+  AlertTriangle,
+  ArrowUpRight,
+  Bell,
+  Briefcase,
+  Calendar,
+  ChevronDown,
+  Clock,
+  Command,
+  DollarSign,
+  FileText,
+  FolderKanban,
+  MapPin,
+  Moon,
+  PhoneCall,
+  Receipt,
+  Search,
+  Sparkles,
+  Sun,
+  Target,
+  Upload,
+  Users,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import useIsMobile from "@/hooks/useIsMobile";
 import { canAccessFeature, canAccessModule } from "@/lib/access-control";
 import logo from "../Images/Logo/logo.png";
 
-// ============================================
-// TYPES
-// ============================================
 type ThemeColor = "teal" | "gold" | "navy" | "green" | "blue" | "purple";
+type RevenuePipelineStage = "lead" | "contacted" | "estimate-sent" | "negotiation" | "won" | "lost";
+type QuickActionVariant = "default" | "outline";
+type LeadStatusValue = Parameters<typeof updateLeadStatus>[1];
 
-interface User { firstName: string; lastName: string; email?: string; role?: string; }
-interface DashboardStats { projectsCount: number; clientsCount: number; earnings: number; pendingTasks: number; }
-interface QuickAction { title: string; icon: React.ElementType; color: ThemeColor; path: string; description: string; }
-interface ActivityItem { id: string; type: string; message: string; time: string; icon: React.ElementType; color: ThemeColor; }
-interface BellNotification { id: string; title: string; message: string; time: string; icon: React.ElementType; color: ThemeColor; read: boolean; }
+interface User {
+  firstName: string;
+  lastName: string;
+  email?: string;
+  role?: string;
+}
 
-// Mapped UI types derived from API data
+interface BellNotification {
+  id: string;
+  title: string;
+  message: string;
+  time: string;
+  icon: ElementType;
+  color: ThemeColor;
+  read: boolean;
+}
+
 interface LeadItem {
-  id: string; name: string; company: string; value: number;
-  status: "hot" | "warm" | "cold" | "stalled";
-  daysInStage: number; source: string; assignee: string;
+  id: string;
+  name: string;
+  company: string;
+  value: number;
+  temperature: "hot" | "warm" | "cold";
+  stage: RevenuePipelineStage;
+  daysInStage: number;
+  source: string;
+  assignee: string;
+  address: string;
+  jobType: string;
+  nextAction: string;
+  phone: string;
+  email: string;
+  updatedAt: string;
+  isStalled: boolean;
 }
+
 interface InvoiceItem {
-  id: string; client: string; amount: number; dueDate: string;
+  id: string;
+  client: string;
+  amount: number;
+  outstandingAmount: number;
+  dueDate: string;
   status: "overdue" | "pending" | "paid" | "draft";
-  daysOverdue?: number; invoiceNo: string;
+  daysOverdue?: number;
+  invoiceNo: string;
 }
-interface ProjectItem {
-  id: string; name: string; client: string; progress: number;
+
+interface JobItem {
+  id: string;
+  name: string;
+  client: string;
+  address: string;
+  value: number;
+  crew: string;
+  deadline: string;
   status: "on-track" | "at-risk" | "delayed" | "completed";
-  deadline: string; team: string[]; budget: number; spent: number;
-}
-interface SmartAlert {
-  id: string; type: "warning" | "danger" | "info" | "success";
-  title: string; message: string; action: string; actionPath: string;
+  statusLabel: string;
+  type: string;
 }
 
-// ============================================
-// THEME COLORS
-// ============================================
-const themeColors: Record<ThemeColor, { bg: string; text: string; light: string; gradient: string }> = {
-  teal: { bg: "bg-[#0891B2]", text: "text-[#0891B2]", light: "bg-[#0891B2]/10", gradient: "from-[#0891B2]" },
-  gold: { bg: "bg-[#D97706]", text: "text-[#D97706]", light: "bg-[#D97706]/10", gradient: "from-[#FBBF24]" },
-  navy: { bg: "bg-[#FF7B36]", text: "text-[#FF7B36]", light: "bg-[#FF7B36]/10", gradient: "from-[#FF7B36]" },
-  green: { bg: "bg-[#01C44A]", text: "text-[#01C44A]", light: "bg-[#01C44A]/10", gradient: "from-[#01C44A]" },
-  blue: { bg: "bg-[#0891B2]", text: "text-[#0891B2]", light: "bg-[#0891B2]/10", gradient: "from-[#0891B2]" },
-  purple: { bg: "bg-[#FF7B36]", text: "text-[#FF7B36]", light: "bg-[#FF7B36]/10", gradient: "from-[#FF7B36]" },
+interface EstimateItem {
+  id: string;
+  quoteNumber: string;
+  status: string;
+  total: number;
+  recipientName: string;
+  createdAt: string;
+  validUntil: string;
+  sentAt?: string | null;
+}
+
+interface SiteVisitItem {
+  id: string;
+  leadId: string;
+  clientName: string;
+  address: string;
+  inspectionType: string;
+  scheduledAt: Date | null;
+  estimateValue: number;
+}
+
+interface ClientItem {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  lastContacted?: string;
+}
+
+interface QuickActionItem {
+  id: string;
+  label: string;
+  description: string;
+  icon: ElementType;
+  path: string;
+  variant: QuickActionVariant;
+}
+
+interface ActionCenterItem {
+  id: string;
+  tone: "danger" | "warning" | "success";
+  label: string;
+  detail: string;
+  actionLabel: string;
+  path: string;
+}
+
+const themeColors: Record<ThemeColor, { bg: string; text: string; light: string }> = {
+  teal: { bg: "bg-[#0891B2]", text: "text-[#0891B2]", light: "bg-[#0891B2]/10" },
+  gold: { bg: "bg-[#D97706]", text: "text-[#D97706]", light: "bg-[#D97706]/10" },
+  navy: { bg: "bg-[#FF7B36]", text: "text-[#FF7B36]", light: "bg-[#FF7B36]/10" },
+  green: { bg: "bg-[#01C44A]", text: "text-[#01C44A]", light: "bg-[#01C44A]/10" },
+  blue: { bg: "bg-[#0891B2]", text: "text-[#0891B2]", light: "bg-[#0891B2]/10" },
+  purple: { bg: "bg-[#6637F4]", text: "text-[#6637F4]", light: "bg-[#6637F4]/10" },
 };
-const getColorClasses = (color: ThemeColor) => themeColors[color] || themeColors.teal;
-
-// ============================================
-// STATIC DATA
-// ============================================
-const quickActions: QuickAction[] = [
-  { title: "New Project", icon: FolderKanban, color: "teal", path: "/projects/add", description: "Create a new project" },
-  { title: "Add Client", icon: Users, color: "gold", path: "/client-list/add", description: "Add a new client" },
-  { title: "Create Invoice", icon: DollarSign, color: "navy", path: "/invoice/create", description: "Generate invoice" },
-  { title: "Ask Zodo AI", icon: Sparkles, color: "purple", path: "__copilot__", description: "AI assistant" },
-];
 
 const dashboardWidgetConfig = {
-  dashboard: { permissionModule: "dashboard" },
   leads: { featureId: "leads" as const, permissionModule: "leads" },
   invoices: { featureId: "finance" as const, permissionModule: "invoices" },
+  quotes: { featureId: "finance" as const, permissionModule: "quotes" },
   clients: { featureId: "clients" as const, permissionModule: "clients" },
   projects: { featureId: "projects" as const, permissionModule: "projects" },
+  roofEstimator: { featureId: "roofEstimator" as const, permissionModule: "roof-estimator" },
+  inspections: { featureId: "leads" as const, permissionModule: "leads" },
   tasks: { featureId: "tasks" as const, permissionModule: "tasks" },
-  calendar: { featureId: "calendar" as const, permissionModule: "calendar" },
   aiAssistant: { featureId: "aiAssistant" as const },
 } as const;
 
-// Map API notification type → icon & color for the bell dropdown
-const bellTypeConfig: Record<string, { icon: React.ElementType; color: ThemeColor }> = {
-  info: { icon: Activity, color: "blue" },
-  success: { icon: CheckCircle2, color: "green" },
+const bellTypeConfig: Record<string, { icon: ElementType; color: ThemeColor }> = {
+  info: { icon: AlertCircle, color: "blue" },
+  success: { icon: Target, color: "green" },
   warning: { icon: AlertTriangle, color: "gold" },
   error: { icon: AlertCircle, color: "navy" },
-  message: { icon: MessageSquare, color: "teal" },
-  task: { icon: CheckCircle2, color: "purple" },
+  message: { icon: PhoneCall, color: "teal" },
+  task: { icon: Clock, color: "purple" },
   deal: { icon: DollarSign, color: "green" },
   calendar: { icon: Calendar, color: "teal" },
-  system: { icon: Zap, color: "navy" },
+  system: { icon: Sparkles, color: "navy" },
   mention: { icon: Users, color: "teal" },
 };
+
+const stageToLeadStatus: Record<RevenuePipelineStage, LeadStatusValue> = {
+  lead: "NEW",
+  contacted: "CONTACTED",
+  "estimate-sent": "PROPOSAL",
+  negotiation: "NEGOTIATION",
+  won: "WON",
+  lost: "LOST",
+};
+
+const sectionCardClassName = "bg-white rounded-md border border-[rgba(15,23,42,0.06)] card-shadow overflow-hidden";
+
+function getColorClasses(color: ThemeColor) {
+  return themeColors[color] || themeColors.teal;
+}
 
 function formatRelativeTime(ts: string): string {
   const now = Date.now();
   const date = new Date(ts).getTime();
-  if (isNaN(date)) return "";
+  if (Number.isNaN(date)) return "";
   const diff = (now - date) / 1000;
   if (diff < 60) return "Just now";
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
   if (diff < 172800) return "Yesterday";
-  return new Date(ts).toLocaleDateString("en-CA", { month: "short", day: "numeric" });
+  return new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function mapApiNotification(n: NotificationEntity): BellNotification {
-  const config = bellTypeConfig[n.type] || bellTypeConfig.info;
+function mapApiNotification(notification: NotificationEntity): BellNotification {
+  const config = bellTypeConfig[notification.type] || bellTypeConfig.info;
   return {
-    id: n.id,
-    title: n.title || "Notification",
-    message: n.message || "",
-    time: formatRelativeTime(n.createdAt),
+    id: notification.id,
+    title: notification.title || "Notification",
+    message: notification.message || "",
+    time: formatRelativeTime(notification.createdAt),
     icon: config.icon,
     color: config.color,
-    read: n.isRead,
+    read: notification.isRead,
   };
 }
 
-// ── Data mappers ───────────────────────────────────────────────────────
-function mapLead(l: DashboardLead): LeadItem {
-  const daysSinceUpdate = Math.floor((Date.now() - new Date(l.updatedAt).getTime()) / 86400000);
-  const temp = (l.temperature || "WARM").toLowerCase() as "hot" | "warm" | "cold";
-  const isStalled = daysSinceUpdate > 7 && temp !== "hot";
+function readText(value: unknown): string {
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "number") return String(value);
+  return "";
+}
+
+function buildAddress(parts: Array<unknown>): string {
+  return parts.map(readText).filter(Boolean).join(", ");
+}
+
+function formatMoney(amount: number): string {
+  return `$${Math.round(amount || 0).toLocaleString()}`;
+}
+
+function formatDateLabel(value: string | null | undefined): string {
+  if (!value) return "Pending";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Pending";
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function formatDateTimeLabel(date: Date | null): string {
+  if (!date) return "Schedule pending";
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function formatTimeLabel(date: Date | null): string {
+  if (!date) return "Time pending";
+  return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}
+
+function toDashboardLeadStage(status: string): RevenuePipelineStage {
+  const normalized = readText(status).toUpperCase();
+  if (normalized === "WON") return "won";
+  if (normalized === "LOST") return "lost";
+  if (normalized === "NEGOTIATION") return "negotiation";
+  if (normalized === "PROPOSAL") return "estimate-sent";
+  if (normalized === "CONTACTED" || normalized === "QUALIFIED") return "contacted";
+  return "lead";
+}
+
+function getLeadNextAction(stage: RevenuePipelineStage, temperature: LeadItem["temperature"]): string {
+  if (stage === "lead") return temperature === "hot" ? "Call homeowner" : "Qualify opportunity";
+  if (stage === "contacted") return "Schedule site visit";
+  if (stage === "estimate-sent") return "Follow up on estimate";
+  if (stage === "negotiation") return "Resolve objections";
+  if (stage === "won") return "Open job file";
+  return "Review lead";
+}
+
+function mapJobStatus(rawStatus: string): JobItem["status"] {
+  const normalized = readText(rawStatus).toUpperCase();
+  if (normalized === "COMPLETED" || normalized === "ARCHIVED") return "completed";
+  if (normalized === "ON_HOLD" || normalized === "CANCELLED") return "delayed";
+  if (normalized === "PLANNING" || normalized === "PENDING") return "at-risk";
+  return "on-track";
+}
+
+function formatPhoneHref(phone: string): string {
+  return `tel:${phone.replace(/[^\d+]/g, "")}`;
+}
+
+function isEstimateSent(quote: EstimateItem): boolean {
+  const status = quote.status.toLowerCase();
+  if (status.includes("draft") || status.includes("cancel")) {
+    return false;
+  }
+
+  return Boolean(quote.sentAt) || ["sent", "viewed", "open", "approved", "accepted"].some((token) => status.includes(token));
+}
+
+function isEstimateDraft(quote: EstimateItem): boolean {
+  const status = quote.status.toLowerCase();
+  if (status.includes("cancel")) {
+    return false;
+  }
+
+  return status.includes("draft") || (!quote.sentAt && !isEstimateSent(quote));
+}
+
+function mapLead(lead: DashboardLead): LeadItem {
+  const updatedAt = new Date(lead.updatedAt).getTime();
+  const daysSinceUpdate = Number.isNaN(updatedAt)
+    ? 0
+    : Math.max(0, Math.floor((Date.now() - updatedAt) / 86400000));
+  const temperature = (lead.temperature || "WARM").toLowerCase() as LeadItem["temperature"];
+  const stage = toDashboardLeadStage(lead.status);
+  const propertyAddress = buildAddress([
+    lead.propertyAddress,
+    lead.city,
+    lead.state,
+    lead.zipCode,
+  ]);
+  const assignee = (lead.assignedTo && "user" in lead.assignedTo && lead.assignedTo.user)
+    ? `${readText(lead.assignedTo.user.firstName)} ${readText(lead.assignedTo.user.lastName)}`.trim()
+    : `${readText(lead.assignedTo?.firstName)} ${readText(lead.assignedTo?.lastName)}`.trim();
+  const name = `${readText(lead.firstName)} ${readText(lead.lastName)}`.trim() || "Lead";
+
   return {
-    id: l.id,
-    name: `${l.firstName} ${l.lastName}`,
-    company: l.companyName || "—",
-    value: Number(l.potentialValue || 0),
-    status: isStalled ? "stalled" : temp,
+    id: lead.id,
+    name,
+    company: lead.companyName || "Residential Prospect",
+    value: Number(lead.potentialValue || 0),
+    temperature,
+    stage,
     daysInStage: daysSinceUpdate,
-    source: l.leadSource?.name || "Direct",
-    assignee: l.assignedTo ? `${(l.assignedTo.firstName || "?")[0]}${(l.assignedTo.lastName || "?")[0]}` : "—",
+    source: lead.leadSource?.name || "Direct",
+    assignee: assignee || "Unassigned",
+    address: propertyAddress || "Address pending",
+    jobType: readText(lead.serviceType) || "Roofing estimate",
+    nextAction: getLeadNextAction(stage, temperature),
+    phone: readText(lead.phone),
+    email: readText(lead.email),
+    updatedAt: lead.updatedAt,
+    isStalled: daysSinceUpdate >= 5 && stage !== "won" && stage !== "lost",
   };
 }
 
-function mapInvoice(inv: DashboardInvoice): InvoiceItem {
-  const due = new Date(inv.dueDate);
+function mapInvoice(invoice: DashboardInvoice): InvoiceItem {
+  const due = new Date(invoice.dueDate);
   const now = new Date();
-  const daysOverdue = inv.status === "OVERDUE" ? Math.max(0, Math.floor((now.getTime() - due.getTime()) / 86400000)) : undefined;
-  const clientName = inv.client?.companyName || [inv.client?.firstName, inv.client?.lastName].filter(Boolean).join(" ") || "—";
-  const statusMap: Record<string, InvoiceItem["status"]> = { OVERDUE: "overdue", SENT: "pending", VIEWED: "pending", PARTIALLY_PAID: "pending", PAID: "paid", DRAFT: "draft", CANCELLED: "draft", REFUNDED: "draft" };
+  const daysOverdue = invoice.status === "OVERDUE" && !Number.isNaN(due.getTime())
+    ? Math.max(0, Math.floor((now.getTime() - due.getTime()) / 86400000))
+    : undefined;
+  const clientName = invoice.client?.companyName
+    || [invoice.client?.firstName, invoice.client?.lastName].filter(Boolean).join(" ")
+    || "Client";
+  const statusMap: Record<string, InvoiceItem["status"]> = {
+    OVERDUE: "overdue",
+    SENT: "pending",
+    VIEWED: "pending",
+    PARTIALLY_PAID: "pending",
+    PAID: "paid",
+    DRAFT: "draft",
+    CANCELLED: "draft",
+    REFUNDED: "draft",
+  };
+
   return {
-    id: inv.id,
+    id: invoice.id,
     client: clientName,
-    amount: Number(inv.total || 0),
-    dueDate: due.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-    status: statusMap[inv.status] || "draft",
+    amount: Number(invoice.total || 0),
+    outstandingAmount: Number(invoice.amountDue || invoice.total || 0),
+    dueDate: formatDateLabel(invoice.dueDate),
+    status: statusMap[invoice.status] || "draft",
     daysOverdue,
-    invoiceNo: inv.invoiceNumber,
+    invoiceNo: invoice.invoiceNumber,
   };
 }
 
-function mapProject(p: DashboardProject): ProjectItem {
-  const clientName = p.client?.companyName || [p.client?.firstName, p.client?.lastName].filter(Boolean).join(" ") || "—";
-  const statusMap: Record<string, ProjectItem["status"]> = { ACTIVE: "on-track", PLANNING: "on-track", ON_HOLD: "delayed", COMPLETED: "completed", CANCELLED: "delayed", ARCHIVED: "completed" };
-  const members = (p.members || []).map((m) => m.employee ? `${m.employee.firstName[0]}${m.employee.lastName[0]}` : "??");
+function mapProject(project: DashboardProject): JobItem {
+  const clientName = project.client?.companyName
+    || [project.client?.firstName, project.client?.lastName].filter(Boolean).join(" ")
+    || "Client";
+  const status = mapJobStatus(project.status || "");
+  const value = Number(
+    (project as Record<string, unknown>).contractValue
+      ?? (project as Record<string, unknown>).budget
+      ?? 0,
+  );
+  const crewCount = (project.members || []).filter((member) => member.employee).length;
+
   return {
-    id: p.id,
-    name: p.name,
+    id: project.id,
+    name: project.name,
     client: clientName,
-    progress: p.progress || 0,
-    status: statusMap[p.status] || "on-track",
-    deadline: p.endDate ? new Date(p.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—",
-    team: members.length ? members : ["—"],
-    budget: Number(p.budget || 0),
-    spent: 0,
+    address: readText((project as Record<string, unknown>).jobSiteAddress)
+      || readText((project as Record<string, unknown>).address)
+      || readText((project as Record<string, unknown>).location)
+      || "Address pending",
+    value,
+    crew: crewCount > 0 ? `${crewCount} crew member${crewCount === 1 ? "" : "s"}` : "Assign crew",
+    deadline: project.endDate ? formatDateLabel(project.endDate) : "Pending",
+    status,
+    statusLabel: status === "on-track" ? "On Track" : status === "at-risk" ? "At Risk" : status === "delayed" ? "Delayed" : "Completed",
+    type: readText((project as Record<string, unknown>).projectType) || "Roofing Job",
   };
 }
 
-function buildAlerts(leads: LeadItem[], invoices: InvoiceItem[], projects: ProjectItem[]): SmartAlert[] {
-  const alerts: SmartAlert[] = [];
-  const overdue = invoices.filter((i) => i.status === "overdue");
-  if (overdue.length > 0) {
-    const total = overdue.reduce((s, i) => s + i.amount, 0);
-    alerts.push({ id: "a-overdue", type: "danger", title: `${overdue.length} Invoice${overdue.length > 1 ? "s" : ""} Overdue`, message: `$${total.toLocaleString()} in overdue payments need immediate attention`, action: "View Invoices", actionPath: "/invoice" });
-  }
-  const stalled = leads.filter((l) => l.status === "stalled");
-  if (stalled.length > 0) {
-    alerts.push({ id: "a-stalled", type: "warning", title: `${stalled.length} Lead${stalled.length > 1 ? "s" : ""} Stalled`, message: `${stalled.map((l) => l.name).slice(0, 2).join(" and ")} haven't progressed in 7+ days`, action: "Follow Up", actionPath: "/leads" });
-  }
-  const atRisk = projects.filter((p) => p.status === "at-risk" || p.status === "delayed");
-  if (atRisk.length > 0) {
-    alerts.push({ id: "a-risk", type: "warning", title: `${atRisk.length} Project${atRisk.length > 1 ? "s" : ""} At Risk`, message: `${atRisk.map((p) => p.name).slice(0, 2).join(", ")} need attention`, action: "View Projects", actionPath: "/projects" });
-  }
-  const hot = leads.filter((l) => l.status === "hot");
-  if (hot.length > 0) {
-    const val = hot.reduce((s, l) => s + l.value, 0);
-    alerts.push({ id: "a-hot", type: "info", title: `${hot.length} Hot Lead${hot.length > 1 ? "s" : ""}`, message: `${hot.map((l) => `${l.name} ($${(l.value / 1000).toFixed(0)}K)`).slice(0, 2).join(" and ")} ready to close`, action: "View Pipeline", actionPath: "/leads" });
-  }
-  return alerts;
+function mapQuote(quote: DashboardQuote): EstimateItem {
+  const leadName = quote.lead
+    ? `${readText(quote.lead.firstName)} ${readText(quote.lead.lastName)}`.trim()
+    : "";
+  const normalizedStatus = readText(quote.status).toLowerCase() || (quote.sentAt ? "sent" : "draft");
+
+  return {
+    id: quote.id,
+    quoteNumber: quote.quoteNumber,
+    status: normalizedStatus,
+    total: Number(quote.total || 0),
+    recipientName: readText(quote.client?.clientName) || leadName || readText(quote.lead?.companyName) || "Estimate recipient",
+    createdAt: quote.createdAt,
+    validUntil: quote.validUntil,
+    sentAt: quote.sentAt || null,
+  };
 }
 
-// ============================================
-// MAIN COMPONENT
-// ============================================
+function mapInspection(inspection: DashboardInspection): SiteVisitItem {
+  return {
+    id: inspection.id,
+    leadId: inspection.leadId,
+    clientName: inspection.lead
+      ? `${readText(inspection.lead.firstName)} ${readText(inspection.lead.lastName)}`.trim() || readText(inspection.lead.companyName) || "Client"
+      : "Client",
+    address: buildAddress([
+      inspection.lead?.propertyAddress,
+      inspection.lead?.city,
+      inspection.lead?.state,
+      inspection.lead?.zipCode,
+    ]) || "Address pending",
+    inspectionType: readText(inspection.inspectionType) || "Site Visit",
+    scheduledAt: inspection.inspectionDate ? new Date(inspection.inspectionDate) : null,
+    estimateValue: Number(inspection.totalEstimate || 0),
+  };
+}
+
+function mapClient(client: DashboardClient): ClientItem {
+  return {
+    id: readText(client.id ?? client.Id) || readText(client.clientName ?? client.ClientName ?? client.name ?? client.Name),
+    name: readText(client.clientName ?? client.ClientName ?? client.name ?? client.Name) || "Client",
+    phone: readText(client.primaryContactPhone ?? client.phone ?? client.mobile ?? client.contactNo),
+    email: readText(client.primaryEmail ?? client.email ?? client.contactEmail),
+    lastContacted: readText(client.lastInteractionDate ?? client.lastContacted),
+  };
+}
+
+function getTemperatureBadgeClasses(temperature: LeadItem["temperature"]): string {
+  if (temperature === "hot") return "bg-[#FF2E2D]/10 text-[#FF2E2D]";
+  if (temperature === "warm") return "bg-[#D97706]/10 text-[#D97706]";
+  return "bg-[#0891B2]/10 text-[#0891B2]";
+}
+
+function getJobStatusBadgeClasses(status: JobItem["status"]): string {
+  if (status === "completed") return "bg-[#01C44A]/10 text-[#01C44A]";
+  if (status === "delayed") return "bg-[#FF2E2D]/10 text-[#FF2E2D]";
+  if (status === "at-risk") return "bg-[#D97706]/10 text-[#D97706]";
+  return "bg-[#0891B2]/10 text-[#0891B2]";
+}
+
 const Index = () => {
   const navigate = useNavigate();
   const { isMobile } = useIsMobile();
@@ -219,16 +486,15 @@ const Index = () => {
   const dashboardAccess = useMemo(() => ({
     canViewLeads: canAccessFeature(dashboardWidgetConfig.leads.featureId) && canAccessModule(dashboardWidgetConfig.leads.permissionModule),
     canViewInvoices: canAccessFeature(dashboardWidgetConfig.invoices.featureId) && canAccessModule(dashboardWidgetConfig.invoices.permissionModule),
+    canViewQuotes: canAccessFeature(dashboardWidgetConfig.quotes.featureId) && canAccessModule(dashboardWidgetConfig.quotes.permissionModule),
     canViewClients: canAccessFeature(dashboardWidgetConfig.clients.featureId) && canAccessModule(dashboardWidgetConfig.clients.permissionModule),
     canViewProjects: canAccessFeature(dashboardWidgetConfig.projects.featureId) && canAccessModule(dashboardWidgetConfig.projects.permissionModule),
+    canViewRoofEstimator: canAccessFeature(dashboardWidgetConfig.roofEstimator.featureId) && canAccessModule(dashboardWidgetConfig.roofEstimator.permissionModule),
+    canViewSiteVisits: canAccessFeature(dashboardWidgetConfig.inspections.featureId) && canAccessModule(dashboardWidgetConfig.inspections.permissionModule),
     canViewTasks: canAccessFeature(dashboardWidgetConfig.tasks.featureId) && canAccessModule(dashboardWidgetConfig.tasks.permissionModule),
-    canViewCalendar: canAccessFeature(dashboardWidgetConfig.calendar.featureId) && canAccessModule(dashboardWidgetConfig.calendar.permissionModule),
     canViewAiAssistant: canAccessFeature(dashboardWidgetConfig.aiAssistant.featureId),
   }), []);
 
-  // Existing state
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [stats, setStats] = useState<DashboardStats>({ projectsCount: 0, clientsCount: 0, earnings: 0, pendingTasks: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -238,28 +504,32 @@ const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [showCopilot, setShowCopilot] = useState(false);
-
-  // API-backed dashboard state
-  const [dismissedAlerts, setDismissedAlerts] = useState<string[]>([]);
+  const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null);
   const [leads, setLeads] = useState<LeadItem[]>([]);
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
-  const [projects, setProjects] = useState<ProjectItem[]>([]);
-  const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
+  const [jobs, setJobs] = useState<JobItem[]>([]);
+  const [quotes, setQuotes] = useState<EstimateItem[]>([]);
+  const [siteVisits, setSiteVisits] = useState<SiteVisitItem[]>([]);
+  const [clients, setClients] = useState<ClientItem[]>([]);
 
-  // Refs
   const notificationRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // ============================================
-  // EFFECTS (all preserved from original)
-  // ============================================
-  useEffect(() => { const timer = setInterval(() => setCurrentTime(new Date()), 60000); return () => clearInterval(timer); }, []);
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
-    if (storedUser) { try { setUser(JSON.parse(storedUser)); } catch (e) { console.error("Failed to parse user data"); } }
+    if (!storedUser) return;
+
+    try {
+      setUser(JSON.parse(storedUser));
+    } catch {
+      console.error("Failed to parse user data");
+    }
   }, []);
 
   useEffect(() => {
@@ -267,7 +537,9 @@ const Index = () => {
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     const shouldBeDark = savedTheme === "dark" || (!savedTheme && prefersDark);
     setIsDarkMode(shouldBeDark);
-    if (shouldBeDark) document.documentElement.classList.add("dark");
+    if (shouldBeDark) {
+      document.documentElement.classList.add("dark");
+    }
   }, []);
 
   useEffect(() => {
@@ -277,360 +549,724 @@ const Index = () => {
         const data = await fetchDashboardData({
           canViewLeads: dashboardAccess.canViewLeads,
           canViewInvoices: dashboardAccess.canViewInvoices,
+          canViewQuotes: dashboardAccess.canViewQuotes,
           canViewProjects: dashboardAccess.canViewProjects,
           canViewClients: dashboardAccess.canViewClients,
+          canViewInspections: dashboardAccess.canViewSiteVisits,
           canViewTasks: dashboardAccess.canViewTasks,
         });
-        setStats({
-          projectsCount: dashboardAccess.canViewProjects ? (data.projectsCount || 0) : 0,
-          clientsCount: dashboardAccess.canViewClients ? (data.clientsCount || 0) : 0,
-          earnings: dashboardAccess.canViewInvoices ? (data.totalEarnings || 0) : 0,
-          pendingTasks: dashboardAccess.canViewTasks ? (data.pendingTasks || 0) : 0,
-        });
+
         setLeads(data.leads.map(mapLead));
         setInvoices(data.invoices.map(mapInvoice));
-        setProjects(data.projects.map(mapProject));
-
-        // Build recent activity from latest data
-        const acts: ActivityItem[] = [];
-        data.projects.slice(0, 2).forEach((p, i) => acts.push({ id: `p-${p.id}`, type: "project", message: `Project '${p.name}' — ${p.status.toLowerCase().replace("_", " ")}`, time: new Date(p.startDate || p.endDate || Date.now()).toLocaleDateString(), icon: FolderKanban, color: "teal" }));
-        data.invoices.filter((inv) => inv.status === "PAID").slice(0, 1).forEach((inv) => acts.push({ id: `inv-${inv.id}`, type: "payment", message: `Payment received — $${Number(inv.total).toLocaleString()}`, time: inv.paidAt ? new Date(inv.paidAt).toLocaleDateString() : "Recently", icon: DollarSign, color: "green" }));
-        data.leads.slice(0, 1).forEach((l) => acts.push({ id: `l-${l.id}`, type: "lead", message: `Lead '${l.firstName} ${l.lastName}' added`, time: new Date(l.createdAt).toLocaleDateString(), icon: Users, color: "gold" }));
-        setRecentActivity(acts);
+        setJobs(data.projects.map(mapProject));
+        setQuotes(data.quotes.map(mapQuote));
+        setSiteVisits(data.inspections.map(mapInspection));
+        setClients(data.clients.map(mapClient));
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
-        setStats({ projectsCount: 0, clientsCount: 0, earnings: 0, pendingTasks: 0 });
-        setRecentActivity([]);
-      } finally { setIsLoading(false); }
+        setLeads([]);
+        setInvoices([]);
+        setJobs([]);
+        setQuotes([]);
+        setSiteVisits([]);
+        setClients([]);
+      } finally {
+        setIsLoading(false);
+      }
     };
-    loadDashboard();
 
-    // Fetch real notifications for the bell dropdown
     const loadNotifications = async () => {
       try {
         const data = await getNotifications({ limit: 10 });
         setNotifications(data.map(mapApiNotification));
-      } catch (err) {
-        console.error("Failed to fetch notifications for bell:", err);
+      } catch (error) {
+        console.error("Failed to fetch notifications for dashboard:", error);
       }
     };
+
+    loadDashboard();
     loadNotifications();
-  }, [dashboardAccess.canViewClients, dashboardAccess.canViewInvoices, dashboardAccess.canViewLeads, dashboardAccess.canViewProjects, dashboardAccess.canViewTasks]);
+  }, [
+    dashboardAccess.canViewClients,
+    dashboardAccess.canViewInvoices,
+    dashboardAccess.canViewLeads,
+    dashboardAccess.canViewProjects,
+    dashboardAccess.canViewQuotes,
+    dashboardAccess.canViewSiteVisits,
+    dashboardAccess.canViewTasks,
+  ]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) setShowNotifications(false);
-      if (profileRef.current && !profileRef.current.contains(event.target as Node)) setShowProfileMenu(false);
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
+      }
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setShowProfileMenu(false);
+      }
     };
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key === "k") { event.preventDefault(); setShowSearchModal(true); setTimeout(() => searchInputRef.current?.focus(), 100); }
-      if (event.key === "Escape") { setShowSearchModal(false); setShowNotifications(false); setShowProfileMenu(false); }
+      if ((event.metaKey || event.ctrlKey) && event.key === "k") {
+        event.preventDefault();
+        setShowSearchModal(true);
+        setTimeout(() => searchInputRef.current?.focus(), 100);
+      }
+
+      if (event.key === "Escape") {
+        setShowSearchModal(false);
+        setShowNotifications(false);
+        setShowProfileMenu(false);
+      }
     };
+
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // ============================================
-  // HANDLERS
-  // ============================================
-  const getGreeting = () => { const h = currentTime.getHours(); return h < 12 ? "Good Morning" : h < 18 ? "Good Afternoon" : "Good Evening"; };
-  const toggleDarkMode = () => { const n = !isDarkMode; setIsDarkMode(n); localStorage.setItem("theme", n ? "dark" : "light"); n ? document.documentElement.classList.add("dark") : document.documentElement.classList.remove("dark"); };
-  const handleMarkAllAsRead = async () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    try { await markAllNotificationsRead(); } catch { /* optimistic */ }
+  const getGreeting = () => {
+    const hour = currentTime.getHours();
+    if (hour < 12) return "Good Morning";
+    if (hour < 18) return "Good Afternoon";
+    return "Good Evening";
   };
-  const handleQuickAction = (path: string) => {
-    if (path === "__copilot__") {
-      setShowCopilot(true);
+
+  const toggleDarkMode = () => {
+    const nextMode = !isDarkMode;
+    setIsDarkMode(nextMode);
+    localStorage.setItem("theme", nextMode ? "dark" : "light");
+
+    if (nextMode) {
+      document.documentElement.classList.add("dark");
     } else {
-      navigate(path);
+      document.documentElement.classList.remove("dark");
     }
   };
-  const handleLogout = () => { localStorage.removeItem("user"); localStorage.removeItem("token"); navigate("/login"); };
-  const unreadNotificationsCount = notifications.filter((n) => !n.read).length;
 
-  const visibleQuickActions = quickActions.filter((action) => {
-    if (action.path === "__copilot__") {
-      return dashboardAccess.canViewAiAssistant;
+  const handleMarkAllAsRead = async () => {
+    setNotifications((previous) => previous.map((notification) => ({ ...notification, read: true })));
+    try {
+      await markAllNotificationsRead();
+    } catch {
+      // Keep optimistic UI.
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
+    navigate("/login");
+  };
+
+  const handleClientCall = (client: ClientItem) => {
+    if (!client.phone) {
+      toast({
+        title: "Phone number missing",
+        description: `Add a phone number for ${client.name} before calling from the dashboard.`,
+      });
+      return;
     }
 
-    if (action.path.startsWith("/projects")) {
-      return dashboardAccess.canViewProjects;
+    window.location.href = formatPhoneHref(client.phone);
+  };
+
+  const handleLeadSuggestion = (lead: LeadItem) => {
+    if (lead.stage === "lead" || lead.stage === "contacted") {
+      navigate(dashboardAccess.canViewSiteVisits ? "/inspections/new" : "/leads/pipeline");
+      return;
     }
 
-    if (action.path.startsWith("/client-list")) {
-      return dashboardAccess.canViewClients;
+    if (lead.stage === "won") {
+      navigate("/projects");
+      return;
     }
 
-    if (action.path.startsWith("/invoice")) {
-      return dashboardAccess.canViewInvoices;
+    navigate(dashboardAccess.canViewQuotes ? "/quotes" : "/leads/pipeline");
+  };
+
+  const handleLeadDragStart = (event: DragEvent<HTMLDivElement>, leadId: string) => {
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("application/lead-id", leadId);
+    setDraggedLeadId(leadId);
+  };
+
+  const handleLeadDrop = async (stage: Exclude<RevenuePipelineStage, "lost">) => {
+    if (!draggedLeadId) return;
+
+    const previousLead = leads.find((lead) => lead.id === draggedLeadId);
+    if (!previousLead || previousLead.stage === stage) {
+      setDraggedLeadId(null);
+      return;
     }
 
-    return true;
-  });
+    setLeads((previous) => previous.map((lead) => (
+      lead.id === draggedLeadId
+        ? { ...lead, stage, nextAction: getLeadNextAction(stage, lead.temperature), isStalled: false, daysInStage: 0 }
+        : lead
+    )));
 
-  const handleDismissAlert = (id: string) => { setDismissedAlerts((p) => [...p, id]); toast({ title: "Alert Dismissed", description: "You can view dismissed alerts in notifications." }); };
-  const handleFollowUpLead = (lead: LeadItem) => { toast({ title: "Follow-up Initiated", description: `Email queued for ${lead.name} at ${lead.company}.` }); };
-  const handleSendReminder = (inv: InvoiceItem) => { toast({ title: "Reminder Sent", description: `Payment reminder sent for ${inv.invoiceNo} to ${inv.client}.` }); };
+    try {
+      await updateLeadStatus(draggedLeadId, stageToLeadStatus[stage]);
+      toast({
+        title: "Pipeline updated",
+        description: `${previousLead.name} moved to ${stage.replace("-", " ")}.`,
+      });
+    } catch (error) {
+      console.error("Failed to update lead status:", error);
+      setLeads((previous) => previous.map((lead) => (
+        lead.id === draggedLeadId ? previousLead : lead
+      )));
+      toast({
+        title: "Could not update pipeline",
+        description: "The lead stayed in its previous stage. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDraggedLeadId(null);
+    }
+  };
 
-  const smartAlerts = buildAlerts(
-    dashboardAccess.canViewLeads ? leads : [],
-    dashboardAccess.canViewInvoices ? invoices : [],
-    dashboardAccess.canViewProjects ? projects : [],
-  );
-  const visibleAlerts = smartAlerts.filter((a) => !dismissedAlerts.includes(a.id));
-  const stalledLeads = leads.filter((l) => l.status === "stalled");
-  const hotLeads = leads.filter((l) => l.status === "hot");
-  const warmLeads = leads.filter((l) => l.status === "warm");
-  const overdueInvoices = invoices.filter((i) => i.status === "overdue");
-  const pendingInvoices = invoices.filter((i) => i.status === "pending");
-  const totalOverdue = overdueInvoices.reduce((s, i) => s + i.amount, 0);
-  const atRiskProjects = projects.filter((p) => p.status === "at-risk" || p.status === "delayed");
-  const hotPipelineValue = dashboardAccess.canViewLeads ? hotLeads.reduce((sum, lead) => sum + lead.value, 0) : 0;
-  const pendingInvoiceValue = dashboardAccess.canViewInvoices ? pendingInvoices.reduce((sum, invoice) => sum + invoice.amount, 0) : 0;
-  const weightedWarmPipelineValue = dashboardAccess.canViewLeads ? Math.round(warmLeads.reduce((sum, lead) => sum + lead.value, 0) * 0.35) : 0;
-  const forecastValue = hotPipelineValue + pendingInvoiceValue + weightedWarmPipelineValue;
-  const hasForecastSignals = forecastValue > 0;
-  const priorityActionsCount =
-    (dashboardAccess.canViewTasks ? stats.pendingTasks : 0) +
-    (dashboardAccess.canViewInvoices ? overdueInvoices.length : 0) +
-    (dashboardAccess.canViewLeads ? stalledLeads.length : 0) +
-    (dashboardAccess.canViewProjects ? atRiskProjects.length : 0);
-  const hasBusinessData =
-    (dashboardAccess.canViewLeads && leads.length > 0) ||
-    (dashboardAccess.canViewInvoices && invoices.length > 0) ||
-    (dashboardAccess.canViewProjects && projects.length > 0) ||
-    (dashboardAccess.canViewTasks && stats.pendingTasks > 0) ||
-    (dashboardAccess.canViewClients && stats.clientsCount > 0) ||
-    (dashboardAccess.canViewInvoices && stats.earnings > 0);
-  const pipelineHealthLabel = !dashboardAccess.canViewLeads ? "Not Available" : leads.length === 0 ? "No Pipeline Yet" : stalledLeads.length > 0 ? "Medium Risk" : "Healthy";
-  const pipelineHealthText =
-    !dashboardAccess.canViewLeads
-      ? "Lead access is restricted for this account"
-      : leads.length === 0
-      ? "Add leads to start pipeline monitoring"
-      : `${stalledLeads.length} leads stalled >5 days`;
-  const forecastSupportText = hasForecastSignals
-    ? "Hot leads + pending invoices + weighted warm pipeline"
-    : hasBusinessData
-      ? "No closeable revenue signals yet"
-      : "Create leads or invoices to unlock forecasting";
-  const dailyAiSummary = !hasBusinessData
-    ? "Your workspace is fresh. Add leads, projects, or invoices to unlock AI forecasting, pipeline insights, and action summaries."
-    : [
-        dashboardAccess.canViewInvoices && overdueInvoices.length > 0 ? `${`$${totalOverdue.toLocaleString()}`} in overdue invoices.` : "",
-        dashboardAccess.canViewLeads && stalledLeads.length > 0 ? `${stalledLeads.length} stalled lead${stalledLeads.length > 1 ? "s" : ""} need follow-up.` : "",
-        dashboardAccess.canViewLeads && hotLeads.length > 0 ? `${hotLeads.length} hot lead${hotLeads.length > 1 ? "s" : ""} worth $${hotPipelineValue.toLocaleString()} are ready to close.` : "",
-        dashboardAccess.canViewProjects && atRiskProjects.length > 0 ? `${atRiskProjects.length} project${atRiskProjects.length > 1 ? "s" : ""} need attention.` : "",
-        dashboardAccess.canViewTasks && stats.pendingTasks > 0 ? `${stats.pendingTasks} task${stats.pendingTasks > 1 ? "s" : ""} pending.` : dashboardAccess.canViewTasks ? "All tasks on track." : "",
-        dashboardAccess.canViewProjects && stats.projectsCount > 0 ? `${stats.projectsCount} active project${stats.projectsCount > 1 ? "s" : ""}.` : "",
-      ]
-        .filter(Boolean)
-        .join(" ");
-  const visibleStatCards = [
-    dashboardAccess.canViewProjects ? { icon: FolderKanban, color: "#0891B2", title: "Active Projects", value: `${stats.projectsCount}`, sub: stats.projectsCount > 0 ? `${stats.projectsCount}, on track` : "none", path: "/projects" } : null,
-    dashboardAccess.canViewInvoices ? { icon: DollarSign, color: "#01C44A", title: "Total Earnings", value: `$${stats.earnings.toLocaleString()}`, sub: "paid invoices", path: "/invoice" } : null,
-    dashboardAccess.canViewClients ? { icon: Users, color: "#D97706", title: "Total Clients", value: `${stats.clientsCount}`, sub: stats.clientsCount > 0 ? `${stats.clientsCount}, active` : "none", path: "/client-list" } : null,
-    dashboardAccess.canViewTasks ? { icon: Clock, color: "#FF7B36", title: "Pending Tasks", value: `${stats.pendingTasks}`, sub: stats.pendingTasks > 0 ? `${stats.pendingTasks}, needs action` : "all done", path: "/tasks" } : null,
-  ].filter(Boolean) as Array<{ icon: React.ElementType; color: string; title: string; value: string; sub: string; path: string }>;
-  const aiOverviewCards = [
-    dashboardAccess.canViewLeads ? (
-      <div key="pipeline-health" className="px-5 py-4">
-        <div className="flex items-center gap-1.5 mb-2"><Activity size={12} className="text-[#94A3B8]" /><span className="metric-label">Pipeline Health</span></div>
-        <div className="flex items-center gap-2 mb-1"><span className="text-lg font-bold text-[#0F172A] tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>{pipelineHealthLabel}</span></div>
-        <p className="text-[11px] text-[#475569] leading-relaxed">
-          {leads.length === 0 ? (
-            pipelineHealthText
-          ) : (
-            <>
-              <span className="text-[#FF7B36] font-medium">{stalledLeads.length} leads</span> stalled &gt;5 days
-            </>
-          )}
-        </p>
-      </div>
-    ) : null,
-    (dashboardAccess.canViewLeads || dashboardAccess.canViewInvoices) ? (
-      <div key="revenue-forecast" className="px-5 py-4">
-        <div className="flex items-center gap-1.5 mb-2"><TrendingUp size={12} className="text-[#94A3B8]" /><span className="metric-label">Revenue Forecast</span></div>
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-lg font-bold text-[#0F172A] tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>
-            ${forecastValue.toLocaleString()}
-          </span>
-          {hasForecastSignals ? <span className="text-[11px] text-[#01C44A] font-medium">projected</span> : null}
-        </div>
-        <p className="text-[11px] text-[#475569]">{forecastSupportText}</p>
-      </div>
-    ) : null,
-    dashboardAccess.canViewInvoices ? (
-      <div key="overdue-amount" className="px-5 py-4">
-        <div className="flex items-center gap-1.5 mb-2"><DollarSign size={12} className="text-[#94A3B8]" /><span className="metric-label">Overdue Amount</span></div>
-        <div className="flex items-center gap-2 mb-1"><span className="text-lg font-bold text-[#DC2626] tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>${totalOverdue.toLocaleString()}</span></div>
-        <p className="text-[11px] text-[#475569]">{overdueInvoices.length} invoices past due</p>
-      </div>
-    ) : null,
-    (dashboardAccess.canViewTasks || dashboardAccess.canViewInvoices || dashboardAccess.canViewLeads || dashboardAccess.canViewProjects) ? (
-      <div key="priority-actions" className="px-5 py-4">
-        <div className="flex items-center gap-1.5 mb-2"><AlertCircle size={12} className="text-[#94A3B8]" /><span className="metric-label">Priority Actions</span></div>
-        <div className="flex items-center gap-2 mb-1"><span className="text-lg font-bold text-[#FF7B36] tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>{priorityActionsCount}</span><span className="text-[11px] text-[#94A3B8] font-medium">items</span></div>
-        <p className="text-[11px] text-[#475569]">Require immediate attention</p>
-      </div>
-    ) : null,
-    dashboardAccess.canViewLeads ? (
-      <div key="hot-pipeline" className="px-5 py-4">
-        <div className="flex items-center gap-1.5 mb-2"><Target size={12} className="text-[#94A3B8]" /><span className="metric-label">Hot Pipeline</span></div>
-        <div className="flex items-center gap-2 mb-1"><span className="text-lg font-bold text-[#01C44A] tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>${hotPipelineValue.toLocaleString()}</span></div>
-        <p className="text-[11px] text-[#475569]">{hotLeads.length} leads ready to close</p>
-      </div>
-    ) : null,
-  ].filter(Boolean) as React.ReactNode[];
-  const aiOverviewGridClass = cn(
-    "grid divide-x divide-y md:divide-y-0 divide-[rgba(15,23,42,0.06)]",
-    aiOverviewCards.length <= 1
-      ? "grid-cols-1"
-      : aiOverviewCards.length === 2
-      ? "grid-cols-1 md:grid-cols-2"
-      : aiOverviewCards.length === 3
-      ? "grid-cols-1 md:grid-cols-3"
-      : aiOverviewCards.length === 4
-      ? "grid-cols-2 md:grid-cols-2 lg:grid-cols-4"
-      : "grid-cols-2 md:grid-cols-3 lg:grid-cols-5",
-  );
-  const canShowAiOverview = aiOverviewCards.length > 0;
+  const unreadNotificationsCount = notifications.filter((notification) => !notification.read).length;
+
+  const quickActions = useMemo<QuickActionItem[]>(() => {
+    const items: QuickActionItem[] = [];
+
+    if (dashboardAccess.canViewQuotes) {
+      items.push({
+        id: "create-estimate",
+        label: "Create Estimate",
+        description: "Turn a lead into a priced proposal",
+        icon: FileText,
+        path: "/quotes",
+        variant: "default",
+      });
+    }
+
+    if (dashboardAccess.canViewRoofEstimator) {
+      items.push({
+        id: "upload-roof-image",
+        label: "Upload Roof Image",
+        description: "Start measurements from a roof photo",
+        icon: Upload,
+        path: "/roof-estimator/new",
+        variant: "outline",
+      });
+    }
+
+    if (dashboardAccess.canViewSiteVisits) {
+      items.push({
+        id: "schedule-site-visit",
+        label: "Schedule Site Visit",
+        description: "Book the next inspection slot",
+        icon: Calendar,
+        path: "/inspections/new",
+        variant: "outline",
+      });
+    }
+
+    if (dashboardAccess.canViewLeads) {
+      items.push({
+        id: "view-pipeline",
+        label: "View Pipeline",
+        description: "Work the leads closest to revenue",
+        icon: Target,
+        path: "/leads/pipeline",
+        variant: "outline",
+      });
+    }
+
+    if (dashboardAccess.canViewProjects) {
+      items.push({
+        id: "view-jobs",
+        label: "View Jobs",
+        description: "Track production and crew deadlines",
+        icon: Briefcase,
+        path: "/projects",
+        variant: "outline",
+      });
+    }
+
+    if (dashboardAccess.canViewInvoices) {
+      items.push({
+        id: "view-invoices",
+        label: "View Invoices",
+        description: "Collect overdue and pending payments",
+        icon: Receipt,
+        path: "/invoice",
+        variant: "outline",
+      });
+    }
+
+    return items;
+  }, [
+    dashboardAccess.canViewInvoices,
+    dashboardAccess.canViewLeads,
+    dashboardAccess.canViewProjects,
+    dashboardAccess.canViewQuotes,
+    dashboardAccess.canViewRoofEstimator,
+    dashboardAccess.canViewSiteVisits,
+  ]);
+
+  const filteredQuickActions = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return quickActions;
+
+    return quickActions.filter((action) => (
+      `${action.label} ${action.description}`.toLowerCase().includes(query)
+    ));
+  }, [quickActions, searchQuery]);
+
+  const hotLeads = useMemo(() => (
+    dashboardAccess.canViewLeads
+      ? leads.filter((lead) => lead.temperature === "hot" && lead.stage !== "won" && lead.stage !== "lost")
+      : []
+  ), [dashboardAccess.canViewLeads, leads]);
+
+  const overdueInvoices = useMemo(() => (
+    dashboardAccess.canViewInvoices
+      ? invoices.filter((invoice) => invoice.status === "overdue")
+      : []
+  ), [dashboardAccess.canViewInvoices, invoices]);
+
+  const pendingPayments = useMemo(() => (
+    dashboardAccess.canViewInvoices
+      ? invoices.filter((invoice) => invoice.status === "pending" || invoice.status === "overdue")
+      : []
+  ), [dashboardAccess.canViewInvoices, invoices]);
+
+  const draftEstimates = useMemo(() => (
+    dashboardAccess.canViewQuotes
+      ? quotes.filter(isEstimateDraft)
+      : []
+  ), [dashboardAccess.canViewQuotes, quotes]);
+
+  const sentEstimates = useMemo(() => (
+    dashboardAccess.canViewQuotes
+      ? quotes.filter(isEstimateSent)
+      : []
+  ), [dashboardAccess.canViewQuotes, quotes]);
+
+  const nextSiteVisit = useMemo(() => {
+    if (!dashboardAccess.canViewSiteVisits) return null;
+
+    return [...siteVisits]
+      .filter((visit) => visit.scheduledAt && visit.scheduledAt.getTime() >= Date.now())
+      .sort((left, right) => (left.scheduledAt?.getTime() || 0) - (right.scheduledAt?.getTime() || 0))[0] || null;
+  }, [dashboardAccess.canViewSiteVisits, siteVisits]);
+
+  const activeJobs = useMemo(() => (
+    dashboardAccess.canViewProjects
+      ? [...jobs]
+          .filter((job) => job.status !== "completed")
+          .sort((left, right) => left.deadline.localeCompare(right.deadline))
+          .slice(0, 4)
+      : []
+  ), [dashboardAccess.canViewProjects, jobs]);
+
+  const recentClients = useMemo(() => (
+    dashboardAccess.canViewClients
+      ? [...clients]
+          .sort((left, right) => {
+            const leftTime = left.lastContacted ? new Date(left.lastContacted).getTime() : 0;
+            const rightTime = right.lastContacted ? new Date(right.lastContacted).getTime() : 0;
+            return rightTime - leftTime;
+          })
+          .slice(0, 5)
+      : []
+  ), [clients, dashboardAccess.canViewClients]);
+
+  const openPipelineLeads = useMemo(() => (
+    dashboardAccess.canViewLeads
+      ? leads.filter((lead) => lead.stage !== "won" && lead.stage !== "lost")
+      : []
+  ), [dashboardAccess.canViewLeads, leads]);
+
+  const totalPotentialRevenue = openPipelineLeads.reduce((sum, lead) => sum + lead.value, 0) + pendingPayments.reduce((sum, invoice) => sum + invoice.outstandingAmount, 0);
+  const hotLeadsValue = hotLeads.reduce((sum, lead) => sum + lead.value, 0);
+  const estimatesSentValue = sentEstimates.reduce((sum, quote) => sum + quote.total, 0);
+  const pendingPaymentsValue = pendingPayments.reduce((sum, invoice) => sum + invoice.outstandingAmount, 0);
+  const stalledLeadValue = leads.filter((lead) => lead.isStalled).reduce((sum, lead) => sum + lead.value, 0);
+  const estimateNotSentValue = draftEstimates.reduce((sum, quote) => sum + quote.total, 0);
+  const missedRevenueValue = stalledLeadValue + estimateNotSentValue;
+
+  const totalPotentialTrend = openPipelineLeads.length > 0
+    ? Math.round((hotLeadsValue / Math.max(openPipelineLeads.reduce((sum, lead) => sum + lead.value, 0), 1)) * 100)
+    : 0;
+  const hotLeadsTrend = openPipelineLeads.length > 0
+    ? Math.round((hotLeads.length / Math.max(openPipelineLeads.length, 1)) * 100)
+    : 0;
+  const estimatesSentTrend = quotes.length > 0
+    ? Math.round((sentEstimates.length / Math.max(quotes.length, 1)) * 100)
+    : 0;
+  const pendingPaymentsTrend = invoices.length > 0
+    ? Math.round((pendingPayments.length / Math.max(invoices.length, 1)) * 100)
+    : 0;
+
+  const actionCenterItems = useMemo<ActionCenterItem[]>(() => {
+    const items: ActionCenterItem[] = [];
+
+    if (dashboardAccess.canViewLeads) {
+      items.push({
+        id: "follow-up-hot-leads",
+        tone: "danger",
+        label: `Follow up: ${hotLeads.length} hot lead${hotLeads.length === 1 ? "" : "s"}`,
+        detail: hotLeads.length > 0
+          ? `${formatMoney(hotLeadsValue)} ready for a call back today`
+          : "No hot leads waiting right now",
+        actionLabel: "Open Pipeline",
+        path: "/leads/pipeline",
+      });
+    }
+
+    if (dashboardAccess.canViewQuotes) {
+      items.push({
+        id: "estimates-not-sent",
+        tone: "warning",
+        label: `${draftEstimates.length} estimate${draftEstimates.length === 1 ? "" : "s"} not sent`,
+        detail: draftEstimates.length > 0
+          ? `${formatMoney(estimateNotSentValue)} still sitting in draft`
+          : "Every estimate in the queue has been sent",
+        actionLabel: "Open Estimates",
+        path: "/quotes",
+      });
+    }
+
+    if (dashboardAccess.canViewSiteVisits) {
+      items.push({
+        id: "next-site-visit",
+        tone: "success",
+        label: nextSiteVisit
+          ? `Visit at ${formatTimeLabel(nextSiteVisit.scheduledAt)} - ${nextSiteVisit.clientName}`
+          : "Site visit schedule is open",
+        detail: nextSiteVisit
+          ? `${nextSiteVisit.inspectionType} at ${nextSiteVisit.address}`
+          : "Book the next inspection before the day fills up",
+        actionLabel: nextSiteVisit ? "Open Visit" : "Schedule Visit",
+        path: nextSiteVisit ? "/inspections" : "/inspections/new",
+      });
+    }
+
+    if (dashboardAccess.canViewInvoices) {
+      items.push({
+        id: "invoice-overdue",
+        tone: "danger",
+        label: `Invoice overdue: ${formatMoney(overdueInvoices.reduce((sum, invoice) => sum + invoice.outstandingAmount, 0))}`,
+        detail: overdueInvoices.length > 0
+          ? `${overdueInvoices.length} invoice${overdueInvoices.length === 1 ? "" : "s"} need collection follow-up`
+          : "No overdue invoices right now",
+        actionLabel: "Open Invoices",
+        path: "/invoice",
+      });
+    }
+
+    return items;
+  }, [
+    dashboardAccess.canViewInvoices,
+    dashboardAccess.canViewLeads,
+    dashboardAccess.canViewQuotes,
+    dashboardAccess.canViewSiteVisits,
+    draftEstimates.length,
+    estimateNotSentValue,
+    hotLeads.length,
+    hotLeadsValue,
+    nextSiteVisit,
+    overdueInvoices,
+  ]);
+
+  const kanbanColumns = useMemo(() => ([
+    { id: "lead" as const, title: "Lead", leads: leads.filter((lead) => lead.stage === "lead") },
+    { id: "contacted" as const, title: "Contacted", leads: leads.filter((lead) => lead.stage === "contacted") },
+    { id: "estimate-sent" as const, title: "Estimate Sent", leads: leads.filter((lead) => lead.stage === "estimate-sent") },
+    { id: "negotiation" as const, title: "Negotiation", leads: leads.filter((lead) => lead.stage === "negotiation") },
+    { id: "won" as const, title: "Won", leads: leads.filter((lead) => lead.stage === "won") },
+  ]), [leads]);
+
   const hasAnyDashboardModuleAccess =
     dashboardAccess.canViewLeads ||
     dashboardAccess.canViewInvoices ||
+    dashboardAccess.canViewQuotes ||
     dashboardAccess.canViewProjects ||
-    dashboardAccess.canViewTasks ||
     dashboardAccess.canViewClients ||
-    dashboardAccess.canViewCalendar ||
-    dashboardAccess.canViewAiAssistant;
+    dashboardAccess.canViewRoofEstimator ||
+    dashboardAccess.canViewSiteVisits;
 
-  // ============================================
-  // RENDER
-  // ============================================
   return (
-    <div className={cn("min-h-screen w-full bg-[#F7F7FB]")}>
+    <div className="min-h-screen w-full bg-[#F7F7FB]">
       <main>
-        {/* ============= MOBILE HEADER ============= */}
-        <header className={cn(
-          "crm-module-header sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-[rgba(15,23,42,0.06)]",
-          isMobile ? "pt-[env(safe-area-inset-top,7px)]" : "pt-0"
-        )}>
+        <header
+          className={cn(
+            "crm-module-header sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-[rgba(15,23,42,0.06)]",
+            isMobile ? "pt-[env(safe-area-inset-top,7px)]" : "pt-0",
+          )}
+        >
           {isMobile ? (
-            /* ---- MOBILE TOP BAR ---- */
             <div className="flex h-12 items-center justify-between px-4">
               <div className="flex items-center gap-2">
                 <img src={logo} alt="ZODO" className="h-8 w-auto object-contain" />
-                <span className="text-sm font-bold text-[#0F172A] tracking-tight">ZODO CRM</span>
+                <span className="text-sm font-bold text-[#0F172A] tracking-tight">ZODO Dashboard</span>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => navigate("/settings/profile")} className="p-1.5 rounded-full text-[#475569]">
-                  <div className="h-7 w-7 rounded-full bg-[#0891B2] flex items-center justify-center text-white text-[10px] font-bold">{user ? (user.firstName[0] + user.lastName[0]).toUpperCase() : "GU"}</div>
+                <button
+                  onClick={() => navigate("/settings/profile")}
+                  className="p-1.5 rounded-full text-[#475569]"
+                >
+                  <div className="h-7 w-7 rounded-full bg-[#0891B2] flex items-center justify-center text-white text-[10px] font-bold">
+                    {user ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase() : "ZU"}
+                  </div>
                 </button>
                 <div ref={notificationRef} className="relative">
-                  <button onClick={() => setShowNotifications(!showNotifications)} className="relative p-1.5 rounded-full text-[#475569]">
+                  <button
+                    onClick={() => setShowNotifications(!showNotifications)}
+                    className="relative p-1.5 rounded-full text-[#475569]"
+                  >
                     <Bell size={20} />
-                    {unreadNotificationsCount > 0 && <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] bg-[#FF7B36] text-white text-[8px] font-bold rounded-full flex items-center justify-center border-2 border-white z-10">{unreadNotificationsCount}</span>}
+                    {unreadNotificationsCount > 0 ? (
+                      <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] bg-[#FF7B36] text-white text-[8px] font-bold rounded-full flex items-center justify-center border-2 border-white z-10">
+                        {unreadNotificationsCount}
+                      </span>
+                    ) : null}
                   </button>
                   <AnimatePresence>
-                    {showNotifications && (
-                      <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} transition={{ duration: 0.15 }} className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-80 bg-white border border-[rgba(15,23,42,0.06)] card-shadow rounded-md overflow-hidden z-50">
-                        <div className="p-4 border-b border-[rgba(15,23,42,0.06)]"><div className="flex items-center justify-between"><h4 className="font-semibold text-[#0F172A]">Notifications</h4><button onClick={handleMarkAllAsRead} className="text-xs text-[#0891B2] font-medium cursor-pointer hover:underline">Mark all as read</button></div></div>
+                    {showNotifications ? (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-80 bg-white border border-[rgba(15,23,42,0.06)] card-shadow rounded-md overflow-hidden z-50"
+                      >
+                        <div className="p-4 border-b border-[rgba(15,23,42,0.06)]">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-semibold text-[#0F172A]">Notifications</h4>
+                            <button
+                              onClick={handleMarkAllAsRead}
+                              className="text-xs text-[#0891B2] font-medium cursor-pointer hover:underline"
+                            >
+                              Mark all as read
+                            </button>
+                          </div>
+                        </div>
                         <div className="max-h-80 overflow-y-auto">
                           {notifications.map((notification) => {
-                            const colors = getColorClasses(notification.color); return (
-                              <div key={notification.id} className={cn("p-3 hover:bg-white transition-colors cursor-pointer border-b border-[rgba(15,23,42,0.06)] last:border-0", !notification.read && "bg-[#0891B2]/5")}>
+                            const colors = getColorClasses(notification.color);
+                            return (
+                              <div
+                                key={notification.id}
+                                className={cn(
+                                  "p-3 hover:bg-white transition-colors cursor-pointer border-b border-[rgba(15,23,42,0.06)] last:border-0",
+                                  !notification.read && "bg-[#0891B2]/5",
+                                )}
+                              >
                                 <div className="flex gap-3">
-                                  <div className={cn("w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0", colors.light)}><notification.icon size={16} className={colors.text} /></div>
-                                  <div className="flex-1 min-w-0"><p className="text-xs font-medium text-[#0F172A]">{notification.title}</p><p className="text-[11px] text-[#475569] line-clamp-2">{notification.message}</p><p className="text-[10px] text-[#94A3B8] mt-0.5">{notification.time}</p></div>
-                                  {!notification.read && <div className="w-1.5 h-1.5 rounded-full bg-[#0891B2] flex-shrink-0 mt-2" />}
+                                  <div className={cn("w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0", colors.light)}>
+                                    <notification.icon size={16} className={colors.text} />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-medium text-[#0F172A]">{notification.title}</p>
+                                    <p className="text-[11px] text-[#475569] line-clamp-2">{notification.message}</p>
+                                    <p className="text-[10px] text-[#94A3B8] mt-0.5">{notification.time}</p>
+                                  </div>
+                                  {!notification.read ? <div className="w-1.5 h-1.5 rounded-full bg-[#0891B2] flex-shrink-0 mt-2" /> : null}
                                 </div>
                               </div>
                             );
                           })}
                         </div>
-                        <div className="p-2.5 bg-white text-center border-t border-[rgba(15,23,42,0.06)]"><button onClick={() => navigate("/notifications")} className="text-xs text-[#0891B2] font-medium hover:underline">View All Notifications</button></div>
+                        <div className="p-2.5 bg-white text-center border-t border-[rgba(15,23,42,0.06)]">
+                          <button
+                            onClick={() => navigate("/notifications")}
+                            className="text-xs text-[#0891B2] font-medium hover:underline"
+                          >
+                            View All Notifications
+                          </button>
+                        </div>
                       </motion.div>
-                    )}
+                    ) : null}
                   </AnimatePresence>
                 </div>
               </div>
             </div>
           ) : (
-            /* ---- DESKTOP TOP BAR ---- */
             <div className="flex h-12 items-center justify-between px-3 md:px-5">
               <div className="flex items-center gap-2 md:gap-6 flex-1 min-w-0">
-                <div className="relative flex-1 max-w-[140px] sm:max-w-xs md:max-w-none md:flex-none md:w-64">
+                <div className="relative flex-1 max-w-[160px] sm:max-w-xs md:max-w-none md:flex-none md:w-72">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#475569]" />
-                  <input type="text" placeholder="Search anything..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onClick={() => setShowSearchModal(true)} className="w-full h-8 pl-9 pr-4 md:pr-14 rounded-md bg-white border border-[rgba(15,23,42,0.06)] text-xs text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-1 focus:ring-[#0891B2]/30 transition-colors" />
-                  <kbd className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-0.5 rounded bg-[#F1F5F9] text-[10px] text-[#475569] border border-[rgba(15,23,42,0.06)] font-mono hidden md:flex items-center gap-1"><Command size={10} />K</kbd>
+                  <input
+                    type="text"
+                    placeholder="Search jobs, estimates, clients..."
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    onClick={() => setShowSearchModal(true)}
+                    className="w-full h-8 pl-9 pr-4 md:pr-14 rounded-md bg-white border border-[rgba(15,23,42,0.06)] text-xs text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-1 focus:ring-[#0891B2]/30 transition-colors"
+                  />
+                  <kbd className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-0.5 rounded bg-[#F1F5F9] text-[10px] text-[#475569] border border-[rgba(15,23,42,0.06)] font-mono hidden md:flex items-center gap-1">
+                    <Command size={10} />
+                    K
+                  </kbd>
                 </div>
               </div>
+
               <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 flex-shrink-0">
-                {dashboardAccess.canViewAiAssistant && (
-                <button onClick={() => setShowCopilot(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0891B2]/8 text-[#0891B2] text-xs font-medium rounded-md hover:bg-[#0891B2]/14 transition-colors border border-[#0891B2]/15">
-                  <Sparkles size={14} /><span className="hidden sm:inline">Ask Zodo AI</span>
-                </button>
-                )}
-                {dashboardAccess.canViewProjects && (
-                <button onClick={() => navigate("/projects/add")} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0891B2] text-white text-xs font-medium rounded-md hover:bg-[#0891B2]/90 transition-colors">
-                  <Plus size={14} /><span className="hidden sm:inline">New</span>
-                </button>
-                )}
-                <button onClick={toggleDarkMode} className="p-2 rounded-md bg-white border border-[rgba(15,23,42,0.06)] text-[#94A3B8] hover:text-[#475569] transition-colors">
+                <div className="hidden lg:flex items-center gap-2">
+                  {quickActions.slice(0, 3).map((action) => (
+                    <Button
+                      key={action.id}
+                      variant={action.variant}
+                      size="sm"
+                      onClick={() => navigate(action.path)}
+                    >
+                      <action.icon />
+                      <span>{action.label}</span>
+                    </Button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={toggleDarkMode}
+                  className="p-2 rounded-md bg-white border border-[rgba(15,23,42,0.06)] text-[#94A3B8] hover:text-[#475569] transition-colors"
+                >
                   {isDarkMode ? <Sun size={15} /> : <Moon size={15} />}
                 </button>
+
                 <div ref={notificationRef} className="relative">
-                  <button onClick={() => setShowNotifications(!showNotifications)} className="relative overflow-visible p-2 rounded-md bg-white border border-[rgba(15,23,42,0.06)] text-[#94A3B8] hover:text-[#475569] transition-colors">
+                  <button
+                    onClick={() => setShowNotifications(!showNotifications)}
+                    className="relative overflow-visible p-2 rounded-md bg-white border border-[rgba(15,23,42,0.06)] text-[#94A3B8] hover:text-[#475569] transition-colors"
+                  >
                     <Bell size={15} />
-                    {unreadNotificationsCount > 0 && <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-[#FF7B36] text-white text-[9px] font-bold rounded-full flex items-center justify-center border-2 border-white z-10">{unreadNotificationsCount}</span>}
+                    {unreadNotificationsCount > 0 ? (
+                      <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-[#FF7B36] text-white text-[9px] font-bold rounded-full flex items-center justify-center border-2 border-white z-10">
+                        {unreadNotificationsCount}
+                      </span>
+                    ) : null}
                   </button>
                   <AnimatePresence>
-                    {showNotifications && (
-                      <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} transition={{ duration: 0.15 }} className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-80 max-w-80 bg-white border border-[rgba(15,23,42,0.06)] card-shadow rounded-md overflow-hidden z-50">
-                        <div className="p-4 border-b border-[rgba(15,23,42,0.06)]"><div className="flex items-center justify-between"><h4 className="font-semibold text-[#0F172A]">Notifications</h4><button onClick={handleMarkAllAsRead} className="text-xs text-[#0891B2] font-medium cursor-pointer hover:underline">Mark all as read</button></div></div>
+                    {showNotifications ? (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-80 max-w-80 bg-white border border-[rgba(15,23,42,0.06)] card-shadow rounded-md overflow-hidden z-50"
+                      >
+                        <div className="p-4 border-b border-[rgba(15,23,42,0.06)]">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-semibold text-[#0F172A]">Notifications</h4>
+                            <button
+                              onClick={handleMarkAllAsRead}
+                              className="text-xs text-[#0891B2] font-medium cursor-pointer hover:underline"
+                            >
+                              Mark all as read
+                            </button>
+                          </div>
+                        </div>
                         <div className="max-h-80 overflow-y-auto">
                           {notifications.map((notification) => {
-                            const colors = getColorClasses(notification.color); return (
-                              <div key={notification.id} className={cn("p-4 hover:bg-white transition-colors cursor-pointer border-b border-[rgba(15,23,42,0.06)] last:border-0", !notification.read && "bg-[#0891B2]/5")}>
+                            const colors = getColorClasses(notification.color);
+                            return (
+                              <div
+                                key={notification.id}
+                                className={cn(
+                                  "p-4 hover:bg-white transition-colors cursor-pointer border-b border-[rgba(15,23,42,0.06)] last:border-0",
+                                  !notification.read && "bg-[#0891B2]/5",
+                                )}
+                              >
                                 <div className="flex gap-3">
-                                  <div className={cn("w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0", colors.light)}><notification.icon size={18} className={colors.text} /></div>
-                                  <div className="flex-1 min-w-0"><p className="text-sm font-medium text-[#0F172A]">{notification.title}</p><p className="text-sm text-[#475569]">{notification.message}</p><p className="text-xs text-[#475569] mt-1">{notification.time}</p></div>
-                                  {!notification.read && <div className="w-2 h-2 rounded-full bg-[#0891B2] flex-shrink-0 mt-2" />}
+                                  <div className={cn("w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0", colors.light)}>
+                                    <notification.icon size={18} className={colors.text} />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-[#0F172A]">{notification.title}</p>
+                                    <p className="text-sm text-[#475569]">{notification.message}</p>
+                                    <p className="text-xs text-[#475569] mt-1">{notification.time}</p>
+                                  </div>
+                                  {!notification.read ? <div className="w-2 h-2 rounded-full bg-[#0891B2] flex-shrink-0 mt-2" /> : null}
                                 </div>
                               </div>
                             );
                           })}
                         </div>
-                        <div className="p-3 bg-white text-center border-t border-[rgba(15,23,42,0.06)]"><button onClick={() => navigate("/notifications")} className="text-sm text-[#0891B2] font-medium hover:underline">View All Notifications</button></div>
+                        <div className="p-3 bg-white text-center border-t border-[rgba(15,23,42,0.06)]">
+                          <button
+                            onClick={() => navigate("/notifications")}
+                            className="text-sm text-[#0891B2] font-medium hover:underline"
+                          >
+                            View All Notifications
+                          </button>
+                        </div>
                       </motion.div>
-                    )}
+                    ) : null}
                   </AnimatePresence>
                 </div>
+
                 <div ref={profileRef} className="relative flex items-center gap-3 pl-3 ml-3 border-l border-[rgba(15,23,42,0.06)] hidden md:flex">
-                  <div className="text-right hidden sm:block"><p className="text-sm font-semibold text-[#0F172A]">{user ? `${user.firstName} ${user.lastName}` : "Guest User"}</p><p className="text-xs text-[#94A3B8]">{user?.role || "Administrator"}</p></div>
-                  <motion.button whileHover={{ scale: 1.05 }} onClick={() => setShowProfileMenu(!showProfileMenu)} className="relative cursor-pointer flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-md bg-[#0891B2] flex items-center justify-center text-white text-xs font-bold">{user ? (user.firstName[0] + user.lastName[0]).toUpperCase() : "GU"}</div>
+                  <div className="text-right hidden sm:block">
+                    <p className="text-sm font-semibold text-[#0F172A]">
+                      {user ? `${user.firstName} ${user.lastName}` : "Guest User"}
+                    </p>
+                    <p className="text-xs text-[#94A3B8]">{user?.role || "Administrator"}</p>
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    onClick={() => setShowProfileMenu(!showProfileMenu)}
+                    className="relative cursor-pointer flex items-center gap-2"
+                  >
+                    <div className="h-8 w-8 rounded-md bg-[#0891B2] flex items-center justify-center text-white text-xs font-bold">
+                      {user ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase() : "ZU"}
+                    </div>
                     <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-[#01C44A] rounded-full border-2 border-[rgba(15,23,42,0.06)]" />
                   </motion.button>
                   <ChevronDown size={16} className={cn("text-[#475569] transition-transform", showProfileMenu && "rotate-180")} />
                   <AnimatePresence>
-                    {showProfileMenu && (
-                      <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} transition={{ duration: 0.15 }} className="absolute right-0 top-full mt-2 w-56 bg-white border border-[rgba(15,23,42,0.06)] card-shadow rounded-md overflow-hidden z-50">
-                        <div className="p-4 border-b border-[rgba(15,23,42,0.06)]"><p className="font-semibold text-[#0F172A]">{user ? `${user.firstName} ${user.lastName}` : "Guest User"}</p><p className="text-xs text-[#475569] truncate">{user?.email || "guest@yoursoft.ca"}</p></div>
-                        <div className="p-2">
-                          <button onClick={() => navigate("/settings/profile")} className="w-full px-3 py-2 text-left text-sm text-[#475569] hover:bg-white hover:text-[#0F172A] rounded-md transition-colors">Profile Settings</button>
-                          <button onClick={() => navigate("/settings")} className="w-full px-3 py-2 text-left text-sm text-[#475569] hover:bg-white hover:text-[#0F172A] rounded-md transition-colors">Account Settings</button>
-                          <button onClick={() => navigate("/help")} className="w-full px-3 py-2 text-left text-sm text-[#475569] hover:bg-white hover:text-[#0F172A] rounded-md transition-colors">Help & Support</button>
+                    {showProfileMenu ? (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute right-0 top-full mt-2 w-56 bg-white border border-[rgba(15,23,42,0.06)] card-shadow rounded-md overflow-hidden z-50"
+                      >
+                        <div className="p-4 border-b border-[rgba(15,23,42,0.06)]">
+                          <p className="font-semibold text-[#0F172A]">
+                            {user ? `${user.firstName} ${user.lastName}` : "Guest User"}
+                          </p>
+                          <p className="text-xs text-[#475569] truncate">{user?.email || "guest@zodo.ca"}</p>
                         </div>
-                        <div className="p-2 border-t border-[rgba(15,23,42,0.06)]"><button onClick={handleLogout} className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 rounded-md transition-colors">Sign Out</button></div>
+                        <div className="p-2">
+                          <button
+                            onClick={() => navigate("/settings/profile")}
+                            className="w-full px-3 py-2 text-left text-sm text-[#475569] hover:bg-white hover:text-[#0F172A] rounded-md transition-colors"
+                          >
+                            Profile Settings
+                          </button>
+                          <button
+                            onClick={() => navigate("/settings")}
+                            className="w-full px-3 py-2 text-left text-sm text-[#475569] hover:bg-white hover:text-[#0F172A] rounded-md transition-colors"
+                          >
+                            Account Settings
+                          </button>
+                          <button
+                            onClick={() => navigate("/help")}
+                            className="w-full px-3 py-2 text-left text-sm text-[#475569] hover:bg-white hover:text-[#0F172A] rounded-md transition-colors"
+                          >
+                            Help and Support
+                          </button>
+                        </div>
+                        <div className="p-2 border-t border-[rgba(15,23,42,0.06)]">
+                          <button
+                            onClick={handleLogout}
+                            className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 rounded-md transition-colors"
+                          >
+                            Sign Out
+                          </button>
+                        </div>
                       </motion.div>
-                    )}
+                    ) : null}
                   </AnimatePresence>
                 </div>
               </div>
@@ -638,341 +1274,718 @@ const Index = () => {
           )}
         </header>
 
-        {/* ============= MAIN CONTENT ============= */}
         <div className={cn("space-y-4 md:space-y-6 page-enter", isMobile ? "p-3" : "p-4 md:p-6")}>
-
-          {/* ===== GREETING + AI OVERVIEW ===== */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h1 className="text-xl font-bold text-[#0F172A]">{getGreeting()}, {user ? user.firstName : "there"} 👋</h1>
-              <p className="text-xs text-[#94A3B8] mt-0.5">{currentTime.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</p>
+              <h1 className="text-xl font-bold text-[#0F172A]">
+                {getGreeting()}, {user ? user.firstName : "there"}
+              </h1>
+              <p className="text-xs text-[#94A3B8] mt-0.5">
+                {currentTime.toLocaleDateString("en-US", {
+                  weekday: "long",
+                  month: "long",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </p>
             </div>
+
             <div className="flex items-center gap-2">
-              <span className="ai-tag">LIVE</span>
-              <span className="text-[10px] text-[#94A3B8]">Updated just now</span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#0891B2] bg-[#0891B2]/10 px-2 py-1 rounded">
+                Live
+              </span>
+              <span className="text-[10px] text-[#94A3B8]">Revenue engine updated just now</span>
             </div>
           </div>
 
-          {!hasAnyDashboardModuleAccess && (
-            <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] px-5 py-4">
+          {isMobile ? (
+            <div className="flex flex-wrap gap-2">
+              {quickActions.slice(0, 3).map((action) => (
+                <Button
+                  key={action.id}
+                  variant={action.variant}
+                  size="sm"
+                  onClick={() => navigate(action.path)}
+                >
+                  <action.icon />
+                  <span>{action.label}</span>
+                </Button>
+              ))}
+            </div>
+          ) : null}
+
+          {!hasAnyDashboardModuleAccess ? (
+            <div className={`${sectionCardClassName} px-5 py-4`}>
               <h2 className="text-sm font-semibold text-[#0F172A]">Dashboard Access Limited</h2>
               <p className="mt-1 text-sm text-[#475569]">
-                This account can access the dashboard shell, but all module widgets are currently hidden by permissions.
+                This account can access the dashboard shell, but roofing revenue widgets are hidden by permissions.
               </p>
             </div>
-          )}
+          ) : null}
 
-          {/* ===== SMART ALERTS ===== */}
-          {visibleAlerts.length > 0 && (
-            <div className="space-y-2">
-              {visibleAlerts.map((alert) => (
-                <motion.div key={alert.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, height: 0 }} className={cn("flex items-center gap-3 px-4 py-2.5 rounded-md border", alert.type === "danger" ? "bg-[#FF2E2D]/5 border-red-200/15" : alert.type === "warning" ? "bg-[#D97706]/5 border-[#D97706]/15" : "bg-[#0891B2]/5 border-[#0891B2]/15")}>
-                  <AlertTriangle size={14} className={alert.type === "danger" ? "text-[#FF2E2D]" : alert.type === "warning" ? "text-[#D97706]" : "text-[#0891B2]"} />
-                  <div className="flex-1 min-w-0">
-                    <span className="text-xs font-semibold text-[#0F172A]">{alert.title}</span>
-                    <span className="text-xs text-[#475569] ml-2">{alert.message}</span>
-                  </div>
-                  <button onClick={() => navigate(alert.actionPath)} className="text-[11px] font-medium text-[#0891B2] hover:underline whitespace-nowrap">{alert.action}</button>
-                  <button onClick={() => handleDismissAlert(alert.id)} className="text-[#94A3B8] hover:text-[#475569]"><X size={14} /></button>
-                </motion.div>
-              ))}
-            </div>
-          )}
-
-          {/* ===== AI BUSINESS OVERVIEW ===== */}
-          {canShowAiOverview && (
-          <div className="bg-white rounded-md border-l-[3px] border-l-[#0891B2] p-0 overflow-hidden ai-hero-pulse" style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.04), 0 8px 20px rgba(15,23,42,0.05)' }}>
-            <div className="flex items-center justify-between px-5 pt-4 pb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-md bg-[#0891B2]/8 flex items-center justify-center"><Sparkles size={16} className="text-[#0891B2]" /></div>
-                <div>
-                  <h2 className="text-sm font-semibold text-[#0F172A] tracking-tight">AI Business Intelligence</h2>
-                  <p className="text-[11px] text-[#94A3B8]">Real-time insights across your CRM</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="ai-tag">AI</span>
-              </div>
-            </div>
-            <div className={aiOverviewGridClass}>{aiOverviewCards}</div>
-          </div>
-          )}
-
-          {/* ===== AI DAILY SUMMARY ===== */}
-          {canShowAiOverview && (
-          <div className="ai-insight-enter" style={{ animationDelay: '200ms' }}>
-            <div className="flex items-center gap-2 px-1 mb-3"><Sparkles size={13} className="text-[#0891B2]" /><span className="text-xs font-semibold text-[#0F172A]">Daily AI Summary</span><span className="ai-tag">AI</span></div>
-            <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] px-5 py-3" style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.03)' }}>
-              <p className="text-[12px] text-[#475569] leading-relaxed">
-                <span className="text-[#0F172A] font-medium">Today's overview:</span>{' '}
-                {dailyAiSummary}
-              </p>
-            </div>
-          </div>
-          )}
-
-          {/* ===== QUICK ACTIONS ===== */}
-          {visibleQuickActions.length > 0 && (isMobile ? (
-            /* Mobile: compact icon grid matching screenshot */
-            <div className="grid grid-cols-4 gap-2">
-              {visibleQuickActions.map((action, index) => (
-                <motion.button key={index} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 * index }} whileTap={{ scale: 0.95 }} onClick={() => handleQuickAction(action.path)} className="flex flex-col items-center gap-1.5 py-3 bg-white rounded-md border border-[rgba(15,23,42,0.06)] active:bg-[#F1F5F9] transition-colors">
-                  <div className="w-9 h-9 rounded-md bg-[#F1F5F9] flex items-center justify-center"><action.icon size={18} className="text-[#475569]" /></div>
-                  <span className="text-[10px] font-medium text-[#475569] leading-tight text-center px-1">{action.title}</span>
-                </motion.button>
-              ))}
-            </div>
-          ) : (
-            /* Desktop: full cards */
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-              {visibleQuickActions.map((action, index) => {
-                const colors = getColorClasses(action.color); return (
-                  <motion.button key={index} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 * index }} whileHover={{ scale: 1.01, y: -2 }} whileTap={{ scale: 0.99 }} onClick={() => handleQuickAction(action.path)} className="flex items-center gap-4 p-4 bg-white rounded-md card-shadow hover:shadow-md transition-all group">
-                    <div className="w-10 h-10 rounded-md bg-[#F1F5F9] flex items-center justify-center"><action.icon size={20} className="text-[#475569]" /></div>
-                    <div className="text-left"><p className="font-semibold text-[#0F172A] group-hover:text-[#0891B2] transition-colors">{action.title}</p><p className="text-xs text-[#475569]">{action.description}</p></div>
-                    <ArrowUpRight size={16} className="ml-auto text-[#94A3B8] group-hover:text-[#0891B2] transition-colors" />
-                  </motion.button>
-                );
-              })}
-            </div>
-          ))}
-
-          {/* ===== STAT CARDS ===== */}
-          {visibleStatCards.length > 0 && (isMobile ? (
-            /* Mobile: list-style stat rows with chevrons */
-            <div className="bg-white rounded-md card-shadow divide-y divide-[rgba(15,23,42,0.04)] overflow-hidden">
-              {visibleStatCards.map((s, i) => (
-                <button key={i} onClick={() => navigate(s.path)} className="flex items-center gap-3 px-4 py-3 w-full text-left active:bg-[#F7F7FB] transition-colors">
-                  <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${s.color}15` }}><s.icon size={18} style={{ color: s.color }} /></div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-[#0F172A]">{s.title}</p>
-                    <p className="text-[11px] text-[#94A3B8]">{s.sub}</p>
-                  </div>
-                  <ChevronDown size={16} className="text-[#94A3B8] -rotate-90 flex-shrink-0" />
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className={cn("grid gap-3 md:gap-4 stagger-enter", visibleStatCards.length === 1 ? "grid-cols-1" : visibleStatCards.length === 2 ? "grid-cols-2" : "grid-cols-2 lg:grid-cols-4")}>
-              {dashboardAccess.canViewProjects && <StatCard title="Active Projects" value={stats.projectsCount} subtitle="Total projects" trend={0} comparison="Current" icon={FolderKanban} color="cyan" isLoading={isLoading} lastUpdated="Updated just now" aiInsight={stats.projectsCount > 0 ? "Delivery pace on track" : undefined} />}
-              {dashboardAccess.canViewInvoices && <StatCard title="Total Earnings" value={`$${stats.earnings.toLocaleString()}`} subtitle="Paid invoices" trend={0} comparison="Current" icon={DollarSign} color="orange" isLoading={isLoading} lastUpdated="Updated just now" aiInsight={stats.earnings > 0 ? "From paid invoices" : undefined} />}
-              {dashboardAccess.canViewClients && <StatCard title="Total Clients" value={stats.clientsCount} subtitle="Active clients" trend={0} comparison="Current" icon={Users} color="green" isLoading={isLoading} lastUpdated="Updated just now" aiInsight={stats.clientsCount > 0 ? `${stats.clientsCount} active` : undefined} />}
-              {dashboardAccess.canViewTasks && <StatCard title="Pending Tasks" value={stats.pendingTasks} subtitle="Needs action" trend={0} comparison="Current" icon={Clock} color="purple" isLoading={isLoading} lastUpdated="Updated just now" aiInsight={stats.pendingTasks > 5 ? "Prioritize overdue items" : "On track"} />}
-            </div>
-          ))}
-
-          {/* ===== LEADS & INVOICES ROW ===== */}
-          {(dashboardAccess.canViewLeads || dashboardAccess.canViewInvoices) && (
-          <div className={cn("grid grid-cols-1 gap-4 md:gap-6", dashboardAccess.canViewLeads && dashboardAccess.canViewInvoices ? "lg:grid-cols-2" : "lg:grid-cols-1")}>
-
-            {/* Leads Tracker */}
-            {dashboardAccess.canViewLeads && <div className="bg-white rounded-md card-shadow overflow-hidden">
-              <div className="p-5 border-b border-[rgba(15,23,42,0.06)]">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-md bg-[#0891B2]/10 flex items-center justify-center"><Target size={16} className="text-[#0891B2]" /></div>
-                    <div><h3 className="font-semibold text-sm text-[#0F172A]">Lead Pipeline</h3><p className="text-[11px] text-[#94A3B8]">{hotLeads.length} hot · {stalledLeads.length} stalled</p></div>
-                  </div>
-                  <button onClick={() => navigate("/leads")} className="text-xs text-[#0891B2] font-medium hover:underline flex items-center gap-1">View All <ArrowUpRight size={12} /></button>
-                </div>
-              </div>
-              <div className="divide-y divide-[rgba(15,23,42,0.04)] max-h-[320px] overflow-y-auto">
-                {leads.map((lead) => (
-                  <div key={lead.id} className="px-5 py-3 hover:bg-[#F7F7FB] transition-colors">
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2">
-                        <span className={cn("w-2 h-2 rounded-full", lead.status === "hot" ? "bg-[#FF2E2D]" : lead.status === "warm" ? "bg-[#D97706]" : lead.status === "stalled" ? "bg-[#FF7B36]" : "bg-[#94A3B8]")} />
-                        <span className="text-xs font-medium text-[#0F172A]">{lead.name}</span>
-                        <span className="text-[10px] text-[#94A3B8]">· {lead.company}</span>
+          {hasAnyDashboardModuleAccess ? (
+            <>
+              <div className="grid grid-cols-1 gap-4 md:gap-6 xl:grid-cols-[1.4fr,0.9fr]">
+                <motion.section
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.05 }}
+                  className={sectionCardClassName}
+                >
+                  <div className="p-5 border-b border-[rgba(15,23,42,0.06)]">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-md bg-[#0891B2]/10 flex items-center justify-center">
+                          <Target size={16} className="text-[#0891B2]" />
+                        </div>
+                        <div>
+                          <h2 className="text-sm font-semibold text-[#0F172A]">What should I do today?</h2>
+                          <p className="text-[11px] text-[#94A3B8]">Work the tasks that move revenue fastest</p>
+                        </div>
                       </div>
-                      <span className="text-xs font-semibold text-[#0F172A]">${lead.value.toLocaleString()}</span>
+                      {dashboardAccess.canViewLeads ? (
+                        <button
+                          onClick={() => navigate("/leads/pipeline")}
+                          className="text-xs text-[#0891B2] font-medium hover:underline flex items-center gap-1"
+                        >
+                          Open Pipeline
+                          <ArrowUpRight size={12} />
+                        </button>
+                      ) : null}
                     </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className={cn("px-1.5 py-0.5 rounded text-[9px] font-bold uppercase", lead.status === "hot" ? "bg-[#FF2E2D]/10 text-[#FF2E2D]" : lead.status === "stalled" ? "bg-[#FF7B36]/10 text-[#FF7B36]" : lead.status === "warm" ? "bg-[#D97706]/10 text-[#D97706]" : "bg-[#94A3B8]/10 text-[#94A3B8]")}>{lead.status}</span>
-                        <span className="text-[10px] text-[#94A3B8]">{lead.daysInStage}d in stage</span>
+                  </div>
+
+                  <div className="divide-y divide-[rgba(15,23,42,0.04)]">
+                    {actionCenterItems.length > 0 ? actionCenterItems.map((item) => {
+                      const toneClasses = item.tone === "danger"
+                        ? { bg: "bg-[#FF2E2D]/10", text: "text-[#FF2E2D]" }
+                        : item.tone === "warning"
+                          ? { bg: "bg-[#D97706]/10", text: "text-[#D97706]" }
+                          : { bg: "bg-[#01C44A]/10", text: "text-[#01C44A]" };
+
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => navigate(item.path)}
+                          className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-[#F7F7FB] transition-colors"
+                        >
+                          <div className={cn("w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0", toneClasses.bg)}>
+                            {item.tone === "danger" ? (
+                              <AlertTriangle size={14} className={toneClasses.text} />
+                            ) : item.tone === "warning" ? (
+                              <FileText size={14} className={toneClasses.text} />
+                            ) : (
+                              <Calendar size={14} className={toneClasses.text} />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold text-[#0F172A]">{item.label}</p>
+                            <p className="text-[11px] text-[#475569]">{item.detail}</p>
+                          </div>
+                          <span className="text-[11px] font-medium text-[#0891B2] whitespace-nowrap">{item.actionLabel}</span>
+                        </button>
+                      );
+                    }) : (
+                      <div className="px-5 py-6 text-sm text-[#475569]">
+                        No action center items are available for this account yet.
                       </div>
-                      {(lead.status === "stalled" || lead.status === "hot") && (
-                        <button onClick={() => handleFollowUpLead(lead)} className="text-[10px] font-medium text-[#0891B2] hover:underline flex items-center gap-1"><Send size={10} /> Follow Up</button>
+                    )}
+                  </div>
+                </motion.section>
+
+                <motion.section
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="rounded-md border border-red-200/15 bg-[#FF2E2D]/5 px-5 py-4"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-md bg-[#FF2E2D]/10 flex items-center justify-center flex-shrink-0">
+                      <AlertTriangle size={16} className="text-[#FF2E2D]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h2 className="text-sm font-semibold text-[#0F172A]">Missed Revenue Alert</h2>
+                      <p className="text-[11px] text-[#475569] mt-1">Lost momentum that can still be recovered this week.</p>
+                      <p className="text-lg font-bold text-[#FF2E2D] mt-3">{formatMoney(missedRevenueValue)}</p>
+                      <div className="mt-4 space-y-2">
+                        <div className="flex items-center justify-between gap-3 text-xs">
+                          <span className="text-[#475569]">No follow-up</span>
+                          <span className="font-semibold text-[#0F172A]">{formatMoney(stalledLeadValue)}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3 text-xs">
+                          <span className="text-[#475569]">Estimate not sent</span>
+                          <span className="font-semibold text-[#0F172A]">{formatMoney(estimateNotSentValue)}</span>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-4"
+                        onClick={() => navigate(draftEstimates.length > 0 ? "/quotes" : "/leads/pipeline")}
+                      >
+                        Recover Revenue
+                      </Button>
+                    </div>
+                  </div>
+                </motion.section>
+              </div>
+
+              <motion.section
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 }}
+              >
+                <div className="mb-3 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-sm font-semibold text-[#0F172A]">Revenue Snapshot</h2>
+                    <p className="text-[11px] text-[#94A3B8]">Pipeline, estimates, and collections in one view</p>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
+                  <StatCard
+                    title="Total Potential Revenue"
+                    value={formatMoney(totalPotentialRevenue)}
+                    subtitle="Open pipeline plus receivables"
+                    trend={totalPotentialTrend}
+                    comparison="hot share"
+                    icon={DollarSign}
+                    color="orange"
+                    isLoading={isLoading}
+                    lastUpdated="Updated just now"
+                    aiInsight={totalPotentialRevenue > 0 ? "Focus on pipeline and collections today" : undefined}
+                  />
+                  <StatCard
+                    title="Hot Leads Value"
+                    value={formatMoney(hotLeadsValue)}
+                    subtitle={`${hotLeads.length} hot roofing opportunities`}
+                    trend={hotLeadsTrend}
+                    comparison="of open leads"
+                    icon={Target}
+                    color="yellow"
+                    isLoading={isLoading}
+                    lastUpdated="Updated just now"
+                    aiInsight={hotLeads.length > 0 ? "Call these first for fastest revenue" : undefined}
+                  />
+                  <StatCard
+                    title="Estimates Sent Value"
+                    value={formatMoney(estimatesSentValue)}
+                    subtitle={`${sentEstimates.length} estimate${sentEstimates.length === 1 ? "" : "s"} out with clients`}
+                    trend={estimatesSentTrend}
+                    comparison="sent rate"
+                    icon={FileText}
+                    color="cyan"
+                    isLoading={isLoading}
+                    lastUpdated="Updated just now"
+                    aiInsight={sentEstimates.length > 0 ? "Follow up before validity dates expire" : undefined}
+                  />
+                  <StatCard
+                    title="Pending Payments Value"
+                    value={formatMoney(pendingPaymentsValue)}
+                    subtitle={`${pendingPayments.length} invoice${pendingPayments.length === 1 ? "" : "s"} awaiting payment`}
+                    trend={pendingPaymentsTrend}
+                    comparison="receivable mix"
+                    icon={Receipt}
+                    color="green"
+                    isLoading={isLoading}
+                    lastUpdated="Updated just now"
+                    aiInsight={pendingPayments.length > 0 ? "Collection follow-up is revenue protection" : undefined}
+                  />
+                </div>
+              </motion.section>
+
+              {dashboardAccess.canViewLeads ? (
+                <motion.section
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className={sectionCardClassName}
+                >
+                  <div className="p-5 border-b border-[rgba(15,23,42,0.06)]">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-md bg-[#0891B2]/10 flex items-center justify-center">
+                          <FolderKanban size={16} className="text-[#0891B2]" />
+                        </div>
+                        <div>
+                          <h2 className="text-sm font-semibold text-[#0F172A]">Job Pipeline</h2>
+                          <p className="text-[11px] text-[#94A3B8]">Move leads through the sales stages that create jobs</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => navigate("/leads/pipeline")}
+                        className="text-xs text-[#0891B2] font-medium hover:underline flex items-center gap-1"
+                      >
+                        View Pipeline
+                        <ArrowUpRight size={12} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <div className="grid min-w-[980px] grid-cols-5 gap-4 p-5">
+                      {kanbanColumns.map((column) => (
+                        <div
+                          key={column.id}
+                          onDragOver={(event) => event.preventDefault()}
+                          onDrop={() => handleLeadDrop(column.id)}
+                          className={cn(
+                            "rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F7F7FB] p-3 min-h-[360px]",
+                            draggedLeadId && "border-dashed",
+                          )}
+                        >
+                          <div className="flex items-center justify-between gap-2 mb-3">
+                            <h3 className="text-xs font-semibold text-[#0F172A]">{column.title}</h3>
+                            <span className="px-2 py-0.5 rounded bg-white text-[10px] font-semibold text-[#475569] border border-[rgba(15,23,42,0.06)]">
+                              {column.leads.length}
+                            </span>
+                          </div>
+
+                          <div className="space-y-3">
+                            {column.leads.length > 0 ? column.leads.map((lead) => (
+                              <div
+                                key={lead.id}
+                                draggable
+                                onDragStart={(event) => handleLeadDragStart(event, lead.id)}
+                                onDragEnd={() => setDraggedLeadId(null)}
+                                className={cn(
+                                  "bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4 cursor-grab active:cursor-grabbing transition-all hover:shadow-md hover:border-slate-300",
+                                  draggedLeadId === lead.id && "opacity-60",
+                                )}
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-semibold text-[#0F172A]">{lead.name}</p>
+                                    <p className="mt-1 text-[11px] text-[#94A3B8] flex items-start gap-1">
+                                      <MapPin size={12} className="mt-0.5 flex-shrink-0" />
+                                      <span className="line-clamp-2">{lead.address}</span>
+                                    </p>
+                                  </div>
+                                  <span className="text-xs font-semibold text-[#0F172A] whitespace-nowrap">{formatMoney(lead.value)}</span>
+                                </div>
+
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                  <span className={cn("px-2 py-0.5 rounded text-[10px] font-semibold capitalize", getTemperatureBadgeClasses(lead.temperature))}>
+                                    {lead.temperature}
+                                  </span>
+                                  <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-[#F1F5F9] text-[#475569]">
+                                    {lead.jobType}
+                                  </span>
+                                </div>
+
+                                <div className="mt-4 flex items-end justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <p className="text-[10px] uppercase tracking-[0.14em] text-[#94A3B8]">Next Action</p>
+                                    <p className="text-xs font-medium text-[#475569]">{lead.nextAction}</p>
+                                  </div>
+                                  {dashboardAccess.canViewAiAssistant ? (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleLeadSuggestion(lead)}
+                                    >
+                                      <Sparkles />
+                                      <span>{lead.stage === "won" ? "Open job?" : "Follow up?"}</span>
+                                    </Button>
+                                  ) : null}
+                                </div>
+                              </div>
+                            )) : (
+                              <div className="rounded-md border border-dashed border-[rgba(15,23,42,0.08)] bg-white px-4 py-6 text-center text-xs text-[#94A3B8]">
+                                No items in this stage
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </motion.section>
+              ) : null}
+
+              <div className="grid grid-cols-1 gap-4 md:gap-6 xl:grid-cols-[1.2fr,0.8fr]">
+                {dashboardAccess.canViewProjects ? (
+                  <motion.section
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.25 }}
+                    className={sectionCardClassName}
+                  >
+                    <div className="p-5 border-b border-[rgba(15,23,42,0.06)]">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-md bg-[#0891B2]/10 flex items-center justify-center">
+                            <Briefcase size={16} className="text-[#0891B2]" />
+                          </div>
+                          <div>
+                            <h2 className="text-sm font-semibold text-[#0F172A]">Active Jobs</h2>
+                            <p className="text-[11px] text-[#94A3B8]">Production work already sold and scheduled</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => navigate("/projects")}
+                          className="text-xs text-[#0891B2] font-medium hover:underline flex items-center gap-1"
+                        >
+                          View Jobs
+                          <ArrowUpRight size={12} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 p-5 md:grid-cols-2">
+                      {activeJobs.length > 0 ? activeJobs.map((job) => (
+                        <div key={job.id} className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold text-[#0F172A] line-clamp-1">{job.name}</p>
+                              <p className="text-[11px] text-[#94A3B8] line-clamp-1">{job.client}</p>
+                            </div>
+                            <span className={cn("px-2 py-0.5 rounded text-[10px] font-semibold whitespace-nowrap", getJobStatusBadgeClasses(job.status))}>
+                              {job.statusLabel}
+                            </span>
+                          </div>
+
+                          <div className="mt-4 space-y-3 text-xs">
+                            <div className="flex items-start gap-2 text-[#475569]">
+                              <MapPin size={13} className="mt-0.5 flex-shrink-0 text-[#94A3B8]" />
+                              <span>{job.address}</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="text-[#94A3B8]">Value</span>
+                              <span className="font-semibold text-[#0F172A]">{formatMoney(job.value)}</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="text-[#94A3B8]">Crew</span>
+                              <span className="font-medium text-[#475569]">{job.crew}</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="text-[#94A3B8]">Deadline</span>
+                              <span className="font-medium text-[#475569]">{job.deadline}</span>
+                            </div>
+                          </div>
+
+                          <div className="mt-4 flex items-center justify-between gap-3 border-t border-[rgba(15,23,42,0.06)] pt-4">
+                            <span className="text-[11px] text-[#94A3B8]">{job.type}</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => navigate("/projects")}
+                            >
+                              View Job
+                            </Button>
+                          </div>
+                        </div>
+                      )) : (
+                        <div className="md:col-span-2 rounded-md border border-dashed border-[rgba(15,23,42,0.08)] bg-[#F7F7FB] px-4 py-10 text-center text-sm text-[#475569]">
+                          No active jobs are on the board yet.
+                        </div>
                       )}
                     </div>
-                  </div>
-                ))}
-              </div>
-            </div>}
+                  </motion.section>
+                ) : null}
 
-            {/* Invoices Tracker */}
-            {dashboardAccess.canViewInvoices && <div className="bg-white rounded-md card-shadow overflow-hidden">
-              <div className="p-5 border-b border-[rgba(15,23,42,0.06)]">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-md bg-[#FF7B36]/10 flex items-center justify-center"><FileText size={16} className="text-[#FF7B36]" /></div>
-                    <div><h3 className="font-semibold text-sm text-[#0F172A]">Invoice Tracker</h3><p className="text-[11px] text-[#94A3B8]">{overdueInvoices.length} overdue · {pendingInvoices.length} pending</p></div>
-                  </div>
-                  <button onClick={() => navigate("/invoice")} className="text-xs text-[#0891B2] font-medium hover:underline flex items-center gap-1">View All <ArrowUpRight size={12} /></button>
-                </div>
-              </div>
-              <div className="divide-y divide-[rgba(15,23,42,0.04)] max-h-[320px] overflow-y-auto">
-                {invoices.map((inv) => (
-                  <div key={inv.id} className="px-5 py-3 hover:bg-[#F7F7FB] transition-colors">
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-[#94A3B8] font-mono">{inv.invoiceNo}</span>
-                        <span className="text-xs font-medium text-[#0F172A]">{inv.client}</span>
+                {dashboardAccess.canViewClients ? (
+                  <motion.section
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className={sectionCardClassName}
+                  >
+                    <div className="p-5 border-b border-[rgba(15,23,42,0.06)]">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-md bg-[#0891B2]/10 flex items-center justify-center">
+                            <Users size={16} className="text-[#0891B2]" />
+                          </div>
+                          <div>
+                            <h2 className="text-sm font-semibold text-[#0F172A]">Recent Clients</h2>
+                            <p className="text-[11px] text-[#94A3B8]">Recent homeowners and commercial accounts</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => navigate("/client-list")}
+                          className="text-xs text-[#0891B2] font-medium hover:underline flex items-center gap-1"
+                        >
+                          View Clients
+                          <ArrowUpRight size={12} />
+                        </button>
                       </div>
-                      <span className="text-xs font-semibold text-[#0F172A]">${inv.amount.toLocaleString()}</span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className={cn("px-1.5 py-0.5 rounded text-[9px] font-bold uppercase", inv.status === "overdue" ? "bg-[#FF2E2D]/10 text-[#FF2E2D]" : inv.status === "pending" ? "bg-[#D97706]/10 text-[#D97706]" : inv.status === "paid" ? "bg-[#01C44A]/10 text-[#01C44A]" : "bg-[#94A3B8]/10 text-[#94A3B8]")}>{inv.status}</span>
-                        <span className="text-[10px] text-[#94A3B8]">Due {inv.dueDate}</span>
-                        {inv.daysOverdue && <span className="text-[10px] text-[#FF2E2D] font-medium">({inv.daysOverdue}d late)</span>}
-                      </div>
-                      {inv.status === "overdue" && (
-                        <button onClick={() => handleSendReminder(inv)} className="text-[10px] font-medium text-[#FF2E2D] hover:underline flex items-center gap-1"><Send size={10} /> Remind</button>
+
+                    <div className="divide-y divide-[rgba(15,23,42,0.04)]">
+                      {recentClients.length > 0 ? recentClients.map((client) => (
+                        <div key={client.id} className="px-5 py-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold text-[#0F172A]">{client.name}</p>
+                              <p className="text-[11px] text-[#94A3B8]">
+                                {client.lastContacted ? `Last contacted ${formatDateLabel(client.lastContacted)}` : "Newly added client"}
+                              </p>
+                            </div>
+                            {dashboardAccess.canViewAiAssistant ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => navigate("/quotes")}
+                              >
+                                <Sparkles />
+                                <span>Send estimate?</span>
+                              </Button>
+                            ) : null}
+                          </div>
+
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleClientCall(client)}
+                            >
+                              <PhoneCall />
+                              <span>Call</span>
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => navigate("/quotes")}
+                            >
+                              <FileText />
+                              <span>Send Estimate</span>
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => navigate("/projects")}
+                            >
+                              <Briefcase />
+                              <span>View Jobs</span>
+                            </Button>
+                          </div>
+                        </div>
+                      )) : (
+                        <div className="px-5 py-8 text-sm text-[#475569]">
+                          No recent clients are available yet.
+                        </div>
                       )}
                     </div>
-                  </div>
-                ))}
+                  </motion.section>
+                ) : null}
               </div>
-            </div>}
-          </div>
-          )}
 
-          {/* ===== PROJECTS OVERVIEW ===== */}
-          {dashboardAccess.canViewProjects && (
-          <div className="bg-white rounded-md card-shadow overflow-hidden">
-            <div className="p-5 border-b border-[rgba(15,23,42,0.06)]">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-md bg-[#0891B2]/10 flex items-center justify-center"><Briefcase size={16} className="text-[#0891B2]" /></div>
-                  <div><h3 className="font-semibold text-sm text-[#0F172A]">Projects Overview</h3><p className="text-[11px] text-[#94A3B8]">{projects.filter(p => p.status !== "completed").length} active · {atRiskProjects.length} need attention</p></div>
-                </div>
-                <button onClick={() => navigate("/projects")} className="text-xs text-[#0891B2] font-medium hover:underline flex items-center gap-1">View All <ArrowUpRight size={12} /></button>
-              </div>
-            </div>
-            <div className="responsive-table">
-              <table className="w-full text-xs min-w-[700px]">
-                <thead className="sticky-thead"><tr className="bg-[#F7F7FB] border-b border-[rgba(15,23,42,0.08)]">
-                  <th className="text-left py-3 px-5 text-[#94A3B8] font-medium">Project</th>
-                  <th className="text-left py-3 px-5 text-[#94A3B8] font-medium">Client</th>
-                  <th className="text-center py-3 px-5 text-[#94A3B8] font-medium">Progress</th>
-                  <th className="text-center py-3 px-5 text-[#94A3B8] font-medium">Status</th>
-                  <th className="text-center py-3 px-5 text-[#94A3B8] font-medium">Budget</th>
-                  <th className="text-left py-3 px-5 text-[#94A3B8] font-medium">Deadline</th>
-                  <th className="text-center py-3 px-5 text-[#94A3B8] font-medium">Team</th>
-                </tr></thead>
-                <tbody>{projects.map((proj) => (
-                  <tr key={proj.id} className="border-b border-[rgba(15,23,42,0.04)] hover:bg-[#F7F7FB] cursor-pointer" onClick={() => navigate("/projects")}>
-                    <td className="py-3 px-5 font-medium text-[#0F172A]">{proj.name}</td>
-                    <td className="py-3 px-5 text-[#475569]">{proj.client}</td>
-                    <td className="py-3 px-5">
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="w-20 h-1.5 bg-[#F1F5F9] rounded-full overflow-hidden"><div className="h-full rounded-full" style={{ width: `${proj.progress}%`, backgroundColor: proj.progress === 100 ? "#01C44A" : proj.progress > 60 ? "#0891B2" : proj.progress > 30 ? "#D97706" : "#FF2E2D" }} /></div>
-                        <span className="text-[10px] font-medium text-[#475569] w-8">{proj.progress}%</span>
+              {(dashboardAccess.canViewQuotes || dashboardAccess.canViewInvoices || dashboardAccess.canViewSiteVisits) ? (
+                <motion.section
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.35 }}
+                  className="grid grid-cols-1 gap-4 md:gap-6 xl:grid-cols-3"
+                >
+                  {dashboardAccess.canViewQuotes ? (
+                    <div className={sectionCardClassName}>
+                      <div className="p-5 border-b border-[rgba(15,23,42,0.06)]">
+                        <h2 className="text-sm font-semibold text-[#0F172A]">Estimate Queue</h2>
+                        <p className="text-[11px] text-[#94A3B8]">Drafts and sent estimates ready for follow-up</p>
                       </div>
-                    </td>
-                    <td className="py-3 px-5 text-center"><span className={cn("px-2 py-0.5 rounded-full text-[10px] font-semibold", proj.status === "on-track" ? "bg-[#01C44A]/10 text-[#01C44A]" : proj.status === "at-risk" ? "bg-[#D97706]/10 text-[#D97706]" : proj.status === "delayed" ? "bg-[#FF2E2D]/10 text-[#FF2E2D]" : "bg-[#94A3B8]/10 text-[#94A3B8]")}>{proj.status.replace("-", " ")}</span></td>
-                    <td className="py-3 px-5 text-center">
-                      <div><span className="text-[#0F172A] font-medium">${(proj.spent / 1000).toFixed(0)}k</span><span className="text-[#94A3B8]"> / ${(proj.budget / 1000).toFixed(0)}k</span></div>
-                    </td>
-                    <td className="py-3 px-5 text-[#475569]">{proj.deadline}</td>
-                    <td className="py-3 px-5">
-                      <div className="flex items-center justify-center -space-x-1.5">{proj.team.slice(0, 3).map((t, i) => <div key={i} className="w-6 h-6 rounded-full bg-[#0891B2]/10 border-2 border-white flex items-center justify-center text-[8px] font-bold text-[#0891B2]">{t}</div>)}{proj.team.length > 3 && <div className="w-6 h-6 rounded-full bg-[#F1F5F9] border-2 border-white flex items-center justify-center text-[8px] font-bold text-[#475569]">+{proj.team.length - 3}</div>}</div>
-                    </td>
-                  </tr>
-                ))}</tbody>
-              </table>
-            </div>
-          </div>
-          )}
-
-          {/* ===== CHARTS & CALENDAR ===== */}
-          {(dashboardAccess.canViewProjects || dashboardAccess.canViewCalendar) && (
-          <div className={cn("grid grid-cols-1 gap-4 md:gap-6", dashboardAccess.canViewProjects && dashboardAccess.canViewCalendar ? "lg:grid-cols-3" : "lg:grid-cols-1")}>
-            {dashboardAccess.canViewProjects && <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className={dashboardAccess.canViewCalendar ? "lg:col-span-2" : "lg:col-span-1"}><ProjectsChart /></motion.div>}
-            {dashboardAccess.canViewCalendar && <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}><CalendarWidget /></motion.div>}
-          </div>
-          )}
-
-          {/* ===== ACTIVITY & PROJECTS TABLE ===== */}
-          {(recentActivity.length > 0 || dashboardAccess.canViewProjects) && (
-          <div className={cn("grid grid-cols-1 gap-4 md:gap-6", dashboardAccess.canViewProjects ? "lg:grid-cols-3" : "lg:grid-cols-1")}>
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="bg-white border border-[rgba(15,23,42,0.06)] rounded-md overflow-hidden">
-              <div className="p-6 border-b border-[rgba(15,23,42,0.06)]">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-md bg-[#0891B2]/10 flex items-center justify-center"><Zap size={18} className="text-[#0891B2]" /></div><div><h3 className="font-semibold text-[#0F172A]">Recent Activity</h3><p className="text-xs text-[#475569]">Latest updates</p></div></div>
-                  <button onClick={() => navigate("/activity")} className="text-sm text-[#0891B2] font-medium hover:underline">View All</button>
-                </div>
-              </div>
-              <div className="divide-y divide-[rgba(15,23,42,0.06)]">
-                {recentActivity.map((activity, index) => {
-                  const colors = getColorClasses(activity.color); return (
-                    <motion.div key={activity.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 * index }} className="p-4 hover:bg-white transition-colors cursor-pointer group">
-                      <div className="flex items-start gap-3">
-                        <div className={cn("w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0", colors.light)}><activity.icon size={18} className={colors.text} /></div>
-                        <div className="flex-1 min-w-0"><p className="text-sm text-[#0F172A] group-hover:text-[#0891B2] transition-colors">{activity.message}</p><p className="text-xs text-[#475569] mt-1 flex items-center gap-1"><Clock size={10} />{activity.time}</p></div>
+                      <div className="divide-y divide-[rgba(15,23,42,0.04)]">
+                        {[...draftEstimates, ...sentEstimates].slice(0, 4).map((estimate) => (
+                          <div key={estimate.id} className="px-5 py-4 flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold text-[#0F172A] line-clamp-1">{estimate.recipientName}</p>
+                              <p className="text-[11px] text-[#94A3B8]">
+                                {estimate.quoteNumber} · {isEstimateDraft(estimate) ? "Draft" : "Sent"}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs font-semibold text-[#0F172A]">{formatMoney(estimate.total)}</p>
+                              <p className="text-[11px] text-[#94A3B8]">Valid {formatDateLabel(estimate.validUntil)}</p>
+                            </div>
+                          </div>
+                        ))}
+                        {draftEstimates.length + sentEstimates.length === 0 ? (
+                          <div className="px-5 py-8 text-sm text-[#475569]">No estimates are in the queue yet.</div>
+                        ) : null}
                       </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            </motion.div>
-            {dashboardAccess.canViewProjects && <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} className="lg:col-span-2"><ProjectsTable /></motion.div>}
-          </div>
-          )}
+                    </div>
+                  ) : null}
+
+                  {dashboardAccess.canViewSiteVisits ? (
+                    <div className={sectionCardClassName}>
+                      <div className="p-5 border-b border-[rgba(15,23,42,0.06)]">
+                        <h2 className="text-sm font-semibold text-[#0F172A]">Site Visits</h2>
+                        <p className="text-[11px] text-[#94A3B8]">Upcoming inspections and property visits</p>
+                      </div>
+                      <div className="divide-y divide-[rgba(15,23,42,0.04)]">
+                        {siteVisits
+                          .filter((visit) => visit.scheduledAt)
+                          .sort((left, right) => (left.scheduledAt?.getTime() || 0) - (right.scheduledAt?.getTime() || 0))
+                          .slice(0, 4)
+                          .map((visit) => (
+                            <div key={visit.id} className="px-5 py-4">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="text-sm font-semibold text-[#0F172A]">{visit.clientName}</p>
+                                  <p className="text-[11px] text-[#94A3B8] line-clamp-1">{visit.address}</p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-xs font-semibold text-[#0F172A]">{formatTimeLabel(visit.scheduledAt)}</p>
+                                  <p className="text-[11px] text-[#94A3B8]">{formatDateTimeLabel(visit.scheduledAt)}</p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        {siteVisits.filter((visit) => visit.scheduledAt).length === 0 ? (
+                          <div className="px-5 py-8 text-sm text-[#475569]">No site visits are scheduled yet.</div>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {dashboardAccess.canViewInvoices ? (
+                    <div className={sectionCardClassName}>
+                      <div className="p-5 border-b border-[rgba(15,23,42,0.06)]">
+                        <h2 className="text-sm font-semibold text-[#0F172A]">Pending Payments</h2>
+                        <p className="text-[11px] text-[#94A3B8]">Invoices waiting for payment or collection</p>
+                      </div>
+                      <div className="divide-y divide-[rgba(15,23,42,0.04)]">
+                        {pendingPayments.slice(0, 4).map((invoice) => (
+                          <div key={invoice.id} className="px-5 py-4 flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold text-[#0F172A] line-clamp-1">{invoice.client}</p>
+                              <p className="text-[11px] text-[#94A3B8]">
+                                {invoice.invoiceNo} · Due {invoice.dueDate}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs font-semibold text-[#0F172A]">{formatMoney(invoice.outstandingAmount)}</p>
+                              <p className={cn(
+                                "text-[11px] font-medium",
+                                invoice.status === "overdue" ? "text-[#FF2E2D]" : "text-[#D97706]",
+                              )}>
+                                {invoice.status === "overdue" ? "Overdue" : "Pending"}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                        {pendingPayments.length === 0 ? (
+                          <div className="px-5 py-8 text-sm text-[#475569]">No pending payments right now.</div>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
+                </motion.section>
+              ) : null}
+            </>
+          ) : null}
         </div>
 
-        {/* Footer — hidden on mobile (bottom tab bar takes over) */}
-        {!isMobile && (
+        {!isMobile ? (
           <footer className="px-6 py-4 bg-[#F7F7FB] border-b border-[rgba(15,23,42,0.06)]">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-2 md:gap-4 text-xs md:text-sm text-[#94A3B8]">
-              <div className="flex items-center gap-2"><span>© {new Date().getFullYear()}</span><span className="font-semibold text-[#0F172A]">ZODO</span><span className="text-[#0891B2] font-semibold">CRM</span><span>• All rights reserved</span></div>
-              <div className="flex items-center gap-4"><a href="#" className="hover:text-[#0891B2] transition-colors">Privacy</a><a href="#" className="hover:text-[#0891B2] transition-colors">Terms</a><a href="#" className="hover:text-[#0891B2] transition-colors">Support</a></div>
+              <div className="flex items-center gap-2">
+                <span>{new Date().getFullYear()}</span>
+                <span className="font-semibold text-[#0F172A]">ZODO</span>
+                <span className="text-[#0891B2] font-semibold">Dashboard</span>
+                <span>All rights reserved</span>
+              </div>
+              <div className="flex items-center gap-4">
+                <a href="#" className="hover:text-[#0891B2] transition-colors">Privacy</a>
+                <a href="#" className="hover:text-[#0891B2] transition-colors">Terms</a>
+                <a href="#" className="hover:text-[#0891B2] transition-colors">Support</a>
+              </div>
             </div>
           </footer>
-        )}
-        {/* Bottom spacer for mobile tab bar */}
-        {isMobile && <div className="h-20" />}
+        ) : null}
+
+        {isMobile ? <div className="h-20" /> : null}
       </main>
 
-      {/* Search Modal */}
       <AnimatePresence>
-        {showSearchModal && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 bg-black/60 backdrop-blur-md" onClick={() => setShowSearchModal(false)}>
-            <motion.div initial={{ opacity: 0, y: -20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -20, scale: 0.95 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-2xl bg-white border border-[rgba(15,23,42,0.06)] card-shadow rounded-md overflow-hidden">
+        {showSearchModal ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 bg-black/60 backdrop-blur-md"
+            onClick={() => setShowSearchModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: -20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.95 }}
+              onClick={(event) => event.stopPropagation()}
+              className="w-full max-w-2xl bg-white border border-[rgba(15,23,42,0.06)] card-shadow rounded-md overflow-hidden"
+            >
               <div className="flex items-center gap-3 p-4 border-b border-[rgba(15,23,42,0.06)]">
                 <Search size={20} className="text-[#475569]" />
-                <input ref={searchInputRef} type="text" placeholder="Search projects, clients, invoices..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="flex-1 bg-transparent text-lg text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none" />
-                <button onClick={() => setShowSearchModal(false)} className="p-1.5 rounded-md hover:bg-[#F1F5F9] text-[#475569] transition-colors"><X size={18} /></button>
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder="Search actions across jobs, estimates, and clients..."
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  className="flex-1 bg-transparent text-lg text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none"
+                />
+                <button
+                  onClick={() => setShowSearchModal(false)}
+                  className="p-1.5 rounded-md hover:bg-[#F1F5F9] text-[#475569] transition-colors"
+                >
+                  <X size={18} />
+                </button>
               </div>
+
               <div className="p-4">
                 <p className="text-xs font-medium text-[#475569] uppercase tracking-wider mb-3">Quick Actions</p>
-                <div className="space-y-1">{visibleQuickActions.map((action, index) => {
-                  const colors = getColorClasses(action.color); return (
-                    <button key={index} onClick={() => { handleQuickAction(action.path); setShowSearchModal(false); }} className="w-full flex items-center gap-3 p-3 rounded-md hover:bg-white transition-colors group">
-                      <div className={cn("w-10 h-10 rounded-md flex items-center justify-center", colors.light)}><action.icon size={18} className={colors.text} /></div>
-                      <div className="text-left"><p className="text-sm font-medium text-[#0F172A] group-hover:text-[#0891B2] transition-colors">{action.title}</p><p className="text-xs text-[#475569]">{action.description}</p></div>
-                      <ArrowUpRight size={14} className="ml-auto text-[#94A3B8] group-hover:text-[#0891B2] transition-colors" />
-                    </button>
-                  );
-                })}</div>
+                <div className="space-y-1">
+                  {filteredQuickActions.length > 0 ? filteredQuickActions.map((action) => {
+                    const colors = action.variant === "default"
+                      ? { light: "bg-[#0891B2]/10", text: "text-[#0891B2]" }
+                      : getColorClasses(action.id === "view-invoices" ? "navy" : action.id === "view-pipeline" ? "gold" : "teal");
+
+                    return (
+                      <button
+                        key={action.id}
+                        onClick={() => {
+                          navigate(action.path);
+                          setShowSearchModal(false);
+                        }}
+                        className="w-full flex items-center gap-3 p-3 rounded-md hover:bg-white transition-colors group"
+                      >
+                        <div className={cn("w-10 h-10 rounded-md flex items-center justify-center", colors.light)}>
+                          <action.icon size={18} className={colors.text} />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-sm font-medium text-[#0F172A] group-hover:text-[#0891B2] transition-colors">{action.label}</p>
+                          <p className="text-xs text-[#475569]">{action.description}</p>
+                        </div>
+                        <ArrowUpRight size={14} className="ml-auto text-[#94A3B8] group-hover:text-[#0891B2] transition-colors" />
+                      </button>
+                    );
+                  }) : (
+                    <div className="px-3 py-8 text-center text-sm text-[#475569]">
+                      No dashboard actions match "{searchQuery}".
+                    </div>
+                  )}
+                </div>
               </div>
+
               <div className="px-4 py-3 bg-white border-t border-[rgba(15,23,42,0.06)]">
                 <div className="flex items-center justify-between text-xs text-[#475569]">
-                  <div className="flex items-center gap-4"><span className="flex items-center gap-1"><kbd className="px-1.5 py-0.5 rounded bg-[#F1F5F9] border border-[rgba(15,23,42,0.06)] font-mono">↵</kbd>to select</span><span className="flex items-center gap-1"><kbd className="px-1.5 py-0.5 rounded bg-[#F1F5F9] border border-[rgba(15,23,42,0.06)] font-mono">esc</kbd>to close</span></div>
-                  <span>Powered by ZODO CRM</span>
+                  <div className="flex items-center gap-4">
+                    <span className="flex items-center gap-1">
+                      <kbd className="px-1.5 py-0.5 rounded bg-[#F1F5F9] border border-[rgba(15,23,42,0.06)] font-mono">Enter</kbd>
+                      to select
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <kbd className="px-1.5 py-0.5 rounded bg-[#F1F5F9] border border-[rgba(15,23,42,0.06)] font-mono">Esc</kbd>
+                      to close
+                    </span>
+                  </div>
+                  <span>Powered by ZODO Dashboard</span>
                 </div>
               </div>
             </motion.div>
           </motion.div>
-        )}
+        ) : null}
       </AnimatePresence>
-
-      {/* AI Copilot Panel */}
-      <AiCopilotPanel isOpen={showCopilot} onClose={() => setShowCopilot(false)} />
     </div>
-
   );
 };
 

@@ -1,5 +1,11 @@
 import { PrismaClient, Prisma, TaskStatus, TaskPriority } from '@prisma/client';
-import { CreateTaskDto, UpdateTaskDto, TaskQueryDto } from './tasks.dto';
+import {
+    CreateTaskDto,
+    UpdateTaskDto,
+    TaskQueryDto,
+    buildTaskStoredTagNames,
+    parseTaskStoredTags,
+} from './tasks.dto';
 import {
     DataAccessContext,
     buildTaskAccessWhere,
@@ -12,36 +18,195 @@ const taskInclude = {
     createdBy: { include: { user: { select: { firstName: true, lastName: true } } } },
     project: { select: { id: true, name: true } },
     client: { select: { id: true, clientName: true } },
+    tags: {
+        include: {
+            tag: {
+                select: {
+                    name: true,
+                    color: true,
+                },
+            },
+        },
+    },
+    subtasks: {
+        select: {
+            id: true,
+            title: true,
+            status: true,
+            completedAt: true,
+            createdAt: true,
+            updatedAt: true,
+        },
+        orderBy: {
+            createdAt: 'asc' as const,
+        },
+    },
 };
 
 export class TasksRepository {
-    async create(tenantId: string, data: CreateTaskDto, createdById?: string) {
-        return prisma.task.create({
-            data: {
+    private async syncTaskTags(
+        tx: Prisma.TransactionClient,
+        taskId: string,
+        tenantId: string,
+        data: {
+            category?: string | null;
+            tags?: string[] | null;
+            isStarred?: boolean;
+            isRecurring?: boolean;
+        },
+    ): Promise<void> {
+        const storedNames = buildTaskStoredTagNames(data);
+        await tx.taskTag.deleteMany({ where: { taskId } });
+
+        if (storedNames.length === 0) {
+            return;
+        }
+
+        const existingTags = await tx.tag.findMany({
+            where: {
                 tenantId,
-                title: data.title,
-                description: data.description,
-                status: data.status || 'TODO',
-                priority: data.priority || 'MEDIUM',
-                assignedToId: data.assignedToId || null,
-                createdById: createdById || null,
-                dueDate: data.dueDate ? new Date(data.dueDate as string) : null,
-                projectId: data.projectId || null,
-                clientId: data.clientId || null,
-                estimatedTime: data.estimatedHours ? Math.round(data.estimatedHours * 60) : null,
+                name: { in: storedNames },
             },
-            include: taskInclude,
+            select: {
+                id: true,
+                name: true,
+            },
+        });
+        const existingMap = new Map(existingTags.map((tag) => [tag.name, tag.id]));
+
+        for (const name of storedNames) {
+            if (existingMap.has(name)) {
+                continue;
+            }
+
+            const tag = await tx.tag.create({
+                data: {
+                    tenantId,
+                    name,
+                },
+                select: {
+                    id: true,
+                    name: true,
+                },
+            });
+            existingMap.set(tag.name, tag.id);
+        }
+
+        await tx.taskTag.createMany({
+            data: storedNames.map((name) => ({
+                taskId,
+                tagId: existingMap.get(name)!,
+            })),
+            skipDuplicates: true,
+        });
+    }
+
+    private async syncSubtasks(
+        tx: Prisma.TransactionClient,
+        parentTaskId: string,
+        tenantId: string,
+        subtasks: NonNullable<CreateTaskDto['subtasks']>,
+        createdById?: string | null,
+    ): Promise<void> {
+        const existingSubtasks = await tx.task.findMany({
+            where: {
+                tenantId,
+                parentTaskId,
+            },
+            select: {
+                id: true,
+            },
+        });
+        const existingIds = new Set(existingSubtasks.map((subtask) => subtask.id));
+        const incomingExistingIds = subtasks
+            .map((subtask) => subtask.id)
+            .filter((id): id is string => Boolean(id && existingIds.has(id)));
+
+        await tx.task.deleteMany({
+            where: {
+                tenantId,
+                parentTaskId,
+                ...(incomingExistingIds.length > 0
+                    ? { id: { notIn: incomingExistingIds } }
+                    : {}),
+            },
+        });
+
+        for (const subtask of subtasks) {
+            const payload = {
+                title: subtask.title.trim(),
+                status: subtask.completed ? TaskStatus.DONE : TaskStatus.TODO,
+                completedAt: subtask.completed ? new Date() : null,
+            };
+
+            if (subtask.id && existingIds.has(subtask.id)) {
+                await tx.task.update({
+                    where: { id: subtask.id },
+                    data: payload,
+                });
+                continue;
+            }
+
+            await tx.task.create({
+                data: {
+                    tenantId,
+                    parentTaskId,
+                    createdById: createdById || null,
+                    description: null,
+                    priority: TaskPriority.LOW,
+                    ...payload,
+                },
+            });
+        }
+    }
+
+    async create(tenantId: string, data: CreateTaskDto, createdById?: string) {
+        return prisma.$transaction(async (tx) => {
+            const task = await tx.task.create({
+                data: {
+                    tenantId,
+                    title: data.title,
+                    description: data.description,
+                    status: data.status || 'TODO',
+                    priority: data.priority || 'MEDIUM',
+                    assignedToId: data.assignedToId || null,
+                    createdById: createdById || null,
+                    dueDate: data.dueDate ? new Date(data.dueDate as string) : null,
+                    startDate: data.startDate ? new Date(data.startDate as string) : null,
+                    projectId: data.projectId || null,
+                    clientId: data.clientId || null,
+                    estimatedTime: data.estimatedHours ? Math.round(data.estimatedHours * 60) : null,
+                    actualTime: data.actualMinutes ?? null,
+                },
+            });
+
+            await this.syncTaskTags(tx, task.id, tenantId, {
+                category: data.category,
+                tags: data.tags,
+                isStarred: data.isStarred,
+                isRecurring: data.isRecurring,
+            });
+
+            if (data.subtasks && data.subtasks.length > 0) {
+                await this.syncSubtasks(tx, task.id, tenantId, data.subtasks, createdById || null);
+            }
+
+            return tx.task.findFirstOrThrow({
+                where: { id: task.id, tenantId },
+                include: taskInclude,
+            });
         });
     }
 
     async findById(id: string, tenantId: string) {
-        return prisma.task.findFirst({ where: { id, tenantId }, include: taskInclude });
+        return prisma.task.findFirst({ where: { id, tenantId, parentTaskId: null }, include: taskInclude });
     }
 
     async findMany(tenantId: string, query: TaskQueryDto, dataAccess?: DataAccessContext) {
         const { page = 1, limit = 20, search, status, priority, assignedToId, projectId, clientId, sortBy = 'createdAt', sortOrder = 'desc' } = query;
         const baseWhere: Prisma.TaskWhereInput = {
             tenantId,
+            parentTaskId: null,
             ...(status && { status }),
             ...(priority && { priority }),
             ...(assignedToId && { assignedToId }),
@@ -58,36 +223,63 @@ export class TasksRepository {
     }
 
     async update(id: string, tenantId: string, data: UpdateTaskDto) {
-        // Verify tenant ownership
-        const existing = await prisma.task.findFirst({ where: { id, tenantId } });
+        const existing = await prisma.task.findFirst({ where: { id, tenantId, parentTaskId: null }, include: taskInclude });
         if (!existing) throw new Error('Task not found or access denied');
 
-        return prisma.task.update({
-            where: { id },
-            data: {
-                ...(data.title !== undefined && { title: data.title }),
-                ...(data.description !== undefined && { description: data.description }),
-                ...(data.status !== undefined && { status: data.status }),
-                ...(data.priority !== undefined && { priority: data.priority }),
-                ...(data.assignedToId !== undefined && { assignedToId: data.assignedToId }),
-                ...(data.dueDate !== undefined && { dueDate: data.dueDate ? new Date(data.dueDate as string) : null }),
-                ...(data.projectId !== undefined && { projectId: data.projectId }),
-                ...(data.clientId !== undefined && { clientId: data.clientId }),
-            },
-            include: taskInclude,
+        return prisma.$transaction(async (tx) => {
+            await tx.task.update({
+                where: { id },
+                data: {
+                    ...(data.title !== undefined && { title: data.title }),
+                    ...(data.description !== undefined && { description: data.description }),
+                    ...(data.status !== undefined && { status: data.status }),
+                    ...(data.priority !== undefined && { priority: data.priority }),
+                    ...(data.assignedToId !== undefined && { assignedToId: data.assignedToId }),
+                    ...(data.dueDate !== undefined && { dueDate: data.dueDate ? new Date(data.dueDate as string) : null }),
+                    ...(data.startDate !== undefined && { startDate: data.startDate ? new Date(data.startDate as string) : null }),
+                    ...(data.projectId !== undefined && { projectId: data.projectId }),
+                    ...(data.clientId !== undefined && { clientId: data.clientId }),
+                    ...(data.estimatedHours !== undefined && { estimatedTime: data.estimatedHours ? Math.round(data.estimatedHours * 60) : null }),
+                    ...(data.actualMinutes !== undefined && { actualTime: data.actualMinutes ?? null }),
+                },
+            });
+
+            if (
+                data.tags !== undefined
+                || data.category !== undefined
+                || data.isStarred !== undefined
+                || data.isRecurring !== undefined
+            ) {
+                const currentTagState = parseTaskStoredTags(existing.tags);
+                await this.syncTaskTags(tx, id, tenantId, {
+                    category: data.category !== undefined ? data.category : currentTagState.category,
+                    tags: data.tags !== undefined ? data.tags : currentTagState.tags,
+                    isStarred: data.isStarred !== undefined ? data.isStarred : currentTagState.isStarred,
+                    isRecurring: data.isRecurring !== undefined ? data.isRecurring : currentTagState.isRecurring,
+                });
+            }
+
+            if (data.subtasks !== undefined) {
+                await this.syncSubtasks(tx, id, tenantId, data.subtasks, existing.createdById);
+            }
+
+            return tx.task.findFirstOrThrow({
+                where: { id, tenantId, parentTaskId: null },
+                include: taskInclude,
+            });
         });
     }
 
     async updateStatus(id: string, tenantId: string, status: TaskStatus) {
         // Verify tenant ownership
-        const existing = await prisma.task.findFirst({ where: { id, tenantId } });
+        const existing = await prisma.task.findFirst({ where: { id, tenantId, parentTaskId: null } });
         if (!existing) throw new Error('Task not found or access denied');
 
         return prisma.task.update({
             where: { id },
             data: {
                 status,
-                completedAt: status === 'DONE' ? new Date() : null,
+                completedAt: status === 'DONE' || status === 'COMPLETED' ? new Date() : null,
             },
             include: taskInclude,
         });
@@ -95,9 +287,13 @@ export class TasksRepository {
 
     async delete(id: string, tenantId: string) {
         // Tenant-scoped delete
-        const existing = await prisma.task.findFirst({ where: { id, tenantId } });
+        const existing = await prisma.task.findFirst({ where: { id, tenantId, parentTaskId: null } });
         if (!existing) throw new Error('Task not found or access denied');
-        return prisma.task.delete({ where: { id } });
+        return prisma.$transaction(async (tx) => {
+            await tx.task.deleteMany({ where: { tenantId, parentTaskId: id } });
+            await tx.taskTag.deleteMany({ where: { taskId: id } });
+            return tx.task.delete({ where: { id } });
+        });
     }
 
     async employeeExists(employeeId: string, tenantId: string): Promise<boolean> {
@@ -112,7 +308,7 @@ export class TasksRepository {
 
     async assign(id: string, tenantId: string, assignedToId: string | null) {
         // Verify tenant ownership
-        const existing = await prisma.task.findFirst({ where: { id, tenantId } });
+        const existing = await prisma.task.findFirst({ where: { id, tenantId, parentTaskId: null } });
         if (!existing) throw new Error('Task not found or access denied');
 
         return prisma.task.update({
@@ -125,6 +321,7 @@ export class TasksRepository {
     async getKanban(tenantId: string, filters?: { assignedToId?: string; projectId?: string }, dataAccess?: DataAccessContext) {
         const baseWhere: Prisma.TaskWhereInput = {
             tenantId,
+            parentTaskId: null,
             ...(filters?.assignedToId && { assignedToId: filters.assignedToId }),
             ...(filters?.projectId && { projectId: filters.projectId }),
         };
@@ -146,12 +343,12 @@ export class TasksRepository {
         const REVIEW_STATUS: TaskStatus = 'REVIEW';
         const DONE_STATUS: TaskStatus = 'DONE';
         const [total, todo, inProgress, review, done, overdue] = await Promise.all([
-            prisma.task.count({ where: mergeWhereWithAccess({ tenantId }, accessibleWhere) }),
-            prisma.task.count({ where: mergeWhereWithAccess({ tenantId, status: TODO_STATUS }, accessibleWhere) }),
-            prisma.task.count({ where: mergeWhereWithAccess({ tenantId, status: IN_PROGRESS_STATUS }, accessibleWhere) }),
-            prisma.task.count({ where: mergeWhereWithAccess({ tenantId, status: REVIEW_STATUS }, accessibleWhere) }),
-            prisma.task.count({ where: mergeWhereWithAccess({ tenantId, status: DONE_STATUS }, accessibleWhere) }),
-            prisma.task.count({ where: mergeWhereWithAccess({ tenantId, status: { not: DONE_STATUS }, dueDate: { lt: new Date() } }, accessibleWhere) }),
+            prisma.task.count({ where: mergeWhereWithAccess({ tenantId, parentTaskId: null }, accessibleWhere) }),
+            prisma.task.count({ where: mergeWhereWithAccess({ tenantId, parentTaskId: null, status: TODO_STATUS }, accessibleWhere) }),
+            prisma.task.count({ where: mergeWhereWithAccess({ tenantId, parentTaskId: null, status: IN_PROGRESS_STATUS }, accessibleWhere) }),
+            prisma.task.count({ where: mergeWhereWithAccess({ tenantId, parentTaskId: null, status: REVIEW_STATUS }, accessibleWhere) }),
+            prisma.task.count({ where: mergeWhereWithAccess({ tenantId, parentTaskId: null, status: DONE_STATUS }, accessibleWhere) }),
+            prisma.task.count({ where: mergeWhereWithAccess({ tenantId, parentTaskId: null, status: { not: DONE_STATUS }, dueDate: { lt: new Date() } }, accessibleWhere) }),
         ]);
         return { total, todo, inProgress, review, done, overdue };
     }

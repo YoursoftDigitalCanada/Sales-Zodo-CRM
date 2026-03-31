@@ -4,6 +4,25 @@ import { Task, TaskStatus, TaskPriority } from '@prisma/client';
 // TASKS DTOs - Matching Schema Fields
 // ============================================================================
 
+export const TASK_CATEGORY_TAG_PREFIX = '__task_category__:';
+export const TASK_META_TAG_PREFIX = '__task_meta__:';
+export const TASK_STARRED_TAG = `${TASK_META_TAG_PREFIX}starred`;
+export const TASK_RECURRING_TAG = `${TASK_META_TAG_PREFIX}recurring`;
+
+export interface TaskSubtaskInputDto {
+    id?: string;
+    title: string;
+    completed?: boolean;
+}
+
+export interface TaskSubtaskDto {
+    id: string;
+    title: string;
+    completed: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
 export interface CreateTaskDto {
     title: string;
     description?: string | null;
@@ -11,9 +30,16 @@ export interface CreateTaskDto {
     priority?: TaskPriority;
     assignedToId?: string | null;
     dueDate?: Date | string | null;
+    startDate?: Date | string | null;
     projectId?: string | null;
     clientId?: string | null;
     estimatedHours?: number | null;
+    actualMinutes?: number | null;
+    category?: string | null;
+    tags?: string[];
+    subtasks?: TaskSubtaskInputDto[];
+    isStarred?: boolean;
+    isRecurring?: boolean;
 }
 
 export interface UpdateTaskDto extends Partial<CreateTaskDto> { }
@@ -43,8 +69,14 @@ export interface TaskResponseDto {
     startDate: Date | null;
     completedAt: Date | null;
     estimatedTime: number | null;
+    actualTime: number | null;
     project: { id: string; name: string } | null;
     client: { id: string; clientName: string } | null;
+    category: string | null;
+    tags: string[];
+    subtasks: TaskSubtaskDto[];
+    isStarred: boolean;
+    isRecurring: boolean;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -82,9 +114,101 @@ type TaskWithRelations = Task & {
     createdBy?: { id: string; user: { firstName: string; lastName: string } } | null;
     project?: { id: string; name: string } | null;
     client?: { id: string; clientName: string } | null;
+    tags?: Array<{ tag: { name: string; color?: string | null } }>;
+    subtasks?: Array<{
+        id: string;
+        title: string;
+        status: TaskStatus;
+        completedAt: Date | null;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
 };
 
+function normalizeTaskText(value: string): string {
+    return value.trim().replace(/\s+/g, ' ');
+}
+
+export function buildTaskStoredTagNames(input: {
+    category?: string | null;
+    tags?: string[] | null;
+    isStarred?: boolean;
+    isRecurring?: boolean;
+}): string[] {
+    const stored = new Set<string>();
+
+    if (typeof input.category === 'string' && input.category.trim()) {
+        stored.add(`${TASK_CATEGORY_TAG_PREFIX}${normalizeTaskText(input.category)}`);
+    }
+
+    for (const tag of input.tags || []) {
+        const normalized = normalizeTaskText(tag);
+        if (!normalized) {
+            continue;
+        }
+
+        stored.add(normalized);
+    }
+
+    if (input.isStarred) {
+        stored.add(TASK_STARRED_TAG);
+    }
+
+    if (input.isRecurring) {
+        stored.add(TASK_RECURRING_TAG);
+    }
+
+    return [...stored];
+}
+
+export function parseTaskStoredTags(
+    tagLinks?: Array<{ tag: { name: string; color?: string | null } }>,
+): {
+    category: string | null;
+    tags: string[];
+    isStarred: boolean;
+    isRecurring: boolean;
+} {
+    let category: string | null = null;
+    let isStarred = false;
+    let isRecurring = false;
+    const tags: string[] = [];
+
+    for (const link of tagLinks || []) {
+        const name = typeof link?.tag?.name === 'string' ? link.tag.name : '';
+        if (!name) {
+            continue;
+        }
+
+        if (name.startsWith(TASK_CATEGORY_TAG_PREFIX)) {
+            category = name.slice(TASK_CATEGORY_TAG_PREFIX.length) || null;
+            continue;
+        }
+
+        if (name === TASK_STARRED_TAG) {
+            isStarred = true;
+            continue;
+        }
+
+        if (name === TASK_RECURRING_TAG) {
+            isRecurring = true;
+            continue;
+        }
+
+        tags.push(name);
+    }
+
+    return {
+        category,
+        tags,
+        isStarred,
+        isRecurring,
+    };
+}
+
 export function toTaskResponseDto(t: TaskWithRelations): TaskResponseDto {
+    const tagState = parseTaskStoredTags(t.tags);
+
     return {
         id: t.id,
         title: t.title,
@@ -97,8 +221,20 @@ export function toTaskResponseDto(t: TaskWithRelations): TaskResponseDto {
         startDate: t.startDate,
         completedAt: t.completedAt,
         estimatedTime: t.estimatedTime,
+        actualTime: t.actualTime,
         project: t.project || null,
         client: t.client || null,
+        category: tagState.category,
+        tags: tagState.tags,
+        subtasks: (t.subtasks || []).map((subtask) => ({
+            id: subtask.id,
+            title: subtask.title,
+            completed: subtask.status === 'DONE' || subtask.status === 'COMPLETED',
+            createdAt: subtask.createdAt,
+            updatedAt: subtask.updatedAt,
+        })),
+        isStarred: tagState.isStarred,
+        isRecurring: tagState.isRecurring,
         createdAt: t.createdAt,
         updatedAt: t.updatedAt,
     };

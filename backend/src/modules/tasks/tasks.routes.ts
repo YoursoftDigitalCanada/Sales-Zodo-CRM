@@ -14,6 +14,7 @@ import {
     updateTaskSchema,
     taskQuerySchema,
     taskIdSchema,
+    taskStatusUpdateSchema,
 } from './tasks.validators';
 
 const router = Router();
@@ -69,6 +70,7 @@ router.patch(
     '/:id/status',
     requirePermission(PERMISSIONS.TASKS_UPDATE),
     validate(taskIdSchema),
+    validate(taskStatusUpdateSchema),
     tasksController.updateStatus.bind(tasksController)
 );
 

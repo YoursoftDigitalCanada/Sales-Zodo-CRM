@@ -1,10 +1,11 @@
 // src/pages/Tasks.tsx
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { getTasks as fetchTasksApi, createTask as createTaskApi, updateTask as updateTaskApi, deleteTask as deleteTaskApi, updateTaskStatus } from "@/features/tasks";
 import api from "@/lib/axios";
 import { extractApiArray } from "@/types/api";
 import { getUsers } from "@/features/users";
+import { useNavigate } from "react-router-dom";
 // import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { AiInsightBadge, getTaskInsights } from "@/components/ai/AiInsightBadge";
 import { motion, AnimatePresence, Reorder } from "framer-motion";
@@ -165,6 +166,7 @@ interface Task {
   dueDate?: Date;
   startDate?: Date;
   completedDate?: Date;
+  projectId?: string;
   project?: string;
   projectColor?: string;
   category: string;
@@ -230,16 +232,19 @@ const taskPriorities = [
 ];
 
 const taskCategories: TaskCategory[] = [
-  { id: "development", name: "Development", icon: Zap, color: "#3B82F6" },
-  { id: "design", name: "Design", icon: Sparkles, color: "#EC4899" },
-  { id: "marketing", name: "Marketing", icon: Target, color: "#F59E0B" },
-  { id: "sales", name: "Sales", icon: Briefcase, color: "#10B981" },
-  { id: "support", name: "Support", icon: MessageSquare, color: "#8B5CF6" },
-  { id: "admin", name: "Admin", icon: Settings, color: "#64748B" },
+  { id: "roof_inspection", name: "Roof Inspection", icon: Eye, color: "#3B82F6" },
+  { id: "roof_repair", name: "Roof Repair", icon: Settings, color: "#EF4444" },
+  { id: "roof_replacement", name: "Roof Replacement", icon: Upload, color: "#10B981" },
+  { id: "gutters_fascia", name: "Gutters & Fascia", icon: ArrowDownRight, color: "#06B6D4" },
+  { id: "insurance_claim", name: "Insurance Claim", icon: AlertTriangle, color: "#F59E0B" },
+  { id: "materials_delivery", name: "Materials & Delivery", icon: Inbox, color: "#8B5CF6" },
+  { id: "permits_paperwork", name: "Permits & Paperwork", icon: FolderOpen, color: "#64748B" },
+  { id: "customer_follow_up", name: "Customer Follow-up", icon: MessageSquare, color: "#EC4899" },
   { id: "other", name: "Other", icon: FolderOpen, color: "#06B6D4" },
 ];
 
 const PROJECT_COLORS = ["#3B82F6", "#10B981", "#8B5CF6", "#F59E0B", "#EC4899", "#EF4444", "#06B6D4", "#F97316"];
+const DEFAULT_TASK_CATEGORY = "roof_inspection";
 
 
 
@@ -280,8 +285,124 @@ const getPriorityInfo = (priorityId: string) => {
 };
 
 const getCategoryInfo = (categoryId: string) => {
-  return taskCategories.find((c) => c.id === categoryId) || taskCategories[6];
+  return taskCategories.find((c) => c.id === categoryId) || taskCategories[taskCategories.length - 1];
 };
+
+const isUuid = (value?: string) => (
+  typeof value === "string"
+  && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+);
+
+const getProjectColor = (key?: string): string => {
+  if (!key) {
+    return "#8B5CF6";
+  }
+
+  const hash = [...key].reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  return PROJECT_COLORS[hash % PROJECT_COLORS.length];
+};
+
+const mapApiStatusToTaskStatus = (status?: string): Task["status"] => {
+  switch (String(status || "").toUpperCase()) {
+    case "IN_PROGRESS":
+      return "in_progress";
+    case "REVIEW":
+      return "in_review";
+    case "DONE":
+    case "COMPLETED":
+      return "completed";
+    case "CANCELLED":
+      return "cancelled";
+    default:
+      return "todo";
+  }
+};
+
+const mapTaskStatusToApiStatus = (status?: Task["status"]): string => {
+  switch (status) {
+    case "in_progress":
+      return "IN_PROGRESS";
+    case "in_review":
+      return "REVIEW";
+    case "completed":
+      return "DONE";
+    case "cancelled":
+      return "CANCELLED";
+    default:
+      return "TODO";
+  }
+};
+
+const mapApiPriorityToTaskPriority = (priority?: string): Task["priority"] => {
+  const normalized = String(priority || "").toUpperCase();
+  if (normalized === "LOW" || normalized === "MEDIUM" || normalized === "HIGH" || normalized === "URGENT") {
+    return normalized.toLowerCase() as Task["priority"];
+  }
+
+  return "medium";
+};
+
+const mapApiTaskToTask = (task: any): Task => ({
+  id: String(task.id),
+  title: task.title,
+  description: task.description || "",
+  status: mapApiStatusToTaskStatus(task.status),
+  priority: mapApiPriorityToTaskPriority(task.priority),
+  dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
+  startDate: task.startDate ? new Date(task.startDate) : undefined,
+  completedDate: task.completedAt ? new Date(task.completedAt) : undefined,
+  projectId: task.project?.id || undefined,
+  project: task.project?.name || undefined,
+  projectColor: getProjectColor(task.project?.id || task.project?.name || task.id),
+  category: typeof task.category === "string" && task.category ? task.category : DEFAULT_TASK_CATEGORY,
+  tags: Array.isArray(task.tags) ? task.tags : [],
+  assignees: task.assignedTo
+    ? [{
+      id: String(task.assignedTo.id),
+      name: `${task.assignedTo.user?.firstName || ""} ${task.assignedTo.user?.lastName || ""}`.trim() || "Unassigned",
+      email: task.assignedTo.user?.email || "",
+      avatar: task.assignedTo.user?.avatar || undefined,
+    }]
+    : [],
+  subtasks: Array.isArray(task.subtasks)
+    ? task.subtasks.map((subtask: any) => ({
+      id: String(subtask.id),
+      title: subtask.title,
+      completed: Boolean(subtask.completed),
+    }))
+    : [],
+  attachments: Number(task.attachmentCount || 0),
+  comments: Number(task.commentCount || 0),
+  isStarred: task.isStarred === true,
+  isRecurring: task.isRecurring === true,
+  estimatedTime: typeof task.estimatedTime === "number" ? task.estimatedTime : undefined,
+  actualTime: typeof task.actualTime === "number" ? task.actualTime : undefined,
+  createdBy: `${task.createdBy?.user?.firstName || ""} ${task.createdBy?.user?.lastName || ""}`.trim() || "System",
+  createdAt: new Date(task.createdAt),
+  updatedAt: task.updatedAt ? new Date(task.updatedAt) : undefined,
+});
+
+const buildTaskPayload = (data: Partial<Task>) => ({
+  title: data.title,
+  description: data.description || "",
+  status: mapTaskStatusToApiStatus(data.status || "todo"),
+  priority: String(data.priority || "medium").toUpperCase(),
+  dueDate: data.dueDate ? data.dueDate.toISOString() : null,
+  startDate: data.startDate ? data.startDate.toISOString() : null,
+  assignedToId: data.assignees?.[0]?.id || null,
+  projectId: data.projectId || null,
+  estimatedHours: typeof data.estimatedTime === "number" ? data.estimatedTime / 60 : null,
+  actualMinutes: typeof data.actualTime === "number" ? data.actualTime : null,
+  category: data.category || DEFAULT_TASK_CATEGORY,
+  tags: data.tags || [],
+  subtasks: (data.subtasks || []).map((subtask) => ({
+    ...(isUuid(subtask.id) ? { id: subtask.id } : {}),
+    title: subtask.title,
+    completed: Boolean(subtask.completed),
+  })),
+  isStarred: data.isStarred === true,
+  isRecurring: data.isRecurring === true,
+});
 
 const getInitials = (name: string): string => {
   return name.split(" ").map((n) => n[0]).join("").toUpperCase();
@@ -394,6 +515,8 @@ const TaskListItem = ({
   task,
   onToggleComplete,
   onToggleStar,
+  onDuplicate,
+  onArchive,
   onClick,
   onEdit,
   onDelete,
@@ -401,6 +524,8 @@ const TaskListItem = ({
   task: Task;
   onToggleComplete: () => void;
   onToggleStar: () => void;
+  onDuplicate: () => void;
+  onArchive: () => void;
   onClick: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -604,10 +729,10 @@ const TaskListItem = ({
                     {task.isStarred ? "Remove Star" : "Add Star"}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="rounded-md">
+                  <DropdownMenuItem onClick={onDuplicate} className="rounded-md">
                     <Copy size={14} className="mr-2" /> Duplicate
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="rounded-md">
+                  <DropdownMenuItem onClick={onArchive} className="rounded-md">
                     <Archive size={14} className="mr-2" /> Archive
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
@@ -1121,7 +1246,7 @@ const TaskFormDialog = ({
   isOpen: boolean;
   onClose: () => void;
   task: Task | null;
-  onSubmit: (data: Partial<Task>) => void;
+  onSubmit: (data: Partial<Task>) => boolean | Promise<boolean>;
   projects?: Project[];
 }) => {
   const [formData, setFormData] = useState({
@@ -1129,7 +1254,7 @@ const TaskFormDialog = ({
     description: "",
     status: "todo" as Task["status"],
     priority: "medium" as Task["priority"],
-    category: "development",
+    category: DEFAULT_TASK_CATEGORY,
     project: "none",
     dueDate: undefined as Date | undefined,
     estimatedTime: "",
@@ -1153,12 +1278,14 @@ const TaskFormDialog = ({
         const data = await getUsers();
         if (!cancelled) {
           setAvailableUsers(
-            data.map((u: any) => ({
-              id: String(u.id),
+            data
+              .map((u: any) => ({
+              id: String(u.employeeId || ""),
               name: u.fullName || `${u.firstName || ""} ${u.lastName || ""}`.trim() || "Unknown",
               email: u.email || "",
               avatar: u.avatar || "",
             }))
+              .filter((user) => user.id)
           );
         }
       } catch {
@@ -1179,7 +1306,7 @@ const TaskFormDialog = ({
         status: task.status,
         priority: task.priority,
         category: task.category,
-        project: task.project || "none",
+        project: task.projectId || "none",
         dueDate: task.dueDate,
         estimatedTime: task.estimatedTime?.toString() || "",
         tags: task.tags?.join(", ") || "",
@@ -1193,7 +1320,7 @@ const TaskFormDialog = ({
         description: "",
         status: "todo",
         priority: "medium",
-        category: "development",
+        category: DEFAULT_TASK_CATEGORY,
         project: "none",
         dueDate: undefined,
         estimatedTime: "",
@@ -1205,18 +1332,19 @@ const TaskFormDialog = ({
     }
   }, [task, isOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title.trim()) return;
 
     const selectedProject = formData.project !== "none" ? projects.find((p) => p.id === formData.project) : undefined;
 
-    onSubmit({
+    const didSave = await onSubmit({
       title: formData.title,
       description: formData.description,
       status: formData.status,
       priority: formData.priority,
       category: formData.category,
+      projectId: selectedProject?.id,
       project: selectedProject?.name,
       projectColor: selectedProject?.color,
       dueDate: formData.dueDate,
@@ -1227,7 +1355,9 @@ const TaskFormDialog = ({
       isRecurring: formData.isRecurring,
     });
 
-    onClose();
+    if (didSave) {
+      onClose();
+    }
   };
 
   const addSubtask = () => {
@@ -1248,7 +1378,7 @@ const TaskFormDialog = ({
     setSelectedAssignees((prev) =>
       prev.find((a) => a.id === assignee.id)
         ? prev.filter((a) => a.id !== assignee.id)
-        : [...prev, assignee]
+        : [assignee]
     );
   };
 
@@ -1960,6 +2090,7 @@ const TaskSidebar = ({
   quickFilter,
   onSelectQuickFilter,
   projects,
+  onCreateProject,
 }: {
   selectedProject: string;
   onSelectProject: (projectId: string) => void;
@@ -1980,6 +2111,7 @@ const TaskSidebar = ({
   quickFilter: "" | "today" | "upcoming" | "overdue";
   onSelectQuickFilter: (filter: "" | "today" | "upcoming" | "overdue") => void;
   projects: Project[];
+  onCreateProject: () => void;
 }) => {
   return (
     <div className="space-y-6">
@@ -2073,7 +2205,7 @@ const TaskSidebar = ({
       <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-[#0F172A]">Projects</h3>
-          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md">
+          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md" onClick={onCreateProject}>
             <Plus size={14} />
           </Button>
         </div>
@@ -2148,52 +2280,11 @@ const TaskSidebar = ({
 
 const TasksPage = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   // State
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
-  // Fetch tasks from API on mount
-  useEffect(() => {
-    const fetchTasks = async () => {
-      try {
-        const response = await fetchTasksApi() as any[];
-        const apiTasks = (Array.isArray(response) ? response : []).map((t: any) => ({
-          id: t.id,
-          title: t.title,
-          description: t.description || '',
-          status: t.status === 'DONE' ? 'completed' : t.status === 'REVIEW' ? 'in_review' : t.status === 'IN_PROGRESS' ? 'in_progress' : 'todo',
-          priority: t.priority?.toLowerCase() || 'medium',
-          dueDate: t.dueDate ? new Date(t.dueDate) : undefined,
-          startDate: t.startDate ? new Date(t.startDate) : undefined,
-          completedDate: t.completedAt ? new Date(t.completedAt) : undefined,
-          project: t.project?.name || undefined,
-          projectColor: '#8B5CF6',
-          category: t.category || 'development',
-          tags: t.tags || [],
-          assignees: t.assignedTo ? [{ id: t.assignedTo.id, name: `${t.assignedTo.user?.firstName || ''} ${t.assignedTo.user?.lastName || ''}`.trim(), email: t.assignedTo.user?.email || '', avatar: undefined }] : [],
-          subtasks: [],
-          attachments: t.attachmentCount || 0,
-          comments: t.commentCount || 0,
-          isStarred: false,
-          isRecurring: false,
-          estimatedTime: t.estimatedTime || undefined,
-          actualTime: undefined,
-          createdBy: t.createdBy?.user?.firstName || 'System',
-          createdAt: new Date(t.createdAt),
-          updatedAt: t.updatedAt ? new Date(t.updatedAt) : undefined,
-        }));
-        setTasks(apiTasks as Task[]);
-      } catch (error) {
-        console.error('Failed to fetch tasks:', error);
-        setTasks([]);
-        toast({ title: 'Error', description: 'Failed to load tasks. Please login.', variant: 'destructive' });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchTasks();
-  }, [toast]);
 
   // Fetch projects from API for sidebar
   const [apiProjects, setApiProjects] = useState<Project[]>([]);
@@ -2231,15 +2322,39 @@ const TasksPage = () => {
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
 
+  const loadTasks = useCallback(async (showLoader = false) => {
+    if (showLoader) {
+      setIsLoading(true);
+    }
+
+    try {
+      const response = await fetchTasksApi() as any[];
+      const apiTasks = (Array.isArray(response) ? response : []).map(mapApiTaskToTask);
+      setTasks(apiTasks);
+    } catch (error) {
+      console.error('Failed to fetch tasks:', error);
+      setTasks([]);
+      toast({ title: 'Error', description: 'Failed to load tasks. Please login.', variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    void loadTasks(true);
+  }, [loadTasks]);
+
+  const syncTaskIntoState = useCallback((nextTask: Task) => {
+    setTasks((prev) => prev.map((task) => (task.id === nextTask.id ? nextTask : task)));
+    setCurrentTask((prev) => (prev?.id === nextTask.id ? nextTask : prev));
+  }, []);
+
+  const prependTaskIntoState = useCallback((nextTask: Task) => {
+    setTasks((prev) => [nextTask, ...prev.filter((task) => task.id !== nextTask.id)]);
+  }, []);
+
   // Calculate task counts
   const taskCounts = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const nextWeek = new Date(today);
-    nextWeek.setDate(nextWeek.getDate() + 7);
-
     return {
       all: tasks.filter((t) => t.status !== "cancelled").length,
       today: tasks.filter((t) => t.dueDate && isDueToday(t) && t.status !== "completed").length,
@@ -2288,10 +2403,7 @@ const TasksPage = () => {
 
     // Filter by project
     if (selectedProject) {
-      const project = projects.find((p) => p.id === selectedProject);
-      if (project) {
-        result = result.filter((t) => t.project === project.name);
-      }
+      result = result.filter((t) => t.projectId === selectedProject);
     }
 
     // Filter by category
@@ -2350,53 +2462,17 @@ const TasksPage = () => {
     if (!task || task.status === newStatusId) return;
 
     // Optimistic update
-    setTasks((prev) =>
-      prev.map((t) => (t.id === taskId ? { ...t, status: newStatusId as Task["status"] } : t))
-    );
+    const optimisticTask: Task = { ...task, status: newStatusId as Task["status"] };
+    syncTaskIntoState(optimisticTask);
 
     try {
-      // Map frontend status IDs to backend enum values
-      const statusMap: Record<string, string> = {
-        todo: "TODO",
-        in_progress: "IN_PROGRESS",
-        in_review: "REVIEW",
-        completed: "DONE",
-        cancelled: "DONE",
-      };
-      await updateTaskStatus(taskId, statusMap[newStatusId] || newStatusId.toUpperCase());
+      const response = await updateTaskStatus(taskId, mapTaskStatusToApiStatus(newStatusId as Task["status"]));
+      syncTaskIntoState(mapApiTaskToTask(response as any));
       toast({ title: "Status Updated", description: `Task moved to ${taskStatuses.find(s => s.id === newStatusId)?.name || newStatusId}.` });
     } catch (error) {
       console.error("Failed to update task status", error);
-      // Revert by re-fetching
-      try {
-        const response = await fetchTasksApi() as any[];
-        const apiTasks = (Array.isArray(response) ? response : []).map((t: any) => ({
-          id: t.id,
-          title: t.title,
-          description: t.description || '',
-          status: (t.status === 'DONE' ? 'completed' : t.status === 'REVIEW' ? 'in_review' : t.status === 'IN_PROGRESS' ? 'in_progress' : 'todo') as Task["status"],
-          priority: (t.priority?.toLowerCase() || 'medium') as Task["priority"],
-          dueDate: t.dueDate ? new Date(t.dueDate) : undefined,
-          startDate: t.startDate ? new Date(t.startDate) : undefined,
-          completedDate: t.completedAt ? new Date(t.completedAt) : undefined,
-          project: t.project?.name || undefined,
-          projectColor: '#8B5CF6',
-          category: t.category || 'development',
-          tags: t.tags || [],
-          assignees: t.assignedTo ? [{ id: t.assignedTo.id, name: `${t.assignedTo.user?.firstName || ''} ${t.assignedTo.user?.lastName || ''}`.trim(), email: t.assignedTo.user?.email || '', avatar: undefined }] : [],
-          subtasks: [],
-          attachments: t.attachmentCount || 0,
-          comments: t.commentCount || 0,
-          isStarred: false,
-          isRecurring: false,
-          estimatedTime: t.estimatedTime || undefined,
-          actualTime: undefined,
-          createdBy: t.createdBy?.user?.firstName || 'System',
-          createdAt: new Date(t.createdAt),
-          updatedAt: t.updatedAt ? new Date(t.updatedAt) : undefined,
-        }));
-        setTasks(apiTasks as Task[]);
-      } catch { /* ignore */ }
+      syncTaskIntoState(task);
+      void loadTasks();
       toast({ title: "Error", description: "Failed to update task status.", variant: "destructive" });
     }
   };
@@ -2404,47 +2480,15 @@ const TasksPage = () => {
   // Handlers
   const handleAddTask = async (data: Partial<Task>) => {
     try {
-      // Prepare data for API
-      const apiData = {
-        title: data.title,
-        description: data.description || '',
-        status: (data.status || 'todo').toUpperCase().replace('_', '_'),
-        priority: (data.priority || 'medium').toUpperCase(),
-        dueDate: data.dueDate?.toISOString(),
-        category: data.category || 'OTHER',
-        estimatedHours: data.estimatedTime ? data.estimatedTime / 60 : undefined,
-      };
+      const responseData = await createTaskApi(buildTaskPayload(data));
+      const newTask = mapApiTaskToTask(responseData as any);
 
-      const responseData = await createTaskApi(apiData);
-
-      if (responseData) {
-        const t = responseData as any;
-        const newTask: Task = {
-          id: t.id,
-          title: t.title,
-          description: t.description || '',
-          status: t.status?.toLowerCase() || 'todo',
-          priority: t.priority?.toLowerCase() || 'medium',
-          dueDate: t.dueDate ? new Date(t.dueDate) : undefined,
-          project: data.project,
-          projectColor: data.projectColor || '#8B5CF6',
-          category: t.category || 'development',
-          tags: data.tags || [],
-          assignees: data.assignees || [],
-          subtasks: data.subtasks || [],
-          isStarred: false,
-          isRecurring: data.isRecurring || false,
-          estimatedTime: data.estimatedTime,
-          createdBy: 'Current User',
-          createdAt: new Date(t.createdAt),
-        };
-
-        setTasks((prev) => [newTask, ...prev]);
-        toast({
-          title: 'Task Created',
-          description: `"${newTask.title}" has been added to your tasks.`,
-        });
-      }
+      prependTaskIntoState(newTask);
+      toast({
+        title: 'Task Created',
+        description: `"${newTask.title}" has been added to your tasks.`,
+      });
+      return true;
     } catch (error: any) {
       console.error('Failed to create task:', error);
       toast({
@@ -2452,33 +2496,25 @@ const TasksPage = () => {
         description: error.response?.data?.message || 'Failed to create task',
         variant: 'destructive',
       });
+      return false;
     }
   };
 
   const handleEditTask = async (data: Partial<Task>) => {
-    if (!currentTask) return;
+    if (!currentTask) return false;
 
     try {
-      const apiData = {
-        title: data.title,
-        description: data.description || '',
-        status: (data.status || 'todo').toUpperCase().replace('_', '_'),
-        priority: (data.priority || 'medium').toUpperCase(),
-        dueDate: data.dueDate?.toISOString(),
-        category: data.category || 'OTHER',
-      };
-
-      await updateTaskApi(currentTask.id, apiData);
-
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === currentTask.id ? { ...t, ...data, updatedAt: new Date() } : t
-        )
-      );
+      const responseData = await updateTaskApi(currentTask.id, buildTaskPayload({
+        ...currentTask,
+        ...data,
+      }));
+      const updatedTask = mapApiTaskToTask(responseData as any);
+      syncTaskIntoState(updatedTask);
       toast({
         title: 'Task Updated',
         description: 'The task has been updated successfully.',
       });
+      return true;
     } catch (error: any) {
       console.error('Failed to update task:', error);
       toast({
@@ -2486,6 +2522,7 @@ const TasksPage = () => {
         description: error.response?.data?.message || 'Failed to update task',
         variant: 'destructive',
       });
+      return false;
     }
   };
 
@@ -2515,24 +2552,13 @@ const TasksPage = () => {
   };
 
   const handleToggleComplete = async (task: Task) => {
-    const newStatus = task.status === "completed" ? "TODO" : "DONE";
+    const nextStatus: Task["status"] = task.status === "completed" ? "todo" : "completed";
     try {
-      await updateTaskStatus(task.id, newStatus);
-
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === task.id
-            ? {
-              ...t,
-              status: newStatus.toLowerCase() as Task["status"],
-              completedDate: newStatus === "DONE" ? new Date() : undefined,
-            }
-            : t
-        )
-      );
+      const responseData = await updateTaskStatus(task.id, mapTaskStatusToApiStatus(nextStatus));
+      syncTaskIntoState(mapApiTaskToTask(responseData as any));
       toast({
-        title: newStatus === "DONE" ? "Task Completed" : "Task Reopened",
-        description: `"${task.title}" has been ${newStatus === "DONE" ? "marked as complete" : "reopened"}.`,
+        title: nextStatus === "completed" ? "Task Completed" : "Task Reopened",
+        description: `"${task.title}" has been ${nextStatus === "completed" ? "marked as complete" : "reopened"}.`,
       });
     } catch (error: any) {
       console.error('Failed to toggle task:', error);
@@ -2544,39 +2570,74 @@ const TasksPage = () => {
     }
   };
 
-  const handleToggleStar = (task: Task) => {
-    setTasks((prev) =>
-      prev.map((t) => (t.id === task.id ? { ...t, isStarred: !t.isStarred } : t))
-    );
+  const handleToggleStar = async (task: Task) => {
+    try {
+      const responseData = await updateTaskApi(task.id, { isStarred: !task.isStarred });
+      syncTaskIntoState(mapApiTaskToTask(responseData as any));
+    } catch (error: any) {
+      console.error('Failed to update task star:', error);
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to update task star',
+        variant: 'destructive',
+      });
+    }
   };
 
-  const handleToggleSubtask = (subtaskId: string) => {
+  const handleToggleSubtask = async (subtaskId: string) => {
     if (!currentTask) return;
 
-    setTasks((prev) =>
-      prev.map((t) =>
-        t.id === currentTask.id
-          ? {
-            ...t,
-            subtasks: t.subtasks?.map((st) =>
-              st.id === subtaskId ? { ...st, completed: !st.completed } : st
-            ),
-          }
-          : t
-      )
+    const nextSubtasks = (currentTask.subtasks || []).map((subtask) =>
+      subtask.id === subtaskId ? { ...subtask, completed: !subtask.completed } : subtask,
     );
 
-    // Update current task for dialog
-    setCurrentTask((prev) =>
-      prev
-        ? {
-          ...prev,
-          subtasks: prev.subtasks?.map((st) =>
-            st.id === subtaskId ? { ...st, completed: !st.completed } : st
-          ),
-        }
-        : null
-    );
+    try {
+      const responseData = await updateTaskApi(currentTask.id, { subtasks: nextSubtasks });
+      syncTaskIntoState(mapApiTaskToTask(responseData as any));
+    } catch (error: any) {
+      console.error('Failed to update subtask:', error);
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to update subtask',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleArchiveTask = async (task: Task) => {
+    try {
+      const responseData = await updateTaskStatus(task.id, "CANCELLED");
+      syncTaskIntoState(mapApiTaskToTask(responseData as any));
+      if (currentTask?.id === task.id) {
+        setIsDetailsOpen(false);
+        setCurrentTask(null);
+      }
+      toast({
+        title: 'Task Archived',
+        description: `"${task.title}" has been moved out of the active task list.`,
+      });
+    } catch (error: any) {
+      console.error('Failed to archive task:', error);
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to archive task',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDuplicateTask = async (task: Task) => {
+    await handleAddTask({
+      ...task,
+      title: `${task.title} (Copy)`,
+      status: task.status === "completed" || task.status === "cancelled" ? "todo" : task.status,
+      completedDate: undefined,
+      isStarred: false,
+      subtasks: (task.subtasks || []).map((subtask) => ({
+        title: subtask.title,
+        completed: subtask.completed,
+      })),
+    });
   };
 
   // Stats
@@ -2717,6 +2778,7 @@ const TasksPage = () => {
                 quickFilter={quickFilter}
                 onSelectQuickFilter={(f) => setQuickFilter(f === quickFilter ? "" : f)}
                 projects={projects}
+                onCreateProject={() => navigate("/projects/add")}
               />
             </div>
 
@@ -2822,7 +2884,12 @@ const TasksPage = () => {
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
                     >
-                      {filteredTasks.length === 0 ? (
+                      {isLoading ? (
+                        <div className="p-12 text-center">
+                          <RefreshCw size={32} className="text-[#94A3B8] mx-auto mb-3 animate-spin" />
+                          <p className="text-[#94A3B8] font-medium">Loading tasks...</p>
+                        </div>
+                      ) : filteredTasks.length === 0 ? (
                         <div className="p-12 text-center">
                           <ListTodo size={48} className="text-[#475569] mx-auto mb-3" />
                           <p className="text-[#94A3B8] font-medium">No tasks found</p>
@@ -2836,6 +2903,8 @@ const TasksPage = () => {
                               task={task}
                               onToggleComplete={() => handleToggleComplete(task)}
                               onToggleStar={() => handleToggleStar(task)}
+                              onDuplicate={() => handleDuplicateTask(task)}
+                              onArchive={() => handleArchiveTask(task)}
                               onClick={() => {
                                 setCurrentTask(task);
                                 setIsDetailsOpen(true);
@@ -2863,7 +2932,12 @@ const TasksPage = () => {
                       exit={{ opacity: 0 }}
                       className="p-6"
                     >
-                      {filteredTasks.length === 0 ? (
+                      {isLoading ? (
+                        <div className="text-center py-12">
+                          <RefreshCw size={32} className="text-[#94A3B8] mx-auto mb-3 animate-spin" />
+                          <p className="text-[#94A3B8] font-medium">Loading tasks...</p>
+                        </div>
+                      ) : filteredTasks.length === 0 ? (
                         <div className="text-center py-12">
                           <ListTodo size={48} className="text-[#475569] mx-auto mb-3" />
                           <p className="text-[#94A3B8] font-medium">No tasks found</p>
@@ -2971,8 +3045,7 @@ const TasksPage = () => {
         }}
         onToggleStar={() => {
           if (currentTask) {
-            handleToggleStar(currentTask);
-            setCurrentTask((prev) => (prev ? { ...prev, isStarred: !prev.isStarred } : null));
+            void handleToggleStar(currentTask);
           }
         }}
         onToggleSubtask={handleToggleSubtask}

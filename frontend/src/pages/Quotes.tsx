@@ -884,12 +884,34 @@ const QuotesPage = () => {
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    const requestedQuoteId = searchParams.get("quoteId");
+    if (!requestedQuoteId || quotes.length === 0) {
+      return;
+    }
+
+    const requestedQuote = quotes.find((quote) => quote.id === requestedQuoteId);
+    if (requestedQuote) {
+      setCurrentQuote(requestedQuote);
+      setIsDetailOpen(true);
+    }
+  }, [quotes, searchParams]);
+
   const closeQuoteForm = () => {
     setIsFormOpen(false);
     setCurrentQuote(null);
     if (searchParams.get("action") === "create") {
       const nextParams = new URLSearchParams(searchParams);
       nextParams.delete("action");
+      setSearchParams(nextParams, { replace: true });
+    }
+  };
+
+  const closeQuoteDetail = () => {
+    setIsDetailOpen(false);
+    if (searchParams.get("quoteId")) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete("quoteId");
       setSearchParams(nextParams, { replace: true });
     }
   };
@@ -1335,7 +1357,7 @@ const QuotesPage = () => {
       <QuoteFormDialog isOpen={isFormOpen} onClose={closeQuoteForm}
         quote={currentQuote} onSubmit={currentQuote ? handleEditQuote : handleCreateQuote} />
 
-      <QuoteDetailDialog isOpen={isDetailOpen} onClose={() => setIsDetailOpen(false)} quote={currentQuote}
+      <QuoteDetailDialog isOpen={isDetailOpen} onClose={closeQuoteDetail} quote={currentQuote}
         onEdit={() => { setIsDetailOpen(false); setIsFormOpen(true); }}
         onDelete={() => { setIsDetailOpen(false); if (currentQuote) setDeleteQuoteId(currentQuote.id); }}
         onSend={() => { if (currentQuote) handleSendQuote(currentQuote.id); setIsDetailOpen(false); }}

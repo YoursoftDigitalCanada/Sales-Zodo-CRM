@@ -12,6 +12,7 @@ import { filesRepository } from '../files/files.repository';
 import { notificationsService } from '../notifications/notifications.service';
 import { generateQuoteContractPdfBuffer } from './quote-contract-pdf';
 import { quoteSignatureReminderService } from './quote-signature-reminder.service';
+import { buildQuoteSelect, stripUnsupportedQuoteSignatureFields } from './quote-schema-compat';
 import fs from 'fs';
 import path from 'path';
 
@@ -202,49 +203,51 @@ export class QuotesService {
         };
     }
 
-    private async loadQuoteContractRecord(where: Record<string, unknown>) {
-        return prisma.quote.findFirst({
-            where,
-            include: {
-                client: {
-                    select: {
-                        id: true,
-                        clientName: true,
-                        companyName: true,
-                        primaryEmail: true,
-                        primaryPhone: true,
-                        streetAddress: true,
-                        city: true,
-                        province: true,
-                        postalCode: true,
-                        country: true,
-                    },
-                },
-                lead: {
-                    select: {
-                        id: true,
-                        firstName: true,
-                        lastName: true,
-                        companyName: true,
-                        email: true,
-                        phone: true,
-                        propertyAddress: true,
-                    },
-                },
-                items: { orderBy: { sortOrder: 'asc' } },
-                roofEstimate: {
-                    select: {
-                        id: true,
-                        address: true,
-                        roofType: true,
-                    },
-                },
-                projects: {
-                    select: { id: true },
-                    orderBy: { createdAt: 'desc' },
-                    take: 1,
+    private async loadQuoteContractRecord(where: Record<string, unknown>): Promise<QuoteContractRecord | null> {
+        const select = await buildQuoteSelect({
+            client: {
+                select: {
+                    id: true,
+                    clientName: true,
+                    companyName: true,
+                    primaryEmail: true,
+                    primaryPhone: true,
+                    streetAddress: true,
+                    city: true,
+                    province: true,
+                    postalCode: true,
+                    country: true,
                 },
             },
+            lead: {
+                select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    companyName: true,
+                    email: true,
+                    phone: true,
+                    propertyAddress: true,
+                },
+            },
+            items: { orderBy: { sortOrder: 'asc' } },
+            roofEstimate: {
+                select: {
+                    id: true,
+                    address: true,
+                    roofType: true,
+                },
+            },
+            projects: {
+                select: { id: true },
+                orderBy: { createdAt: 'desc' },
+                take: 1,
+            },
+        });
+
+        return prisma.quote.findFirst({
+            where,
+            select: select as any,
         });
     }
 
@@ -669,22 +672,27 @@ export class QuotesService {
         const nextViewCount = Number((quote as any).viewCount || 0) + 1;
         const isFirstView = !quote.firstViewedAt;
         const nextStatus: QuoteStatusValue = quote.status === 'SENT' ? 'VIEWED' : quote.status;
+        const safeViewUpdate = await stripUnsupportedQuoteSignatureFields({
+            status: nextStatus,
+            viewCount: nextViewCount,
+            firstViewedAt: quote.firstViewedAt || now,
+            lastViewedAt: now,
+            auditTrail: {
+                ...(quote.auditTrail && typeof quote.auditTrail === 'object' ? quote.auditTrail as Record<string, unknown> : {}),
+                viewCount: nextViewCount,
+                firstViewedAt: (quote.firstViewedAt || now).toISOString(),
+                lastViewedAt: now.toISOString(),
+            } as any,
+        });
 
         const updated = await prisma.quote.update({
             where: { id: quote.id },
-            data: {
-                status: nextStatus,
-                viewCount: nextViewCount,
-                firstViewedAt: quote.firstViewedAt || now,
-                lastViewedAt: now,
-                auditTrail: {
-                    ...(quote.auditTrail && typeof quote.auditTrail === 'object' ? quote.auditTrail as Record<string, unknown> : {}),
-                    viewCount: nextViewCount,
-                    firstViewedAt: (quote.firstViewedAt || now).toISOString(),
-                    lastViewedAt: now.toISOString(),
-                } as any,
+            data: safeViewUpdate as any,
+            select: {
+                id: true,
+                status: true,
             },
-        });
+        }) as { id: string; status: QuoteStatusValue };
 
         const effectiveQuote = {
             ...quote,
@@ -726,16 +734,18 @@ export class QuotesService {
 
         if (action === 'reject') {
             const rejectedAt = new Date();
+            const safeRejectUpdate = await stripUnsupportedQuoteSignatureFields({
+                status: 'REJECTED',
+                rejectedAt,
+                auditTrail: {
+                    ...(quote.auditTrail && typeof quote.auditTrail === 'object' ? quote.auditTrail as Record<string, unknown> : {}),
+                    rejectedAt: rejectedAt.toISOString(),
+                } as any,
+            });
             await prisma.quote.update({
                 where: { id: quote.id },
-                data: {
-                    status: 'REJECTED',
-                    rejectedAt,
-                    auditTrail: {
-                        ...(quote.auditTrail && typeof quote.auditTrail === 'object' ? quote.auditTrail as Record<string, unknown> : {}),
-                        rejectedAt: rejectedAt.toISOString(),
-                    } as any,
-                },
+                data: safeRejectUpdate as any,
+                select: { id: true },
             });
 
             activityLogger.log({
@@ -799,23 +809,25 @@ export class QuotesService {
             lastViewedAt: quote.lastViewedAt ? quote.lastViewedAt.toISOString() : null,
             signedPdfFileId,
         };
+        const safeSignedUpdate = await stripUnsupportedQuoteSignatureFields({
+            status: 'SIGNED',
+            isContract: true,
+            signedAt,
+            acceptedAt: signedAt,
+            signedBy: signedByName,
+            signatureType: payload?.signatureType || null,
+            signatureData: payload?.signatureData || null,
+            signerIpAddress: payload?.ipAddress || null,
+            signerUserAgent: payload?.userAgent || null,
+            contractSnapshot: contractSnapshot as any,
+            auditTrail: auditTrail as any,
+            signedPdfFileId,
+        });
 
         await prisma.quote.update({
             where: { id: quote.id },
-            data: {
-                status: 'SIGNED',
-                isContract: true,
-                signedAt,
-                acceptedAt: signedAt,
-                signedBy: signedByName,
-                signatureType: payload?.signatureType || null,
-                signatureData: payload?.signatureData || null,
-                signerIpAddress: payload?.ipAddress || null,
-                signerUserAgent: payload?.userAgent || null,
-                contractSnapshot: contractSnapshot as any,
-                auditTrail: auditTrail as any,
-                signedPdfFileId,
-            },
+            data: safeSignedUpdate as any,
+            select: { id: true },
         });
 
         activityLogger.log({

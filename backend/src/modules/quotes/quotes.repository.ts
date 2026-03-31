@@ -1,8 +1,9 @@
 import { PrismaClient, Prisma, QuoteStatus } from '@prisma/client';
 import { CreateQuoteDto, UpdateQuoteDto, QuoteQueryDto } from './quotes.dto';
+import { buildQuoteSelect, stripUnsupportedQuoteSignatureFields } from './quote-schema-compat';
 
 const prisma = new PrismaClient();
-const quoteInclude = {
+const quoteRelations = {
     client: { select: { id: true, clientName: true } },
     lead: { select: { id: true, firstName: true, lastName: true, companyName: true } },
     items: true,
@@ -27,9 +28,10 @@ async function generateQuoteNumber(tenantId: string): Promise<string> {
 }
 
 export class QuotesRepository {
-    async create(tenantId: string, data: CreateQuoteDto, createdById?: string) {
+    async create(tenantId: string, data: CreateQuoteDto, createdById?: string): Promise<any> {
         const quoteNumber = data.quoteNumber || await generateQuoteNumber(tenantId);
         const { subtotal, taxAmount, total } = calculateTotals(data.items, data.taxRate, data.discountAmount);
+        const select = await buildQuoteSelect(quoteRelations);
 
         return prisma.quote.create({
             data: {
@@ -64,16 +66,18 @@ export class QuotesRepository {
                     })),
                 },
             },
-            include: quoteInclude,
+            select: select as any,
         });
     }
 
-    async findById(id: string, tenantId: string) {
-        return prisma.quote.findFirst({ where: { id, tenantId }, include: quoteInclude });
+    async findById(id: string, tenantId: string): Promise<any> {
+        const select = await buildQuoteSelect(quoteRelations);
+        return prisma.quote.findFirst({ where: { id, tenantId }, select: select as any });
     }
 
-    async findMany(tenantId: string, query: QuoteQueryDto) {
+    async findMany(tenantId: string, query: QuoteQueryDto): Promise<{ data: any[]; total: number }> {
         const { page = 1, limit = 20, search, status, clientId, leadId, sortBy = 'issueDate', sortOrder = 'desc' } = query;
+        const select = await buildQuoteSelect(quoteRelations);
         const where: Prisma.QuoteWhereInput = {
             tenantId,
             ...(status && { status }),
@@ -87,14 +91,17 @@ export class QuotesRepository {
             }),
         };
         const [data, total] = await Promise.all([
-            prisma.quote.findMany({ where, include: quoteInclude, orderBy: { [sortBy]: sortOrder }, skip: (page - 1) * limit, take: limit }),
+            prisma.quote.findMany({ where, select: select as any, orderBy: { [sortBy]: sortOrder }, skip: (page - 1) * limit, take: limit }),
             prisma.quote.count({ where }),
         ]);
         return { data, total };
     }
 
-    async update(id: string, tenantId: string, data: UpdateQuoteDto) {
-        const existing = await prisma.quote.findFirst({ where: { id, tenantId } });
+    async update(id: string, tenantId: string, data: UpdateQuoteDto): Promise<any> {
+        const existing = await prisma.quote.findFirst({
+            where: { id, tenantId },
+            select: { id: true },
+        });
         if (!existing) throw new Error('Quote not found or access denied');
 
         let totals = {};
@@ -151,20 +158,25 @@ export class QuotesRepository {
                     },
                 }),
         };
+        const select = await buildQuoteSelect(quoteRelations);
+        const safeUpdatePayload = await stripUnsupportedQuoteSignatureFields(updatePayload);
 
         return prisma.quote.update({
             where: { id },
-            data: updatePayload,
-            include: quoteInclude,
+            data: safeUpdatePayload as any,
+            select: select as any,
         });
     }
 
-    async delete(id: string, tenantId: string) {
-        const existing = await prisma.quote.findFirst({ where: { id, tenantId } });
+    async delete(id: string, tenantId: string): Promise<{ id: string }> {
+        const existing = await prisma.quote.findFirst({
+            where: { id, tenantId },
+            select: { id: true },
+        });
         if (!existing) throw new Error('Quote not found or access denied');
 
         await prisma.quoteItem.deleteMany({ where: { quoteId: id } });
-        return prisma.quote.delete({ where: { id } });
+        return prisma.quote.delete({ where: { id }, select: { id: true } });
     }
 }
 

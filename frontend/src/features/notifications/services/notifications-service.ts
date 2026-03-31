@@ -8,6 +8,8 @@ export interface NotificationEntity {
     message: string;
     isRead: boolean;
     link?: string;
+    actionUrl?: string;
+    actionLabel?: string;
     metadata?: Record<string, unknown>;
     createdAt: string;
     [key: string]: unknown;

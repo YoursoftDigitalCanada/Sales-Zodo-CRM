@@ -62,6 +62,6 @@ export const quoteQuerySchema = z.object({
     status: z.enum(['DRAFT', 'SENT', 'VIEWED', 'ACCEPTED', 'SIGNED', 'REJECTED', 'EXPIRED']).optional(),
     clientId: z.string().uuid().optional(),
     leadId: z.string().uuid().optional(),
-    sortBy: z.enum(['quoteNumber', 'issueDate', 'validUntil', 'total']).optional(),
+    sortBy: z.enum(['quoteNumber', 'issueDate', 'validUntil', 'total', 'createdAt', 'updatedAt']).optional(),
     sortOrder: z.enum(['asc', 'desc']).optional(),
 });

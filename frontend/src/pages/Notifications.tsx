@@ -1,6 +1,7 @@
 // src/pages/Notifications.tsx
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 // import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,12 +20,12 @@ import {
 } from "lucide-react";
 import {
   getNotifications,
-  getNotificationCounts,
   markNotificationAsRead,
   markManyAsRead,
   markAllAsRead,
   deleteNotification as deleteNotificationApi,
 } from "@/features/notifications";
+import { resolveNotificationTarget } from "@/features/notifications/utils/notification-navigation";
 
 // ============================================
 // TYPES
@@ -40,6 +41,7 @@ interface Notification {
   archived: boolean;
   actionUrl?: string;
   actionLabel?: string;
+  metadata?: Record<string, unknown>;
   sender?: { name: string; avatar?: string };
   category: "general" | "crm" | "finance" | "team" | "system";
 }
@@ -72,15 +74,16 @@ const categoryOptions = [
 /** Normalise an API record into the local Notification shape */
 const normalise = (n: Record<string, any>): Notification => ({
   id: n.id,
-  type: n.type ?? "info",
+  type: typeof n.type === "string" ? n.type.toLowerCase() : "info",
   title: n.title ?? "",
   message: n.message ?? n.description ?? "",
   timestamp: n.createdAt ?? n.timestamp ?? new Date().toISOString(),
   read: n.isRead ?? n.read ?? false,
   starred: n.starred ?? false,
   archived: n.archived ?? false,
-  actionUrl: n.link ?? n.actionUrl,
+  actionUrl: resolveNotificationTarget({ actionUrl: n.actionUrl, link: n.link, metadata: n.metadata }),
   actionLabel: n.actionLabel,
+  metadata: n.metadata,
   sender: n.sender,
   category: n.category ?? "general",
 });
@@ -103,6 +106,7 @@ const getInitials = (name: string) => name.split(" ").map(n => n[0]).join("").to
 // MAIN COMPONENT
 // ============================================
 const NotificationsPage = () => {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -176,10 +180,24 @@ const NotificationsPage = () => {
   }, [filtered]);
 
   // Handlers — call backend APIs
-  const markAsRead = async (id: string) => {
+  const markAsRead = useCallback(async (id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
     try { await markNotificationAsRead(id); } catch { /* optimistic */ }
-  };
+  }, []);
+  const openTarget = useCallback((target?: string) => {
+    if (!target) return;
+    if (/^https?:\/\//i.test(target)) {
+      window.open(target, "_blank", "noopener,noreferrer");
+      return;
+    }
+    navigate(target);
+  }, [navigate]);
+  const handleOpenNotification = useCallback(async (notification: Notification) => {
+    if (!notification.read) {
+      await markAsRead(notification.id);
+    }
+    openTarget(notification.actionUrl);
+  }, [markAsRead, openTarget]);
   const markAsUnread = (id: string) => setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: false } : n));
   const toggleStar = (id: string) => setNotifications(prev => prev.map(n => n.id === id ? { ...n, starred: !n.starred } : n));
   const archiveNotification = (id: string) => {
@@ -216,15 +234,16 @@ const NotificationsPage = () => {
     setSelectedIds(new Set());
   };
 
-  const renderNotification = (n: Notification) => {
+  const renderNotification = useCallback((n: Notification) => {
     const config = typeConfig[n.type] || typeConfig.info;
     const Icon = config.icon;
     return (
       <motion.div key={n.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}
+        onClick={() => void handleOpenNotification(n)}
         className={cn("group flex items-start gap-4 p-4 border-b border-[rgba(15,23,42,0.06)] transition-colors cursor-pointer",
           !n.read ? "bg-[#0891B2]/5 hover:bg-[#0891B2]/8" : "hover:bg-[#F8FAFC]")}>
         {/* Checkbox + Icon */}
-        <div className="flex items-center gap-3 pt-0.5">
+        <div className="flex items-center gap-3 pt-0.5" onClick={(e) => e.stopPropagation()}>
           <Checkbox checked={selectedIds.has(n.id)}
             onCheckedChange={(c) => { const s = new Set(selectedIds); c ? s.add(n.id) : s.delete(n.id); setSelectedIds(s); }}
             className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]" />
@@ -237,7 +256,7 @@ const NotificationsPage = () => {
           </div>
         </div>
         {/* Content */}
-        <div className="flex-1 min-w-0" onClick={() => !n.read && markAsRead(n.id)}>
+        <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
@@ -255,7 +274,10 @@ const NotificationsPage = () => {
           <div className="flex items-center gap-2 mt-2">
             {n.actionLabel && (
               <Button size="sm" variant="outline" className="h-7 text-xs rounded-md border-[rgba(15,23,42,0.06)] text-[#0891B2]"
-                onClick={(e) => { e.stopPropagation(); markAsRead(n.id); toast({ title: n.actionLabel, description: "Navigating..." }); }}>
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void handleOpenNotification(n);
+                }}>
                 {n.actionLabel}
               </Button>
             )}
@@ -282,7 +304,7 @@ const NotificationsPage = () => {
         </div>
       </motion.div>
     );
-  };
+  }, [handleOpenNotification, selectedIds]);
 
   const renderGroup = (title: string, items: Notification[]) => {
     if (items.length === 0) return null;

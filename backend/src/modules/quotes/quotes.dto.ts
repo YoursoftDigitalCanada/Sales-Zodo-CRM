@@ -62,7 +62,7 @@ export interface QuoteQueryDto {
     status?: QuoteStatus;
     clientId?: string;
     leadId?: string;
-    sortBy?: 'quoteNumber' | 'issueDate' | 'validUntil' | 'total';
+    sortBy?: 'quoteNumber' | 'issueDate' | 'validUntil' | 'total' | 'createdAt' | 'updatedAt';
     sortOrder?: 'asc' | 'desc';
 }
 

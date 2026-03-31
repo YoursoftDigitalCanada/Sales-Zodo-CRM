@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { AnimatePresence } from "framer-motion";
+import { useSearchParams } from "react-router-dom";
 // import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import {
   ChatSidebar,
@@ -24,6 +25,7 @@ import {
 } from "@/features/chat";
 
 export default function ChatPage() {
+    const [searchParams] = useSearchParams();
     const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -58,6 +60,18 @@ export default function ChatPage() {
   }, []);
 
   useEffect(() => { fetchConversations(); }, [fetchConversations]);
+
+  useEffect(() => {
+    const requestedConversationId = searchParams.get("conversationId");
+    if (!requestedConversationId || conversations.length === 0) {
+      return;
+    }
+
+    const requestedConversation = conversations.find((conversation) => conversation.id === requestedConversationId);
+    if (requestedConversation && selectedConversation?.id !== requestedConversation.id) {
+      setSelectedConversation(requestedConversation);
+    }
+  }, [conversations, searchParams, selectedConversation?.id]);
 
   // Load messages when conversation changes
   useEffect(() => {

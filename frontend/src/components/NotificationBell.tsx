@@ -21,6 +21,7 @@ import {
   markNotificationAsRead,
   type NotificationEntity,
 } from "@/features/notifications";
+import { resolveNotificationTarget } from "@/features/notifications/utils/notification-navigation";
 import { cn } from "@/lib/utils";
 
 interface NotificationBellProps {
@@ -37,7 +38,7 @@ interface BellNotification {
   title: string;
   message: string;
   read: boolean;
-  link?: string;
+  target?: string;
   time: string;
   icon: LucideIcon;
   iconClassName: string;
@@ -121,14 +122,15 @@ function formatRelativeTime(timestamp: string): string {
 }
 
 function normalizeNotification(notification: NotificationEntity): BellNotification {
-  const config = notificationTypeConfig[notification.type] || notificationTypeConfig.info;
+  const normalizedType = typeof notification.type === "string" ? notification.type.toLowerCase() : "info";
+  const config = notificationTypeConfig[normalizedType] || notificationTypeConfig.info;
 
   return {
     id: notification.id,
     title: notification.title || "Notification",
     message: notification.message || "",
     read: Boolean(notification.isRead),
-    link: typeof notification.link === "string" ? notification.link : undefined,
+    target: resolveNotificationTarget(notification),
     time: formatRelativeTime(notification.createdAt),
     icon: config.icon,
     iconClassName: config.iconClassName,
@@ -246,7 +248,7 @@ export function NotificationBell({
       }
 
       setIsOpen(false);
-      openTarget(notification.link);
+      openTarget(notification.target);
     },
     [openTarget],
   );

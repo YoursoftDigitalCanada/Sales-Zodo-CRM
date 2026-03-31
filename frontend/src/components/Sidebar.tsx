@@ -328,7 +328,7 @@ const navigationItems: NavigationItem[] = [
     badgeColor: "teal",
   },
   {
-    title: "Site Visits",
+    title: "Inspections",
     icon: CheckSquare,
     path: "/inspections",
     featureId: "leads",

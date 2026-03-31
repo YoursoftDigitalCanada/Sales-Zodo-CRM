@@ -45,6 +45,8 @@ export interface InspectionEntity {
     hailDamageDetails: string | null;
     hailSizeFound: string | null;
     inspectorNotes: string | null;
+    photosTakenCount: number | null;
+    photoFileIds: string[];
     totalEstimate: number | null;
     createdAt: string;
     updatedAt: string;
@@ -80,4 +82,3 @@ export async function updateInspection(leadId: string, inspectionId: string, dat
 export async function deleteInspection(leadId: string, inspectionId: string): Promise<void> {
     await api.delete(`/leads/${leadId}/inspections/${inspectionId}`);
 }
-

@@ -1,0 +1,2 @@
+ALTER TABLE "LeadInspection"
+ADD COLUMN "photoFileIds" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];

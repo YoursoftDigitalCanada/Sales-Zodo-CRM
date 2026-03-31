@@ -107,6 +107,10 @@ export class InspectionsRepository {
                 result[field] = new Date(result[field]);
             }
         }
+        if (Array.isArray(result.photoFileIds)) {
+            result.photoFileIds = result.photoFileIds.filter((value: unknown): value is string => typeof value === 'string' && value.length > 0);
+            result.photosTakenCount = result.photoFileIds.length;
+        }
         return result;
     }
 }

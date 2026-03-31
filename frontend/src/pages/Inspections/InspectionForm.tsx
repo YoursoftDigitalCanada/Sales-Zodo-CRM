@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -20,8 +20,6 @@ import {
     Save,
     CheckCircle2,
     ClipboardList,
-    Camera,
-    Plus,
     ArrowRight,
     Calendar,
     Loader2,
@@ -29,7 +27,12 @@ import {
     Search,
 } from "lucide-react";
 import api from "@/lib/axios";
-import { createInspection } from "@/features/leads/services/inspections-service";
+import { uploadFile } from "@/features/files/services/files-service";
+import {
+    createInspection,
+    updateInspection,
+} from "@/features/leads/services/inspections-service";
+import InspectionPhotoSection from "./InspectionPhotoSection";
 
 // ============================================
 // TYPES
@@ -43,6 +46,12 @@ interface LeadOption {
     address: string;
     insurance: string;
     claimNumber: string;
+}
+
+interface PendingInspectionPhoto {
+    id: string;
+    file: File;
+    previewUrl: string;
 }
 
 // ============================================
@@ -106,6 +115,7 @@ const SectionCard = ({
 const InspectionForm = () => {
     const navigate = useNavigate();
     const { toast } = useToast();
+    const photoUrlsRef = useRef<string[]>([]);
 
     // Leads
     const [leads, setLeads] = useState<LeadOption[]>([]);
@@ -138,6 +148,7 @@ const InspectionForm = () => {
     const [damageChecks, setDamageChecks] = useState({ hail: false, wind: false, flashing: false, gutter: false, deck: false });
     const [inspectorNotes, setInspectorNotes] = useState("");
     const [recommendation, setRecommendation] = useState("full_replacement");
+    const [selectedPhotos, setSelectedPhotos] = useState<PendingInspectionPhoto[]>([]);
 
     // Load leads
     useEffect(() => {
@@ -169,11 +180,65 @@ const InspectionForm = () => {
         } catch { /* ignore */ }
     }, []);
 
+    useEffect(() => {
+        return () => {
+            photoUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+            photoUrlsRef.current = [];
+        };
+    }, []);
+
     const filteredLeads = leadSearch
         ? leads.filter(l => l.name.toLowerCase().includes(leadSearch.toLowerCase()) || l.address.toLowerCase().includes(leadSearch.toLowerCase()))
         : leads;
 
     const selectedLead = leads.find(l => l.id === selectedLeadId);
+
+    const inspectionPhotoItems = selectedPhotos.map((photo) => ({
+        id: photo.id,
+        name: photo.file.name,
+        previewUrl: photo.previewUrl,
+        statusLabel: "Ready to upload",
+    }));
+
+    const resetSelectedPhotos = () => {
+        photoUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+        photoUrlsRef.current = [];
+        setSelectedPhotos([]);
+    };
+
+    const handleAddPhotos = async (files: File[]) => {
+        const imageFiles = files.filter((file) => file.type.startsWith("image/"));
+        if (imageFiles.length !== files.length) {
+            toast({
+                title: "Images only",
+                description: "Please upload roof photos as image files.",
+                variant: "destructive",
+            });
+        }
+
+        const nextPhotos = imageFiles.map((file) => {
+            const previewUrl = URL.createObjectURL(file);
+            photoUrlsRef.current.push(previewUrl);
+            return {
+                id: globalThis.crypto?.randomUUID?.() || `${file.name}-${file.lastModified}-${Math.random()}`,
+                file,
+                previewUrl,
+            };
+        });
+
+        setSelectedPhotos((current) => [...current, ...nextPhotos]);
+    };
+
+    const handleRemovePhoto = async (photoId: string) => {
+        setSelectedPhotos((current) => {
+            const target = current.find((photo) => photo.id === photoId);
+            if (target) {
+                URL.revokeObjectURL(target.previewUrl);
+                photoUrlsRef.current = photoUrlsRef.current.filter((url) => url !== target.previewUrl);
+            }
+            return current.filter((photo) => photo.id !== photoId);
+        });
+    };
 
     // Submit
     const handleSubmit = async (isDraft = true) => {
@@ -213,10 +278,33 @@ const InspectionForm = () => {
             };
 
             const result = await createInspection(selectedLeadId, payload);
+
+            if (selectedPhotos.length > 0) {
+                try {
+                    const uploadedPhotos = await Promise.all(
+                        selectedPhotos.map((photo) => uploadFile(photo.file, { leadId: selectedLeadId })),
+                    );
+                    const photoFileIds = uploadedPhotos.map((file) => file.id);
+                    await updateInspection(selectedLeadId, result.id, {
+                        photoFileIds,
+                        photosTakenCount: photoFileIds.length,
+                    });
+                } catch {
+                    toast({
+                        title: "Inspection saved",
+                        description: "The inspection was created, but roof photos could not be uploaded. You can add them from the inspection page.",
+                        variant: "destructive",
+                    });
+                    navigate(`/inspections/${result.id}`);
+                    return;
+                }
+            }
+
             toast({
                 title: isDraft ? "Inspection Saved" : "Inspection Completed",
                 description: `Inspection for ${selectedLead?.name || "customer"} ${isDraft ? "saved as draft" : "marked as complete"}.`,
             });
+            resetSelectedPhotos();
             navigate(`/inspections/${result.id}`);
         } catch (err) {
             toast({ title: "Error", description: "Failed to create inspection.", variant: "destructive" });
@@ -465,6 +553,14 @@ const InspectionForm = () => {
                         </SectionCard>
                     </div>
                 </motion.div>
+
+                <InspectionPhotoSection
+                    items={inspectionPhotoItems}
+                    onAddFiles={handleAddPhotos}
+                    onRemove={handleRemovePhoto}
+                    uploading={saving}
+                    disabled={saving}
+                />
 
                 {/* STEP 5: Notes & Recommendation */}
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm mb-6">

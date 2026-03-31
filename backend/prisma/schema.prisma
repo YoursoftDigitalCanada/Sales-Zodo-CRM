@@ -1375,6 +1375,7 @@ model LeadInspection {
   interiorDamageFound   Boolean?  @default(false)
   interiorDamageDetails String?   @db.Text
   photosTakenCount      Int?
+  photoFileIds          String[]  @default([])
   overallDamageRating   String?          // None, Minor, Moderate, Severe, Total Loss
 
   // ── Material Selections (~10) ───────────────────────────────

@@ -44,6 +44,7 @@ const inspectionFields = {
     interiorDamageFound: z.boolean().optional(),
     interiorDamageDetails: z.string().max(2000).optional(),
     photosTakenCount: z.number().int().min(0).optional(),
+    photoFileIds: z.array(z.string().uuid()).optional(),
     overallDamageRating: z.string().max(50).optional(),
 
     // Material Selections

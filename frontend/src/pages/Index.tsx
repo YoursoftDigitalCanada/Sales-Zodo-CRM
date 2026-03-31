@@ -283,7 +283,7 @@ function toDashboardLeadStage(status: string): RevenuePipelineStage {
 
 function getLeadNextAction(stage: RevenuePipelineStage, temperature: LeadItem["temperature"]): string {
   if (stage === "lead") return temperature === "hot" ? "Call homeowner" : "Qualify opportunity";
-  if (stage === "contacted") return "Schedule site visit";
+  if (stage === "contacted") return "Schedule inspection";
   if (stage === "estimate-sent") return "Follow up on estimate";
   if (stage === "negotiation") return "Resolve objections";
   if (stage === "won") return "Open job file";
@@ -450,7 +450,7 @@ function mapInspection(inspection: DashboardInspection): SiteVisitItem {
       inspection.lead?.state,
       inspection.lead?.zipCode,
     ]) || "Address pending",
-    inspectionType: readText(inspection.inspectionType) || "Site Visit",
+    inspectionType: readText(inspection.inspectionType) || "Inspection",
     scheduledAt: inspection.inspectionDate ? new Date(inspection.inspectionDate) : null,
     estimateValue: Number(inspection.totalEstimate || 0),
   };
@@ -764,7 +764,7 @@ const Index = () => {
     if (dashboardAccess.canViewSiteVisits) {
       items.push({
         id: "schedule-site-visit",
-        label: "Schedule Site Visit",
+        label: "Schedule Inspection",
         description: "Book the next inspection slot",
         icon: Calendar,
         path: "/inspections/new",
@@ -945,11 +945,11 @@ const Index = () => {
         tone: "success",
         label: nextSiteVisit
           ? `Visit at ${formatTimeLabel(nextSiteVisit.scheduledAt)} - ${nextSiteVisit.clientName}`
-          : "Site visit schedule is open",
+          : "Inspection schedule is open",
         detail: nextSiteVisit
           ? `${nextSiteVisit.inspectionType} at ${nextSiteVisit.address}`
           : "Book the next inspection before the day fills up",
-        actionLabel: nextSiteVisit ? "Open Visit" : "Schedule Visit",
+        actionLabel: nextSiteVisit ? "Open Inspection" : "Schedule Inspection",
         path: nextSiteVisit ? "/inspections" : "/inspections/new",
       });
     }
@@ -1818,7 +1818,7 @@ const Index = () => {
                   {dashboardAccess.canViewSiteVisits ? (
                     <div className={sectionCardClassName}>
                       <div className="p-5 border-b border-[rgba(15,23,42,0.06)]">
-                        <h2 className="text-sm font-semibold text-[#0F172A]">Site Visits</h2>
+                        <h2 className="text-sm font-semibold text-[#0F172A]">Inspections</h2>
                         <p className="text-[11px] text-[#94A3B8]">Upcoming inspections and property visits</p>
                       </div>
                       <div className="divide-y divide-[rgba(15,23,42,0.04)]">
@@ -1841,7 +1841,7 @@ const Index = () => {
                             </div>
                           ))}
                         {siteVisits.filter((visit) => visit.scheduledAt).length === 0 ? (
-                          <div className="px-5 py-8 text-sm text-[#475569]">No site visits are scheduled yet.</div>
+                          <div className="px-5 py-8 text-sm text-[#475569]">No inspections are scheduled yet.</div>
                         ) : null}
                       </div>
                     </div>

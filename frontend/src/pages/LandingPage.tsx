@@ -519,7 +519,7 @@ export default function LandingPage() {
             { icon: Brain, title: 'AI Roof Estimator', desc: 'Enter an address, get instant measurements and pricing', highlight: true, badge: 'AI POWERED' },
             { icon: LayoutGrid, title: 'Job Pipeline', desc: 'Track every job from lead to completion with drag-and-drop Kanban', highlight: false },
             { icon: Receipt, title: 'Auto Invoice Builder', desc: 'Generate professional invoices directly from completed jobs', highlight: false },
-            { icon: Calendar, title: 'Site Visit Scheduling', desc: 'Book and manage site visits with integrated calendar', highlight: false },
+            { icon: Calendar, title: 'Inspection Scheduling', desc: 'Book and manage inspections with integrated calendar', highlight: false },
             { icon: Users, title: 'Client Management', desc: 'Full CRM with contact history, notes, and communications', highlight: false },
             { icon: CreditCard, title: 'Payments Tracking', desc: 'Monitor payments, outstanding balances, and revenue', highlight: false },
           ].map((f, i) => (
@@ -684,7 +684,7 @@ export default function LandingPage() {
                   'Job pipeline management',
                   'Invoice builder',
                   'Client management',
-                  'Site visit scheduling',
+                  'Inspection scheduling',
                   'Email support',
                 ].map((f, i) => (
                   <li key={i} className="flex items-center gap-2.5">

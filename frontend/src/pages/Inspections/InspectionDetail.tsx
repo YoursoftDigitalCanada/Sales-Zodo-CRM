@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -21,22 +21,24 @@ import {
     Building2,
     FileText,
     ClipboardList,
-    Camera,
-    Plus,
-    Home,
     ArrowRight,
     Calendar,
     Sun,
     CloudLightning,
-    Eye,
-    Trash2,
     Loader2,
 } from "lucide-react";
+import {
+    deleteFile,
+    fetchFileBlob,
+    getFileById,
+    uploadFile,
+} from "@/features/files/services/files-service";
 import {
     getAllInspections,
     updateInspection,
     type InspectionEntity,
 } from "@/features/leads/services/inspections-service";
+import InspectionPhotoSection from "./InspectionPhotoSection";
 
 // ============================================
 // SUB-COMPONENTS
@@ -128,6 +130,12 @@ function getSeverityFromRating(rating: string | null): { label: string; color: s
     return { label: rating, color: "#6B7280", bgColor: "#F3F4F6", score: 0 };
 }
 
+interface StoredInspectionPhoto {
+    id: string;
+    name: string;
+    previewUrl: string;
+}
+
 // ============================================
 // MAIN COMPONENT
 // ============================================
@@ -136,11 +144,15 @@ const InspectionDetail = () => {
     const navigate = useNavigate();
     const { id } = useParams();
     const { toast } = useToast();
+    const photoUrlsRef = useRef<string[]>([]);
 
     // Data state
     const [inspection, setInspection] = useState<InspectionEntity | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [photoLoading, setPhotoLoading] = useState(false);
+    const [photoMutating, setPhotoMutating] = useState(false);
+    const [inspectionPhotos, setInspectionPhotos] = useState<StoredInspectionPhoto[]>([]);
 
     // Form state — populated from API data
     const [measurementSource, setMeasurementSource] = useState("manual");
@@ -172,6 +184,11 @@ const InspectionDetail = () => {
         cause: "", dateOfLoss: "", inspectionType: "",
     });
 
+    const clearPhotoUrls = () => {
+        photoUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+        photoUrlsRef.current = [];
+    };
+
     // ---------- Load Data ----------
     useEffect(() => {
         const loadInspection = async () => {
@@ -195,6 +212,85 @@ const InspectionDetail = () => {
         };
         loadInspection();
     }, [id]);
+
+    useEffect(() => {
+        return () => {
+            clearPhotoUrls();
+        };
+    }, []);
+
+    const photoIdsKey = inspection?.photoFileIds?.join(",") || "";
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadPhotos = async () => {
+            const photoFileIds = inspection?.photoFileIds || [];
+            clearPhotoUrls();
+
+            if (!inspection || photoFileIds.length === 0) {
+                setInspectionPhotos([]);
+                setPhotoLoading(false);
+                return;
+            }
+
+            setPhotoLoading(true);
+            try {
+                const loadedPhotos = await Promise.all(
+                    photoFileIds.map(async (fileId) => {
+                        const [file, previewUrl] = await Promise.all([
+                            getFileById(fileId),
+                            fetchFileBlob(fileId),
+                        ]);
+                        return {
+                            id: fileId,
+                            name: file.originalName || file.name,
+                            previewUrl,
+                        };
+                    }),
+                );
+
+                if (cancelled) {
+                    loadedPhotos.forEach((photo) => URL.revokeObjectURL(photo.previewUrl));
+                    return;
+                }
+
+                photoUrlsRef.current = loadedPhotos.map((photo) => photo.previewUrl);
+                setInspectionPhotos(loadedPhotos);
+            } catch {
+                if (!cancelled) {
+                    setInspectionPhotos([]);
+                    toast({
+                        title: "Photo load failed",
+                        description: "Some inspection photos could not be loaded.",
+                        variant: "destructive",
+                    });
+                }
+            } finally {
+                if (!cancelled) {
+                    setPhotoLoading(false);
+                }
+            }
+        };
+
+        void loadPhotos();
+
+        return () => {
+            cancelled = true;
+            clearPhotoUrls();
+        };
+    }, [inspection?.id, photoIdsKey, toast]);
+
+    const applyInspectionUpdate = (updated: InspectionEntity) => {
+        setInspection((current) => {
+            if (!current) return updated;
+            return {
+                ...current,
+                ...updated,
+                lead: current.lead || updated.lead,
+            };
+        });
+    };
 
     const populateForm = (data: InspectionEntity) => {
         const lead = data.lead;
@@ -314,7 +410,8 @@ const InspectionDetail = () => {
                 estimateStatus: isComplete ? "completed" : "pending",
             };
 
-            await updateInspection(inspection.leadId, inspection.id, payload);
+            const updated = await updateInspection(inspection.leadId, inspection.id, payload);
+            applyInspectionUpdate(updated);
             toast({
                 title: isComplete ? "Report Completed" : "Report Saved",
                 description: isComplete ? "Inspection report marked as complete." : "Inspection report has been saved.",
@@ -323,6 +420,85 @@ const InspectionDetail = () => {
             toast({ title: "Error", description: "Failed to save inspection.", variant: "destructive" });
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleAddPhotos = async (files: File[]) => {
+        if (!inspection) return;
+
+        const imageFiles = files.filter((file) => file.type.startsWith("image/"));
+        if (imageFiles.length !== files.length) {
+            toast({
+                title: "Images only",
+                description: "Please upload roof photos as image files.",
+                variant: "destructive",
+            });
+        }
+        if (imageFiles.length === 0) return;
+
+        setPhotoMutating(true);
+        try {
+            const uploadedPhotos = await Promise.all(
+                imageFiles.map((file) => uploadFile(file, { leadId: inspection.leadId })),
+            );
+            const nextPhotoIds = [
+                ...(inspection.photoFileIds || []),
+                ...uploadedPhotos.map((file) => file.id),
+            ];
+            const updated = await updateInspection(inspection.leadId, inspection.id, {
+                photoFileIds: nextPhotoIds,
+                photosTakenCount: nextPhotoIds.length,
+            });
+            applyInspectionUpdate(updated);
+            toast({
+                title: "Photos uploaded",
+                description: `${uploadedPhotos.length} roof photo${uploadedPhotos.length === 1 ? "" : "s"} added to this inspection.`,
+            });
+        } catch {
+            toast({
+                title: "Upload failed",
+                description: "Roof photos could not be uploaded right now.",
+                variant: "destructive",
+            });
+        } finally {
+            setPhotoMutating(false);
+        }
+    };
+
+    const handleRemovePhoto = async (photoId: string) => {
+        if (!inspection) return;
+
+        setPhotoMutating(true);
+        try {
+            const nextPhotoIds = (inspection.photoFileIds || []).filter((id) => id !== photoId);
+            const updated = await updateInspection(inspection.leadId, inspection.id, {
+                photoFileIds: nextPhotoIds,
+                photosTakenCount: nextPhotoIds.length,
+            });
+            applyInspectionUpdate(updated);
+
+            try {
+                await deleteFile(photoId);
+            } catch {
+                toast({
+                    title: "Photo detached",
+                    description: "The photo was removed from this inspection, but file cleanup in storage needs a retry.",
+                });
+                return;
+            }
+
+            toast({
+                title: "Photo removed",
+                description: "The roof photo was removed from this inspection.",
+            });
+        } catch {
+            toast({
+                title: "Remove failed",
+                description: "The roof photo could not be removed right now.",
+                variant: "destructive",
+            });
+        } finally {
+            setPhotoMutating(false);
         }
     };
 
@@ -727,39 +903,14 @@ const InspectionDetail = () => {
                     </div>
                 </motion.div>
 
-                {/* PHOTOS SECTION */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm mb-6"
-                >
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-semibold text-gray-900 flex items-center gap-2">📸 Photos</h3>
-                        <Button variant="outline" size="sm" className="rounded-lg gap-1.5 border-gray-200">
-                            <Camera size={14} /> Upload Photos
-                        </Button>
-                    </div>
-                    <p className="text-xs text-gray-400 font-medium uppercase tracking-wider mb-3">Before / Damage Photos</p>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-                        {["Overall View", "Hail Damage", "Flashing Damage", "Close-up"].map((label) => (
-                            <div key={label} className="group relative aspect-square bg-gray-50 rounded-lg border border-gray-200 flex flex-col items-center justify-center overflow-hidden hover:border-[#1E40AF]/30 transition-colors cursor-pointer">
-                                <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-2">
-                                    <Camera size={20} className="text-gray-400" />
-                                </div>
-                                <span className="text-xs text-gray-500 text-center px-2">{label}</span>
-                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                    <button className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center hover:bg-white"><Eye size={14} className="text-gray-700" /></button>
-                                    <button className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center hover:bg-white"><Trash2 size={14} className="text-red-500" /></button>
-                                </div>
-                            </div>
-                        ))}
-                        <div className="aspect-square rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-[#1E40AF] hover:bg-blue-50/30 transition-colors">
-                            <Plus size={24} className="text-gray-400 mb-1" />
-                            <span className="text-xs text-gray-500">Add Photo</span>
-                        </div>
-                    </div>
-                </motion.div>
+                <InspectionPhotoSection
+                    items={inspectionPhotos}
+                    onAddFiles={handleAddPhotos}
+                    onRemove={handleRemovePhoto}
+                    loading={photoLoading}
+                    uploading={photoMutating}
+                    disabled={saving || photoMutating}
+                />
 
                 {/* INSPECTOR NOTES */}
                 <motion.div

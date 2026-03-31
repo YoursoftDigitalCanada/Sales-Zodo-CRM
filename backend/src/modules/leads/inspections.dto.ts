@@ -44,6 +44,7 @@ export interface CreateLeadInspectionDto {
     interiorDamageFound?: boolean;
     interiorDamageDetails?: string;
     photosTakenCount?: number;
+    photoFileIds?: string[];
     overallDamageRating?: string;
 
     // Material Selections
@@ -141,6 +142,7 @@ export interface LeadInspectionResponseDto {
     interiorDamageFound: boolean | null;
     interiorDamageDetails: string | null;
     photosTakenCount: number | null;
+    photoFileIds: string[];
     overallDamageRating: string | null;
 
     proposedMaterial: string | null;
@@ -243,6 +245,7 @@ export function toLeadInspectionResponseDto(i: any): LeadInspectionResponseDto {
         interiorDamageFound: i.interiorDamageFound ?? null,
         interiorDamageDetails: i.interiorDamageDetails ?? null,
         photosTakenCount: i.photosTakenCount ?? null,
+        photoFileIds: Array.isArray(i.photoFileIds) ? i.photoFileIds : [],
         overallDamageRating: i.overallDamageRating ?? null,
 
         proposedMaterial: i.proposedMaterial ?? null,

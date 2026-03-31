@@ -924,6 +924,14 @@ export default function RoofEstimatorWizard() {
         estimateId: savedId || "NEW",
         createdAt: new Date().toISOString(),
         notes: data.notes || undefined,
+        branding: {
+          companyName: companyProfile?.companyName || "ZODO CRM",
+          companyLogoUrl: companyProfile?.logoUrl || null,
+          companyEmail: companyProfile?.email || null,
+          companyPhone: companyProfile?.phone || null,
+          companyAddress: companyProfile?.address || null,
+          companyDomain: companyProfile?.domain || null,
+        },
       });
 
       const summaryPdfResult = await buildEstimateSummaryPdf({

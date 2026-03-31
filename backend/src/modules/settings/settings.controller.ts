@@ -54,6 +54,15 @@ export class SettingsController {
     }
   }
 
+  async getCompanyBranding(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const company = await settingsService.getCompany(req.context.tenantId);
+      sendSuccess(res, company);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async updateCompany(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const company = await settingsService.updateCompany(req.context.tenantId, sanitizeBody(req.body));

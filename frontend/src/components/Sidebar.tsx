@@ -15,6 +15,7 @@ import {
   subscribeEnabledFeatures,
   type FeatureId,
 } from "@/lib/enabled-features";
+import { useWorkspaceBranding } from "@/features/settings/context/workspace-branding";
 import {
   LayoutDashboard,
   Users,
@@ -70,7 +71,6 @@ import {
   UserCheck,
   type LucideIcon,
 } from "lucide-react";
-import logo from "../Images/Logo/logo.png";
 
 // ============================================
 // TYPES
@@ -613,6 +613,13 @@ const Tag = ({ type }: { type: "new" | "pro" }) => {
   );
 };
 
+function getBrandInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "WS";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase();
+}
+
 // ============================================
 // MAIN SIDEBAR COMPONENT
 // ============================================
@@ -627,6 +634,7 @@ export function Sidebar({
   const suppressSidebar = useContext(SidebarSuppressionContext);
   if (suppressSidebar && !forceRender) return null;
 
+  const { branding } = useWorkspaceBranding();
   const { isMobile, isTablet } = useIsMobile();
   const [internalCollapsed, setInternalCollapsed] = useState(false);
   const collapsed = isMobile ? false : (isTablet ? true : (controlledCollapsed ?? internalCollapsed));
@@ -647,6 +655,9 @@ export function Sidebar({
   const [userPermissions, setUserPermissions] = useState<string[] | null>(() => readStoredPermissions());
   const [isOwnerOrAdmin, setIsOwnerOrAdmin] = useState(() => readStoredOwnerOrAdmin());
   const [runtimeNavigationMeta, setRuntimeNavigationMeta] = useState<SidebarRuntimeMeta>({});
+  const brandName = branding?.companyName?.trim() || "ZODO CRM";
+  const brandLogoUrl = branding?.logoUrl || null;
+  const brandInitials = getBrandInitials(brandName);
 
   useEffect(() => {
     return subscribeEnabledFeatures(() =>
@@ -951,14 +962,25 @@ export function Sidebar({
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className="flex flex-col items-center flex-1"
+                className="flex flex-1 items-center"
               >
-                <img
-                  src={logo}
-                  alt="ZODO"
-                  className="h-12 w-auto object-contain"
-                />
-                <span className="text-[7px] text-[#94A3B8] tracking-[0.2em] uppercase mt-0.5">One Stop Solution</span>
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]">
+                    {brandLogoUrl ? (
+                      <img
+                        src={brandLogoUrl}
+                        alt={brandName}
+                        className="h-full w-full object-contain p-1.5"
+                      />
+                    ) : (
+                      <span className="text-sm font-bold uppercase tracking-[0.14em] text-[#0891B2]">{brandInitials}</span>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-[#0F172A]">{brandName}</p>
+                    <p className="truncate text-[10px] uppercase tracking-[0.18em] text-[#94A3B8]">Workspace CRM</p>
+                  </div>
+                </div>
               </motion.div>
             ) : (
               <motion.div
@@ -966,11 +988,17 @@ export function Sidebar({
                 animate={{ opacity: 1, scale: 1 }}
                 className="mx-auto"
               >
-                <img
-                  src={logo}
-                  alt="ZODO"
-                  className="h-10 w-10 object-contain rounded-xl"
-                />
+                <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]">
+                  {brandLogoUrl ? (
+                    <img
+                      src={brandLogoUrl}
+                      alt={brandName}
+                      className="h-full w-full object-contain p-1.5"
+                    />
+                  ) : (
+                    <span className="text-xs font-bold uppercase tracking-[0.14em] text-[#0891B2]">{brandInitials}</span>
+                  )}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

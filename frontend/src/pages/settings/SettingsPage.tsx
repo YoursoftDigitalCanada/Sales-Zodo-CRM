@@ -62,6 +62,7 @@ import {
   type UserTeamMember,
   type WorkspaceTheme,
 } from "@/features/settings/services/settings-service";
+import { useWorkspaceBranding } from "@/features/settings/context/workspace-branding";
 
 type SettingsTab = "general" | "company" | "billing" | "email" | "security" | "notifications" | "team";
 
@@ -277,6 +278,7 @@ export default function SettingsPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { updateBranding } = useWorkspaceBranding();
   const [activeTab, setActiveTab] = useState<SettingsTab>(routeMap[location.pathname] || "general");
   const [isLoading, setIsLoading] = useState(true);
   const [savingSection, setSavingSection] = useState<string | null>(null);
@@ -401,6 +403,7 @@ export default function SettingsPage() {
         address: company.address,
       });
       setCompany(next);
+      updateBranding(next);
       if (general) {
         setGeneral({ ...general, organizationName: next.companyName || general.organizationName });
       }
@@ -417,6 +420,7 @@ export default function SettingsPage() {
     try {
       const next = await uploadCompanyLogo(file);
       setCompany(next);
+      updateBranding(next);
       toast({ title: "Logo uploaded", description: "Your workspace logo was updated." });
     } catch (error) {
       toast({ title: "Upload failed", description: getErrorMessage(error), variant: "destructive" });

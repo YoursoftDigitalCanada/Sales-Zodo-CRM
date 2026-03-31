@@ -10,6 +10,7 @@ import { BrowserRouter, Navigate, Routes, Route, useLocation } from "react-route
 import { CopilotContextProvider } from "@/contexts/CopilotContext";
 import { Sidebar, SidebarSuppressionContext } from "@/components/Sidebar";
 import { getAccessToken } from "@/features/auth/lib/auth-storage";
+import { WorkspaceBrandingProvider, useWorkspaceBranding } from "@/features/settings/context/workspace-branding";
 import { canAccessModule, getDefaultAuthorizedRoute } from "@/lib/access-control";
 import { isOnboardingRequired } from "@/lib/enabled-features";
 
@@ -130,6 +131,7 @@ const AppRoutes = () => {
   const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { branding } = useWorkspaceBranding();
   const onboardingLocked =
     Boolean(getAccessToken()) &&
     isOnboardingRequired() &&
@@ -138,6 +140,8 @@ const AppRoutes = () => {
     () => !isPublicPath(location.pathname),
     [location.pathname],
   );
+  const companyName = branding?.companyName?.trim() || "ZODO CRM";
+  const companyLogoUrl = branding?.logoUrl || null;
 
   if (onboardingLocked) {
     return <Navigate to="/onboarding" replace />;
@@ -710,7 +714,16 @@ const AppRoutes = () => {
             >
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
             </button>
-            <span className="text-sm font-bold text-[#0F172A] tracking-tight">ZODO <span className="text-[#0891B2]">CRM</span></span>
+            <div className="flex min-w-0 items-center gap-2">
+              {companyLogoUrl ? (
+                <img src={companyLogoUrl} alt={companyName} className="h-8 w-8 rounded-md object-contain" />
+              ) : (
+                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#0891B2]/10 text-[11px] font-bold uppercase text-[#0891B2]">
+                  {companyName.slice(0, 2).toUpperCase()}
+                </div>
+              )}
+              <span className="max-w-[180px] truncate text-sm font-bold text-[#0F172A] tracking-tight">{companyName}</span>
+            </div>
             <div className="flex items-center gap-2">
               <button onClick={() => { }} className="p-2 rounded-md hover:bg-[#F1F5F9] text-[#475569] touch-exempt" aria-label="Search">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
@@ -743,9 +756,11 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <CopilotContextProvider>
-          <AppRoutes />
-        </CopilotContextProvider>
+        <WorkspaceBrandingProvider>
+          <CopilotContextProvider>
+            <AppRoutes />
+          </CopilotContextProvider>
+        </WorkspaceBrandingProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

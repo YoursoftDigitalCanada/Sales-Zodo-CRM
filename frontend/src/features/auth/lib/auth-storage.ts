@@ -67,6 +67,7 @@ export function clearAuthSession(): void {
     "availableFeatures",
     "onboardingCompleted",
     "onboardingData",
+    "workspaceBranding",
   ].forEach((key) => localStorage.removeItem(key));
 }
 

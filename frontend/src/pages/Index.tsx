@@ -47,7 +47,7 @@ import {
 import { cn } from "@/lib/utils";
 import useIsMobile from "@/hooks/useIsMobile";
 import { canAccessFeature, canAccessModule } from "@/lib/access-control";
-import logo from "../Images/Logo/logo.png";
+import { useWorkspaceBranding } from "@/features/settings/context/workspace-branding";
 
 type ThemeColor = "teal" | "gold" | "navy" | "green" | "blue" | "purple";
 type RevenuePipelineStage = "lead" | "contacted" | "estimate-sent" | "negotiation" | "won" | "lost";
@@ -483,6 +483,9 @@ const Index = () => {
   const navigate = useNavigate();
   const { isMobile } = useIsMobile();
   const { toast } = useToast();
+  const { branding } = useWorkspaceBranding();
+  const companyName = branding?.companyName?.trim() || "ZODO CRM";
+  const companyLogoUrl = branding?.logoUrl || null;
   const dashboardAccess = useMemo(() => ({
     canViewLeads: canAccessFeature(dashboardWidgetConfig.leads.featureId) && canAccessModule(dashboardWidgetConfig.leads.permissionModule),
     canViewInvoices: canAccessFeature(dashboardWidgetConfig.invoices.featureId) && canAccessModule(dashboardWidgetConfig.invoices.permissionModule),
@@ -1007,8 +1010,14 @@ const Index = () => {
           {isMobile ? (
             <div className="flex h-12 items-center justify-between px-4">
               <div className="flex items-center gap-2">
-                <img src={logo} alt="ZODO" className="h-8 w-auto object-contain" />
-                <span className="text-sm font-bold text-[#0F172A] tracking-tight">ZODO Dashboard</span>
+                {companyLogoUrl ? (
+                  <img src={companyLogoUrl} alt={companyName} className="h-8 w-8 rounded-md object-contain" />
+                ) : (
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#0891B2]/10 text-[11px] font-bold uppercase text-[#0891B2]">
+                    {companyName.slice(0, 2).toUpperCase()}
+                  </div>
+                )}
+                <span className="max-w-[160px] truncate text-sm font-bold text-[#0F172A] tracking-tight">{companyName}</span>
               </div>
               <div className="flex items-center gap-2">
                 <button

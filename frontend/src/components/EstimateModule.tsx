@@ -56,6 +56,7 @@ import {
   parseStaticMapSize,
   parseStaticMapZoom,
 } from "@/features/roof-estimator/utils/static-map";
+import { useWorkspaceBranding } from "@/features/settings/context/workspace-branding";
 
 const SQM_PER_SQFT = 1 / 10.7639;
 const DEFAULT_IMAGE_WIDTH = 1024;
@@ -311,8 +312,18 @@ function createProposalNumber(): string {
   return `RFQ-${yyyy}${mm}${dd}-${hh}${min}`;
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export default function EstimateModule(): JSX.Element {
   const { toast } = useToast();
+  const { branding: workspaceBranding } = useWorkspaceBranding();
 
   const [address, setAddress] = useState("3837 Oak St, Vancouver, BC V6H 2M6, Canada");
   const [selectedAddressPlaceId, setSelectedAddressPlaceId] = useState("");
@@ -342,7 +353,7 @@ export default function EstimateModule(): JSX.Element {
   const [proposalTitle, setProposalTitle] = useState("Roof Replacement Proposal");
   const [proposalIssueDate, setProposalIssueDate] = useState(() => getTodayIsoDate());
   const [proposalValidUntil, setProposalValidUntil] = useState(() => getIsoDatePlusDays(15));
-  const [proposalCompanyName, setProposalCompanyName] = useState("Zodo Roofing");
+  const [proposalCompanyName, setProposalCompanyName] = useState(() => workspaceBranding?.companyName?.trim() || "Zodo Roofing");
   const [proposalClientName, setProposalClientName] = useState("");
   const [proposalClientCompany, setProposalClientCompany] = useState("");
   const [proposalClientEmail, setProposalClientEmail] = useState("");
@@ -375,6 +386,18 @@ export default function EstimateModule(): JSX.Element {
 
   const addressAutocompleteRef = useRef<HTMLDivElement | null>(null);
   const addressDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!workspaceBranding?.companyName?.trim()) return;
+
+    setProposalCompanyName((current) => {
+      const trimmed = current.trim();
+      if (!trimmed || trimmed === "Zodo Roofing") {
+        return workspaceBranding.companyName.trim();
+      }
+      return current;
+    });
+  }, [workspaceBranding?.companyName]);
 
   const activeRecipients = useMemo(
     () => (recipientType === "client" ? clients : leads),
@@ -935,6 +958,11 @@ export default function EstimateModule(): JSX.Element {
         issueDate: proposalIssueDate || getTodayIsoDate(),
         validUntil: proposalValidUntil || getIsoDatePlusDays(15),
         companyName: proposalCompanyName.trim() || "Zodo Roofing",
+        companyLogoUrl: workspaceBranding?.logoUrl || null,
+        companyEmail: workspaceBranding?.email || undefined,
+        companyPhone: workspaceBranding?.phone || undefined,
+        companyAddress: workspaceBranding?.address || undefined,
+        companyDomain: workspaceBranding?.domain || undefined,
         recipient: {
           type: recipientType,
           name: recipientName,
@@ -984,6 +1012,11 @@ export default function EstimateModule(): JSX.Element {
       proposalValidUntil,
       recipientType,
       satellite,
+      workspaceBranding?.address,
+      workspaceBranding?.domain,
+      workspaceBranding?.email,
+      workspaceBranding?.logoUrl,
+      workspaceBranding?.phone,
       zoom,
     ],
   );
@@ -1469,6 +1502,38 @@ export default function EstimateModule(): JSX.Element {
                       const satImg = eagleViewImageUrl || satellite?.satelliteImageUrl || '';
                       const reportDate = new Date().toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' });
                       const totalPerimeter = est.eaveLengthFt + est.rakeLengthFt;
+                      const safeBrandName = escapeHtml(workspaceBranding?.companyName?.trim() || proposalCompanyName.trim() || "Roof Estimate");
+                      const safeBrandLogoUrl = workspaceBranding?.logoUrl ? escapeHtml(workspaceBranding.logoUrl) : "";
+                      const safeBrandContact = escapeHtml([
+                        workspaceBranding?.email?.trim(),
+                        workspaceBranding?.phone?.trim(),
+                        workspaceBranding?.address?.trim(),
+                      ].filter(Boolean).join(" • "));
+                      const safeBrandMeta = escapeHtml(
+                        workspaceBranding?.domain?.trim()
+                          || workspaceBranding?.email?.trim()
+                          || workspaceBranding?.phone?.trim()
+                          || "",
+                      );
+                      const safeAddress = escapeHtml(address || "Property Address");
+                      const pageOneBranding = `
+        <div class="brand-lockup">
+          ${safeBrandLogoUrl ? `<img class="brand-logo" src="${safeBrandLogoUrl}" alt="${safeBrandName} logo" />` : ""}
+          <div>
+            <div class="brand-name">${safeBrandName}</div>
+            <div class="brand-subtitle">Roof Measurement Report</div>
+            ${safeBrandContact ? `<div class="brand-contact">${safeBrandContact}</div>` : ""}
+          </div>
+        </div>`;
+                      const pageTwoBranding = `
+        <div class="brand-lockup">
+          ${safeBrandLogoUrl ? `<img class="brand-logo" src="${safeBrandLogoUrl}" alt="${safeBrandName} logo" />` : ""}
+          <div>
+            <div class="brand-name">${safeBrandName}</div>
+            <div class="brand-subtitle">Material & Cost Estimate</div>
+            ${safeBrandContact ? `<div class="brand-contact">${safeBrandContact}</div>` : ""}
+          </div>
+        </div>`;
 
                       // Generate waste factor grid (4% to 15%)
                       const wasteRows: string[] = [];
@@ -1478,7 +1543,7 @@ export default function EstimateModule(): JSX.Element {
                       }
 
                       w.document.write(`<!DOCTYPE html><html><head>
-<title>Zodo Roof Report — ${address || 'Property'}</title>
+<title>${safeBrandName} Roof Report — ${safeAddress}</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -1495,8 +1560,11 @@ export default function EstimateModule(): JSX.Element {
   /* Header bar */
   .header-bar { background: #dc2626; height: 6px; width: 100%; }
   .header { display: flex; justify-content: space-between; align-items: center; padding: 20px 32px 16px; border-bottom: 2px solid #e2e8f0; }
-  .logo { font-size: 32px; font-weight: 800; color: #dc2626; letter-spacing: -1px; }
-  .logo span { color: #1e293b; }
+  .brand-lockup { display: flex; align-items: center; gap: 14px; max-width: 420px; }
+  .brand-logo { width: 56px; height: 56px; object-fit: contain; border-radius: 12px; border: 1px solid #e2e8f0; padding: 6px; background: #fff; }
+  .brand-name { font-size: 26px; font-weight: 800; color: #1e293b; line-height: 1.1; }
+  .brand-subtitle { font-size: 10px; color: #64748b; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; margin-top: 4px; }
+  .brand-contact { font-size: 10px; color: #64748b; margin-top: 4px; }
   .address-block { text-align: right; }
   .address-main { font-size: 15px; font-weight: 700; color: #1e293b; }
   .address-sub { font-size: 11px; color: #64748b; }
@@ -1553,7 +1621,7 @@ export default function EstimateModule(): JSX.Element {
   .footer { margin-top: 32px; padding: 16px 32px; border-top: 2px solid #dc2626; display: flex; justify-content: space-between; align-items: center; }
   .footer-left { font-size: 10px; color: #94a3b8; max-width: 500px; }
   .footer-right { text-align: right; }
-  .footer-brand { font-size: 18px; font-weight: 800; color: #dc2626; }
+  .footer-brand { font-size: 18px; font-weight: 800; color: #1e293b; }
   .footer-info { font-size: 9px; color: #94a3b8; }
 
   .disclaimer { background: #fef2f2; border: 1px solid #fecaca; border-radius: 4px; padding: 8px 12px; font-size: 9px; color: #991b1b; text-align: center; margin: 16px 32px; font-weight: 500; }
@@ -1564,12 +1632,9 @@ export default function EstimateModule(): JSX.Element {
 <div class="page">
   <div class="header-bar"></div>
   <div class="header">
-    <div>
-      <div class="logo">Z<span>odo</span></div>
-      <div style="font-size:10px;color:#64748b;font-weight:500;">Roof Measurement Report</div>
-    </div>
+    ${pageOneBranding}
     <div class="address-block">
-      <div class="address-main">${address || 'Property Address'}</div>
+      <div class="address-main">${safeAddress}</div>
       <div class="address-sub">Report Date: ${reportDate}</div>
     </div>
   </div>
@@ -1638,7 +1703,7 @@ export default function EstimateModule(): JSX.Element {
       <!-- Right: Satellite Image -->
       <div>
         <div class="section-title">Aerial View</div>
-        ${satImg ? `<img class="sat-img" src="${satImg}" alt="Satellite view of ${address || 'property'}" />` : '<div style="height:280px;background:#f1f5f9;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#94a3b8;">No satellite image available</div>'}
+        ${satImg ? `<img class="sat-img" src="${satImg}" alt="Satellite view of ${safeAddress}" />` : '<div style="height:280px;background:#f1f5f9;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#94a3b8;">No satellite image available</div>'}
       </div>
     </div>
 
@@ -1656,10 +1721,10 @@ export default function EstimateModule(): JSX.Element {
   </div>
 
   <div class="footer">
-    <div class="footer-left">Zodo CRM Roof Measurement Report</div>
+    <div class="footer-left">${safeBrandName} Roof Measurement Report</div>
     <div class="footer-right">
-      <div class="footer-brand">Zodo</div>
-      <div class="footer-info">zodo.ca | ${reportDate} | p.1/2</div>
+      <div class="footer-brand">${safeBrandName}</div>
+      <div class="footer-info">${[safeBrandMeta, reportDate, "p.1/2"].filter(Boolean).join(" | ")}</div>
     </div>
   </div>
 </div>
@@ -1668,12 +1733,9 @@ export default function EstimateModule(): JSX.Element {
 <div class="page">
   <div class="header-bar"></div>
   <div class="header">
-    <div>
-      <div class="logo">Z<span>odo</span></div>
-      <div style="font-size:10px;color:#64748b;font-weight:500;">Material & Cost Estimate</div>
-    </div>
+    ${pageTwoBranding}
     <div class="address-block">
-      <div class="address-main">${address || 'Property Address'}</div>
+      <div class="address-main">${safeAddress}</div>
       <div class="address-sub">${reportDate} — ${est.complexity} roof (${(est.wasteFactor * 100).toFixed(0)}% waste factor)</div>
     </div>
   </div>
@@ -1717,10 +1779,10 @@ export default function EstimateModule(): JSX.Element {
   </div>
 
   <div class="footer">
-    <div class="footer-left">Zodo CRM Material & Cost Estimate</div>
+    <div class="footer-left">${safeBrandName} Material & Cost Estimate</div>
     <div class="footer-right">
-      <div class="footer-brand">Zodo</div>
-      <div class="footer-info">zodo.ca | ${reportDate} | p.2/2</div>
+      <div class="footer-brand">${safeBrandName}</div>
+      <div class="footer-info">${[safeBrandMeta, reportDate, "p.2/2"].filter(Boolean).join(" | ")}</div>
     </div>
   </div>
 </div>

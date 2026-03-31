@@ -11,6 +11,11 @@ export interface RoofProposalPdfInput {
   issueDate: string;
   validUntil: string;
   companyName: string;
+  companyLogoUrl?: string | null;
+  companyEmail?: string;
+  companyPhone?: string;
+  companyAddress?: string;
+  companyDomain?: string;
   recipient: {
     type: RecipientType;
     name: string;
@@ -112,6 +117,32 @@ function loadImage(url: string): Promise<HTMLImageElement> {
     image.onerror = () => reject(new Error("Failed to load satellite image for PDF."));
     image.src = url;
   });
+}
+
+async function loadImageAsDataUrl(url: string | null | undefined): Promise<string | null> {
+  const source = String(url || "").trim();
+  if (!source) return null;
+  if (source.startsWith("data:image/")) return source;
+
+  try {
+    const response = await fetch(source, { mode: "cors" });
+    const blob = await response.blob();
+    return await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+function getImageFormat(dataUrl: string): "JPEG" | "PNG" | "WEBP" {
+  const mimeType = dataUrl.match(/^data:image\/([a-zA-Z0-9+.-]+);/i)?.[1]?.toLowerCase();
+  if (mimeType === "png") return "PNG";
+  if (mimeType === "webp") return "WEBP";
+  return "JPEG";
 }
 
 function drawRoundedRect(
@@ -246,6 +277,7 @@ function addFooter(
   doc: jsPDF,
   pageNumber: number,
   totalPages: number,
+  companyName: string,
 ): void {
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -260,7 +292,7 @@ function addFooter(
 
   doc.setTextColor(30, 64, 175);
   doc.setFont("helvetica", "bold");
-  doc.text("Powered By Zodo", pageWidth - 40, pageHeight - 15, { align: "right" });
+  doc.text(companyName, pageWidth - 40, pageHeight - 15, { align: "right" });
 }
 
 export async function generateRoofProposalPdf(input: RoofProposalPdfInput): Promise<string> {
@@ -287,27 +319,49 @@ export async function buildRoofProposalPdf(input: RoofProposalPdfInput): Promise
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 40;
-  let cursorY = 46;
+  const headerTop = 46;
+  let cursorY = headerTop;
 
   const companyName = input.companyName.trim() || "Your Roofing Company";
+  const companyLogoData = await loadImageAsDataUrl(input.companyLogoUrl);
+  const companyContactLines = [
+    input.companyEmail?.trim(),
+    input.companyPhone?.trim(),
+    input.companyAddress?.trim(),
+    input.companyDomain?.trim(),
+  ].filter((value): value is string => Boolean(value));
   const recipientName = input.recipient.name.trim() || "Recipient";
   const recipientLabel = input.recipient.type === "lead" ? "Lead" : "Client";
+  const headerTextX = companyLogoData ? margin + 72 : margin;
+
+  if (companyLogoData) {
+    doc.addImage(companyLogoData, getImageFormat(companyLogoData), margin, 34, 54, 54);
+  }
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(20);
   doc.setTextColor(15, 23, 42);
-  doc.text(companyName, margin, cursorY);
+  doc.text(companyName, headerTextX, cursorY);
 
   doc.setFontSize(13);
   doc.setTextColor(37, 99, 235);
-  doc.text("Roof Estimate Proposal", margin, cursorY + 22);
+  doc.text("Roof Estimate Proposal", headerTextX, cursorY + 22);
+
+  if (companyContactLines.length > 0) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(71, 85, 105);
+    const wrappedContactLines = doc.splitTextToSize(companyContactLines.join(" • "), 250);
+    doc.text(wrappedContactLines, headerTextX, cursorY + 38);
+    cursorY += wrappedContactLines.length * 10;
+  }
 
   doc.setTextColor(15, 23, 42);
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  doc.text(`Proposal #: ${input.proposalNumber}`, pageWidth - margin, cursorY, { align: "right" });
-  doc.text(`Issue Date: ${input.issueDate}`, pageWidth - margin, cursorY + 14, { align: "right" });
-  doc.text(`Valid Until: ${input.validUntil}`, pageWidth - margin, cursorY + 28, { align: "right" });
+  doc.text(`Proposal #: ${input.proposalNumber}`, pageWidth - margin, headerTop, { align: "right" });
+  doc.text(`Issue Date: ${input.issueDate}`, pageWidth - margin, headerTop + 14, { align: "right" });
+  doc.text(`Valid Until: ${input.validUntil}`, pageWidth - margin, headerTop + 28, { align: "right" });
 
   cursorY += 52;
   doc.setDrawColor(226, 232, 240);
@@ -571,7 +625,7 @@ export async function buildRoofProposalPdf(input: RoofProposalPdfInput): Promise
   const totalPages = doc.getNumberOfPages();
   for (let page = 1; page <= totalPages; page += 1) {
     doc.setPage(page);
-    addFooter(doc, page, totalPages);
+    addFooter(doc, page, totalPages, companyName);
   }
 
   const fileName = `${safeFileName(input.proposalNumber || "roof-proposal")}.pdf`;

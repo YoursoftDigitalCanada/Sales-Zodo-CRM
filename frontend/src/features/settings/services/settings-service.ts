@@ -229,7 +229,7 @@ export async function updateGeneralSettings(payload: Partial<GeneralSettings>): 
 }
 
 export async function getCompanyProfile(): Promise<CompanyProfile> {
-  const response = await api.get("/settings/company");
+  const response = await api.get("/settings/company/branding");
   return normalizeLogoUrl(extractData<CompanyProfile>(response.data));
 }
 

@@ -28,6 +28,7 @@ router.put('/', requirePermission(PERMISSIONS.SETTINGS_UPDATE), validate(updateS
 router.get('/general', requirePermission(PERMISSIONS.SETTINGS_VIEW), settingsController.getGeneral.bind(settingsController));
 router.put('/general', requirePermission(PERMISSIONS.SETTINGS_UPDATE), validate(updateGeneralSchema), settingsController.updateGeneral.bind(settingsController));
 
+router.get('/company/branding', settingsController.getCompanyBranding.bind(settingsController));
 router.get('/company', requirePermission(PERMISSIONS.SETTINGS_VIEW), settingsController.getCompany.bind(settingsController));
 router.put('/company', requirePermission(PERMISSIONS.SETTINGS_UPDATE), validate(updateCompanySchema), settingsController.updateCompany.bind(settingsController));
 router.post('/company/logo', requirePermission(PERMISSIONS.SETTINGS_UPDATE), uploadCompanyLogo, settingsController.uploadCompanyLogo.bind(settingsController));

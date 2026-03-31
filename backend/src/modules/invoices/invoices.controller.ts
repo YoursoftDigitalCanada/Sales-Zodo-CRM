@@ -59,6 +59,18 @@ export class InvoicesController {
         } catch (e) { next(e); }
     }
 
+    async recordPayment(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const invoice = await invoicesService.recordPayment(
+                req.params.id,
+                req.context.tenantId,
+                sanitizeBody(req.body),
+                req.user?.userId,
+            );
+            sendSuccess(res, invoice, 'Invoice payment recorded');
+        } catch (e) { next(e); }
+    }
+
     async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             await invoicesService.delete(req.params.id, req.context.tenantId);

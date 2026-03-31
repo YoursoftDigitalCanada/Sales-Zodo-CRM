@@ -63,6 +63,9 @@ interface InvoiceData {
   total: number;
   amountPaid: number;
   amountDue: number;
+  sentAt?: string;
+  viewedAt?: string;
+  paidAt?: string;
   notes?: string;
   terms?: string;
   businessName?: string;
@@ -88,6 +91,14 @@ interface InvoiceData {
     country?: string;
   };
   items: InvoiceItem[];
+  payments?: Array<{
+    id: string;
+    amount: number;
+    paymentMethod: string;
+    paymentDate: string;
+    reference?: string | null;
+    notes?: string | null;
+  }>;
   createdAt: string;
 }
 
@@ -341,7 +352,7 @@ const InvoiceDetailPage = () => {
             </Button>
             <Button
               size="sm"
-              onClick={() => navigate(`/invoice/create?invoiceId=${invoice.id}`)}
+              onClick={() => navigate(`/invoice/${invoice.id}/edit`)}
               className="rounded-md bg-[#0891B2] hover:bg-[#0891B2]/90 text-white"
             >
               <Pencil size={14} className="mr-1.5" />
@@ -482,6 +493,35 @@ const InvoiceDetailPage = () => {
               </SectionCard>
             )}
           </div>
+        )}
+
+        {(invoice.payments?.length || invoice.sentAt || invoice.paidAt) && (
+          <SectionCard title="Activity" icon={CreditCard}>
+            <div className="space-y-3">
+              {invoice.sentAt ? (
+                <div className="flex items-center justify-between rounded-md bg-[#F8FAFC] px-4 py-3">
+                  <span className="text-sm text-[#475569]">Invoice sent</span>
+                  <span className="text-sm font-medium text-[#0F172A]">{formatDate(invoice.sentAt)}</span>
+                </div>
+              ) : null}
+              {invoice.payments?.map((payment) => (
+                <div key={payment.id} className="rounded-md border border-[rgba(15,23,42,0.06)] px-4 py-3">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-[#0F172A]">{payment.paymentMethod.replaceAll("_", " ")}</p>
+                      <p className="text-xs text-[#94A3B8]">{formatDate(payment.paymentDate)}</p>
+                    </div>
+                    <span className="text-sm font-semibold text-green-600">{formatCurrency(payment.amount, invoice.currency)}</span>
+                  </div>
+                  {payment.reference || payment.notes ? (
+                    <p className="mt-2 text-xs text-[#475569]">
+                      {[payment.reference, payment.notes].filter(Boolean).join(" · ")}
+                    </p>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </SectionCard>
         )}
 
         {/* Invoice Meta */}

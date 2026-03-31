@@ -456,6 +456,14 @@ const AppRoutes = () => {
               </FeatureGuard>
             }
           />
+          <Route
+            path="/invoice/:id/edit"
+            element={
+              <FeatureGuard featureId="finance">
+                <CreateInvoice />
+              </FeatureGuard>
+            }
+          />
           {/* ✅ NEW: Employee Management Routes */}
           <Route
             path="/employees"

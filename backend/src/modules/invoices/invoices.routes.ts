@@ -4,7 +4,7 @@ import { authenticate, loadEmployee } from '../../common/middleware/auth.middlew
 import { requirePermission } from '../../common/middleware/permission.middleware';
 import { validate } from '../../common/middleware/validate.middleware';
 import { PERMISSIONS } from '../../common/constants/permissions';
-import { createInvoiceSchema, updateInvoiceSchema, invoiceQuerySchema, invoiceIdSchema } from './invoices.validators';
+import { createInvoiceSchema, updateInvoiceSchema, invoiceQuerySchema, invoiceIdSchema, recordInvoicePaymentSchema } from './invoices.validators';
 
 const router = Router();
 router.use(authenticate);
@@ -16,6 +16,7 @@ router.get('/:id', requirePermission(PERMISSIONS.INVOICES_VIEW), validate(invoic
 router.get('/:id/pdf', requirePermission(PERMISSIONS.INVOICES_VIEW), validate(invoiceIdSchema), invoicesController.downloadPdf.bind(invoicesController));
 router.put('/:id', requirePermission(PERMISSIONS.INVOICES_UPDATE), validate(invoiceIdSchema), validate(updateInvoiceSchema), invoicesController.update.bind(invoicesController));
 router.post('/:id/send', requirePermission(PERMISSIONS.INVOICES_UPDATE), validate(invoiceIdSchema), invoicesController.send.bind(invoicesController));
+router.post('/:id/payments', requirePermission(PERMISSIONS.INVOICES_MARK_PAID), validate(invoiceIdSchema), validate(recordInvoicePaymentSchema), invoicesController.recordPayment.bind(invoicesController));
 router.patch('/:id/paid', requirePermission(PERMISSIONS.INVOICES_MARK_PAID), validate(invoiceIdSchema), invoicesController.markAsPaid.bind(invoicesController));
 router.delete('/:id', requirePermission(PERMISSIONS.INVOICES_DELETE), validate(invoiceIdSchema), invoicesController.delete.bind(invoicesController));
 

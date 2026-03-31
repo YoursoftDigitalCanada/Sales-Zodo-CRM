@@ -66,6 +66,8 @@ const ROUTE_PATTERNS: RoutePattern[] = [
 
     // Finance
     { match: /^\/invoice\/create$/, module: "finance", page: "create-invoice", label: "New Invoice" },
+    { match: /^\/invoice\/[^/]+\/edit$/, module: "finance", page: "edit-invoice", label: "Edit Invoice" },
+    { match: /^\/invoice\/[^/]+$/, module: "finance", page: "invoice-detail", label: "Invoice Detail" },
     { match: /^\/invoice\/list$/, module: "finance", page: "invoice-list", label: "Invoice List" },
     { match: /^\/invoice$/, module: "finance", page: "invoices", label: "Invoices" },
     { match: /^\/expenses$/, module: "finance", page: "expenses", label: "Expenses" },

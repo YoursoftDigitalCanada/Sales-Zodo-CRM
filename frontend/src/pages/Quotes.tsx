@@ -1,6 +1,6 @@
 // src/pages/Quotes.tsx
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 // import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { Button } from "@/components/ui/button";
@@ -844,6 +844,7 @@ function mapApiQuote(q: QuoteEntity): Quote {
 
 const QuotesPage = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
@@ -875,6 +876,23 @@ const QuotesPage = () => {
   }, [toast]);
 
   useEffect(() => { fetchQuotes(); }, [fetchQuotes]);
+
+  useEffect(() => {
+    if (searchParams.get("action") === "create") {
+      setCurrentQuote(null);
+      setIsFormOpen(true);
+    }
+  }, [searchParams]);
+
+  const closeQuoteForm = () => {
+    setIsFormOpen(false);
+    setCurrentQuote(null);
+    if (searchParams.get("action") === "create") {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete("action");
+      setSearchParams(nextParams, { replace: true });
+    }
+  };
 
   // Stats
   const stats = useMemo(() => {
@@ -1314,7 +1332,7 @@ const QuotesPage = () => {
       </div>
 
       {/* Dialogs */}
-      <QuoteFormDialog isOpen={isFormOpen} onClose={() => { setIsFormOpen(false); setCurrentQuote(null); }}
+      <QuoteFormDialog isOpen={isFormOpen} onClose={closeQuoteForm}
         quote={currentQuote} onSubmit={currentQuote ? handleEditQuote : handleCreateQuote} />
 
       <QuoteDetailDialog isOpen={isDetailOpen} onClose={() => setIsDetailOpen(false)} quote={currentQuote}

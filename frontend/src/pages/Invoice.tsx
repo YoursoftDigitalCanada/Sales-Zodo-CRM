@@ -42,7 +42,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { getInvoices, deleteInvoice, createInvoice, markInvoiceAsPaid } from "@/services/invoiceService";
+import { getInvoices, deleteInvoice, createInvoice, downloadInvoicePdf, printInvoicePdf, recordInvoicePayment, sendInvoice } from "@/services/invoiceService";
 import {
   Bell,
   Plus,
@@ -117,9 +117,9 @@ import { cn } from "@/lib/utils";
 // ============================================
 
 interface Invoice {
-  id: number;
+  id: string;
   invoiceNumber: string;
-  clientId?: number;
+  clientId?: string;
   clientName: string;
   clientEmail?: string;
   invoiceDate: string;
@@ -133,17 +133,29 @@ interface Invoice {
   notes?: string;
   items?: InvoiceItem[];
   createdAt?: string;
+  sentAt?: string;
+  paidAt?: string;
+  payments?: InvoicePayment[];
   lastSent?: string;
   paymentMethod?: string;
   currency?: string;
 }
 
 interface InvoiceItem {
-  id: number;
+  id: string | number;
   description: string;
   quantity: number;
   rate: number;
   amount: number;
+}
+
+interface InvoicePayment {
+  id: string;
+  amount: number;
+  paymentMethod: string;
+  paymentDate: string;
+  reference?: string | null;
+  notes?: string | null;
 }
 
 interface AppUser {
@@ -174,6 +186,25 @@ const dateFilterOptions = [
   { value: "quarter", label: "This Quarter" },
   { value: "year", label: "This Year" },
 ];
+
+const backendStatusToUi: Record<string, string> = {
+  DRAFT: "Draft",
+  SENT: "Sent",
+  VIEWED: "Viewed",
+  PAID: "Paid",
+  PARTIALLY_PAID: "Partial",
+  OVERDUE: "Overdue",
+  CANCELLED: "Cancelled",
+  REFUNDED: "Refunded",
+};
+
+const paymentMethodMap: Record<string, "CASH" | "CREDIT_CARD" | "CHECK" | "BANK_TRANSFER" | "E_TRANSFER" | "OTHER"> = {
+  cash: "CASH",
+  card: "CREDIT_CARD",
+  cheque: "CHECK",
+  bank_transfer: "BANK_TRANSFER",
+  upi: "E_TRANSFER",
+};
 
 // ============================================
 // UTILITY FUNCTIONS
@@ -252,6 +283,48 @@ const isOverdue = (dueDate?: string, status?: string) => {
     return false;
   }
   return new Date(dueDate) < new Date();
+};
+
+const normalizeInvoice = (inv: any): Invoice => {
+  const rawStatus = (inv?.status || "Draft").toString().toUpperCase();
+  return {
+    id: String(inv?.id || ""),
+    invoiceNumber: inv?.invoiceNumber || "",
+    clientId: inv?.client?.id ? String(inv.client.id) : inv?.clientId ? String(inv.clientId) : undefined,
+    clientName: inv?.client?.clientName || inv?.clientName || "Unknown Client",
+    clientEmail: inv?.client?.primaryEmail || inv?.clientEmail || "",
+    invoiceDate: inv?.issueDate || inv?.invoiceDate || inv?.createdAt || "",
+    dueDate: inv?.dueDate || "",
+    status: backendStatusToUi[rawStatus] || rawStatus,
+    subtotal: Number(inv?.subtotal) || 0,
+    tax: Number(inv?.taxAmount) || 0,
+    discount: Number(inv?.discountAmount) || 0,
+    total: Number(inv?.total) || 0,
+    amountPaid: Number(inv?.amountPaid) || 0,
+    notes: inv?.notes || "",
+    items: (inv?.items || []).map((item: any, index: number) => ({
+      id: item?.id || item?.sortOrder || index,
+      description: item?.description || "",
+      quantity: Number(item?.quantity) || 0,
+      rate: Number(item?.unitPrice ?? item?.rate) || 0,
+      amount: Number(item?.amount) || 0,
+    })),
+    createdAt: inv?.createdAt || "",
+    sentAt: inv?.sentAt || "",
+    paidAt: inv?.paidAt || "",
+    payments: Array.isArray(inv?.payments)
+      ? inv.payments.map((payment: any) => ({
+        id: String(payment?.id || ""),
+        amount: Number(payment?.amount) || 0,
+        paymentMethod: String(payment?.paymentMethod || "OTHER"),
+        paymentDate: payment?.paymentDate || payment?.createdAt || "",
+        reference: payment?.reference || null,
+        notes: payment?.notes || null,
+      }))
+      : [],
+    lastSent: inv?.sentAt || "",
+    currency: inv?.currency || "CAD",
+  };
 };
 
 // ============================================
@@ -338,6 +411,8 @@ const InvoiceRow = ({
   onDownload,
   onDuplicate,
   onRecordPayment,
+  onPrint,
+  onHistory,
 }: {
   invoice: Invoice;
   isSelected: boolean;
@@ -349,6 +424,8 @@ const InvoiceRow = ({
   onDownload: () => void;
   onDuplicate: () => void;
   onRecordPayment: () => void;
+  onPrint: () => void;
+  onHistory: () => void;
 }) => {
   const statusConfig = getStatusConfig(invoice.status);
   const StatusIcon = statusConfig.icon;
@@ -525,12 +602,12 @@ const InvoiceRow = ({
                 <FileDown size={14} className="mr-2" />
                 Download PDF
               </DropdownMenuItem>
-              <DropdownMenuItem className="rounded-md">
+              <DropdownMenuItem onClick={onPrint} className="rounded-md">
                 <Printer size={14} className="mr-2" />
                 Print
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="rounded-md">
+              <DropdownMenuItem onClick={onHistory} className="rounded-md">
                 <History size={14} className="mr-2" />
                 View History
               </DropdownMenuItem>
@@ -563,6 +640,7 @@ const InvoiceCard = ({
   onDelete,
   onSend,
   onDownload,
+  onPrint,
 }: {
   invoice: Invoice;
   isSelected: boolean;
@@ -572,6 +650,7 @@ const InvoiceCard = ({
   onDelete: () => void;
   onSend: () => void;
   onDownload: () => void;
+  onPrint: () => void;
 }) => {
   const statusConfig = getStatusConfig(invoice.status);
   const StatusIcon = statusConfig.icon;
@@ -637,6 +716,10 @@ const InvoiceCard = ({
               <DropdownMenuItem onClick={onDownload} className="rounded-md">
                 <FileDown size={14} className="mr-2" />
                 Download
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onPrint} className="rounded-md">
+                <Printer size={14} className="mr-2" />
+                Print
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -740,7 +823,7 @@ const RecordPaymentDialog = ({
   isOpen: boolean;
   onClose: () => void;
   invoice: Invoice | null;
-  onSubmit: (invoiceId: number, amount: number, method: string, notes: string) => void;
+  onSubmit: (invoiceId: string, amount: number, method: string, notes: string) => void;
 }) => {
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState("bank_transfer");
@@ -911,7 +994,7 @@ const SendInvoiceDialog = ({
   isOpen: boolean;
   onClose: () => void;
   invoice: Invoice | null;
-  onSend: (invoiceId: number, email: string, message: string) => void;
+  onSend: (invoiceId: string, email: string, message: string) => void;
 }) => {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
@@ -1060,7 +1143,7 @@ const InvoicePage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
-  const [selectedInvoices, setSelectedInvoices] = useState<number[]>([]);
+  const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterDate, setFilterDate] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -1103,40 +1186,7 @@ const InvoicePage = () => {
     setIsLoading(true);
     try {
       const data = await getInvoices();
-      const enhanced = (data || []).map((inv: any) => {
-        // Normalize status from UPPER_CASE backend enum to Title Case for UI
-        const rawStatus = (inv.status || "Draft").toString();
-        const statusMap: Record<string, string> = {
-          DRAFT: "Draft", SENT: "Sent", PAID: "Paid",
-          OVERDUE: "Overdue", CANCELLED: "Cancelled", PARTIAL: "Partial",
-        };
-        return {
-          id: inv.id,
-          invoiceNumber: inv.invoiceNumber || "",
-          clientId: inv.client?.id || inv.clientId || undefined,
-          clientName: inv.client?.clientName || inv.clientName || "Unknown Client",
-          clientEmail: inv.clientEmail || "",
-          invoiceDate: inv.issueDate || inv.invoiceDate || inv.createdAt || "",
-          dueDate: inv.dueDate || "",
-          status: statusMap[rawStatus.toUpperCase()] || rawStatus,
-          subtotal: Number(inv.subtotal) || 0,
-          tax: Number(inv.taxAmount) || 0,
-          discount: Number(inv.discountAmount) || 0,
-          total: Number(inv.total) || 0,
-          amountPaid: Number(inv.amountPaid) || 0,
-          notes: inv.notes || "",
-          items: (inv.items || []).map((item: any) => ({
-            id: item.id || item.sortOrder,
-            description: item.description || "",
-            quantity: Number(item.quantity) || 0,
-            rate: Number(item.unitPrice) || 0,
-            amount: Number(item.amount) || 0,
-          })),
-          createdAt: inv.createdAt || "",
-          currency: inv.currency || "CAD",
-        };
-      });
-      setInvoices(enhanced);
+      setInvoices((data || []).map(normalizeInvoice));
     } catch (err) {
       console.error("Failed to load invoices:", err);
       toast({
@@ -1172,22 +1222,15 @@ const InvoicePage = () => {
     }
   };
 
-  // TODO: Backend only supports marking invoice as fully paid (PATCH /:id/paid).
-  // The amount, method, and notes params are accepted by the UI but cannot be
-  // sent to the backend until a partial-payment endpoint is implemented.
-  const handleRecordPayment = async (invoiceId: number, amount: number, method: string, notes: string) => {
+  const handleRecordPayment = async (invoiceId: string, amount: number, method: string, notes: string) => {
     try {
-      await markInvoiceAsPaid(invoiceId);
-      setInvoices((prev) =>
-        prev.map((inv) => {
-          if (inv.id === invoiceId) {
-            const newAmountPaid = (inv.amountPaid || 0) + amount;
-            const newStatus = newAmountPaid >= inv.total ? "Paid" : "Partial";
-            return { ...inv, amountPaid: newAmountPaid, status: newStatus };
-          }
-          return inv;
-        })
-      );
+      const updated = await recordInvoicePayment(invoiceId, {
+        amount,
+        paymentMethod: paymentMethodMap[method] || "OTHER",
+        notes: notes || undefined,
+      });
+      const normalized = normalizeInvoice(updated);
+      setInvoices((prev) => prev.map((inv) => (inv.id === invoiceId ? normalized : inv)));
       toast({
         title: "Payment Recorded",
         description: `Payment of ${formatCurrency(amount)} has been recorded.`,
@@ -1201,17 +1244,11 @@ const InvoicePage = () => {
     }
   };
 
-  // TODO: No backend endpoint for sending invoices exists yet.
-  // This handler performs a local-only optimistic update. When a
-  // POST /invoices/:id/send endpoint is implemented, wire the
-  // backend call here before updating local state.
-  const handleSendInvoice = async (invoiceId: number, email: string, message: string) => {
+  const handleSendInvoice = async (invoiceId: string, email: string, _message: string) => {
     try {
-      setInvoices((prev) =>
-        prev.map((inv) =>
-          inv.id === invoiceId ? { ...inv, status: "Sent", lastSent: new Date().toISOString() } : inv
-        )
-      );
+      const updated = await sendInvoice(invoiceId, email || undefined);
+      const normalized = normalizeInvoice(updated);
+      setInvoices((prev) => prev.map((inv) => (inv.id === invoiceId ? normalized : inv)));
       toast({
         title: "Invoice Sent",
         description: `Invoice has been sent to ${email}`,
@@ -1225,34 +1262,63 @@ const InvoicePage = () => {
     }
   };
 
-  const handleDownloadPDF = (invoice: Invoice) => {
-    toast({
-      title: "Downloading",
-      description: `Generating PDF for ${invoice.invoiceNumber}...`,
-    });
-    // Implement PDF generation
+  const handleDownloadPDF = async (invoice: Invoice) => {
+    try {
+      await downloadInvoicePdf(invoice.id, `${invoice.invoiceNumber}.pdf`);
+      toast({
+        title: "Downloaded",
+        description: `${invoice.invoiceNumber} PDF downloaded successfully.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to download invoice PDF",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handlePrintInvoice = async (invoice: Invoice) => {
+    try {
+      await printInvoicePdf(invoice.id, `${invoice.invoiceNumber}.pdf`);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to open invoice for printing",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDuplicate = async (invoice: Invoice) => {
     try {
+      if (!invoice.clientId) {
+        toast({
+          title: "Client required",
+          description: "This invoice cannot be duplicated because its client record is missing.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const duplicateData = {
         clientId: invoice.clientId,
         invoiceNumber: `INV-${Date.now().toString().slice(-6)}`,
         invoiceDate: new Date().toISOString(),
-        dueDate: invoice.dueDate,
-        items: invoice.items,
+        dueDate: invoice.dueDate || new Date(Date.now() + 30 * 86400000).toISOString(),
+        currency: invoice.currency || "CAD",
+        discountAmount: invoice.discount || 0,
         notes: invoice.notes,
-        status: "DRAFT",
+        items: invoice.items?.map((item, index) => ({
+          description: item.description,
+          quantity: item.quantity,
+          unitPrice: item.rate,
+          amount: item.amount,
+          sortOrder: index,
+        })) || [],
       };
-      const result = await createInvoice(duplicateData);
-      const newInvoice: Invoice = {
-        ...invoice,
-        id: result?.data?.id || Date.now(),
-        invoiceNumber: duplicateData.invoiceNumber,
-        status: "Draft",
-        invoiceDate: new Date().toISOString(),
-        amountPaid: 0,
-      };
+      const result = await createInvoice(duplicateData as any);
+      const newInvoice = normalizeInvoice(result);
       setInvoices((prev) => [newInvoice, ...prev]);
       toast({
         title: "Duplicated",
@@ -1367,7 +1433,7 @@ const InvoicePage = () => {
     }
   };
 
-  const handleSelectInvoice = (id: number, checked: boolean) => {
+  const handleSelectInvoice = (id: string, checked: boolean) => {
     if (checked) {
       setSelectedInvoices((prev) => [...prev, id]);
     } else {
@@ -1389,6 +1455,30 @@ const InvoicePage = () => {
       toast({
         title: "Error",
         description: "Failed to delete invoices",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleBulkSend = async () => {
+    if (selectedInvoices.length === 0) return;
+    try {
+      await Promise.allSettled(
+        selectedInvoices.map((id) => {
+          const invoice = invoices.find((entry) => entry.id === id);
+          return sendInvoice(id, invoice?.clientEmail || undefined);
+        }),
+      );
+      await loadInvoices();
+      toast({
+        title: "Invoices Sent",
+        description: `${selectedInvoices.length} invoices have been updated.`,
+      });
+      setSelectedInvoices([]);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to send selected invoices",
         variant: "destructive",
       });
     }
@@ -1665,6 +1755,7 @@ const InvoicePage = () => {
                             size="sm"
                             variant="outline"
                             className="h-9 rounded-md border-[rgba(15,23,42,0.06)]"
+                            onClick={handleBulkSend}
                           >
                             <Send size={14} className="mr-1" />
                             Send
@@ -1786,6 +1877,8 @@ const InvoicePage = () => {
                                   setInvoiceForPayment(invoice);
                                   setPaymentDialogOpen(true);
                                 }}
+                                onPrint={() => handlePrintInvoice(invoice)}
+                                onHistory={() => navigate(`/invoice/${invoice.id}`)}
                               />
                             ))}
                           </AnimatePresence>
@@ -1920,6 +2013,7 @@ const InvoicePage = () => {
                                 setSendDialogOpen(true);
                               }}
                               onDownload={() => handleDownloadPDF(invoice)}
+                              onPrint={() => handlePrintInvoice(invoice)}
                             />
                           </motion.div>
                         ))}
@@ -2075,10 +2169,26 @@ const InvoicePage = () => {
                 <div className="space-y-2">
                   {[
                     { icon: FilePlus, label: "Create Invoice", color: "teal", action: () => navigate("/invoice/create") },
-                    { icon: Receipt, label: "Create Quote", color: "gold", action: () => navigate("/quotes/create") },
-                    { icon: CreditCard, label: "Record Payment", color: "green", action: () => { } },
-                    { icon: FileSpreadsheet, label: "Generate Report", color: "purple", action: () => { } },
-                    { icon: Settings, label: "Invoice Settings", color: "slate", action: () => navigate("/settings/invoice") },
+                    { icon: Receipt, label: "Create Quote", color: "gold", action: () => navigate("/quotes?action=create") },
+                    {
+                      icon: CreditCard,
+                      label: "Record Payment",
+                      color: "green",
+                      action: () => {
+                        const candidate = invoices.find((inv) => inv.status !== "Paid" && inv.status !== "Cancelled");
+                        if (!candidate) {
+                          toast({
+                            title: "No unpaid invoices",
+                            description: "There are no invoices ready for payment.",
+                          });
+                          return;
+                        }
+                        setInvoiceForPayment(candidate);
+                        setPaymentDialogOpen(true);
+                      },
+                    },
+                    { icon: FileSpreadsheet, label: "Generate Report", color: "purple", action: () => navigate("/reports/revenue") },
+                    { icon: Settings, label: "Invoice Settings", color: "slate", action: () => navigate("/settings/billing") },
                   ].map((action, index) => {
                     const colorClasses: Record<string, string> = {
                       teal: "bg-[#0891B2]/10 text-[#0891B2]",
@@ -2117,7 +2227,7 @@ const InvoicePage = () => {
               >
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-semibold text-[#0F172A]">Recent Activity</h3>
-                  <button className="text-xs text-[#0891B2] hover:underline">View All</button>
+                  <button onClick={() => navigate("/notifications")} className="text-xs text-[#0891B2] hover:underline">View All</button>
                 </div>
 
                 <div className="space-y-4">
@@ -2211,7 +2321,7 @@ const InvoicePage = () => {
                     <p className="text-xs text-[#94A3B8] leading-relaxed">
                       Set up automatic payment reminders to reduce overdue invoices by up to 30%.
                     </p>
-                    <button className="mt-2 text-xs font-medium text-[#0891B2] hover:underline">
+                    <button onClick={() => navigate("/settings/notifications")} className="mt-2 text-xs font-medium text-[#0891B2] hover:underline">
                       Configure Reminders →
                     </button>
                   </div>

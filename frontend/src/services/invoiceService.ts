@@ -5,6 +5,8 @@ export {
   deleteInvoice,
   updateInvoice,
   sendInvoice,
+  recordInvoicePayment,
   markInvoiceAsPaid,
   downloadInvoicePdf,
+  printInvoicePdf,
 } from "@/features/invoices";

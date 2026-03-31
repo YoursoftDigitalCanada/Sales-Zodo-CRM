@@ -2,6 +2,17 @@ import { z } from "zod";
 import { CurrencySchema, InvoiceStatusSchema, SortOrderSchema } from "./enums";
 
 const dateTimeString = z.string().datetime();
+const invoicePaymentMethodValues = [
+  "CASH",
+  "CREDIT_CARD",
+  "DEBIT_CARD",
+  "BANK_TRANSFER",
+  "E_TRANSFER",
+  "CHECK",
+  "PAYPAL",
+  "STRIPE",
+  "OTHER",
+] as const;
 
 export const InvoiceAddressSchema = z.object({
   address: z.string().max(255).optional().nullable(),
@@ -90,6 +101,16 @@ export const InvoicePdfParamsSchema = z.object({
   id: z.string().uuid(),
 });
 
+export const InvoicePaymentMethodSchema = z.enum(invoicePaymentMethodValues);
+
+export const RecordInvoicePaymentSchema = z.object({
+  amount: z.number().positive(),
+  paymentMethod: InvoicePaymentMethodSchema,
+  paymentDate: dateTimeString.optional(),
+  reference: z.string().max(255).optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
+
 export type InvoiceItemDto = z.input<typeof InvoiceItemSchema>;
 export type CanonicalInvoiceItemDto = z.input<typeof CanonicalInvoiceItemSchema>;
 export type CreateInvoiceDto = z.input<typeof CreateInvoiceSchema> & {
@@ -105,3 +126,5 @@ export type UpdateInvoiceDto = z.input<typeof UpdateInvoiceSchema> & {
   items?: Array<InvoiceItemDto | CanonicalInvoiceItemDto>;
 };
 export type InvoiceQueryDto = z.input<typeof InvoiceQuerySchema>;
+export type InvoicePaymentMethod = z.infer<typeof InvoicePaymentMethodSchema>;
+export type RecordInvoicePaymentDto = z.input<typeof RecordInvoicePaymentSchema>;

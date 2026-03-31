@@ -1,5 +1,5 @@
-import { PrismaClient, Prisma, InvoiceStatus, Currency } from '@prisma/client';
-import type { CreateInvoiceDto, UpdateInvoiceDto, InvoiceQueryDto } from '@contracts/invoice';
+import { PrismaClient, Prisma } from '@prisma/client';
+import type { CreateInvoiceDto, UpdateInvoiceDto, InvoiceQueryDto, RecordInvoicePaymentDto } from '@contracts/invoice';
 
 const prisma = new PrismaClient();
 const invoiceInclude = {
@@ -18,6 +18,9 @@ const invoiceInclude = {
         },
     },
     items: true,
+    payments: {
+        orderBy: { paymentDate: 'desc' as const },
+    },
 };
 
 function calculateTotals(
@@ -139,6 +142,8 @@ export class InvoicesRepository {
                     issueDate: new Date((data.issueDate ?? (data as any).invoiceDate) as any),
                 }),
                 ...(data.dueDate !== undefined && { dueDate: new Date(data.dueDate) }),
+                ...((data as any).sentAt !== undefined && { sentAt: new Date((data as any).sentAt) }),
+                ...((data as any).viewedAt !== undefined && { viewedAt: new Date((data as any).viewedAt) }),
                 ...(data.currency !== undefined && { currency: data.currency }),
                 ...(data.status !== undefined && { status: data.status }),
                 ...(data.taxRate !== undefined && { taxRate: data.taxRate }),
@@ -173,6 +178,42 @@ export class InvoicesRepository {
             where: { id },
             data: { status: 'PAID', paidAt: new Date(), amountPaid: invoice.total || 0, amountDue: 0 },
             include: invoiceInclude,
+        });
+    }
+
+    async recordPayment(id: string, tenantId: string, data: RecordInvoicePaymentDto) {
+        const invoice = await prisma.invoice.findFirst({ where: { id, tenantId } });
+        if (!invoice) throw new Error('Invoice not found or access denied');
+
+        const nextAmountPaid = Number(invoice.amountPaid || 0) + Number(data.amount || 0);
+        const invoiceTotal = Number(invoice.total || 0);
+        const nextAmountDue = Math.max(invoiceTotal - nextAmountPaid, 0);
+
+        return prisma.$transaction(async (tx) => {
+            await tx.invoicePayment.create({
+                data: {
+                    invoiceId: id,
+                    clientId: invoice.clientId,
+                    projectId: invoice.projectId,
+                    tenantId,
+                    amount: Number(data.amount),
+                    paymentMethod: data.paymentMethod,
+                    paymentDate: data.paymentDate ? new Date(data.paymentDate) : new Date(),
+                    reference: data.reference ?? null,
+                    notes: data.notes ?? null,
+                },
+            });
+
+            return tx.invoice.update({
+                where: { id },
+                data: {
+                    amountPaid: nextAmountPaid,
+                    amountDue: nextAmountDue,
+                    paidAt: nextAmountDue === 0 ? new Date() : null,
+                    status: nextAmountDue === 0 ? 'PAID' : 'PARTIALLY_PAID',
+                },
+                include: invoiceInclude,
+            });
         });
     }
 

@@ -1,7 +1,7 @@
 import { invoicesRepository } from './invoices.repository';
 import { toInvoiceResponseDto } from './invoices.dto';
-import type { CreateInvoiceDto, UpdateInvoiceDto, InvoiceQueryDto } from '@contracts/invoice';
-import { NotFoundError } from '../../common/errors/HttpErrors';
+import type { CreateInvoiceDto, UpdateInvoiceDto, InvoiceQueryDto, RecordInvoicePaymentDto } from '@contracts/invoice';
+import { BadRequestError, NotFoundError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
 import { eventBus } from '../../common/events/event-bus';
 import { clientLifecycleService } from '../../common/services/client-lifecycle.service';
@@ -107,7 +107,15 @@ export class InvoicesService {
     async getById(id: string, tenantId: string) {
         const invoice = await invoicesRepository.findById(id, tenantId);
         if (!invoice) throw new NotFoundError('Invoice not found', ErrorCodes.RESOURCE_NOT_FOUND);
-        return toInvoiceResponseDto(invoice);
+        const dto = toInvoiceResponseDto(invoice);
+        const company = await this.getCompanyProfile(tenantId);
+        return {
+            ...dto,
+            businessName: company.companyName,
+            businessEmail: company.email || null,
+            businessPhone: company.phone || null,
+            businessAddress: company.address ? { address: company.address } : null,
+        };
     }
 
     async generatePdf(id: string, tenantId: string): Promise<{ buffer: Buffer; fileName: string }> {
@@ -353,7 +361,7 @@ export class InvoicesService {
         if (!existing) throw new NotFoundError('Invoice not found', ErrorCodes.RESOURCE_NOT_FOUND);
 
         // Mark invoice as SENT
-        const invoice = await invoicesRepository.update(id, tenantId, { status: 'SENT' } as any);
+        const invoice = await invoicesRepository.update(id, tenantId, { status: 'SENT', sentAt: new Date() } as any);
         const dto = toInvoiceResponseDto(invoice);
 
         // Domain event: invoice sent
@@ -375,51 +383,84 @@ export class InvoicesService {
         return dto;
     }
 
-    async markAsPaid(id: string, tenantId: string, actorUserId?: string) {
+    async recordPayment(id: string, tenantId: string, data: RecordInvoicePaymentDto, actorUserId?: string) {
         const existing = await invoicesRepository.findById(id, tenantId);
         if (!existing) throw new NotFoundError('Invoice not found', ErrorCodes.RESOURCE_NOT_FOUND);
-        const oldStatus = (existing as any).status || 'UNPAID';
-        const invoice = await invoicesRepository.markAsPaid(id, tenantId);
+
+        const amount = Number(data.amount || 0);
+        const amountDue = Number((existing as any).amountDue || 0);
+        if (!Number.isFinite(amount) || amount <= 0) {
+            throw new BadRequestError('Payment amount must be greater than zero', ErrorCodes.INVALID_INPUT);
+        }
+        if (amount > amountDue) {
+            throw new BadRequestError('Payment amount cannot exceed the invoice balance due', ErrorCodes.INVALID_INPUT);
+        }
+
+        const invoice = await invoicesRepository.recordPayment(id, tenantId, data);
         const dto = toInvoiceResponseDto(invoice);
-
-        // Domain event: invoice status changed
-        eventBus.emit('invoice.statusChanged', {
-            tenantId,
-            invoiceId: id,
-            invoiceNumber: (existing as any).invoiceNumber || '',
-            oldStatus,
-            newStatus: 'PAID',
-            clientId: (existing as any).clientId || (existing as any).client?.id,
-            ownerUserId: actorUserId,
-        });
-
-        // Lifecycle: paying client → ACTIVE
         const clientId = (existing as any).clientId || (existing as any).client?.id;
+        const newStatus = amount >= amountDue ? 'PAID' : 'PARTIALLY_PAID';
+
         if (clientId) {
             await clientLifecycleService.progressTo(clientId, tenantId, 'ACTIVE');
             await clientLifecycleService.reinforceEngagement(clientId, tenantId);
         }
 
-        // Domain event: payment received (semantic alias for automation triggers)
+        eventBus.emit('invoice.statusChanged', {
+            tenantId,
+            invoiceId: id,
+            invoiceNumber: (existing as any).invoiceNumber || '',
+            oldStatus: (existing as any).status || 'DRAFT',
+            newStatus,
+            clientId,
+            ownerUserId: actorUserId,
+        });
+
         eventBus.emit('payment.received', {
             tenantId,
             invoiceId: id,
             invoiceNumber: (existing as any).invoiceNumber || '',
             clientId,
-            amount: (existing as any).totalAmount || (existing as any).total,
+            amount,
             paidByUserId: actorUserId,
         });
 
-        // Timeline: log payment (single entry — avoids duplicate with statusChanged)
         activityLogger.log({
-            tenantId, entityType: 'Invoice', entityId: id,
-            action: 'STATUS_CHANGE', module: 'invoices',
-            description: `Invoice "${(existing as any).invoiceNumber || id}" marked as paid`,
+            tenantId,
+            entityType: 'Invoice',
+            entityId: id,
+            action: 'STATUS_CHANGE',
+            module: 'invoices',
+            description: `Recorded payment of ${amount.toFixed(2)} for invoice "${(existing as any).invoiceNumber || id}"`,
             userId: actorUserId,
-            metadata: { oldStatus, newStatus: 'PAID', clientId },
+            metadata: {
+                paymentAmount: amount,
+                paymentMethod: data.paymentMethod,
+                newStatus,
+                clientId,
+            },
         });
 
         return dto;
+    }
+
+    async markAsPaid(id: string, tenantId: string, actorUserId?: string) {
+        const existing = await invoicesRepository.findById(id, tenantId);
+        if (!existing) throw new NotFoundError('Invoice not found', ErrorCodes.RESOURCE_NOT_FOUND);
+        const outstandingAmount = Number((existing as any).amountDue || 0);
+        if (outstandingAmount <= 0) {
+            return toInvoiceResponseDto(existing as any);
+        }
+
+        return this.recordPayment(
+            id,
+            tenantId,
+            {
+                amount: outstandingAmount,
+                paymentMethod: 'OTHER',
+            },
+            actorUserId,
+        );
     }
 }
 

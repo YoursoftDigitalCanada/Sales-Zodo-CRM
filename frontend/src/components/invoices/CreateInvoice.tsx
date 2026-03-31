@@ -1,6 +1,6 @@
 // src/pages/CreateInvoice.tsx
 import React, { useState, useEffect, useMemo } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useForm, FormProvider, useFieldArray, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -99,7 +99,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { createInvoice, sendInvoice, updateInvoice } from "@/services/invoiceService";
+import { createInvoice, downloadInvoicePdf, getInvoiceById, printInvoicePdf, sendInvoice, updateInvoice } from "@/services/invoiceService";
 import { getClients } from "@/features/clients/services/clients-service";
 import { getProjectById, type ProjectEntity } from "@/features/projects/services/projects-service";
 import { useWorkspaceBranding } from "@/features/settings/context/workspace-branding";
@@ -329,6 +329,16 @@ const getProjectInvoice = (project: ProjectEntity, invoiceId?: string | null) =>
     if (exact) return exact;
   }
   return invoices.find((invoice) => readText(invoice.status).toUpperCase() === "DRAFT") ?? invoices[0] ?? null;
+};
+
+const findMatchingClient = (clients: Client[], billedTo: InvoiceFormData["billedTo"]) => {
+  const email = billedTo.email.trim().toLowerCase();
+  const businessName = billedTo.businessName.trim().toLowerCase();
+
+  return clients.find((client) => {
+    if (email && client.email.trim().toLowerCase() === email) return true;
+    return businessName ? client.businessName.trim().toLowerCase() === businessName : false;
+  }) || null;
 };
 
 const mapInvoiceItemsToFormItems = (
@@ -1129,12 +1139,14 @@ const InvoicePreview = ({
 
 const CreateInvoicePage = () => {
   const navigate = useNavigate();
+  const { id: routeInvoiceId } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { branding: workspaceBranding } = useWorkspaceBranding();
   const linkedProjectId = searchParams.get("projectId");
-  const requestedInvoiceId = searchParams.get("invoiceId");
+  const requestedInvoiceId = searchParams.get("invoiceId") || routeInvoiceId;
   const isProjectReviewMode = Boolean(linkedProjectId);
+  const isEditMode = Boolean(requestedInvoiceId) && !isProjectReviewMode;
 
   // State
   const [user, setUser] = useState<AppUser | null>(null);
@@ -1355,6 +1367,93 @@ const CreateInvoicePage = () => {
     };
   }, [getValues, linkedProjectId, requestedInvoiceId, reset, toast]);
 
+  useEffect(() => {
+    if (!requestedInvoiceId || linkedProjectId) return;
+
+    let cancelled = false;
+    setIsLoadingLinkedInvoice(true);
+
+    getInvoiceById(requestedInvoiceId)
+      .then((invoice: any) => {
+        if (cancelled) return;
+
+        const currentValues = getValues();
+        const client = invoice?.client && typeof invoice.client === "object" ? invoice.client : null;
+        const businessAddress = invoice?.businessAddress && typeof invoice.businessAddress === "object" ? invoice.businessAddress : null;
+        const invoiceDateValue = toDateInputValue(invoice?.issueDate || invoice?.invoiceDate);
+        const dueDateValue = toDateInputValue(invoice?.dueDate);
+        const provinceCode = getProvinceCode(client?.province || currentValues.billedTo.province);
+        const provinceTax = canadianProvinces.find((entry) => entry.code === provinceCode) || canadianProvinces.find((entry) => entry.code === "ON")!;
+        const reviewItems = mapInvoiceItemsToFormItems(
+          Array.isArray(invoice?.items) ? invoice.items : [],
+          { gst: provinceTax.gst, pst: provinceTax.pst, hst: provinceTax.hst },
+        );
+
+        selectedClientIdRef.current = readText(client?.id) || null;
+        setLinkedInvoiceId(readText(invoice?.id) || requestedInvoiceId);
+
+        reset({
+          ...currentValues,
+          invoiceNumber: readText(invoice?.invoiceNumber) || currentValues.invoiceNumber,
+          invoiceDate: invoiceDateValue,
+          dueDate: dueDateValue,
+          paymentTerms: inferPaymentTerms(invoiceDateValue, dueDateValue),
+          currency: readText(invoice?.currency) || currentValues.currency,
+          clientProvince: provinceCode,
+          billedBy: {
+            businessName: readText(invoice?.businessName) || currentValues.billedBy.businessName,
+            email: readText(invoice?.businessEmail) || currentValues.billedBy.email,
+            phone: readText(invoice?.businessPhone) || currentValues.billedBy.phone,
+            address: readText(businessAddress?.address) || currentValues.billedBy.address,
+            city: readText(businessAddress?.city) || currentValues.billedBy.city,
+            province: getProvinceCode(businessAddress?.province || currentValues.billedBy.province),
+            postalCode: readText(businessAddress?.postalCode) || currentValues.billedBy.postalCode,
+            country: currentValues.billedBy.country,
+            gstNumber: readText(invoice?.businessGstHstNumber) || currentValues.billedBy.gstNumber,
+          },
+          billedTo: {
+            businessName: readText(client?.clientName || client?.companyName) || currentValues.billedTo.businessName,
+            email: readText(client?.primaryEmail) || currentValues.billedTo.email,
+            phone: readText(client?.primaryPhone) || currentValues.billedTo.phone,
+            address: readText(client?.streetAddress) || currentValues.billedTo.address,
+            city: readText(client?.city) || currentValues.billedTo.city,
+            province: provinceCode,
+            postalCode: readText(client?.postalCode) || currentValues.billedTo.postalCode,
+            country: readText(client?.country) || currentValues.billedTo.country,
+            gstNumber: currentValues.billedTo.gstNumber,
+          },
+          items: reviewItems.length > 0 ? reviewItems : currentValues.items,
+          notes: readText(invoice?.notes) || currentValues.notes || "",
+          terms: readText(invoice?.terms) || currentValues.terms || "",
+          discount: toNumber(invoice?.discountAmount),
+          discountType: "fixed",
+          sendReminder: currentValues.sendReminder ?? true,
+          isRecurring: false,
+          recurringFrequency: currentValues.recurringFrequency || "monthly",
+        });
+      })
+      .catch((error) => {
+        console.error("Failed to load invoice:", error);
+        if (!cancelled) {
+          toast({
+            title: "Invoice unavailable",
+            description: "The invoice could not be loaded right now.",
+            variant: "destructive",
+          });
+          navigate("/invoice");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoadingLinkedInvoice(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [getValues, linkedProjectId, navigate, requestedInvoiceId, reset, toast]);
+
   // Fetch real clients from API
   useEffect(() => {
     const fetchClients = async () => {
@@ -1402,7 +1501,7 @@ const CreateInvoicePage = () => {
     setValue("clientProvince", client.province);
   };
 
-  const buildInvoicePayload = (data: InvoiceFormData) => {
+  const buildInvoicePayload = (data: InvoiceFormData, clientId: string) => {
     const effectiveTaxRate = taxRates.hst > 0 ? taxRates.hst : taxRates.gst + taxRates.pst;
     return {
       invoiceNumber: data.invoiceNumber,
@@ -1422,7 +1521,7 @@ const CreateInvoicePage = () => {
         postalCode: data.billedBy.postalCode || null,
       },
       businessGstHstNumber: data.billedBy.gstNumber || null,
-      clientId: selectedClientIdRef.current || null,
+      clientId,
       clientBusinessName: data.billedTo.businessName || null,
       clientEmail: data.billedTo.email || null,
       clientPhone: data.billedTo.phone || null,
@@ -1449,11 +1548,24 @@ const CreateInvoicePage = () => {
   const persistInvoice = async (data: InvoiceFormData, options?: { send?: boolean }) => {
     setIsSaving(true);
     try {
-      const apiPayload = buildInvoicePayload(data);
-      const response = linkedInvoiceId
+      const matchedClient = selectedClientIdRef.current ? null : findMatchingClient(clients, data.billedTo);
+      const resolvedClientId = selectedClientIdRef.current || (matchedClient ? String(matchedClient.id) : null);
+
+      if (!resolvedClientId) {
+        toast({
+          title: "Client required",
+          description: "Select an existing client or create one before saving this invoice.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      selectedClientIdRef.current = resolvedClientId;
+
+      const apiPayload = buildInvoicePayload(data, resolvedClientId);
+      const savedInvoice = linkedInvoiceId
         ? await updateInvoice(linkedInvoiceId, apiPayload)
         : await createInvoice(apiPayload);
-      const savedInvoice = response?.data || response;
       const savedInvoiceId = readText(savedInvoice?.id) || linkedInvoiceId;
 
       if (options?.send && savedInvoiceId) {
@@ -1487,33 +1599,60 @@ const CreateInvoicePage = () => {
   };
 
   const handleSaveAndSend = async () => {
-    const data = getValues();
-    if (!data.billedTo.email) {
-      toast({
-        title: "Email Required",
-        description: "Please enter a client email address to send the invoice.",
-        variant: "destructive",
-      });
-      return;
-    }
-    await persistInvoice(data, { send: true });
+    await handleSubmit(async (data) => {
+      if (!data.billedTo.email) {
+        toast({
+          title: "Email Required",
+          description: "Please enter a client email address to send the invoice.",
+          variant: "destructive",
+        });
+        return;
+      }
+      await persistInvoice(data, { send: true });
+    })();
   };
 
-  const handleDownloadPDF = () => {
-    const data = getValues();
-    if (!data.billedTo.businessName) {
+  const handleDownloadPDF = async () => {
+    if (!linkedInvoiceId) {
       toast({
-        title: "Client Required",
-        description: "Please enter a client name before downloading.",
-        variant: "destructive",
+        title: "Save required",
+        description: "Save the invoice first to download its PDF.",
       });
       return;
     }
-    // Implement PDF generation
-    toast({
-      title: "Generating PDF",
-      description: "Your invoice PDF is being generated...",
-    });
+
+    try {
+      await downloadInvoicePdf(linkedInvoiceId);
+      toast({
+        title: "Downloaded",
+        description: "Your invoice PDF is ready.",
+      });
+    } catch (error) {
+      console.error("Failed to download invoice PDF:", error);
+      toast({
+        title: "Error",
+        description: "Failed to download invoice PDF.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handlePrintPreview = async () => {
+    if (!linkedInvoiceId) {
+      window.print();
+      return;
+    }
+
+    try {
+      await printInvoicePdf(linkedInvoiceId);
+    } catch (error) {
+      console.error("Failed to print invoice PDF:", error);
+      toast({
+        title: "Error",
+        description: "Failed to open the invoice for printing.",
+        variant: "destructive",
+      });
+    }
   };
 
   // ============================================
@@ -1545,7 +1684,9 @@ const CreateInvoicePage = () => {
               <div className="flex items-center gap-2 text-sm">
                 <span className="text-[#475569]">Invoices</span>
                 <ChevronRight size={16} className="text-[#475569]" />
-                <span className="font-medium text-[#0F172A]">{isProjectReviewMode ? "Review Job Invoice" : "Create Invoice"}</span>
+                <span className="font-medium text-[#0F172A]">
+                  {isProjectReviewMode ? "Review Job Invoice" : isEditMode ? "Edit Invoice" : "Create Invoice"}
+                </span>
               </div>
             </div>
 
@@ -1592,7 +1733,7 @@ const CreateInvoicePage = () => {
                 ) : (
                   <Save size={16} className="mr-2" />
                 )}
-                {isProjectReviewMode ? "Save Changes" : "Save Draft"}
+                  {isProjectReviewMode ? "Save Changes" : isEditMode ? "Save Changes" : "Save Draft"}
               </Button>
 
               {/* Save & Send */}
@@ -1603,7 +1744,7 @@ const CreateInvoicePage = () => {
                 className="bg-[#F1F5F9]/90 hover:from-[#22D3EE]/90 hover:to-[#22D3EE] text-[#0F172A] rounded-md "
               >
                 <Send size={16} className="mr-2" />
-                {isProjectReviewMode ? "Review & Send" : "Save & Send"}
+                {isProjectReviewMode ? "Review & Send" : isEditMode ? "Update & Send" : "Save & Send"}
               </Button>
             </div>
           </div>
@@ -1638,11 +1779,15 @@ const CreateInvoicePage = () => {
                       <FilePlus size={24} className="text-[#0F172A]" />
                     </div>
                     <div>
-                      <h1 className="text-lg sm:text-2xl font-bold text-[#0F172A]">{isProjectReviewMode ? "Review Job Invoice" : "Create Invoice"}</h1>
+                      <h1 className="text-lg sm:text-2xl font-bold text-[#0F172A]">
+                        {isProjectReviewMode ? "Review Job Invoice" : isEditMode ? "Edit Invoice" : "Create Invoice"}
+                      </h1>
                       <p className="text-[#94A3B8]">
                         {isProjectReviewMode
                           ? "The job already built this invoice draft. Review it here and send when ready."
-                          : "Fill in the details to generate a new roofing invoice"}
+                          : isEditMode
+                            ? "Update the existing invoice details and keep the same billing pattern."
+                            : "Fill in the details to generate a new roofing invoice"}
                       </p>
                     </div>
                   </motion.div>
@@ -2123,10 +2268,10 @@ const CreateInvoicePage = () => {
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="font-semibold text-[#0F172A]">Live Preview</h3>
                         <div className="flex items-center gap-2">
-                          <button className="p-2 rounded-md bg-white text-[#94A3B8] hover:text-[#0891B2]">
+                          <button onClick={handlePrintPreview} className="p-2 rounded-md bg-white text-[#94A3B8] hover:text-[#0891B2]">
                             <Printer size={16} />
                           </button>
-                          <button className="p-2 rounded-md bg-white text-[#94A3B8] hover:text-[#0891B2]">
+                          <button onClick={() => void handleDownloadPDF()} className="p-2 rounded-md bg-white text-[#94A3B8] hover:text-[#0891B2]">
                             <Download size={16} />
                           </button>
                         </div>

@@ -77,6 +77,7 @@ import {
 } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+import AddressAutocompleteInput from "@/components/address/AddressAutocompleteInput";
 import {
   Search,
   Plus,
@@ -1549,15 +1550,21 @@ export const LeadFormDialog = ({
                 <Label className="text-sm font-medium text-[#475569]">
                   Property Address <span className="text-red-500">*</span>
                 </Label>
-                <div className="relative">
-                  <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
-                  <Input
-                    value={formData.propertyAddress}
-                    onChange={(e) => setFieldValue("propertyAddress", e.target.value)}
-                    placeholder="123 Main Street"
-                    className={cn("h-11 pl-10 rounded-md", getFieldErrorClass("propertyAddress"))}
-                  />
-                </div>
+                <AddressAutocompleteInput
+                  value={formData.propertyAddress}
+                  onValueChange={(value) => setFieldValue("propertyAddress", value)}
+                  onSelectAddress={(details) => {
+                    setFormData((current) => ({
+                      ...current,
+                      propertyAddress: details.addressLine1 || details.formattedAddress || current.propertyAddress,
+                      city: details.city || current.city,
+                      state: details.state || current.state,
+                      zipCode: details.postalCode || current.zipCode,
+                    }));
+                  }}
+                  placeholder="123 Main Street"
+                  className={cn("h-11 rounded-md", getFieldErrorClass("propertyAddress"))}
+                />
                 {errors.propertyAddress && <p className="text-xs text-red-500">{errors.propertyAddress}</p>}
               </div>
 

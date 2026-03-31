@@ -20,6 +20,7 @@ import {
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import AddressAutocompleteInput from "@/components/address/AddressAutocompleteInput";
 import { useToast } from "@/hooks/use-toast";
 import {
   exportAuditLogs,
@@ -819,7 +820,13 @@ export default function SettingsPage() {
                         <input className={fieldClass} value={company.taxId} onChange={(event) => setCompany({ ...company, taxId: event.target.value })} />
                       </Field>
                       <Field label="Address">
-                        <input className={fieldClass} value={company.address} onChange={(event) => setCompany({ ...company, address: event.target.value })} />
+                        <AddressAutocompleteInput
+                          value={company.address}
+                          onValueChange={(value) => setCompany({ ...company, address: value })}
+                          onSelectAddress={(details) => setCompany({ ...company, address: details.formattedAddress || details.addressLine1 || company.address })}
+                          className={fieldClass}
+                          iconClassName="text-[#64748B]"
+                        />
                       </Field>
                     </div>
                   </div>

@@ -36,6 +36,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import AddressAutocompleteInput from '@/components/address/AddressAutocompleteInput';
 import {
   Select,
   SelectContent,
@@ -512,10 +513,21 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
                     <FormItem>
                       <FormLabel>Street Address</FormLabel>
                       <FormControl>
-                        <div className="relative">
-                          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
-                          <Input {...field} className="pl-10" placeholder="123 Main Street" />
-                        </div>
+                        <AddressAutocompleteInput
+                          name={field.name}
+                          value={field.value || ''}
+                          onValueChange={field.onChange}
+                          onBlur={field.onBlur}
+                          placeholder="123 Main Street"
+                          className="h-10"
+                          onSelectAddress={(details) => {
+                            form.setValue('street', details.addressLine1 || details.formattedAddress || field.value || '', { shouldDirty: true });
+                            form.setValue('city', details.city || '', { shouldDirty: true });
+                            form.setValue('state', details.state || '', { shouldDirty: true });
+                            form.setValue('zipCode', details.postalCode || '', { shouldDirty: true });
+                            form.setValue('country', details.country || form.getValues('country') || 'USA', { shouldDirty: true });
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

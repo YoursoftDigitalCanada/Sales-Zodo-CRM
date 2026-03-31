@@ -103,6 +103,7 @@ import { createInvoice, downloadInvoicePdf, getInvoiceById, printInvoicePdf, sen
 import { getClients } from "@/features/clients/services/clients-service";
 import { getProjectById, type ProjectEntity } from "@/features/projects/services/projects-service";
 import { useWorkspaceBranding } from "@/features/settings/context/workspace-branding";
+import AddressAutocompleteInput from "@/components/address/AddressAutocompleteInput";
 
 // ============================================
 // TYPES
@@ -460,6 +461,7 @@ const AddressBlock = ({
   title,
   prefix,
   control,
+  setValue,
   register,
   errors,
   onSelectClient,
@@ -470,6 +472,7 @@ const AddressBlock = ({
   title: string;
   prefix: "billedBy" | "billedTo";
   control: any;
+  setValue: any;
   register: any;
   errors: any;
   onSelectClient?: (client: Client) => void;
@@ -596,15 +599,28 @@ const AddressBlock = ({
 
         <div className="col-span-2 space-y-1">
           <Label className="text-xs text-[#94A3B8]">Address</Label>
-          <div className="relative">
-            <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
-            <Input
-              {...register(`${prefix}.address`)}
-              placeholder="Street Address"
-              disabled={disabled}
-              className="h-10 pl-9 rounded-md border-[rgba(15,23,42,0.06)] text-sm"
-            />
-          </div>
+          <Controller
+            name={`${prefix}.address`}
+            control={control}
+            render={({ field }) => (
+              <AddressAutocompleteInput
+                name={field.name}
+                value={field.value || ""}
+                onValueChange={field.onChange}
+                onBlur={field.onBlur}
+                placeholder="Street Address"
+                disabled={disabled}
+                className="h-10 rounded-md border-[rgba(15,23,42,0.06)] text-sm"
+                onSelectAddress={(details) => {
+                  field.onChange(details.addressLine1 || details.formattedAddress || field.value || "");
+                  setValue(`${prefix}.city`, details.city || "", { shouldDirty: true });
+                  setValue(`${prefix}.province`, getProvinceCode(details.state), { shouldDirty: true });
+                  setValue(`${prefix}.postalCode`, details.postalCode || "", { shouldDirty: true });
+                  setValue(`${prefix}.country`, details.country || "Canada", { shouldDirty: true });
+                }}
+              />
+            )}
+          />
         </div>
 
         <div className="space-y-1">
@@ -1952,6 +1968,7 @@ const CreateInvoicePage = () => {
                         title="Billed By"
                         prefix="billedBy"
                         control={control}
+                        setValue={setValue}
                         register={register}
                         errors={errors}
                         disabled={isProjectReviewMode}
@@ -1979,6 +1996,7 @@ const CreateInvoicePage = () => {
                         title="Billed To"
                         prefix="billedTo"
                         control={control}
+                        setValue={setValue}
                         register={register}
                         errors={errors}
                         showClientSelector={!isProjectReviewMode}

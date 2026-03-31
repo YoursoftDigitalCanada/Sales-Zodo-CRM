@@ -46,6 +46,8 @@ import {
   Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import AddressAutocompleteInput from "@/components/address/AddressAutocompleteInput";
+import { normalizeProvinceName } from "@/lib/address-utils";
 import { getClientById, createClient, updateClient } from "@/services/clientService";
 import { getEmployees } from "@/features/users";
 
@@ -1019,14 +1021,31 @@ const AddClientPage = () => {
                   <div className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                       <div className="md:col-span-2 space-y-3">
-                        <StyledInput
-                          label="Street Address"
-                          id="billingAddressLine1"
-                          placeholder="123 King St W"
-                          value={formData.billingAddressLine1}
-                          onChange={handleInputChange}
-                          icon={MapPin}
-                        />
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium text-[#475569]">
+                            Street Address
+                          </Label>
+                          <AddressAutocompleteInput
+                            id="billingAddressLine1"
+                            placeholder="123 King St W"
+                            value={formData.billingAddressLine1}
+                            onValueChange={(value) =>
+                              setFormData((prev) => ({ ...prev, billingAddressLine1: value }))
+                            }
+                            onSelectAddress={(details) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                billingAddressLine1: details.addressLine1 || details.formattedAddress || prev.billingAddressLine1,
+                                city: details.city || prev.city,
+                                state: normalizeProvinceName(details.state) || prev.state,
+                                pincode: details.postalCode || prev.pincode,
+                                country: details.country || prev.country,
+                              }))
+                            }
+                            className="h-11 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all"
+                            iconClassName="text-[#475569]"
+                          />
+                        </div>
                         <Input
                           id="billingAddressLine2"
                           placeholder="Suite 100 (Optional)"

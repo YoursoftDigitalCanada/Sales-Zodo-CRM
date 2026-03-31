@@ -1,5 +1,5 @@
 import { AlertCircle, MapPin, Search } from "lucide-react";
-import { useFormContext } from "react-hook-form";
+import { Controller, useFormContext } from "react-hook-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import AddressAutocompleteInput from "@/components/address/AddressAutocompleteInput";
 import { ProjectWizardFormValues, CANADIAN_PROVINCES } from "@/lib/validations/project.schema";
 
 interface ClientOption {
@@ -50,6 +51,7 @@ export function Step2ClientSite({
   isClientsLoading,
 }: Step2ClientSiteProps) {
   const {
+    control,
     register,
     setValue,
     watch,
@@ -195,7 +197,27 @@ export function Step2ClientSite({
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div className="md:col-span-2">
                 <Label>Job Site Address *</Label>
-                <Input {...register("jobSiteAddress")} placeholder="123 Main St" disabled={watch("sameAsClientAddress")} />
+                <Controller
+                  name="jobSiteAddress"
+                  control={control}
+                  render={({ field }) => (
+                    <AddressAutocompleteInput
+                      name={field.name}
+                      value={field.value || ""}
+                      onValueChange={field.onChange}
+                      onBlur={field.onBlur}
+                      placeholder="123 Main St"
+                      disabled={watch("sameAsClientAddress")}
+                      className="h-10"
+                      onSelectAddress={(details) => {
+                        setValue("jobSiteAddress", details.addressLine1 || details.formattedAddress || field.value || "", { shouldDirty: true, shouldValidate: true });
+                        setValue("jobSiteCity", details.city || "", { shouldDirty: true, shouldValidate: true });
+                        setValue("jobSiteState", details.state || "", { shouldDirty: true, shouldValidate: true });
+                        setValue("jobSiteZip", details.postalCode || "", { shouldDirty: true, shouldValidate: true });
+                      }}
+                    />
+                  )}
+                />
                 <FieldError message={errors.jobSiteAddress?.message} />
               </div>
               <div className="md:col-span-2">

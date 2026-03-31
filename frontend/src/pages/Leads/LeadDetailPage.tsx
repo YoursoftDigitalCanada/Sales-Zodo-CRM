@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import AddressAutocompleteInput from "@/components/address/AddressAutocompleteInput";
 import {
     Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle
 } from "@/components/ui/dialog";
@@ -1385,7 +1386,12 @@ const InsuranceClaimFormDialog = ({ open, onClose, onSave, claim }: InsuranceCla
                     </div>
                     <div className="space-y-1 col-span-full">
                         <Label className="text-xs text-[#475569]">Mortgage Company Address</Label>
-                        <Input value={form.mortgageCompanyAddress || ''} onChange={e => set('mortgageCompanyAddress', e.target.value)} className="text-sm" />
+                        <AddressAutocompleteInput
+                            value={form.mortgageCompanyAddress || ''}
+                            onValueChange={(value) => set('mortgageCompanyAddress', value)}
+                            onSelectAddress={(details) => set('mortgageCompanyAddress', details.formattedAddress || details.addressLine1 || '')}
+                            className="h-9 text-sm"
+                        />
                     </div>
                     <div className="space-y-1">
                         <Label className="text-xs text-[#475569]">Mortgage Loan Number</Label>

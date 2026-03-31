@@ -100,6 +100,7 @@ import ReportsPage from "./pages/reports/ReportsPage";
 
 // Quotes
 import QuotesPage from "./pages/Quotes";
+import ProfilePage from "./pages/Profile";
 
 // Notifications
 import NotificationsPage from "./pages/Notifications";
@@ -576,6 +577,7 @@ const AppRoutes = () => {
             </FeatureGuard>
           }
         />
+        <Route path="/profile" element={<ProfilePage />} />
 
         {/* ✅ Chat Route */}
         <Route
@@ -590,6 +592,7 @@ const AppRoutes = () => {
         {/* ========== SETTINGS ROUTES ========== */}
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/settings/profile" element={<Navigate to="/profile" replace />} />
         <Route path="/settings/general" element={<SettingsPage />} />
         <Route path="/settings/company" element={<SettingsPage />} />
         <Route path="/settings/billing" element={<SettingsPage />} />

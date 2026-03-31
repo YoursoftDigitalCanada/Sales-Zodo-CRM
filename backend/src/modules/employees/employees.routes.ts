@@ -32,6 +32,9 @@ router.get('/attendance/my', validate(attendanceQuerySchema), employeesControlle
 router.get('/attendance/summary/my', validate(attendanceQuerySchema), employeesController.getMyAttendanceSummary.bind(employeesController));
 router.get('/leave-requests/my', employeesController.getMyLeaveRequests.bind(employeesController));
 router.post('/leave-requests', validate(createLeaveRequestSchema), employeesController.createLeaveRequest.bind(employeesController));
+router.get('/me', employeesController.getMe.bind(employeesController));
+router.put('/me', validate(updateEmployeeSchema), employeesController.updateMe.bind(employeesController));
+router.get('/departments/my', employeesController.getMyDepartments.bind(employeesController));
 router.get('/leave-requests', requirePermission(PERMISSIONS.EMPLOYEES_VIEW), employeesController.getLeaveRequests.bind(employeesController));
 router.put('/leave-requests/:leaveRequestId/review', requirePermission(PERMISSIONS.EMPLOYEES_UPDATE), validate(leaveRequestIdSchema), validate(reviewLeaveRequestSchema), employeesController.reviewLeaveRequest.bind(employeesController));
 router.get('/', requirePermission(PERMISSIONS.EMPLOYEES_VIEW), validate(employeeQuerySchema), employeesController.getMany.bind(employeesController));

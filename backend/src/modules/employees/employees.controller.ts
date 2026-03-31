@@ -27,10 +27,40 @@ export class EmployeesController {
         } catch (e) { next(e); }
     }
 
+    async getMe(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const employeeId = req.context.employeeId || req.user?.employeeId;
+            if (!employeeId) {
+                throw new BadRequestError(
+                    'Your user account is not linked to an employee profile',
+                    ErrorCodes.EMPLOYEE_NOT_FOUND,
+                );
+            }
+
+            const emp = await employeesService.getById(employeeId, req.context.tenantId);
+            sendSuccess(res, emp);
+        } catch (e) { next(e); }
+    }
+
     async update(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const emp = await employeesService.update(req.params.id, req.context.tenantId, sanitizeBody(req.body));
             sendSuccess(res, emp, 'Employee updated');
+        } catch (e) { next(e); }
+    }
+
+    async updateMe(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const employeeId = req.context.employeeId || req.user?.employeeId;
+            if (!employeeId) {
+                throw new BadRequestError(
+                    'Your user account is not linked to an employee profile',
+                    ErrorCodes.EMPLOYEE_NOT_FOUND,
+                );
+            }
+
+            const emp = await employeesService.update(employeeId, req.context.tenantId, sanitizeBody(req.body));
+            sendSuccess(res, emp, 'Profile updated');
         } catch (e) { next(e); }
     }
 
@@ -56,6 +86,13 @@ export class EmployeesController {
     }
 
     async getDepartments(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const departments = await employeesService.getDepartments(req.context.tenantId);
+            sendSuccess(res, departments);
+        } catch (e) { next(e); }
+    }
+
+    async getMyDepartments(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const departments = await employeesService.getDepartments(req.context.tenantId);
             sendSuccess(res, departments);

@@ -1008,7 +1008,7 @@ const Index = () => {
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => navigate("/settings/profile")}
+                  onClick={() => navigate("/profile")}
                   className="p-1.5 rounded-full text-[#475569]"
                 >
                   <div className="h-7 w-7 rounded-full bg-[#0891B2] flex items-center justify-center text-white text-[10px] font-bold">
@@ -1235,7 +1235,7 @@ const Index = () => {
                         </div>
                         <div className="p-2">
                           <button
-                            onClick={() => navigate("/settings/profile")}
+                            onClick={() => navigate("/profile")}
                             className="w-full px-3 py-2 text-left text-sm text-[#475569] hover:bg-white hover:text-[#0F172A] rounded-md transition-colors"
                           >
                             Profile Settings

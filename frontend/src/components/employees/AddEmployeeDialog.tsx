@@ -83,6 +83,7 @@ type EditableEmployee = Employee & { portalEmail?: string };
 type EmployeeFormStep = 'basic' | 'employment' | 'address' | 'emergency' | 'portal';
 
 const EMPLOYEE_FORM_STEPS: EmployeeFormStep[] = ['basic', 'employment', 'address', 'emergency', 'portal'];
+const EDIT_EMPLOYEE_FORM_STEPS: EmployeeFormStep[] = ['basic', 'employment', 'address', 'emergency'];
 
 const STEP_FIELDS: Record<EmployeeFormStep, Array<keyof EmployeeFormValues>> = {
   basic: ['firstName', 'lastName', 'email', 'phone'],
@@ -109,6 +110,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
 }) => {
   const [showPortalPassword, setShowPortalPassword] = useState(false);
   const [activeStep, setActiveStep] = useState<EmployeeFormStep>('basic');
+  const formSteps = editingEmployee ? EDIT_EMPLOYEE_FORM_STEPS : EMPLOYEE_FORM_STEPS;
   const form = useForm<EmployeeFormValues>({
     resolver: zodResolver(employeeFormSchema),
     defaultValues: {
@@ -203,8 +205,8 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
     onOpenChange(false);
   };
 
-  const currentStepIndex = EMPLOYEE_FORM_STEPS.indexOf(activeStep);
-  const isLastStep = currentStepIndex === EMPLOYEE_FORM_STEPS.length - 1;
+  const currentStepIndex = formSteps.indexOf(activeStep);
+  const isLastStep = currentStepIndex === formSteps.length - 1;
 
   const validateStep = async (step: EmployeeFormStep) => form.trigger(STEP_FIELDS[step]);
 
@@ -235,7 +237,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
       return;
     }
 
-    setActiveStep(EMPLOYEE_FORM_STEPS[currentStepIndex + 1]);
+    setActiveStep(formSteps[currentStepIndex + 1]);
   };
 
   const handlePreviousStep = () => {
@@ -243,7 +245,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
       return;
     }
 
-    setActiveStep(EMPLOYEE_FORM_STEPS[currentStepIndex - 1]);
+    setActiveStep(formSteps[currentStepIndex - 1]);
   };
 
   return (
@@ -258,12 +260,12 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
             <Tabs value={activeStep} onValueChange={(value) => { void goToStep(value as EmployeeFormStep); }} className="w-full">
-              <TabsList className="grid w-full grid-cols-5">
+              <TabsList className={`grid w-full ${editingEmployee ? 'grid-cols-4' : 'grid-cols-5'}`}>
                 <TabsTrigger value="basic">Basic Info</TabsTrigger>
                 <TabsTrigger value="employment">Employment</TabsTrigger>
                 <TabsTrigger value="address">Address</TabsTrigger>
                 <TabsTrigger value="emergency">Emergency</TabsTrigger>
-                <TabsTrigger value="portal">Crew Portal</TabsTrigger>
+                {!editingEmployee ? <TabsTrigger value="portal">Crew Portal</TabsTrigger> : null}
               </TabsList>
 
               <TabsContent value="basic" className="space-y-4 mt-4">
@@ -649,87 +651,89 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
                 />
               </TabsContent>
 
-              <TabsContent value="portal" className="space-y-4 mt-4">
-                <div className="bg-cyan-50 border border-cyan-200 rounded-md p-4 mb-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Globe className="w-4 h-4 text-cyan-700" />
-                    <p className="text-sm font-semibold text-cyan-800">Crew Portal Access</p>
+              {!editingEmployee ? (
+                <TabsContent value="portal" className="space-y-4 mt-4">
+                  <div className="bg-cyan-50 border border-cyan-200 rounded-md p-4 mb-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Globe className="w-4 h-4 text-cyan-700" />
+                      <p className="text-sm font-semibold text-cyan-800">Crew Portal Access</p>
+                    </div>
+                    <p className="text-sm text-cyan-700">
+                      Create login credentials for the employee to access the Crew Portal at{' '}
+                      <strong>crew.zodo.ca</strong>. New employees need portal credentials at creation time.
+                    </p>
                   </div>
-                  <p className="text-sm text-cyan-700">
-                    Create login credentials for the employee to access the Crew Portal at{' '}
-                    <strong>crew.zodo.ca</strong>. New employees need portal credentials at creation time.
-                  </p>
-                </div>
 
-                <FormField
-                  control={form.control}
-                  name="portalEmail"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Portal Email</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
-                          <Input
-                            {...field}
-                            className="pl-10"
-                            placeholder="firstname.lastname@zodo.ca"
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              form.clearErrors('portalEmail');
-                              field.onChange(val);
-                            }}
-                          />
-                        </div>
-                      </FormControl>
-                      <p className="text-xs text-muted-foreground">Must end with @zodo.ca</p>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="portalPassword"
-                  render={({ field }) => (
+                  <FormField
+                    control={form.control}
+                    name="portalEmail"
+                    render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Portal Password</FormLabel>
+                        <FormLabel>Portal Email</FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
+                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
                             <Input
                               {...field}
-                              type={showPortalPassword ? 'text' : 'password'}
-                              className="pl-10 pr-10"
-                              placeholder="Min 8 characters"
+                              className="pl-10"
+                              placeholder="firstname.lastname@zodo.ca"
                               onChange={(e) => {
-                                form.clearErrors('portalPassword');
-                                field.onChange(e.target.value);
+                                const val = e.target.value;
+                                form.clearErrors('portalEmail');
+                                field.onChange(val);
                               }}
                             />
-                            <button
-                              type="button"
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#0F172A]"
-                              onClick={() => setShowPortalPassword((current) => !current)}
-                            >
-                              {showPortalPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                            </button>
                           </div>
                         </FormControl>
-                        <p className="text-xs text-muted-foreground">Min 8 chars, must include uppercase, lowercase, number, and special character (!@#$%...)</p>
+                        <p className="text-xs text-muted-foreground">Must end with @zodo.ca</p>
                         <FormMessage />
                       </FormItem>
-                  )}
-                />
+                    )}
+                  />
 
-                <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
-                  <p className="text-xs text-blue-700">
-                    <strong>Tip:</strong> Use the format <code>firstname.lastname@zodo.ca</code> for consistency.
-                    The employee will use these credentials to log into the Crew Portal to view assigned jobs,
-                    track time, submit checklists, and more.
-                  </p>
-                </div>
-              </TabsContent>
+                  <FormField
+                    control={form.control}
+                    name="portalPassword"
+                    render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Portal Password</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
+                              <Input
+                                {...field}
+                                type={showPortalPassword ? 'text' : 'password'}
+                                className="pl-10 pr-10"
+                                placeholder="Min 8 characters"
+                                onChange={(e) => {
+                                  form.clearErrors('portalPassword');
+                                  field.onChange(e.target.value);
+                                }}
+                              />
+                              <button
+                                type="button"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#0F172A]"
+                                onClick={() => setShowPortalPassword((current) => !current)}
+                              >
+                                {showPortalPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                              </button>
+                            </div>
+                          </FormControl>
+                          <p className="text-xs text-muted-foreground">Min 8 chars, must include uppercase, lowercase, number, and special character (!@#$%...)</p>
+                          <FormMessage />
+                        </FormItem>
+                    )}
+                  />
+
+                  <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+                    <p className="text-xs text-blue-700">
+                      <strong>Tip:</strong> Use the format <code>firstname.lastname@zodo.ca</code> for consistency.
+                      The employee will use these credentials to log into the Crew Portal to view assigned jobs,
+                      track time, submit checklists, and more.
+                    </p>
+                  </div>
+                </TabsContent>
+              ) : null}
             </Tabs>
 
             <div className="flex justify-end gap-3 pt-4 border-t">

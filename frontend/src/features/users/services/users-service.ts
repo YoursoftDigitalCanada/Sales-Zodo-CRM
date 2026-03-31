@@ -21,6 +21,54 @@ export interface DepartmentEntity {
     isActive: boolean;
 }
 
+export interface EmployeeProfileEntity {
+    id: string;
+    employeeNumber?: string | null;
+    department?: string | null;
+    position?: string | null;
+    hireDate?: string | null;
+    isActive?: boolean;
+    employmentStatus?: string;
+    employmentType?: string;
+    salary?: number | null;
+    phone?: string | null;
+    skills?: string[];
+    address?: {
+        street?: string;
+        city?: string;
+        state?: string;
+        zipCode?: string;
+        country?: string;
+    };
+    emergencyContact?: {
+        name?: string;
+        relationship?: string;
+        phone?: string;
+    };
+    managerId?: string | null;
+    managerName?: string | null;
+    documents?: Array<{
+        id: string;
+        name?: string;
+        type?: string;
+        fileUrl?: string;
+        uploadedAt?: string;
+    }>;
+    user?: {
+        id?: string;
+        firstName?: string;
+        lastName?: string;
+        email?: string;
+        avatar?: string | null;
+    } | null;
+    role?: {
+        id?: string;
+        name?: string;
+    } | null;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
 export interface AttendanceEntity {
     id: string;
     employeeId: string;
@@ -111,8 +159,23 @@ export async function getEmployees(params?: Record<string, unknown>): Promise<Us
     return extractApiArray<UserEntity>(response.data);
 }
 
+export async function getMyEmployeeProfile(): Promise<EmployeeProfileEntity> {
+    const response = await api.get("/employees/me");
+    return extractApiData<EmployeeProfileEntity>(response.data);
+}
+
+export async function updateMyEmployeeProfile(data: Record<string, unknown>): Promise<EmployeeProfileEntity> {
+    const response = await api.put("/employees/me", data);
+    return extractApiData<EmployeeProfileEntity>(response.data);
+}
+
 export async function getDepartments(): Promise<DepartmentEntity[]> {
     const response = await api.get("/employees/departments");
+    return extractApiArray<DepartmentEntity>(response.data);
+}
+
+export async function getMyDepartments(): Promise<DepartmentEntity[]> {
+    const response = await api.get("/employees/departments/my");
     return extractApiArray<DepartmentEntity>(response.data);
 }
 

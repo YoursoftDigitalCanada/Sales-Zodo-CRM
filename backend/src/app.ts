@@ -65,8 +65,15 @@ export function createApp(): Application {
   // Compression
   app.use(compression());
 
-  // Static uploads for company logos and other local assets
-  app.use('/uploads', express.static(path.resolve(config.upload.uploadPath)));
+  // Static uploads are embedded by the CRM frontend on a different subdomain.
+  app.use(
+    '/uploads',
+    express.static(path.resolve(config.upload.uploadPath), {
+      setHeaders: (res) => {
+        res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+      },
+    })
+  );
 
   // =========================================================================
   // REQUEST TRACKING MIDDLEWARE

@@ -5,6 +5,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import { config } from '../../config';
+import { notificationsService } from '../../modules/notifications/notifications.service';
 
 const prisma = new PrismaClient();
 const INITIAL_SYNC_MAX_MESSAGES = 250;
@@ -224,6 +225,27 @@ class ImapService {
                 sentAt: isSent ? (parsed.date || new Date()) : null,
             },
         });
+
+        // Trigger notification bell for incoming emails
+        if (!isSent) {
+            const senderLabel = fromAddr?.name || fromAddr?.address || 'Unknown sender';
+            const subjectLabel = parsed.subject || '(No Subject)';
+            try {
+                await notificationsService.create({
+                    userId: mailboxOwnerUserId,
+                    tenantId,
+                    title: `New email from ${senderLabel}`,
+                    message: subjectLabel,
+                    type: 'INFO',
+                    actionUrl: '/letterbox',
+                    actionLabel: 'Open Letter Box',
+                    metadata: { emailFrom: fromAddr?.address, emailSubject: subjectLabel },
+                });
+            } catch (notifErr: any) {
+                // Never let notification failure break email ingestion
+                console.warn('⚠️ Failed to create email notification:', notifErr.message);
+            }
+        }
 
         return 1;
     }

@@ -3,7 +3,20 @@ import type { CreateInvoiceDto, UpdateInvoiceDto, InvoiceQueryDto } from '@contr
 
 const prisma = new PrismaClient();
 const invoiceInclude = {
-    client: { select: { id: true, clientName: true } },
+    client: {
+        select: {
+            id: true,
+            clientName: true,
+            companyName: true,
+            primaryEmail: true,
+            primaryPhone: true,
+            streetAddress: true,
+            city: true,
+            province: true,
+            postalCode: true,
+            country: true,
+        },
+    },
     items: true,
 };
 

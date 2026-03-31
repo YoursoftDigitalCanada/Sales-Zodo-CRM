@@ -102,6 +102,7 @@ import { cn } from "@/lib/utils";
 import { createInvoice, sendInvoice, updateInvoice } from "@/services/invoiceService";
 import { getClients } from "@/features/clients/services/clients-service";
 import { getProjectById, type ProjectEntity } from "@/features/projects/services/projects-service";
+import { useWorkspaceBranding } from "@/features/settings/context/workspace-branding";
 
 // ============================================
 // TYPES
@@ -948,11 +949,17 @@ const InvoicePreview = ({
   data,
   totals,
   taxRates,
+  brandLogoUrl,
+  brandName,
 }: {
   data: InvoiceFormData;
   totals: { subtotal: number; gst: number; pst: number; hst: number; discount: number; total: number };
   taxRates: { gst: number; pst: number; hst: number; taxType: string };
+  brandLogoUrl?: string | null;
+  brandName?: string;
 }) => {
+  const previewBrandName = brandName?.trim() || data.billedBy.businessName || "Your Business";
+
   return (
     <div className="bg-white rounded-md card-shadow p-8 max-w-2xl mx-auto">
       {/* Header */}
@@ -962,8 +969,16 @@ const InvoicePreview = ({
           <p className="text-[#94A3B8] mt-1">{data.invoiceNumber}</p>
         </div>
         <div className="text-right">
-          <div className="w-16 h-16 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] font-bold text-xl">
-            {getInitials(data.billedBy.businessName || "YB")}
+          <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] text-[#0F172A] font-bold text-xl">
+            {brandLogoUrl ? (
+              <img
+                src={brandLogoUrl}
+                alt={`${previewBrandName} logo`}
+                className="h-full w-full object-contain p-2"
+              />
+            ) : (
+              getInitials(previewBrandName || "YB")
+            )}
           </div>
         </div>
       </div>
@@ -1116,6 +1131,7 @@ const CreateInvoicePage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  const { branding: workspaceBranding } = useWorkspaceBranding();
   const linkedProjectId = searchParams.get("projectId");
   const requestedInvoiceId = searchParams.get("invoiceId");
   const isProjectReviewMode = Boolean(linkedProjectId);
@@ -2120,6 +2136,8 @@ const CreateInvoicePage = () => {
                           data={getValues()}
                           totals={totals}
                           taxRates={taxRates}
+                          brandLogoUrl={workspaceBranding?.logoUrl || null}
+                          brandName={workspaceBranding?.companyName || getValues().billedBy.businessName}
                         />
                       </div>
                     </div>

@@ -4,6 +4,7 @@ import { connectDatabase, disconnectDatabase } from './config/database';
 import { closeRedisConnection } from './config/redis';
 import { logger } from './common/utils/logger';
 import { imapPoller } from './common/services/imap-poller.service';
+import { emailScheduler } from './common/services/email-scheduler.service';
 
 // ============================================================================
 // SERVER STARTUP
@@ -30,6 +31,7 @@ async function startServer(): Promise<void> {
 
       // Start IMAP poller (check for incoming emails every 2 minutes)
       imapPoller.start(2 * 60 * 1000);
+      emailScheduler.start(60 * 1000);
     });
 
     // ========================================================================
@@ -41,6 +43,7 @@ async function startServer(): Promise<void> {
 
       // Stop IMAP poller
       imapPoller.stop();
+      emailScheduler.stop();
 
       // Stop accepting new connections
       server.close(async () => {

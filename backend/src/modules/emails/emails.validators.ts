@@ -25,6 +25,29 @@ export const sendEmailSchema = z.object({
     }),
 });
 
+export const saveDraftSchema = z.object({
+    body: z.object({
+        toAddresses: z.array(emailAddress).optional().default([]),
+        ccAddresses: z.array(emailAddress).optional().default([]),
+        bccAddresses: z.array(emailAddress).optional().default([]),
+        subject: z.string().max(500).optional(),
+        bodyText: z.string().optional(),
+        bodyHtml: z.string().optional(),
+        clientId: z.string().uuid().optional(),
+        leadId: z.string().uuid().optional(),
+        scheduledFor: z.string().datetime().nullable().optional(),
+        attachmentsCount: z.number().int().min(0).optional().default(0),
+    }).refine((data) => {
+        const hasRecipients = (data.toAddresses?.length || 0) > 0 || (data.ccAddresses?.length || 0) > 0 || (data.bccAddresses?.length || 0) > 0;
+        const hasBodyText = Boolean(data.bodyText?.trim());
+        const hasBodyHtml = Boolean(data.bodyHtml?.trim());
+        const hasSubject = Boolean(data.subject?.trim());
+        return hasRecipients || hasBodyText || hasBodyHtml || hasSubject || data.attachmentsCount > 0;
+    }, {
+        message: 'Provide at least one draft field or attachment',
+    }),
+});
+
 export const emailQuerySchema = z.object({
     query: z.object({
         page: z.coerce.number().int().min(1).default(1),
@@ -41,6 +64,41 @@ export const emailQuerySchema = z.object({
 
 export const emailIdSchema = z.object({
     params: z.object({ id: z.string().uuid() }),
+});
+
+export const updateEmailReadSchema = z.object({
+    params: z.object({ id: z.string().uuid() }),
+    body: z.object({
+        isRead: z.boolean().optional(),
+    }),
+});
+
+export const updateEmailImportantSchema = z.object({
+    params: z.object({ id: z.string().uuid() }),
+    body: z.object({
+        isImportant: z.boolean(),
+    }),
+});
+
+export const updateEmailLabelsSchema = z.object({
+    params: z.object({ id: z.string().uuid() }),
+    body: z.object({
+        labelIds: z.array(z.string().uuid()).default([]),
+    }),
+});
+
+export const snoozeEmailSchema = z.object({
+    params: z.object({ id: z.string().uuid() }),
+    body: z.object({
+        snoozedUntil: z.string().datetime().nullable().optional(),
+    }),
+});
+
+export const createEmailLabelSchema = z.object({
+    body: z.object({
+        name: z.string().trim().min(1).max(100),
+        color: z.string().trim().max(32).nullable().optional(),
+    }),
 });
 
 const emailEncryptionSchema = z.enum(['SSL/TLS', 'STARTTLS', 'NONE']);

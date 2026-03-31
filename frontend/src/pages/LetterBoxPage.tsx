@@ -45,16 +45,23 @@ import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import {
   sendEmail as apiSendEmail,
+  saveDraft as apiSaveDraft,
   getEmails as apiGetEmails,
-  markAsRead as apiMarkAsRead,
   getEmailConfigStatus,
   fetchEmailsNow,
   toggleStar as apiToggleStar,
+  toggleImportant as apiToggleImportant,
+  setEmailLabels as apiSetEmailLabels,
+  snoozeEmail as apiSnoozeEmail,
+  updateReadStatus as apiUpdateReadStatus,
   moveToFolder as apiMoveToFolder,
+  getEmailLabels as apiGetEmailLabels,
+  createEmailLabel as apiCreateEmailLabel,
   getMailboxSettings as apiGetMailboxSettings,
   updateMailboxSettings as apiUpdateMailboxSettings,
   type MailboxSettings,
   type UpdateMailboxSettingsPayload,
+  type EmailResponse,
 } from "@/features/emails/services/emails-service";
 import { API_ORIGIN } from "@/services/api";
 import {
@@ -153,6 +160,7 @@ interface Email {
   body: string;
   date: string;
   time: string;
+  sortAt?: number;
   read: boolean;
   starred: boolean;
   important: boolean;
@@ -160,6 +168,7 @@ interface Email {
   attachments?: Attachment[];
   labels: string[];
   folder: string;
+  snoozedUntil?: string | null;
   threadId?: string;
   replyTo?: string;
 }
@@ -201,7 +210,7 @@ const folders: Folder[] = [
   { id: "trash", name: "Trash", icon: Trash2, count: 0 },
 ];
 
-const labels: EmailLabel[] = [
+const DEFAULT_EMAIL_LABELS: EmailLabel[] = [
   { id: "work", name: "Work", color: "#3B82F6" },
   { id: "personal", name: "Personal", color: "#8B5CF6" },
   { id: "clients", name: "Clients", color: "#22D3EE" },
@@ -209,6 +218,8 @@ const labels: EmailLabel[] = [
   { id: "urgent", name: "Urgent", color: "#EF4444" },
   { id: "social", name: "Social", color: "#EC4899" },
 ];
+
+const NEW_LABEL_COLORS = ["#3B82F6", "#8B5CF6", "#22D3EE", "#22C55E", "#EF4444", "#EC4899", "#F59E0B", "#14B8A6"];
 
 const initialEmails: Email[] = [
   {
@@ -516,13 +527,88 @@ const buildAttachmentUrl = (value?: string) => {
   return /^https?:\/\//i.test(value) ? value : `${API_ORIGIN}${value.startsWith("/") ? value : `/${value}`}`;
 };
 
-const getInitialComposeValues = (replyTo?: Email, forwardEmail?: Email) => {
+const mapEmailResponseToEmail = (e: EmailResponse): Email => {
+  const toArr = Array.isArray(e.toAddresses) ? e.toAddresses : [];
+  const ccArr = Array.isArray(e.ccAddresses) ? e.ccAddresses : [];
+  const created = e.sentAt || e.receivedAt || e.createdAt;
+  const d = created ? new Date(created) : new Date();
+  const isToday = new Date().toDateString() === d.toDateString();
+
+  return {
+    id: e.id,
+    from: {
+      name: e.fromName || e.fromAddress || "Unknown",
+      email: e.fromAddress || "",
+    },
+    to: toArr.map((a: any) => ({ name: a.name || a.email || "", email: a.email || "" })),
+    cc: ccArr.length > 0 ? ccArr.map((a: any) => ({ name: a.name || a.email || "", email: a.email || "" })) : undefined,
+    subject: e.subject || "(No Subject)",
+    preview: e.bodyText ? e.bodyText.slice(0, 120) : (e.bodyHtml ? e.bodyHtml.replace(/<[^>]+>/g, "").slice(0, 120) : ""),
+    body: e.bodyHtml || plainTextToHtml(e.bodyText || "") || "",
+    date: isToday ? "Today" : d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+    time: d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }),
+    sortAt: d.getTime(),
+    read: e.isRead ?? true,
+    starred: e.isStarred ?? false,
+    important: e.isImportant ?? false,
+    hasAttachments: e.hasAttachments ?? false,
+    attachments: Array.isArray(e.attachments)
+      ? e.attachments.map((attachment) => ({
+          id: attachment.id,
+          name: attachment.filename || "Attachment",
+          size: formatFileSize(typeof attachment.size === "number" ? attachment.size : Number(attachment.size || 0)),
+          type: attachment.mimeType || "file",
+          url: buildAttachmentUrl(attachment.path),
+        }))
+      : [],
+    labels: Array.isArray(e.labels) ? e.labels.map((label) => label.id) : [],
+    folder: (e.folder || "INBOX").toLowerCase(),
+    snoozedUntil: e.snoozedUntil ?? null,
+  };
+};
+
+const isEmailSnoozed = (email: Pick<Email, "folder" | "snoozedUntil">) => {
+  if (email.folder !== "inbox" || !email.snoozedUntil) {
+    return false;
+  }
+
+  const snoozedUntil = new Date(email.snoozedUntil).getTime();
+  return Number.isFinite(snoozedUntil) && snoozedUntil > Date.now();
+};
+
+const getTomorrowMorningIso = () => {
+  const next = new Date();
+  next.setDate(next.getDate() + 1);
+  next.setHours(9, 0, 0, 0);
+  return next.toISOString();
+};
+
+const getInitialComposeValues = (
+  replyTo?: Email,
+  forwardEmail?: Email,
+  preset?: {
+    to?: string;
+    cc?: string;
+    subject?: string;
+    bodyHtml?: string;
+  },
+) => {
+  if (preset) {
+    return {
+      to: preset.to || "",
+      cc: preset.cc || "",
+      subject: preset.subject || "",
+      bodyHtml: preset.bodyHtml || "",
+    };
+  }
+
   const forwardedText = forwardEmail
     ? `\n\n---------- Forwarded message ----------\nFrom: ${forwardEmail.from.name} <${forwardEmail.from.email}>\nDate: ${forwardEmail.date}\nSubject: ${forwardEmail.subject}\n\n${forwardEmail.preview}`
     : "";
 
   return {
     to: replyTo ? replyTo.from.email : "",
+    cc: "",
     subject: replyTo ? `Re: ${replyTo.subject}` : forwardEmail ? `Fwd: ${forwardEmail.subject}` : "",
     bodyHtml: forwardedText ? plainTextToHtml(forwardedText) : "",
   };
@@ -537,11 +623,18 @@ const ComposeEmailDialog = ({
   onClose,
   replyTo,
   forwardEmail,
+  preset,
 }: {
   isOpen: boolean;
   onClose: () => void;
   replyTo?: Email;
   forwardEmail?: Email;
+  preset?: {
+    to?: string;
+    cc?: string;
+    subject?: string;
+    bodyHtml?: string;
+  };
 }) => {
   const { toast } = useToast();
   const editorRef = useRef<HTMLDivElement | null>(null);
@@ -560,12 +653,12 @@ const ComposeEmailDialog = ({
   useEffect(() => {
     if (!isOpen) return;
 
-    const initialValues = getInitialComposeValues(replyTo, forwardEmail);
+    const initialValues = getInitialComposeValues(replyTo, forwardEmail, preset);
     setTo(initialValues.to);
-    setCc("");
+    setCc(initialValues.cc || "");
     setSubject(initialValues.subject);
     setBodyHtml(initialValues.bodyHtml);
-    setShowCc(false);
+    setShowCc(Boolean(initialValues.cc));
     setAttachments([]);
     setIsMinimized(false);
     setIsEditorFocused(false);
@@ -575,7 +668,7 @@ const ComposeEmailDialog = ({
         editorRef.current.innerHTML = initialValues.bodyHtml;
       }
     });
-  }, [isOpen, replyTo, forwardEmail]);
+  }, [isOpen, replyTo, forwardEmail, preset]);
 
   const syncEditorState = useCallback(() => {
     setBodyHtml(editorRef.current?.innerHTML || "");
@@ -631,11 +724,89 @@ const ComposeEmailDialog = ({
   };
 
   const handleSaveDraft = () => {
-    toast({
-      title: "Draft Saved",
-      description: "Your email has been saved to drafts.",
-    });
-    onClose();
+    const saveDraft = async () => {
+      try {
+        const toAddresses = to.split(/[,;]/).map((email) => email.trim()).filter(Boolean).map((email) => ({ email }));
+        const ccAddresses = cc ? cc.split(/[,;]/).map((email) => email.trim()).filter(Boolean).map((email) => ({ email })) : undefined;
+        const currentBodyHtml = (editorRef.current?.innerHTML || bodyHtml || "").trim();
+        const bodyText = htmlToPlainText(currentBodyHtml).trim();
+
+        await apiSaveDraft({
+          toAddresses,
+          ccAddresses,
+          subject,
+          bodyHtml: currentBodyHtml,
+          bodyText,
+          attachments,
+        });
+
+        toast({
+          title: "Draft Saved",
+          description: "Your email has been saved to drafts.",
+        });
+        onClose();
+      } catch (err: any) {
+        const message = err?.response?.data?.message || err?.message || "Could not save the draft.";
+        toast({
+          title: "Draft Save Failed",
+          description: message,
+          variant: "destructive",
+        });
+      }
+    };
+
+    void saveDraft();
+  };
+
+  const handleScheduleSend = () => {
+    const input = window.prompt("Schedule send for (YYYY-MM-DD HH:MM, 24-hour time)");
+    if (!input) return;
+
+    const normalized = input.trim().replace(" ", "T");
+    const parsed = new Date(normalized);
+
+    if (Number.isNaN(parsed.getTime()) || parsed.getTime() <= Date.now()) {
+      toast({
+        title: "Invalid Schedule",
+        description: "Enter a future date and time, for example 2026-04-02 09:00.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const scheduleDraft = async () => {
+      try {
+        const toAddresses = to.split(/[,;]/).map((email) => email.trim()).filter(Boolean).map((email) => ({ email }));
+        const ccAddresses = cc ? cc.split(/[,;]/).map((email) => email.trim()).filter(Boolean).map((email) => ({ email })) : undefined;
+        const currentBodyHtml = (editorRef.current?.innerHTML || bodyHtml || "").trim();
+        const bodyText = htmlToPlainText(currentBodyHtml).trim();
+
+        await apiSaveDraft({
+          toAddresses,
+          ccAddresses,
+          subject,
+          bodyHtml: currentBodyHtml,
+          bodyText,
+          scheduledFor: parsed.toISOString(),
+          attachments,
+        });
+
+        toast({
+          title: "Email Scheduled",
+          description: `Your email is scheduled for ${parsed.toLocaleString()}.`,
+        });
+        onClose();
+      } catch (err: any) {
+        const message = err?.response?.data?.message || err?.message || "Could not schedule the email.";
+        toast({
+          title: "Schedule Failed",
+          description: message,
+          variant: "destructive",
+        });
+      }
+    };
+
+    void scheduleDraft();
   };
 
   if (isMinimized) {
@@ -903,7 +1074,7 @@ const ComposeEmailDialog = ({
                   <Send size={14} className="mr-2" />
                   {isSending ? "Sending..." : "Send Now"}
                 </DropdownMenuItem>
-                <DropdownMenuItem className="rounded-md">
+                <DropdownMenuItem onClick={handleScheduleSend} className="rounded-md">
                   <Clock size={14} className="mr-2" />
                   Schedule Send
                 </DropdownMenuItem>
@@ -922,6 +1093,7 @@ const ComposeEmailDialog = ({
 
 const EmailListItem = ({
   email,
+  labels,
   isSelected,
   isActive,
   onSelect,
@@ -932,6 +1104,7 @@ const EmailListItem = ({
   onDelete,
 }: {
   email: Email;
+  labels: EmailLabel[];
   isSelected: boolean;
   isActive: boolean;
   onSelect: () => void;
@@ -1088,22 +1261,36 @@ const EmailListItem = ({
 
 const EmailDetailView = ({
   email,
+  labels,
   onClose,
   onReply,
+  onReplyAll,
   onForward,
   onStar,
   onArchive,
   onDelete,
   onMarkRead,
+  onPrint,
+  onDownload,
+  onToggleLabel,
+  onToggleImportant,
+  onSnooze,
 }: {
   email: Email;
+  labels: EmailLabel[];
   onClose: () => void;
   onReply: () => void;
+  onReplyAll: () => void;
   onForward: () => void;
   onStar: () => void;
   onArchive: () => void;
   onDelete: () => void;
   onMarkRead: () => void;
+  onPrint: () => void;
+  onDownload: () => void;
+  onToggleLabel: (labelId: string) => void;
+  onToggleImportant: () => void;
+  onSnooze: () => void;
 }) => {
   const emailLabels = labels.filter((l) => email.labels.includes(l.id));
 
@@ -1178,11 +1365,11 @@ const EmailDetailView = ({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48 rounded-md">
-                <DropdownMenuItem className="rounded-md">
+                <DropdownMenuItem onClick={onPrint} className="rounded-md">
                   <Printer size={14} className="mr-2" />
                   Print
                 </DropdownMenuItem>
-                <DropdownMenuItem className="rounded-md">
+                <DropdownMenuItem onClick={onDownload} className="rounded-md">
                   <Download size={14} className="mr-2" />
                   Download
                 </DropdownMenuItem>
@@ -1194,22 +1381,23 @@ const EmailDetailView = ({
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent className="rounded-md">
                     {labels.map((label) => (
-                      <DropdownMenuItem key={label.id} className="rounded-md">
+                      <DropdownMenuItem key={label.id} onClick={() => onToggleLabel(label.id)} className="rounded-md">
                         <span
                           className="w-3 h-3 rounded-full mr-2"
                           style={{ backgroundColor: label.color }}
                         />
                         {label.name}
+                        {email.labels.includes(label.id) ? <Check size={14} className="ml-auto" /> : null}
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="rounded-md">
+                <DropdownMenuItem onClick={onToggleImportant} className="rounded-md">
                   <Flag size={14} className="mr-2" />
-                  Mark as Important
+                  {email.important ? "Remove Important" : "Mark as Important"}
                 </DropdownMenuItem>
-                <DropdownMenuItem className="rounded-md">
+                <DropdownMenuItem onClick={onSnooze} className="rounded-md">
                   <Clock size={14} className="mr-2" />
                   Snooze
                 </DropdownMenuItem>
@@ -1354,6 +1542,7 @@ const EmailDetailView = ({
             Reply
           </Button>
           <Button
+            onClick={onReplyAll}
             variant="outline"
             className="flex-1 rounded-md border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE] hover:text-[#0891B2]"
           >
@@ -1590,13 +1779,20 @@ const LetterBoxPage = () => {
 
   // State
   const [emails, setEmails] = useState<Email[]>([]);
+  const [availableLabels, setAvailableLabels] = useState<EmailLabel[]>(DEFAULT_EMAIL_LABELS);
   const [selectedFolder, setSelectedFolder] = useState("inbox");
+  const [selectedLabelId, setSelectedLabelId] = useState<string | null>(null);
   const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
   const [activeEmail, setActiveEmail] = useState<Email | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortPreference, setSortPreference] = useState<"date" | "sender" | "subject">("date");
+  const [unreadFirst, setUnreadFirst] = useState(false);
+  const [starredFirst, setStarredFirst] = useState(false);
+  const [attachmentsOnly, setAttachmentsOnly] = useState(false);
   const [showCompose, setShowCompose] = useState(false);
   const [replyToEmail, setReplyToEmail] = useState<Email | undefined>(undefined);
   const [forwardEmail, setForwardEmail] = useState<Email | undefined>(undefined);
+  const [composePreset, setComposePreset] = useState<{ to?: string; cc?: string; subject?: string; bodyHtml?: string } | undefined>(undefined);
   const [emailsLoading, setEmailsLoading] = useState(true);
   const [emailConfigured, setEmailConfigured] = useState<{ smtp: boolean; imap: boolean; mailboxAddress: string | null } | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -1630,47 +1826,64 @@ const LetterBoxPage = () => {
     void refreshMailboxState();
   }, [refreshMailboxState]);
 
+  const loadLabels = useCallback(async () => {
+    try {
+      const nextLabels = await apiGetEmailLabels();
+      if (Array.isArray(nextLabels) && nextLabels.length > 0) {
+        setAvailableLabels(nextLabels.map((label) => ({
+          id: label.id,
+          name: label.name,
+          color: label.color || "#94A3B8",
+        })));
+      } else {
+        setAvailableLabels(DEFAULT_EMAIL_LABELS);
+      }
+    } catch {
+      setAvailableLabels(DEFAULT_EMAIL_LABELS);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadLabels();
+  }, [loadLabels]);
+
+  const patchEmailInState = useCallback((emailId: string, updater: (email: Email) => Email) => {
+    setEmails((prev) => prev.map((email) => (email.id === emailId ? updater(email) : email)));
+    setActiveEmail((prev) => (prev?.id === emailId ? updater(prev) : prev));
+  }, []);
+
+  const mergeEmailResponse = useCallback((response: EmailResponse) => {
+    const mapped = mapEmailResponseToEmail(response);
+
+    setEmails((prev) =>
+      prev.map((email) =>
+        email.id === mapped.id
+          ? {
+              ...email,
+              ...mapped,
+              from: { ...email.from, ...mapped.from },
+            }
+          : email,
+      ),
+    );
+
+    setActiveEmail((prev) =>
+      prev?.id === mapped.id
+        ? {
+            ...prev,
+            ...mapped,
+            from: { ...prev.from, ...mapped.from },
+          }
+        : prev,
+    );
+  }, []);
+
   // Fetch emails from API
   const loadEmails = useCallback(async (silent = false) => {
     try {
       if (!silent) setEmailsLoading(true);
       const data = await apiGetEmails();
-      const mapped: Email[] = (Array.isArray(data) ? data : []).map((e: any) => {
-        const toArr = Array.isArray(e.toAddresses) ? e.toAddresses : [];
-        const ccArr = Array.isArray(e.ccAddresses) ? e.ccAddresses : [];
-        const created = e.sentAt || e.createdAt;
-        const d = created ? new Date(created) : new Date();
-        const isToday = new Date().toDateString() === d.toDateString();
-        return {
-          id: e.id,
-          from: {
-            name: e.fromName || e.fromAddress || 'Unknown',
-            email: e.fromAddress || '',
-          },
-          to: toArr.map((a: any) => ({ name: a.name || a.email || '', email: a.email || '' })),
-          cc: ccArr.length > 0 ? ccArr.map((a: any) => ({ name: a.name || a.email || '', email: a.email || '' })) : undefined,
-          subject: e.subject || '(No Subject)',
-          preview: e.bodyText ? e.bodyText.slice(0, 120) : (e.bodyHtml ? e.bodyHtml.replace(/<[^>]+>/g, '').slice(0, 120) : ''),
-          body: e.bodyHtml || e.bodyText || '',
-          date: isToday ? 'Today' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          time: d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
-          read: e.isRead ?? true,
-          starred: e.isStarred ?? false,
-          important: false,
-          hasAttachments: e.hasAttachments ?? false,
-          attachments: Array.isArray(e.attachments)
-            ? e.attachments.map((attachment: any) => ({
-                id: attachment.id,
-                name: attachment.filename || "Attachment",
-                size: formatFileSize(typeof attachment.size === "number" ? attachment.size : Number(attachment.size || 0)),
-                type: attachment.mimeType || "file",
-                url: buildAttachmentUrl(attachment.path),
-              }))
-            : [],
-          labels: [],
-          folder: (e.folder || 'INBOX').toLowerCase(),
-        };
-      });
+      const mapped: Email[] = (Array.isArray(data) ? data : []).map((email) => mapEmailResponseToEmail(email as EmailResponse));
       setEmails(mapped);
     } catch (err) {
       console.error('Failed to load emails:', err);
@@ -1733,10 +1946,19 @@ const LetterBoxPage = () => {
   // Filtered emails
   const filteredEmails = useMemo(() => {
     let result = emails.filter((e) => {
+      if (isEmailSnoozed(e)) return false;
       if (selectedFolder === "starred") return e.starred;
       if (selectedFolder === "important") return e.important;
       return e.folder === selectedFolder;
     });
+
+    if (selectedLabelId) {
+      result = result.filter((email) => email.labels.includes(selectedLabelId));
+    }
+
+    if (attachmentsOnly) {
+      result = result.filter((email) => email.hasAttachments);
+    }
 
     if (searchTerm) {
       result = result.filter(
@@ -1747,12 +1969,30 @@ const LetterBoxPage = () => {
       );
     }
 
-    return result;
-  }, [emails, selectedFolder, searchTerm]);
+    return [...result].sort((a, b) => {
+      if (unreadFirst && a.read !== b.read) {
+        return Number(a.read) - Number(b.read);
+      }
+
+      if (starredFirst && a.starred !== b.starred) {
+        return Number(b.starred) - Number(a.starred);
+      }
+
+      if (sortPreference === "sender") {
+        return a.from.name.localeCompare(b.from.name);
+      }
+
+      if (sortPreference === "subject") {
+        return a.subject.localeCompare(b.subject);
+      }
+
+      return (b.sortAt || 0) - (a.sortAt || 0);
+    });
+  }, [attachmentsOnly, emails, searchTerm, selectedFolder, selectedLabelId, sortPreference, starredFirst, unreadFirst]);
 
   // Unread count
   const unreadCount = useMemo(() => {
-    return emails.filter((e) => !e.read && e.folder === "inbox").length;
+    return emails.filter((e) => !e.read && e.folder === "inbox" && !isEmailSnoozed(e)).length;
   }, [emails]);
 
   // Folder counts
@@ -1763,9 +2003,9 @@ const LetterBoxPage = () => {
         f.id === "inbox"
           ? unreadCount
           : f.id === "starred"
-            ? emails.filter((e) => e.starred).length
+            ? emails.filter((e) => e.starred && !isEmailSnoozed(e)).length
             : f.id === "important"
-              ? emails.filter((e) => e.important).length
+              ? emails.filter((e) => e.important && !isEmailSnoozed(e)).length
               : emails.filter((e) => e.folder === f.id).length,
     }));
   }, [emails, unreadCount]);
@@ -1780,7 +2020,7 @@ const LetterBoxPage = () => {
   };
 
   const handleSelectAll = () => {
-    if (selectedEmails.length === filteredEmails.length) {
+    if (filteredEmails.length === 0 || selectedEmails.length === filteredEmails.length) {
       setSelectedEmails([]);
     } else {
       setSelectedEmails(filteredEmails.map((e) => e.id));
@@ -1789,84 +2029,87 @@ const LetterBoxPage = () => {
 
   const handleStarEmail = async (emailId: string) => {
     const email = emails.find((e) => e.id === emailId);
-    const newStarred = !email?.starred;
-    // Optimistic update
-    setEmails((prev) =>
-      prev.map((e) => (e.id === emailId ? { ...e, starred: newStarred } : e))
-    );
+    if (!email) return;
+
+    const newStarred = !email.starred;
+    patchEmailInState(emailId, (current) => ({ ...current, starred: newStarred }));
     try {
-      await apiToggleStar(emailId, newStarred);
+      const updated = await apiToggleStar(emailId, newStarred);
+      mergeEmailResponse(updated);
     } catch {
-      // Revert on error
-      setEmails((prev) =>
-        prev.map((e) => (e.id === emailId ? { ...e, starred: !newStarred } : e))
-      );
+      patchEmailInState(emailId, (current) => ({ ...current, starred: email.starred }));
     }
   };
 
-  const handleMarkRead = async (emailId: string) => {
-    setEmails((prev) =>
-      prev.map((e) => (e.id === emailId ? { ...e, read: true } : e))
-    );
+  const handleReadStatus = async (emailId: string, isRead: boolean) => {
+    const email = emails.find((entry) => entry.id === emailId);
+    if (!email) return;
+
+    patchEmailInState(emailId, (current) => ({ ...current, read: isRead }));
     try {
-      await apiMarkAsRead(emailId);
+      const updated = await apiUpdateReadStatus(emailId, isRead);
+      mergeEmailResponse(updated);
     } catch {
-      // Silently fail
+      patchEmailInState(emailId, (current) => ({ ...current, read: email.read }));
     }
   };
 
   const handleArchiveEmail = async (emailId: string) => {
-    setEmails((prev) =>
-      prev.map((e) => (e.id === emailId ? { ...e, folder: "archive" } : e))
-    );
+    const email = emails.find((entry) => entry.id === emailId);
+    if (!email) return;
+
+    patchEmailInState(emailId, (current) => ({ ...current, folder: "archive" }));
     if (activeEmail?.id === emailId) {
       setActiveEmail(null);
     }
     try {
-      await apiMoveToFolder(emailId, 'ARCHIVE');
+      const updated = await apiMoveToFolder(emailId, 'ARCHIVE');
+      mergeEmailResponse(updated);
       toast({ title: "Email Archived", description: "The email has been moved to archive." });
     } catch {
+      patchEmailInState(emailId, (current) => ({ ...current, folder: email.folder }));
       toast({ title: "Archive Failed", description: "Could not archive the email.", variant: "destructive" });
     }
   };
 
   const handleDeleteEmail = async (emailId: string) => {
-    setEmails((prev) =>
-      prev.map((e) => (e.id === emailId ? { ...e, folder: "trash" } : e))
-    );
+    const email = emails.find((entry) => entry.id === emailId);
+    if (!email) return;
+
+    patchEmailInState(emailId, (current) => ({ ...current, folder: "trash" }));
     if (activeEmail?.id === emailId) {
       setActiveEmail(null);
     }
     try {
-      await apiMoveToFolder(emailId, 'TRASH');
+      const updated = await apiMoveToFolder(emailId, 'TRASH');
+      mergeEmailResponse(updated);
       toast({ title: "Email Deleted", description: "The email has been moved to trash." });
     } catch {
+      patchEmailInState(emailId, (current) => ({ ...current, folder: email.folder }));
       toast({ title: "Delete Failed", description: "Could not delete the email.", variant: "destructive" });
     }
   };
 
   const handleBulkAction = async (action: "archive" | "delete" | "read" | "unread") => {
     const ids = [...selectedEmails];
+    if (ids.length === 0) return;
+
     // Optimistic local update
-    setEmails((prev) =>
-      prev.map((e) => {
-        if (ids.includes(e.id)) {
-          switch (action) {
-            case "archive":
-              return { ...e, folder: "archive" };
-            case "delete":
-              return { ...e, folder: "trash" };
-            case "read":
-              return { ...e, read: true };
-            case "unread":
-              return { ...e, read: false };
-            default:
-              return e;
-          }
-        }
-        return e;
-      })
-    );
+    setEmails((prev) => prev.map((e) => {
+      if (!ids.includes(e.id)) return e;
+      switch (action) {
+        case "archive":
+          return { ...e, folder: "archive" };
+        case "delete":
+          return { ...e, folder: "trash" };
+        case "read":
+          return { ...e, read: true };
+        case "unread":
+          return { ...e, read: false };
+        default:
+          return e;
+      }
+    }));
     setSelectedEmails([]);
     toast({
       title: "Action Completed",
@@ -1879,36 +2122,251 @@ const LetterBoxPage = () => {
         switch (action) {
           case "archive": return apiMoveToFolder(id, 'ARCHIVE');
           case "delete": return apiMoveToFolder(id, 'TRASH');
-          case "read": return apiMarkAsRead(id);
-          case "unread": return apiMarkAsRead(id); // Mark as read for now
+          case "read": return apiUpdateReadStatus(id, true);
+          case "unread": return apiUpdateReadStatus(id, false);
         }
       }));
     } catch {
       // If persisting fails, reload to get correct state
-      loadEmails(true);
+      void loadEmails(true);
     }
   };
 
-  const handleOpenEmail = (email: Email) => {
+  const handleBulkStarSelected = async () => {
+    const ids = [...selectedEmails];
+    if (ids.length === 0) return;
+
+    setEmails((prev) => prev.map((email) => (
+      ids.includes(email.id) ? { ...email, starred: true } : email
+    )));
+
+    try {
+      await Promise.all(ids.map((id) => apiToggleStar(id, true)));
+      toast({ title: "Emails Starred", description: `${ids.length} email(s) starred.` });
+    } catch {
+      void loadEmails(true);
+      toast({ title: "Update Failed", description: "Could not star the selected emails.", variant: "destructive" });
+    }
+  };
+
+  const handleBulkMarkImportant = async () => {
+    const ids = [...selectedEmails];
+    if (ids.length === 0) return;
+
+    setEmails((prev) => prev.map((email) => (
+      ids.includes(email.id) ? { ...email, important: true } : email
+    )));
+
+    try {
+      await Promise.all(ids.map((id) => apiToggleImportant(id, true)));
+      toast({ title: "Emails Updated", description: `${ids.length} email(s) marked as important.` });
+    } catch {
+      void loadEmails(true);
+      toast({ title: "Update Failed", description: "Could not update the selected emails.", variant: "destructive" });
+    }
+  };
+
+  const handleOpenEmail = async (email: Email) => {
     setActiveEmail(email);
     if (!email.read) {
-      setEmails((prev) =>
-        prev.map((e) => (e.id === email.id ? { ...e, read: true } : e))
-      );
+      patchEmailInState(email.id, (current) => ({ ...current, read: true }));
+      try {
+        const updated = await apiUpdateReadStatus(email.id, true);
+        mergeEmailResponse(updated);
+      } catch {
+        patchEmailInState(email.id, (current) => ({ ...current, read: email.read }));
+      }
     }
   };
 
   const handleReply = () => {
     if (activeEmail) {
+      setComposePreset(undefined);
+      setForwardEmail(undefined);
       setReplyToEmail(activeEmail);
       setShowCompose(true);
     }
   };
 
+  const handleReplyAll = () => {
+    if (!activeEmail) return;
+
+    const ownAddresses = new Set(
+      [emailConfigured?.mailboxAddress, mailboxForm.senderEmail]
+        .filter(Boolean)
+        .map((email) => String(email).trim().toLowerCase()),
+    );
+
+    const toRecipients = [activeEmail.from.email, ...activeEmail.to.map((recipient) => recipient.email)]
+      .filter(Boolean)
+      .filter((email) => !ownAddresses.has(email.trim().toLowerCase()));
+    const uniqueToRecipients = Array.from(new Set(toRecipients));
+
+    const ccRecipients = (activeEmail.cc || [])
+      .map((recipient) => recipient.email)
+      .filter(Boolean)
+      .filter((email) => !ownAddresses.has(email.trim().toLowerCase()) && !uniqueToRecipients.includes(email));
+
+    const quotedReply = plainTextToHtml(
+      `\n\nOn ${activeEmail.date} at ${activeEmail.time}, ${activeEmail.from.name} <${activeEmail.from.email}> wrote:\n${htmlToPlainText(activeEmail.body)}`,
+    );
+
+    setReplyToEmail(undefined);
+    setForwardEmail(undefined);
+    setComposePreset({
+      to: uniqueToRecipients.join(", "),
+      cc: Array.from(new Set(ccRecipients)).join(", "),
+      subject: `Re: ${activeEmail.subject}`,
+      bodyHtml: quotedReply,
+    });
+    setShowCompose(true);
+  };
+
   const handleForward = () => {
     if (activeEmail) {
+      setComposePreset(undefined);
+      setReplyToEmail(undefined);
       setForwardEmail(activeEmail);
       setShowCompose(true);
+    }
+  };
+
+  const handleToggleImportant = async (emailId: string) => {
+    const email = emails.find((entry) => entry.id === emailId);
+    if (!email) return;
+
+    const nextImportant = !email.important;
+    patchEmailInState(emailId, (current) => ({ ...current, important: nextImportant }));
+
+    try {
+      const updated = await apiToggleImportant(emailId, nextImportant);
+      mergeEmailResponse(updated);
+      toast({
+        title: nextImportant ? "Marked Important" : "Importance Removed",
+        description: nextImportant ? "The email is now marked as important." : "The email is no longer marked as important.",
+      });
+    } catch {
+      patchEmailInState(emailId, (current) => ({ ...current, important: email.important }));
+      toast({ title: "Update Failed", description: "Could not update email importance.", variant: "destructive" });
+    }
+  };
+
+  const handleToggleLabel = async (emailId: string, labelId: string) => {
+    const email = emails.find((entry) => entry.id === emailId);
+    if (!email) return;
+
+    const labelIds = email.labels.includes(labelId)
+      ? email.labels.filter((id) => id !== labelId)
+      : [...email.labels, labelId];
+
+    patchEmailInState(emailId, (current) => ({ ...current, labels: labelIds }));
+
+    try {
+      const updated = await apiSetEmailLabels(emailId, labelIds);
+      mergeEmailResponse(updated);
+    } catch {
+      patchEmailInState(emailId, (current) => ({ ...current, labels: email.labels }));
+      toast({ title: "Label Update Failed", description: "Could not update email labels.", variant: "destructive" });
+    }
+  };
+
+  const handleSnoozeEmail = async (emailId: string) => {
+    const email = emails.find((entry) => entry.id === emailId);
+    if (!email) return;
+
+    const snoozedUntil = getTomorrowMorningIso();
+    patchEmailInState(emailId, (current) => ({ ...current, snoozedUntil }));
+
+    if (activeEmail?.id === emailId) {
+      setActiveEmail(null);
+    }
+
+    try {
+      const updated = await apiSnoozeEmail(emailId, snoozedUntil);
+      mergeEmailResponse(updated);
+      toast({
+        title: "Email Snoozed",
+        description: "The email will return to your inbox tomorrow morning.",
+      });
+    } catch {
+      patchEmailInState(emailId, (current) => ({ ...current, snoozedUntil: email.snoozedUntil ?? null }));
+      toast({ title: "Snooze Failed", description: "Could not snooze the email.", variant: "destructive" });
+    }
+  };
+
+  const handlePrintEmail = useCallback((email: Email) => {
+    const printWindow = window.open("", "_blank", "noopener,noreferrer,width=900,height=700");
+    if (!printWindow) {
+      toast({ title: "Print Blocked", description: "Please allow pop-ups to print this email.", variant: "destructive" });
+      return;
+    }
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>${escapeHtml(email.subject)}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 24px; color: #0f172a; }
+            .meta { margin-bottom: 24px; color: #475569; }
+            .meta p { margin: 4px 0; }
+          </style>
+        </head>
+        <body>
+          <h1>${escapeHtml(email.subject)}</h1>
+          <div class="meta">
+            <p><strong>From:</strong> ${escapeHtml(email.from.name)} &lt;${escapeHtml(email.from.email)}&gt;</p>
+            <p><strong>To:</strong> ${escapeHtml(email.to.map((recipient) => recipient.email).join(", "))}</p>
+            <p><strong>Date:</strong> ${escapeHtml(`${email.date} ${email.time}`)}</p>
+          </div>
+          <div>${email.body}</div>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  }, [toast]);
+
+  const handleDownloadEmail = useCallback((email: Email) => {
+    const html = `
+      <html>
+        <head><meta charset="utf-8" /><title>${escapeHtml(email.subject)}</title></head>
+        <body>
+          <h1>${escapeHtml(email.subject)}</h1>
+          <p><strong>From:</strong> ${escapeHtml(email.from.name)} &lt;${escapeHtml(email.from.email)}&gt;</p>
+          <p><strong>To:</strong> ${escapeHtml(email.to.map((recipient) => recipient.email).join(", "))}</p>
+          <p><strong>Date:</strong> ${escapeHtml(`${email.date} ${email.time}`)}</p>
+          <hr />
+          <div>${email.body}</div>
+        </body>
+      </html>
+    `;
+
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = window.URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `${email.subject.replace(/[^a-z0-9-_]+/gi, "_").slice(0, 80) || "email"}.html`;
+    anchor.click();
+    window.URL.revokeObjectURL(url);
+  }, []);
+
+  const handleCreateLabel = async () => {
+    const name = window.prompt("Enter a new label name");
+    if (!name || !name.trim()) return;
+
+    const color = NEW_LABEL_COLORS[availableLabels.length % NEW_LABEL_COLORS.length];
+
+    try {
+      const created = await apiCreateEmailLabel({ name: name.trim(), color });
+      setAvailableLabels((prev) => [...prev, {
+        id: created.id,
+        name: created.name,
+        color: created.color || color,
+      }]);
+      toast({ title: "Label Created", description: `${created.name} is now available in Letter Box.` });
+    } catch {
+      toast({ title: "Label Creation Failed", description: "Could not create the label.", variant: "destructive" });
     }
   };
 
@@ -2173,15 +2631,21 @@ const LetterBoxPage = () => {
                 <h3 className="text-xs font-bold text-[#475569] uppercase tracking-wider">
                   Labels
                 </h3>
-                <button className="p-1 rounded-md hover:bg-white/10">
+                <button onClick={() => void handleCreateLabel()} className="p-1 rounded-md hover:bg-white/10">
                   <FolderPlus size={14} className="text-[#475569]" />
                 </button>
               </div>
               <div className="space-y-1">
-                {labels.map((label) => (
+                {availableLabels.map((label) => (
                   <button
                     key={label.id}
-                    className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-[#475569] hover:bg-[#F8FAFC] transition-colors"
+                    onClick={() => setSelectedLabelId((current) => current === label.id ? null : label.id)}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors",
+                      selectedLabelId === label.id
+                        ? "bg-[#0891B2]/10 text-[#0891B2]"
+                        : "text-[#475569] hover:bg-[#F8FAFC]",
+                    )}
                   >
                     <span
                       className="w-3 h-3 rounded-full"
@@ -2283,11 +2747,11 @@ const LetterBoxPage = () => {
                           Mark as Unread
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="rounded-md">
+                        <DropdownMenuItem onClick={() => void handleBulkStarSelected()} className="rounded-md">
                           <Star size={14} className="mr-2" />
                           Star Selected
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="rounded-md">
+                        <DropdownMenuItem onClick={() => void handleBulkMarkImportant()} className="rounded-md">
                           <Flag size={14} className="mr-2" />
                           Mark Important
                         </DropdownMenuItem>
@@ -2325,30 +2789,30 @@ const LetterBoxPage = () => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48 rounded-md">
-                    <DropdownMenuItem className="rounded-md">
+                    <DropdownMenuItem onClick={() => setSortPreference("date")} className="rounded-md">
                       <Clock size={14} className="mr-2" />
-                      Sort by Date
+                      Sort by Date {sortPreference === "date" ? "✓" : ""}
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="rounded-md">
+                    <DropdownMenuItem onClick={() => setSortPreference("sender")} className="rounded-md">
                       <AtSign size={14} className="mr-2" />
-                      Sort by Sender
+                      Sort by Sender {sortPreference === "sender" ? "✓" : ""}
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="rounded-md">
+                    <DropdownMenuItem onClick={() => setSortPreference("subject")} className="rounded-md">
                       <FileText size={14} className="mr-2" />
-                      Sort by Subject
+                      Sort by Subject {sortPreference === "subject" ? "✓" : ""}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem className="rounded-md">
+                    <DropdownMenuItem onClick={() => setUnreadFirst((current) => !current)} className="rounded-md">
                       <Mail size={14} className="mr-2" />
-                      Unread First
+                      {unreadFirst ? "Disable Unread First" : "Unread First"}
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="rounded-md">
+                    <DropdownMenuItem onClick={() => setStarredFirst((current) => !current)} className="rounded-md">
                       <Star size={14} className="mr-2" />
-                      Starred First
+                      {starredFirst ? "Disable Starred First" : "Starred First"}
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="rounded-md">
+                    <DropdownMenuItem onClick={() => setAttachmentsOnly((current) => !current)} className="rounded-md">
                       <Paperclip size={14} className="mr-2" />
-                      With Attachments
+                      {attachmentsOnly ? "Show All Emails" : "With Attachments"}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -2363,12 +2827,13 @@ const LetterBoxPage = () => {
                     <EmailListItem
                       key={email.id}
                       email={email}
+                      labels={availableLabels}
                       isSelected={selectedEmails.includes(email.id)}
                       isActive={activeEmail?.id === email.id}
                       onSelect={() => handleSelectEmail(email.id)}
-                      onClick={() => handleOpenEmail(email)}
+                      onClick={() => void handleOpenEmail(email)}
                       onStar={() => handleStarEmail(email.id)}
-                      onMarkRead={() => handleMarkRead(email.id)}
+                      onMarkRead={() => handleReadStatus(email.id, !email.read)}
                       onArchive={() => handleArchiveEmail(email.id)}
                       onDelete={() => handleDeleteEmail(email.id)}
                     />
@@ -2429,13 +2894,20 @@ const LetterBoxPage = () => {
               <div className="flex-1 bg-white">
                 <EmailDetailView
                   email={activeEmail}
+                  labels={availableLabels}
                   onClose={() => setActiveEmail(null)}
                   onReply={handleReply}
+                  onReplyAll={handleReplyAll}
                   onForward={handleForward}
                   onStar={() => handleStarEmail(activeEmail.id)}
                   onArchive={() => handleArchiveEmail(activeEmail.id)}
                   onDelete={() => handleDeleteEmail(activeEmail.id)}
-                  onMarkRead={() => handleMarkRead(activeEmail.id)}
+                  onMarkRead={() => handleReadStatus(activeEmail.id, !activeEmail.read)}
+                  onPrint={() => handlePrintEmail(activeEmail)}
+                  onDownload={() => handleDownloadEmail(activeEmail)}
+                  onToggleLabel={(labelId) => handleToggleLabel(activeEmail.id, labelId)}
+                  onToggleImportant={() => handleToggleImportant(activeEmail.id)}
+                  onSnooze={() => handleSnoozeEmail(activeEmail.id)}
                 />
               </div>
             ) : (
@@ -2497,10 +2969,12 @@ const LetterBoxPage = () => {
           setShowCompose(false);
           setReplyToEmail(undefined);
           setForwardEmail(undefined);
-          loadEmails();
+          setComposePreset(undefined);
+          void loadEmails();
         }}
         replyTo={replyToEmail}
         forwardEmail={forwardEmail}
+        preset={composePreset}
       />
     </div>
   );

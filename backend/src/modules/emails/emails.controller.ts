@@ -36,10 +36,32 @@ export class EmailsController {
         } catch (e) { next(e); }
     }
 
+    async saveDraft(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const files = ((req as any).files as Express.Multer.File[] | undefined) || [];
+            const result = await emailsService.saveDraft(
+                req.context.tenantId,
+                req.context.userId,
+                sanitizeBody(req.body),
+                {
+                    employeeId: req.context.employeeId,
+                    userId: req.context.userId,
+                },
+                files,
+            );
+            sendCreated(res, result, result.scheduledFor ? 'Email scheduled' : 'Draft saved');
+        } catch (e) { next(e); }
+    }
+
     async markAsRead(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const email = await emailsService.markAsRead(req.params.id, req.context.tenantId, req.context.userId);
-            sendSuccess(res, email, 'Email marked as read');
+            const email = await emailsService.markAsRead(
+                req.params.id,
+                req.context.tenantId,
+                req.context.userId,
+                req.body?.isRead,
+            );
+            sendSuccess(res, email, req.body?.isRead === false ? 'Email marked as unread' : 'Email marked as read');
         } catch (e) { next(e); }
     }
 
@@ -91,6 +113,56 @@ export class EmailsController {
         try {
             const settings = await emailsService.updateMailboxSettings(req.context.userId, sanitizeBody(req.body));
             sendSuccess(res, settings, 'Mailbox settings updated');
+        } catch (e) { next(e); }
+    }
+
+    async getLabels(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const labels = await emailsService.getLabels(req.context.tenantId);
+            sendSuccess(res, labels);
+        } catch (e) { next(e); }
+    }
+
+    async createLabel(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const label = await emailsService.createLabel(req.context.tenantId, sanitizeBody(req.body));
+            sendCreated(res, label, 'Email label created');
+        } catch (e) { next(e); }
+    }
+
+    async setLabels(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const email = await emailsService.setLabels(
+                req.params.id,
+                req.context.tenantId,
+                req.context.userId,
+                req.body?.labelIds || [],
+            );
+            sendSuccess(res, email, 'Email labels updated');
+        } catch (e) { next(e); }
+    }
+
+    async toggleImportant(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const email = await emailsService.toggleImportant(
+                req.params.id,
+                req.context.tenantId,
+                req.context.userId,
+                req.body?.isImportant,
+            );
+            sendSuccess(res, email, req.body?.isImportant ? 'Email marked as important' : 'Email importance removed');
+        } catch (e) { next(e); }
+    }
+
+    async snooze(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const email = await emailsService.snooze(
+                req.params.id,
+                req.context.tenantId,
+                req.context.userId,
+                req.body?.snoozedUntil,
+            );
+            sendSuccess(res, email, req.body?.snoozedUntil ? 'Email snoozed' : 'Email snooze cleared');
         } catch (e) { next(e); }
     }
 }

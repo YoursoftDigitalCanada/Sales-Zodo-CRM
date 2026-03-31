@@ -28,6 +28,26 @@ export interface SendEmailDto {
     }[];
 }
 
+export interface SaveDraftDto {
+    toAddresses?: { email: string; name?: string }[];
+    ccAddresses?: { email: string; name?: string }[];
+    bccAddresses?: { email: string; name?: string }[];
+    subject?: string;
+    bodyText?: string;
+    bodyHtml?: string;
+    fromName?: string;
+    fromAddress?: string;
+    clientId?: string;
+    leadId?: string;
+    scheduledFor?: string | null;
+    attachments?: {
+        filename: string;
+        mimeType: string;
+        size: number;
+        path: string;
+    }[];
+}
+
 export interface EmailQueryDto {
     page?: number;
     limit?: number;
@@ -38,6 +58,12 @@ export interface EmailQueryDto {
     labelId?: string;
     sortBy?: 'receivedAt' | 'subject';
     sortOrder?: 'asc' | 'desc';
+}
+
+export interface EmailLabelResponseDto {
+    id: string;
+    name: string;
+    color: string | null;
 }
 
 export interface EmailResponseDto {
@@ -54,7 +80,11 @@ export interface EmailResponseDto {
     status: EmailStatus;
     isRead: boolean;
     isStarred: boolean;
+    isImportant: boolean;
     hasAttachments: boolean;
+    snoozedUntil: Date | null;
+    scheduledFor: Date | null;
+    labels: EmailLabelResponseDto[];
     attachments: {
         id: string;
         filename: string;
@@ -124,9 +154,30 @@ export interface UpdateMailboxSettingsDto {
     imap?: UpdateMailboxImapDto;
 }
 
+export interface UpdateEmailReadDto {
+    isRead?: boolean;
+}
+
+export interface UpdateEmailImportantDto {
+    isImportant: boolean;
+}
+
+export interface UpdateEmailLabelsDto {
+    labelIds: string[];
+}
+
+export interface SnoozeEmailDto {
+    snoozedUntil?: string | null;
+}
+
+export interface CreateEmailLabelDto {
+    name: string;
+    color?: string | null;
+}
+
 type EmailWithRelations = Email & {
     sentBy?: { id: string; user: { firstName: string; lastName: string } } | null;
-    labels?: { id: string; label: { id: string; name: string } }[];
+    labels?: { id: string; label: { id: string; name: string; color: string | null } }[];
     attachments?: { id: string; filename: string; mimeType: string; size: bigint; path: string }[];
 };
 
@@ -145,7 +196,15 @@ export function toEmailResponseDto(e: EmailWithRelations): EmailResponseDto {
         status: e.status,
         isRead: e.isRead,
         isStarred: e.isStarred,
+        isImportant: e.isImportant,
         hasAttachments: e.hasAttachments,
+        snoozedUntil: e.snoozedUntil,
+        scheduledFor: e.scheduledFor,
+        labels: (e.labels || []).map((assignment) => ({
+            id: assignment.label.id,
+            name: assignment.label.name,
+            color: assignment.label.color ?? null,
+        })),
         attachments: (e.attachments || []).map((attachment) => ({
             id: attachment.id,
             filename: attachment.filename,

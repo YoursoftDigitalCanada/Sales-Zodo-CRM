@@ -9,6 +9,7 @@ export interface SendEmailPayload {
     bodyText?: string;
     clientId?: string;
     leadId?: string;
+    scheduledFor?: string | null;
     attachments?: File[];
 }
 
@@ -25,8 +26,15 @@ export interface EmailResponse {
     status: string;
     isRead: boolean;
     isStarred?: boolean;
+    isImportant?: boolean;
     folder?: string;
     hasAttachments?: boolean;
+    snoozedUntil?: string | null;
+    labels?: {
+        id: string;
+        name: string;
+        color: string | null;
+    }[];
     attachments?: {
         id: string;
         filename: string;
@@ -37,6 +45,12 @@ export interface EmailResponse {
     createdAt: string;
     receivedAt?: string;
     sentAt?: string;
+}
+
+export interface EmailLabel {
+    id: string;
+    name: string;
+    color: string | null;
 }
 
 export type EmailEncryption = "SSL/TLS" | "STARTTLS" | "NONE";
@@ -111,8 +125,27 @@ export async function sendEmail(payload: SendEmailPayload): Promise<EmailRespons
     return response.data?.data || response.data;
 }
 
+export async function saveDraft(payload: SendEmailPayload): Promise<EmailResponse> {
+    const hasAttachments = Array.isArray(payload.attachments) && payload.attachments.length > 0;
+
+    const response = hasAttachments
+        ? await api.post("/emails/drafts", buildEmailFormData(payload), {
+            headers: {
+                "Content-Type": "multipart/form-data",
+            },
+        })
+        : await api.post("/emails/drafts", payload);
+
+    return response.data?.data || response.data;
+}
+
 export async function markAsRead(id: string): Promise<EmailResponse> {
-    const response = await api.patch(`/emails/${id}/read`);
+    const response = await api.patch(`/emails/${id}/read`, { isRead: true });
+    return response.data?.data || response.data;
+}
+
+export async function updateReadStatus(id: string, isRead: boolean): Promise<EmailResponse> {
+    const response = await api.patch(`/emails/${id}/read`, { isRead });
     return response.data?.data || response.data;
 }
 
@@ -122,6 +155,21 @@ export async function deleteEmail(id: string): Promise<void> {
 
 export async function toggleStar(id: string, isStarred: boolean): Promise<EmailResponse> {
     const response = await api.patch(`/emails/${id}/star`, { isStarred });
+    return response.data?.data || response.data;
+}
+
+export async function toggleImportant(id: string, isImportant: boolean): Promise<EmailResponse> {
+    const response = await api.patch(`/emails/${id}/important`, { isImportant });
+    return response.data?.data || response.data;
+}
+
+export async function setEmailLabels(id: string, labelIds: string[]): Promise<EmailResponse> {
+    const response = await api.patch(`/emails/${id}/labels`, { labelIds });
+    return response.data?.data || response.data;
+}
+
+export async function snoozeEmail(id: string, snoozedUntil: string | null): Promise<EmailResponse> {
+    const response = await api.patch(`/emails/${id}/snooze`, { snoozedUntil });
     return response.data?.data || response.data;
 }
 
@@ -137,6 +185,16 @@ export async function getEmailConfigStatus(): Promise<{ smtpConfigured: boolean;
 
 export async function fetchEmailsNow(): Promise<{ fetched: number; error: string | null }> {
     const response = await api.post("/emails/fetch-now");
+    return response.data?.data || response.data;
+}
+
+export async function getEmailLabels(): Promise<EmailLabel[]> {
+    const response = await api.get("/emails/labels");
+    return response.data?.data || response.data || [];
+}
+
+export async function createEmailLabel(payload: { name: string; color?: string | null }): Promise<EmailLabel> {
+    const response = await api.post("/emails/labels", payload);
     return response.data?.data || response.data;
 }
 
@@ -171,6 +229,10 @@ function buildEmailFormData(payload: SendEmailPayload): FormData {
 
     if (typeof payload.leadId === "string") {
         formData.append("leadId", payload.leadId);
+    }
+
+    if (typeof payload.scheduledFor === "string") {
+        formData.append("scheduledFor", payload.scheduledFor);
     }
 
     for (const file of payload.attachments || []) {

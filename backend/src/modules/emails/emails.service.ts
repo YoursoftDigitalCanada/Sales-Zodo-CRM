@@ -2,10 +2,12 @@ import { emailsRepository } from './emails.repository';
 import { EmailFolder } from '@prisma/client';
 import {
     SendEmailDto,
+    SaveDraftDto,
     EmailQueryDto,
     MailboxConfigStatusDto,
     MailboxSettingsResponseDto,
     UpdateMailboxSettingsDto,
+    CreateEmailLabelDto,
     toEmailResponseDto,
 } from './emails.dto';
 import { BadRequestError, NotFoundError, ServiceUnavailableError } from '../../common/errors/HttpErrors';
@@ -13,6 +15,7 @@ import { ErrorCodes } from '../../common/errors/errorCodes';
 import { activityLogger } from '../../common/services/activity-logger.service';
 import { mailerService } from '../../common/services/mailer.service';
 import { mailboxRepository } from './mailbox.repository';
+import { config } from '../../config';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -52,6 +55,13 @@ export class EmailsService {
         }));
     }
 
+    private resolveAttachmentPath(storedPath: string) {
+        const relativePath = storedPath.startsWith('/uploads/')
+            ? storedPath.replace(/^\/uploads\/?/, '')
+            : storedPath.replace(/^\/+/, '');
+        return path.resolve(config.upload.uploadPath, relativePath);
+    }
+
     async getMailboxSettings(userId: string): Promise<MailboxSettingsResponseDto> {
         return mailboxRepository.getMailboxSettings(userId);
     }
@@ -62,6 +72,29 @@ export class EmailsService {
 
     async getMailboxConfigStatus(userId: string): Promise<MailboxConfigStatusDto> {
         return mailboxRepository.getConfigStatus(userId);
+    }
+
+    async getLabels(tenantId: string) {
+        const labels = await emailsRepository.listLabels(tenantId);
+        return labels.map((label) => ({
+            id: label.id,
+            name: label.name,
+            color: label.color ?? null,
+        }));
+    }
+
+    async createLabel(tenantId: string, data: CreateEmailLabelDto) {
+        const name = data.name.trim();
+        if (!name) {
+            throw new BadRequestError('Label name is required', ErrorCodes.INVALID_INPUT);
+        }
+
+        const label = await emailsRepository.createLabel(tenantId, name, data.color ?? null);
+        return {
+            id: label.id,
+            name: label.name,
+            color: label.color ?? null,
+        };
     }
 
     private async getRequiredMailboxConfig(userId: string) {
@@ -181,10 +214,34 @@ export class EmailsService {
         return dto;
     }
 
-    async markAsRead(id: string, tenantId: string, mailboxOwnerUserId: string) {
+    async saveDraft(
+        tenantId: string,
+        mailboxOwnerUserId: string,
+        data: SaveDraftDto,
+        actor?: { employeeId?: string; userId?: string },
+        files: Express.Multer.File[] = [],
+    ) {
+        const uploadedAttachments = await this.buildUploadedAttachments(tenantId, files);
+        const draft = await emailsRepository.saveDraft(tenantId, {
+            ...data,
+            attachments: uploadedAttachments.map(({ filename, mimeType, size, path: attachmentPath }) => ({
+                filename,
+                mimeType,
+                size,
+                path: attachmentPath,
+            })),
+        }, {
+            sentByEmployeeId: actor?.employeeId,
+            mailboxOwnerUserId,
+        });
+
+        return toEmailResponseDto(draft);
+    }
+
+    async markAsRead(id: string, tenantId: string, mailboxOwnerUserId: string, isRead: boolean = true) {
         const existing = await emailsRepository.findById(id, tenantId, mailboxOwnerUserId);
         if (!existing) throw new NotFoundError('Email not found', ErrorCodes.RESOURCE_NOT_FOUND);
-        const email = await emailsRepository.markAsRead(id, tenantId, mailboxOwnerUserId);
+        const email = await emailsRepository.updateReadStatus(id, tenantId, mailboxOwnerUserId, isRead);
         return toEmailResponseDto(email);
     }
 
@@ -192,6 +249,37 @@ export class EmailsService {
         const existing = await emailsRepository.findById(id, tenantId, mailboxOwnerUserId);
         if (!existing) throw new NotFoundError('Email not found', ErrorCodes.RESOURCE_NOT_FOUND);
         const email = await emailsRepository.toggleStar(id, tenantId, mailboxOwnerUserId, isStarred);
+        return toEmailResponseDto(email);
+    }
+
+    async toggleImportant(id: string, tenantId: string, mailboxOwnerUserId: string, isImportant: boolean) {
+        const existing = await emailsRepository.findById(id, tenantId, mailboxOwnerUserId);
+        if (!existing) throw new NotFoundError('Email not found', ErrorCodes.RESOURCE_NOT_FOUND);
+        const email = await emailsRepository.toggleImportant(id, tenantId, mailboxOwnerUserId, Boolean(isImportant));
+        return toEmailResponseDto(email);
+    }
+
+    async setLabels(id: string, tenantId: string, mailboxOwnerUserId: string, labelIds: string[]) {
+        const existing = await emailsRepository.findById(id, tenantId, mailboxOwnerUserId);
+        if (!existing) throw new NotFoundError('Email not found', ErrorCodes.RESOURCE_NOT_FOUND);
+        const email = await emailsRepository.setLabels(id, tenantId, mailboxOwnerUserId, labelIds);
+        return toEmailResponseDto(email);
+    }
+
+    async snooze(id: string, tenantId: string, mailboxOwnerUserId: string, snoozedUntil?: string | null) {
+        const existing = await emailsRepository.findById(id, tenantId, mailboxOwnerUserId);
+        if (!existing) throw new NotFoundError('Email not found', ErrorCodes.RESOURCE_NOT_FOUND);
+
+        let snoozeAt: Date | null = null;
+        if (typeof snoozedUntil === 'string' && snoozedUntil.trim()) {
+            const parsed = new Date(snoozedUntil);
+            if (Number.isNaN(parsed.getTime())) {
+                throw new BadRequestError('Invalid snooze date', ErrorCodes.INVALID_INPUT);
+            }
+            snoozeAt = parsed;
+        }
+
+        const email = await emailsRepository.snooze(id, tenantId, mailboxOwnerUserId, snoozeAt);
         return toEmailResponseDto(email);
     }
 
@@ -214,6 +302,73 @@ export class EmailsService {
         });
 
         await emailsRepository.delete(id, tenantId, mailboxOwnerUserId);
+    }
+
+    async sendDueScheduledDrafts() {
+        const drafts = await emailsRepository.findScheduledDraftsDue();
+
+        for (const draft of drafts) {
+            try {
+                const mailboxOwnerUserId = draft.mailboxOwnerUserId;
+                if (!mailboxOwnerUserId) {
+                    continue;
+                }
+
+                const mailboxConfig = await this.getRequiredMailboxConfig(mailboxOwnerUserId);
+                const smtpConfigured = Boolean(mailboxConfig.smtp.host && mailboxConfig.smtp.user && mailboxConfig.smtp.pass);
+                if (!smtpConfigured) {
+                    continue;
+                }
+
+                const toAddresses = Array.isArray(draft.toAddresses)
+                    ? draft.toAddresses.map((address: any) => typeof address === 'string' ? address : address.email).filter(Boolean)
+                    : [];
+
+                if (toAddresses.length === 0) {
+                    continue;
+                }
+
+                const attachments = await Promise.all((draft.attachments || []).map(async (attachment) => ({
+                    filename: attachment.filename,
+                    contentType: attachment.mimeType,
+                    content: await fs.readFile(this.resolveAttachmentPath(attachment.path)),
+                })));
+
+                const senderEmail = mailboxConfig.smtp.senderEmail || mailboxConfig.smtp.user;
+                const senderName = mailboxConfig.smtp.senderName || 'ZODO CRM';
+
+                const delivery = await mailerService.sendMailWithConfigDetailed(
+                    {
+                        host: mailboxConfig.smtp.host,
+                        port: mailboxConfig.smtp.port,
+                        user: mailboxConfig.smtp.user,
+                        pass: mailboxConfig.smtp.pass,
+                        encryption: mailboxConfig.smtp.encryption,
+                        senderName,
+                        senderEmail,
+                    },
+                    {
+                        to: toAddresses,
+                        subject: draft.subject,
+                        html: draft.bodyHtml || draft.bodyText || '',
+                        text: draft.bodyText || undefined,
+                        attachments,
+                    },
+                );
+
+                if (!delivery.sent) {
+                    continue;
+                }
+
+                await emailsRepository.markDraftSent(draft.id, {
+                    fromName: senderName,
+                    fromAddress: senderEmail,
+                    sentAt: new Date(),
+                });
+            } catch (error) {
+                console.error('[EmailScheduler] Failed to send scheduled draft', draft.id, error);
+            }
+        }
     }
 }
 

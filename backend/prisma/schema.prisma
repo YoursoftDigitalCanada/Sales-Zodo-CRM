@@ -3797,7 +3797,10 @@ model Email {
   // Flags
   isRead          Boolean       @default(false)
   isStarred       Boolean       @default(false)
+  isImportant     Boolean       @default(false)
   hasAttachments  Boolean       @default(false)
+  snoozedUntil    DateTime?
+  scheduledFor    DateTime?
   
   // Size (for quota)
   size            BigInt        @default(0)
@@ -3851,6 +3854,9 @@ model Email {
   @@index([messageId])
   @@index([threadId])
   @@index([isRead])
+  @@index([isImportant])
+  @@index([snoozedUntil])
+  @@index([scheduledFor])
   @@index([deletedAt])
   @@index([clientId])
   @@index([contactId])

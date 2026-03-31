@@ -80,7 +80,8 @@ export const createEstimateSchema = z.object({
         totalEstimate: z.number().min(0),
         snowMode: z.boolean().optional(),
         notes: z.string().max(2000).optional(),
-        clientId: z.string().uuid().optional(),
+        clientId: z.string().uuid().optional().nullable(),
+        leadId: z.string().uuid().optional().nullable(),
         // New fields
         pitch: pitchSchema,
         roofType: roofTypeSchema,
@@ -115,6 +116,7 @@ export const updateEstimateSchema = z.object({
         snowMode: z.boolean().optional(),
         notes: z.string().max(2000).optional(),
         clientId: z.string().uuid().optional().nullable(),
+        leadId: z.string().uuid().optional().nullable(),
         // New fields
         pitch: pitchSchema,
         roofType: roofTypeSchema,
@@ -145,6 +147,7 @@ export const estimateQuerySchema = z.object({
         limit: z.coerce.number().int().positive().max(100).optional(),
         search: z.string().optional(),
         clientId: z.string().uuid().optional(),
+        leadId: z.string().uuid().optional(),
         sortBy: z.enum(['createdAt', 'totalEstimate', 'roofAreaSqft', 'address']).optional(),
         sortOrder: z.enum(['asc', 'desc']).optional(),
     }),

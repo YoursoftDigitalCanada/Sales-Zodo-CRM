@@ -35,6 +35,7 @@ export interface ManualEntryDto {
     eaveLengthFt?: number;
     rakeLengthFt?: number;
     clientId?: string;
+    leadId?: string;
     notes?: string;
 }
 
@@ -54,7 +55,8 @@ export interface CreateEstimateDto {
     totalEstimate: number;
     snowMode?: boolean;
     notes?: string;
-    clientId?: string;
+    clientId?: string | null;
+    leadId?: string | null;
     // New fields
     pitch?: string;
     roofType?: string;
@@ -113,7 +115,8 @@ export interface UpdateEstimateDto {
     totalEstimate?: number;
     snowMode?: boolean;
     notes?: string;
-    clientId?: string;
+    clientId?: string | null;
+    leadId?: string | null;
     // New fields
     pitch?: string;
     roofType?: string;
@@ -174,6 +177,7 @@ export interface EstimateQueryDto {
     limit?: number;
     search?: string;
     clientId?: string;
+    leadId?: string;
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
 }

@@ -83,6 +83,10 @@ const fmtPct = (n: number | null | undefined) =>
 const short = (id: string) => id.slice(0, 8).toUpperCase();
 const fmtDate = (d: string) =>
   new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+const getEstimatePartyName = (estimate: RoofEstimate) => {
+  const leadName = `${estimate.lead?.firstName || ""} ${estimate.lead?.lastName || ""}`.trim();
+  return estimate.client?.clientName || leadName || estimate.lead?.companyName || "—";
+};
 
 /* ─── Stat Card (matches Client List) ────────────────────── */
 
@@ -208,7 +212,7 @@ function EstimateRow({
         </div>
       </td>
       <td className="py-4 px-4">
-        <span className="text-sm font-medium text-[#0F172A]">{est.client?.clientName || "—"}</span>
+        <span className="text-sm font-medium text-[#0F172A]">{getEstimatePartyName(est)}</span>
       </td>
       <td className="py-4 px-4">
         <span className="text-sm text-[#475569] truncate max-w-[200px] block">{est.address}</span>
@@ -329,7 +333,7 @@ function EstimateCard({
       <div className="mb-3">
         <p className="font-mono text-xs text-[#94A3B8]">{short(est.id)}</p>
         <h3 className="font-semibold text-[#0F172A] group-hover:text-[#0891B2] transition-colors mt-1 truncate">
-          {est.client?.clientName || "—"}
+          {getEstimatePartyName(est)}
         </h3>
         <p className="text-xs text-[#475569] truncate mt-0.5">{est.address}</p>
       </div>
@@ -417,7 +421,7 @@ export default function RoofEstimator() {
       list = list.filter(
         (e) =>
           e.address.toLowerCase().includes(q) ||
-          e.client?.clientName?.toLowerCase().includes(q) ||
+          getEstimatePartyName(e).toLowerCase().includes(q) ||
           e.id.toLowerCase().includes(q)
       );
     }

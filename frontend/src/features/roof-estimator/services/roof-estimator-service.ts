@@ -18,8 +18,32 @@ export interface RoofEstimate {
     snowMode: boolean;
     notes: string | null;
     clientId: string | null;
+    leadId: string | null;
     createdAt: string;
-    client?: { id: string; clientName: string; companyName: string | null } | null;
+    client?: {
+        id: string;
+        clientName: string;
+        companyName: string | null;
+        primaryEmail: string | null;
+        primaryPhone: string | null;
+        streetAddress: string | null;
+        suite: string | null;
+        city: string | null;
+        province: string | null;
+        postalCode: string | null;
+    } | null;
+    lead?: {
+        id: string;
+        firstName: string;
+        lastName: string;
+        email: string | null;
+        phone: string | null;
+        companyName: string | null;
+        propertyAddress: string | null;
+        city: string | null;
+        state: string | null;
+        zipCode: string | null;
+    } | null;
     // Geometry fields
     pitch: string | null;
     pitchDegrees: number | null;
@@ -162,7 +186,8 @@ export interface SaveEstimatePayload {
     totalEstimate: number;
     snowMode: boolean;
     notes?: string;
-    clientId?: string;
+    clientId?: string | null;
+    leadId?: string | null;
     // New fields
     pitch?: string;
     roofType?: string;

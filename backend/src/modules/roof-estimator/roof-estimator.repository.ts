@@ -9,7 +9,34 @@ import { planAreaToTrueArea, pitchToDegrees, estimateRidgeLength, estimateHipLen
 const prisma = new PrismaClient();
 
 const estimateInclude = {
-    client: { select: { id: true, clientName: true, companyName: true } },
+    client: {
+        select: {
+            id: true,
+            clientName: true,
+            companyName: true,
+            primaryEmail: true,
+            primaryPhone: true,
+            streetAddress: true,
+            suite: true,
+            city: true,
+            province: true,
+            postalCode: true,
+        },
+    },
+    lead: {
+        select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+            companyName: true,
+            propertyAddress: true,
+            city: true,
+            state: true,
+            zipCode: true,
+        },
+    },
 };
 
 export class RoofEstimatorRepository {
@@ -54,6 +81,7 @@ export class RoofEstimatorRepository {
                 snowMode: data.snowMode || false,
                 notes: data.notes || null,
                 clientId: data.clientId || null,
+                leadId: data.leadId || null,
                 createdBy,
                 // Wizard workflow
                 status: data.status || 'draft',
@@ -111,6 +139,7 @@ export class RoofEstimatorRepository {
             limit = 20,
             search,
             clientId,
+            leadId,
             sortBy = 'createdAt',
             sortOrder = 'desc',
         } = query;
@@ -118,6 +147,7 @@ export class RoofEstimatorRepository {
         const where: Prisma.RoofEstimateWhereInput = {
             tenantId,
             ...(clientId && { clientId }),
+            ...(leadId && { leadId }),
             ...(search && {
                 address: { contains: search, mode: 'insensitive' as const },
             }),
@@ -170,6 +200,7 @@ export class RoofEstimatorRepository {
                 ...(data.snowMode !== undefined && { snowMode: data.snowMode }),
                 ...(data.notes !== undefined && { notes: data.notes }),
                 ...(data.clientId !== undefined && { clientId: data.clientId }),
+                ...(data.leadId !== undefined && { leadId: data.leadId }),
                 // New fields
                 ...(data.pitch !== undefined && { pitch: data.pitch, pitchDegrees: pitchDeg, trueSurfaceAreaSqft: trueSurface }),
                 ...(data.roofType !== undefined && { roofType: data.roofType }),

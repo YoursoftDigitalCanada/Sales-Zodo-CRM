@@ -16,8 +16,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { generateEstimatePDF, downloadPDFBlob } from "@/features/roof-estimator/utils/generate-estimate-pdf";
 import { buildEstimateSummaryPdf } from "@/features/roof-estimator/utils/generate-estimate-summary-pdf";
-import { getClients, type ClientEntity } from "@/features/clients/services/clients-service";
-import { getLeads, type LeadEntity } from "@/features/leads/services/leads-service";
+import { getClients, getClientById, type ClientEntity } from "@/features/clients/services/clients-service";
+import { getLeads, getLeadById, type LeadEntity } from "@/features/leads/services/leads-service";
 import {
   getWallet,
   chargeEstimate,
@@ -124,6 +124,87 @@ const normalizeEstimatePhotos = (
     } satisfies EstimatePhoto;
   })
   .filter((photo): photo is EstimatePhoto => Boolean(photo));
+
+const readString = (value: unknown): string =>
+  typeof value === "string" ? value.trim() : "";
+
+const joinAddressParts = (...parts: unknown[]) =>
+  parts
+    .map((part) => readString(part))
+    .filter(Boolean)
+    .join(", ");
+
+const getClientRecordName = (client: Record<string, unknown>): string =>
+  readString(client.clientName)
+  || readString(client.ClientName)
+  || readString(client.name)
+  || readString(client.Name);
+
+const getClientRecordEmail = (client: Record<string, unknown>): string =>
+  readString(client.primaryEmail)
+  || readString(client.contactEmail)
+  || readString(client.ContactEmail)
+  || readString(client.email);
+
+const getClientRecordPhone = (client: Record<string, unknown>): string =>
+  readString(client.primaryPhone)
+  || readString(client.primaryContactPhone)
+  || readString(client.contactNo)
+  || readString(client.ContactNo)
+  || readString(client.directPhone)
+  || readString(client.phone)
+  || readString(client.mobile);
+
+const getClientRecordCompany = (client: Record<string, unknown>): string =>
+  readString(client.companyName)
+  || getClientRecordName(client);
+
+const getClientRecordAddress = (client: Record<string, unknown>): string =>
+  joinAddressParts(
+    client.streetAddress,
+    client.billingAddressLine1,
+    client.suite,
+    client.billingAddressLine2,
+    client.city,
+    client.province,
+    client.state,
+    client.postalCode,
+    client.pincode,
+    client.country,
+  );
+
+const getLeadRecordName = (lead: Record<string, unknown>): string => {
+  const fullName = readString(lead.fullName);
+  if (fullName) return fullName;
+
+  const firstName = readString(lead.firstName);
+  const lastName = readString(lead.lastName);
+  const combined = `${firstName} ${lastName}`.trim();
+
+  return combined || readString(lead.name);
+};
+
+const getLeadRecordEmail = (lead: Record<string, unknown>): string =>
+  readString(lead.email);
+
+const getLeadRecordPhone = (lead: Record<string, unknown>): string =>
+  readString(lead.phone)
+  || readString(lead.mobile)
+  || readString(lead.secondaryPhone);
+
+const getLeadRecordCompany = (lead: Record<string, unknown>): string =>
+  readString(lead.companyName)
+  || readString(lead.company);
+
+const getLeadRecordAddress = (lead: Record<string, unknown>): string =>
+  joinAddressParts(
+    lead.propertyAddress,
+    lead.address,
+    lead.city,
+    lead.state,
+    lead.zipCode,
+    lead.postalCode,
+  );
 
 const createEstimateDocumentNumber = (estimateId: string): string =>
   `EST-${estimateId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 8).toUpperCase() || "DRAFT"}`;
@@ -338,6 +419,7 @@ export default function RoofEstimatorWizard() {
   const [clients, setClients] = useState<ClientEntity[]>([]);
   const [leads, setLeads] = useState<LeadEntity[]>([]);
   const [clientSearchQ, setClientSearchQ] = useState("");
+  const [selectionLoading, setSelectionLoading] = useState(false);
 
   // Step 2 specific
   const [addressSuggestions, setAddressSuggestions] = useState<{ description: string; placeId: string }[]>([]);
@@ -373,6 +455,117 @@ export default function RoofEstimatorWizard() {
     }));
   }, []);
 
+  const handleSourceTypeChange = useCallback((nextSourceType: WizardData["sourceType"]) => {
+    setClientSearchQ("");
+    setData((prev) => {
+      if (prev.sourceType === nextSourceType) {
+        return prev;
+      }
+
+      if (nextSourceType === "manual") {
+        return {
+          ...prev,
+          sourceType: "manual",
+          clientId: "",
+          leadId: "",
+        };
+      }
+
+      return {
+        ...prev,
+        sourceType: nextSourceType,
+        clientId: "",
+        leadId: "",
+        clientName: "",
+        clientEmail: "",
+        clientPhone: "",
+        clientCompany: "",
+      };
+    });
+  }, []);
+
+  const clearSelectedSource = useCallback(() => {
+    setClientSearchQ("");
+    setData((prev) => ({
+      ...prev,
+      sourceType: "manual",
+      clientId: "",
+      leadId: "",
+      clientName: "",
+      clientEmail: "",
+      clientPhone: "",
+      clientCompany: "",
+    }));
+  }, []);
+
+  const handleSelectClient = useCallback(async (clientId: string) => {
+    if (!clientId) return;
+
+    setSelectionLoading(true);
+    try {
+      const clientRecord = await getClientById(clientId);
+      const normalizedClient = (clientRecord || {}) as Record<string, unknown>;
+
+      resetEagleViewMeasurement({
+        sourceType: "client",
+        clientId,
+        leadId: "",
+        clientName: getClientRecordName(normalizedClient),
+        clientEmail: getClientRecordEmail(normalizedClient),
+        clientPhone: getClientRecordPhone(normalizedClient),
+        clientCompany: getClientRecordCompany(normalizedClient),
+        address: getClientRecordAddress(normalizedClient),
+        placeId: "",
+        latitude: 0,
+        longitude: 0,
+      });
+      setClientSearchQ("");
+    } catch (error) {
+      console.error("Failed to load client details for roof estimate:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load the selected client details.",
+        variant: "destructive",
+      });
+    } finally {
+      setSelectionLoading(false);
+    }
+  }, [resetEagleViewMeasurement, toast]);
+
+  const handleSelectLead = useCallback(async (leadId: string) => {
+    if (!leadId) return;
+
+    setSelectionLoading(true);
+    try {
+      const leadRecord = await getLeadById(leadId);
+      const normalizedLead = (leadRecord || {}) as Record<string, unknown>;
+
+      resetEagleViewMeasurement({
+        sourceType: "lead",
+        clientId: "",
+        leadId,
+        clientName: getLeadRecordName(normalizedLead),
+        clientEmail: getLeadRecordEmail(normalizedLead),
+        clientPhone: getLeadRecordPhone(normalizedLead),
+        clientCompany: getLeadRecordCompany(normalizedLead),
+        address: getLeadRecordAddress(normalizedLead),
+        placeId: "",
+        latitude: 0,
+        longitude: 0,
+      });
+      setClientSearchQ("");
+    } catch (error) {
+      console.error("Failed to load lead details for roof estimate:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load the selected lead details.",
+        variant: "destructive",
+      });
+    } finally {
+      setSelectionLoading(false);
+    }
+  }, [resetEagleViewMeasurement, toast]);
+
   // Load clients + leads + wallet on mount
   useEffect(() => {
     (async () => {
@@ -400,11 +593,18 @@ export default function RoofEstimatorWizard() {
         try {
           const est = await getEstimateById(id);
           const previewSource = splitPreviewSource(est.satelliteImageUrl || "");
+          const estimateLeadName = est.lead
+            ? `${readString(est.lead.firstName)} ${readString(est.lead.lastName)}`.trim()
+            : "";
           setEstimateId(est.id);
           setData({
-            clientName: est.client?.clientName || "", clientEmail: "", clientPhone: "",
-            clientCompany: est.client?.companyName || "", sourceType: est.clientId ? "client" : "manual",
-            leadId: "", address: est.address || "", placeId: "", latitude: est.latitude || 0,
+            clientName: est.client?.clientName || estimateLeadName || "",
+            clientEmail: est.client?.primaryEmail || est.lead?.email || "",
+            clientPhone: est.client?.primaryPhone || est.lead?.phone || "",
+            clientCompany: est.client?.companyName || est.lead?.companyName || est.client?.clientName || "",
+            sourceType: est.leadId ? "lead" : est.clientId ? "client" : "manual",
+            leadId: est.leadId || "",
+            address: est.address || "", placeId: "", latitude: est.latitude || 0,
             longitude: est.longitude || 0, satelliteImageUrl: previewSource.imageUrl,
             eagleViewReportUrl: previewSource.reportUrl,
             photoUrls: normalizeEstimatePhotos(est.photoUrls),
@@ -486,6 +686,12 @@ export default function RoofEstimatorWizard() {
   const getSectionValidation = useCallback((sectionId: SectionId): { valid: boolean; message: string } => {
     switch (sectionId) {
       case "client":
+        if (data.sourceType === "client" && !data.clientId) {
+          return { valid: false, message: "Select a client from the dropdown or switch to manual entry." };
+        }
+        if (data.sourceType === "lead" && !data.leadId) {
+          return { valid: false, message: "Select a lead from the dropdown or switch to manual entry." };
+        }
         if (!data.clientName.trim()) {
           return { valid: false, message: "Enter the client or contact name to continue." };
         }
@@ -734,7 +940,8 @@ export default function RoofEstimatorWizard() {
       aiModel: data.aiModel, pricePerSqft: data.roofAreaSqft > 0 ? finalPrice / data.roofAreaSqft : 0,
       manualAdjustment: 0, totalEstimate: finalPrice,
       snowMode: false, notes: data.notes || undefined,
-      clientId: data.clientId || undefined,
+      clientId: data.sourceType === "client" ? (data.clientId || null) : null,
+      leadId: data.sourceType === "lead" ? (data.leadId || null) : null,
       pitch: data.pitch, roofType: data.roofType, stories: data.stories, layers: data.layers,
       measurementSource: data.measurementSource || undefined, tearOffRequired: data.tearOffRequired,
       photoUrls: data.photoUrls.length > 0 ? data.photoUrls : undefined,
@@ -793,7 +1000,7 @@ export default function RoofEstimatorWizard() {
 
       const estimateDocumentNumber = createEstimateDocumentNumber(savedId || "NEW");
       const linkedLeadId = data.sourceType === "lead" && data.leadId ? data.leadId : undefined;
-      const linkedClientId = data.clientId || undefined;
+      const linkedClientId = data.sourceType === "client" && data.clientId ? data.clientId : undefined;
 
       let linkedQuote: QuoteEntity | null = null;
       try {
@@ -1082,6 +1289,11 @@ export default function RoofEstimatorWizard() {
             leads={leads}
             clientSearchQ={clientSearchQ}
             setClientSearchQ={setClientSearchQ}
+            onSourceTypeChange={handleSourceTypeChange}
+            onClearSelection={clearSelectedSource}
+            onSelectClient={handleSelectClient}
+            onSelectLead={handleSelectLead}
+            selectionLoading={selectionLoading}
             hideHeader
           />
         );
@@ -1655,13 +1867,31 @@ function MiniStat({ label, value }: { label: string; value: string }) {
 
 /* ─── Step 1: Client / Lead Selection ────────────────────── */
 
-function Step1ClientInfo({ data, up, clients, leads, clientSearchQ, setClientSearchQ, hideHeader = false }: {
+function Step1ClientInfo({
+  data,
+  up,
+  clients,
+  leads,
+  clientSearchQ,
+  setClientSearchQ,
+  onSourceTypeChange,
+  onClearSelection,
+  onSelectClient,
+  onSelectLead,
+  selectionLoading,
+  hideHeader = false,
+}: {
   data: WizardData;
   up: <K extends keyof WizardData>(key: K, val: WizardData[K]) => void;
   clients: ClientEntity[];
   leads: LeadEntity[];
   clientSearchQ: string;
   setClientSearchQ: (q: string) => void;
+  onSourceTypeChange: (nextSourceType: WizardData["sourceType"]) => void;
+  onClearSelection: () => void;
+  onSelectClient: (clientId: string) => void;
+  onSelectLead: (leadId: string) => void;
+  selectionLoading: boolean;
   hideHeader?: boolean;
 }) {
   const q = clientSearchQ.toLowerCase();
@@ -1682,97 +1912,129 @@ function Step1ClientInfo({ data, up, clients, leads, clientSearchQ, setClientSea
       })
     : leads;
 
-  const selectClient = (c: ClientEntity) => {
-    up("sourceType", "client");
-    up("clientId", String(c.id || c.Id || ""));
-    up("clientName", c.clientName || c.ClientName || c.name || c.Name || "");
-    up("clientEmail", c.primaryEmail || c.contactEmail || c.ContactEmail || c.email || "");
-    up("clientPhone", c.primaryContactPhone || c.contactNo || c.ContactNo || c.phone || "");
-    up("clientCompany", c.clientName || c.ClientName || "");
-    setClientSearchQ("");
-  };
-
-  const selectLead = (l: LeadEntity) => {
-    up("sourceType", "lead");
-    up("leadId", String(l.id));
-    up("clientName", String(l.fullName || l.firstName || l.name || ""));
-    up("clientEmail", String(l.email || ""));
-    up("clientPhone", String(l.phone || l.mobile || ""));
-    up("clientCompany", String(l.companyName || l.company || ""));
-    if (l.propertyAddress || l.address) {
-      up("address", String(l.propertyAddress || l.address || ""));
-    }
-    setClientSearchQ("");
-  };
+  const selectedRecordId = data.sourceType === "client"
+    ? data.clientId
+    : data.sourceType === "lead"
+      ? data.leadId
+      : "";
+  const selectionOptions = data.sourceType === "lead" ? filteredLeads : filteredClients;
+  const selectionLabel = data.sourceType === "lead" ? "Lead" : "Client";
 
   return (
     <div>
       {!hideHeader && (
         <>
           <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A", marginBottom: 4 }}>👤 Client / Lead Information</h2>
-          <p style={{ fontSize: 13, color: "#64748B", marginBottom: 20 }}>Select an existing client or lead, or enter details manually.</p>
+          <p style={{ fontSize: 13, color: "#64748B", marginBottom: 20 }}>Choose whether this estimate is for a client or lead, then auto-fill the form from the selected record.</p>
         </>
       )}
 
-      {/* Search */}
-      <Field label="Search Client or Lead">
-        <div style={{ position: "relative" }}>
-          <input
-            placeholder="Type a name or email to search…"
-            value={clientSearchQ}
-            onChange={(e) => setClientSearchQ(e.target.value)}
-            style={inputStyle}
-          />
-          {clientSearchQ && (filteredClients.length > 0 || filteredLeads.length > 0) && (
-            <div style={{
-              position: "absolute", top: "100%", left: 0, right: 0, zIndex: 50,
-              background: "#fff", border: "1px solid #E2E8F0", borderRadius: 8,
-              boxShadow: "0 8px 24px rgba(0,0,0,.12)", maxHeight: 260, overflow: "auto",
-            }}>
-              {filteredClients.length > 0 && (
-                <>
-                  <div style={{ padding: "6px 14px", fontSize: 10, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", background: "#F8FAFC" }}>
-                    Clients ({filteredClients.length})
-                  </div>
-                  {filteredClients.slice(0, 8).map((c, i) => (
-                    <button key={`c-${i}`} onClick={() => selectClient(c)} style={{
-                      display: "block", width: "100%", textAlign: "left", padding: "10px 14px",
-                      border: "none", background: "transparent", fontSize: 13, color: "#0F172A",
-                      cursor: "pointer", borderBottom: "1px solid #F1F5F9",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = "#F5F3FF")}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-                      <div style={{ fontWeight: 600 }}>{c.clientName || c.ClientName || c.name || "Unnamed"}</div>
-                      <div style={{ fontSize: 11, color: "#64748B" }}>{c.primaryEmail || c.contactEmail || ""}</div>
-                    </button>
-                  ))}
-                </>
-              )}
-              {filteredLeads.length > 0 && (
-                <>
-                  <div style={{ padding: "6px 14px", fontSize: 10, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", background: "#F8FAFC" }}>
-                    Leads ({filteredLeads.length})
-                  </div>
-                  {filteredLeads.slice(0, 8).map((l, i) => (
-                    <button key={`l-${i}`} onClick={() => selectLead(l)} style={{
-                      display: "block", width: "100%", textAlign: "left", padding: "10px 14px",
-                      border: "none", background: "transparent", fontSize: 13, color: "#0F172A",
-                      cursor: "pointer", borderBottom: "1px solid #F1F5F9",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = "#FFF7ED")}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-                      <div style={{ fontWeight: 600 }}>{String(l.fullName || l.firstName || l.name || "Unnamed Lead")}</div>
-                      <div style={{ fontSize: 11, color: "#64748B" }}>{String(l.email || "")}</div>
-                    </button>
-                  ))}
-                </>
-              )}
-            </div>
-          )}
+      <Field label="Estimate For">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
+          {[
+            { id: "client", label: "Client" },
+            { id: "lead", label: "Lead" },
+            { id: "manual", label: "Manual" },
+          ].map((option) => {
+            const isActive = data.sourceType === option.id;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => onSourceTypeChange(option.id as WizardData["sourceType"])}
+                style={{
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  border: isActive ? "1px solid #0891B2" : "1px solid #CBD5E1",
+                  background: isActive ? "rgba(8,145,178,.10)" : "#FFFFFF",
+                  color: isActive ? "#0F172A" : "#475569",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  transition: "all .15s ease",
+                }}
+              >
+                {option.label}
+              </button>
+            );
+          })}
         </div>
       </Field>
 
-      {/* Source badge */}
+      {data.sourceType !== "manual" ? (
+        <>
+          <Field label={`Filter ${selectionLabel}s`}>
+            <input
+              placeholder={`Type a ${selectionLabel.toLowerCase()} name or email to filter…`}
+              value={clientSearchQ}
+              onChange={(e) => setClientSearchQ(e.target.value)}
+              style={inputStyle}
+            />
+          </Field>
+
+          <Field
+            label={`Select ${selectionLabel}`}
+            hint={selectionOptions.length > 0
+              ? `${selectionOptions.length} ${selectionLabel.toLowerCase()}${selectionOptions.length === 1 ? "" : "s"} available`
+              : `No ${selectionLabel.toLowerCase()}s match the current filter.`}
+          >
+            <select
+              value={selectedRecordId || "none"}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === "none") return;
+                if (data.sourceType === "client") {
+                  onSelectClient(value);
+                  return;
+                }
+                onSelectLead(value);
+              }}
+              style={inputStyle}
+              disabled={selectionLoading}
+            >
+              <option value="none">
+                {selectionLoading ? `Loading ${selectionLabel.toLowerCase()} details...` : `Select a ${selectionLabel.toLowerCase()}`}
+              </option>
+              {selectionOptions.map((record) => {
+                if (data.sourceType === "lead") {
+                  const lead = record as LeadEntity;
+                  const optionId = String(lead.id || "");
+                  const optionName = String(lead.fullName || lead.firstName || lead.name || "Unnamed Lead");
+                  const optionEmail = String(lead.email || "");
+                  return (
+                    <option key={optionId} value={optionId}>
+                      {optionEmail ? `${optionName} - ${optionEmail}` : optionName}
+                    </option>
+                  );
+                }
+
+                const client = record as ClientEntity;
+                const optionId = String(client.id || client.Id || "");
+                const optionName = client.clientName || client.ClientName || client.name || client.Name || "Unnamed Client";
+                const optionEmail = client.primaryEmail || client.contactEmail || client.ContactEmail || client.email || "";
+                return (
+                  <option key={optionId} value={optionId}>
+                    {optionEmail ? `${optionName} - ${optionEmail}` : optionName}
+                  </option>
+                );
+              })}
+            </select>
+          </Field>
+        </>
+      ) : (
+        <div style={{
+          marginBottom: 14,
+          padding: "12px 14px",
+          borderRadius: 10,
+          border: "1px dashed #CBD5E1",
+          background: "#F8FAFC",
+          fontSize: 12,
+          color: "#64748B",
+        }}>
+          Manual entry is enabled. Type the contact details below if this estimate is not tied to an existing lead or client.
+        </div>
+      )}
+
       {data.sourceType !== "manual" && (
         <div style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{
@@ -1782,13 +2044,12 @@ function Step1ClientInfo({ data, up, clients, leads, clientSearchQ, setClientSea
           }}>
             {data.sourceType === "client" ? "✓ Client Selected" : "✓ Lead Selected"}
           </span>
-          <button onClick={() => { up("sourceType", "manual"); up("clientName", ""); up("clientEmail", ""); up("clientPhone", ""); up("clientCompany", ""); up("clientId", ""); up("leadId", ""); }} style={{
+          <button onClick={onClearSelection} style={{
             fontSize: 11, color: "#94A3B8", background: "none", border: "none", cursor: "pointer", textDecoration: "underline",
           }}>Clear</button>
         </div>
       )}
 
-      {/* Editable fields */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         <Field label="Client / Contact Name">
           <input value={data.clientName} onChange={(e) => up("clientName", e.target.value)} style={inputStyle} placeholder="Full name" />

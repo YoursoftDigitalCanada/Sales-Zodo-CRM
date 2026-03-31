@@ -18,7 +18,7 @@ import {
     Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { getLeadById, convertLead, getInspectionsByLeadId, createInspection, updateInspection, deleteInspection, getInsuranceClaimsByLeadId, createInsuranceClaim, updateInsuranceClaim, deleteInsuranceClaim } from "@/features/leads";
+import { getLeadById, updateLead, convertLead, getInspectionsByLeadId, createInspection, updateInspection, deleteInspection, getInsuranceClaimsByLeadId, createInsuranceClaim, updateInsuranceClaim, deleteInsuranceClaim } from "@/features/leads";
 import { getFiles, getDownloadUrl } from "@/features/files/services/files-service";
 import { getProjects } from "@/features/projects/services/projects-service";
 import { getTasks } from "@/features/tasks/services/tasks-service";
@@ -140,6 +140,8 @@ interface NoteEntry {
     author: string;
 }
 
+const STRUCTURED_NOTE_REGEX = /^\[(.+?) \| (.+?)\]\n([\s\S]+)$/;
+
 // ── Helpers ─────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
@@ -168,6 +170,21 @@ const formatDate = (d: string | null | undefined) => {
     if (!d) return "—";
     try { return new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }); }
     catch { return "—"; }
+};
+
+const formatDateTime = (d: string | Date | null | undefined) => {
+    if (!d) return "—";
+    try {
+        return new Date(d).toLocaleString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+        });
+    } catch {
+        return "—";
+    }
 };
 
 const timeAgo = (d: string | null | undefined) => {
@@ -201,6 +218,58 @@ const sortByNewest = <T extends Record<string, any>>(items: T[], ...fields: stri
         const bTime = fields.map((field) => b?.[field]).find(Boolean);
         return new Date(bTime || 0).getTime() - new Date(aTime || 0).getTime();
     });
+
+const getStoredUserName = () => {
+    if (typeof window === "undefined") return "ZODO Team";
+    try {
+        const storedUser = JSON.parse(window.localStorage.getItem("user") || "{}");
+        const firstName = String(storedUser?.firstName || storedUser?.user?.firstName || "").trim();
+        const lastName = String(storedUser?.lastName || storedUser?.user?.lastName || "").trim();
+        const fullName = `${firstName} ${lastName}`.trim();
+        return fullName || "ZODO Team";
+    } catch {
+        return "ZODO Team";
+    }
+};
+
+const parseLeadNotes = (
+    rawNotes: string | null | undefined,
+    fallbackAuthor: string,
+    fallbackDate: string,
+): NoteEntry[] => {
+    const normalizedNotes = String(rawNotes || "").trim();
+    if (!normalizedNotes) return [];
+
+    const blocks = normalizedNotes.split(/\n{2,}(?=\[[^\n]+\s\|\s[^\n]+\]\n)/);
+
+    return blocks
+        .map((block, index) => {
+            const trimmedBlock = block.trim();
+            const match = trimmedBlock.match(STRUCTURED_NOTE_REGEX);
+
+            if (match) {
+                return {
+                    id: index + 1,
+                    date: match[1].trim(),
+                    author: match[2].trim(),
+                    content: match[3].trim(),
+                };
+            }
+
+            return {
+                id: index + 1,
+                date: fallbackDate,
+                author: fallbackAuthor,
+                content: trimmedBlock,
+            };
+        })
+        .filter((entry) => entry.content);
+};
+
+const serializeLeadNotes = (entries: NoteEntry[]) =>
+    entries
+        .map((entry) => `[${entry.date} | ${entry.author}]\n${entry.content.trim()}`)
+        .join("\n\n");
 
 // ── Pipeline Progress ───────────────────────────────────────────────────
 
@@ -391,6 +460,7 @@ const LeadDetailPage = () => {
     // Notes state
     const [notes, setNotes] = useState<NoteEntry[]>([]);
     const [newNote, setNewNote] = useState("");
+    const [isSavingNote, setIsSavingNote] = useState(false);
 
     // Inspections state
     const [inspections, setInspections] = useState<any[]>([]);
@@ -415,23 +485,29 @@ const LeadDetailPage = () => {
     const [loadingEmails, setLoadingEmails] = useState(false);
     const [showComposeEmail, setShowComposeEmail] = useState(false);
 
+    const applyLeadState = useCallback((data: LeadData) => {
+        setLead(data);
+
+        const fallbackAuthor = data.createdBy
+            ? `${data.createdBy.user.firstName} ${data.createdBy.user.lastName}`.trim() || "ZODO Team"
+            : "ZODO Team";
+        const fallbackDate = formatDateTime(data.updatedAt || data.createdAt);
+
+        setNotes(parseLeadNotes(data.notes, fallbackAuthor, fallbackDate));
+    }, []);
+
     const fetchLead = useCallback(async () => {
         try {
             setIsLoading(true);
             const data = await getLeadById(id!);
-            setLead(data);
-
-            // Parse notes from lead
-            if (data.notes) {
-                setNotes([{ id: 1, content: data.notes, date: formatDate(data.createdAt), author: "System" }]);
-            }
+            applyLeadState(data as LeadData);
         } catch (err) {
             toast({ title: "Error", description: "Failed to load lead details.", variant: "destructive" });
             console.error("Failed to fetch lead:", err);
         } finally {
             setIsLoading(false);
         }
-    }, [id, toast]);
+    }, [applyLeadState, id, toast]);
 
     useEffect(() => { fetchLead(); }, [fetchLead]);
 
@@ -615,10 +691,35 @@ const LeadDetailPage = () => {
         }
     };
 
-    const handleAddNote = () => {
-        if (!newNote.trim()) return;
-        setNotes(prev => [{ id: Date.now(), content: newNote, date: "Just now", author: "You" }, ...prev]);
-        setNewNote("");
+    const handleAddNote = async () => {
+        if (!id || !lead || !newNote.trim() || isSavingNote) return;
+
+        const noteEntry: NoteEntry = {
+            id: Date.now(),
+            content: newNote.trim(),
+            date: formatDateTime(new Date()),
+            author: getStoredUserName(),
+        };
+        const nextNotes = [noteEntry, ...notes];
+
+        try {
+            setIsSavingNote(true);
+            const updatedLead = await updateLead(id, {
+                notes: serializeLeadNotes(nextNotes),
+            });
+            applyLeadState(updatedLead as LeadData);
+            setNewNote("");
+            toast({ title: "Note saved" });
+        } catch (err) {
+            toast({
+                title: "Error",
+                description: "Failed to save note.",
+                variant: "destructive",
+            });
+            console.error("Failed to save lead note:", err);
+        } finally {
+            setIsSavingNote(false);
+        }
     };
 
     const handleConvertSuccess = (clientId: string) => {
@@ -1003,11 +1104,11 @@ const LeadDetailPage = () => {
                         </div>
                         <div className="bg-[#F9FAFB] p-3 rounded-lg mb-3 border border-[#E5E7EB]">
                             <Textarea placeholder="Type your note here..." className="resize-none min-h-[60px] bg-white text-sm" value={newNote} onChange={(e) => setNewNote(e.target.value)} />
-                            <div className="flex justify-end mt-2"><Button size="sm" className="bg-[#14B8A6] text-white hover:bg-[#0D9488] text-xs" onClick={handleAddNote} disabled={!newNote.trim()}>Save Note</Button></div>
+                            <div className="flex justify-end mt-2"><Button size="sm" className="bg-[#14B8A6] text-white hover:bg-[#0D9488] text-xs" onClick={handleAddNote} disabled={!newNote.trim() || isSavingNote}>{isSavingNote && <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />}Save Note</Button></div>
                         </div>
                         {notes.length === 0 ? <p className="text-center text-xs text-[#9CA3AF] py-4">No notes yet</p> :
                             <div className="space-y-2 max-h-[200px] overflow-y-auto">{notes.map(note => (
-                                <div key={note.id} className="bg-[#FFFBEB] p-3 rounded-lg border border-[#FDE68A]/50"><p className="text-sm text-[#111827]">{note.content}</p><p className="text-[10px] text-[#9CA3AF] mt-1">{note.author} · {note.date}</p></div>
+                                <div key={note.id} className="bg-[#FFFBEB] p-3 rounded-lg border border-[#FDE68A]/50"><p className="text-sm text-[#111827] whitespace-pre-wrap">{note.content}</p><p className="text-[10px] text-[#9CA3AF] mt-1">{note.author} · {note.date}</p></div>
                             ))}</div>}
                     </div>
 

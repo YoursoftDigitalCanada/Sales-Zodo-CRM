@@ -4,9 +4,25 @@ const API_VERSION = "v1";
 const rawApiOrigin = import.meta.env.VITE_API_URL || FALLBACK_API_ORIGIN;
 const normalizedOrigin = rawApiOrigin.replace(/\/+$/, "");
 
-export const API_ORIGIN = normalizedOrigin;
+function stripApiPathSuffix(url: string): string {
+  return url.replace(/\/api(?:\/v\d+)?$/i, "");
+}
+
+function resolveApiBaseUrl(url: string): string {
+  if (/\/api\/v\d+$/i.test(url)) {
+    return url;
+  }
+
+  if (/\/api$/i.test(url)) {
+    return `${stripApiPathSuffix(url)}/api/${API_VERSION}`;
+  }
+
+  return `${stripApiPathSuffix(url)}/api/${API_VERSION}`;
+}
+
+export const API_ORIGIN = stripApiPathSuffix(normalizedOrigin);
 export const API_PREFIX = `/api/${API_VERSION}`;
-export const API_BASE_URL = `${API_ORIGIN}${API_PREFIX}`;
+export const API_BASE_URL = resolveApiBaseUrl(normalizedOrigin);
 
 function isAbsoluteUrl(url: string): boolean {
   return /^https?:\/\//i.test(url);

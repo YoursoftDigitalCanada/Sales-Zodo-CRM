@@ -296,6 +296,7 @@ export default function SettingsPage() {
   const [roles, setRoles] = useState<RoleOption[]>([]);
   const [testEmailAddress, setTestEmailAddress] = useState("");
   const [selectedTemplateId, setSelectedTemplateId] = useState<EmailTemplateId>("TEAM_INVITE");
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [inviteForm, setInviteForm] = useState({
     email: "",
     firstName: "",
@@ -308,6 +309,23 @@ export default function SettingsPage() {
   useEffect(() => {
     setActiveTab(routeMap[location.pathname] || "general");
   }, [location.pathname]);
+
+  useEffect(() => {
+    return () => {
+      if (logoPreviewUrl?.startsWith("blob:")) {
+        URL.revokeObjectURL(logoPreviewUrl);
+      }
+    };
+  }, [logoPreviewUrl]);
+
+  const replaceLogoPreview = useCallback((nextUrl: string | null) => {
+    setLogoPreviewUrl((current) => {
+      if (current?.startsWith("blob:")) {
+        URL.revokeObjectURL(current);
+      }
+      return nextUrl;
+    });
+  }, []);
 
   const selectedTemplate = useMemo(
     () => emailSettings?.templates.find((template) => template.id === selectedTemplateId) || null,
@@ -416,6 +434,8 @@ export default function SettingsPage() {
   };
 
   const handleUploadLogo = async (file: File) => {
+    const localPreviewUrl = URL.createObjectURL(file);
+    replaceLogoPreview(localPreviewUrl);
     setSavingSection("logo");
     try {
       const next = await uploadCompanyLogo(file);
@@ -423,6 +443,7 @@ export default function SettingsPage() {
       updateBranding(next);
       toast({ title: "Logo uploaded", description: "Your workspace logo was updated." });
     } catch (error) {
+      replaceLogoPreview(null);
       toast({ title: "Upload failed", description: getErrorMessage(error), variant: "destructive" });
     } finally {
       setSavingSection(null);
@@ -750,8 +771,8 @@ export default function SettingsPage() {
                       <p className="text-sm font-medium text-[#0F172A]">Company logo</p>
                       <p className="mt-1 text-xs text-[#64748B]">PNG, JPG, WEBP, or SVG. Maximum 2MB.</p>
                       <div className="mt-5 flex aspect-square items-center justify-center overflow-hidden rounded-md bg-white">
-                        {company.logoUrl ? (
-                          <img src={company.logoUrl} alt="Company logo" className="h-full w-full object-contain p-4" />
+                        {logoPreviewUrl || company.logoUrl ? (
+                          <img src={logoPreviewUrl || company.logoUrl || ""} alt="Company logo" className="h-full w-full object-contain p-4" />
                         ) : (
                           <div className="text-center text-sm text-[#64748B]">
                             <Building2 size={28} className="mx-auto mb-2 text-[#94A3B8]" />

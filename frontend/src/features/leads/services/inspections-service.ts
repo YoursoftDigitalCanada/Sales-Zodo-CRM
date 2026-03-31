@@ -1,6 +1,12 @@
 import api from "@/lib/axios";
 import { extractApiArray } from "@/types/api";
 
+function stripNullishFields(data: Record<string, unknown>): Record<string, unknown> {
+    return Object.fromEntries(
+        Object.entries(data).filter(([, value]) => value !== null && value !== undefined),
+    );
+}
+
 export interface InspectionLead {
     id: string;
     firstName: string;
@@ -70,12 +76,12 @@ export async function getInspectionById(leadId: string, inspectionId: string): P
 }
 
 export async function createInspection(leadId: string, data: Record<string, unknown>): Promise<InspectionEntity> {
-    const response = await api.post(`/leads/${leadId}/inspections`, data);
+    const response = await api.post(`/leads/${leadId}/inspections`, stripNullishFields(data));
     return response.data?.data || response.data;
 }
 
 export async function updateInspection(leadId: string, inspectionId: string, data: Record<string, unknown>): Promise<InspectionEntity> {
-    const response = await api.put(`/leads/${leadId}/inspections/${inspectionId}`, data);
+    const response = await api.put(`/leads/${leadId}/inspections/${inspectionId}`, stripNullishFields(data));
     return response.data?.data || response.data;
 }
 

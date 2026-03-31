@@ -5,20 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { API_ORIGIN, buildApiUrl } from "@/services/api";
 import { cn } from "@/lib/utils";
-
-const API_BASE = import.meta.env.VITE_API_URL || "https://api.zodo.ca/api/v1";
-
-const getApiOrigin = () => {
-  try {
-    return new URL(
-      API_BASE,
-      typeof window !== "undefined" ? window.location.origin : "https://crm.zodo.ca",
-    ).origin;
-  } catch {
-    return "";
-  }
-};
 
 interface QuoteCompany {
   companyName: string;
@@ -96,11 +84,7 @@ const resolvePublicAssetUrl = (value?: string | null) => {
   if (/^https?:\/\//i.test(value)) {
     return value;
   }
-  const apiOrigin = getApiOrigin();
-  if (!apiOrigin) {
-    return value;
-  }
-  return `${apiOrigin}${value.startsWith("/") ? value : `/${value}`}`;
+  return `${API_ORIGIN}${value.startsWith("/") ? value : `/${value}`}`;
 };
 
 const statusConfig = (status: string) => {
@@ -142,7 +126,7 @@ export default function PublicQuoteView() {
       try {
         setLoading(true);
         setError(null);
-        const res = await fetch(`${API_BASE}/public/quotes/${token}`);
+        const res = await fetch(buildApiUrl(`/public/quotes/${token}`));
         if (!res.ok) {
           const payload = await res.json().catch(() => ({}));
           throw new Error(payload.message || "Estimate not found or link has expired.");
@@ -266,7 +250,7 @@ export default function PublicQuoteView() {
     try {
       setResponding(true);
       setError(null);
-      const res = await fetch(`${API_BASE}/public/quotes/${token}/respond`, {
+      const res = await fetch(buildApiUrl(`/public/quotes/${token}/respond`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

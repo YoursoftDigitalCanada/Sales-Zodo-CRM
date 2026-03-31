@@ -21,11 +21,14 @@ const invoiceInclude = {
 };
 
 function calculateTotals(
-    items: { quantity: number; unitPrice: number; amount: number }[],
+    items: Array<{ quantity?: number; unitPrice?: number; rate?: number; amount?: number; lineTotal?: number }>,
     taxRate?: number | null,
     discountAmount?: number | null,
 ) {
-    const subtotal = items.reduce((sum, item) => sum + Number(item.amount), 0);
+    const subtotal = items.reduce((sum, item) => {
+        const amt = Number(item.amount || item.lineTotal || ((item.quantity || 0) * (item.unitPrice ?? item.rate ?? 0)));
+        return sum + amt;
+    }, 0);
     const safeTaxRate = taxRate ? Number(taxRate) : 0;
     const taxAmount = safeTaxRate ? (subtotal * safeTaxRate) / 100 : 0;
     const safeDiscount = discountAmount ? Number(discountAmount) : 0;
@@ -62,9 +65,9 @@ export class InvoicesRepository {
                 items: {
                     create: data.items.map((item: any, index: number) => ({
                         description: item.description || item.itemName || '',
-                        quantity: item.quantity,
+                        quantity: item.quantity || 0,
                         unitPrice: item.unitPrice ?? item.rate ?? 0,
-                        amount: item.amount || (item.quantity * (item.unitPrice ?? item.rate ?? 0)),
+                        amount: item.amount || item.lineTotal || ((item.quantity || 0) * (item.unitPrice ?? item.rate ?? 0)),
                         taxRate: item.taxRate,
                         sortOrder: item.sortOrder || index,
                     })),

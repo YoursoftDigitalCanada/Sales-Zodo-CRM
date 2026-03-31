@@ -1,5 +1,6 @@
 export {
   getInvoices,
+  getInvoiceById,
   createInvoice,
   deleteInvoice,
   updateInvoice,

@@ -53,6 +53,7 @@ import SignupPage from "./pages/Signup";
 // import BookingsPage from "@/pages/Bookings";
 import UsersPage from "@/pages/Users";
 import InvoicePage from "./pages/Invoice";
+import InvoiceDetailPage from "./pages/InvoiceDetail";
 // import ExpensesPage from "./pages/Expenses";
 
 // import EcommercePage from "./pages/Ecommerce";
@@ -360,6 +361,14 @@ const AppRoutes = () => {
           element={
             <FeatureGuard featureId="finance">
               <InvoicePage />
+            </FeatureGuard>
+          }
+        />
+        <Route
+          path="/invoice/:id"
+          element={
+            <FeatureGuard featureId="finance">
+              <InvoiceDetailPage />
             </FeatureGuard>
           }
         />

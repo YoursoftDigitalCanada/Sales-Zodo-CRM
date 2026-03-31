@@ -12,6 +12,11 @@ export async function getInvoices(params?: Partial<InvoiceQueryDto>) {
   return extractApiArray<InvoiceEntity>(response.data);
 }
 
+export async function getInvoiceById(id: string) {
+  const response = await api.get(`/invoices/${id}`);
+  return response.data?.data || response.data;
+}
+
 export async function createInvoice(data: CreateInvoiceDto) {
   const response = await api.post("/invoices", data);
   return response.data;

@@ -128,7 +128,7 @@ export const AddDepartmentDialog: React.FC<AddDepartmentDialogProps> = ({
                     <FormControl>
                       <div className="relative">
                         <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
-                        <Input {...field} className="pl-10" placeholder="Engineering" />
+                        <Input {...field} className="pl-10" placeholder="Roofing Operations" />
                       </div>
                     </FormControl>
                     <FormMessage />
@@ -145,7 +145,7 @@ export const AddDepartmentDialog: React.FC<AddDepartmentDialogProps> = ({
                     <FormControl>
                       <Input 
                         {...field} 
-                        placeholder="ENG" 
+                        placeholder="ROOF" 
                         maxLength={5}
                         className="uppercase"
                         onChange={(e) => field.onChange(e.target.value.toUpperCase())}
@@ -166,7 +166,7 @@ export const AddDepartmentDialog: React.FC<AddDepartmentDialogProps> = ({
                   <FormControl>
                     <Textarea 
                       {...field} 
-                      placeholder="Describe the department's responsibilities and focus areas..."
+                      placeholder="Manage field crews, site inspections, scheduling, safety, materials, and roofing production."
                       className="resize-none"
                       rows={3}
                     />
@@ -189,7 +189,7 @@ export const AddDepartmentDialog: React.FC<AddDepartmentDialogProps> = ({
                     <FormControl>
                       <SelectTrigger>
                         <User className="w-4 h-4 text-[#94A3B8] mr-2" />
-                        <SelectValue placeholder="Select department head" />
+                        <SelectValue placeholder="Select operations manager or crew lead" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -202,7 +202,7 @@ export const AddDepartmentDialog: React.FC<AddDepartmentDialogProps> = ({
                     </SelectContent>
                   </Select>
                   <FormDescription>
-                    Only managers and leads are shown
+                    Only managers, supervisors, crew leads, and department heads are shown
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -218,7 +218,7 @@ export const AddDepartmentDialog: React.FC<AddDepartmentDialogProps> = ({
                   <FormControl>
                     <div className="relative">
                       <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
-                      <Input {...field} type="number" className="pl-10" placeholder="500000" />
+                      <Input {...field} type="number" className="pl-10" placeholder="1200000" />
                     </div>
                   </FormControl>
                   <FormMessage />

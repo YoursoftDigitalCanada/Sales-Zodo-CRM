@@ -78,6 +78,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import AddressAutocompleteInput from "@/components/address/AddressAutocompleteInput";
+import { ComposeEmailSheet } from "@/features/emails/components/ComposeEmailSheet";
 import {
   Search,
   Plus,
@@ -273,6 +274,12 @@ interface LeadStats {
   coldLeads: number;
 }
 
+interface TagOption {
+  id: string;
+  name: string;
+  color?: string | null;
+}
+
 // ============================================
 // CONSTANTS & DATA
 // ============================================
@@ -318,6 +325,105 @@ const formatCurrency = (amount: number, currency: string = "CAD"): string => {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
+};
+
+const csvEscape = (value: unknown): string => {
+  const stringValue = String(value ?? "");
+  if (!/[",\n]/.test(stringValue)) {
+    return stringValue;
+  }
+
+  return `"${stringValue.replace(/"/g, '""')}"`;
+};
+
+const downloadCsv = (rows: Array<Array<unknown>>, fileName: string) => {
+  const csvContent = rows.map((row) => row.map(csvEscape).join(",")).join("\n");
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  link.click();
+  window.URL.revokeObjectURL(url);
+};
+
+const normalizeLookupKey = (value: string) =>
+  value.trim().toLowerCase().replace(/\s+/g, " ");
+
+const normalizeLeadStatusValue = (value?: string | null): LeadStatus => {
+  if (!value) return LeadStatus.NEW;
+
+  const normalized = value.trim().toUpperCase().replace(/[\s-]+/g, "_");
+  const match = leadStatuses.find(
+    (status) => status.id === normalized || status.name.toUpperCase().replace(/[\s-]+/g, "_") === normalized
+  );
+
+  return (match?.id || LeadStatus.NEW) as LeadStatus;
+};
+
+const normalizeLeadTemperatureValue = (value?: string | null): LeadTemperature => {
+  if (!value) return LeadTemperature.WARM;
+
+  const normalized = value.trim().toUpperCase().replace(/[\s-]+/g, "_");
+  if (normalized === LeadTemperature.HOT) return LeadTemperature.HOT;
+  if (normalized === LeadTemperature.COLD) return LeadTemperature.COLD;
+  return LeadTemperature.WARM;
+};
+
+const parseCsvText = (content: string): string[][] => {
+  const rows: string[][] = [];
+  let currentField = "";
+  let currentRow: string[] = [];
+  let insideQuotes = false;
+
+  for (let index = 0; index < content.length; index += 1) {
+    const char = content[index];
+    const nextChar = content[index + 1];
+
+    if (char === '"') {
+      if (insideQuotes && nextChar === '"') {
+        currentField += '"';
+        index += 1;
+      } else {
+        insideQuotes = !insideQuotes;
+      }
+      continue;
+    }
+
+    if (char === "," && !insideQuotes) {
+      currentRow.push(currentField);
+      currentField = "";
+      continue;
+    }
+
+    if ((char === "\n" || char === "\r") && !insideQuotes) {
+      if (char === "\r" && nextChar === "\n") {
+        index += 1;
+      }
+      currentRow.push(currentField);
+      if (currentRow.some((field) => field.trim().length > 0)) {
+        rows.push(currentRow);
+      }
+      currentRow = [];
+      currentField = "";
+      continue;
+    }
+
+    currentField += char;
+  }
+
+  currentRow.push(currentField);
+  if (currentRow.some((field) => field.trim().length > 0)) {
+    rows.push(currentRow);
+  }
+
+  return rows;
+};
+
+const pickTagColor = (tagName: string): string => {
+  const palette = ["#14B8A6", "#6637F4", "#F59E0B", "#EF4444", "#0EA5E9", "#8B5CF6"];
+  const hash = [...tagName].reduce((total, char) => total + char.charCodeAt(0), 0);
+  return palette[hash % palette.length];
 };
 
 const formatDate = (dateString: string): string => {
@@ -508,6 +614,8 @@ const LeadCard = ({
   onView,
   onEdit,
   onDelete,
+  onEmail,
+  onCall,
   onStatusChange,
   delay = 0,
 }: {
@@ -517,6 +625,8 @@ const LeadCard = ({
   onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onEmail: () => void;
+  onCall: () => void;
   onStatusChange: (status: Lead["status"]) => void;
   delay?: number;
 }) => {
@@ -573,10 +683,10 @@ const LeadCard = ({
             <DropdownMenuItem onClick={onEdit} className="rounded-md">
               <Pencil size={14} className="mr-2" /> Edit Lead
             </DropdownMenuItem>
-            <DropdownMenuItem className="rounded-md">
+            <DropdownMenuItem onClick={onEmail} className="rounded-md">
               <Mail size={14} className="mr-2" /> Send Email
             </DropdownMenuItem>
-            <DropdownMenuItem className="rounded-md">
+            <DropdownMenuItem onClick={onCall} className="rounded-md">
               <Phone size={14} className="mr-2" /> Call
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -734,6 +844,10 @@ const LeadRow = ({
   onView,
   onEdit,
   onDelete,
+  onEmail,
+  onCall,
+  onDuplicate,
+  onScheduleFollowUp,
   onStatusChange,
 }: {
   lead: Lead;
@@ -742,6 +856,10 @@ const LeadRow = ({
   onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onEmail: () => void;
+  onCall: () => void;
+  onDuplicate: () => void;
+  onScheduleFollowUp: () => void;
   onStatusChange: (status: Lead["status"]) => void;
 }) => {
   const statusInfo = getStatusInfo(lead.status);
@@ -874,7 +992,7 @@ const LeadRow = ({
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md">
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" onClick={onEmail}>
                   <Mail size={16} className="text-[#475569]" />
                 </Button>
               </TooltipTrigger>
@@ -894,17 +1012,17 @@ const LeadRow = ({
               <DropdownMenuItem onClick={onEdit} className="rounded-md">
                 <Pencil size={14} className="mr-2" /> Edit
               </DropdownMenuItem>
-              <DropdownMenuItem className="rounded-md">
+              <DropdownMenuItem onClick={onDuplicate} className="rounded-md">
                 <Copy size={14} className="mr-2" /> Duplicate
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="rounded-md">
+              <DropdownMenuItem onClick={onEmail} className="rounded-md">
                 <Mail size={14} className="mr-2" /> Send Email
               </DropdownMenuItem>
-              <DropdownMenuItem className="rounded-md">
+              <DropdownMenuItem onClick={onCall} className="rounded-md">
                 <Phone size={14} className="mr-2" /> Call
               </DropdownMenuItem>
-              <DropdownMenuItem className="rounded-md">
+              <DropdownMenuItem onClick={onScheduleFollowUp} className="rounded-md">
                 <CalendarDays size={14} className="mr-2" /> Schedule Follow-up
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -2769,12 +2887,14 @@ const ScheduleMeetingDialog = ({
   lead,
   onSchedule,
   onSkip,
+  mode = "qualification",
 }: {
   isOpen: boolean;
   onClose: () => void;
   lead: Lead | null;
   onSchedule: (meetingData: Record<string, unknown>) => Promise<void>;
   onSkip: () => void;
+  mode?: "qualification" | "followUp";
 }) => {
   const [meetingType, setMeetingType] = useState<"online" | "offline">("online");
   const [meetingTitle, setMeetingTitle] = useState("");
@@ -2789,6 +2909,7 @@ const ScheduleMeetingDialog = ({
   const [showLocSuggestions, setShowLocSuggestions] = useState(false);
   const locAutocompleteRef = useRef<HTMLDivElement>(null);
   const locDebounceTimer = useRef<NodeJS.Timeout | null>(null);
+  const isFollowUpMode = mode === "followUp";
 
   // Close location autocomplete on outside click
   useEffect(() => {
@@ -2837,7 +2958,7 @@ const ScheduleMeetingDialog = ({
         tomorrow.setDate(tomorrow.getDate() + 1);
       }
       setMeetingDate(tomorrow.toISOString().split("T")[0]);
-      setMeetingTitle(`Meeting with ${lead.firstName} ${lead.lastName}`);
+      setMeetingTitle(`${isFollowUpMode ? "Follow-up" : "Meeting"} with ${lead.firstName} ${lead.lastName}`);
       setMeetingType("online");
       setMeetingTime("10:00");
       setMeetingDuration("30");
@@ -2845,7 +2966,7 @@ const ScheduleMeetingDialog = ({
       setMeetingLink("");
       setMeetingNotes("");
     }
-  }, [isOpen, lead]);
+  }, [isFollowUpMode, isOpen, lead]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -2856,8 +2977,8 @@ const ScheduleMeetingDialog = ({
       const endTime = new Date(startTime.getTime() + parseInt(meetingDuration) * 60000);
 
       await onSchedule({
-        title: meetingTitle || `Meeting with ${lead.firstName} ${lead.lastName}`,
-        description: `Qualification meeting with lead ${lead.firstName} ${lead.lastName}${lead.companyName ? ` from ${lead.companyName}` : ""}. ${meetingNotes ? `\n\nNotes: ${meetingNotes}` : ""}`,
+        title: meetingTitle || `${isFollowUpMode ? "Follow-up" : "Meeting"} with ${lead.firstName} ${lead.lastName}`,
+        description: `${isFollowUpMode ? "Follow-up" : "Qualification meeting"} with lead ${lead.firstName} ${lead.lastName}${lead.companyName ? ` from ${lead.companyName}` : ""}. ${meetingNotes ? `\n\nNotes: ${meetingNotes}` : ""}`,
         startTime: startTime.toISOString(),
         endTime: endTime.toISOString(),
         eventType: "MEETING",
@@ -2881,11 +3002,20 @@ const ScheduleMeetingDialog = ({
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
               <CalendarDays size={22} />
-              Schedule Meeting
+              {isFollowUpMode ? "Schedule Follow-up" : "Schedule Meeting"}
             </DialogTitle>
             <DialogDescription className="text-white/80 mt-1">
-              <span className="font-semibold text-white">{lead.firstName} {lead.lastName}</span> has been qualified!
-              Schedule a meeting to move forward.
+              {isFollowUpMode ? (
+                <>
+                  Schedule the next touchpoint for{" "}
+                  <span className="font-semibold text-white">{lead.firstName} {lead.lastName}</span>.
+                </>
+              ) : (
+                <>
+                  <span className="font-semibold text-white">{lead.firstName} {lead.lastName}</span> has been qualified!
+                  Schedule a meeting to move forward.
+                </>
+              )}
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -3063,7 +3193,7 @@ const ScheduleMeetingDialog = ({
               onClick={onSkip}
               className="text-gray-500 hover:text-gray-700"
             >
-              Skip for now
+              {isFollowUpMode ? "Cancel" : "Skip for now"}
             </Button>
             <Button
               type="submit"
@@ -3080,7 +3210,7 @@ const ScheduleMeetingDialog = ({
               ) : (
                 <MapPin size={16} />
               )}
-              {isSubmitting ? "Scheduling..." : "Schedule Meeting"}
+              {isSubmitting ? "Scheduling..." : isFollowUpMode ? "Schedule Follow-up" : "Schedule Meeting"}
             </Button>
           </DialogFooter>
         </form>
@@ -3213,6 +3343,7 @@ const mapApiLead = (apiLead: any): Lead => ({
 const AllLeads = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const importFileInputRef = useRef<HTMLInputElement | null>(null);
 
   // State
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -3226,12 +3357,22 @@ const AllLeads = () => {
   const [sortBy, setSortBy] = useState<"date" | "score" | "value" | "name">("date");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
+  const [employees, setEmployees] = useState<{ id: string; name: string }[]>([]);
+  const [leadSources, setLeadSources] = useState<{ id: string; name: string }[]>([]);
+  const [availableTags, setAvailableTags] = useState<TagOption[]>([]);
+  const [emailComposerTarget, setEmailComposerTarget] = useState<{ to: string; name: string; leadId?: string } | null>(null);
+  const [bulkActionLoading, setBulkActionLoading] = useState<null | "assign" | "tags" | "status" | "temperature" | "export" | "delete" | "import" | "duplicate">(null);
+  const [isBulkAssignOpen, setIsBulkAssignOpen] = useState(false);
+  const [bulkAssignedToId, setBulkAssignedToId] = useState("");
+  const [isBulkTagsOpen, setIsBulkTagsOpen] = useState(false);
+  const [bulkTagsInput, setBulkTagsInput] = useState("");
 
   // Dialog states
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [isMeetingDialogOpen, setIsMeetingDialogOpen] = useState(false);
+  const [meetingDialogMode, setMeetingDialogMode] = useState<"qualification" | "followUp">("qualification");
   const [currentLead, setCurrentLead] = useState<Lead | null>(null);
   const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
   const [pendingQualifiedLead, setPendingQualifiedLead] = useState<Lead | null>(null);
@@ -3245,24 +3386,58 @@ const AllLeads = () => {
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const [sidePanelLead, setSidePanelLead] = useState<Lead | null>(null);
 
-  // Fetch leads from API
-  useEffect(() => {
-    const fetchLeads = async () => {
-      try {
-        setLoading(true);
-        const response = await getLeads();
-        const apiLeads = Array.isArray(response) ? response : [];
-        const mapped = apiLeads.map(mapApiLead);
-        setLeads(mapped);
-      } catch (error) {
-        console.error("Failed to fetch leads:", error);
-        toast({ title: "Error", description: "Failed to load leads.", variant: "destructive" });
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchLeads();
+  const loadLeads = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await getLeads();
+      const apiLeads = Array.isArray(response) ? response : [];
+      setLeads(apiLeads.map(mapApiLead));
+    } catch (error) {
+      console.error("Failed to fetch leads:", error);
+      toast({ title: "Error", description: "Failed to load leads.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  const loadLookupData = useCallback(async () => {
+    try {
+      const [employeeData, leadSourceData, tagsResponse] = await Promise.all([
+        getEmployees().catch(() => []),
+        getLeadSources({ limit: 200 }).catch(() => []),
+        api.get("/tags/all").catch(() => ({ data: { data: [] } })),
+      ]);
+
+      setEmployees(
+        (Array.isArray(employeeData) ? employeeData : []).map((employee: any) => ({
+          id: employee.id,
+          name: `${employee.user?.firstName || ""} ${employee.user?.lastName || ""}`.trim() || employee.email || "Employee",
+        }))
+      );
+      setLeadSources(
+        (Array.isArray(leadSourceData) ? leadSourceData : []).map((source: any) => ({
+          id: String(source.id),
+          name: String(source.name || ""),
+        }))
+      );
+
+      const tagData = tagsResponse?.data?.data || tagsResponse?.data || [];
+      setAvailableTags(
+        (Array.isArray(tagData) ? tagData : []).map((tag: any) => ({
+          id: String(tag.id),
+          name: String(tag.name || ""),
+          color: typeof tag.color === "string" ? tag.color : null,
+        }))
+      );
+    } catch (error) {
+      console.error("Failed to load lead lookup data:", error);
+    }
   }, []);
+
+  useEffect(() => {
+    void loadLeads();
+    void loadLookupData();
+  }, [loadLeads, loadLookupData]);
 
   // Filtered and sorted leads
   const filteredLeads = useMemo(() => {
@@ -3306,7 +3481,7 @@ const AllLeads = () => {
 
     // Filter by temperature
     if (selectedTemperature !== "all") {
-      result = result.filter((l) => l.temperature === selectedTemperature);
+      result = result.filter((l) => l.temperature === normalizeLeadTemperatureValue(selectedTemperature));
     }
 
     // Sort
@@ -3317,10 +3492,10 @@ const AllLeads = () => {
           comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
           break;
         case "score":
-          comparison = a.score - b.score;
+          comparison = (a.leadScore ?? a.displayScore ?? 0) - (b.leadScore ?? b.displayScore ?? 0);
           break;
         case "value":
-          comparison = a.value - b.value;
+          comparison = a.potentialValue - b.potentialValue;
           break;
         case "name":
           comparison = `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);
@@ -3331,6 +3506,207 @@ const AllLeads = () => {
 
     return result;
   }, [leads, activeTab, searchQuery, selectedSource, selectedStatus, selectedTemperature, sortBy, sortOrder]);
+
+  const closeMeetingDialog = useCallback(() => {
+    setIsMeetingDialogOpen(false);
+    setPendingQualifiedLead(null);
+    setMeetingDialogMode("qualification");
+  }, []);
+
+  const ensureTagOptionsLoaded = useCallback(async () => {
+    if (availableTags.length > 0) {
+      return availableTags;
+    }
+
+    const response = await api.get("/tags/all");
+    const tagData = response.data?.data || response.data || [];
+    const mappedTags = (Array.isArray(tagData) ? tagData : []).map((tag: any) => ({
+      id: String(tag.id),
+      name: String(tag.name || ""),
+      color: typeof tag.color === "string" ? tag.color : null,
+    }));
+    setAvailableTags(mappedTags);
+    return mappedTags;
+  }, [availableTags]);
+
+  const parseTagNames = useCallback((input: string[] | string | undefined): string[] => {
+    if (Array.isArray(input)) {
+      return [...new Set(input.map((tag) => tag.trim()).filter(Boolean))];
+    }
+
+    if (typeof input !== "string") {
+      return [];
+    }
+
+    return [...new Set(input.split(",").map((tag) => tag.trim()).filter(Boolean))];
+  }, []);
+
+  const resolveTagIdsByNames = useCallback(async (tagNames: string[]) => {
+    const uniqueTagNames = [...new Set(tagNames.map((name) => name.trim()).filter(Boolean))];
+    if (uniqueTagNames.length === 0) {
+      return [];
+    }
+
+    let tagOptions = await ensureTagOptionsLoaded();
+    const tagMap = new Map(tagOptions.map((tag) => [normalizeLookupKey(tag.name), tag]));
+    const missingNames = uniqueTagNames.filter((name) => !tagMap.has(normalizeLookupKey(name)));
+
+    if (missingNames.length > 0) {
+      const createdTags = await Promise.all(
+        missingNames.map(async (name) => {
+          const response = await api.post("/tags", { name, color: pickTagColor(name) });
+          const created = response.data?.data || response.data;
+          return {
+            id: String(created.id),
+            name: String(created.name || name),
+            color: typeof created.color === "string" ? created.color : pickTagColor(name),
+          } as TagOption;
+        })
+      );
+
+      tagOptions = [...tagOptions, ...createdTags];
+      setAvailableTags(tagOptions);
+      createdTags.forEach((tag) => {
+        tagMap.set(normalizeLookupKey(tag.name), tag);
+      });
+    }
+
+    return uniqueTagNames
+      .map((name) => tagMap.get(normalizeLookupKey(name))?.id)
+      .filter((id): id is string => Boolean(id));
+  }, [ensureTagOptionsLoaded]);
+
+  const buildLeadMutationPayload = useCallback(async (data: Partial<Lead>) => {
+    const apiData: Record<string, any> = {
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email || undefined,
+      phone: data.phone || undefined,
+      companyName: data.companyName,
+      jobTitle: data.jobTitle || undefined,
+      website: data.website && data.website.trim() ? data.website.trim() : undefined,
+      location: data.location || undefined,
+      status: normalizeLeadStatusValue(String(data.status || LeadStatus.NEW)),
+      temperature: normalizeLeadTemperatureValue(String(data.temperature || LeadTemperature.WARM)),
+      potentialValue: data.potentialValue || 0,
+      notes: data.notes || undefined,
+      ...buildNewFieldsPayload(data),
+    };
+
+    if (data.leadSourceId && data.leadSourceId !== "none" && data.leadSourceId !== "") {
+      apiData.leadSourceId = data.leadSourceId;
+    } else if ("leadSourceId" in data) {
+      apiData.leadSourceId = null;
+    }
+
+    if (data.assignedToId && data.assignedToId !== "unassigned" && data.assignedToId !== "") {
+      apiData.assignedToId = data.assignedToId;
+    } else if ("assignedToId" in data) {
+      apiData.assignedToId = null;
+    }
+
+    const tagIds = await resolveTagIdsByNames(parseTagNames(data.tags));
+    if (tagIds.length > 0 || "tags" in data) {
+      apiData.tagIds = tagIds;
+    }
+
+    return apiData;
+  }, [parseTagNames, resolveTagIdsByNames]);
+
+  const syncLeadRecord = useCallback((updatedLead: Lead) => {
+    setLeads((prev) => prev.map((lead) => (lead.id === updatedLead.id ? updatedLead : lead)));
+    setCurrentLead((prev) => (prev?.id === updatedLead.id ? updatedLead : prev));
+    setSidePanelLead((prev) => (prev?.id === updatedLead.id ? updatedLead : prev));
+  }, []);
+
+  const openLeadEmailComposer = useCallback((lead: Lead) => {
+    if (!lead.email) {
+      toast({
+        title: "Email Missing",
+        description: "This lead does not have an email address yet.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setEmailComposerTarget({
+      to: lead.email,
+      name: `${lead.firstName} ${lead.lastName}`.trim() || lead.email,
+      leadId: lead.id,
+    });
+  }, [toast]);
+
+  const handleCallLead = useCallback((lead: Lead) => {
+    if (!lead.phone) {
+      toast({
+        title: "Phone Missing",
+        description: "This lead does not have a phone number yet.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    window.location.href = `tel:${lead.phone}`;
+  }, [toast]);
+
+  const exportLeadRecords = useCallback((records: Lead[], baseFileName: string) => {
+    if (records.length === 0) {
+      toast({
+        title: "Nothing to Export",
+        description: "There are no leads matching your current selection.",
+      });
+      return;
+    }
+
+    const rows: Array<Array<unknown>> = [
+      [
+        "First Name",
+        "Last Name",
+        "Email",
+        "Phone",
+        "Company Name",
+        "Job Title",
+        "Location",
+        "Status",
+        "Temperature",
+        "Potential Value",
+        "Assigned To",
+        "Lead Source",
+        "Property Address",
+        "City",
+        "State",
+        "Zip Code",
+        "Service Type",
+        "Insurance Claim",
+        "Notes",
+        "Tags",
+      ],
+      ...records.map((lead) => [
+        lead.firstName,
+        lead.lastName,
+        lead.email,
+        lead.phone,
+        lead.companyName,
+        lead.jobTitle,
+        lead.location,
+        lead.status,
+        lead.temperature,
+        lead.potentialValue,
+        lead.assignedToName,
+        getSourceInfo(lead.leadSourceName).name,
+        lead.propertyAddress,
+        lead.city,
+        lead.state,
+        lead.zipCode,
+        lead.serviceType,
+        lead.isInsuranceClaim,
+        lead.notes,
+        (lead.tags || []).join(", "),
+      ]),
+    ];
+
+    downloadCsv(rows, `${baseFileName}-${new Date().toISOString().slice(0, 10)}.csv`);
+  }, [toast]);
 
   // Handlers
   // Helper to build the new-fields portion of the API payload
@@ -3422,31 +3798,8 @@ const AllLeads = () => {
   };
 
   const handleAddLead = async (data: Partial<Lead>) => {
-    const apiData: Record<string, any> = {
-      firstName: data.firstName,
-      lastName: data.lastName,
-      email: data.email,
-      phone: data.phone || undefined,
-      companyName: data.companyName,
-      jobTitle: data.jobTitle || undefined,
-      website: data.website && data.website.trim() ? data.website.trim() : undefined,
-      location: data.location || undefined,
-      status: (data.status || "new").toUpperCase(),
-      temperature: (data.temperature || "warm").toUpperCase(),
-      potentialValue: data.potentialValue || 0,
-      notes: data.notes || undefined,
-      ...buildNewFieldsPayload(data),
-    };
-
-    if (data.leadSourceId && data.leadSourceId !== "none" && data.leadSourceId !== "") {
-      apiData.leadSourceId = data.leadSourceId;
-    }
-
-    if (data.assignedToId && data.assignedToId !== "unassigned" && data.assignedToId !== "") {
-      apiData.assignedToId = data.assignedToId;
-    }
-
     try {
+      const apiData = await buildLeadMutationPayload(data);
       const responseData = await createLead(apiData);
       const newLead = mapApiLead(responseData);
       setLeads((prev) => [newLead, ...prev]);
@@ -3534,40 +3887,10 @@ const AllLeads = () => {
   const handleEditLead = async (data: Partial<Lead>) => {
     if (!currentLead) return false;
     try {
-      const apiData: Record<string, any> = {
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
-        phone: data.phone || undefined,
-        companyName: data.companyName,
-        jobTitle: data.jobTitle || undefined,
-        website: data.website && data.website.trim() ? data.website.trim() : undefined,
-        location: data.location || undefined,
-        status: data.status?.toUpperCase(),
-        temperature: data.temperature?.toUpperCase(),
-        potentialValue: data.potentialValue || 0,
-        notes: data.notes || undefined,
-        ...buildNewFieldsPayload(data),
-      };
-      // Send leadSourceId if selected
-      if (data.leadSourceId && data.leadSourceId !== "none" && data.leadSourceId !== "") {
-        apiData.leadSourceId = data.leadSourceId;
-      } else {
-        apiData.leadSourceId = null;
-      }
-
-      // Only send assignedToId if a valid employee is selected
-      if (data.assignedToId && data.assignedToId !== "unassigned" && data.assignedToId !== "") {
-        apiData.assignedToId = data.assignedToId;
-      } else {
-        apiData.assignedToId = null;
-      }
-
+      const apiData = await buildLeadMutationPayload(data);
       const responseData = await updateLead(currentLead.id, apiData);
       const updatedLead = mapApiLead(responseData);
-      setLeads((prev) =>
-        prev.map((l) => (l.id === currentLead.id ? updatedLead : l))
-      );
+      syncLeadRecord(updatedLead);
       toast({
         title: "Lead Updated",
         description: "The lead has been updated successfully.",
@@ -3611,10 +3934,40 @@ const AllLeads = () => {
     }
   };
 
+  const handleDuplicateLead = async (lead: Lead) => {
+    try {
+      setBulkActionLoading("duplicate");
+      const apiData = await buildLeadMutationPayload({
+        ...lead,
+        firstName: lead.firstName,
+        lastName: lead.lastName,
+        email: lead.email,
+        phone: lead.phone,
+      });
+      const responseData = await createLead({ ...apiData, skipDuplicateCheck: true });
+      const duplicatedLead = mapApiLead(responseData);
+      setLeads((prev) => [duplicatedLead, ...prev]);
+      toast({
+        title: "Lead Duplicated",
+        description: `${lead.firstName} ${lead.lastName} was duplicated successfully.`,
+      });
+    } catch (error: any) {
+      console.error("Failed to duplicate lead:", error);
+      toast({
+        title: "Error",
+        description: getLeadErrorMessage(error, "Failed to duplicate lead."),
+        variant: "destructive",
+      });
+    } finally {
+      setBulkActionLoading(null);
+    }
+  };
+
   const handleStatusChange = async (lead: Lead, status: Lead["status"]) => {
     // Intercept QUALIFIED status → show meeting scheduling dialog
-    if (status === LeadStatus.QUALIFIED && lead.status !== "qualified") {
+    if (status === LeadStatus.QUALIFIED && lead.status !== LeadStatus.QUALIFIED) {
       setPendingQualifiedLead(lead);
+      setMeetingDialogMode("qualification");
       setIsMeetingDialogOpen(true);
       return;
     }
@@ -3646,25 +3999,32 @@ const AllLeads = () => {
   const handleMeetingSchedule = async (meetingData: Record<string, unknown>) => {
     if (!pendingQualifiedLead) return;
     try {
-      // 1. Update lead status to QUALIFIED
-      await updateLeadStatus(pendingQualifiedLead.id, "QUALIFIED");
-      setLeads((prev) =>
-        prev.map((l) =>
-          l.id === pendingQualifiedLead.id
-            ? { ...l, status: LeadStatus.QUALIFIED as Lead["status"], updatedAt: new Date().toISOString() }
-            : l
-        )
-      );
+      if (meetingDialogMode === "followUp") {
+        await createCalendarEvent(meetingData);
+        const responseData = await updateLead(pendingQualifiedLead.id, {
+          followUpDateTime: String(meetingData.startTime || ""),
+          nextStep: pendingQualifiedLead.nextStep || "Follow-up scheduled",
+        } as any);
+        const updatedLead = mapApiLead(responseData);
+        syncLeadRecord(updatedLead);
+        toast({
+          title: "Follow-up Scheduled",
+          description: `Follow-up scheduled for ${pendingQualifiedLead.firstName} ${pendingQualifiedLead.lastName}.`,
+        });
+        closeMeetingDialog();
+        return;
+      }
 
-      // 2. Create calendar event
+      const responseData = await updateLeadStatus(pendingQualifiedLead.id, "QUALIFIED");
+      syncLeadRecord(mapApiLead(responseData));
+
       await createCalendarEvent(meetingData);
 
       toast({
         title: "🎉 Lead Qualified & Meeting Scheduled!",
         description: `Meeting scheduled with ${pendingQualifiedLead.firstName} ${pendingQualifiedLead.lastName}.`,
       });
-      setIsMeetingDialogOpen(false);
-      setPendingQualifiedLead(null);
+      closeMeetingDialog();
     } catch (error: any) {
       console.error("Failed to schedule meeting:", error);
       toast({
@@ -3678,15 +4038,14 @@ const AllLeads = () => {
   // Handle skip meeting (still qualify the lead)
   const handleSkipMeeting = async () => {
     if (!pendingQualifiedLead) return;
+    if (meetingDialogMode === "followUp") {
+      closeMeetingDialog();
+      return;
+    }
+
     try {
-      await updateLeadStatus(pendingQualifiedLead.id, "QUALIFIED");
-      setLeads((prev) =>
-        prev.map((l) =>
-          l.id === pendingQualifiedLead.id
-            ? { ...l, status: LeadStatus.QUALIFIED as Lead["status"], updatedAt: new Date().toISOString() }
-            : l
-        )
-      );
+      const responseData = await updateLeadStatus(pendingQualifiedLead.id, "QUALIFIED");
+      syncLeadRecord(mapApiLead(responseData));
       toast({
         title: "Status Updated",
         description: `Lead marked as qualified (no meeting scheduled).`,
@@ -3699,8 +4058,7 @@ const AllLeads = () => {
         variant: "destructive",
       });
     }
-    setIsMeetingDialogOpen(false);
-    setPendingQualifiedLead(null);
+    closeMeetingDialog();
   };
 
   const toggleSelectAll = () => {
@@ -3722,6 +4080,411 @@ const AllLeads = () => {
       return newSet;
     });
   };
+
+  const handleScheduleFollowUp = useCallback((lead: Lead) => {
+    setPendingQualifiedLead(lead);
+    setMeetingDialogMode("followUp");
+    setIsMeetingDialogOpen(true);
+  }, []);
+
+  const handleBulkEmail = useCallback(() => {
+    const recipients = leads.filter((lead) => selectedLeads.has(lead.id) && lead.email);
+    if (recipients.length === 0) {
+      toast({
+        title: "No Recipients",
+        description: "Select at least one lead with an email address.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setEmailComposerTarget({
+      to: recipients.map((lead) => lead.email).join(", "),
+      name: recipients.length === 1
+        ? `${recipients[0].firstName} ${recipients[0].lastName}`.trim() || recipients[0].email
+        : `${recipients.length} leads`,
+    });
+  }, [leads, selectedLeads, toast]);
+
+  const handleBulkAssign = useCallback(async () => {
+    if (!bulkAssignedToId) {
+      toast({
+        title: "Assignee Required",
+        description: "Choose who these leads should be assigned to.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const leadIds = Array.from(selectedLeads);
+    if (leadIds.length === 0) {
+      return;
+    }
+
+    try {
+      setBulkActionLoading("assign");
+      await api.post("/leads/bulk/assign", { leadIds, assignedToId: bulkAssignedToId });
+      const assigneeName = employees.find((employee) => employee.id === bulkAssignedToId)?.name || "Assigned";
+      setLeads((prev) =>
+        prev.map((lead) =>
+          selectedLeads.has(lead.id)
+            ? { ...lead, assignedToId: bulkAssignedToId, assignedTo: assigneeName, assignedToName: assigneeName }
+            : lead
+        )
+      );
+      setSelectedLeads(new Set());
+      setBulkAssignedToId("");
+      setIsBulkAssignOpen(false);
+      toast({
+        title: "Leads Assigned",
+        description: `${leadIds.length} lead(s) assigned to ${assigneeName}.`,
+      });
+    } catch (error: any) {
+      console.error("Failed to bulk assign leads:", error);
+      toast({
+        title: "Error",
+        description: getLeadErrorMessage(error, "Failed to assign selected leads."),
+        variant: "destructive",
+      });
+    } finally {
+      setBulkActionLoading(null);
+    }
+  }, [bulkAssignedToId, employees, selectedLeads, toast]);
+
+  const handleBulkStatusUpdate = useCallback(async (status: Lead["status"]) => {
+    const leadIds = Array.from(selectedLeads);
+    if (leadIds.length === 0) {
+      return;
+    }
+
+    try {
+      setBulkActionLoading("status");
+      await api.post("/leads/bulk/status", { leadIds, status });
+      setLeads((prev) =>
+        prev.map((lead) =>
+          selectedLeads.has(lead.id)
+            ? { ...lead, status, updatedAt: new Date().toISOString() }
+            : lead
+        )
+      );
+      setSelectedLeads(new Set());
+      toast({
+        title: "Status Updated",
+        description: `${leadIds.length} lead(s) updated successfully.`,
+      });
+    } catch (error: any) {
+      console.error("Failed to bulk update lead status:", error);
+      toast({
+        title: "Error",
+        description: getLeadErrorMessage(error, "Failed to update selected lead statuses."),
+        variant: "destructive",
+      });
+    } finally {
+      setBulkActionLoading(null);
+    }
+  }, [selectedLeads, toast]);
+
+  const handleBulkTemperatureUpdate = useCallback(async (temperature: Lead["temperature"]) => {
+    const leadIds = Array.from(selectedLeads);
+    if (leadIds.length === 0) {
+      return;
+    }
+
+    try {
+      setBulkActionLoading("temperature");
+      const results = await Promise.allSettled(
+        leadIds.map((leadId) => updateLead(leadId, { temperature } as any))
+      );
+      const successfulLeadIds = leadIds.filter((_, index) => results[index]?.status === "fulfilled");
+
+      if (successfulLeadIds.length > 0) {
+        setLeads((prev) =>
+          prev.map((lead) =>
+            successfulLeadIds.includes(lead.id)
+              ? { ...lead, temperature, updatedAt: new Date().toISOString() }
+              : lead
+          )
+        );
+        setSelectedLeads(new Set());
+      }
+
+      toast({
+        title: successfulLeadIds.length === leadIds.length ? "Temperature Updated" : "Temperature Partially Updated",
+        description:
+          successfulLeadIds.length === leadIds.length
+            ? `${successfulLeadIds.length} lead(s) updated successfully.`
+            : `${successfulLeadIds.length} of ${leadIds.length} lead(s) were updated.`,
+        variant: successfulLeadIds.length === leadIds.length ? "default" : "destructive",
+      });
+    } catch (error: any) {
+      console.error("Failed to bulk update lead temperature:", error);
+      toast({
+        title: "Error",
+        description: getLeadErrorMessage(error, "Failed to update selected lead temperatures."),
+        variant: "destructive",
+      });
+    } finally {
+      setBulkActionLoading(null);
+    }
+  }, [selectedLeads, toast]);
+
+  const handleBulkAddTags = useCallback(async () => {
+    const leadIds = Array.from(selectedLeads);
+    const inputTagNames = parseTagNames(bulkTagsInput);
+
+    if (leadIds.length === 0) {
+      return;
+    }
+
+    if (inputTagNames.length === 0) {
+      toast({
+        title: "Tags Required",
+        description: "Enter at least one tag to add to the selected leads.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setBulkActionLoading("tags");
+      await resolveTagIdsByNames(inputTagNames);
+      const tagResponse = await api.get("/tags/all");
+      const tagOptions = (tagResponse.data?.data || tagResponse.data || []).map((tag: any) => ({
+        id: String(tag.id),
+        name: String(tag.name || ""),
+      }));
+      const tagMap = new Map(tagOptions.map((tag) => [normalizeLookupKey(tag.name), tag.id]));
+      const selectedLeadRecords = leads.filter((lead) => selectedLeads.has(lead.id));
+
+      const results = await Promise.allSettled(
+        selectedLeadRecords.map(async (lead) => {
+          const mergedTagNames = [...new Set([...(lead.tags || []), ...inputTagNames])];
+          const tagIds = mergedTagNames
+            .map((name) => tagMap.get(normalizeLookupKey(name)))
+            .filter((id): id is string => Boolean(id));
+          await updateLead(lead.id, { tagIds } as any);
+          return { leadId: lead.id, tags: mergedTagNames };
+        })
+      );
+
+      const successfulUpdates = results
+        .filter((result): result is PromiseFulfilledResult<{ leadId: string; tags: string[] }> => result.status === "fulfilled")
+        .map((result) => result.value);
+
+      if (successfulUpdates.length > 0) {
+        const updateMap = new Map(successfulUpdates.map((result) => [result.leadId, result.tags]));
+        setLeads((prev) =>
+          prev.map((lead) =>
+            updateMap.has(lead.id)
+              ? { ...lead, tags: updateMap.get(lead.id) }
+              : lead
+          )
+        );
+      }
+
+      setSelectedLeads(new Set());
+      setBulkTagsInput("");
+      setIsBulkTagsOpen(false);
+      toast({
+        title: successfulUpdates.length === selectedLeadRecords.length ? "Tags Added" : "Tags Partially Added",
+        description:
+          successfulUpdates.length === selectedLeadRecords.length
+            ? `${successfulUpdates.length} lead(s) updated with the new tags.`
+            : `${successfulUpdates.length} of ${selectedLeadRecords.length} lead(s) were updated.`,
+        variant: successfulUpdates.length === selectedLeadRecords.length ? "default" : "destructive",
+      });
+    } catch (error: any) {
+      console.error("Failed to bulk add tags:", error);
+      toast({
+        title: "Error",
+        description: getLeadErrorMessage(error, "Failed to add tags to selected leads."),
+        variant: "destructive",
+      });
+    } finally {
+      setBulkActionLoading(null);
+    }
+  }, [bulkTagsInput, ensureTagOptionsLoaded, leads, parseTagNames, resolveTagIdsByNames, selectedLeads, toast]);
+
+  const handleBulkExport = useCallback(() => {
+    const selectedLeadRecords = leads.filter((lead) => selectedLeads.has(lead.id));
+    exportLeadRecords(selectedLeadRecords, "selected-leads");
+  }, [exportLeadRecords, leads, selectedLeads]);
+
+  const handleBulkDelete = useCallback(async () => {
+    const leadIds = Array.from(selectedLeads);
+    if (leadIds.length === 0) {
+      return;
+    }
+
+    if (!window.confirm(`Delete ${leadIds.length} selected lead(s)? This cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      setBulkActionLoading("delete");
+      const results = await Promise.allSettled(leadIds.map((leadId) => deleteLead(leadId)));
+      const successfulLeadIds = leadIds.filter((_, index) => results[index]?.status === "fulfilled");
+
+      if (successfulLeadIds.length > 0) {
+        setLeads((prev) => prev.filter((lead) => !successfulLeadIds.includes(lead.id)));
+        setSelectedLeads(new Set());
+      }
+
+      toast({
+        title: successfulLeadIds.length === leadIds.length ? "Leads Deleted" : "Leads Partially Deleted",
+        description:
+          successfulLeadIds.length === leadIds.length
+            ? `${successfulLeadIds.length} lead(s) removed.`
+            : `${successfulLeadIds.length} of ${leadIds.length} lead(s) were removed.`,
+        variant: successfulLeadIds.length === leadIds.length ? "destructive" : "destructive",
+      });
+    } catch (error: any) {
+      console.error("Failed to bulk delete leads:", error);
+      toast({
+        title: "Error",
+        description: getLeadErrorMessage(error, "Failed to delete selected leads."),
+        variant: "destructive",
+      });
+    } finally {
+      setBulkActionLoading(null);
+    }
+  }, [selectedLeads, toast]);
+
+  const handleImportLeads = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) {
+      return;
+    }
+
+    try {
+      setBulkActionLoading("import");
+      const content = await file.text();
+      let importedRows: Record<string, string>[] = [];
+
+      if (file.name.toLowerCase().endsWith(".json")) {
+        const parsed = JSON.parse(content);
+        importedRows = Array.isArray(parsed) ? parsed as Record<string, string>[] : [];
+      } else {
+        const csvRows = parseCsvText(content);
+        if (csvRows.length < 2) {
+          throw new Error("The selected CSV file is empty.");
+        }
+
+        const [rawHeaders, ...dataRows] = csvRows;
+        const headers = rawHeaders.map((header) => normalizeLookupKey(header));
+        importedRows = dataRows.map((row) =>
+          headers.reduce<Record<string, string>>((accumulator, header, index) => {
+            accumulator[header] = row[index] || "";
+            return accumulator;
+          }, {})
+        );
+      }
+
+      const employeeMap = new Map(
+        employees.flatMap((employee) => [
+          [normalizeLookupKey(employee.name), employee.id],
+          [normalizeLookupKey(employee.id), employee.id],
+        ])
+      );
+      const leadSourceMap = new Map(
+        leadSources.flatMap((source) => [
+          [normalizeLookupKey(source.name), source.id],
+          [normalizeLookupKey(source.id), source.id],
+        ])
+      );
+
+      const parsedLeads = importedRows.map((row, index) => {
+        const firstName = row["first name"] || row["firstname"] || row["first_name"] || row["firstName"] || "";
+        const lastName = row["last name"] || row["lastname"] || row["last_name"] || row["lastName"] || "";
+        if (!firstName.trim() || !lastName.trim()) {
+          throw new Error(`Row ${index + 2}: first name and last name are required.`);
+        }
+
+        const rawTags = row["tags"] || "";
+        const parsedTagNames = rawTags
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter(Boolean);
+
+        return {
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          email: (row["email"] || "").trim() || undefined,
+          phone: (row["phone"] || "").trim() || undefined,
+          companyName: (row["company name"] || row["company"] || row["companyName"] || "").trim(),
+          jobTitle: (row["job title"] || row["jobtitle"] || row["jobTitle"] || "").trim() || undefined,
+          location: (row["location"] || "").trim() || undefined,
+          status: normalizeLeadStatusValue(row["status"]),
+          temperature: normalizeLeadTemperatureValue(row["temperature"]),
+          potentialValue: Number((row["potential value"] || row["value"] || row["potentialValue"] || "0").replace(/[^0-9.-]/g, "")) || 0,
+          assignedToId: employeeMap.get(normalizeLookupKey(row["assigned to"] || row["assignedto"] || row["assignedToId"] || "")) || undefined,
+          leadSourceId: leadSourceMap.get(normalizeLookupKey(row["lead source"] || row["source"] || row["leadSourceId"] || "")) || undefined,
+          propertyAddress: (row["property address"] || row["propertyaddress"] || row["propertyAddress"] || "").trim() || undefined,
+          city: (row["city"] || "").trim() || undefined,
+          state: (row["state"] || "").trim() || undefined,
+          zipCode: (row["zip code"] || row["zipcode"] || row["postal code"] || row["zipCode"] || "").trim() || undefined,
+          serviceType: (row["service type"] || row["servicetype"] || row["serviceType"] || "").trim() || undefined,
+          isInsuranceClaim: (row["insurance claim"] || row["isinsuranceclaim"] || row["isInsuranceClaim"] || "").trim() || undefined,
+          notes: (row["notes"] || "").trim() || undefined,
+          tagNames: parsedTagNames,
+        };
+      });
+
+      const uniqueImportTagNames = [...new Set(parsedLeads.flatMap((lead) => lead.tagNames))];
+      await resolveTagIdsByNames(uniqueImportTagNames);
+      const tagResponse = await api.get("/tags/all");
+      const tagOptions = (tagResponse.data?.data || tagResponse.data || []).map((tag: any) => ({
+        id: String(tag.id),
+        name: String(tag.name || ""),
+      }));
+      const tagMap = new Map(tagOptions.map((tag) => [normalizeLookupKey(tag.name), tag.id]));
+
+      const payload = parsedLeads.map((lead) => ({
+        firstName: lead.firstName,
+        lastName: lead.lastName,
+        email: lead.email,
+        phone: lead.phone,
+        companyName: lead.companyName,
+        jobTitle: lead.jobTitle,
+        location: lead.location,
+        status: lead.status,
+        temperature: lead.temperature,
+        potentialValue: lead.potentialValue,
+        assignedToId: lead.assignedToId,
+        leadSourceId: lead.leadSourceId,
+        propertyAddress: lead.propertyAddress,
+        city: lead.city,
+        state: lead.state,
+        zipCode: lead.zipCode,
+        serviceType: lead.serviceType,
+        isInsuranceClaim: lead.isInsuranceClaim,
+        notes: lead.notes,
+        tagIds: lead.tagNames
+          .map((tagName) => tagMap.get(normalizeLookupKey(tagName)))
+          .filter((id): id is string => Boolean(id)),
+      }));
+
+      const response = await api.post("/leads/import", { leads: payload });
+      const result = response.data?.data || response.data || {};
+      await loadLeads();
+
+      toast({
+        title: "Import Completed",
+        description: `${result.imported || payload.length} imported, ${result.failed || 0} failed, ${result.duplicates || 0} duplicates handled.`,
+      });
+    } catch (error: any) {
+      console.error("Failed to import leads:", error);
+      toast({
+        title: "Import Failed",
+        description: getLeadErrorMessage(error, "Failed to import leads from the selected file."),
+        variant: "destructive",
+      });
+    } finally {
+      setBulkActionLoading(null);
+    }
+  }, [employees, ensureTagOptionsLoaded, leadSources, loadLeads, resolveTagIdsByNames, toast]);
 
   // Stats calculations
   const newCount = leads.filter((l) => l.status === "NEW").length;
@@ -3754,7 +4517,13 @@ const AllLeads = () => {
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="outline" size="icon" className="rounded-md hidden sm:inline-flex">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="rounded-md hidden sm:inline-flex"
+                        onClick={() => importFileInputRef.current?.click()}
+                        disabled={bulkActionLoading === "import"}
+                      >
                         <Upload size={18} />
                       </Button>
                     </TooltipTrigger>
@@ -3762,7 +4531,13 @@ const AllLeads = () => {
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="outline" size="icon" className="rounded-md hidden sm:inline-flex">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="rounded-md hidden sm:inline-flex"
+                        onClick={() => exportLeadRecords(filteredLeads, "leads")}
+                        disabled={bulkActionLoading === "export"}
+                      >
                         <Download size={18} />
                       </Button>
                     </TooltipTrigger>
@@ -4077,21 +4852,21 @@ const AllLeads = () => {
                       {selectedLeads.size} selected
                     </span>
                     <div className="flex-1" />
-                    <Button size="sm" variant="outline" className="rounded-md">
+                    <Button size="sm" variant="outline" className="rounded-md" onClick={handleBulkEmail}>
                       <Mail size={14} className="mr-1" />
                       Email
                     </Button>
-                    <Button size="sm" variant="outline" className="rounded-md">
+                    <Button size="sm" variant="outline" className="rounded-md" onClick={() => setIsBulkTagsOpen(true)}>
                       <Tag size={14} className="mr-1" />
                       Add Tags
                     </Button>
-                    <Button size="sm" variant="outline" className="rounded-md">
+                    <Button size="sm" variant="outline" className="rounded-md" onClick={() => setIsBulkAssignOpen(true)}>
                       <UserCheck size={14} className="mr-1" />
                       Assign
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="sm" variant="outline" className="rounded-md">
+                        <Button size="sm" variant="outline" className="rounded-md" disabled={bulkActionLoading === "status"}>
                           <RefreshCw size={14} className="mr-1" />
                           Status
                           <ChevronDown size={12} className="ml-1" />
@@ -4102,17 +4877,7 @@ const AllLeads = () => {
                           <DropdownMenuItem
                             key={status.id}
                             className="rounded-md"
-                            onClick={() => {
-                              setLeads((prev) =>
-                                prev.map((l) =>
-                                  selectedLeads.has(l.id) ? { ...l, status: status.id as Lead["status"] } : l
-                                )
-                              );
-                              toast({
-                                title: "Status Updated",
-                                description: `${selectedLeads.size} lead(s) updated to ${status.name}.`,
-                              });
-                            }}
+                            onClick={() => void handleBulkStatusUpdate(status.id as Lead["status"])}
                           >
                             <span className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: status.color }} />
                             {status.name}
@@ -4122,36 +4887,25 @@ const AllLeads = () => {
                     </DropdownMenu>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="sm" variant="outline" className="rounded-md">
+                        <Button size="sm" variant="outline" className="rounded-md" disabled={bulkActionLoading === "temperature"}>
                           <Thermometer size={14} className="mr-1" />
                           Temp
                           <ChevronDown size={12} className="ml-1" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent className="rounded-md">
-                        <DropdownMenuItem className="rounded-md" onClick={() => {
-                          setLeads((prev) => prev.map((l) => selectedLeads.has(l.id) ? { ...l, temperature: LeadTemperature.HOT } : l));
-                          toast({ title: "Temperature Updated", description: `${selectedLeads.size} lead(s) set to Hot.` });
-                        }}>
+                        <DropdownMenuItem className="rounded-md" onClick={() => void handleBulkTemperatureUpdate(LeadTemperature.HOT)}>
                           <Flame size={14} className="mr-2 text-red-500" /> Hot
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="rounded-md" onClick={() => {
-                          setLeads((prev) => prev.map((l) => selectedLeads.has(l.id) ? { ...l, temperature: LeadTemperature.WARM } : l));
-                          toast({ title: "Temperature Updated", description: `${selectedLeads.size} lead(s) set to Warm.` });
-                        }}>
+                        <DropdownMenuItem className="rounded-md" onClick={() => void handleBulkTemperatureUpdate(LeadTemperature.WARM)}>
                           <ThermometerSun size={14} className="mr-2 text-yellow-500" /> Warm
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="rounded-md" onClick={() => {
-                          setLeads((prev) => prev.map((l) => selectedLeads.has(l.id) ? { ...l, temperature: LeadTemperature.COLD } : l));
-                          toast({ title: "Temperature Updated", description: `${selectedLeads.size} lead(s) set to Cold.` });
-                        }}>
+                        <DropdownMenuItem className="rounded-md" onClick={() => void handleBulkTemperatureUpdate(LeadTemperature.COLD)}>
                           <Snowflake size={14} className="mr-2 text-blue-500" /> Cold
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
-                    <Button size="sm" variant="outline" className="rounded-md" onClick={() => {
-                      toast({ title: "Exported", description: `${selectedLeads.size} lead(s) exported to CSV.` });
-                    }}>
+                    <Button size="sm" variant="outline" className="rounded-md" onClick={handleBulkExport}>
                       <Download size={14} className="mr-1" />
                       Export
                     </Button>
@@ -4159,16 +4913,7 @@ const AllLeads = () => {
                       size="sm"
                       variant="outline"
                       className="rounded-md text-red-600 border-red-200 hover:bg-red-50"
-                      onClick={() => {
-                        // Delete selected leads
-                        setLeads((prev) => prev.filter((l) => !selectedLeads.has(l.id)));
-                        setSelectedLeads(new Set());
-                        toast({
-                          title: "Leads Deleted",
-                          description: `${selectedLeads.size} lead(s) have been removed.`,
-                          variant: "destructive",
-                        });
-                      }}
+                      onClick={() => void handleBulkDelete()}
                     >
                       <Trash2 size={14} className="mr-1" />
                       Delete
@@ -4235,6 +4980,10 @@ const AllLeads = () => {
                               setLeadToDelete(lead);
                               setIsDeleteAlertOpen(true);
                             }}
+                            onEmail={() => openLeadEmailComposer(lead)}
+                            onCall={() => handleCallLead(lead)}
+                            onDuplicate={() => void handleDuplicateLead(lead)}
+                            onScheduleFollowUp={() => handleScheduleFollowUp(lead)}
                             onStatusChange={(status) => handleStatusChange(lead, status)}
                           />
                         ))
@@ -4269,6 +5018,8 @@ const AllLeads = () => {
                           setLeadToDelete(lead);
                           setIsDeleteAlertOpen(true);
                         }}
+                        onEmail={() => openLeadEmailComposer(lead)}
+                        onCall={() => handleCallLead(lead)}
                         onStatusChange={(status) => handleStatusChange(lead, status)}
                         delay={index * 0.05}
                       />
@@ -4282,6 +5033,14 @@ const AllLeads = () => {
       </main>
 
       {/* Dialogs */}
+      <input
+        ref={importFileInputRef}
+        type="file"
+        accept=".csv,application/json,.json"
+        className="hidden"
+        onChange={(event) => void handleImportLeads(event)}
+      />
+
       <LeadFormDialog
         isOpen={isFormOpen}
         onClose={() => {
@@ -4392,14 +5151,75 @@ const AllLeads = () => {
 
       <ScheduleMeetingDialog
         isOpen={isMeetingDialogOpen}
-        onClose={() => {
-          setIsMeetingDialogOpen(false);
-          setPendingQualifiedLead(null);
-        }}
+        onClose={closeMeetingDialog}
         lead={pendingQualifiedLead}
         onSchedule={handleMeetingSchedule}
         onSkip={handleSkipMeeting}
+        mode={meetingDialogMode}
       />
+
+      <Dialog open={isBulkAssignOpen} onOpenChange={setIsBulkAssignOpen}>
+        <DialogContent className="rounded-md sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Assign Selected Leads</DialogTitle>
+            <DialogDescription>
+              Choose the team member who should own these {selectedLeads.size} lead(s).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Label htmlFor="bulkAssignedToId">Assign to</Label>
+            <Select value={bulkAssignedToId} onValueChange={setBulkAssignedToId}>
+              <SelectTrigger id="bulkAssignedToId" className="rounded-md">
+                <SelectValue placeholder="Select employee" />
+              </SelectTrigger>
+              <SelectContent className="rounded-md">
+                {employees.map((employee) => (
+                  <SelectItem key={employee.id} value={employee.id} className="rounded-md">
+                    {employee.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" className="rounded-md" onClick={() => setIsBulkAssignOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" className="rounded-md" onClick={() => void handleBulkAssign()} disabled={bulkActionLoading === "assign"}>
+              {bulkActionLoading === "assign" ? "Assigning..." : "Assign Leads"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isBulkTagsOpen} onOpenChange={setIsBulkTagsOpen}>
+        <DialogContent className="rounded-md sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Tags</DialogTitle>
+            <DialogDescription>
+              Add one or more comma-separated tags to the {selectedLeads.size} selected lead(s).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Label htmlFor="bulkTagsInput">Tags</Label>
+            <Input
+              id="bulkTagsInput"
+              value={bulkTagsInput}
+              onChange={(event) => setBulkTagsInput(event.target.value)}
+              placeholder="Insurance Claim, High Value, Repeat Customer"
+              className="rounded-md"
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" className="rounded-md" onClick={() => setIsBulkTagsOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" className="rounded-md" onClick={() => void handleBulkAddTags()} disabled={bulkActionLoading === "tags"}>
+              {bulkActionLoading === "tags" ? "Saving..." : "Add Tags"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Lead Side Panel */}
       <Sheet open={isSidePanelOpen} onOpenChange={setIsSidePanelOpen}>
@@ -4565,6 +5385,14 @@ const AllLeads = () => {
           })()}
         </SheetContent>
       </Sheet>
+
+      <ComposeEmailSheet
+        isOpen={Boolean(emailComposerTarget)}
+        onClose={() => setEmailComposerTarget(null)}
+        defaultRecipientEmail={emailComposerTarget?.to || null}
+        defaultRecipientName={emailComposerTarget?.name || null}
+        leadId={emailComposerTarget?.leadId}
+      />
     </div>
   );
 };

@@ -40,7 +40,6 @@ import {
   Sparkles,
   Sun,
   Target,
-  Upload,
   Users,
   X,
 } from "lucide-react";
@@ -747,17 +746,6 @@ const Index = () => {
         icon: FileText,
         path: "/roof-estimator/new",
         variant: "default",
-      });
-    }
-
-    if (dashboardAccess.canViewRoofEstimator) {
-      items.push({
-        id: "upload-roof-image",
-        label: "Upload Roof Image",
-        description: "Start measurements from a roof photo",
-        icon: Upload,
-        path: "/roof-estimator/new",
-        variant: "outline",
       });
     }
 

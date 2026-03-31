@@ -739,13 +739,13 @@ const Index = () => {
   const quickActions = useMemo<QuickActionItem[]>(() => {
     const items: QuickActionItem[] = [];
 
-    if (dashboardAccess.canViewQuotes) {
+    if (dashboardAccess.canViewRoofEstimator) {
       items.push({
         id: "create-estimate",
         label: "Create Estimate",
-        description: "Turn a lead into a priced proposal",
+        description: "Launch the ZODO AI Roof Estimator",
         icon: FileText,
-        path: "/quotes",
+        path: "/roof-estimator/new",
         variant: "default",
       });
     }
@@ -810,7 +810,6 @@ const Index = () => {
     dashboardAccess.canViewInvoices,
     dashboardAccess.canViewLeads,
     dashboardAccess.canViewProjects,
-    dashboardAccess.canViewQuotes,
     dashboardAccess.canViewRoofEstimator,
     dashboardAccess.canViewSiteVisits,
   ]);

@@ -62,6 +62,10 @@ export {
   requestTiming,
 } from './requestLogger.middleware';
 
+export {
+  requestLocalization,
+} from './requestLocalization.middleware';
+
 // Note: Upload middleware exports removed - functions not implemented yet
 // TODO: Implement file upload middleware when needed
 

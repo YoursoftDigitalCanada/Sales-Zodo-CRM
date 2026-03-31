@@ -11,6 +11,7 @@ import {
   requestId,
   requestLogger,
   requestTiming,
+  requestLocalization,
   defaultRateLimiter,
   errorHandler,
   notFoundHandler,
@@ -87,6 +88,9 @@ export function createApp(): Application {
 
   // Request logging
   app.use(requestLogger);
+
+  // Per-user browser locale and timezone
+  app.use(requestLocalization);
 
   // =========================================================================
   // RATE LIMITING

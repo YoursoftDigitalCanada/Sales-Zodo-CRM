@@ -64,6 +64,7 @@ import {
   completeTenantOnboarding,
   getTenantOnboarding,
 } from "@/features/onboarding/services/onboarding-service";
+import { detectUserLocalization } from "@/lib/user-localization";
 import logo from "../Images/Logo/logo.png";
 
 type StepId = "modules" | "settings" | "team" | "projects" | "ai" | "analytics" | "complete";
@@ -137,12 +138,8 @@ const PLAN_ACCENTS: Record<PlanKey, { badge: string; tone: string; highlight: st
 };
 
 function detectLocaleSettings(): OnboardingPayload["settings"] {
-  const timezone =
-    Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-  const locale = typeof navigator !== "undefined"
-    ? navigator.languages?.find(Boolean) || navigator.language || "en-US"
-    : "en-US";
-  const country = locale.split("-").pop()?.toUpperCase() || "US";
+  const detected = detectUserLocalization();
+  const country = detected.countryCode;
 
   const currencyByCountry: Record<string, OnboardingPayload["settings"]["currency"]> = {
     US: "USD",
@@ -167,7 +164,7 @@ function detectLocaleSettings(): OnboardingPayload["settings"] {
 
   return {
     currency: currencyByCountry[country] || "USD",
-    timezone,
+    timezone: detected.timezone,
     dateFormat,
   };
 }

@@ -51,6 +51,16 @@ declare global {
       requestId?: string;
 
       /**
+       * User-local browser timezone sent from the frontend on each request.
+       */
+      userTimezone?: string;
+
+      /**
+       * User-local browser locale sent from the frontend on each request.
+       */
+      userLocale?: string;
+
+      /**
        * Data-level assignment scope for non-admin employees.
        * Set by `loadDataAccess` middleware on scoped CRM modules.
        */

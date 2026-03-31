@@ -1,6 +1,7 @@
 import axios from "axios";
 import { getAccessToken, clearAuthSession } from "@/features/auth/lib/auth-storage";
 import { API_BASE_URL, normalizeApiEndpoint } from "@/services/api";
+import { getUserLocalizationSnapshot } from "@/lib/user-localization";
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -15,11 +16,16 @@ apiClient.interceptors.request.use(
       config.url = normalizeApiEndpoint(config.url);
     }
 
+    config.headers = config.headers || {};
+
     const token = getAccessToken();
     if (token) {
-      config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    const localization = getUserLocalizationSnapshot();
+    config.headers["X-User-Timezone"] = localization.timezone;
+    config.headers["X-User-Locale"] = localization.locale;
 
     return config;
   },

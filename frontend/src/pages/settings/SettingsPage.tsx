@@ -64,6 +64,7 @@ import {
   type WorkspaceTheme,
 } from "@/features/settings/services/settings-service";
 import { useWorkspaceBranding } from "@/features/settings/context/workspace-branding";
+import { getUserLocalizationSnapshot } from "@/lib/user-localization";
 
 type SettingsTab = "general" | "company" | "billing" | "email" | "security" | "notifications" | "team";
 
@@ -280,6 +281,7 @@ export default function SettingsPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { updateBranding } = useWorkspaceBranding();
+  const userLocalization = useMemo(() => getUserLocalizationSnapshot(), []);
   const [activeTab, setActiveTab] = useState<SettingsTab>(routeMap[location.pathname] || "general");
   const [isLoading, setIsLoading] = useState(true);
   const [savingSection, setSavingSection] = useState<string | null>(null);
@@ -331,6 +333,11 @@ export default function SettingsPage() {
   const selectedTemplate = useMemo(
     () => emailSettings?.templates.find((template) => template.id === selectedTemplateId) || null,
     [emailSettings, selectedTemplateId]
+  );
+
+  const availableTimezones = useMemo(
+    () => Array.from(new Set([userLocalization.timezone, ...(general?.timezone ? [general.timezone] : []), ...timezones])).filter(Boolean),
+    [general?.timezone, userLocalization.timezone],
   );
 
   const loadSettingsData = useCallback(async () => {
@@ -705,9 +712,9 @@ export default function SettingsPage() {
                         ))}
                       </select>
                     </Field>
-                    <Field label="Timezone" hint="Lead timestamps, activity feeds, and automation schedules use this timezone.">
+                    <Field label="Timezone" hint="Shared schedules and automations use this workspace timezone. Each signed-in user now sees app timestamps in their own local timezone automatically.">
                       <select className={fieldClass} value={general.timezone} onChange={(event) => setGeneral({ ...general, timezone: event.target.value })}>
-                        {timezones.map((timezone) => (
+                        {availableTimezones.map((timezone) => (
                           <option key={timezone} value={timezone}>
                             {timezone}
                           </option>

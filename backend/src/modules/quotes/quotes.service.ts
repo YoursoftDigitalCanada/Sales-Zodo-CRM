@@ -13,6 +13,7 @@ import { notificationsService } from '../notifications/notifications.service';
 import { generateQuoteContractPdfBuffer } from './quote-contract-pdf';
 import { quoteSignatureReminderService } from './quote-signature-reminder.service';
 import { buildQuoteSelect, stripUnsupportedQuoteSignatureFields } from './quote-schema-compat';
+import { logger } from '../../common/utils/logger';
 import fs from 'fs';
 import path from 'path';
 
@@ -48,6 +49,27 @@ export class QuotesService {
 
     private joinAddress(parts: Array<string | null | undefined>) {
         return parts.map((part) => String(part || '').trim()).filter(Boolean).join(', ');
+    }
+
+    private async resolveUserId(userOrEmployeeId?: string | null): Promise<string | undefined> {
+        const normalizedId = String(userOrEmployeeId || '').trim();
+        if (!normalizedId) {
+            return undefined;
+        }
+
+        const employee = await prisma.employee.findUnique({
+            where: { id: normalizedId },
+            select: { userId: true },
+        });
+        if (employee?.userId) {
+            return employee.userId;
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { id: normalizedId },
+            select: { id: true },
+        });
+        return user?.id;
     }
 
     private async getCompanyProfile(tenantId: string): Promise<CompanyProfile> {
@@ -311,32 +333,40 @@ export class QuotesService {
 
     private async notifyQuoteSigner(quote: QuoteContractRecord, signerName: string) {
         if (!quote.createdById) return;
-        const owner = await prisma.employee.findUnique({
-            where: { id: quote.createdById },
-            select: { userId: true },
-        });
-        if (!owner?.userId) return;
+        const ownerUserId = await this.resolveUserId(quote.createdById);
+        if (!ownerUserId) return;
 
-        await notificationsService.create({
-            title: 'Estimate Signed',
-            message: `${signerName} signed ${quote.quoteNumber}. You can now convert it to a job.`,
-            type: 'SUCCESS',
-            userId: owner.userId,
-            tenantId: quote.tenantId,
-            actionUrl: `/quotes`,
-            actionLabel: 'View Estimate',
-        });
+        try {
+            await notificationsService.create({
+                title: 'Estimate Signed',
+                message: `${signerName} signed ${quote.quoteNumber}. You can now convert it to a job.`,
+                type: 'SUCCESS',
+                userId: ownerUserId,
+                tenantId: quote.tenantId,
+                actionUrl: `/quotes`,
+                actionLabel: 'View Estimate',
+            });
+        } catch (error) {
+            logger.error('[Quotes] Failed to create signed-estimate notification', {
+                quoteId: quote.id,
+                quoteNumber: quote.quoteNumber,
+                tenantId: quote.tenantId,
+                ownerUserId,
+                error: error instanceof Error ? error.message : String(error),
+            });
+        }
     }
 
     async create(tenantId: string, data: CreateQuoteDto, createdById?: string) {
         const quote = await quotesRepository.create(tenantId, data, createdById);
         const dto = toQuoteResponseDto(quote);
+        const actorUserId = await this.resolveUserId(createdById);
 
         activityLogger.log({
             tenantId, entityType: 'Quote', entityId: dto.id,
             action: 'CREATE', module: 'quotes',
             description: `Created quote "${dto.quoteNumber}"`,
-            userId: createdById,
+            userId: actorUserId,
             metadata: { quoteNumber: dto.quoteNumber, total: dto.total, clientId: dto.client?.id },
         });
 
@@ -402,6 +432,7 @@ export class QuotesService {
     async updateStatus(id: string, tenantId: string, status: string, actorEmployeeId?: string) {
         const existing = await quotesRepository.findById(id, tenantId);
         if (!existing) throw new NotFoundError('Quote not found', ErrorCodes.RESOURCE_NOT_FOUND);
+        const actorUserId = await this.resolveUserId(actorEmployeeId);
 
         const oldStatus = (existing as any).status;
         if (['SIGNED', 'ACCEPTED'].includes(String(oldStatus)) && status !== oldStatus) {
@@ -425,6 +456,7 @@ export class QuotesService {
             tenantId, entityType: 'Quote', entityId: dto.id,
             action: 'STATUS_CHANGE', module: 'quotes',
             description: `Quote "${dto.quoteNumber}" status: ${oldStatus} → ${status}`,
+            userId: actorUserId,
             metadata: { oldStatus, newStatus: status },
         });
 
@@ -449,6 +481,7 @@ export class QuotesService {
     async sendQuote(id: string, tenantId: string, actorEmployeeId?: string) {
         const quote = await this.loadQuoteContractRecord({ id, tenantId });
         if (!quote) throw new NotFoundError('Quote not found', ErrorCodes.RESOURCE_NOT_FOUND);
+        const actorUserId = await this.resolveUserId(actorEmployeeId);
 
         const q = quote as QuoteContractRecord;
         if (['SIGNED', 'ACCEPTED'].includes(String(q.status))) {
@@ -648,7 +681,7 @@ export class QuotesService {
             tenantId, entityType: 'Quote', entityId: dto.id,
             action: 'STATUS_CHANGE', module: 'quotes',
             description: `Estimate "${dto.quoteNumber}" sent for signature to ${recipient.email}${emailAttachments.length > 0 ? ' (with roof estimate PDF)' : ''}`,
-            userId: actorEmployeeId,
+            userId: actorUserId,
             metadata: { recipientEmail: recipient.email, publicToken, publicLink, hasRoofEstimatePdf: emailAttachments.length > 0, contractVersion },
         });
 

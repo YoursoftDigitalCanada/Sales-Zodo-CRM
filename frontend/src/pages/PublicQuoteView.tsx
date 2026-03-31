@@ -9,6 +9,17 @@ import { cn } from "@/lib/utils";
 
 const API_BASE = import.meta.env.VITE_API_URL || "https://api.zodo.ca/api/v1";
 
+const getApiOrigin = () => {
+  try {
+    return new URL(
+      API_BASE,
+      typeof window !== "undefined" ? window.location.origin : "https://crm.zodo.ca",
+    ).origin;
+  } catch {
+    return "";
+  }
+};
+
 interface QuoteCompany {
   companyName: string;
   email?: string | null;
@@ -78,6 +89,20 @@ const formatDate = (value?: string | null) =>
     ? new Date(value).toLocaleDateString("en-CA", { year: "numeric", month: "long", day: "numeric" })
     : "-";
 
+const resolvePublicAssetUrl = (value?: string | null) => {
+  if (!value) {
+    return null;
+  }
+  if (/^https?:\/\//i.test(value)) {
+    return value;
+  }
+  const apiOrigin = getApiOrigin();
+  if (!apiOrigin) {
+    return value;
+  }
+  return `${apiOrigin}${value.startsWith("/") ? value : `/${value}`}`;
+};
+
 const statusConfig = (status: string) => {
   const normalized = status.toLowerCase();
   if (normalized === "signed" || normalized === "accepted") {
@@ -124,6 +149,7 @@ export default function PublicQuoteView() {
         }
         const data = await res.json();
         setQuote(data);
+        setFullName((current) => current || data.client?.name || "");
       } catch (err: any) {
         setError(err.message || "Unable to load estimate.");
       } finally {
@@ -167,6 +193,7 @@ export default function PublicQuoteView() {
   const normalizedCurrentStatus = currentStatus.toLowerCase();
   const badge = statusConfig(currentStatus);
   const StatusIcon = badge.icon;
+  const companyLogoUrl = resolvePublicAssetUrl(quote?.company.logoUrl);
 
   const getCanvasPoint = (event: React.PointerEvent<HTMLCanvasElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -228,6 +255,11 @@ export default function PublicQuoteView() {
 
     if (action === "sign" && signatureMode === "draw" && (!drawnSignature || drawnSignature === "data:,")) {
       setError("Draw the signature before signing.");
+      return;
+    }
+
+    if (action === "sign" && !agreeToTerms) {
+      setError("Please agree to the estimate terms before signing.");
       return;
     }
 
@@ -302,8 +334,8 @@ export default function PublicQuoteView() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-md bg-[#0891B2]/10 flex items-center justify-center overflow-hidden">
-                {quote.company.logoUrl ? (
-                  <img src={quote.company.logoUrl} alt={quote.company.companyName} className="h-full w-full object-contain" />
+                {companyLogoUrl ? (
+                  <img src={companyLogoUrl} alt={quote.company.companyName} className="h-full w-full object-contain" />
                 ) : (
                   <FileStack className="h-5 w-5 text-[#0891B2]" />
                 )}

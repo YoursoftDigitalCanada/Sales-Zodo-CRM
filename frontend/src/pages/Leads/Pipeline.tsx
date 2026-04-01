@@ -1,7 +1,7 @@
 // src/pages/Leads/Pipeline.tsx
 
-import React, { useState, useCallback, useEffect, useRef } from "react";
-import { getLeads, createLead, deleteLead, updateLeadStatus, convertLead } from "@/features/leads";
+import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { getLeads, getLeadById, createLead, updateLead, deleteLead, updateLeadStatus, convertLead } from "@/features/leads";
 import { createCalendarEvent } from "@/features/calendar";
 import { autocompleteAddress } from "@/features/roof-estimator/services/roof-estimator-service";
 import { LeadFormDialog } from "@/pages/Leads/AllLeads";
@@ -18,6 +18,13 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -30,8 +37,15 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+import api from "@/lib/axios";
+import { ComposeEmailSheet } from "@/features/emails/components/ComposeEmailSheet";
 import {
   Search,
   Plus,
@@ -105,6 +119,8 @@ interface PipelineStage {
   leads: Lead[];
 }
 
+type LeadFormLead = React.ComponentProps<typeof LeadFormDialog>["lead"];
+
 // ============================================
 // PIPELINE STAGE DEFINITIONS
 // ============================================
@@ -163,6 +179,100 @@ function buildEmptyPipeline(): PipelineStage[] {
   return pipelineStageConfig.map((cfg) => ({ ...cfg, leads: [] }));
 }
 
+function mapApiLeadToDialogLead(apiLead: any): NonNullable<LeadFormLead> {
+  return {
+    id: apiLead.id,
+    firstName: apiLead.firstName || "",
+    lastName: apiLead.lastName || "",
+    email: apiLead.email || "",
+    phone: apiLead.phone || "",
+    companyName: (() => {
+      const companyName = apiLead.companyName || "";
+      if (companyName && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(companyName)) {
+        return "";
+      }
+      return companyName;
+    })(),
+    jobTitle: apiLead.jobTitle || "",
+    website: apiLead.website || "",
+    location: apiLead.location || "",
+    leadSourceName: (apiLead.leadSource?.name || "other").toLowerCase().replace(/\s+/g, "_"),
+    status: apiLead.status || "NEW",
+    displayScore: apiLead.leadScore != null ? Math.min(apiLead.leadScore * 10, 100) : 50,
+    temperature: apiLead.temperature || "WARM",
+    potentialValue: apiLead.potentialValue || 0,
+    currency: "CAD",
+    assignedTo: apiLead.assignedTo
+      ? `${apiLead.assignedTo.user?.firstName || ""} ${apiLead.assignedTo.user?.lastName || ""}`.trim()
+      : "",
+    assignedToName: apiLead.assignedTo
+      ? `${apiLead.assignedTo.user?.firstName || ""} ${apiLead.assignedTo.user?.lastName || ""}`.trim()
+      : "",
+    assignedToId: apiLead.assignedToId || apiLead.assignedTo?.id || "",
+    leadSourceId: apiLead.leadSourceId || "",
+    tags: apiLead.tags?.map((tag: any) => tag.name) || [],
+    notes: apiLead.notes || "",
+    lastContact: apiLead.lastContact || "",
+    nextFollowUp: apiLead.nextFollowUp || "",
+    createdAt: apiLead.createdAt,
+    updatedAt: apiLead.updatedAt || "",
+    avatar: apiLead.avatar || "",
+    propertyAddress: apiLead.propertyAddress || "",
+    city: apiLead.city || "",
+    state: apiLead.state || "",
+    zipCode: apiLead.zipCode || "",
+    propertyType: apiLead.propertyType || "",
+    serviceType: apiLead.serviceType || "",
+    isInsuranceClaim: apiLead.isInsuranceClaim || "",
+    urgencyLevel: apiLead.urgencyLevel || "",
+    preferredContactMethod: apiLead.preferredContactMethod || "",
+    bestTimeToContact: apiLead.bestTimeToContact || "",
+    issueDescription: apiLead.issueDescription || "",
+    confirmedName: apiLead.confirmedName || false,
+    confirmedPhone: apiLead.confirmedPhone || false,
+    confirmedEmail: apiLead.confirmedEmail || false,
+    confirmedAddress: apiLead.confirmedAddress || false,
+    secondaryPhone: apiLead.secondaryPhone || "",
+    spouseCoOwnerName: apiLead.spouseCoOwnerName || "",
+    isHomeowner: apiLead.isHomeowner || "",
+    isDecisionMaker: apiLead.isDecisionMaker || "",
+    ownershipType: apiLead.ownershipType || "",
+    roofAge: apiLead.roofAge || "",
+    currentRoofMaterial: apiLead.currentRoofMaterial || "",
+    numberOfStories: apiLead.numberOfStories || "",
+    knownDamageType: apiLead.knownDamageType || [],
+    damageOccurrenceDate: apiLead.damageOccurrenceDate || "",
+    previousRoofWork: apiLead.previousRoofWork || "",
+    previousRoofWorkDetails: apiLead.previousRoofWorkDetails || "",
+    insuranceCompanyName: apiLead.insuranceCompanyName || "",
+    hasClaimBeenFiled: apiLead.hasClaimBeenFiled || "",
+    claimNumber: apiLead.claimNumber || "",
+    adjusterAssigned: apiLead.adjusterAssigned || "",
+    adjusterName: apiLead.adjusterName || "",
+    adjusterPhone: apiLead.adjusterPhone || "",
+    adjusterEmail: apiLead.adjusterEmail || "",
+    adjusterMeetingDate: apiLead.adjusterMeetingDate || "",
+    budgetRange: apiLead.budgetRange || "",
+    workTimeline: apiLead.workTimeline || "",
+    financingNeeded: apiLead.financingNeeded || "",
+    gettingOtherQuotes: apiLead.gettingOtherQuotes || "",
+    numberOfOtherQuotes: apiLead.numberOfOtherQuotes || undefined,
+    topPriority: apiLead.topPriority || "",
+    isHOA: apiLead.isHOA || "",
+    hoaRestrictions: apiLead.hoaRestrictions || "",
+    leadScore: apiLead.leadScore || undefined,
+    disqualifiedReason: apiLead.disqualifiedReason || "",
+    nextStep: apiLead.nextStep || "",
+    followUpDateTime: apiLead.followUpDateTime || "",
+    inspectionAppointmentDate: apiLead.inspectionAppointmentDate || "",
+    qualificationCallNotes: apiLead.qualificationCallNotes || "",
+    closureReason: apiLead.closureReason || "",
+    duplicateOfLeadId: apiLead.duplicateOfLeadId || "",
+    closedAt: apiLead.closedAt || "",
+    reactivateAt: apiLead.reactivateAt || "",
+  };
+}
+
 // ============================================
 // UTILITY FUNCTIONS
 // ============================================
@@ -195,15 +305,39 @@ const formatDate = (dateStr: string) => {
   } catch { return dateStr; }
 };
 
+const normalizeLookupKey = (value: string) =>
+  value.trim().toLowerCase().replace(/\s+/g, " ");
+
+const pickTagColor = (tagName: string): string => {
+  const palette = ["#14B8A6", "#6637F4", "#F59E0B", "#EF4444", "#0EA5E9", "#8B5CF6"];
+  const hash = [...tagName].reduce((total, char) => total + char.charCodeAt(0), 0);
+  return palette[hash % palette.length];
+};
+
+const parseTagNames = (input: string[] | string | undefined): string[] => {
+  if (Array.isArray(input)) {
+    return [...new Set(input.map((tag) => tag.trim()).filter(Boolean))];
+  }
+
+  if (typeof input !== "string") {
+    return [];
+  }
+
+  return [...new Set(input.split(",").map((tag) => tag.trim()).filter(Boolean))];
+};
+
 // ============================================
 // LEAD CARD COMPONENT (Draggable)
 // ============================================
 
 const PipelineLeadCard = ({
-  lead, stageColor, onView, onEdit, onDelete,
+  lead, stageColor, onOpenRecord, onPreview, onEdit, onDelete,
 }: {
   lead: Lead; stageColor: string;
-  onView: () => void; onEdit: () => void; onDelete: () => void;
+  onOpenRecord: () => void;
+  onPreview: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
 }) => {
   const tempInfo = getTemperatureInfo(lead.temperature);
   const TempIcon = tempInfo.icon;
@@ -225,7 +359,7 @@ const PipelineLeadCard = ({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4 cursor-grab active:cursor-grabbing hover:shadow-lg hover:border-slate-300 transition-all group"
-      onClick={onView}
+      onClick={onOpenRecord}
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
@@ -258,7 +392,7 @@ const PipelineLeadCard = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-40 rounded-md">
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onView(); }} className="rounded-md text-sm">
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPreview(); }} className="rounded-md text-sm">
                 <Eye size={14} className="mr-2" /> View
               </DropdownMenuItem>
               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }} className="rounded-md text-sm">
@@ -316,10 +450,11 @@ const PipelineLeadCard = ({
 // ============================================
 
 const PipelineColumn = ({
-  stage, onLeadView, onLeadEdit, onLeadDelete, onAddLead, onDropLead,
+  stage, onLeadOpenRecord, onLeadPreview, onLeadEdit, onLeadDelete, onAddLead, onDropLead,
 }: {
   stage: PipelineStage;
-  onLeadView: (lead: Lead) => void;
+  onLeadOpenRecord: (lead: Lead) => void;
+  onLeadPreview: (lead: Lead) => void;
   onLeadEdit: (lead: Lead) => void;
   onLeadDelete: (lead: Lead) => void;
   onAddLead: (stageId: string) => void;
@@ -412,7 +547,8 @@ const PipelineColumn = ({
               key={lead.id}
               lead={lead}
               stageColor={stage.color}
-              onView={() => onLeadView(lead)}
+              onOpenRecord={() => onLeadOpenRecord(lead)}
+              onPreview={() => onLeadPreview(lead)}
               onEdit={() => onLeadEdit(lead)}
               onDelete={() => onLeadDelete(lead)}
             />
@@ -440,7 +576,19 @@ const PipelineColumn = ({
 // LEAD DETAIL PANEL
 // ============================================
 
-const LeadDetailPanel = ({ lead, onClose, stageColor }: { lead: Lead; onClose: () => void; stageColor: string }) => {
+const LeadDetailPanel = ({
+  lead,
+  onClose,
+  onEmail,
+  onCall,
+  stageColor,
+}: {
+  lead: Lead;
+  onClose: () => void;
+  onEmail: () => void;
+  onCall: () => void;
+  stageColor: string;
+}) => {
   const tempInfo = getTemperatureInfo(lead.temperature);
   const TempIcon = tempInfo.icon;
 
@@ -586,10 +734,10 @@ const LeadDetailPanel = ({ lead, onClose, stageColor }: { lead: Lead; onClose: (
 
       {/* Footer Actions */}
       <div className="p-4 border-t border-[rgba(15,23,42,0.06)] flex gap-3">
-        <Button className="flex-1 bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-md gap-2">
+        <Button className="flex-1 bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-md gap-2" onClick={onEmail}>
           <Mail size={16} /> Send Email
         </Button>
-        <Button variant="outline" className="flex-1 rounded-md gap-2">
+        <Button variant="outline" className="flex-1 rounded-md gap-2" onClick={onCall}>
           <Phone size={16} /> Call
         </Button>
       </div>
@@ -606,10 +754,15 @@ const Pipeline = () => {
   const navigate = useNavigate();
   const [pipeline, setPipeline] = useState<PipelineStage[]>(buildEmptyPipeline());
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterTemperature, setFilterTemperature] = useState("all");
+  const [filterSource, setFilterSource] = useState("all");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAddLeadDialogOpen, setIsAddLeadDialogOpen] = useState(false);
   const [pendingAddStageId, setPendingAddStageId] = useState<string | null>(null);
+  const [leadDialogMode, setLeadDialogMode] = useState<"create" | "edit">("create");
+  const [editingLead, setEditingLead] = useState<LeadFormLead>(null);
+  const [emailComposerTarget, setEmailComposerTarget] = useState<{ to: string; name: string; leadId?: string } | null>(null);
 
   // ── Conversion dialog state ──
   const [convertingLead, setConvertingLead] = useState<{ lead: Lead; sourceStageId: string } | null>(null);
@@ -673,47 +826,186 @@ const Pipeline = () => {
     setShowLocSuggestions(false);
   };
 
-  // Fetch leads from API and distribute into pipeline stages
-  useEffect(() => {
-    const fetchLeads = async () => {
-      try {
+  const loadPipeline = useCallback(async (options?: { showSpinner?: boolean }) => {
+    const showSpinner = options?.showSpinner ?? true;
+
+    try {
+      if (showSpinner) {
         setLoading(true);
-        const apiLeads = await getLeads();
-        const stages = buildEmptyPipeline();
-        const leads: Lead[] = Array.isArray(apiLeads) ? apiLeads.map(mapApiLeadToPipeline) : [];
+      }
 
-        leads.forEach((lead) => {
-          const stageId = statusToStageId[(lead.status || "new").toUpperCase()] || "new";
-          const stage = stages.find((s) => s.id === stageId);
-          if (stage) stage.leads.push(lead);
-        });
+      const apiLeads = await getLeads();
+      const stages = buildEmptyPipeline();
+      const leads: Lead[] = Array.isArray(apiLeads) ? apiLeads.map(mapApiLeadToPipeline) : [];
 
-        setPipeline(stages);
-      } catch (error) {
-        console.error("Failed to fetch pipeline leads:", error);
-        toast({ title: "Error", description: "Failed to load pipeline data.", variant: "destructive" });
-      } finally {
+      leads.forEach((lead) => {
+        const stageId = statusToStageId[(lead.status || "new").toUpperCase()] || "new";
+        const stage = stages.find((item) => item.id === stageId);
+        if (stage) {
+          stage.leads.push(lead);
+        }
+      });
+
+      setPipeline(stages);
+      setSelectedLead((prev) => {
+        if (!prev) {
+          return prev;
+        }
+
+        const refreshedLead = stages.flatMap((stage) => stage.leads).find((lead) => lead.id === prev.id);
+        return refreshedLead || null;
+      });
+    } catch (error) {
+      console.error("Failed to fetch pipeline leads:", error);
+      toast({ title: "Error", description: "Failed to load pipeline data.", variant: "destructive" });
+    } finally {
+      if (showSpinner) {
         setLoading(false);
       }
-    };
-    fetchLeads();
-  }, []);
+    }
+  }, [toast]);
 
-  const totalLeads = pipeline.reduce((acc, stage) => acc + stage.leads.length, 0);
-  const totalValue = pipeline.reduce((acc, stage) => acc + stage.leads.reduce((sum, lead) => sum + lead.value, 0), 0);
-  const wonValue = pipeline.find((s) => s.id === "won")?.leads.reduce((acc, l) => acc + l.value, 0) || 0;
+  useEffect(() => {
+    void loadPipeline();
+  }, [loadPipeline]);
+
+  const displayedPipeline = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+
+    return pipeline.map((stage) => ({
+      ...stage,
+      leads: stage.leads.filter((lead) => {
+        const matchesSearch = !normalizedQuery || [
+          lead.firstName,
+          lead.lastName,
+          lead.email,
+          lead.phone,
+          lead.company,
+          lead.jobTitle,
+          lead.assignedTo,
+          lead.source,
+        ].some((value) => value.toLowerCase().includes(normalizedQuery));
+
+        const matchesTemperature = filterTemperature === "all" || lead.temperature === filterTemperature;
+        const matchesSource = filterSource === "all" || lead.source === filterSource;
+
+        return matchesSearch && matchesTemperature && matchesSource;
+      }),
+    }));
+  }, [filterSource, filterTemperature, pipeline, searchQuery]);
+
+  const totalLeads = displayedPipeline.reduce((acc, stage) => acc + stage.leads.length, 0);
+  const totalValue = displayedPipeline.reduce((acc, stage) => acc + stage.leads.reduce((sum, lead) => sum + lead.value, 0), 0);
+  const wonValue = displayedPipeline.find((stage) => stage.id === "won")?.leads.reduce((acc, lead) => acc + lead.value, 0) || 0;
+  const sourceOptions = useMemo(
+    () => [...new Set(pipeline.flatMap((stage) => stage.leads.map((lead) => lead.source).filter(Boolean)))].sort((a, b) => a.localeCompare(b)),
+    [pipeline]
+  );
+  const activeFilterCount = Number(filterTemperature !== "all") + Number(filterSource !== "all");
+  const hasDisplayedLeads = displayedPipeline.some((stage) => stage.leads.length > 0);
 
   // Find the stage color for the selected lead
   const selectedLeadStageColor = selectedLead
     ? pipeline.find((s) => s.leads.some((l) => l.id === selectedLead.id))?.color || "#6637F4"
     : "#6637F4";
 
-  const handleLeadView = (lead: Lead) => {
+  const handleLeadOpenRecord = (lead: Lead) => {
     navigate(`/leads/${lead.id}`);
   };
 
-  const handleLeadEdit = (lead: Lead) => {
-    toast({ title: "Edit Lead", description: `Editing ${lead.firstName} ${lead.lastName} ` });
+  const handleLeadPreview = (lead: Lead) => {
+    setSelectedLead(lead);
+  };
+
+  const resolveTagIdsByNames = useCallback(async (tagInput: string[] | string | undefined) => {
+    const tagNames = parseTagNames(tagInput);
+    if (tagNames.length === 0) {
+      return [];
+    }
+
+    const tagResponse = await api.get("/tags/all");
+    const tagData = tagResponse.data?.data || tagResponse.data || [];
+    const tagMap = new Map(
+      (Array.isArray(tagData) ? tagData : []).map((tag: any) => [normalizeLookupKey(String(tag.name || "")), tag])
+    );
+
+    const missingNames = tagNames.filter((name) => !tagMap.has(normalizeLookupKey(name)));
+    if (missingNames.length > 0) {
+      const createdTags = await Promise.all(
+        missingNames.map(async (name) => {
+          const response = await api.post("/tags", { name, color: pickTagColor(name) });
+          return response.data?.data || response.data;
+        })
+      );
+
+      createdTags.forEach((tag: any) => {
+        tagMap.set(normalizeLookupKey(String(tag.name || "")), tag);
+      });
+    }
+
+    return tagNames
+      .map((name) => tagMap.get(normalizeLookupKey(name))?.id)
+      .filter((id): id is string => Boolean(id));
+  }, []);
+
+  const buildLeadMutationPayload = useCallback(async (data: Record<string, any>, options?: { requestedStageId?: string | null }) => {
+    const requestedStatus = options?.requestedStageId ? stageIdToStatus[options.requestedStageId] : undefined;
+    const selectedStatus = data.status ? String(data.status).toUpperCase() : undefined;
+    const resolvedStatus = requestedStatus && (!selectedStatus || selectedStatus === "NEW")
+      ? requestedStatus
+      : (selectedStatus || "NEW");
+
+    const apiData: Record<string, any> = {
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email || undefined,
+      phone: data.phone || undefined,
+      companyName: data.companyName,
+      jobTitle: data.jobTitle || undefined,
+      website: data.website && data.website.trim() ? data.website.trim() : undefined,
+      location: data.location || undefined,
+      status: resolvedStatus,
+      temperature: String(data.temperature || "WARM").toUpperCase(),
+      potentialValue: data.potentialValue || 0,
+      notes: data.notes || undefined,
+      ...buildNewFieldsPayload(data),
+    };
+
+    if (data.leadSourceId && data.leadSourceId !== "none" && data.leadSourceId !== "") {
+      apiData.leadSourceId = data.leadSourceId;
+    } else if ("leadSourceId" in data) {
+      apiData.leadSourceId = null;
+    }
+
+    if (data.assignedToId && data.assignedToId !== "unassigned" && data.assignedToId !== "") {
+      apiData.assignedToId = data.assignedToId;
+    } else if ("assignedToId" in data) {
+      apiData.assignedToId = null;
+    }
+
+    const tagIds = await resolveTagIdsByNames(data.tags);
+    if (tagIds.length > 0 || "tags" in data) {
+      apiData.tagIds = tagIds;
+    }
+
+    return apiData;
+  }, [resolveTagIdsByNames]);
+
+  const handleLeadEdit = async (lead: Lead) => {
+    try {
+      const apiLead = await getLeadById(lead.id);
+      setLeadDialogMode("edit");
+      setEditingLead(mapApiLeadToDialogLead(apiLead));
+      setPendingAddStageId(null);
+      setIsAddLeadDialogOpen(true);
+    } catch (error) {
+      console.error("Failed to load lead for editing:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load that lead for editing.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleLeadDelete = async (lead: Lead) => {
@@ -785,6 +1077,8 @@ const Pipeline = () => {
   };
 
   const openAddLeadDialog = (stageId?: string | null) => {
+    setLeadDialogMode("create");
+    setEditingLead(null);
     setPendingAddStageId(stageId ?? null);
     setIsAddLeadDialogOpen(true);
   };
@@ -792,6 +1086,7 @@ const Pipeline = () => {
   const closeAddLeadDialog = () => {
     setIsAddLeadDialogOpen(false);
     setPendingAddStageId(null);
+    setEditingLead(null);
   };
 
   const getLeadErrorMessage = (error: any, fallback: string) => {
@@ -819,48 +1114,11 @@ const Pipeline = () => {
 
   const handleCreateLeadFromDialog = async (data: any) => {
     try {
-      const requestedStageStatus = pendingAddStageId ? stageIdToStatus[pendingAddStageId] : undefined;
-      const selectedStatus = data.status ? String(data.status).toUpperCase() : undefined;
-      const resolvedStatus = requestedStageStatus && (!selectedStatus || selectedStatus === "NEW")
-        ? requestedStageStatus
-        : (selectedStatus || "NEW");
-
-      const apiData: Record<string, any> = {
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
-        phone: data.phone || undefined,
-        companyName: data.companyName,
-        jobTitle: data.jobTitle || undefined,
-        website: data.website && data.website.trim() ? data.website.trim() : undefined,
-        location: data.location || undefined,
-        status: resolvedStatus,
-        temperature: (data.temperature || "warm").toUpperCase(),
-        potentialValue: data.potentialValue || 0,
-        notes: data.notes || undefined,
-        ...buildNewFieldsPayload(data),
-      };
-
-      if (data.leadSourceId && data.leadSourceId !== "none" && data.leadSourceId !== "") {
-        apiData.leadSourceId = data.leadSourceId;
-      }
-
-      if (data.assignedToId && data.assignedToId !== "unassigned" && data.assignedToId !== "") {
-        apiData.assignedToId = data.assignedToId;
-      }
-
+      const apiData = await buildLeadMutationPayload(data, { requestedStageId: pendingAddStageId });
       const responseData = await createLead(apiData);
       const newLead = mapApiLeadToPipeline(responseData);
+      await loadPipeline({ showSpinner: false });
       const targetStageId = statusToStageId[(newLead.status || "new").toUpperCase()] || "new";
-
-      setPipeline((prev) =>
-        prev.map((stage) =>
-          stage.id === targetStageId
-            ? { ...stage, leads: [newLead, ...stage.leads] }
-            : stage
-        )
-      );
-
       const stageName = pipelineStageConfig.find((stage) => stage.id === targetStageId)?.name || "the pipeline";
       toast({
         title: "Lead Added",
@@ -877,6 +1135,65 @@ const Pipeline = () => {
       return false;
     }
   };
+
+  const handleUpdateLeadFromDialog = async (data: any) => {
+    if (!editingLead?.id) {
+      return false;
+    }
+
+    try {
+      const apiData = await buildLeadMutationPayload(data);
+      const responseData = await updateLead(editingLead.id, apiData as any);
+      const updatedLead = mapApiLeadToPipeline(responseData);
+      await loadPipeline({ showSpinner: false });
+      toast({
+        title: "Lead Updated",
+        description: `${updatedLead.firstName} ${updatedLead.lastName} was updated successfully.`,
+      });
+      return true;
+    } catch (error: any) {
+      console.error("Failed to update lead from pipeline:", error);
+      toast({
+        title: "Error",
+        description: getLeadErrorMessage(error, "Failed to update lead."),
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  const handleLeadDialogSubmit = async (data: any) =>
+    leadDialogMode === "edit" ? handleUpdateLeadFromDialog(data) : handleCreateLeadFromDialog(data);
+
+  const openLeadEmailComposer = useCallback((lead: Lead) => {
+    if (!lead.email) {
+      toast({
+        title: "Email Missing",
+        description: "This lead does not have an email address yet.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setEmailComposerTarget({
+      to: lead.email,
+      name: `${lead.firstName} ${lead.lastName}`.trim() || lead.email,
+      leadId: lead.id,
+    });
+  }, [toast]);
+
+  const handleCallLead = useCallback((lead: Lead) => {
+    if (!lead.phone) {
+      toast({
+        title: "Phone Missing",
+        description: "This lead does not have a phone number yet.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    window.location.href = `tel:${lead.phone}`;
+  }, [toast]);
 
   const handleAddLead = (stageId: string) => {
     openAddLeadDialog(stageId);
@@ -1150,10 +1467,69 @@ const Pipeline = () => {
                   />
                 </div>
 
-                <Button variant="outline" className="rounded-md gap-2">
-                  <Filter size={16} />
-                  Filter
-                </Button>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="rounded-md gap-2">
+                      <Filter size={16} />
+                      Filter
+                      {activeFilterCount > 0 && (
+                        <span className="inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full bg-[#6637F4]/10 text-[#6637F4] text-xs font-semibold">
+                          {activeFilterCount}
+                        </span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-72 rounded-md p-4 space-y-4">
+                    <div className="space-y-1">
+                      <h3 className="text-sm font-semibold text-[#0F172A]">Filter Pipeline</h3>
+                      <p className="text-xs text-[#64748B]">Narrow the board by temperature or source.</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium text-[#475569]">Temperature</Label>
+                      <Select value={filterTemperature} onValueChange={setFilterTemperature}>
+                        <SelectTrigger className="rounded-md">
+                          <SelectValue placeholder="All temperatures" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-md">
+                          <SelectItem value="all" className="rounded-md">All Temperatures</SelectItem>
+                          <SelectItem value="hot" className="rounded-md">Hot</SelectItem>
+                          <SelectItem value="warm" className="rounded-md">Warm</SelectItem>
+                          <SelectItem value="cold" className="rounded-md">Cold</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium text-[#475569]">Lead Source</Label>
+                      <Select value={filterSource} onValueChange={setFilterSource}>
+                        <SelectTrigger className="rounded-md">
+                          <SelectValue placeholder="All sources" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-md">
+                          <SelectItem value="all" className="rounded-md">All Sources</SelectItem>
+                          {sourceOptions.map((source) => (
+                            <SelectItem key={source} value={source} className="rounded-md">
+                              {source}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="w-full justify-center rounded-md"
+                      onClick={() => {
+                        setFilterTemperature("all");
+                        setFilterSource("all");
+                      }}
+                    >
+                      Clear Filters
+                    </Button>
+                  </PopoverContent>
+                </Popover>
 
                 <Button
                   className="bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-md gap-2"
@@ -1172,7 +1548,7 @@ const Pipeline = () => {
           {/* Pipeline Flow Indicator */}
           <div className="mb-6 flex items-center justify-center">
             <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-md border border-[rgba(15,23,42,0.06)] shadow-sm">
-              {pipeline.map((stage, index) => (
+              {displayedPipeline.map((stage, index) => (
                 <React.Fragment key={stage.id}>
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: stage.color }} />
@@ -1191,11 +1567,12 @@ const Pipeline = () => {
 
           {/* Pipeline Columns */}
           <div className="flex gap-6 overflow-x-auto pb-6 custom-scrollbar">
-            {pipeline.map((stage) => (
+            {displayedPipeline.map((stage) => (
               <PipelineColumn
                 key={stage.id}
                 stage={stage}
-                onLeadView={handleLeadView}
+                onLeadOpenRecord={handleLeadOpenRecord}
+                onLeadPreview={handleLeadPreview}
                 onLeadEdit={handleLeadEdit}
                 onLeadDelete={handleLeadDelete}
                 onAddLead={handleAddLead}
@@ -1203,6 +1580,13 @@ const Pipeline = () => {
               />
             ))}
           </div>
+
+          {!hasDisplayedLeads && !loading && (
+            <div className="mt-4 rounded-xl border border-dashed border-[#D8D5F8] bg-white p-6 text-center">
+              <p className="text-sm font-medium text-[#0F172A]">No leads match your current search or filters.</p>
+              <p className="mt-1 text-xs text-[#64748B]">Try clearing the filters or searching with a different name, company, phone, or email.</p>
+            </div>
+          )}
         </div>
       </main>
 
@@ -1221,6 +1605,8 @@ const Pipeline = () => {
             <LeadDetailPanel
               lead={selectedLead}
               onClose={() => setSelectedLead(null)}
+              onEmail={() => openLeadEmailComposer(selectedLead)}
+              onCall={() => handleCallLead(selectedLead)}
               stageColor={selectedLeadStageColor}
             />
           </>
@@ -1230,8 +1616,16 @@ const Pipeline = () => {
       <LeadFormDialog
         isOpen={isAddLeadDialogOpen}
         onClose={closeAddLeadDialog}
-        lead={null}
-        onSubmit={handleCreateLeadFromDialog}
+        lead={editingLead}
+        onSubmit={handleLeadDialogSubmit}
+      />
+
+      <ComposeEmailSheet
+        isOpen={Boolean(emailComposerTarget)}
+        onClose={() => setEmailComposerTarget(null)}
+        defaultRecipientEmail={emailComposerTarget?.to || null}
+        defaultRecipientName={emailComposerTarget?.name || null}
+        leadId={emailComposerTarget?.leadId}
       />
 
       {/* Convert Lead to Client Dialog */}

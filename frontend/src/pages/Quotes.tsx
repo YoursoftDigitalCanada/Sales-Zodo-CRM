@@ -313,7 +313,7 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
   const [formData, setFormData] = useState({
     title: "", clientId: "", clientName: "", clientEmail: "", clientCompany: "",
     leadId: "", leadName: "", projectName: "",
-    description: "", notes: "", terms: "50% upfront, 50% on delivery. Net 30 terms.",
+    description: "", notes: "", terms: "A material deposit is due before scheduling. Remaining balance is due upon substantial completion. Quote valid for 14 days unless otherwise noted.",
     validUntil: "", priority: "medium" as Quote["priority"], status: "draft" as Quote["status"],
     items: [{ id: "new-1", description: "", quantity: 1, rate: 0, amount: 0 }] as QuoteItem[],
     discount: 0, tax: 13,
@@ -410,7 +410,7 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
               {quote ? "Edit Quote" : "Create New Quote"}
             </DialogTitle>
             <DialogDescription className="text-[#94A3B8]">
-              {quote ? `Editing ${quote.quoteNumber}` : "Fill in the details to create a professional quote"}
+              {quote ? `Editing ${quote.quoteNumber}` : "Fill in the details to create a professional roofing quote"}
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -420,11 +420,11 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
             <div className="grid grid-cols-2 gap-4">
               <div><Label className="text-xs text-[#475569]">Quote Title *</Label>
                 <Input value={formData.title} onChange={e => setFormData(p => ({ ...p, title: e.target.value }))}
-                  placeholder="e.g. Website Redesign Package" className="mt-1 rounded-md" required />
+                  placeholder="e.g. Asphalt Shingle Roof Replacement" className="mt-1 rounded-md" required />
               </div>
               <div><Label className="text-xs text-[#475569]">Project Name</Label>
                 <Input value={formData.projectName} onChange={e => setFormData(p => ({ ...p, projectName: e.target.value }))}
-                  placeholder="e.g. Web Revamp 2026" className="mt-1 rounded-md" />
+                  placeholder="e.g. Johnson Residence Roof Replacement" className="mt-1 rounded-md" />
               </div>
             </div>
 
@@ -543,13 +543,13 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
               </div>
               <div><Label className="text-xs text-[#475569]">Email</Label>
                 <Input value={formData.clientEmail} onChange={e => setFormData(p => ({ ...p, clientEmail: e.target.value }))}
-                  placeholder="email@example.com" type="email" className="mt-1 rounded-md" />
+                  placeholder="homeowner@example.com" type="email" className="mt-1 rounded-md" />
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               <div><Label className="text-xs text-[#475569]">Company</Label>
                 <Input value={formData.clientCompany} onChange={e => setFormData(p => ({ ...p, clientCompany: e.target.value }))}
-                  placeholder="Company name" className="mt-1 rounded-md" />
+                  placeholder="HOA, builder, or property company" className="mt-1 rounded-md" />
               </div>
               <div><Label className="text-xs text-[#475569]">Valid Until</Label>
                 <Input type="date" value={formData.validUntil} onChange={e => setFormData(p => ({ ...p, validUntil: e.target.value }))}
@@ -584,7 +584,7 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
                     {formData.items.map((item, idx) => (
                       <tr key={item.id} className="border-t border-[rgba(15,23,42,0.06)]">
                         <td className="px-3 py-2"><Input value={item.description} onChange={e => updateItem(idx, "description", e.target.value)}
-                          placeholder="Service description" className="h-8 rounded-md text-sm" /></td>
+                          placeholder="Tear-off, underlayment, shingles, flashing, cleanup" className="h-8 rounded-md text-sm" /></td>
                         <td className="px-3 py-2"><Input type="number" value={item.quantity} onChange={e => updateItem(idx, "quantity", Number(e.target.value))}
                           className="h-8 rounded-md text-sm text-center" min={1} /></td>
                         <td className="px-3 py-2"><Input type="number" value={item.rate} onChange={e => updateItem(idx, "rate", Number(e.target.value))}
@@ -653,11 +653,11 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
             <div className="grid grid-cols-2 gap-4">
               <div><Label className="text-xs text-[#475569]">Notes</Label>
                 <Textarea value={formData.notes} onChange={e => setFormData(p => ({ ...p, notes: e.target.value }))}
-                  placeholder="Internal notes..." className="mt-1 rounded-md h-20" />
+                  placeholder="Internal notes about access, steep pitch, insurance scope, or supplements..." className="mt-1 rounded-md h-20" />
               </div>
               <div><Label className="text-xs text-[#475569]">Terms & Conditions</Label>
                 <Textarea value={formData.terms} onChange={e => setFormData(p => ({ ...p, terms: e.target.value }))}
-                  placeholder="Payment terms..." className="mt-1 rounded-md h-20" />
+                  placeholder="Material deposit, scheduling, workmanship warranty, and final payment terms..." className="mt-1 rounded-md h-20" />
               </div>
             </div>
           </div>

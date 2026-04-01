@@ -57,6 +57,7 @@ export class QuotesRepository {
                 createdById: createdById || null,
                 items: {
                     create: data.items.map((item, index) => ({
+                        tenantId,
                         description: item.description,
                         quantity: item.quantity,
                         unitPrice: item.unitPrice,
@@ -105,7 +106,7 @@ export class QuotesRepository {
 
         let totals = {};
         if (data.items) {
-            await prisma.quoteItem.deleteMany({ where: { quoteId: id } });
+            await prisma.quoteItem.deleteMany({ where: { quoteId: id, tenantId } });
             totals = calculateTotals(data.items, data.taxRate, data.discountAmount);
         }
 
@@ -148,6 +149,7 @@ export class QuotesRepository {
                 ...(data.items && {
                     items: {
                         create: data.items.map((item, index) => ({
+                            tenantId,
                             description: item.description,
                             quantity: item.quantity,
                             unitPrice: item.unitPrice,
@@ -174,7 +176,7 @@ export class QuotesRepository {
         });
         if (!existing) throw new Error('Quote not found or access denied');
 
-        await prisma.quoteItem.deleteMany({ where: { quoteId: id } });
+        await prisma.quoteItem.deleteMany({ where: { quoteId: id, tenantId } });
         return prisma.quote.delete({
             where: { id_tenantId: { id, tenantId } },
             select: { id: true },

@@ -33,7 +33,12 @@ export class CalendarRepository {
                 leadId: data.leadId || null,
                 createdById,
                 ...(data.attendeeIds?.length && {
-                    attendees: { create: data.attendeeIds.map((employeeId) => ({ employeeId })) },
+                    attendees: {
+                        create: data.attendeeIds.map((employeeId) => ({
+                            tenantId,
+                            employeeId,
+                        })),
+                    },
                 }),
             },
             include: calendarEventInclude,
@@ -67,7 +72,7 @@ export class CalendarRepository {
         if (!existing) throw new Error('Calendar event not found or access denied');
 
         if (data.attendeeIds) {
-            await prisma.calendarEventAttendee.deleteMany({ where: { eventId: id } });
+            await prisma.calendarEventAttendee.deleteMany({ where: { eventId: id, tenantId } });
         }
 
         return prisma.calendarEvent.update({
@@ -94,7 +99,12 @@ export class CalendarRepository {
                 ...(data.clientId !== undefined && { clientId: data.clientId || null }),
                 ...(data.leadId !== undefined && { leadId: data.leadId || null }),
                 ...(data.attendeeIds && {
-                    attendees: { create: data.attendeeIds.map((employeeId) => ({ employeeId })) },
+                    attendees: {
+                        create: data.attendeeIds.map((employeeId) => ({
+                            tenantId,
+                            employeeId,
+                        })),
+                    },
                 }),
             },
             include: calendarEventInclude,
@@ -117,7 +127,7 @@ export class CalendarRepository {
         const existing = await prisma.calendarEvent.findFirst({ where: { id, tenantId } });
         if (!existing) throw new Error('Calendar event not found or access denied');
 
-        await prisma.calendarEventAttendee.deleteMany({ where: { eventId: id } });
+        await prisma.calendarEventAttendee.deleteMany({ where: { eventId: id, tenantId } });
         return prisma.calendarEvent.delete({ where: { id_tenantId: { id, tenantId } } });
     }
 }

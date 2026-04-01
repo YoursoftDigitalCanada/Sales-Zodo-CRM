@@ -56,7 +56,7 @@ export class TasksRepository {
         },
     ): Promise<void> {
         const storedNames = buildTaskStoredTagNames(data);
-        await tx.taskTag.deleteMany({ where: { taskId } });
+        await tx.taskTag.deleteMany({ where: { taskId, tenantId } });
 
         if (storedNames.length === 0) {
             return;
@@ -94,6 +94,7 @@ export class TasksRepository {
 
         await tx.taskTag.createMany({
             data: storedNames.map((name) => ({
+                tenantId,
                 taskId,
                 tagId: existingMap.get(name)!,
             })),
@@ -291,7 +292,7 @@ export class TasksRepository {
         if (!existing) throw new Error('Task not found or access denied');
         return prisma.$transaction(async (tx) => {
             await tx.task.deleteMany({ where: { tenantId, parentTaskId: id } });
-            await tx.taskTag.deleteMany({ where: { taskId: id } });
+            await tx.taskTag.deleteMany({ where: { taskId: id, tenantId } });
             return tx.task.delete({ where: { id_tenantId: { id, tenantId } } });
         });
     }

@@ -66,6 +66,7 @@ export class InvoicesRepository {
                 amountDue,
                 items: {
                     create: data.items.map((item: any, index: number) => ({
+                        tenantId,
                         description: item.description || item.itemName || '',
                         quantity: item.quantity || 0,
                         unitPrice: item.unitPrice ?? item.rate ?? 0,
@@ -114,12 +115,12 @@ export class InvoicesRepository {
             const itemsForTotals = data.items
                 ? (data.items as any)
                 : await prisma.invoiceItem.findMany({
-                    where: { invoiceId: id },
+                    where: { invoiceId: id, tenantId },
                     select: { quantity: true, unitPrice: true, amount: true },
                 });
 
             if (data.items) {
-                await prisma.invoiceItem.deleteMany({ where: { invoiceId: id } });
+                await prisma.invoiceItem.deleteMany({ where: { invoiceId: id, tenantId } });
             }
 
             const calculated = calculateTotals(
@@ -154,6 +155,7 @@ export class InvoicesRepository {
                 ...(data.items && {
                     items: {
                         create: data.items.map((item: any, index: number) => ({
+                            tenantId,
                             description: item.description || item.itemName || 'Item',
                             quantity: item.quantity || 0,
                             unitPrice: item.unitPrice ?? item.rate ?? 0,
@@ -221,7 +223,7 @@ export class InvoicesRepository {
         const existing = await prisma.invoice.findFirst({ where: { id, tenantId } });
         if (!existing) throw new Error('Invoice not found or access denied');
 
-        await prisma.invoiceItem.deleteMany({ where: { invoiceId: id } });
+        await prisma.invoiceItem.deleteMany({ where: { invoiceId: id, tenantId } });
         return prisma.invoice.delete({ where: { id_tenantId: { id, tenantId } } });
     }
 }

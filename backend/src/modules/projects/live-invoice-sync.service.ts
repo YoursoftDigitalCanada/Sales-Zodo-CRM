@@ -172,9 +172,9 @@ export class LiveInvoiceSyncService {
 
     if (existingDraft) {
       return prisma.$transaction(async (tx) => {
-        await tx.invoiceItem.deleteMany({ where: { invoiceId: existingDraft.id } });
+        await tx.invoiceItem.deleteMany({ where: { invoiceId: existingDraft.id, tenantId: project.tenantId } });
         return tx.invoice.update({
-          where: { id: existingDraft.id },
+          where: { id_tenantId: { id: existingDraft.id, tenantId: project.tenantId } },
           data: {
             clientId: project.clientId!,
             quoteId: project.quoteId ?? null,
@@ -190,6 +190,7 @@ export class LiveInvoiceSyncService {
             terms,
             items: {
               create: lineItems.map((item, index) => ({
+                tenantId: project.tenantId,
                 description: item.description,
                 quantity: decimal(item.quantity),
                 unitPrice: decimal(item.unitPrice),
@@ -229,6 +230,7 @@ export class LiveInvoiceSyncService {
         terms,
         items: {
           create: lineItems.map((item, index) => ({
+            tenantId,
             description: item.description,
             quantity: decimal(item.quantity),
             unitPrice: decimal(item.unitPrice),

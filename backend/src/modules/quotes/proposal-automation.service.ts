@@ -190,6 +190,7 @@ export class ProposalAutomationService {
                     ].filter(Boolean).join('\n'),
                     items: {
                         create: lineItems.map((item, index) => ({
+                            tenantId: event.tenantId,
                             description: item.description,
                             quantity: item.quantity,
                             unitPrice: item.unitPrice,

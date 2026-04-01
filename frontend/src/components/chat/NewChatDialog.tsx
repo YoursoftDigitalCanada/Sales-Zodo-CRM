@@ -6,6 +6,7 @@ import { Search, Check } from "lucide-react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -82,6 +83,9 @@ export function NewChatDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>New Conversation</DialogTitle>
+          <DialogDescription>
+            Start a direct message with a teammate or create a group chat for your company.
+          </DialogDescription>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "direct" | "group")} className="mt-4">

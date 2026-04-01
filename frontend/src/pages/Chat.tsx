@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
+import { AxiosError } from "axios";
 import {
   ChatSidebar,
   ChatWindow,
@@ -179,6 +180,34 @@ function downloadAttachment(attachment: Attachment) {
   document.body.removeChild(link);
 }
 
+function getApiErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof AxiosError) {
+    const data = error.response?.data as
+      | { message?: string; errors?: Record<string, string[] | string> }
+      | undefined;
+
+    if (typeof data?.message === "string" && data.message.trim()) {
+      return data.message;
+    }
+
+    if (data?.errors && typeof data.errors === "object") {
+      const firstError = Object.values(data.errors)[0];
+      if (Array.isArray(firstError) && firstError.length > 0) {
+        return String(firstError[0]);
+      }
+      if (typeof firstError === "string" && firstError.trim()) {
+        return firstError;
+      }
+    }
+  }
+
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  return fallback;
+}
+
 function removeConversationParam(
   searchParams: URLSearchParams,
   setSearchParams: ReturnType<typeof useSearchParams>[1],
@@ -251,6 +280,8 @@ export default function ChatPage() {
     setCurrentUser(me);
     setDirectoryUsers(
       (employees as any[])
+        .filter((employee) => employee?.isActive !== false)
+        .filter((employee) => employee?.user?.email || employee?.email)
         .filter((employee) => String(employee.id) !== me.id)
         .map(toChatUserFromEmployee),
     );
@@ -379,8 +410,8 @@ export default function ChatPage() {
       setShowArchived(false);
       handleSelectConversation(normalized);
       setShowNewChatDialog(false);
-    } catch {
-      toast.error("Failed to start a direct chat.");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Failed to start a direct chat."));
     }
   }, [handleSelectConversation, starredMessageIds, upsertConversation]);
 
@@ -396,8 +427,8 @@ export default function ChatPage() {
       setShowArchived(false);
       handleSelectConversation(normalized);
       setShowNewChatDialog(false);
-    } catch {
-      toast.error("Failed to create the group chat.");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Failed to create the group chat."));
     }
   }, [handleSelectConversation, starredMessageIds, upsertConversation]);
 

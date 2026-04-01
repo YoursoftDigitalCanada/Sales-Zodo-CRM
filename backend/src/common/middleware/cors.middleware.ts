@@ -120,6 +120,8 @@ export const corsOptions: CorsOptions = {
     'X-Request-ID',
     'X-Tenant-ID',
     'X-API-Key',
+    'X-User-Timezone',
+    'X-User-Locale',
     'Cache-Control',
     'Pragma',
   ],

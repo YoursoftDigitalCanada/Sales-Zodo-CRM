@@ -51,6 +51,80 @@ export class QuotesService {
         return parts.map((part) => String(part || '').trim()).filter(Boolean).join(', ');
     }
 
+    private asNumberOrNull(value: unknown) {
+        if (value === null || value === undefined || value === '') {
+            return null;
+        }
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    private hasDigitalSignature(quote: QuoteContractRecord) {
+        return Boolean(
+            quote?.signedAt
+            || quote?.signedBy
+            || quote?.signedPdfFileId
+            || (typeof quote?.signatureData === 'string' && quote.signatureData.trim()),
+        );
+    }
+
+    private isLegacyAcceptedAwaitingSignature(quote: QuoteContractRecord) {
+        return quote?.status === 'ACCEPTED' && !this.hasDigitalSignature(quote);
+    }
+
+    private buildRoofEstimateSummary(roofEstimate: any) {
+        if (!roofEstimate) {
+            return null;
+        }
+
+        const latestTakeoff = Array.isArray(roofEstimate.takeoffs) ? roofEstimate.takeoffs[0] : null;
+
+        return {
+            id: roofEstimate.id,
+            address: roofEstimate.address || null,
+            satelliteImageUrl: roofEstimate.satelliteImageUrl || null,
+            roofAreaSqft: this.asNumberOrNull(roofEstimate.roofAreaSqft),
+            trueSurfaceAreaSqft: this.asNumberOrNull(roofEstimate.trueSurfaceAreaSqft),
+            pitch: roofEstimate.pitch || null,
+            roofType: roofEstimate.roofType || null,
+            stories: this.asNumberOrNull(roofEstimate.stories),
+            layers: this.asNumberOrNull(roofEstimate.layers),
+            pricePerSqft: this.asNumberOrNull(roofEstimate.pricePerSqft),
+            totalEstimate: this.asNumberOrNull(roofEstimate.totalEstimate),
+            confidence: this.asNumberOrNull(roofEstimate.confidence),
+            measurementSource: roofEstimate.measurementSource || null,
+            notes: roofEstimate.notes || null,
+            photoUrls: Array.isArray(roofEstimate.photoUrls) ? roofEstimate.photoUrls : [],
+            takeoff: latestTakeoff ? {
+                id: latestTakeoff.id,
+                scenarioName: latestTakeoff.scenarioName || null,
+                materialType: latestTakeoff.materialType || null,
+                adjustedAreaSqft: this.asNumberOrNull(latestTakeoff.adjustedAreaSqft),
+                wasteFactor: this.asNumberOrNull(latestTakeoff.wasteFactor),
+                subtotal: this.asNumberOrNull(latestTakeoff.subtotal),
+                laborCost: this.asNumberOrNull(latestTakeoff.laborCost),
+                materialCost: this.asNumberOrNull(latestTakeoff.materialCost),
+                accessoryCost: this.asNumberOrNull(latestTakeoff.accessoryCost),
+                tearOffCost: this.asNumberOrNull(latestTakeoff.tearOffCost),
+                totalPrice: this.asNumberOrNull(latestTakeoff.totalPrice),
+                items: Array.isArray(latestTakeoff.items)
+                    ? latestTakeoff.items.map((item: any) => ({
+                        id: item.id,
+                        description: item.description,
+                        category: item.category || null,
+                        quantity: this.asNumberOrNull(item.quantity),
+                        unit: item.unit || null,
+                        unitPrice: this.asNumberOrNull(item.unitPrice),
+                        wasteFactor: this.asNumberOrNull(item.wasteFactor),
+                        wasteQuantity: this.asNumberOrNull(item.wasteQuantity),
+                        totalQuantity: this.asNumberOrNull(item.totalQuantity),
+                        totalPrice: this.asNumberOrNull(item.totalPrice),
+                    }))
+                    : [],
+            } : null,
+        };
+    }
+
     private async resolveUserId(userOrEmployeeId?: string | null): Promise<string | undefined> {
         const normalizedId = String(userOrEmployeeId || '').trim();
         if (!normalizedId) {
@@ -159,6 +233,7 @@ export class QuotesService {
             total: Number(quote.total),
             notes: quote.notes || null,
             terms: quote.terms || null,
+            roofEstimate: this.buildRoofEstimateSummary(quote.roofEstimate),
         };
     }
 
@@ -185,17 +260,20 @@ export class QuotesService {
             jobType: quote.roofEstimate?.roofType || 'Roofing Service',
             recipientType: quote.leadId ? 'lead' : 'client',
         };
+        const sourceRoofEstimate = snapshot?.roofEstimate ?? this.buildRoofEstimateSummary(quote.roofEstimate);
         const sourceItems = snapshot?.items ?? (quote.items || []).map((item: any) => ({
             description: item.description,
             quantity: Number(item.quantity),
             unitPrice: Number(item.unitPrice),
             total: Number(item.total),
         }));
+        const requiresDigitalSignature = this.isLegacyAcceptedAwaitingSignature(quote);
+        const publicStatus = requiresDigitalSignature ? 'VIEWED' : quote.status;
 
         return {
             id: quote.id,
             quoteNumber: snapshot?.quoteNumber || quote.quoteNumber,
-            status: quote.status,
+            status: publicStatus,
             company: sourceCompany,
             client: sourceClient,
             project: sourceProject,
@@ -214,14 +292,17 @@ export class QuotesService {
             viewCount: quote.viewCount ?? 0,
             firstViewedAt: quote.firstViewedAt ?? null,
             lastViewedAt: quote.lastViewedAt ?? null,
-            signedAt: quote.signedAt ?? quote.acceptedAt ?? null,
+            acceptedAt: quote.acceptedAt ?? null,
+            signedAt: this.hasDigitalSignature(quote) ? (quote.signedAt ?? null) : null,
             signedBy: quote.signedBy ?? null,
             signatureType: quote.signatureType ?? null,
             isContract: Boolean(quote.isContract),
             contractVersion: quote.contractVersion ?? snapshot?.contractVersion ?? 0,
             signedPdfFileId: quote.signedPdfFileId ?? null,
-            canSign: ['SENT', 'VIEWED'].includes(quote.status),
-            canReject: ['SENT', 'VIEWED'].includes(quote.status),
+            roofEstimate: sourceRoofEstimate,
+            requiresDigitalSignature,
+            canSign: ['SENT', 'VIEWED'].includes(quote.status) || requiresDigitalSignature,
+            canReject: ['SENT', 'VIEWED'].includes(quote.status) || requiresDigitalSignature,
         };
     }
 
@@ -257,7 +338,28 @@ export class QuotesService {
                 select: {
                     id: true,
                     address: true,
+                    satelliteImageUrl: true,
+                    roofAreaSqft: true,
+                    trueSurfaceAreaSqft: true,
+                    pitch: true,
                     roofType: true,
+                    stories: true,
+                    layers: true,
+                    pricePerSqft: true,
+                    totalEstimate: true,
+                    confidence: true,
+                    measurementSource: true,
+                    notes: true,
+                    photoUrls: true,
+                    takeoffs: {
+                        orderBy: { createdAt: 'desc' },
+                        take: 1,
+                        include: {
+                            items: {
+                                orderBy: { sortOrder: 'asc' },
+                            },
+                        },
+                    },
                 },
             },
             projects: {
@@ -755,13 +857,22 @@ export class QuotesService {
     // ── Public: sign or reject quote by token ───────────────────────────────
     async respondToQuote(
         token: string,
-        action: 'accept' | 'sign' | 'reject',
-        payload?: { signedByName?: string; signatureData?: string; signatureType?: string; ipAddress?: string; userAgent?: string },
+        action: 'sign' | 'reject',
+        payload?: {
+            signedByName?: string;
+            signatureData?: string;
+            signatureType?: string;
+            agreeToTerms?: boolean;
+            hasDrawnSignature?: boolean;
+            ipAddress?: string;
+            userAgent?: string;
+        },
     ) {
         const quote = await this.loadQuoteContractRecord({ publicToken: token });
         if (!quote) throw new NotFoundError('Quote not found or link has expired');
 
-        if (!['SENT', 'VIEWED'].includes(String(quote.status))) {
+        const awaitingLegacySignature = this.isLegacyAcceptedAwaitingSignature(quote);
+        if (!['SENT', 'VIEWED'].includes(String(quote.status)) && !awaitingLegacySignature) {
             throw new BadRequestError(`This quote has already been ${quote.status.toLowerCase()}`);
         }
 
@@ -818,6 +929,33 @@ export class QuotesService {
             throw new BadRequestError('Full name is required to sign the estimate');
         }
 
+        if (payload?.agreeToTerms !== true) {
+            throw new BadRequestError('Please agree to the estimate terms before signing');
+        }
+
+        const requestedSignatureType = String(payload?.signatureType || '').trim().toLowerCase();
+        const normalizedSignatureType = requestedSignatureType === 'draw' || requestedSignatureType === 'drawn'
+            ? 'drawn'
+            : requestedSignatureType === 'type' || requestedSignatureType === 'typed'
+                ? 'typed'
+                : '';
+        if (!normalizedSignatureType) {
+            throw new BadRequestError('Choose a signature type before signing');
+        }
+
+        const signatureData = String(payload?.signatureData || '').trim();
+        if (normalizedSignatureType === 'typed' && !signatureData) {
+            throw new BadRequestError('Type your signature before signing');
+        }
+        if (normalizedSignatureType === 'drawn') {
+            if (!payload?.hasDrawnSignature) {
+                throw new BadRequestError('Draw your signature before signing');
+            }
+            if (!signatureData.startsWith('data:image')) {
+                throw new BadRequestError('Draw your signature before signing');
+            }
+        }
+
         const signedAt = new Date();
         const company = await this.getCompanyProfile(quote.tenantId);
         const recipient = this.resolveRecipientProfile(quote);
@@ -825,8 +963,8 @@ export class QuotesService {
         const contractSnapshot = this.buildContractSnapshot(quote, company, recipient, contractVersion);
         const signedPdfFileId = await this.createSignedPdfFile(quote, quote.tenantId, contractSnapshot, {
             signedBy: signedByName,
-            signatureType: payload?.signatureType || null,
-            signatureData: payload?.signatureData || null,
+            signatureType: normalizedSignatureType,
+            signatureData,
             signedAt,
         });
 
@@ -848,8 +986,8 @@ export class QuotesService {
             signedAt,
             acceptedAt: signedAt,
             signedBy: signedByName,
-            signatureType: payload?.signatureType || null,
-            signatureData: payload?.signatureData || null,
+            signatureType: normalizedSignatureType,
+            signatureData,
             signerIpAddress: payload?.ipAddress || null,
             signerUserAgent: payload?.userAgent || null,
             contractSnapshot: contractSnapshot as any,
@@ -870,7 +1008,7 @@ export class QuotesService {
             action: 'STATUS_CHANGE',
             module: 'quotes',
             description: `Estimate "${quote.quoteNumber}" signed by ${signedByName}`,
-            metadata: { action: 'sign', signedByName, signatureType: payload?.signatureType || null, signedPdfFileId },
+            metadata: { action: 'sign', signedByName, signatureType: normalizedSignatureType, signedPdfFileId },
         });
 
         eventBus.emit('quote.statusChanged', {

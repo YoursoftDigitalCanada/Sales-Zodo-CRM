@@ -723,6 +723,7 @@ const QuoteDetailDialog = ({ isOpen, onClose, quote, onEdit, onDelete, onSend, o
             {quote.sentAt && <div className="p-3 bg-[#F8FAFC] rounded-md"><p className="text-xs text-[#94A3B8]">Sent</p><p className="text-sm font-medium text-[#0F172A]">{formatDate(quote.sentAt)}</p></div>}
             {quote.viewCount !== undefined && quote.viewCount > 0 && <div className="p-3 bg-[#F8FAFC] rounded-md"><p className="text-xs text-[#94A3B8]">Viewed</p><p className="text-sm font-medium text-[#0F172A]">{quote.viewCount} time{quote.viewCount === 1 ? "" : "s"}</p></div>}
             {quote.lastViewedAt && <div className="p-3 bg-[#F8FAFC] rounded-md"><p className="text-xs text-[#94A3B8]">Last Viewed</p><p className="text-sm font-medium text-[#0F172A]">{formatDate(quote.lastViewedAt)}</p></div>}
+            {quote.acceptedAt && !quote.signedAt && <div className="p-3 bg-[#F8FAFC] rounded-md"><p className="text-xs text-[#94A3B8]">Accepted On</p><p className="text-sm font-medium text-[#0F172A]">{formatDate(quote.acceptedAt)}</p></div>}
             {quote.signedAt && <div className="p-3 bg-[#F8FAFC] rounded-md"><p className="text-xs text-[#94A3B8]">Signed On</p><p className="text-sm font-medium text-[#0F172A]">{formatDate(quote.signedAt)}</p></div>}
           </div>
           {(quote.publicToken || quote.signedBy) && (
@@ -792,9 +793,7 @@ function mapApiQuote(q: QuoteEntity): Quote {
   const clientName = q.client?.clientName || "";
   const lead = (q as any).lead;
   const leadName = [lead?.firstName, lead?.lastName].filter(Boolean).join(" ").trim() || lead?.companyName || "";
-  const normalizedStatus = q.status.toLowerCase() === "accepted"
-    ? "signed"
-    : q.status.toLowerCase() === "rejected"
+  const normalizedStatus = q.status.toLowerCase() === "rejected"
       ? "rejected"
       : q.status.toLowerCase();
   return {
@@ -828,7 +827,7 @@ function mapApiQuote(q: QuoteEntity): Quote {
     viewCount: q.viewCount ?? 0,
     firstViewedAt: q.firstViewedAt || undefined,
     lastViewedAt: q.lastViewedAt || undefined,
-    signedAt: q.signedAt || q.acceptedAt || undefined,
+    signedAt: q.signedAt || undefined,
     signedBy: q.signedBy || undefined,
     signatureType: q.signatureType || undefined,
     isContract: q.isContract ?? false,

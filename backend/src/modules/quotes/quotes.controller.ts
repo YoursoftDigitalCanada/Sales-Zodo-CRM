@@ -70,11 +70,11 @@ export class QuotesController {
         } catch (e) { next(e); }
     }
 
-    // Public: accept/reject quote by token (no auth)
+    // Public: sign/reject quote by token (no auth)
     async respondPublic(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const { action } = req.body;
-            if (!action || !['accept', 'sign', 'reject'].includes(action)) {
+            if (!action || !['sign', 'reject'].includes(action)) {
                 res.status(400).json({ success: false, message: 'Invalid action. Must be "sign" or "reject".' });
                 return;
             }
@@ -88,6 +88,8 @@ export class QuotesController {
                 signedByName: req.body.signedByName,
                 signatureData: req.body.signatureData,
                 signatureType: req.body.signatureType,
+                agreeToTerms: req.body.agreeToTerms,
+                hasDrawnSignature: req.body.hasDrawnSignature,
                 ipAddress,
                 userAgent: req.get('user-agent') || undefined,
             });

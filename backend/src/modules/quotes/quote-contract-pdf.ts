@@ -180,7 +180,7 @@ export function generateQuoteContractPdfBuffer(input: QuoteContractPdfInput): { 
     y += 6;
 
     doc.roundedRect(marginX, y, 90, 24, 2, 2);
-    if (input.signatureType === 'drawn' && input.signatureData?.startsWith('data:image')) {
+    if ((input.signatureType === 'drawn' || input.signatureType === 'draw') && input.signatureData?.startsWith('data:image')) {
         try {
             doc.addImage(input.signatureData, 'PNG', marginX + 3, y + 3, 60, 16);
         } catch {

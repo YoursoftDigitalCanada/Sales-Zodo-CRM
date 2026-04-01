@@ -38,6 +38,58 @@ interface QuoteItem {
   total: number;
 }
 
+interface RoofEstimatePhoto {
+  label?: string | null;
+  url: string;
+}
+
+interface RoofEstimateTakeoffItem {
+  id?: string;
+  description: string;
+  category?: string | null;
+  quantity?: number | null;
+  unit?: string | null;
+  unitPrice?: number | null;
+  wasteFactor?: number | null;
+  wasteQuantity?: number | null;
+  totalQuantity?: number | null;
+  totalPrice?: number | null;
+}
+
+interface RoofEstimateTakeoff {
+  id?: string;
+  scenarioName?: string | null;
+  materialType?: string | null;
+  adjustedAreaSqft?: number | null;
+  wasteFactor?: number | null;
+  subtotal?: number | null;
+  laborCost?: number | null;
+  materialCost?: number | null;
+  accessoryCost?: number | null;
+  tearOffCost?: number | null;
+  totalPrice?: number | null;
+  items?: RoofEstimateTakeoffItem[];
+}
+
+interface QuoteRoofEstimate {
+  id: string;
+  address?: string | null;
+  satelliteImageUrl?: string | null;
+  roofAreaSqft?: number | null;
+  trueSurfaceAreaSqft?: number | null;
+  pitch?: string | null;
+  roofType?: string | null;
+  stories?: number | null;
+  layers?: number | null;
+  pricePerSqft?: number | null;
+  totalEstimate?: number | null;
+  confidence?: number | null;
+  measurementSource?: string | null;
+  notes?: string | null;
+  photoUrls?: Array<string | RoofEstimatePhoto> | null;
+  takeoff?: RoofEstimateTakeoff | null;
+}
+
 interface PublicQuote {
   id: string;
   quoteNumber: string;
@@ -60,11 +112,14 @@ interface PublicQuote {
   viewCount: number;
   firstViewedAt?: string | null;
   lastViewedAt?: string | null;
+  acceptedAt?: string | null;
   signedAt?: string | null;
   signedBy?: string | null;
   signatureType?: string | null;
   isContract?: boolean;
   contractVersion?: number;
+  roofEstimate?: QuoteRoofEstimate | null;
+  requiresDigitalSignature?: boolean;
   canSign: boolean;
   canReject: boolean;
 }
@@ -76,6 +131,11 @@ const formatDate = (value?: string | null) =>
   value
     ? new Date(value).toLocaleDateString("en-CA", { year: "numeric", month: "long", day: "numeric" })
     : "-";
+
+const formatNumber = (value?: number | null, maximumFractionDigits = 0) =>
+  value === null || value === undefined
+    ? "-"
+    : new Intl.NumberFormat("en-CA", { maximumFractionDigits }).format(value);
 
 const resolvePublicAssetUrl = (value?: string | null) => {
   if (!value) {
@@ -89,8 +149,11 @@ const resolvePublicAssetUrl = (value?: string | null) => {
 
 const statusConfig = (status: string) => {
   const normalized = status.toLowerCase();
-  if (normalized === "signed" || normalized === "accepted") {
+  if (normalized === "signed") {
     return { bg: "bg-green-100", text: "text-green-600", icon: CheckCircle2, label: "Signed" };
+  }
+  if (normalized === "accepted") {
+    return { bg: "bg-green-100", text: "text-green-600", icon: CheckCircle2, label: "Accepted" };
   }
   if (normalized === "rejected") {
     return { bg: "bg-red-100", text: "text-red-600", icon: XCircle, label: "Rejected" };
@@ -104,6 +167,33 @@ const statusConfig = (status: string) => {
   return { bg: "bg-blue-100", text: "text-[#0891B2]", icon: FileStack, label: "Sent" };
 };
 
+const formatMeasurementSource = (value?: string | null) => {
+  const normalized = String(value || "").trim();
+  if (!normalized) {
+    return "-";
+  }
+  return normalized
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
+const normalizeRoofEstimatePhotos = (photos?: Array<string | RoofEstimatePhoto> | null) =>
+  (Array.isArray(photos) ? photos : [])
+    .map((photo, index) => {
+      if (typeof photo === "string") {
+        const url = resolvePublicAssetUrl(photo);
+        if (!url) return null;
+        return { label: `Roof Photo ${index + 1}`, url };
+      }
+      const url = resolvePublicAssetUrl(photo?.url);
+      if (!url) return null;
+      return {
+        label: photo?.label?.trim() || `Roof Photo ${index + 1}`,
+        url,
+      };
+    })
+    .filter((photo): photo is { label: string; url: string } => Boolean(photo));
+
 export default function PublicQuoteView() {
   const { token } = useParams<{ token: string }>();
   const [quote, setQuote] = useState<PublicQuote | null>(null);
@@ -113,8 +203,9 @@ export default function PublicQuoteView() {
   const [signatureMode, setSignatureMode] = useState<"draw" | "type">("draw");
   const [fullName, setFullName] = useState("");
   const [typedSignature, setTypedSignature] = useState("");
-  const [agreeToTerms, setAgreeToTerms] = useState(true);
+  const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [responseStatus, setResponseStatus] = useState<string | null>(null);
+  const [hasDrawnSignature, setHasDrawnSignature] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawingRef = useRef(false);
   const lastPointRef = useRef<{ x: number; y: number } | null>(null);
@@ -161,11 +252,12 @@ export default function PublicQuoteView() {
     ctx.lineWidth = 2;
     ctx.strokeStyle = "#0F172A";
     ctx.clearRect(0, 0, rect.width, rect.height);
+    setHasDrawnSignature(false);
   }, [quote, signatureMode]);
 
   const isClosed = useMemo(() => {
     if (!quote) return false;
-    return ["signed", "accepted", "rejected", "expired"].includes(quote.status.toLowerCase());
+    return !quote.canSign && !quote.canReject;
   }, [quote]);
 
   const isExpired = useMemo(() => {
@@ -178,6 +270,11 @@ export default function PublicQuoteView() {
   const badge = statusConfig(currentStatus);
   const StatusIcon = badge.icon;
   const companyLogoUrl = resolvePublicAssetUrl(quote?.company.logoUrl);
+  const roofEstimateSatelliteUrl = resolvePublicAssetUrl(quote?.roofEstimate?.satelliteImageUrl);
+  const roofEstimatePhotos = useMemo(
+    () => normalizeRoofEstimatePhotos(quote?.roofEstimate?.photoUrls),
+    [quote?.roofEstimate?.photoUrls],
+  );
 
   const getCanvasPoint = (event: React.PointerEvent<HTMLCanvasElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -190,7 +287,17 @@ export default function PublicQuoteView() {
   const startDrawing = (event: React.PointerEvent<HTMLCanvasElement>) => {
     if (isClosed || signatureMode !== "draw") return;
     drawingRef.current = true;
-    lastPointRef.current = getCanvasPoint(event);
+    const point = getCanvasPoint(event);
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (ctx) {
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, 1, 0, Math.PI * 2);
+      ctx.fillStyle = "#0F172A";
+      ctx.fill();
+    }
+    setHasDrawnSignature(true);
+    lastPointRef.current = point;
   };
 
   const drawSignature = (event: React.PointerEvent<HTMLCanvasElement>) => {
@@ -205,6 +312,7 @@ export default function PublicQuoteView() {
     ctx.moveTo(lastPoint.x, lastPoint.y);
     ctx.lineTo(point.x, point.y);
     ctx.stroke();
+    setHasDrawnSignature(true);
     lastPointRef.current = point;
   };
 
@@ -218,6 +326,7 @@ export default function PublicQuoteView() {
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setHasDrawnSignature(false);
   };
 
   const handleRespond = async (action: "sign" | "reject") => {
@@ -226,6 +335,7 @@ export default function PublicQuoteView() {
     const name = fullName.trim();
     const typedValue = typedSignature.trim() || name;
     const drawnSignature = canvasRef.current?.toDataURL("image/png") || "";
+    const normalizedSignatureType = signatureMode === "type" ? "typed" : "drawn";
 
     if (action === "sign" && !name) {
       setError("Full name is required to sign the estimate.");
@@ -237,7 +347,7 @@ export default function PublicQuoteView() {
       return;
     }
 
-    if (action === "sign" && signatureMode === "draw" && (!drawnSignature || drawnSignature === "data:,")) {
+    if (action === "sign" && signatureMode === "draw" && (!hasDrawnSignature || !drawnSignature.startsWith("data:image"))) {
       setError("Draw the signature before signing.");
       return;
     }
@@ -256,9 +366,10 @@ export default function PublicQuoteView() {
         body: JSON.stringify({
           action,
           signedByName: name,
-          signatureType: action === "sign" ? signatureMode : undefined,
+          signatureType: action === "sign" ? normalizedSignatureType : undefined,
           signatureData: action === "sign" ? (signatureMode === "type" ? typedValue : drawnSignature) : undefined,
           agreeToTerms,
+          hasDrawnSignature,
         }),
       });
 
@@ -274,7 +385,7 @@ export default function PublicQuoteView() {
         status: result.status,
         signedAt: result.status === "SIGNED" ? new Date().toISOString() : current.signedAt,
         signedBy: result.status === "SIGNED" ? name : current.signedBy,
-        signatureType: result.status === "SIGNED" ? signatureMode : current.signatureType,
+        signatureType: result.status === "SIGNED" ? normalizedSignatureType : current.signatureType,
         isContract: result.status === "SIGNED" ? true : current.isContract,
       } : current);
     } catch (err: any) {
@@ -368,6 +479,169 @@ export default function PublicQuoteView() {
                 </div>
               </div>
 
+              {quote.roofEstimate && (
+                <div className="mb-6 space-y-4">
+                  <p className="text-sm font-semibold text-[#0F172A]">Roof Assessment</p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                    <div className="p-4 bg-[#F8FAFC] rounded-md">
+                      <p className="text-xs text-[#94A3B8] mb-1">Roof Area</p>
+                      <p className="text-sm font-semibold text-[#0F172A]">
+                        {quote.roofEstimate.roofAreaSqft !== null && quote.roofEstimate.roofAreaSqft !== undefined
+                          ? `${formatNumber(quote.roofEstimate.roofAreaSqft)} sq ft`
+                          : "-"}
+                      </p>
+                    </div>
+                    <div className="p-4 bg-[#F8FAFC] rounded-md">
+                      <p className="text-xs text-[#94A3B8] mb-1">Pitch / Roof Type</p>
+                      <p className="text-sm font-semibold text-[#0F172A]">
+                        {[quote.roofEstimate.pitch, quote.roofEstimate.roofType].filter(Boolean).join(" · ") || "Roofing Estimate"}
+                      </p>
+                    </div>
+                    <div className="p-4 bg-[#F8FAFC] rounded-md">
+                      <p className="text-xs text-[#94A3B8] mb-1">AI Estimate Total</p>
+                      <p className="text-sm font-semibold text-[#0F172A]">
+                        {quote.roofEstimate.totalEstimate !== null && quote.roofEstimate.totalEstimate !== undefined
+                          ? formatCurrency(quote.roofEstimate.totalEstimate, quote.currency)
+                          : "-"}
+                      </p>
+                    </div>
+                    <div className="p-4 bg-[#F8FAFC] rounded-md">
+                      <p className="text-xs text-[#94A3B8] mb-1">Price Per Sq Ft</p>
+                      <p className="text-sm font-semibold text-[#0F172A]">
+                        {quote.roofEstimate.pricePerSqft !== null && quote.roofEstimate.pricePerSqft !== undefined
+                          ? formatCurrency(quote.roofEstimate.pricePerSqft, quote.currency)
+                          : "-"}
+                      </p>
+                    </div>
+                    <div className="p-4 bg-[#F8FAFC] rounded-md">
+                      <p className="text-xs text-[#94A3B8] mb-1">Confidence / Source</p>
+                      <p className="text-sm font-semibold text-[#0F172A]">
+                        {quote.roofEstimate.confidence !== null && quote.roofEstimate.confidence !== undefined
+                          ? `${formatNumber(quote.roofEstimate.confidence, 1)}%`
+                          : "-"}
+                        {" · "}
+                        {formatMeasurementSource(quote.roofEstimate.measurementSource)}
+                      </p>
+                    </div>
+                    <div className="p-4 bg-[#F8FAFC] rounded-md">
+                      <p className="text-xs text-[#94A3B8] mb-1">Stories / Layers</p>
+                      <p className="text-sm font-semibold text-[#0F172A]">
+                        {[
+                          quote.roofEstimate.stories ? `${formatNumber(quote.roofEstimate.stories)} story${quote.roofEstimate.stories === 1 ? "" : "s"}` : null,
+                          quote.roofEstimate.layers ? `${formatNumber(quote.roofEstimate.layers)} layer${quote.roofEstimate.layers === 1 ? "" : "s"}` : null,
+                        ].filter(Boolean).join(" · ") || "-"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {(roofEstimateSatelliteUrl || roofEstimatePhotos.length > 0) && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {roofEstimateSatelliteUrl && (
+                        <div className="border border-[rgba(15,23,42,0.06)] rounded-md overflow-hidden bg-[#F8FAFC]">
+                          <img
+                            src={roofEstimateSatelliteUrl}
+                            alt="Roof satellite view"
+                            className="w-full h-56 object-cover bg-white"
+                          />
+                          <div className="p-3">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-[#94A3B8]">Satellite View</p>
+                            <p className="text-sm text-[#475569] mt-1">{quote.roofEstimate.address || quote.project.address || "Property imagery"}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {roofEstimatePhotos.map((photo) => (
+                        <div key={`${photo.url}-${photo.label}`} className="border border-[rgba(15,23,42,0.06)] rounded-md overflow-hidden bg-[#F8FAFC]">
+                          <img
+                            src={photo.url}
+                            alt={photo.label}
+                            className="w-full h-56 object-cover bg-white"
+                          />
+                          <div className="p-3">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-[#94A3B8]">Roof Photo</p>
+                            <p className="text-sm text-[#475569] mt-1">{photo.label}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {quote.roofEstimate.takeoff && (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <div className="p-4 bg-[#F8FAFC] rounded-md">
+                          <p className="text-xs text-[#94A3B8] mb-1">Material Scenario</p>
+                          <p className="text-sm font-semibold text-[#0F172A]">{quote.roofEstimate.takeoff.scenarioName || "-"}</p>
+                        </div>
+                        <div className="p-4 bg-[#F8FAFC] rounded-md">
+                          <p className="text-xs text-[#94A3B8] mb-1">Material Type</p>
+                          <p className="text-sm font-semibold text-[#0F172A]">{quote.roofEstimate.takeoff.materialType || "-"}</p>
+                        </div>
+                        <div className="p-4 bg-[#F8FAFC] rounded-md">
+                          <p className="text-xs text-[#94A3B8] mb-1">Adjusted Area</p>
+                          <p className="text-sm font-semibold text-[#0F172A]">
+                            {quote.roofEstimate.takeoff.adjustedAreaSqft !== null && quote.roofEstimate.takeoff.adjustedAreaSqft !== undefined
+                              ? `${formatNumber(quote.roofEstimate.takeoff.adjustedAreaSqft)} sq ft`
+                              : "-"}
+                          </p>
+                        </div>
+                        <div className="p-4 bg-[#F8FAFC] rounded-md">
+                          <p className="text-xs text-[#94A3B8] mb-1">Takeoff Total</p>
+                          <p className="text-sm font-semibold text-[#0F172A]">
+                            {quote.roofEstimate.takeoff.totalPrice !== null && quote.roofEstimate.takeoff.totalPrice !== undefined
+                              ? formatCurrency(quote.roofEstimate.takeoff.totalPrice, quote.currency)
+                              : "-"}
+                          </p>
+                        </div>
+                      </div>
+
+                      {quote.roofEstimate.takeoff.items && quote.roofEstimate.takeoff.items.length > 0 && (
+                        <div className="border border-[rgba(15,23,42,0.06)] rounded-md overflow-hidden">
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="bg-[#F8FAFC]">
+                                  <th className="text-left px-4 py-3 text-xs font-semibold text-[#475569] uppercase tracking-wider">Material</th>
+                                  <th className="text-left px-4 py-3 text-xs font-semibold text-[#475569] uppercase tracking-wider">Category</th>
+                                  <th className="text-right px-4 py-3 text-xs font-semibold text-[#475569] uppercase tracking-wider">Quantity</th>
+                                  <th className="text-right px-4 py-3 text-xs font-semibold text-[#475569] uppercase tracking-wider">Total</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {quote.roofEstimate.takeoff.items.map((item, index) => (
+                                  <tr key={item.id || `${item.description}-${index}`} className="border-t border-[rgba(15,23,42,0.06)]">
+                                    <td className="px-4 py-3 text-[#0F172A]">{item.description}</td>
+                                    <td className="px-4 py-3 text-[#475569]">{item.category || "-"}</td>
+                                    <td className="px-4 py-3 text-right text-[#475569]">
+                                      {item.totalQuantity !== null && item.totalQuantity !== undefined
+                                        ? `${formatNumber(item.totalQuantity, 2)}${item.unit ? ` ${item.unit}` : ""}`
+                                        : "-"}
+                                    </td>
+                                    <td className="px-4 py-3 text-right font-medium text-[#0F172A]">
+                                      {item.totalPrice !== null && item.totalPrice !== undefined
+                                        ? formatCurrency(item.totalPrice, quote.currency)
+                                        : "-"}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {quote.roofEstimate.notes && (
+                    <div className="p-4 bg-[#F8FAFC] rounded-md">
+                      <p className="text-xs text-[#94A3B8] mb-2">Roof Estimate Notes</p>
+                      <p className="text-sm text-[#475569] whitespace-pre-line">{quote.roofEstimate.notes}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="mb-6">
                 <p className="text-sm font-semibold text-[#0F172A] mb-2">Line Items</p>
                 <div className="border border-[rgba(15,23,42,0.06)] rounded-md overflow-hidden">
@@ -449,7 +723,19 @@ export default function PublicQuoteView() {
             <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-6">
               <p className="text-sm font-semibold text-[#0F172A] mb-4">Signature Section</p>
 
-              {(normalizedCurrentStatus === "signed" || normalizedCurrentStatus === "accepted") && (
+              {quote.requiresDigitalSignature && !isClosed && (
+                <div className="p-4 rounded-md bg-blue-50 border border-blue-200 mb-4">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="h-5 w-5 text-[#0891B2] mt-0.5" />
+                    <div>
+                      <p className="text-sm font-semibold text-[#0F172A]">Digital signature required</p>
+                      <p className="text-sm text-[#475569]">Please review the estimate details above and complete the signature below to finalize your approval.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {normalizedCurrentStatus === "signed" && (
                 <div className="p-4 rounded-md bg-green-50 border border-green-200 mb-4">
                   <div className="flex items-start gap-3">
                     <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5" />

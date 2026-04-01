@@ -35,7 +35,7 @@ export interface Quote {
     tax: number;
     discount: number;
     total: number;
-    status: "draft" | "sent" | "viewed" | "signed" | "rejected" | "expired";
+    status: "draft" | "sent" | "viewed" | "accepted" | "signed" | "rejected" | "declined" | "expired";
     priority: "low" | "medium" | "high";
     validUntil: string;
     createdAt: string;
@@ -69,6 +69,7 @@ export const quoteStatusOptions: { value: string; label: string; icon: LucideIco
     { value: "draft", label: "Draft", icon: FileText, color: "slate" },
     { value: "sent", label: "Sent", icon: Send, color: "blue" },
     { value: "viewed", label: "Viewed", icon: Eye, color: "purple" },
+    { value: "accepted", label: "Accepted", icon: CheckCircle2, color: "green" },
     { value: "signed", label: "Signed", icon: CheckCircle2, color: "green" },
     { value: "rejected", label: "Rejected", icon: XCircle, color: "red" },
     { value: "expired", label: "Expired", icon: Clock3, color: "amber" },

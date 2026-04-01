@@ -47,6 +47,7 @@ export class InvoicesController {
                 req.params.id,
                 req.context.tenantId,
                 sanitizeBody(req.body)?.recipientEmail,
+                req.user?.userId,
             );
             sendSuccess(res, invoice, 'Invoice sent');
         } catch (e) { next(e); }

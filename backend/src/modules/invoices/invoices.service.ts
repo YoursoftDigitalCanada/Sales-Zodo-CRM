@@ -1,13 +1,15 @@
 import { invoicesRepository } from './invoices.repository';
 import { toInvoiceResponseDto } from './invoices.dto';
 import type { CreateInvoiceDto, UpdateInvoiceDto, InvoiceQueryDto, RecordInvoicePaymentDto } from '@contracts/invoice';
-import { BadRequestError, NotFoundError } from '../../common/errors/HttpErrors';
+import { BadRequestError, NotFoundError, ServiceUnavailableError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
 import { eventBus } from '../../common/events/event-bus';
 import { clientLifecycleService } from '../../common/services/client-lifecycle.service';
 import { activityLogger } from '../../common/services/activity-logger.service';
+import { mailerService } from '../../common/services/mailer.service';
 import { prisma } from '../../config/database';
 import { config } from '../../config';
+import { mailboxRepository } from '../emails/mailbox.repository';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -19,9 +21,42 @@ interface CompanyProfile {
     logoUrl?: string | null;
 }
 
+interface InvoiceEmailAttachment {
+    filename: string;
+    content: Buffer;
+    contentType?: string;
+}
+
+interface InvoiceRoofAttachmentCandidate {
+    url: string;
+    filenameHint: string;
+    contentType?: string | null;
+}
+
 export class InvoicesService {
+    private static readonly MAX_ROOF_ATTACHMENTS = 6;
+    private static readonly MAX_ATTACHMENT_BYTES = 6 * 1024 * 1024;
+    private static readonly MAX_TOTAL_ROOF_ATTACHMENT_BYTES = 20 * 1024 * 1024;
+
     private joinAddress(parts: Array<string | null | undefined>) {
         return parts.map((part) => String(part || '').trim()).filter(Boolean).join(', ');
+    }
+
+    private formatCurrency(value: number | string, currency = 'CAD') {
+        const amount = typeof value === 'string' ? Number.parseFloat(value) : value;
+        return new Intl.NumberFormat('en-CA', {
+            style: 'currency',
+            currency,
+        }).format(Number.isFinite(amount) ? amount : 0);
+    }
+
+    private escapeHtml(value: string | null | undefined) {
+        return String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
     }
 
     private async getCompanyProfile(tenantId: string): Promise<CompanyProfile> {
@@ -80,6 +115,431 @@ export class InvoicesService {
         if (dataUrl.startsWith('data:image/jpeg')) return 'JPEG';
         if (dataUrl.startsWith('data:image/webp')) return 'WEBP';
         return null;
+    }
+
+    private sanitizeAttachmentFileName(value: string, fallbackBase: string) {
+        const trimmed = String(value || '').trim();
+        const safe = trimmed
+            .replace(/[/\\?%*:|"<>]/g, '-')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '');
+        return safe || fallbackBase;
+    }
+
+    private inferImageContentType(fileName: string, fallback?: string | null): string | null {
+        if (fallback && /^image\//i.test(fallback)) {
+            return fallback;
+        }
+
+        const extension = path.extname(fileName).toLowerCase();
+        if (extension === '.png') return 'image/png';
+        if (extension === '.jpg' || extension === '.jpeg') return 'image/jpeg';
+        if (extension === '.webp') return 'image/webp';
+        if (extension === '.gif') return 'image/gif';
+        if (extension === '.bmp') return 'image/bmp';
+        if (extension === '.svg') return 'image/svg+xml';
+        return null;
+    }
+
+    private ensureAttachmentExtension(fileName: string, contentType?: string | null) {
+        if (path.extname(fileName)) {
+            return fileName;
+        }
+
+        const extension = contentType === 'image/png'
+            ? '.png'
+            : contentType === 'image/webp'
+                ? '.webp'
+                : contentType === 'image/gif'
+                    ? '.gif'
+                    : '.jpg';
+
+        return `${fileName}${extension}`;
+    }
+
+    private resolveStoredAttachmentPath(storedPath: string) {
+        const relativePath = storedPath.startsWith('/uploads/')
+            ? storedPath.replace(/^\/uploads\/?/, '')
+            : storedPath.replace(/^\/+/, '');
+        return path.resolve(config.upload.uploadPath, relativePath);
+    }
+
+    private normalizeRoofPhotoCandidates(photos: unknown): InvoiceRoofAttachmentCandidate[] {
+        return (Array.isArray(photos) ? photos : [])
+            .map((photo, index) => {
+                if (typeof photo === 'string') {
+                    const url = photo.trim();
+                    if (!url) return null;
+                    return {
+                        url,
+                        filenameHint: `roof-view-${index + 1}`,
+                    } satisfies InvoiceRoofAttachmentCandidate;
+                }
+
+                if (!photo || typeof photo !== 'object') return null;
+                const record = photo as Record<string, unknown>;
+                const url = String(record.url || '').trim();
+                if (!url) return null;
+
+                const label = String(record.label || '').trim();
+                return {
+                    url,
+                    filenameHint: label || `roof-view-${index + 1}`,
+                    contentType: typeof record.mimeType === 'string' ? record.mimeType : null,
+                } satisfies InvoiceRoofAttachmentCandidate;
+            })
+            .filter((candidate): candidate is InvoiceRoofAttachmentCandidate => Boolean(candidate));
+    }
+
+    private isAuthenticationError(errorMessage: string) {
+        const normalized = errorMessage.toLowerCase();
+        return normalized.includes('invalid login')
+            || normalized.includes('authentication failed')
+            || normalized.includes('535')
+            || normalized.includes('username')
+            || normalized.includes('password');
+    }
+
+    private async readImageAttachment(
+        sourceUrl: string,
+        fileNameHint: string,
+        contentType?: string | null,
+    ): Promise<InvoiceEmailAttachment | null> {
+        const trimmedUrl = String(sourceUrl || '').trim();
+        if (!trimmedUrl) {
+            return null;
+        }
+
+        if (trimmedUrl.startsWith('data:image/')) {
+            const match = trimmedUrl.match(/^data:(image\/[a-zA-Z0-9+.-]+);base64,(.+)$/);
+            if (!match) return null;
+
+            const buffer = Buffer.from(match[2], 'base64');
+            if (buffer.length > InvoicesService.MAX_ATTACHMENT_BYTES) {
+                return null;
+            }
+
+            const safeName = this.ensureAttachmentExtension(
+                this.sanitizeAttachmentFileName(fileNameHint, 'roof-image'),
+                match[1],
+            );
+
+            return {
+                filename: safeName,
+                content: buffer,
+                contentType: match[1],
+            };
+        }
+
+        if (/^https?:\/\//i.test(trimmedUrl)) {
+            try {
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 12000);
+                const response = await fetch(trimmedUrl, { signal: controller.signal });
+                clearTimeout(timeout);
+
+                if (!response.ok) {
+                    return null;
+                }
+
+                const arrayBuffer = await response.arrayBuffer();
+                const buffer = Buffer.from(arrayBuffer);
+                if (buffer.length === 0 || buffer.length > InvoicesService.MAX_ATTACHMENT_BYTES) {
+                    return null;
+                }
+
+                const urlPath = (() => {
+                    try {
+                        return new URL(trimmedUrl).pathname;
+                    } catch {
+                        return '';
+                    }
+                })();
+                const responseContentType = response.headers.get('content-type');
+                const imageContentType = this.inferImageContentType(urlPath || fileNameHint, responseContentType || contentType);
+                if (!imageContentType) {
+                    return null;
+                }
+
+                const remoteFileName = this.ensureAttachmentExtension(
+                    this.sanitizeAttachmentFileName(
+                        path.basename(urlPath || '') || fileNameHint,
+                        this.sanitizeAttachmentFileName(fileNameHint, 'roof-image'),
+                    ),
+                    imageContentType,
+                );
+
+                return {
+                    filename: remoteFileName,
+                    content: buffer,
+                    contentType: imageContentType,
+                };
+            } catch {
+                return null;
+            }
+        }
+
+        try {
+            const filePath = this.resolveStoredAttachmentPath(trimmedUrl);
+            const stat = await fs.stat(filePath);
+            if (!stat.isFile() || stat.size === 0 || stat.size > InvoicesService.MAX_ATTACHMENT_BYTES) {
+                return null;
+            }
+
+            const fileName = this.ensureAttachmentExtension(
+                this.sanitizeAttachmentFileName(path.basename(filePath) || fileNameHint, 'roof-image'),
+                contentType,
+            );
+            const imageContentType = this.inferImageContentType(fileName, contentType);
+            if (!imageContentType) {
+                return null;
+            }
+
+            const content = await fs.readFile(filePath);
+            return {
+                filename: fileName,
+                content,
+                contentType: imageContentType,
+            };
+        } catch {
+            return null;
+        }
+    }
+
+    private async collectRoofImageAttachments(invoiceRecord: any): Promise<InvoiceEmailAttachment[]> {
+        const candidates: InvoiceRoofAttachmentCandidate[] = [];
+        const projectPhotos = Array.isArray(invoiceRecord?.project?.projectPhotos)
+            ? invoiceRecord.project.projectPhotos
+            : [];
+        const imageProjectPhotos = projectPhotos.filter((photo: any) => {
+            const mimeType = String(photo?.mimeType || '').trim();
+            return /^image\//i.test(mimeType) && String(photo?.url || '').trim();
+        });
+        const preferredProjectPhotos = imageProjectPhotos.filter((photo: any) => Boolean(photo?.visibleToClient));
+        const selectedProjectPhotos = (preferredProjectPhotos.length > 0 ? preferredProjectPhotos : imageProjectPhotos)
+            .slice(0, InvoicesService.MAX_ROOF_ATTACHMENTS);
+
+        selectedProjectPhotos.forEach((photo: any, index: number) => {
+            candidates.push({
+                url: String(photo.url),
+                filenameHint: photo.filename || `project-roof-photo-${index + 1}`,
+                contentType: photo.mimeType || null,
+            });
+        });
+
+        const roofEstimate = invoiceRecord?.quote?.roofEstimate;
+        if (roofEstimate?.satelliteImageUrl) {
+            candidates.push({
+                url: String(roofEstimate.satelliteImageUrl),
+                filenameHint: 'roof-overview',
+                contentType: 'image/jpeg',
+            });
+        }
+        candidates.push(...this.normalizeRoofPhotoCandidates(roofEstimate?.photoUrls));
+
+        const attachments: InvoiceEmailAttachment[] = [];
+        const seenUrls = new Set<string>();
+        let totalBytes = 0;
+
+        for (const candidate of candidates) {
+            const normalizedUrl = candidate.url.trim();
+            if (!normalizedUrl || seenUrls.has(normalizedUrl)) {
+                continue;
+            }
+            seenUrls.add(normalizedUrl);
+
+            const attachment = await this.readImageAttachment(
+                normalizedUrl,
+                candidate.filenameHint,
+                candidate.contentType,
+            );
+            if (!attachment) {
+                continue;
+            }
+
+            if (totalBytes + attachment.content.length > InvoicesService.MAX_TOTAL_ROOF_ATTACHMENT_BYTES) {
+                break;
+            }
+
+            attachments.push(attachment);
+            totalBytes += attachment.content.length;
+
+            if (attachments.length >= InvoicesService.MAX_ROOF_ATTACHMENTS) {
+                break;
+            }
+        }
+
+        return attachments;
+    }
+
+    private async resolveInvoiceSender(
+        tenantId: string,
+        actorUserId?: string,
+    ): Promise<{
+        senderName: string;
+        senderEmail: string;
+        send: (options: {
+            to: string | string[];
+            subject: string;
+            html: string;
+            text?: string;
+            attachments?: InvoiceEmailAttachment[];
+        }) => Promise<{ sent: boolean; error?: string }>;
+    }> {
+        if (actorUserId) {
+            const mailboxConfig = await mailboxRepository.getRuntimeConfig(actorUserId);
+            const hasMailboxSmtp = Boolean(
+                mailboxConfig
+                && mailboxConfig.tenantId === tenantId
+                && mailboxConfig.smtp.host
+                && mailboxConfig.smtp.user
+                && mailboxConfig.smtp.pass,
+            );
+
+            if (mailboxConfig && hasMailboxSmtp) {
+                const senderName = mailboxConfig.smtp.senderName || 'ZODO CRM';
+                const senderEmail = mailboxConfig.smtp.senderEmail || mailboxConfig.smtp.user;
+                return {
+                    senderName,
+                    senderEmail,
+                    send: (options) => mailerService.sendMailWithConfigDetailed(
+                        {
+                            host: mailboxConfig.smtp.host,
+                            port: mailboxConfig.smtp.port,
+                            user: mailboxConfig.smtp.user,
+                            pass: mailboxConfig.smtp.pass,
+                            encryption: mailboxConfig.smtp.encryption,
+                            senderName,
+                            senderEmail,
+                        },
+                        options,
+                    ),
+                };
+            }
+        }
+
+        const hasGlobalSmtp = Boolean(config.email.host && config.email.user && config.email.pass);
+        if (hasGlobalSmtp) {
+            const senderEmail = config.email.from || config.email.user || 'no-reply@zodo.ca';
+            return {
+                senderName: 'ZODO CRM',
+                senderEmail,
+                send: async (options) => {
+                    const sent = await mailerService.sendMail(options);
+                    return sent
+                        ? { sent: true }
+                        : { sent: false, error: 'Server SMTP delivery failed. Check the configured SMTP host, port, and credentials.' };
+                },
+            };
+        }
+
+        throw new ServiceUnavailableError(
+            'Invoice email delivery requires SMTP configuration. Configure Letter Box > My Mailbox for your user or set server SMTP env credentials.',
+        );
+    }
+
+    private buildInvoiceEmailContent(params: {
+        invoice: any;
+        company: CompanyProfile;
+        recipientName: string;
+        roofAttachmentCount: number;
+    }) {
+        const { invoice, company, recipientName, roofAttachmentCount } = params;
+        const invoiceNumber = String(invoice.invoiceNumber || invoice.id);
+        const issueDate = new Date(invoice.issueDate).toLocaleDateString();
+        const dueDate = new Date(invoice.dueDate).toLocaleDateString();
+        const currency = String(invoice.currency || 'CAD');
+        const amountDue = this.formatCurrency(Number(invoice.amountDue || 0), currency);
+        const total = this.formatCurrency(Number(invoice.total || 0), currency);
+        const itemsHtml = Array.isArray(invoice.items)
+            ? invoice.items.map((item: any) => `
+                <tr>
+                  <td style="padding:10px 16px;border-bottom:1px solid #E2E8F0;font-size:13px;color:#0F172A;">${this.escapeHtml(item.description || 'Item')}</td>
+                  <td style="padding:10px 16px;border-bottom:1px solid #E2E8F0;font-size:13px;color:#475569;text-align:center;">${Number(item.quantity || 0).toFixed(2)}</td>
+                  <td style="padding:10px 16px;border-bottom:1px solid #E2E8F0;font-size:13px;color:#475569;text-align:right;">${this.formatCurrency(Number(item.unitPrice || 0), currency)}</td>
+                  <td style="padding:10px 16px;border-bottom:1px solid #E2E8F0;font-size:13px;color:#0F172A;font-weight:600;text-align:right;">${this.formatCurrency(Number(item.amount || 0), currency)}</td>
+                </tr>
+              `).join('')
+            : '';
+        const roofAttachmentNote = roofAttachmentCount > 0
+            ? `<p style="margin:0 0 20px;font-size:13px;color:#0F766E;background:#ECFEFF;border:1px solid #A5F3FC;padding:12px 14px;border-radius:10px;">
+                ${roofAttachmentCount} roof image${roofAttachmentCount === 1 ? '' : 's'} ${roofAttachmentCount === 1 ? 'is' : 'are'} attached with this invoice for reference.
+              </p>`
+            : '';
+
+        const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#F1F5F9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<div style="max-width:640px;margin:0 auto;padding:40px 20px;">
+  <div style="background:linear-gradient(135deg,#0F766E,#115E59);border-radius:16px 16px 0 0;padding:32px;text-align:center;">
+    <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700;letter-spacing:-0.5px;">${this.escapeHtml(company.companyName || 'ZODO CRM')}</h1>
+    <p style="margin:8px 0 0;color:rgba(255,255,255,0.88);font-size:14px;">Invoice Ready</p>
+  </div>
+  <div style="background:#fff;padding:32px;border-radius:0 0 16px 16px;box-shadow:0 4px 24px rgba(0,0,0,0.06);">
+    <p style="margin:0 0 8px;font-size:16px;color:#0F172A;">Hi ${this.escapeHtml(recipientName)},</p>
+    <p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.6;">
+      Your roofing invoice is attached as a PDF. Please review the summary below and contact us if you need anything clarified.
+    </p>
+    <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;padding:20px;margin-bottom:24px;">
+      <table style="width:100%;border-collapse:collapse;">
+        <tr>
+          <td style="padding:4px 0;font-size:13px;color:#64748B;">Invoice Number</td>
+          <td style="padding:4px 0;font-size:13px;color:#0F172A;font-weight:600;text-align:right;">${this.escapeHtml(invoiceNumber)}</td>
+        </tr>
+        <tr>
+          <td style="padding:4px 0;font-size:13px;color:#64748B;">Invoice Date</td>
+          <td style="padding:4px 0;font-size:13px;color:#0F172A;font-weight:600;text-align:right;">${this.escapeHtml(issueDate)}</td>
+        </tr>
+        <tr>
+          <td style="padding:4px 0;font-size:13px;color:#64748B;">Due Date</td>
+          <td style="padding:4px 0;font-size:13px;color:#0F172A;font-weight:600;text-align:right;">${this.escapeHtml(dueDate)}</td>
+        </tr>
+        <tr>
+          <td style="padding:4px 0;font-size:13px;color:#64748B;">Amount Due</td>
+          <td style="padding:4px 0;font-size:18px;color:#0F766E;font-weight:700;text-align:right;">${this.escapeHtml(amountDue)}</td>
+        </tr>
+      </table>
+    </div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
+      <thead>
+        <tr style="background:#F1F5F9;">
+          <th style="padding:10px 16px;text-align:left;font-size:12px;color:#64748B;font-weight:600;text-transform:uppercase;">Description</th>
+          <th style="padding:10px 16px;text-align:center;font-size:12px;color:#64748B;font-weight:600;text-transform:uppercase;">Qty</th>
+          <th style="padding:10px 16px;text-align:right;font-size:12px;color:#64748B;font-weight:600;text-transform:uppercase;">Rate</th>
+          <th style="padding:10px 16px;text-align:right;font-size:12px;color:#64748B;font-weight:600;text-transform:uppercase;">Amount</th>
+        </tr>
+      </thead>
+      <tbody>${itemsHtml}</tbody>
+    </table>
+    ${roofAttachmentNote}
+    <div style="border-top:1px solid #E2E8F0;padding-top:18px;">
+      <p style="margin:0 0 8px;font-size:13px;color:#64748B;">Total Invoice</p>
+      <p style="margin:0;font-size:22px;color:#0F172A;font-weight:700;">${this.escapeHtml(total)}</p>
+    </div>
+  </div>
+  <div style="text-align:center;padding:24px;color:#94A3B8;font-size:12px;">
+    <p style="margin:0;">© ${new Date().getFullYear()} ${this.escapeHtml(company.companyName || 'ZODO CRM')}</p>
+  </div>
+</div>
+</body>
+</html>`;
+
+        const text = [
+            `Hi ${recipientName},`,
+            '',
+            `Your roofing invoice ${invoiceNumber} is attached as a PDF.`,
+            `Invoice date: ${issueDate}`,
+            `Due date: ${dueDate}`,
+            `Amount due: ${amountDue}`,
+            roofAttachmentCount > 0 ? `${roofAttachmentCount} roof image${roofAttachmentCount === 1 ? '' : 's'} attached for reference.` : '',
+            '',
+            `Total invoice: ${total}`,
+        ].filter(Boolean).join('\n');
+
+        return { html, text };
     }
 
     async create(tenantId: string, data: CreateInvoiceDto) {
@@ -356,11 +816,124 @@ export class InvoicesService {
         await invoicesRepository.delete(id, tenantId);
     }
 
-    async sendInvoice(id: string, tenantId: string, recipientEmail?: string) {
+    async sendInvoice(id: string, tenantId: string, recipientEmail?: string, actorUserId?: string) {
         const existing = await invoicesRepository.findById(id, tenantId);
         if (!existing) throw new NotFoundError('Invoice not found', ErrorCodes.RESOURCE_NOT_FOUND);
+        const invoiceForSend = await prisma.invoice.findFirst({
+            where: { id, tenantId },
+            select: {
+                id: true,
+                tenantId: true,
+                invoiceNumber: true,
+                issueDate: true,
+                dueDate: true,
+                currency: true,
+                total: true,
+                amountDue: true,
+                notes: true,
+                terms: true,
+                clientId: true,
+                client: {
+                    select: {
+                        id: true,
+                        clientName: true,
+                        companyName: true,
+                        primaryEmail: true,
+                        primaryPhone: true,
+                    },
+                },
+                items: {
+                    select: {
+                        description: true,
+                        quantity: true,
+                        unitPrice: true,
+                        amount: true,
+                    },
+                    orderBy: { sortOrder: 'asc' },
+                },
+                project: {
+                    select: {
+                        id: true,
+                        name: true,
+                        projectNumber: true,
+                        jobSiteAddress: true,
+                        jobSiteCity: true,
+                        jobSiteState: true,
+                        jobSiteZip: true,
+                        projectPhotos: {
+                            select: {
+                                url: true,
+                                filename: true,
+                                mimeType: true,
+                                visibleToClient: true,
+                            },
+                            orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
+                            take: 12,
+                        },
+                    },
+                },
+                quote: {
+                    select: {
+                        id: true,
+                        quoteNumber: true,
+                        roofEstimate: {
+                            select: {
+                                address: true,
+                                satelliteImageUrl: true,
+                                photoUrls: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+        if (!invoiceForSend) throw new NotFoundError('Invoice not found', ErrorCodes.RESOURCE_NOT_FOUND);
 
-        // Mark invoice as SENT
+        const targetEmail = String(recipientEmail || invoiceForSend.client?.primaryEmail || '').trim();
+        if (!targetEmail) {
+            throw new BadRequestError('A recipient email is required before sending the invoice', ErrorCodes.INVALID_INPUT);
+        }
+
+        const company = await this.getCompanyProfile(tenantId);
+        const recipientName = invoiceForSend.client?.clientName
+            || invoiceForSend.client?.companyName
+            || 'Customer';
+        const sender = await this.resolveInvoiceSender(tenantId, actorUserId);
+        const { buffer, fileName } = await this.generatePdf(id, tenantId);
+        const roofAttachments = await this.collectRoofImageAttachments(invoiceForSend);
+        const emailAttachments: InvoiceEmailAttachment[] = [
+            {
+                filename: fileName,
+                content: buffer,
+                contentType: 'application/pdf',
+            },
+            ...roofAttachments,
+        ];
+        const emailContent = this.buildInvoiceEmailContent({
+            invoice: invoiceForSend,
+            company,
+            recipientName,
+            roofAttachmentCount: roofAttachments.length,
+        });
+        const delivery = await sender.send({
+            to: targetEmail,
+            subject: `Invoice ${invoiceForSend.invoiceNumber} from ${company.companyName}`,
+            html: emailContent.html,
+            text: emailContent.text,
+            attachments: emailAttachments,
+        });
+        if (!delivery.sent) {
+            const errorMessage = delivery.error || 'Check the configured SMTP credentials and try again.';
+            if (this.isAuthenticationError(errorMessage)) {
+                throw new BadRequestError(
+                    `Invoice email delivery failed because the configured SMTP credentials were rejected. ${errorMessage}`,
+                    ErrorCodes.INVALID_INPUT,
+                );
+            }
+
+            throw new ServiceUnavailableError(`Invoice email delivery failed. ${errorMessage}`);
+        }
+
         const invoice = await invoicesRepository.update(id, tenantId, { status: 'SENT', sentAt: new Date() } as any);
         const dto = toInvoiceResponseDto(invoice);
 
@@ -370,14 +943,20 @@ export class InvoicesService {
             invoiceId: id,
             invoiceNumber: (existing as any).invoiceNumber || '',
             clientId: (existing as any).clientId || (existing as any).client?.id,
-            recipientEmail,
+            recipientEmail: targetEmail,
         });
 
         activityLogger.log({
             tenantId, entityType: 'Invoice', entityId: id,
             action: 'STATUS_CHANGE', module: 'invoices',
-            description: `Invoice "${(existing as any).invoiceNumber || id}" sent${recipientEmail ? ` to ${recipientEmail}` : ''}`,
-            metadata: { newStatus: 'SENT', recipientEmail },
+            description: `Invoice "${(existing as any).invoiceNumber || id}" emailed to ${targetEmail}${roofAttachments.length > 0 ? ` with ${roofAttachments.length} roof image attachment${roofAttachments.length === 1 ? '' : 's'}` : ''}`,
+            userId: actorUserId,
+            metadata: {
+                newStatus: 'SENT',
+                recipientEmail: targetEmail,
+                senderEmail: sender.senderEmail,
+                roofAttachmentCount: roofAttachments.length,
+            },
         });
 
         return dto;

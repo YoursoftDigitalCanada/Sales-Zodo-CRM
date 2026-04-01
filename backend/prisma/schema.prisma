@@ -864,6 +864,7 @@ model Employee {
 
   @@unique([tenantId, userId])
   @@unique([tenantId, employeeNumber])
+  @@unique([id, tenantId])
   @@index([tenantId])
   @@index([userId])
   @@index([roleId])
@@ -894,6 +895,7 @@ model Role {
   permissions     RolePermission[]
 
   @@unique([tenantId, name])
+  @@unique([id, tenantId])
   @@index([tenantId])
   @@index([isSystemRole])
 }
@@ -1052,6 +1054,7 @@ model LeadSource {
 
   @@unique([tenantId, name])
   @@unique([tenantId, slug])
+  @@unique([id, tenantId])
   @@index([tenantId])
   @@index([isActive])
   @@index([sourceType])
@@ -1282,6 +1285,7 @@ model Lead {
   @@index([isInsuranceClaim])
   @@index([zipCode])
   @@unique([tenantId, leadNumber])
+  @@unique([id, tenantId])
 }
 
 model LeadContactedDetails {
@@ -1430,6 +1434,7 @@ model LeadInspection {
   updatedAt             DateTime  @updatedAt
 
   @@index([leadId])
+  @@unique([id, tenantId])
   @@index([tenantId])
   @@index([inspectionDate])
   @@index([estimateStatus])
@@ -1461,6 +1466,7 @@ model LeadInsuranceClaim {
   updatedAt                 DateTime  @updatedAt
 
   @@index([leadId])
+  @@unique([id, tenantId])
   @@index([tenantId])
   @@index([claimStatus])
 }
@@ -1623,6 +1629,7 @@ model Client {
   @@index([clientType])
   @@index([assignedOwnerId])
   @@index([primaryEmail])
+  @@unique([id, tenantId])
 }
 
 // ============================================================================
@@ -1662,6 +1669,7 @@ model Contact {
   @@index([isPrimaryContact])
   @@index([email])
   @@index([type])
+  @@unique([id, tenantId])
 
   // Relations
   emails                Email[]
@@ -1817,6 +1825,7 @@ model Task {
   @@index([assignedToId])
   @@index([projectId])
   @@index([dueDate])
+  @@unique([id, tenantId])
 }
 
 model TaskTag {
@@ -3073,6 +3082,7 @@ model CalendarEvent {
   @@index([createdById])
   @@index([clientId])
   @@index([leadId])
+  @@unique([id, tenantId])
 }
 
 model CalendarEventAttendee {
@@ -3127,6 +3137,7 @@ model Folder {
   @@index([tenantId])
   @@index([parentId])
   @@index([deletedAt])
+  @@unique([id, tenantId])
 }
 
 model File {
@@ -3193,6 +3204,7 @@ model File {
   @@index([clientId])
   @@index([leadId])
   @@index([quoteId])
+  @@unique([id, tenantId])
 }
 
 model FileTag {
@@ -3286,6 +3298,7 @@ model Invoice {
   @@index([dueDate])
   @@index([quoteId])
   @@index([projectId])
+  @@unique([id, tenantId])
 }
 
 model InvoiceItem {
@@ -3497,6 +3510,7 @@ model Booking {
   @@index([clientId])
   @@index([assignedToId])
   @@index([serviceId])
+  @@unique([id, tenantId])
 }
 
 // ============================================================================
@@ -3532,6 +3546,7 @@ model Service {
   @@index([tenantId])
   @@index([category])
   @@index([isActive])
+  @@unique([id, tenantId])
 }
 
 // ============================================================================
@@ -4583,6 +4598,7 @@ model Quote {
   @@index([leadId])
   @@index([roofEstimateId])
   @@index([validUntil])
+  @@unique([id, tenantId])
 }
 
 model QuoteItem {
@@ -4774,6 +4790,7 @@ model Contract {
   @@index([projectId])
   @@index([startDate])
   @@index([endDate])
+  @@unique([id, tenantId])
 }
 
 // ============================================================================

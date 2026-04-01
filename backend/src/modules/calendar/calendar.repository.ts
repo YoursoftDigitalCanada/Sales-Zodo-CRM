@@ -1,7 +1,6 @@
-import { PrismaClient, Prisma, CalendarEventType } from '@prisma/client';
+import { Prisma, CalendarEventType } from '@prisma/client';
 import { CreateCalendarEventDto, UpdateCalendarEventDto, CalendarEventQueryDto } from './calendar.dto';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../config/database';
 const calendarEventInclude = {
     attendees: { include: { employee: { include: { user: { select: { firstName: true, lastName: true } } } } } },
     createdBy: { include: { user: { select: { firstName: true, lastName: true } } } },
@@ -72,7 +71,7 @@ export class CalendarRepository {
         }
 
         return prisma.calendarEvent.update({
-            where: { id },
+            where: { id_tenantId: { id, tenantId } },
             data: {
                 ...(data.title !== undefined && { title: data.title }),
                 ...(data.description !== undefined && { description: data.description }),
@@ -107,7 +106,7 @@ export class CalendarRepository {
         if (!existing) throw new Error('Calendar event not found or access denied');
 
         return prisma.calendarEvent.update({
-            where: { id },
+            where: { id_tenantId: { id, tenantId } },
             data: { status },
             include: calendarEventInclude,
         });
@@ -119,7 +118,7 @@ export class CalendarRepository {
         if (!existing) throw new Error('Calendar event not found or access denied');
 
         await prisma.calendarEventAttendee.deleteMany({ where: { eventId: id } });
-        return prisma.calendarEvent.delete({ where: { id } });
+        return prisma.calendarEvent.delete({ where: { id_tenantId: { id, tenantId } } });
     }
 }
 

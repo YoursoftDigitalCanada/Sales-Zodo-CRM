@@ -1,7 +1,6 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { CreateServiceDto, UpdateServiceDto, ServiceQueryDto } from './services.dto';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../config/database';
 
 export class ServicesRepository {
     async create(tenantId: string, data: CreateServiceDto) {
@@ -48,7 +47,7 @@ export class ServicesRepository {
         if (!existing) throw new Error('Service not found or access denied');
 
         return prisma.service.update({
-            where: { id },
+            where: { id_tenantId: { id, tenantId } },
             data: {
                 ...(data.name !== undefined && { name: data.name }),
                 ...(data.description !== undefined && { description: data.description }),
@@ -64,14 +63,17 @@ export class ServicesRepository {
         // Verify tenant ownership
         const existing = await prisma.service.findFirst({ where: { id, tenantId } });
         if (!existing) throw new Error('Service not found or access denied');
-        return prisma.service.update({ where: { id }, data: { isActive: false } });
+        return prisma.service.update({
+            where: { id_tenantId: { id, tenantId } },
+            data: { isActive: false },
+        });
     }
 
     async delete(id: string, tenantId: string) {
         // Verify tenant ownership
         const existing = await prisma.service.findFirst({ where: { id, tenantId } });
         if (!existing) throw new Error('Service not found or access denied');
-        return prisma.service.delete({ where: { id } });
+        return prisma.service.delete({ where: { id_tenantId: { id, tenantId } } });
     }
 }
 

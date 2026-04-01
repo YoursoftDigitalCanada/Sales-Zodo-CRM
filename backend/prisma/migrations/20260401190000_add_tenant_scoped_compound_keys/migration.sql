@@ -1,0 +1,17 @@
+CREATE UNIQUE INDEX IF NOT EXISTS "Employee_id_tenantId_key" ON "Employee"("id", "tenantId");
+CREATE UNIQUE INDEX IF NOT EXISTS "Role_id_tenantId_key" ON "Role"("id", "tenantId");
+CREATE UNIQUE INDEX IF NOT EXISTS "LeadSource_id_tenantId_key" ON "LeadSource"("id", "tenantId");
+CREATE UNIQUE INDEX IF NOT EXISTS "Lead_id_tenantId_key" ON "Lead"("id", "tenantId");
+CREATE UNIQUE INDEX IF NOT EXISTS "LeadInspection_id_tenantId_key" ON "LeadInspection"("id", "tenantId");
+CREATE UNIQUE INDEX IF NOT EXISTS "LeadInsuranceClaim_id_tenantId_key" ON "LeadInsuranceClaim"("id", "tenantId");
+CREATE UNIQUE INDEX IF NOT EXISTS "Client_id_tenantId_key" ON "Client"("id", "tenantId");
+CREATE UNIQUE INDEX IF NOT EXISTS "Contact_id_tenantId_key" ON "Contact"("id", "tenantId");
+CREATE UNIQUE INDEX IF NOT EXISTS "Task_id_tenantId_key" ON "Task"("id", "tenantId");
+CREATE UNIQUE INDEX IF NOT EXISTS "CalendarEvent_id_tenantId_key" ON "CalendarEvent"("id", "tenantId");
+CREATE UNIQUE INDEX IF NOT EXISTS "Folder_id_tenantId_key" ON "Folder"("id", "tenantId");
+CREATE UNIQUE INDEX IF NOT EXISTS "File_id_tenantId_key" ON "File"("id", "tenantId");
+CREATE UNIQUE INDEX IF NOT EXISTS "Invoice_id_tenantId_key" ON "Invoice"("id", "tenantId");
+CREATE UNIQUE INDEX IF NOT EXISTS "Booking_id_tenantId_key" ON "Booking"("id", "tenantId");
+CREATE UNIQUE INDEX IF NOT EXISTS "Service_id_tenantId_key" ON "Service"("id", "tenantId");
+CREATE UNIQUE INDEX IF NOT EXISTS "Quote_id_tenantId_key" ON "Quote"("id", "tenantId");
+CREATE UNIQUE INDEX IF NOT EXISTS "Contract_id_tenantId_key" ON "Contract"("id", "tenantId");

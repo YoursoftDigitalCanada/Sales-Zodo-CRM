@@ -90,7 +90,7 @@ export class EmployeesRepository {
         const currentProfile = normalizeEmployeeProfileData(existing.profileData);
 
         return prisma.employee.update({
-            where: { id },
+            where: { id_tenantId: { id, tenantId } },
             data: {
                 ...(data.roleId !== undefined
                     ? {
@@ -155,7 +155,7 @@ export class EmployeesRepository {
         // Tenant-scoped delete
         const existing = await prisma.employee.findFirst({ where: { id, tenantId } });
         if (!existing) throw new Error('Employee not found or access denied');
-        return prisma.employee.delete({ where: { id } });
+        return prisma.employee.delete({ where: { id_tenantId: { id, tenantId } } });
     }
 }
 

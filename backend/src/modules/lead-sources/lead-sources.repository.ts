@@ -125,7 +125,7 @@ export class LeadSourcesRepository {
     }
 
     return prisma.leadSource.update({
-      where: { id },
+      where: { id_tenantId: { id, tenantId } },
       data: updateData,
       include: {
         _count: {
@@ -232,7 +232,7 @@ export class LeadSourcesRepository {
 
     const webhookSecret = crypto.randomBytes(32).toString('hex');
     return prisma.leadSource.update({
-      where: { id },
+      where: { id_tenantId: { id, tenantId } },
       data: { webhookSecret },
     });
   }
@@ -305,7 +305,7 @@ export class LeadSourcesRepository {
     const lastLeadAt = leads.length > 0 ? leads[0].createdAt : null;
 
     return prisma.leadSource.update({
-      where: { id },
+      where: { id_tenantId: { id, tenantId } },
       data: {
         totalLeads,
         convertedLeads,

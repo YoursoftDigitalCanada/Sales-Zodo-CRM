@@ -1,8 +1,7 @@
-import { PrismaClient, Prisma, ClientType, ClientStatus } from '@prisma/client';
+import { Prisma, ClientType, ClientStatus } from '@prisma/client';
 import { CreateClientDto, UpdateClientDto, ClientQueryDto } from './clients.dto';
 import { DataAccessContext, buildClientAccessWhere, mergeWhereWithAccess } from '../../common/access/data-access';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../config/database';
 const clientInclude = {
     assignedOwner: { include: { user: { select: { firstName: true, lastName: true } } } },
     contacts: { where: { isPrimaryContact: true }, take: 1, select: { contactName: true, email: true, mobilePhone: true } },
@@ -127,7 +126,7 @@ export class ClientsRepository {
         if (!existing) throw new Error('Client not found or access denied');
 
         return prisma.client.update({
-            where: { id },
+            where: { id_tenantId: { id, tenantId } },
             data: {
                 // Basic Information
                 ...(data.clientLogo !== undefined && { clientLogo: data.clientLogo }),
@@ -215,7 +214,7 @@ export class ClientsRepository {
         // Tenant-scoped delete
         const existing = await prisma.client.findFirst({ where: { id, tenantId } });
         if (!existing) throw new Error('Client not found or access denied');
-        return prisma.client.delete({ where: { id } });
+        return prisma.client.delete({ where: { id_tenantId: { id, tenantId } } });
     }
 }
 

@@ -1,8 +1,7 @@
-import { PrismaClient, Prisma, QuoteStatus } from '@prisma/client';
+import { Prisma, QuoteStatus } from '@prisma/client';
 import { CreateQuoteDto, UpdateQuoteDto, QuoteQueryDto } from './quotes.dto';
 import { buildQuoteSelect, stripUnsupportedQuoteSignatureFields } from './quote-schema-compat';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../config/database';
 const quoteRelations = {
     client: { select: { id: true, clientName: true } },
     lead: { select: { id: true, firstName: true, lastName: true, companyName: true } },
@@ -162,7 +161,7 @@ export class QuotesRepository {
         const safeUpdatePayload = await stripUnsupportedQuoteSignatureFields(updatePayload);
 
         return prisma.quote.update({
-            where: { id },
+            where: { id_tenantId: { id, tenantId } },
             data: safeUpdatePayload as any,
             select: select as any,
         });
@@ -176,7 +175,10 @@ export class QuotesRepository {
         if (!existing) throw new Error('Quote not found or access denied');
 
         await prisma.quoteItem.deleteMany({ where: { quoteId: id } });
-        return prisma.quote.delete({ where: { id }, select: { id: true } });
+        return prisma.quote.delete({
+            where: { id_tenantId: { id, tenantId } },
+            select: { id: true },
+        });
     }
 }
 

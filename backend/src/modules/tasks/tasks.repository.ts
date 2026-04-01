@@ -1,4 +1,4 @@
-import { PrismaClient, Prisma, TaskStatus, TaskPriority } from '@prisma/client';
+import { Prisma, TaskStatus, TaskPriority } from '@prisma/client';
 import {
     CreateTaskDto,
     UpdateTaskDto,
@@ -12,7 +12,7 @@ import {
     mergeWhereWithAccess,
 } from '../../common/access/data-access';
 
-const prisma = new PrismaClient();
+import { prisma } from '../../config/database';
 const taskInclude = {
     assignedTo: { include: { user: { select: { firstName: true, lastName: true, email: true } } } },
     createdBy: { include: { user: { select: { firstName: true, lastName: true } } } },
@@ -141,7 +141,7 @@ export class TasksRepository {
 
             if (subtask.id && existingIds.has(subtask.id)) {
                 await tx.task.update({
-                    where: { id: subtask.id },
+                    where: { id_tenantId: { id: subtask.id, tenantId } },
                     data: payload,
                 });
                 continue;
@@ -228,7 +228,7 @@ export class TasksRepository {
 
         return prisma.$transaction(async (tx) => {
             await tx.task.update({
-                where: { id },
+                where: { id_tenantId: { id, tenantId } },
                 data: {
                     ...(data.title !== undefined && { title: data.title }),
                     ...(data.description !== undefined && { description: data.description }),
@@ -276,7 +276,7 @@ export class TasksRepository {
         if (!existing) throw new Error('Task not found or access denied');
 
         return prisma.task.update({
-            where: { id },
+            where: { id_tenantId: { id, tenantId } },
             data: {
                 status,
                 completedAt: status === 'DONE' || status === 'COMPLETED' ? new Date() : null,
@@ -292,7 +292,7 @@ export class TasksRepository {
         return prisma.$transaction(async (tx) => {
             await tx.task.deleteMany({ where: { tenantId, parentTaskId: id } });
             await tx.taskTag.deleteMany({ where: { taskId: id } });
-            return tx.task.delete({ where: { id } });
+            return tx.task.delete({ where: { id_tenantId: { id, tenantId } } });
         });
     }
 
@@ -312,7 +312,7 @@ export class TasksRepository {
         if (!existing) throw new Error('Task not found or access denied');
 
         return prisma.task.update({
-            where: { id },
+            where: { id_tenantId: { id, tenantId } },
             data: { assignedToId },
             include: taskInclude,
         });

@@ -137,8 +137,13 @@ export class UsersRepository {
 
   async update(id: string, tenantId: string, data: UpdateUserDto) {
     await prisma.$transaction(async (tx) => {
-      await tx.user.update({
-        where: { id },
+      const result = await tx.user.updateMany({
+        where: {
+          id,
+          employees: {
+            some: { tenantId },
+          },
+        },
         data: {
           ...(data.firstName !== undefined ? { firstName: data.firstName } : {}),
           ...(data.lastName !== undefined ? { lastName: data.lastName } : {}),
@@ -147,6 +152,9 @@ export class UsersRepository {
           ...(data.status !== undefined ? { status: data.status } : {}),
         },
       });
+      if (result.count === 0) {
+        throw new Error('User not found or access denied');
+      }
 
       if (data.department !== undefined || data.position !== undefined) {
         await tx.employee.updateMany({
@@ -167,10 +175,18 @@ export class UsersRepository {
 
   async updateStatus(id: string, tenantId: string, status: UserStatus) {
     await prisma.$transaction(async (tx) => {
-      await tx.user.update({
-        where: { id },
+      const result = await tx.user.updateMany({
+        where: {
+          id,
+          employees: {
+            some: { tenantId },
+          },
+        },
         data: { status },
       });
+      if (result.count === 0) {
+        throw new Error('User not found or access denied');
+      }
 
       await tx.employee.updateMany({
         where: {
@@ -210,12 +226,20 @@ export class UsersRepository {
         },
       });
 
-      await tx.user.update({
-        where: { id },
+      const result = await tx.user.updateMany({
+        where: {
+          id,
+          employees: {
+            some: { tenantId },
+          },
+        },
         data: {
           status: 'INACTIVE',
         },
       });
+      if (result.count === 0) {
+        throw new Error('User not found or access denied');
+      }
 
       await tx.refreshToken.updateMany({
         where: {

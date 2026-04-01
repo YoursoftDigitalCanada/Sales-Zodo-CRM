@@ -1,7 +1,6 @@
-import { PrismaClient, Prisma, ContractStatus } from '@prisma/client';
+import { Prisma, ContractStatus } from '@prisma/client';
 import { CreateContractDto, UpdateContractDto, ContractQueryDto } from './contracts.dto';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../config/database';
 const contractInclude = {
     client: { select: { id: true, clientName: true } },
 };
@@ -74,7 +73,7 @@ export class ContractsRepository {
         if (!existing) throw new Error('Contract not found or access denied');
 
         return prisma.contract.update({
-            where: { id },
+            where: { id_tenantId: { id, tenantId } },
             data: {
                 ...(data.contractNumber !== undefined && { contractNumber: data.contractNumber }),
                 ...(data.title !== undefined && { title: data.title }),
@@ -104,7 +103,7 @@ export class ContractsRepository {
         }
 
         return prisma.contract.update({
-            where: { id },
+            where: { id_tenantId: { id, tenantId } },
             data: updateData,
             include: contractInclude,
         });
@@ -114,7 +113,7 @@ export class ContractsRepository {
         const existing = await prisma.contract.findFirst({ where: { id, tenantId } });
         if (!existing) throw new Error('Contract not found or access denied');
 
-        return prisma.contract.delete({ where: { id } });
+        return prisma.contract.delete({ where: { id_tenantId: { id, tenantId } } });
     }
 }
 

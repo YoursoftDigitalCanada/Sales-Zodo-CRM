@@ -27,15 +27,27 @@ export class InsuranceClaimsRepository {
     }
 
     async update(claimId: string, tenantId: string, data: UpdateInsuranceClaimDto) {
+        const existing = await prisma.leadInsuranceClaim.findFirst({
+            where: { id: claimId, tenantId },
+            select: { id: true },
+        });
+        if (!existing) throw new Error('Insurance claim not found or access denied');
+
         return prisma.leadInsuranceClaim.update({
-            where: { id: claimId },
+            where: { id_tenantId: { id: claimId, tenantId } },
             data,
         });
     }
 
     async delete(claimId: string, tenantId: string) {
+        const existing = await prisma.leadInsuranceClaim.findFirst({
+            where: { id: claimId, tenantId },
+            select: { id: true },
+        });
+        if (!existing) throw new Error('Insurance claim not found or access denied');
+
         return prisma.leadInsuranceClaim.delete({
-            where: { id: claimId },
+            where: { id_tenantId: { id: claimId, tenantId } },
         });
     }
 }

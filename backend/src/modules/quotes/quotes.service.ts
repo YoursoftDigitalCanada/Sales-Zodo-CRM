@@ -821,7 +821,7 @@ export class QuotesService {
         });
 
         const updated = await prisma.quote.update({
-            where: { id: quote.id },
+            where: { id_tenantId: { id: quote.id, tenantId: quote.tenantId } },
             data: safeViewUpdate as any,
             select: {
                 id: true,
@@ -887,7 +887,7 @@ export class QuotesService {
                 } as any,
             });
             await prisma.quote.update({
-                where: { id: quote.id },
+                where: { id_tenantId: { id: quote.id, tenantId: quote.tenantId } },
                 data: safeRejectUpdate as any,
                 select: { id: true },
             });
@@ -996,7 +996,7 @@ export class QuotesService {
         });
 
         await prisma.quote.update({
-            where: { id: quote.id },
+            where: { id_tenantId: { id: quote.id, tenantId: quote.tenantId } },
             data: safeSignedUpdate as any,
             select: { id: true },
         });

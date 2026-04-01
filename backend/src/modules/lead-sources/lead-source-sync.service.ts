@@ -73,7 +73,7 @@ export class LeadSourceSyncService {
 
     if (updateConnecting) {
       await prisma.leadSource.update({
-        where: { id: source.id },
+        where: { id_tenantId: { id: source.id, tenantId: source.tenantId } },
         data: { integrationStatus: 'CONNECTING' },
       });
     }
@@ -84,7 +84,7 @@ export class LeadSourceSyncService {
 
       await Promise.all([
         prisma.leadSource.update({
-          where: { id: source.id },
+          where: { id_tenantId: { id: source.id, tenantId: source.tenantId } },
           data: {
             integrationStatus: 'CONNECTED',
             lastSyncAt: new Date(),
@@ -114,7 +114,7 @@ export class LeadSourceSyncService {
       const message = this.toSafeErrorMessage(error);
       await Promise.all([
         prisma.leadSource.update({
-          where: { id: source.id },
+          where: { id_tenantId: { id: source.id, tenantId: source.tenantId } },
           data: {
             integrationStatus: 'ERROR',
             lastError: message,
@@ -201,7 +201,7 @@ export class LeadSourceSyncService {
 
       await Promise.all([
         prisma.leadSource.update({
-          where: { id: source.id },
+          where: { id_tenantId: { id: source.id, tenantId: source.tenantId } },
           data: {
             integrationStatus: 'CONNECTED',
             lastSyncAt: new Date(),
@@ -230,7 +230,7 @@ export class LeadSourceSyncService {
       const message = this.toSafeErrorMessage(error);
       await Promise.all([
         prisma.leadSource.update({
-          where: { id: source.id },
+          where: { id_tenantId: { id: source.id, tenantId: source.tenantId } },
           data: {
             integrationStatus: 'ERROR',
             lastError: message,

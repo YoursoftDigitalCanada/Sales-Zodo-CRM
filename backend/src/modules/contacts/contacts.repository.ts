@@ -1,7 +1,6 @@
-import { PrismaClient, Prisma, ContactType } from '@prisma/client';
+import { Prisma, ContactType } from '@prisma/client';
 import { CreateContactDto, UpdateContactDto, ContactQueryDto } from './contacts.dto';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../config/database';
 const contactInclude = {
     company: { select: { id: true, clientName: true } },
 };
@@ -57,7 +56,7 @@ export class ContactsRepository {
         if (!existing) throw new Error('Contact not found or access denied');
 
         return prisma.contact.update({
-            where: { id },
+            where: { id_tenantId: { id, tenantId } },
             data: {
                 ...(data.contactName !== undefined && { contactName: data.contactName }),
                 ...(data.companyId !== undefined && { companyId: data.companyId }),
@@ -78,7 +77,7 @@ export class ContactsRepository {
         // Tenant-scoped delete
         const existing = await prisma.contact.findFirst({ where: { id, tenantId } });
         if (!existing) throw new Error('Contact not found or access denied');
-        return prisma.contact.delete({ where: { id } });
+        return prisma.contact.delete({ where: { id_tenantId: { id, tenantId } } });
     }
 }
 

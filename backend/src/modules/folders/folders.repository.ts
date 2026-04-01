@@ -1,7 +1,6 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { CreateFolderDto, UpdateFolderDto, FolderQueryDto } from './folders.dto';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../config/database';
 const folderInclude = {
     parent: { select: { id: true, name: true } },
     _count: { select: { files: true, children: true } },
@@ -48,13 +47,17 @@ export class FoldersRepository {
         const updateData: Prisma.FolderUpdateInput = {};
         if (data.name !== undefined) updateData.name = data.name;
         if (data.parentId !== undefined) {
+            if (data.parentId) {
+                const parent = await prisma.folder.findFirst({ where: { id: data.parentId, tenantId, deletedAt: null } });
+                if (!parent) throw new Error('Parent folder not found or access denied');
+            }
             updateData.parent = data.parentId ? { connect: { id: data.parentId } } : { disconnect: true };
         }
         if (data.isShared !== undefined) updateData.isShared = data.isShared;
         if (data.sharedWith !== undefined) updateData.sharedWith = data.sharedWith as Prisma.InputJsonValue;
 
         return prisma.folder.update({
-            where: { id },
+            where: { id_tenantId: { id, tenantId } },
             data: updateData,
             include: folderInclude,
         });
@@ -63,20 +66,23 @@ export class FoldersRepository {
     async softDelete(id: string, tenantId: string) {
         const existing = await prisma.folder.findFirst({ where: { id, tenantId, deletedAt: null } });
         if (!existing) throw new Error('Folder not found or access denied');
-        return prisma.folder.update({ where: { id }, data: { deletedAt: new Date() } });
+        return prisma.folder.update({
+            where: { id_tenantId: { id, tenantId } },
+            data: { deletedAt: new Date() },
+        });
     }
 
     async delete(id: string, tenantId: string) {
         const existing = await prisma.folder.findFirst({ where: { id, tenantId } });
         if (!existing) throw new Error('Folder not found or access denied');
-        return prisma.folder.delete({ where: { id } });
+        return prisma.folder.delete({ where: { id_tenantId: { id, tenantId } } });
     }
 
     async toggleStar(id: string, tenantId: string) {
         const existing = await prisma.folder.findFirst({ where: { id, tenantId, deletedAt: null } });
         if (!existing) throw new Error('Folder not found or access denied');
         return prisma.folder.update({
-            where: { id },
+            where: { id_tenantId: { id, tenantId } },
             data: { isStarred: !existing.isStarred },
             include: folderInclude,
         });
@@ -85,13 +91,17 @@ export class FoldersRepository {
     async restore(id: string, tenantId: string) {
         const existing = await prisma.folder.findFirst({ where: { id, tenantId, deletedAt: { not: null } } });
         if (!existing) throw new Error('Folder not found in trash');
-        return prisma.folder.update({ where: { id }, data: { deletedAt: null }, include: folderInclude });
+        return prisma.folder.update({
+            where: { id_tenantId: { id, tenantId } },
+            data: { deletedAt: null },
+            include: folderInclude,
+        });
     }
 
     async permanentDelete(id: string, tenantId: string) {
         const existing = await prisma.folder.findFirst({ where: { id, tenantId } });
         if (!existing) throw new Error('Folder not found or access denied');
-        return prisma.folder.delete({ where: { id } });
+        return prisma.folder.delete({ where: { id_tenantId: { id, tenantId } } });
     }
 
     async getTree(tenantId: string) {

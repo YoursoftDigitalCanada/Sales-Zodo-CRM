@@ -196,7 +196,7 @@ export class LeadsRepository {
     }
 
     return prisma.lead.update({
-      where: { id },
+      where: { id_tenantId: { id, tenantId } },
       data: {
         ...leadData,
         potentialValue: data.potentialValue !== undefined
@@ -227,7 +227,7 @@ export class LeadsRepository {
     if (!existing) throw new Error('Lead not found or access denied');
 
     return prisma.lead.update({
-      where: { id },
+      where: { id_tenantId: { id, tenantId } },
       data: { status },
       include: this.defaultInclude,
     });
@@ -242,7 +242,7 @@ export class LeadsRepository {
     if (!existing) throw new Error('Lead not found or access denied');
 
     return prisma.lead.update({
-      where: { id },
+      where: { id_tenantId: { id, tenantId } },
       data: { assignedToId },
       include: this.defaultInclude,
     });
@@ -283,7 +283,7 @@ export class LeadsRepository {
     if (!existing) throw new Error('Lead not found or access denied');
 
     return prisma.lead.update({
-      where: { id },
+      where: { id_tenantId: { id, tenantId } },
       data: {
         status: 'WON',
         convertedAt: new Date(),

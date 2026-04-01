@@ -1,7 +1,6 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { CreateRoleDto, UpdateRoleDto, RoleQueryDto } from './roles.dto';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../config/database';
 const roleInclude = {
     _count: { select: { employees: true } },
     permissions: { include: { permission: { select: { id: true, code: true, name: true } } } },
@@ -53,7 +52,7 @@ export class RolesRepository {
         }
 
         return prisma.role.update({
-            where: { id },
+            where: { id_tenantId: { id, tenantId } },
             data: {
                 ...(data.name !== undefined && { name: data.name }),
                 ...(data.description !== undefined && { description: data.description }),
@@ -74,7 +73,7 @@ export class RolesRepository {
         if (!existing) throw new Error('Role not found or access denied');
 
         await prisma.rolePermission.deleteMany({ where: { roleId: id } });
-        return prisma.role.delete({ where: { id } });
+        return prisma.role.delete({ where: { id_tenantId: { id, tenantId } } });
     }
 }
 

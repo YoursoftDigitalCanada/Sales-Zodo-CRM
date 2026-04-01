@@ -1,8 +1,7 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { UploadFileDto, UpdateFileDto, FileQueryDto } from './files.dto';
 import { v4 as uuidv4 } from 'uuid';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../config/database';
 const fileInclude = {
     folder: { select: { id: true, name: true } },
     tags: { include: { tag: { select: { id: true, name: true, color: true } } } },
@@ -115,16 +114,24 @@ export class FilesRepository {
         const updateData: Prisma.FileUpdateInput = {};
         if (data.name !== undefined) updateData.name = data.name;
         if (data.folderId !== undefined) {
+            if (data.folderId) {
+                const folder = await prisma.folder.findFirst({ where: { id: data.folderId, tenantId, deletedAt: null } });
+                if (!folder) throw new Error('Target folder not found or access denied');
+            }
             updateData.folder = data.folderId ? { connect: { id: data.folderId } } : { disconnect: true };
         }
-        return prisma.file.update({ where: { id }, data: updateData, include: fileInclude });
+        return prisma.file.update({
+            where: { id_tenantId: { id, tenantId } },
+            data: updateData,
+            include: fileInclude,
+        });
     }
 
     async toggleStar(id: string, tenantId: string) {
         const existing = await prisma.file.findFirst({ where: { id, tenantId, deletedAt: null } });
         if (!existing) throw new Error('File not found or access denied');
         return prisma.file.update({
-            where: { id },
+            where: { id_tenantId: { id, tenantId } },
             data: { isStarred: !existing.isStarred },
             include: fileInclude,
         });
@@ -141,7 +148,7 @@ export class FilesRepository {
         }
 
         return prisma.file.update({
-            where: { id },
+            where: { id_tenantId: { id, tenantId } },
             data: { folder: folderId ? { connect: { id: folderId } } : { disconnect: true } },
             include: fileInclude,
         });
@@ -157,7 +164,7 @@ export class FilesRepository {
             : null;
 
         return prisma.file.update({
-            where: { id },
+            where: { id_tenantId: { id, tenantId } },
             data: { isShared: true, shareLink, shareExpiresAt },
             include: fileInclude,
         });
@@ -167,7 +174,7 @@ export class FilesRepository {
         const existing = await prisma.file.findFirst({ where: { id, tenantId, deletedAt: null } });
         if (!existing) throw new Error('File not found or access denied');
         return prisma.file.update({
-            where: { id },
+            where: { id_tenantId: { id, tenantId } },
             data: { isShared: false, shareLink: null, shareExpiresAt: null },
             include: fileInclude,
         });
@@ -177,19 +184,26 @@ export class FilesRepository {
     async softDelete(id: string, tenantId: string) {
         const existing = await prisma.file.findFirst({ where: { id, tenantId, deletedAt: null } });
         if (!existing) throw new Error('File not found or access denied');
-        return prisma.file.update({ where: { id }, data: { deletedAt: new Date() } });
+        return prisma.file.update({
+            where: { id_tenantId: { id, tenantId } },
+            data: { deletedAt: new Date() },
+        });
     }
 
     async restore(id: string, tenantId: string) {
         const existing = await prisma.file.findFirst({ where: { id, tenantId, deletedAt: { not: null } } });
         if (!existing) throw new Error('File not found in trash');
-        return prisma.file.update({ where: { id }, data: { deletedAt: null }, include: fileInclude });
+        return prisma.file.update({
+            where: { id_tenantId: { id, tenantId } },
+            data: { deletedAt: null },
+            include: fileInclude,
+        });
     }
 
     async permanentDelete(id: string, tenantId: string) {
         const existing = await prisma.file.findFirst({ where: { id, tenantId } });
         if (!existing) throw new Error('File not found or access denied');
-        return prisma.file.delete({ where: { id } });
+        return prisma.file.delete({ where: { id_tenantId: { id, tenantId } } });
     }
 
     // ── BULK ──

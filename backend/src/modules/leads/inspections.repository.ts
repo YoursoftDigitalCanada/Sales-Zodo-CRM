@@ -79,8 +79,14 @@ export class InspectionsRepository {
      * Update an inspection
      */
     async update(inspectionId: string, tenantId: string, data: UpdateLeadInspectionDto) {
+        const existing = await prisma.leadInspection.findFirst({
+            where: { id: inspectionId, tenantId },
+            select: { id: true },
+        });
+        if (!existing) throw new Error('Inspection not found or access denied');
+
         return prisma.leadInspection.update({
-            where: { id: inspectionId },
+            where: { id_tenantId: { id: inspectionId, tenantId } },
             data: this.transformDates(data),
         });
     }
@@ -89,8 +95,14 @@ export class InspectionsRepository {
      * Delete an inspection
      */
     async delete(inspectionId: string, tenantId: string) {
+        const existing = await prisma.leadInspection.findFirst({
+            where: { id: inspectionId, tenantId },
+            select: { id: true },
+        });
+        if (!existing) throw new Error('Inspection not found or access denied');
+
         return prisma.leadInspection.delete({
-            where: { id: inspectionId },
+            where: { id_tenantId: { id: inspectionId, tenantId } },
         });
     }
 

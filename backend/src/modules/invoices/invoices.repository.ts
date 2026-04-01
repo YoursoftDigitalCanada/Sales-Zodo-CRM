@@ -1,7 +1,6 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import type { CreateInvoiceDto, UpdateInvoiceDto, InvoiceQueryDto, RecordInvoicePaymentDto } from '@contracts/invoice';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../config/database';
 const invoiceInclude = {
     client: {
         select: {
@@ -135,7 +134,7 @@ export class InvoicesRepository {
         }
 
         return prisma.invoice.update({
-            where: { id },
+            where: { id_tenantId: { id, tenantId } },
             data: {
                 ...(data.invoiceNumber !== undefined && { invoiceNumber: data.invoiceNumber }),
                 ...((data.issueDate !== undefined || (data as any).invoiceDate !== undefined) && {
@@ -175,7 +174,7 @@ export class InvoicesRepository {
         if (!invoice) throw new Error('Invoice not found or access denied');
 
         return prisma.invoice.update({
-            where: { id },
+            where: { id_tenantId: { id, tenantId } },
             data: { status: 'PAID', paidAt: new Date(), amountPaid: invoice.total || 0, amountDue: 0 },
             include: invoiceInclude,
         });
@@ -205,7 +204,7 @@ export class InvoicesRepository {
             });
 
             return tx.invoice.update({
-                where: { id },
+                where: { id_tenantId: { id, tenantId } },
                 data: {
                     amountPaid: nextAmountPaid,
                     amountDue: nextAmountDue,
@@ -223,7 +222,7 @@ export class InvoicesRepository {
         if (!existing) throw new Error('Invoice not found or access denied');
 
         await prisma.invoiceItem.deleteMany({ where: { invoiceId: id } });
-        return prisma.invoice.delete({ where: { id } });
+        return prisma.invoice.delete({ where: { id_tenantId: { id, tenantId } } });
     }
 }
 

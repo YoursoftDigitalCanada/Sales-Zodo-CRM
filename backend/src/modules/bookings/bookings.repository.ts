@@ -1,7 +1,6 @@
-import { PrismaClient, Prisma, BookingStatus } from '@prisma/client';
+import { Prisma, BookingStatus } from '@prisma/client';
 import { CreateBookingDto, UpdateBookingDto, BookingQueryDto } from './bookings.dto';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../config/database';
 const bookingInclude = {
     client: { select: { id: true, companyName: true, firstName: true, lastName: true, clientType: true } },
     assignedTo: { include: { user: { select: { firstName: true, lastName: true } } } },
@@ -53,7 +52,7 @@ export class BookingsRepository {
         if (!existing) throw new Error('Booking not found or access denied');
 
         return prisma.booking.update({
-            where: { id },
+            where: { id_tenantId: { id, tenantId } },
             data: {
                 ...(data.title !== undefined && { title: data.title }),
                 ...(data.description !== undefined && { description: data.description }),
@@ -73,21 +72,29 @@ export class BookingsRepository {
         // Tenant-scoped delete
         const existing = await prisma.booking.findFirst({ where: { id, tenantId } });
         if (!existing) throw new Error('Booking not found or access denied');
-        return prisma.booking.delete({ where: { id } });
+        return prisma.booking.delete({ where: { id_tenantId: { id, tenantId } } });
     }
 
     async confirm(id: string, tenantId: string) {
         // Verify tenant ownership
         const existing = await prisma.booking.findFirst({ where: { id, tenantId } });
         if (!existing) throw new Error('Booking not found or access denied');
-        return prisma.booking.update({ where: { id }, data: { status: 'CONFIRMED' }, include: bookingInclude });
+        return prisma.booking.update({
+            where: { id_tenantId: { id, tenantId } },
+            data: { status: 'CONFIRMED' },
+            include: bookingInclude,
+        });
     }
 
     async cancel(id: string, tenantId: string) {
         // Verify tenant ownership
         const existing = await prisma.booking.findFirst({ where: { id, tenantId } });
         if (!existing) throw new Error('Booking not found or access denied');
-        return prisma.booking.update({ where: { id }, data: { status: 'CANCELLED' }, include: bookingInclude });
+        return prisma.booking.update({
+            where: { id_tenantId: { id, tenantId } },
+            data: { status: 'CANCELLED' },
+            include: bookingInclude,
+        });
     }
 }
 

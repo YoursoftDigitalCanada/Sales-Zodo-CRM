@@ -91,7 +91,7 @@ export class CalendarService {
             tenantId,
             eventId: dto.id,
             title: (event as any).title || '',
-            startDate: (event as any).startDate?.toISOString?.() || undefined,
+            startDate: (event as any).startTime?.toISOString?.() || undefined,
         });
 
         // Send email notifications if this meeting is linked to a lead

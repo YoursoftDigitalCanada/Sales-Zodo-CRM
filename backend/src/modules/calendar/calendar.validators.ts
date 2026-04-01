@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+const calendarEventTypeSchema = z.enum(['MEETING', 'CALL', 'TASK', 'REMINDER', 'OUT_OF_OFFICE', 'OTHER']);
+const calendarRecurrenceSchema = z.enum(['NONE', 'DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']);
+
 // ============================================================================
 // CALENDAR - Create Event
 // ============================================================================
@@ -11,7 +14,7 @@ export const createCalendarEventSchema = z.object({
         isAllDay: z.boolean().default(false),
         startTime: z.string().datetime(),
         endTime: z.string().datetime(),
-        eventType: z.enum(['MEETING', 'TASK', 'REMINDER', 'EVENT', 'HOLIDAY', 'PERSONAL', 'OTHER']).default('MEETING'),
+        eventType: calendarEventTypeSchema.default('MEETING'),
         category: z.string().max(50).optional().nullable(),
         color: z.string().max(20).optional().nullable(),
         location: z.string().max(255).optional().nullable(),
@@ -20,11 +23,13 @@ export const createCalendarEventSchema = z.object({
         isPrivate: z.boolean().default(false),
         notes: z.string().optional().nullable(),
         timezone: z.string().max(50).optional().default('UTC'),
-        recurrence: z.enum(['NONE', 'DAILY', 'WEEKLY', 'BIWEEKLY', 'MONTHLY', 'YEARLY']).optional().default('NONE'),
+        recurrence: calendarRecurrenceSchema.optional().default('NONE'),
         recurrenceRule: z.string().optional().nullable(),
         recurrenceEndDate: z.string().datetime().optional().nullable(),
         reminderMinutes: z.number().int().optional().nullable(),
         attendeeIds: z.array(z.string()).default([]),
+        clientId: z.string().uuid().optional().nullable(),
+        leadId: z.string().uuid().optional().nullable(),
     }),
 });
 
@@ -35,7 +40,7 @@ export const updateCalendarEventSchema = z.object({
         isAllDay: z.boolean().optional(),
         startTime: z.string().datetime().optional(),
         endTime: z.string().datetime().optional(),
-        eventType: z.enum(['MEETING', 'TASK', 'REMINDER', 'EVENT', 'HOLIDAY', 'PERSONAL', 'OTHER']).optional(),
+        eventType: calendarEventTypeSchema.optional(),
         category: z.string().max(50).optional().nullable(),
         color: z.string().max(20).optional().nullable(),
         location: z.string().max(255).optional().nullable(),
@@ -44,11 +49,13 @@ export const updateCalendarEventSchema = z.object({
         isPrivate: z.boolean().optional(),
         notes: z.string().optional().nullable(),
         timezone: z.string().max(50).optional(),
-        recurrence: z.enum(['NONE', 'DAILY', 'WEEKLY', 'BIWEEKLY', 'MONTHLY', 'YEARLY']).optional(),
+        recurrence: calendarRecurrenceSchema.optional(),
         recurrenceRule: z.string().optional().nullable(),
         recurrenceEndDate: z.string().datetime().optional().nullable(),
         reminderMinutes: z.number().int().optional().nullable(),
         attendeeIds: z.array(z.string()).optional(),
+        clientId: z.string().uuid().optional().nullable(),
+        leadId: z.string().uuid().optional().nullable(),
     }),
 });
 
@@ -58,7 +65,7 @@ export const calendarEventQuerySchema = z.object({
         limit: z.coerce.number().int().min(1).max(200).default(50),
         startDate: z.string().datetime().optional(),
         endDate: z.string().datetime().optional(),
-        eventType: z.enum(['MEETING', 'TASK', 'REMINDER', 'EVENT', 'HOLIDAY', 'PERSONAL', 'OTHER']).optional(),
+        eventType: calendarEventTypeSchema.optional(),
         category: z.string().optional(),
         priority: z.enum(['LOW', 'MEDIUM', 'HIGH']).optional(),
         sortBy: z.enum(['startTime', 'title', 'createdAt']).default('startTime'),

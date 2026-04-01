@@ -30,6 +30,8 @@ export class CalendarRepository {
                 isPrivate: data.isPrivate || false,
                 notes: data.notes,
                 category: data.category,
+                clientId: data.clientId || null,
+                leadId: data.leadId || null,
                 createdById,
                 ...(data.attendeeIds?.length && {
                     attendees: { create: data.attendeeIds.map((employeeId) => ({ employeeId })) },
@@ -90,6 +92,8 @@ export class CalendarRepository {
                 ...(data.isPrivate !== undefined && { isPrivate: data.isPrivate }),
                 ...(data.notes !== undefined && { notes: data.notes }),
                 ...(data.category !== undefined && { category: data.category }),
+                ...(data.clientId !== undefined && { clientId: data.clientId || null }),
+                ...(data.leadId !== undefined && { leadId: data.leadId || null }),
                 ...(data.attendeeIds && {
                     attendees: { create: data.attendeeIds.map((employeeId) => ({ employeeId })) },
                 }),

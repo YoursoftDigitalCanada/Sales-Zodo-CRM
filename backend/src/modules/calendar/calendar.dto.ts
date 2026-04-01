@@ -24,6 +24,8 @@ export interface CreateCalendarEventDto {
     isPrivate?: boolean;
     notes?: string | null;
     category?: string | null;
+    clientId?: string | null;
+    leadId?: string | null;
 }
 
 export interface UpdateCalendarEventDto extends Partial<CreateCalendarEventDto> { }
@@ -60,6 +62,8 @@ export interface CalendarEventResponseDto {
     isPrivate: boolean;
     notes: string | null;
     category: string | null;
+    clientId: string | null;
+    leadId: string | null;
     attendees: { id: string; employeeId: string; status: string }[];
     createdBy: { id: string; firstName: string; lastName: string } | null;
     createdAt: Date;
@@ -92,6 +96,8 @@ export function toCalendarEventResponseDto(e: CalendarEventWithRelations): Calen
         isPrivate: e.isPrivate,
         notes: e.notes,
         category: e.category,
+        clientId: e.clientId ?? null,
+        leadId: e.leadId ?? null,
         attendees: (e.attendees || []).map((a) => ({ id: a.id, employeeId: a.employeeId, status: a.status })),
         createdBy: e.createdBy ? { id: e.createdBy.id, firstName: e.createdBy.user.firstName, lastName: e.createdBy.user.lastName } : null,
         createdAt: e.createdAt,

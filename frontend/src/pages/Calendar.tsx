@@ -141,6 +141,8 @@ interface CalendarEvent {
   isPrivate: boolean;
   attachments?: string[];
   notes?: string;
+  leadId?: string;
+  clientId?: string;
 }
 
 interface Attendee {
@@ -196,6 +198,30 @@ const eventColors = [
   { id: "teal", color: "#6637F4", name: "Teal" },
   { id: "orange", color: "#F97316", name: "Orange" },
 ];
+
+const toBackendEventType = (event: Partial<CalendarEvent>) => {
+  if (event.type === "meeting") return "MEETING";
+  if (event.type === "task") return "TASK";
+  if (event.type === "reminder") return "REMINDER";
+  if (event.type === "holiday") return "OUT_OF_OFFICE";
+  if (event.type === "personal" && event.category === "travel") return "OUT_OF_OFFICE";
+  if (event.category === "holiday" || event.category === "travel") return "OUT_OF_OFFICE";
+  return "OTHER";
+};
+
+const fromBackendEventType = (eventType?: string | null, category?: string | null): CalendarEvent["type"] => {
+  const normalizedType = String(eventType || "").toUpperCase();
+  const normalizedCategory = String(category || "").toLowerCase();
+  if (normalizedType === "MEETING" || normalizedType === "CALL") return "meeting";
+  if (normalizedType === "TASK") return "task";
+  if (normalizedType === "REMINDER") return "reminder";
+  if (normalizedType === "OUT_OF_OFFICE") {
+    return normalizedCategory === "holiday" ? "holiday" : "personal";
+  }
+  if (normalizedCategory === "holiday") return "holiday";
+  if (normalizedCategory === "personal" || normalizedCategory === "travel") return "personal";
+  return "event";
+};
 
 
 
@@ -2023,7 +2049,7 @@ const CalendarPage = () => {
     start: new Date(e.startTime),
     end: new Date(e.endTime),
     allDay: e.isAllDay || false,
-    type: (e.eventType?.toLowerCase() || 'event') as CalendarEvent['type'],
+    type: fromBackendEventType(e.eventType, e.category),
     category: e.category || 'work',
     color: e.color || '#3B82F6',
     location: e.location || undefined,
@@ -2039,6 +2065,8 @@ const CalendarPage = () => {
     createdBy: e.createdBy ? `${e.createdBy.firstName} ${e.createdBy.lastName}` : 'System',
     isPrivate: e.isPrivate || false,
     notes: e.notes || undefined,
+    leadId: e.leadId || undefined,
+    clientId: e.clientId || undefined,
   });
 
   // Fetch events from calendar API
@@ -2127,7 +2155,7 @@ const CalendarPage = () => {
         startTime: data.start!.toISOString(),
         endTime: data.end!.toISOString(),
         isAllDay: data.allDay || false,
-        eventType: (data.type === 'meeting' ? 'MEETING' : data.type === 'task' ? 'TASK' : data.type === 'reminder' ? 'REMINDER' : data.type === 'holiday' ? 'HOLIDAY' : data.type === 'personal' ? 'PERSONAL' : 'EVENT').toUpperCase(),
+        eventType: toBackendEventType(data),
         category: data.category || 'work',
         color: data.color || '#3B82F6',
         location: data.location || null,
@@ -2136,6 +2164,8 @@ const CalendarPage = () => {
         isPrivate: data.isPrivate || false,
         notes: data.notes || null,
         attendeeIds: data.attendees?.map((a) => a.id) || [],
+        leadId: data.leadId || null,
+        clientId: data.clientId || null,
       };
       const created = await createCalendarEvent(payload) as any;
       if (created) setEvents((prev) => [...prev, mapApiEvent(created)]);
@@ -2162,8 +2192,10 @@ const CalendarPage = () => {
       if (data.priority !== undefined) payload.priority = data.priority.toUpperCase();
       if (data.isPrivate !== undefined) payload.isPrivate = data.isPrivate;
       if (data.notes !== undefined) payload.notes = data.notes || null;
-      if (data.type) payload.eventType = (data.type === 'meeting' ? 'MEETING' : data.type === 'task' ? 'TASK' : data.type === 'reminder' ? 'REMINDER' : data.type === 'holiday' ? 'HOLIDAY' : data.type === 'personal' ? 'PERSONAL' : 'EVENT');
+      if (data.type || data.category) payload.eventType = toBackendEventType({ ...currentEvent, ...data });
       if (data.attendees) payload.attendeeIds = data.attendees.map((a) => a.id);
+      if (data.leadId !== undefined) payload.leadId = data.leadId || null;
+      if (data.clientId !== undefined) payload.clientId = data.clientId || null;
 
       const updated = await updateCalendarEvent(currentEvent.id, payload) as any;
       if (updated) setEvents((prev) => prev.map((e) => (e.id === currentEvent.id ? mapApiEvent(updated) : e)));

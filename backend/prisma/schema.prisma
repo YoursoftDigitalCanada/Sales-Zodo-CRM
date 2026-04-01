@@ -3940,6 +3940,9 @@ model ChatParticipant {
   // Read tracking
   lastReadAt      DateTime?
   unreadCount     Int         @default(0)
+  isPinned        Boolean     @default(false)
+  isMuted         Boolean     @default(false)
+  isArchived      Boolean     @default(false)
   
   // Timestamps
   joinedAt        DateTime    @default(now())

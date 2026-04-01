@@ -35,9 +35,13 @@ interface MessageBubbleProps {
   senderName: string;
   senderAvatar?: string;
   onReply?: (message: Message) => void;
+  onReact?: (message: Message) => void;
+  onForward?: (message: Message) => void;
+  onStar?: (message: Message) => void;
   onEdit?: (messageId: string) => void;
   onDelete?: (messageId: string) => void;
   onCopy?: (content: string) => void;
+  onDownloadAttachment?: (attachmentId: string) => void;
 }
 
 // Message Status Icon Component
@@ -54,9 +58,13 @@ export function MessageBubble({
   senderName,
   senderAvatar,
   onReply,
+  onReact,
+  onForward,
+  onStar,
   onEdit,
   onDelete,
   onCopy,
+  onDownloadAttachment,
 }: MessageBubbleProps) {
   return (
     <motion.div
@@ -101,7 +109,10 @@ export function MessageBubble({
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <button className="p-1.5 hover:bg-gray-200 rounded-md bg-white shadow-sm">
+              <button
+                onClick={() => onReact?.(message)}
+                className="p-1.5 hover:bg-gray-200 rounded-md bg-white shadow-sm"
+              >
                 <Smile size={14} className="text-[#475569]" />
               </button>
             </TooltipTrigger>
@@ -119,13 +130,13 @@ export function MessageBubble({
                 <Copy size={14} className="mr-2" />
                 Copy
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onForward?.(message)}>
                 <Forward size={14} className="mr-2" />
                 Forward
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onStar?.(message)}>
                 <Star size={14} className="mr-2" />
-                Star
+                {message.isStarred ? "Remove Star" : "Star"}
               </DropdownMenuItem>
               {isOwn && (
                 <>
@@ -161,6 +172,7 @@ export function MessageBubble({
                   {attachment.type === "image" ? (
                     <div className="rounded-md overflow-hidden">
                       <img
+                        onClick={() => onDownloadAttachment?.(attachment.id)}
                         src={attachment.preview || attachment.url}
                         alt={attachment.name}
                         className="max-w-full h-auto rounded-md cursor-pointer hover:opacity-90 transition-opacity"
@@ -190,6 +202,7 @@ export function MessageBubble({
                         </p>
                       </div>
                       <button
+                        onClick={() => onDownloadAttachment?.(attachment.id)}
                         className={cn(
                           "p-2 rounded-md transition-colors",
                           isOwn ? "hover:bg-white/20" : "hover:bg-gray-200"
@@ -212,6 +225,11 @@ export function MessageBubble({
             <span className={cn("text-[10px]", isOwn ? "text-[#0F172A]/70" : "text-[#94A3B8]")}>
               {formatFullTime(message.timestamp)}
             </span>
+            {message.isEdited && (
+              <span className={cn("text-[10px]", isOwn ? "text-[#0F172A]/70" : "text-[#94A3B8]")}>
+                Edited
+              </span>
+            )}
             {isOwn && <MessageStatus status={message.status} />}
           </div>
         </div>

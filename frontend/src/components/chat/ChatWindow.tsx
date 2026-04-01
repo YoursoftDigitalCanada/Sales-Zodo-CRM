@@ -20,7 +20,16 @@ interface ChatWindowProps {
   showInfoPanel: boolean;
   onToggleInfoPanel: () => void;
   onSendMessage: (content: string, attachments?: Attachment[]) => void;
+  onReactMessage?: (message: Message) => void;
+  onForwardMessage?: (message: Message) => void;
+  onStarMessage?: (message: Message) => void;
+  onEditMessage?: (messageId: string) => void;
   onDeleteMessage: (messageId: string) => void;
+  onDownloadAttachment?: (attachmentId: string) => void;
+  onVoiceCall?: () => void;
+  onVideoCall?: () => void;
+  onSearchInChat?: () => void;
+  onArchiveConversation?: () => void;
   onPinConversation: () => void;
   onMuteConversation: () => void;
   onDeleteConversation: () => void;
@@ -35,7 +44,16 @@ export function ChatWindow({
   showInfoPanel,
   onToggleInfoPanel,
   onSendMessage,
+  onReactMessage,
+  onForwardMessage,
+  onStarMessage,
+  onEditMessage,
   onDeleteMessage,
+  onDownloadAttachment,
+  onVoiceCall,
+  onVideoCall,
+  onSearchInChat,
+  onArchiveConversation,
   onPinConversation,
   onMuteConversation,
   onDeleteConversation,
@@ -85,6 +103,10 @@ export function ChatWindow({
         currentUser={currentUser}
         showInfoPanel={showInfoPanel}
         onToggleInfoPanel={onToggleInfoPanel}
+        onVoiceCall={onVoiceCall}
+        onVideoCall={onVideoCall}
+        onSearchInChat={onSearchInChat}
+        onArchiveConversation={onArchiveConversation}
         onPinConversation={onPinConversation}
         onMuteConversation={onMuteConversation}
         onDeleteConversation={onDeleteConversation}
@@ -112,11 +134,16 @@ export function ChatWindow({
                 message={message}
                 isOwn={isOwn}
                 showAvatar={showAvatar}
-                senderName={otherParticipant.name}
-                senderAvatar={otherParticipant.avatar}
+                senderName={message.senderName || otherParticipant.name}
+                senderAvatar={message.senderAvatar || otherParticipant.avatar}
                 onReply={(msg) => setReplyingTo(msg)}
+                onReact={onReactMessage}
+                onForward={onForwardMessage}
+                onStar={onStarMessage}
+                onEdit={onEditMessage}
                 onDelete={onDeleteMessage}
                 onCopy={(content) => navigator.clipboard.writeText(content)}
+                onDownloadAttachment={onDownloadAttachment}
               />
             );
           })}

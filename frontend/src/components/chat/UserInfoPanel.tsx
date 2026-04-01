@@ -1,7 +1,7 @@
 // src/components/chat/UserInfoPanel.tsx
 
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { cn } from "@/lib/utils";
 import {
   X,
   Phone,
@@ -21,35 +21,58 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Conversation, User } from "./types";
+import { Conversation, Message, User } from "./types";
 import { StatusBadge } from "./StatusBadge";
 import { getInitials, getOtherParticipant, formatLastSeen } from "./utils";
 
 interface UserInfoPanelProps {
   conversation: Conversation;
+  messages: Message[];
   currentUser: User;
   onClose: () => void;
+  onCall: () => void;
+  onVideoCall: () => void;
+  onEmail: () => void;
+  onShowStarred: () => void;
   onMute: () => void;
   onArchive: () => void;
   onDelete: () => void;
+  onDownloadAttachment: (attachmentId: string) => void;
 }
 
 export function UserInfoPanel({
   conversation,
+  messages,
   currentUser,
   onClose,
+  onCall,
+  onVideoCall,
+  onEmail,
+  onShowStarred,
   onMute,
   onArchive,
   onDelete,
+  onDownloadAttachment,
 }: UserInfoPanelProps) {
   const otherParticipant = getOtherParticipant(conversation, currentUser.id);
+  const [showAllMedia, setShowAllMedia] = useState(false);
+  const [showAllFiles, setShowAllFiles] = useState(false);
 
-  // Mock shared files
-  const sharedFiles = [
-    { name: "Project_Timeline.pdf", size: "1.2 MB", date: "Today" },
-    { name: "Budget_2024.xlsx", size: "856 KB", date: "Yesterday" },
-    { name: "Contract_v2.docx", size: "245 KB", date: "Dec 15" },
-  ];
+  const allAttachments = useMemo(
+    () =>
+      messages.flatMap((message) =>
+        (message.attachments || []).map((attachment) => ({
+          ...attachment,
+          timestamp: message.timestamp,
+        })),
+      ),
+    [messages],
+  );
+
+  const sharedMedia = allAttachments.filter((attachment) => attachment.type === "image");
+  const sharedFiles = allAttachments.filter((attachment) => attachment.type !== "image");
+  const visibleMedia = showAllMedia ? sharedMedia : sharedMedia.slice(0, 6);
+  const visibleFiles = showAllFiles ? sharedFiles : sharedFiles.slice(0, 4);
 
   return (
     <motion.div
@@ -97,6 +120,7 @@ export function UserInfoPanel({
                       <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
+                        onClick={onCall}
                         className="p-3 bg-[#0891B2]/10 text-[#0891B2] rounded-md hover:bg-[#0891B2]/20 transition-all"
                       >
                         <Phone size={18} />
@@ -109,6 +133,7 @@ export function UserInfoPanel({
                       <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
+                        onClick={onVideoCall}
                         className="p-3 bg-[#0891B2]/10 text-[#0891B2] rounded-md hover:bg-[#0891B2]/20 transition-all"
                       >
                         <Video size={18} />
@@ -121,6 +146,7 @@ export function UserInfoPanel({
                       <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
+                        onClick={onEmail}
                         className="p-3 bg-[#0891B2]/10 text-[#0891B2] rounded-md hover:bg-[#0891B2]/20 transition-all"
                       >
                         <Mail size={18} />
@@ -227,22 +253,34 @@ export function UserInfoPanel({
               <h5 className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">
                 Shared Media
               </h5>
-              <button className="text-xs text-[#0891B2] font-medium hover:underline">See All</button>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {[1, 2, 3, 4, 5, 6].map((item) => (
-                <div
-                  key={item}
-                  className="aspect-square bg-white/5 rounded-md overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+              {sharedMedia.length > 6 && (
+                <button
+                  onClick={() => setShowAllMedia((prev) => !prev)}
+                  className="text-xs text-[#0891B2] font-medium hover:underline"
                 >
-                  <img
-                    src={`https://picsum.photos/100/100?random=${item}`}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              ))}
+                  {showAllMedia ? "Show Less" : "See All"}
+                </button>
+              )}
             </div>
+            {visibleMedia.length === 0 ? (
+              <p className="text-sm text-[#94A3B8]">No shared media yet.</p>
+            ) : (
+              <div className="grid grid-cols-3 gap-2">
+                {visibleMedia.map((attachment) => (
+                  <button
+                    key={attachment.id}
+                    onClick={() => onDownloadAttachment(attachment.id)}
+                    className="aspect-square bg-white/5 rounded-md overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                  >
+                    <img
+                      src={attachment.preview || attachment.url}
+                      alt={attachment.name || "Shared media"}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Shared Files */}
@@ -251,29 +289,43 @@ export function UserInfoPanel({
               <h5 className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">
                 Shared Files
               </h5>
-              <button className="text-xs text-[#0891B2] font-medium hover:underline">See All</button>
-            </div>
-            <div className="space-y-2">
-              {sharedFiles.map((file, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-3 p-2 rounded-md hover:bg-white/5 cursor-pointer transition-colors"
+              {sharedFiles.length > 4 && (
+                <button
+                  onClick={() => setShowAllFiles((prev) => !prev)}
+                  className="text-xs text-[#0891B2] font-medium hover:underline"
                 >
-                  <div className="p-2 bg-[#0891B2]/10 rounded-md">
-                    <FileText size={16} className="text-[#0891B2]" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-[#0F172A] truncate">{file.name}</p>
-                    <p className="text-xs text-[#94A3B8]">
-                      {file.size} • {file.date}
-                    </p>
-                  </div>
-                  <button className="p-1.5 hover:bg-gray-200 rounded-md">
-                    <Download size={14} className="text-[#475569]" />
-                  </button>
-                </div>
-              ))}
+                  {showAllFiles ? "Show Less" : "See All"}
+                </button>
+              )}
             </div>
+            {visibleFiles.length === 0 ? (
+              <p className="text-sm text-[#94A3B8]">No shared files yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {visibleFiles.map((file) => (
+                  <div
+                    key={file.id}
+                    className="flex items-center gap-3 p-2 rounded-md hover:bg-white/5 cursor-pointer transition-colors"
+                  >
+                    <div className="p-2 bg-[#0891B2]/10 rounded-md">
+                      <FileText size={16} className="text-[#0891B2]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-[#0F172A] truncate">{file.name}</p>
+                      <p className="text-xs text-[#94A3B8]">
+                        {file.size || "File"} • {file.timestamp.toLocaleDateString()}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => onDownloadAttachment(file.id)}
+                      className="p-1.5 hover:bg-gray-200 rounded-md"
+                    >
+                      <Download size={14} className="text-[#475569]" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Chat Settings */}
@@ -291,7 +343,10 @@ export function UserInfoPanel({
                   {conversation.isMuted ? "Unmute Notifications" : "Mute Notifications"}
                 </span>
               </button>
-              <button className="w-full flex items-center gap-3 p-3 rounded-md hover:bg-white/5 transition-colors">
+              <button
+                onClick={onShowStarred}
+                className="w-full flex items-center gap-3 p-3 rounded-md hover:bg-white/5 transition-colors"
+              >
                 <Star size={18} className="text-[#475569]" />
                 <span className="text-sm text-slate-200">Starred Messages</span>
               </button>

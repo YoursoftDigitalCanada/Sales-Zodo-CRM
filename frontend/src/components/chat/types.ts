@@ -25,12 +25,15 @@ export interface Attachment {
 export interface Message {
   id: string;
   senderId: string;
+  senderName?: string;
+  senderAvatar?: string;
   content: string;
   timestamp: Date;
   status: "sent" | "delivered" | "read";
   attachments?: Attachment[];
   replyTo?: Message;
   isEdited?: boolean;
+  isStarred?: boolean;
   reactions?: { emoji: string; userId: string }[];
 }
 

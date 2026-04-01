@@ -1,8 +1,7 @@
 // src/components/chat/ChatInput.tsx
 
-import { useState, useRef } from "react";
+import { useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { cn } from "@/lib/utils";
 import {
   Paperclip,
   Smile,
@@ -21,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/components/ui/use-toast";
 import { Message, Attachment } from "./types";
 
 interface ChatInputProps {
@@ -33,7 +33,10 @@ interface ChatInputProps {
 export function ChatInput({ onSendMessage, replyingTo, onCancelReply, disabled }: ChatInputProps) {
   const [messageInput, setMessageInput] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null);
+  const { toast } = useToast();
 
   const handleSend = () => {
     if (!messageInput.trim()) return;
@@ -41,31 +44,119 @@ export function ChatInput({ onSendMessage, replyingTo, onCancelReply, disabled }
     setMessageInput("");
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const readFileAsDataUrl = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+      reader.onerror = () => reject(new Error(`Failed to read ${file.name}`));
+      reader.readAsDataURL(file);
+    });
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files) return;
 
-    Array.from(files).forEach((file) => {
-      const isImage = file.type.startsWith("image/");
-      const attachment: Attachment = {
-        id: `att-${Date.now()}`,
-        type: isImage ? "image" : "file",
-        name: file.name,
-        url: URL.createObjectURL(file),
-        size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
-        preview: isImage ? URL.createObjectURL(file) : undefined,
-      };
-      onSendMessage("", [attachment]);
-    });
+    try {
+      const attachments: Attachment[] = await Promise.all(
+        Array.from(files).map(async (file, index) => {
+          const isImage = file.type.startsWith("image/");
+          const dataUrl = await readFileAsDataUrl(file);
+          return {
+            id: `att-${Date.now()}-${index}`,
+            type: isImage ? "image" : "file",
+            name: file.name,
+            url: dataUrl,
+            size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+            preview: isImage ? dataUrl : undefined,
+          };
+        }),
+      );
 
-    event.target.value = "";
+      onSendMessage("", attachments);
+    } catch (error) {
+      toast({
+        title: "Attachment failed",
+        description: error instanceof Error ? error.message : "Could not attach the selected file.",
+        variant: "destructive",
+      });
+    } finally {
+      event.target.value = "";
+    }
+  };
+
+  const handleInsertLocation = () => {
+    const address = window.prompt("Enter the address or site location");
+    if (!address?.trim()) return;
+    const mapsUrl = `https://maps.google.com/?q=${encodeURIComponent(address.trim())}`;
+    setMessageInput((prev) => `${prev}${prev ? " " : ""}${address.trim()} ${mapsUrl}`.trim());
+  };
+
+  const handleInsertContact = () => {
+    const contactName = window.prompt("Enter the contact name");
+    if (!contactName?.trim()) return;
+    const contactValue = window.prompt("Enter the phone number or email");
+    if (!contactValue?.trim()) return;
+    setMessageInput((prev) =>
+      `${prev}${prev ? "\n" : ""}Contact: ${contactName.trim()} - ${contactValue.trim()}`.trim(),
+    );
+  };
+
+  const handleVoiceInput = () => {
+    const SpeechRecognitionCtor =
+      typeof window !== "undefined"
+        ? ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
+        : undefined;
+
+    if (!SpeechRecognitionCtor) {
+      const dictatedText = window.prompt("Voice input is not available in this browser. Type what you want to add:");
+      if (dictatedText?.trim()) {
+        setMessageInput((prev) => `${prev}${prev ? " " : ""}${dictatedText.trim()}`.trim());
+      }
+      return;
+    }
+
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+      setIsRecording(false);
+      return;
+    }
+
+    const recognition = new SpeechRecognitionCtor();
+    recognition.lang = navigator.language || "en-US";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => setIsRecording(true);
+    recognition.onend = () => {
+      recognitionRef.current = null;
+      setIsRecording(false);
+    };
+    recognition.onerror = () => {
+      recognitionRef.current = null;
+      setIsRecording(false);
+      toast({
+        title: "Voice input unavailable",
+        description: "Your browser could not capture voice input right now.",
+        variant: "destructive",
+      });
+    };
+    recognition.onresult = (event: any) => {
+      const transcript = event?.results?.[0]?.[0]?.transcript;
+      if (transcript?.trim()) {
+        setMessageInput((prev) => `${prev}${prev ? " " : ""}${transcript.trim()}`.trim());
+      }
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
   };
 
   // Common emoji list
@@ -113,11 +204,11 @@ export function ChatInput({ onSendMessage, replyingTo, onCancelReply, disabled }
                 <FileText size={16} className="mr-2 text-[#D97706]" />
                 Document
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={handleInsertLocation}>
                 <MapPin size={16} className="mr-2 text-red-500" />
                 Location
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={handleInsertContact}>
                 <Contact size={16} className="mr-2 text-blue-500" />
                 Contact
               </DropdownMenuItem>
@@ -186,10 +277,11 @@ export function ChatInput({ onSendMessage, replyingTo, onCancelReply, disabled }
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              onClick={handleVoiceInput}
               disabled={disabled}
               className="p-3 bg-white/5 text-[#475569] rounded-md hover:bg-gray-200 transition-all disabled:opacity-50"
             >
-              <Mic size={20} />
+              <Mic size={20} className={isRecording ? "text-[#0891B2]" : undefined} />
             </motion.button>
           )}
         </div>

@@ -36,6 +36,8 @@ interface ChatHeaderProps {
   onToggleInfoPanel: () => void;
   onVoiceCall?: () => void;
   onVideoCall?: () => void;
+  onSearchInChat?: () => void;
+  onArchiveConversation?: () => void;
   onPinConversation: () => void;
   onMuteConversation: () => void;
   onDeleteConversation: () => void;
@@ -49,6 +51,8 @@ export function ChatHeader({
   onToggleInfoPanel,
   onVoiceCall,
   onVideoCall,
+  onSearchInChat,
+  onArchiveConversation,
   onPinConversation,
   onMuteConversation,
   onDeleteConversation,
@@ -170,12 +174,12 @@ export function ChatHeader({
               <BellOff size={16} className="mr-2" />
               {conversation.isMuted ? "Unmute" : "Mute Notifications"}
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={onSearchInChat}>
               <Search size={16} className="mr-2" />
               Search in Chat
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={onArchiveConversation}>
               <Archive size={16} className="mr-2" />
               Archive Chat
             </DropdownMenuItem>

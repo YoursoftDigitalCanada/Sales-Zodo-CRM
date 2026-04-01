@@ -36,8 +36,14 @@ interface ChatSidebarProps {
   conversations: Conversation[];
   selectedConversation: Conversation | null;
   currentUser: User;
+  showArchived: boolean;
+  showStarredOnly: boolean;
   onSelectConversation: (conversation: Conversation) => void;
   onNewChat: () => void;
+  onNewGroup: () => void;
+  onToggleArchived: () => void;
+  onToggleStarred: () => void;
+  onOpenSettings: () => void;
   onPinConversation: (conversationId: string) => void;
   onMuteConversation: (conversationId: string) => void;
   onDeleteConversation: (conversationId: string) => void;
@@ -47,8 +53,14 @@ export function ChatSidebar({
   conversations,
   selectedConversation,
   currentUser,
+  showArchived,
+  showStarredOnly,
   onSelectConversation,
   onNewChat,
+  onNewGroup,
+  onToggleArchived,
+  onToggleStarred,
+  onOpenSettings,
   onPinConversation,
   onMuteConversation,
   onDeleteConversation,
@@ -105,20 +117,20 @@ export function ChatSidebar({
                 </motion.button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={onNewGroup}>
                   <Users size={16} className="mr-2" />
                   New Group
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={onToggleArchived}>
                   <Archive size={16} className="mr-2" />
-                  Archived Chats
+                  {showArchived ? "Show Active Chats" : "Archived Chats"}
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={onToggleStarred}>
                   <Star size={16} className="mr-2" />
-                  Starred Messages
+                  {showStarredOnly ? "Show All Messages" : "Starred Messages"}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={onOpenSettings}>
                   <Settings size={16} className="mr-2" />
                   Settings
                 </DropdownMenuItem>

@@ -1,6 +1,6 @@
 // src/components/chat/NewChatDialog.tsx
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Search, Check } from "lucide-react";
 import {
@@ -23,6 +23,7 @@ interface NewChatDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   users: User[];
+  initialTab?: "direct" | "group";
   onCreateDirectChat: (user: User) => void;
   onCreateGroupChat: (name: string, users: User[]) => void;
 }
@@ -31,12 +32,23 @@ export function NewChatDialog({
   open,
   onOpenChange,
   users,
+  initialTab = "direct",
   onCreateDirectChat,
   onCreateGroupChat,
 }: NewChatDialogProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [groupName, setGroupName] = useState("");
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
+  const [activeTab, setActiveTab] = useState<"direct" | "group">(initialTab);
+
+  useEffect(() => {
+    if (open) {
+      setActiveTab(initialTab);
+      setSearchQuery("");
+      setGroupName("");
+      setSelectedUsers([]);
+    }
+  }, [initialTab, open]);
 
   const filteredUsers = users.filter((user) =>
     user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -72,7 +84,7 @@ export function NewChatDialog({
           <DialogTitle>New Conversation</DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="direct" className="mt-4">
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "direct" | "group")} className="mt-4">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="direct">Direct Message</TabsTrigger>
             <TabsTrigger value="group">Group Chat</TabsTrigger>

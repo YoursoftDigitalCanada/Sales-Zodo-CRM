@@ -6,6 +6,8 @@ export interface CreateUserDto {
   firstName: string;
   lastName: string;
   phone?: string | null;
+  department?: string | null;
+  position?: string | null;
   tenantId?: string;
   roleId?: string;
   sendInviteEmail?: boolean;
@@ -16,6 +18,8 @@ export interface InviteUserDto {
   firstName?: string;
   lastName?: string;
   phone?: string | null;
+  department?: string | null;
+  position?: string | null;
   roleId: string;
 }
 
@@ -25,6 +29,8 @@ export interface UpdateUserDto {
   phone?: string | null;
   avatar?: string | null;
   status?: UserStatus;
+  department?: string | null;
+  position?: string | null;
 }
 
 export interface UserQueryDto {
@@ -49,6 +55,8 @@ export interface UserResponseDto {
   lastLoginAt: Date | null;
   employeeId: string | null;
   role: { id: string; name: string } | null;
+  department: string | null;
+  position: string | null;
   membershipStatus: 'active' | 'invited' | 'suspended';
   createdAt: Date;
   updatedAt: Date;
@@ -87,6 +95,8 @@ type UserMembershipRecord = {
   employees?: Array<{
     id: string;
     isActive: boolean;
+    department: string | null;
+    position: string | null;
     role: { id: string; name: string } | null;
   }>;
 };
@@ -94,11 +104,11 @@ type UserMembershipRecord = {
 export function toUserResponseDto(user: UserMembershipRecord): UserResponseDto {
   const membership = user.employees?.[0] || null;
   const membershipStatus: UserResponseDto['membershipStatus'] =
-    !membership || !membership.isActive
+    !membership || !membership.isActive || user.status === 'INACTIVE' || user.status === 'SUSPENDED'
       ? 'suspended'
-      : user.lastLoginAt
-        ? 'active'
-        : 'invited';
+      : user.status === 'PENDING_VERIFICATION' || !user.lastLoginAt
+        ? 'invited'
+        : 'active';
 
   return {
     id: user.id,
@@ -113,6 +123,8 @@ export function toUserResponseDto(user: UserMembershipRecord): UserResponseDto {
     lastLoginAt: user.lastLoginAt,
     employeeId: membership?.id || null,
     role: membership?.role || null,
+    department: membership?.department || null,
+    position: membership?.position || null,
     membershipStatus,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,

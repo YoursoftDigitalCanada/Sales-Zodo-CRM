@@ -76,7 +76,7 @@ export async function assignPermissionsToRole(roleId: string, permissionIds: str
 // --- Employees (for Users tab) ---
 
 export async function fetchEmployees(): Promise<ApiEmployee[]> {
-    const res = await api.get("/employees", { params: { limit: 100 } });
+    const res = await api.get("/employees", { params: { limit: 200 } });
     return res.data?.data || [];
 }
 

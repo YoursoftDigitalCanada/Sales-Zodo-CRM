@@ -1,16 +1,66 @@
-// src/pages/UsersPage.tsx
-
-import React, { useEffect, useState, useMemo } from "react";
-// import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
+import React, { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+  Activity,
+  ArrowDownRight,
+  ArrowUpRight,
+  Briefcase,
+  Building2,
+  Camera,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  Copy,
+  Crown,
+  Download,
+  Eye,
+  Key,
+  LayoutGrid,
+  List,
+  LogIn,
+  LogOut,
+  Mail,
+  MailPlus,
+  MapPin,
+  Monitor,
+  MoreHorizontal,
+  MoreVertical,
+  Pencil,
+  Phone,
+  Plus,
+  RefreshCw,
+  Search,
+  Send,
+  Settings,
+  Shield,
+  ShieldCheck,
+  ShieldOff,
+  Smartphone,
+  Trash2,
+  User,
+  UserCheck,
+  UserCog,
+  UserPlus,
+  UserX,
+  Users,
+  X,
+  type LucideIcon,
+} from "lucide-react";
+import { NotificationBell } from "@/components/NotificationBell";
+import { AddDepartmentDialog } from "@/components/employees/AddDepartmentDialog";
+import type {
+  Department as DepartmentDialogEntity,
+  Employee as DepartmentDialogEmployee,
+} from "@/components/employees/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -23,18 +73,18 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -60,7 +110,6 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { NotificationBell } from "@/components/NotificationBell";
 import {
   Tooltip,
   TooltipContent,
@@ -69,393 +118,122 @@ import {
 } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
-import { getUsers, createUser as createUserApi, updateUser as updateUserApi, deleteUser as deleteUserApi } from "@/features/users";
 import {
-  Bell,
-  Search,
-  Plus,
-  Filter,
-  Download,
-  Upload,
-  MoreVertical,
-  MoreHorizontal,
-  LayoutGrid,
-  List,
-  ChevronRight,
-  ChevronDown,
-  ChevronUp,
-  Eye,
-  Pencil,
-  Trash2,
-  Copy,
-  X,
-  Check,
-  CheckCircle2,
-  AlertCircle,
-  Clock,
-  Calendar,
-  Star,
-  StarOff,
-  User,
-  UserPlus,
-  UserMinus,
-  UserCheck,
-  UserX,
-  Users,
-  UsersRound,
-  Shield,
-  ShieldCheck,
-  ShieldAlert,
-  ShieldOff,
-  Key,
-  Lock,
-  Unlock,
-  Mail,
-  MailPlus,
-  Phone,
-  MapPin,
-  Building2,
-  Briefcase,
-  GraduationCap,
-  Crown,
-  Award,
-  Activity,
-  BarChart3,
-  TrendingUp,
-  TrendingDown,
-  ArrowUpRight,
-  ArrowDownRight,
-  RefreshCw,
-  Settings,
-  LogIn,
-  LogOut,
-  History,
-  Globe,
-  Smartphone,
-  Monitor,
-  Camera,
-  Image as ImageIcon,
-  Send,
-  UserCog,
-  Sparkles,
-  Zap,
-  type LucideIcon,
-} from "lucide-react";
+  createDepartment,
+  createUser as createUserApi,
+  deleteDepartment as deleteDepartmentApi,
+  deleteUser as deleteUserApi,
+  getDepartments,
+  getEmployees,
+  getUsers,
+  inviteUser as inviteUserApi,
+  requestUserPasswordReset,
+  updateDepartment as updateDepartmentApi,
+  updateUser as updateUserApi,
+  updateUserRole as updateUserRoleApi,
+  updateUserStatus as updateUserStatusApi,
+  type DepartmentEntity,
+  type InviteWorkspaceUserResponse,
+  type WorkspaceUserEntity,
+  type WorkspaceUserStatus,
+} from "@/features/users";
+import {
+  exportAuditLogs,
+  getAuditLogs,
+  type AuditLogItem,
+} from "@/features/settings/services/settings-service";
+import {
+  createRole as createRoleApi,
+  deleteRole as deleteRoleApi,
+  fetchAllPermissions,
+  fetchEmployees,
+  fetchRoles,
+  updateRole as updateRoleApi,
+  type ApiEmployee,
+  type ApiPermission,
+  type ApiRole,
+} from "@/pages/roles/roles-api";
 
-// ============================================
-// TYPES
-// ============================================
+type UserStatus = "active" | "inactive" | "pending" | "suspended";
+type BulkAction = "delete" | "activate" | "deactivate" | "suspend";
+type DeleteTarget =
+  | { type: "user"; id: string; name: string }
+  | { type: "role"; id: string; name: string }
+  | { type: "department"; id: string; name: string }
+  | null;
 
-interface User {
-  id: number;
+interface UserRecord {
+  id: string;
   fullName: string;
   email: string;
-  phone?: string;
-  role: string;
-  department?: string;
-  position?: string;
-  avatarUrl?: string;
-  status: "active" | "inactive" | "pending" | "suspended";
-  lastLogin?: string;
+  phone: string;
+  roleId: string | null;
+  roleName: string;
+  department: string;
+  position: string;
+  avatarUrl: string | null;
+  status: UserStatus;
+  lastLogin: string | null;
   createdAt: string;
-  updatedAt?: string;
-  isOnline?: boolean;
-  permissions?: string[];
-  teams?: string[];
-  manager?: string;
-  location?: string;
-  bio?: string;
-  skills?: string[];
-  loginCount?: number;
-  tasksCompleted?: number;
-  projectsCount?: number;
+  updatedAt: string;
+  isOnline: boolean;
 }
 
-interface Role {
-  id: string;
+interface UserMetrics {
+  loginCount: number;
+  tasksCompleted: number;
+  projectsCount: number;
+}
+
+interface RoleFormValues {
   name: string;
   description: string;
-  color: string;
-  icon: LucideIcon;
-  permissions: string[];
-  userCount: number;
+  permissionIds: string[];
 }
 
-interface Department {
-  id: string;
-  name: string;
-  head?: string;
-  userCount: number;
-  color: string;
+interface UserFormValues {
+  fullName: string;
+  email: string;
+  phone: string;
+  roleId: string;
+  department: string;
+  position: string;
+  status: UserStatus;
+  sendInviteEmail: boolean;
 }
 
-interface ActivityLog {
-  id: string;
-  userId: number;
-  action: string;
-  description: string;
-  timestamp: string;
-  ip?: string;
-  device?: string;
-}
+const SELECT_NONE_VALUE = "__none__";
 
-interface UserStats {
-  totalUsers: number;
-  activeUsers: number;
-  newUsersThisMonth: number;
-  pendingInvitations: number;
-}
-
-// ============================================
-// DUMMY DATA
-// ============================================
-
-const roles: Role[] = [
-  {
-    id: "admin",
-    name: "Administrator",
-    description: "Full system access",
-    color: "#EF4444",
-    icon: Crown,
-    permissions: ["all"],
-    userCount: 2,
-  },
-  {
-    id: "manager",
-    name: "Manager",
-    description: "Team management access",
-    color: "#8B5CF6",
-    icon: ShieldCheck,
-    permissions: ["read", "write", "manage_team"],
-    userCount: 5,
-  },
-  {
-    id: "staff",
-    name: "Staff",
-    description: "Standard employee access",
-    color: "#22D3EE",
-    icon: User,
-    permissions: ["read", "write"],
-    userCount: 18,
-  },
-  {
-    id: "viewer",
-    name: "Viewer",
-    description: "Read-only access",
-    color: "#6B7280",
-    icon: Eye,
-    permissions: ["read"],
-    userCount: 8,
-  },
+const STATUS_OPTIONS: Array<{ value: UserStatus; label: string }> = [
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+  { value: "pending", label: "Pending" },
+  { value: "suspended", label: "Suspended" },
 ];
 
-const departments: Department[] = [
-  { id: "engineering", name: "Engineering", head: "John Smith", userCount: 12, color: "#3B82F6" },
-  { id: "design", name: "Design", head: "Sarah Johnson", userCount: 6, color: "#EC4899" },
-  { id: "marketing", name: "Marketing", head: "Mike Chen", userCount: 8, color: "#F97316" },
-  { id: "sales", name: "Sales", head: "Emily Davis", userCount: 10, color: "#22C55E" },
-  { id: "hr", name: "Human Resources", head: "Lisa Brown", userCount: 4, color: "#8B5CF6" },
-];
-
-const initialUsers: User[] = [
-  {
-    id: 1,
-    fullName: "John Smith",
-    email: "john.smith@yoursoft.ca",
-    phone: "+1 (555) 123-4567",
-    role: "admin",
-    department: "Engineering",
-    position: "CTO",
-    avatarUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150",
-    status: "active",
-    lastLogin: "2024-01-20T10:30:00Z",
-    createdAt: "2023-06-15T09:00:00Z",
-    isOnline: true,
-    location: "Toronto, Canada",
-    teams: ["Core Team", "Leadership"],
-    loginCount: 245,
-    tasksCompleted: 156,
-    projectsCount: 12,
-  },
-  {
-    id: 2,
-    fullName: "Sarah Johnson",
-    email: "sarah.j@yoursoft.ca",
-    phone: "+1 (555) 234-5678",
-    role: "manager",
-    department: "Design",
-    position: "Design Lead",
-    avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150",
-    status: "active",
-    lastLogin: "2024-01-20T09:15:00Z",
-    createdAt: "2023-07-20T10:00:00Z",
-    isOnline: true,
-    location: "Vancouver, Canada",
-    teams: ["Design Team", "Product"],
-    loginCount: 198,
-    tasksCompleted: 234,
-    projectsCount: 8,
-  },
-  {
-    id: 3,
-    fullName: "Michael Chen",
-    email: "m.chen@yoursoft.ca",
-    phone: "+1 (555) 345-6789",
-    role: "manager",
-    department: "Marketing",
-    position: "Marketing Manager",
-    avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
-    status: "active",
-    lastLogin: "2024-01-19T16:45:00Z",
-    createdAt: "2023-08-10T11:00:00Z",
-    isOnline: false,
-    location: "Montreal, Canada",
-    teams: ["Marketing", "Growth"],
-    loginCount: 167,
-    tasksCompleted: 189,
-    projectsCount: 6,
-  },
-  {
-    id: 4,
-    fullName: "Emily Davis",
-    email: "emily.d@yoursoft.ca",
-    phone: "+1 (555) 456-7890",
-    role: "staff",
-    department: "Sales",
-    position: "Sales Representative",
-    avatarUrl: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150",
-    status: "active",
-    lastLogin: "2024-01-20T08:00:00Z",
-    createdAt: "2023-09-05T09:30:00Z",
-    isOnline: true,
-    location: "Calgary, Canada",
-    teams: ["Sales Team"],
-    loginCount: 134,
-    tasksCompleted: 267,
-    projectsCount: 15,
-  },
-  {
-    id: 5,
-    fullName: "David Wilson",
-    email: "d.wilson@yoursoft.ca",
-    phone: "+1 (555) 567-8901",
-    role: "staff",
-    department: "Engineering",
-    position: "Senior Developer",
-    avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150",
-    status: "active",
-    lastLogin: "2024-01-20T11:00:00Z",
-    createdAt: "2023-10-15T14:00:00Z",
-    isOnline: true,
-    location: "Ottawa, Canada",
-    teams: ["Core Team", "Backend"],
-    loginCount: 189,
-    tasksCompleted: 312,
-    projectsCount: 9,
-  },
-  {
-    id: 6,
-    fullName: "Jessica Martinez",
-    email: "j.martinez@yoursoft.ca",
-    role: "staff",
-    department: "Design",
-    position: "UI Designer",
-    status: "pending",
-    createdAt: "2024-01-18T10:00:00Z",
-    location: "Edmonton, Canada",
-    teams: ["Design Team"],
-    loginCount: 0,
-    tasksCompleted: 0,
-    projectsCount: 0,
-  },
-  {
-    id: 7,
-    fullName: "Robert Brown",
-    email: "r.brown@yoursoft.ca",
-    phone: "+1 (555) 789-0123",
-    role: "viewer",
-    department: "HR",
-    position: "HR Specialist",
-    avatarUrl: "https://images.unsplash.com/photo-1507591064344-4c6ce005b128?w=150",
-    status: "inactive",
-    lastLogin: "2024-01-10T09:00:00Z",
-    createdAt: "2023-05-20T08:00:00Z",
-    isOnline: false,
-    location: "Toronto, Canada",
-    teams: ["HR Team"],
-    loginCount: 45,
-    tasksCompleted: 78,
-    projectsCount: 3,
-  },
-  {
-    id: 8,
-    fullName: "Amanda Lee",
-    email: "a.lee@yoursoft.ca",
-    phone: "+1 (555) 890-1234",
-    role: "staff",
-    department: "Engineering",
-    position: "Frontend Developer",
-    avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
-    status: "active",
-    lastLogin: "2024-01-20T10:00:00Z",
-    createdAt: "2023-11-01T10:00:00Z",
-    isOnline: true,
-    location: "Vancouver, Canada",
-    teams: ["Core Team", "Frontend"],
-    loginCount: 156,
-    tasksCompleted: 198,
-    projectsCount: 7,
-  },
-];
-
-const activityLogs: ActivityLog[] = [
-  { id: "1", userId: 1, action: "login", description: "Logged in from Chrome on Windows", timestamp: "2024-01-20T10:30:00Z", ip: "192.168.1.1", device: "Desktop" },
-  { id: "2", userId: 2, action: "update_profile", description: "Updated profile picture", timestamp: "2024-01-20T09:45:00Z", ip: "192.168.1.2", device: "Mobile" },
-  { id: "3", userId: 4, action: "create_task", description: "Created new task: Client Follow-up", timestamp: "2024-01-20T08:30:00Z", ip: "192.168.1.4", device: "Desktop" },
-  { id: "4", userId: 5, action: "complete_task", description: "Completed task: API Integration", timestamp: "2024-01-19T17:00:00Z", ip: "192.168.1.5", device: "Desktop" },
-  { id: "5", userId: 3, action: "logout", description: "Logged out", timestamp: "2024-01-19T16:45:00Z", ip: "192.168.1.3", device: "Desktop" },
-];
-
-const userStats: UserStats = {
-  totalUsers: 33,
-  activeUsers: 28,
-  newUsersThisMonth: 5,
-  pendingInvitations: 3,
-};
-
-// ============================================
-// UTILITY FUNCTIONS
-// ============================================
-
-const getInitials = (name: string) => {
+function getInitials(name: string): string {
   return name
     .split(" ")
-    .map((n) => n[0])
+    .filter(Boolean)
+    .map((part) => part[0])
     .join("")
     .toUpperCase()
     .slice(0, 2);
-};
+}
 
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case "active":
-      return { bg: "bg-green-50", text: "text-green-600", dot: "bg-green-500" };
-    case "inactive":
-      return { bg: "bg-white/5", text: "text-[#94A3B8]", dot: "bg-slate-400" };
-    case "pending":
-      return { bg: "bg-yellow-50", text: "text-yellow-600", dot: "bg-yellow-500" };
-    case "suspended":
-      return { bg: "bg-red-50", text: "text-red-600", dot: "bg-red-500" };
-    default:
-      return { bg: "bg-[#F8FAFC]", text: "text-[#475569]", dot: "bg-[#F8FAFC]0" };
+function formatDate(dateString: string): string {
+  return new Date(dateString).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function getRelativeTime(dateString?: string | null): string {
+  if (!dateString) {
+    return "Never";
   }
-};
 
-const getRoleInfo = (roleId: string) => {
-  return roles.find((r) => r.id === roleId) || roles[2];
-};
-
-const getRelativeTime = (dateString: string): string => {
   const date = new Date(dateString);
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
@@ -465,19 +243,189 @@ const getRelativeTime = (dateString: string): string => {
   if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
   if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
   return date.toLocaleDateString();
-};
+}
 
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-};
+function getStatusColor(status: UserStatus) {
+  switch (status) {
+    case "active":
+      return { bg: "bg-green-50", text: "text-green-600", dot: "bg-green-500" };
+    case "inactive":
+      return { bg: "bg-slate-50", text: "text-slate-500", dot: "bg-slate-400" };
+    case "pending":
+      return { bg: "bg-amber-50", text: "text-amber-600", dot: "bg-amber-500" };
+    case "suspended":
+      return { bg: "bg-red-50", text: "text-red-600", dot: "bg-red-500" };
+    default:
+      return { bg: "bg-slate-50", text: "text-slate-500", dot: "bg-slate-400" };
+  }
+}
 
-// ============================================
-// STAT CARD COMPONENT
-// ============================================
+function getRoleVisual(roleName?: string | null): {
+  color: string;
+  icon: LucideIcon;
+} {
+  const normalized = (roleName || "").toLowerCase();
+
+  if (
+    normalized.includes("admin")
+    || normalized.includes("owner")
+    || normalized.includes("super admin")
+  ) {
+    return { color: "#EF4444", icon: Crown };
+  }
+
+  if (
+    normalized.includes("manager")
+    || normalized.includes("lead")
+    || normalized.includes("supervisor")
+    || normalized.includes("head")
+  ) {
+    return { color: "#8B5CF6", icon: ShieldCheck };
+  }
+
+  if (
+    normalized.includes("viewer")
+    || normalized.includes("read only")
+    || normalized.includes("readonly")
+  ) {
+    return { color: "#64748B", icon: Eye };
+  }
+
+  return { color: "#0891B2", icon: User };
+}
+
+function toUiStatus(user: WorkspaceUserEntity): UserStatus {
+  if (user.membershipStatus === "invited" || user.status === "PENDING_VERIFICATION") {
+    return "pending";
+  }
+
+  switch (user.status) {
+    case "ACTIVE":
+      return "active";
+    case "INACTIVE":
+      return "inactive";
+    case "SUSPENDED":
+      return "suspended";
+    case "PENDING_VERIFICATION":
+      return "pending";
+    default:
+      return "inactive";
+  }
+}
+
+function toApiStatus(status: UserStatus): WorkspaceUserStatus {
+  switch (status) {
+    case "active":
+      return "ACTIVE";
+    case "inactive":
+      return "INACTIVE";
+    case "suspended":
+      return "SUSPENDED";
+    case "pending":
+      return "PENDING_VERIFICATION";
+    default:
+      return "ACTIVE";
+  }
+}
+
+function mapUserRecord(user: WorkspaceUserEntity): UserRecord {
+  const lastLogin = user.lastLoginAt || null;
+
+  return {
+    id: user.id,
+    fullName: user.fullName || `${user.firstName} ${user.lastName}`.trim(),
+    email: user.email,
+    phone: user.phone || "",
+    roleId: user.role?.id || null,
+    roleName: user.role?.name || "Staff",
+    department: user.department || "",
+    position: user.position || "",
+    avatarUrl: user.avatar,
+    status: toUiStatus(user),
+    lastLogin,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+    isOnline: lastLogin ? Date.now() - new Date(lastLogin).getTime() < 15 * 60 * 1000 : false,
+  };
+}
+
+function splitFullName(fullName: string): { firstName: string; lastName: string } {
+  const [firstName = "", ...rest] = fullName.trim().split(/\s+/);
+  return {
+    firstName: firstName || "Team",
+    lastName: rest.join(" ").trim() || "Member",
+  };
+}
+
+function parseDevice(userAgent?: string): string {
+  const agent = (userAgent || "").toLowerCase();
+  if (!agent) {
+    return "-";
+  }
+  return /iphone|ipad|android|mobile/.test(agent) ? "Mobile" : "Desktop";
+}
+
+function mapEmployeeForDepartmentDialog(employee: ApiEmployee): DepartmentDialogEmployee {
+  return {
+    id: employee.id,
+    employeeId: employee.employeeNumber || employee.id.slice(0, 8).toUpperCase(),
+    firstName: employee.user?.firstName || "",
+    lastName: employee.user?.lastName || "",
+    email: employee.user?.email || "",
+    phone: "",
+    avatar: undefined,
+    position: employee.position || "Team Member",
+    departmentId: employee.department || "",
+    departmentName: employee.department || "",
+    status: employee.isActive ? "active" : "inactive",
+    employmentType: "full-time",
+    joinDate: employee.createdAt ? new Date(employee.createdAt) : new Date(),
+    salary: 0,
+    skills: [],
+    address: {
+      street: "",
+      city: "",
+      state: "",
+      zipCode: "",
+      country: "",
+    },
+    emergencyContact: {
+      name: "",
+      relationship: "",
+      phone: "",
+    },
+    documents: [],
+    performance: {
+      rating: 0,
+      lastReviewDate: new Date(),
+      nextReviewDate: new Date(),
+    },
+  };
+}
+
+function toDepartmentDialogEntity(
+  department: DepartmentEntity | null,
+): DepartmentDialogEntity | undefined {
+  if (!department) {
+    return undefined;
+  }
+
+  return {
+    id: department.id,
+    name: department.name,
+    code: department.code,
+    description: department.description,
+    headId: department.headId || undefined,
+    headName: department.headName,
+    headAvatar: department.headAvatar || undefined,
+    parentDepartmentId: undefined,
+    employeeCount: department.employeeCount,
+    budget: department.budget,
+    color: department.color,
+    createdAt: new Date(department.createdAt),
+    isActive: department.isActive,
+  };
+}
 
 const StatCard = ({
   title,
@@ -493,18 +441,15 @@ const StatCard = ({
   change?: number;
   changeLabel?: string;
   icon: LucideIcon;
-  color: "teal" | "gold" | "navy" | "purple" | "green" | "blue" | "red";
+  color: "teal" | "gold" | "green" | "blue";
   delay?: number;
 }) => {
   const colorClasses = {
     teal: { bg: "bg-[#0891B2]", light: "bg-[#0891B2]/10", text: "text-[#0891B2]" },
     gold: { bg: "bg-[#D97706]", light: "bg-[#D97706]/10", text: "text-[#D97706]" },
-    navy: { bg: "bg-[#F8FAFC]", light: "bg-[#F8FAFC]/10", text: "text-[#0F172A]" },
-    purple: { bg: "bg-purple-500", light: "bg-purple-500/10", text: "text-purple-500" },
     green: { bg: "bg-green-500", light: "bg-green-500/10", text: "text-green-500" },
-    blue: { bg: "bg-[#0891B2]", light: "bg-[#0891B2]/10", text: "text-blue-500" },
-    red: { bg: "bg-red-500", light: "bg-red-500/10", text: "text-red-500" },
-  };
+    blue: { bg: "bg-blue-500", light: "bg-blue-500/10", text: "text-blue-500" },
+  } as const;
 
   const colors = colorClasses[color];
 
@@ -514,16 +459,15 @@ const StatCard = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
       whileHover={{ y: -4 }}
-      className="relative bg-white rounded-md p-5 border border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg  transition-all overflow-hidden group"
+      className="relative overflow-hidden rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-5 transition-all hover:border-[#22D3EE]/30 hover:shadow-lg"
     >
-      <div className={cn("absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-10 group-hover:opacity-20 transition-all", colors.bg)} />
-
+      <div className={cn("absolute -right-4 -top-4 h-20 w-20 rounded-full opacity-10", colors.bg)} />
       <div className="relative flex items-start justify-between">
         <div>
-          <p className="text-sm text-[#94A3B8] mb-1">{title}</p>
-          <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">{value}</p>
+          <p className="mb-1 text-sm text-[#94A3B8]">{title}</p>
+          <p className="text-xl font-bold text-[#0F172A] sm:text-2xl">{value}</p>
           {change !== undefined && (
-            <div className="flex items-center gap-1 mt-2">
+            <div className="mt-2 flex items-center gap-1">
               {change >= 0 ? (
                 <ArrowUpRight size={14} className="text-green-500" />
               ) : (
@@ -536,7 +480,7 @@ const StatCard = ({
             </div>
           )}
         </div>
-        <div className={cn("w-12 h-12 rounded-md flex items-center justify-center", colors.light)}>
+        <div className={cn("flex h-12 w-12 items-center justify-center rounded-md", colors.light)}>
           <Icon size={22} className={colors.text} />
         </div>
       </div>
@@ -544,31 +488,33 @@ const StatCard = ({
   );
 };
 
-// ============================================
-// USER CARD COMPONENT (GRID VIEW)
-// ============================================
-
 const UserCard = ({
   user,
+  metrics,
   isSelected,
   onSelect,
   onView,
   onEdit,
   onDelete,
+  onSendEmail,
+  onResetPassword,
   onStatusChange,
   delay = 0,
 }: {
-  user: User;
+  user: UserRecord;
+  metrics: UserMetrics;
   isSelected: boolean;
   onSelect: () => void;
   onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
-  onStatusChange: (status: User["status"]) => void;
+  onSendEmail: () => void;
+  onResetPassword: () => void;
+  onStatusChange: (status: UserStatus) => void;
   delay?: number;
 }) => {
   const statusColors = getStatusColor(user.status);
-  const roleInfo = getRoleInfo(user.role);
+  const roleVisual = getRoleVisual(user.roleName);
 
   return (
     <motion.div
@@ -577,136 +523,132 @@ const UserCard = ({
       transition={{ delay }}
       whileHover={{ y: -4 }}
       className={cn(
-        "relative bg-white rounded-md border overflow-hidden transition-all group",
+        "group relative overflow-hidden rounded-md border bg-white transition-all",
         isSelected
           ? "border-[#22D3EE] ring-2 ring-[#22D3EE]/20"
-          : "border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg "
+          : "border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg",
       )}
     >
-      {/* Selection Checkbox */}
       <div
-        className="absolute top-4 left-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
-        onClick={(e) => e.stopPropagation()}
+        className="absolute left-4 top-4 z-10 opacity-0 transition-opacity group-hover:opacity-100"
+        onClick={(event) => event.stopPropagation()}
       >
         <Checkbox
           checked={isSelected}
-          onCheckedChange={onSelect}
-          className="data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE] bg-white"
+          onCheckedChange={() => onSelect()}
+          className="border-[#22D3EE] data-[state=checked]:border-[#22D3EE] data-[state=checked]:bg-[#0891B2]"
         />
       </div>
 
-      {/* Actions Menu */}
       <div
-        className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
-        onClick={(e) => e.stopPropagation()}
+        className="absolute right-4 top-4 z-10 opacity-0 transition-opacity group-hover:opacity-100"
+        onClick={(event) => event.stopPropagation()}
       >
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 rounded-md bg-white/80 backdrop-blur-sm hover:bg-white"
-            >
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md bg-white/80 hover:bg-white">
               <MoreHorizontal size={16} />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48 rounded-md">
             <DropdownMenuItem onClick={onView} className="rounded-md">
-              <Eye size={14} className="mr-2" /> View Profile
+              <Eye size={14} className="mr-2" />
+              View Profile
             </DropdownMenuItem>
             <DropdownMenuItem onClick={onEdit} className="rounded-md">
-              <Pencil size={14} className="mr-2" /> Edit User
+              <Pencil size={14} className="mr-2" />
+              Edit User
             </DropdownMenuItem>
-            <DropdownMenuItem className="rounded-md">
-              <Mail size={14} className="mr-2" /> Send Email
+            <DropdownMenuItem onClick={onSendEmail} className="rounded-md">
+              <Mail size={14} className="mr-2" />
+              Send Email
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onResetPassword} className="rounded-md">
+              <Key size={14} className="mr-2" />
+              Reset Password
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuSub>
               <DropdownMenuSubTrigger className="rounded-md">
-                <UserCog size={14} className="mr-2" /> Change Status
+                <UserCog size={14} className="mr-2" />
+                Change Status
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent className="rounded-md">
-                <DropdownMenuItem onClick={() => onStatusChange("active")} className="rounded-md">
-                  <div className="w-2 h-2 rounded-full bg-green-500 mr-2" /> Active
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onStatusChange("inactive")} className="rounded-md">
-                  <div className="w-2 h-2 rounded-full bg-slate-400 mr-2" /> Inactive
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onStatusChange("suspended")} className="rounded-md">
-                  <div className="w-2 h-2 rounded-full bg-red-500 mr-2" /> Suspended
-                </DropdownMenuItem>
+                {STATUS_OPTIONS.map((option) => (
+                  <DropdownMenuItem
+                    key={option.value}
+                    onClick={() => onStatusChange(option.value)}
+                    className="rounded-md"
+                  >
+                    <div className={cn("mr-2 h-2 w-2 rounded-full", getStatusColor(option.value).dot)} />
+                    {option.label}
+                  </DropdownMenuItem>
+                ))}
               </DropdownMenuSubContent>
             </DropdownMenuSub>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={onDelete} className="rounded-md text-red-600 focus:text-red-600">
-              <Trash2 size={14} className="mr-2" /> Delete User
+              <Trash2 size={14} className="mr-2" />
+              Delete User
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
 
-      {/* Card Content */}
-      <div className="p-6 pt-12 text-center cursor-pointer" onClick={onView}>
-        {/* Avatar */}
-        <div className="relative inline-block mb-4">
+      <div className="cursor-pointer p-6 pt-12 text-center" onClick={onView}>
+        <div className="relative mb-4 inline-block">
           {user.avatarUrl ? (
             <img
               src={user.avatarUrl}
               alt={user.fullName}
-              className="w-20 h-20 rounded-md object-cover mx-auto"
+              className="mx-auto h-20 w-20 rounded-md object-cover"
             />
           ) : (
-            <div className="w-20 h-20 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] text-xl sm:text-2xl font-bold mx-auto">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-md bg-[#F1F5F9] text-xl font-bold text-[#0F172A] sm:text-2xl">
               {getInitials(user.fullName)}
             </div>
           )}
           {user.isOnline && (
-            <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-3 border-white" />
+            <span className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full border-4 border-white bg-green-500" />
           )}
         </div>
 
-        {/* Name & Position */}
-        <h3 className="font-semibold text-[#0F172A] mb-1 group-hover:text-[#0891B2] transition-colors">
+        <h3 className="mb-1 font-semibold text-[#0F172A] transition-colors group-hover:text-[#0891B2]">
           {user.fullName}
         </h3>
-        <p className="text-sm text-[#94A3B8] mb-3">{user.position || "Team Member"}</p>
+        <p className="mb-3 text-sm text-[#94A3B8]">{user.position || "Team Member"}</p>
 
-        {/* Role Badge */}
-        <div className="flex items-center justify-center gap-2 mb-4">
+        <div className="mb-4 flex items-center justify-center gap-2">
           <span
-            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium"
-            style={{ backgroundColor: `${roleInfo.color}15`, color: roleInfo.color }}
+            className="inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium"
+            style={{ backgroundColor: `${roleVisual.color}15`, color: roleVisual.color }}
           >
-            <roleInfo.icon size={12} />
-            {roleInfo.name}
+            <roleVisual.icon size={12} />
+            {user.roleName}
           </span>
         </div>
 
-        {/* Status & Department */}
         <div className="flex items-center justify-center gap-3 text-xs">
-          <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-md", statusColors.bg, statusColors.text)}>
-            <span className={cn("w-1.5 h-1.5 rounded-full", statusColors.dot)} />
+          <span className={cn("inline-flex items-center gap-1 rounded-md px-2 py-0.5", statusColors.bg, statusColors.text)}>
+            <span className={cn("h-1.5 w-1.5 rounded-full", statusColors.dot)} />
             {user.status}
           </span>
-          {user.department && (
-            <span className="text-[#475569]">{user.department}</span>
-          )}
+          {user.department && <span className="text-[#475569]">{user.department}</span>}
         </div>
       </div>
 
-      {/* Stats Footer */}
-      <div className="px-6 py-4 border-t border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]/50">
+      <div className="border-t border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]/50 px-6 py-4">
         <div className="flex items-center justify-between text-xs">
           <div className="text-center">
-            <p className="font-semibold text-[#0F172A]">{user.tasksCompleted || 0}</p>
-            <p className="text-[#475569]">Tasks</p>
+            <p className="font-semibold text-[#0F172A]">{metrics.tasksCompleted}</p>
+            <p className="text-[#475569]">Task Logs</p>
           </div>
           <div className="text-center">
-            <p className="font-semibold text-[#0F172A]">{user.projectsCount || 0}</p>
-            <p className="text-[#475569]">Projects</p>
+            <p className="font-semibold text-[#0F172A]">{metrics.projectsCount}</p>
+            <p className="text-[#475569]">Project Logs</p>
           </div>
           <div className="text-center">
-            <p className="font-semibold text-[#0F172A]">{user.loginCount || 0}</p>
+            <p className="font-semibold text-[#0F172A]">{metrics.loginCount}</p>
             <p className="text-[#475569]">Logins</p>
           </div>
         </div>
@@ -715,59 +657,61 @@ const UserCard = ({
   );
 };
 
-// ============================================
-// USER ROW COMPONENT (TABLE VIEW)
-// ============================================
-
 const UserRow = ({
   user,
+  metrics,
   isSelected,
   onSelect,
   onView,
   onEdit,
   onDelete,
+  onSendEmail,
+  onResetPassword,
   onStatusChange,
 }: {
-  user: User;
+  user: UserRecord;
+  metrics: UserMetrics;
   isSelected: boolean;
   onSelect: () => void;
   onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
-  onStatusChange: (status: User["status"]) => void;
+  onSendEmail: () => void;
+  onResetPassword: () => void;
+  onStatusChange: (status: UserStatus) => void;
 }) => {
   const statusColors = getStatusColor(user.status);
-  const roleInfo = getRoleInfo(user.role);
+  const roleVisual = getRoleVisual(user.roleName);
 
   return (
     <TableRow className="group hover:bg-[#F8FAFC]">
       <TableCell>
         <Checkbox
           checked={isSelected}
-          onCheckedChange={onSelect}
-          className="data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
+          onCheckedChange={() => onSelect()}
+          className="border-[#22D3EE] data-[state=checked]:border-[#22D3EE] data-[state=checked]:bg-[#0891B2]"
         />
       </TableCell>
       <TableCell>
-        <div className="flex items-center gap-3 cursor-pointer" onClick={onView}>
+        <div className="flex cursor-pointer items-center gap-3" onClick={onView}>
           <div className="relative">
             {user.avatarUrl ? (
               <img
                 src={user.avatarUrl}
                 alt={user.fullName}
-                className="w-10 h-10 rounded-md object-cover"
+                className="h-10 w-10 rounded-md object-cover"
               />
             ) : (
-              <div className="w-10 h-10 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] text-sm font-bold">
+              <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[#F1F5F9] text-sm font-bold text-[#0F172A]">
                 {getInitials(user.fullName)}
               </div>
             )}
             {user.isOnline && (
-              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
+              <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-green-500" />
             )}
           </div>
           <div>
-            <p className="font-medium text-[#0F172A] group-hover:text-[#0891B2] transition-colors">
+            <p className="font-medium text-[#0F172A] transition-colors group-hover:text-[#0891B2]">
               {user.fullName}
             </p>
             <p className="text-sm text-[#94A3B8]">{user.email}</p>
@@ -776,32 +720,30 @@ const UserRow = ({
       </TableCell>
       <TableCell>
         <span
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium"
-          style={{ backgroundColor: `${roleInfo.color}15`, color: roleInfo.color }}
+          className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium"
+          style={{ backgroundColor: `${roleVisual.color}15`, color: roleVisual.color }}
         >
-          <roleInfo.icon size={12} />
-          {roleInfo.name}
+          <roleVisual.icon size={12} />
+          {user.roleName}
         </span>
       </TableCell>
       <TableCell>
         <span className="text-sm text-[#475569]">{user.department || "-"}</span>
       </TableCell>
       <TableCell>
-        <span className={cn(
-          "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium",
-          statusColors.bg, statusColors.text
-        )}>
-          <span className={cn("w-1.5 h-1.5 rounded-full", statusColors.dot)} />
+        <span className={cn("inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium", statusColors.bg, statusColors.text)}>
+          <span className={cn("h-1.5 w-1.5 rounded-full", statusColors.dot)} />
           {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
         </span>
       </TableCell>
       <TableCell>
-        <span className="text-sm text-[#94A3B8]">
-          {user.lastLogin ? getRelativeTime(user.lastLogin) : "Never"}
-        </span>
+        <div className="space-y-1">
+          <p className="text-sm text-[#94A3B8]">{getRelativeTime(user.lastLogin)}</p>
+          <p className="text-xs text-[#CBD5E1]">{metrics.loginCount} logins logged</p>
+        </div>
       </TableCell>
-      <TableCell>
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <TableCell className="text-right">
+        <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -827,32 +769,37 @@ const UserRow = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48 rounded-md">
-              <DropdownMenuItem className="rounded-md">
-                <Mail size={14} className="mr-2" /> Send Email
+              <DropdownMenuItem onClick={onSendEmail} className="rounded-md">
+                <Mail size={14} className="mr-2" />
+                Send Email
               </DropdownMenuItem>
-              <DropdownMenuItem className="rounded-md">
-                <Key size={14} className="mr-2" /> Reset Password
+              <DropdownMenuItem onClick={onResetPassword} className="rounded-md">
+                <Key size={14} className="mr-2" />
+                Reset Password
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger className="rounded-md">
-                  <UserCog size={14} className="mr-2" /> Change Status
+                  <UserCog size={14} className="mr-2" />
+                  Change Status
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent className="rounded-md">
-                  <DropdownMenuItem onClick={() => onStatusChange("active")} className="rounded-md">
-                    <div className="w-2 h-2 rounded-full bg-green-500 mr-2" /> Active
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onStatusChange("inactive")} className="rounded-md">
-                    <div className="w-2 h-2 rounded-full bg-slate-400 mr-2" /> Inactive
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onStatusChange("suspended")} className="rounded-md">
-                    <div className="w-2 h-2 rounded-full bg-red-500 mr-2" /> Suspended
-                  </DropdownMenuItem>
+                  {STATUS_OPTIONS.map((option) => (
+                    <DropdownMenuItem
+                      key={option.value}
+                      onClick={() => onStatusChange(option.value)}
+                      className="rounded-md"
+                    >
+                      <div className={cn("mr-2 h-2 w-2 rounded-full", getStatusColor(option.value).dot)} />
+                      {option.label}
+                    </DropdownMenuItem>
+                  ))}
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onDelete} className="rounded-md text-red-600 focus:text-red-600">
-                <Trash2 size={14} className="mr-2" /> Delete User
+                <Trash2 size={14} className="mr-2" />
+                Delete User
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -862,34 +809,32 @@ const UserRow = ({
   );
 };
 
-// ============================================
-// USER FORM DIALOG
-// ============================================
-
 const UserFormDialog = ({
   isOpen,
   onClose,
   user,
+  roles,
+  departments,
   onSubmit,
 }: {
   isOpen: boolean;
   onClose: () => void;
-  user: User | null;
-  onSubmit: (data: Partial<User>) => Promise<void>;
+  user: UserRecord | null;
+  roles: ApiRole[];
+  departments: DepartmentEntity[];
+  onSubmit: (values: UserFormValues) => Promise<void>;
 }) => {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<UserFormValues>({
     fullName: "",
     email: "",
     phone: "",
-    role: "staff",
+    roleId: "",
     department: "",
     position: "",
-    location: "",
-    bio: "",
-    status: "active" as User["status"],
+    status: "active",
+    sendInviteEmail: true,
   });
   const [saving, setSaving] = useState(false);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -897,35 +842,33 @@ const UserFormDialog = ({
         fullName: user.fullName,
         email: user.email,
         phone: user.phone || "",
-        role: user.role,
+        roleId: user.roleId || "",
         department: user.department || "",
         position: user.position || "",
-        location: user.location || "",
-        bio: user.bio || "",
         status: user.status,
+        sendInviteEmail: true,
       });
-      setAvatarPreview(user.avatarUrl || null);
-    } else {
-      setFormData({
-        fullName: "",
-        email: "",
-        phone: "",
-        role: "staff",
-        department: "",
-        position: "",
-        location: "",
-        bio: "",
-        status: "active",
-      });
-      setAvatarPreview(null);
-    }
-  }, [user, isOpen]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.fullName.trim() || !formData.email.trim()) {
       return;
     }
+
+    setFormData({
+      fullName: "",
+      email: "",
+      phone: "",
+      roleId: roles[0]?.id || "",
+      department: "",
+      position: "",
+      status: "active",
+      sendInviteEmail: true,
+    });
+  }, [user, roles, isOpen]);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!formData.fullName.trim() || !formData.email.trim() || !formData.roleId) {
+      return;
+    }
+
     setSaving(true);
     try {
       await onSubmit(formData);
@@ -936,47 +879,38 @@ const UserFormDialog = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] p-0 rounded-md overflow-hidden max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-[rgba(15,23,42,0.06)] bg-[#F0FDFA] sticky top-0 bg-white z-10">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-md p-0 sm:max-w-[600px]">
+        <div className="sticky top-0 z-10 border-b border-[rgba(15,23,42,0.06)] bg-white p-6">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-[#0F172A]">
               {user ? "Edit User" : "Add New User"}
             </DialogTitle>
             <DialogDescription className="text-[#94A3B8]">
-              {user ? "Update user information and settings" : "Create a new user account"}
+              {user ? "Update team member details" : "Create a new team member account"}
             </DialogDescription>
           </DialogHeader>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 md:p-6 space-y-4 md:space-y-6">
-          {/* Avatar Upload */}
+        <form onSubmit={handleSubmit} className="space-y-6 p-6">
           <div className="flex items-center gap-6">
             <div className="relative">
-              {avatarPreview ? (
-                <img
-                  src={avatarPreview}
-                  alt="Avatar"
-                  className="w-20 h-20 rounded-md object-cover"
-                />
-              ) : (
-                <div className="w-20 h-20 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] text-xl sm:text-2xl font-bold">
-                  {formData.fullName ? getInitials(formData.fullName) : <User size={32} />}
-                </div>
-              )}
-              <label className="absolute -bottom-2 -right-2 w-8 h-8 bg-[#0891B2] rounded-md flex items-center justify-center cursor-pointer hover:bg-[#0891B2]/90 transition-colors">
-                <Camera size={14} className="text-[#0F172A]" />
-                <input type="file" className="hidden" accept="image/*" />
-              </label>
+              <div className="flex h-20 w-20 items-center justify-center rounded-md bg-[#F1F5F9] text-xl font-bold text-[#0F172A]">
+                {formData.fullName ? getInitials(formData.fullName) : <User size={28} />}
+              </div>
+              <div className="absolute -bottom-2 -right-2 flex h-8 w-8 items-center justify-center rounded-md bg-[#E2E8F0] text-[#64748B]">
+                <Camera size={14} />
+              </div>
             </div>
             <div>
-              <p className="font-medium text-[#0F172A]">Profile Photo</p>
-              <p className="text-sm text-[#94A3B8]">JPG, PNG or GIF. Max 2MB</p>
+              <p className="font-medium text-[#0F172A]">Profile Avatar</p>
+              <p className="text-sm text-[#94A3B8]">
+                Avatar initials are generated automatically for user accounts.
+              </p>
             </div>
           </div>
 
-          {/* Basic Info */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label className="text-sm font-medium text-[#475569]">
                 Full Name <span className="text-red-500">*</span>
@@ -985,13 +919,14 @@ const UserFormDialog = ({
                 <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                 <Input
                   value={formData.fullName}
-                  onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                  placeholder="John Smith"
+                  onChange={(event) => setFormData((current) => ({ ...current, fullName: event.target.value }))}
+                  placeholder="Avery Thompson"
+                  className="h-11 rounded-md border-[rgba(15,23,42,0.06)] pl-10 focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
                   required
-                  className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
                 />
               </div>
             </div>
+
             <div className="space-y-2">
               <Label className="text-sm font-medium text-[#475569]">
                 Email Address <span className="text-red-500">*</span>
@@ -1001,171 +936,157 @@ const UserFormDialog = ({
                 <Input
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="john@yoursoft.ca"
+                  onChange={(event) => setFormData((current) => ({ ...current, email: event.target.value }))}
+                  placeholder="avery@zodo.ca"
+                  className="h-11 rounded-md border-[rgba(15,23,42,0.06)] pl-10 focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
+                  disabled={Boolean(user)}
                   required
-                  className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
                 />
               </div>
+              {user && <p className="text-xs text-[#94A3B8]">Email changes are handled from the employee profile record.</p>}
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label className="text-sm font-medium text-[#475569]">Phone Number</Label>
               <div className="relative">
                 <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                 <Input
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={(event) => setFormData((current) => ({ ...current, phone: event.target.value }))}
                   placeholder="+1 (555) 123-4567"
-                  className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
+                  className="h-11 rounded-md border-[rgba(15,23,42,0.06)] pl-10 focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-[#475569]">Location</Label>
-              <div className="relative">
-                <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
-                <Input
-                  value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  placeholder="Toronto, Canada"
-                  className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
-                />
-              </div>
-            </div>
-          </div>
 
-          {/* Role & Department */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-[#475569]">Role</Label>
-              <Select
-                value={formData.role}
-                onValueChange={(val) => setFormData({ ...formData, role: val })}
-              >
-                <SelectTrigger className="h-11 rounded-md border-[rgba(15,23,42,0.06)]">
-                  <SelectValue placeholder="Select role" />
-                </SelectTrigger>
-                <SelectContent className="rounded-md">
-                  {roles.map((role) => (
-                    <SelectItem key={role.id} value={role.id} className="rounded-md">
-                      <div className="flex items-center gap-2">
-                        <role.icon size={14} style={{ color: role.color }} />
-                        {role.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-[#475569]">Department</Label>
-              <Select
-                value={formData.department}
-                onValueChange={(val) => setFormData({ ...formData, department: val })}
-              >
-                <SelectTrigger className="h-11 rounded-md border-[rgba(15,23,42,0.06)]">
-                  <SelectValue placeholder="Select department" />
-                </SelectTrigger>
-                <SelectContent className="rounded-md">
-                  {departments.map((dept) => (
-                    <SelectItem key={dept.id} value={dept.name} className="rounded-md">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: dept.color }} />
-                        {dept.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="text-sm font-medium text-[#475569]">Position / Title</Label>
               <div className="relative">
                 <Briefcase size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                 <Input
                   value={formData.position}
-                  onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-                  placeholder="Senior Developer"
-                  className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
+                  onChange={(event) => setFormData((current) => ({ ...current, position: event.target.value }))}
+                  placeholder="Production Manager"
+                  className="h-11 rounded-md border-[rgba(15,23,42,0.06)] pl-10 focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
                 />
               </div>
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-[#475569]">Status</Label>
+              <Label className="text-sm font-medium text-[#475569]">Role</Label>
               <Select
-                value={formData.status}
-                onValueChange={(val) => setFormData({ ...formData, status: val as User["status"] })}
+                value={formData.roleId || SELECT_NONE_VALUE}
+                onValueChange={(value) =>
+                  setFormData((current) => ({
+                    ...current,
+                    roleId: value === SELECT_NONE_VALUE ? "" : value,
+                  }))
+                }
               >
                 <SelectTrigger className="h-11 rounded-md border-[rgba(15,23,42,0.06)]">
-                  <SelectValue />
+                  <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent className="rounded-md">
-                  <SelectItem value="active" className="rounded-md">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-green-500" />
-                      Active
-                    </div>
+                  <SelectItem value={SELECT_NONE_VALUE} className="rounded-md">
+                    Select role
                   </SelectItem>
-                  <SelectItem value="inactive" className="rounded-md">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-slate-400" />
-                      Inactive
-                    </div>
+                  {roles.map((role) => {
+                    const roleVisual = getRoleVisual(role.name);
+                    return (
+                      <SelectItem key={role.id} value={role.id} className="rounded-md">
+                        <div className="flex items-center gap-2">
+                          <roleVisual.icon size={14} style={{ color: roleVisual.color }} />
+                          {role.name}
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-[#475569]">Department</Label>
+              <Select
+                value={formData.department || SELECT_NONE_VALUE}
+                onValueChange={(value) =>
+                  setFormData((current) => ({
+                    ...current,
+                    department: value === SELECT_NONE_VALUE ? "" : value,
+                  }))
+                }
+              >
+                <SelectTrigger className="h-11 rounded-md border-[rgba(15,23,42,0.06)]">
+                  <SelectValue placeholder="Select department" />
+                </SelectTrigger>
+                <SelectContent className="rounded-md">
+                  <SelectItem value={SELECT_NONE_VALUE} className="rounded-md">
+                    No department
                   </SelectItem>
-                  <SelectItem value="pending" className="rounded-md">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-yellow-500" />
-                      Pending
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="suspended" className="rounded-md">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-red-500" />
-                      Suspended
-                    </div>
-                  </SelectItem>
+                  {departments.map((department) => (
+                    <SelectItem key={department.id} value={department.name} className="rounded-md">
+                      <div className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: department.color }} />
+                        {department.name}
+                      </div>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
 
-          {/* Bio */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-[#475569]">Bio</Label>
-            <Textarea
-              value={formData.bio}
-              onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-              placeholder="A brief description about the user..."
-              rows={3}
-              className="rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 resize-none"
-            />
+            <Label className="text-sm font-medium text-[#475569]">Status</Label>
+            <Select
+              value={formData.status}
+              onValueChange={(value) => setFormData((current) => ({ ...current, status: value as UserStatus }))}
+            >
+              <SelectTrigger className="h-11 rounded-md border-[rgba(15,23,42,0.06)]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="rounded-md">
+                {STATUS_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value} className="rounded-md">
+                    <div className="flex items-center gap-2">
+                      <span className={cn("h-2 w-2 rounded-full", getStatusColor(option.value).dot)} />
+                      {option.label}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          {/* Send Invitation */}
           {!user && (
-            <div className="flex items-center justify-between p-4 bg-[#F8FAFC] rounded-md">
+            <div className="flex items-center justify-between rounded-md bg-[#F8FAFC] p-4">
               <div>
                 <p className="font-medium text-[#0F172A]">Send Invitation Email</p>
-                <p className="text-sm text-[#94A3B8]">User will receive an email to set their password</p>
+                <p className="text-sm text-[#94A3B8]">
+                  Email the user a secure welcome link instead of manually sharing a password.
+                </p>
               </div>
-              <Switch defaultChecked />
+              <Switch
+                checked={formData.sendInviteEmail}
+                onCheckedChange={(checked) =>
+                  setFormData((current) => ({ ...current, sendInviteEmail: checked }))
+                }
+              />
             </div>
           )}
 
-          <DialogFooter className="pt-4 gap-3">
+          <DialogFooter className="gap-3 pt-2">
             <Button type="button" variant="outline" onClick={onClose} className="rounded-md">
               Cancel
             </Button>
             <Button
               type="submit"
-              disabled={saving || !formData.fullName || !formData.email}
-              className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
+              disabled={saving || !formData.fullName || !formData.email || !formData.roleId}
+              className="rounded-md bg-[#0891B2] text-white hover:bg-[#0891B2]/90"
             >
               {saving ? (
                 <>
@@ -1186,43 +1107,226 @@ const UserFormDialog = ({
   );
 };
 
-// ============================================
-// USER PROFILE DIALOG
-// ============================================
+const RoleFormDialog = ({
+  open,
+  role,
+  permissions,
+  onClose,
+  onSubmit,
+}: {
+  open: boolean;
+  role: ApiRole | null;
+  permissions: ApiPermission[];
+  onClose: () => void;
+  onSubmit: (values: RoleFormValues) => Promise<void>;
+}) => {
+  const [formValues, setFormValues] = useState<RoleFormValues>({
+    name: "",
+    description: "",
+    permissionIds: [],
+  });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    setFormValues({
+      name: role?.name || "",
+      description: role?.description || "",
+      permissionIds: role?.permissions.map((permission) => permission.id) || [],
+    });
+  }, [role, open]);
+
+  const permissionGroups = useMemo(() => {
+    const groups = new Map<string, ApiPermission[]>();
+    permissions.forEach((permission) => {
+      const bucket = groups.get(permission.module) || [];
+      bucket.push(permission);
+      groups.set(permission.module, bucket);
+    });
+    return [...groups.entries()].sort(([left], [right]) => left.localeCompare(right));
+  }, [permissions]);
+
+  const togglePermission = (permissionId: string, checked: boolean) => {
+    setFormValues((current) => ({
+      ...current,
+      permissionIds: checked
+        ? [...current.permissionIds, permissionId]
+        : current.permissionIds.filter((id) => id !== permissionId),
+    }));
+  };
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!formValues.name.trim()) {
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await onSubmit({
+        name: formValues.name.trim(),
+        description: formValues.description.trim(),
+        permissionIds: [...new Set(formValues.permissionIds)],
+      });
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-md p-0 sm:max-w-[760px]">
+        <div className="sticky top-0 z-10 border-b border-[rgba(15,23,42,0.06)] bg-white p-6">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-[#0F172A]">
+              {role ? "Edit Role" : "Create Role"}
+            </DialogTitle>
+            <DialogDescription className="text-[#94A3B8]">
+              Manage tenant-specific permissions for this role.
+            </DialogDescription>
+          </DialogHeader>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6 p-6">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-[#475569]">Role Name</Label>
+              <Input
+                value={formValues.name}
+                onChange={(event) => setFormValues((current) => ({ ...current, name: event.target.value }))}
+                placeholder="Production Manager"
+                className="h-11 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-[#475569]">Permission Count</Label>
+              <div className="flex h-11 items-center rounded-md border border-[rgba(15,23,42,0.06)] px-4 text-sm text-[#475569]">
+                {formValues.permissionIds.length} permissions selected
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-[#475569]">Description</Label>
+            <Textarea
+              value={formValues.description}
+              onChange={(event) => setFormValues((current) => ({ ...current, description: event.target.value }))}
+              placeholder="Access level for estimating, production planning, and team coordination."
+              className="resize-none rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
+              rows={3}
+            />
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-[#0F172A]">Permissions</h3>
+                <p className="text-sm text-[#94A3B8]">Choose the actions this role can perform.</p>
+              </div>
+              <Badge variant="outline" className="rounded-md">
+                {permissions.length} available
+              </Badge>
+            </div>
+
+            <div className="space-y-4">
+              {permissionGroups.map(([module, modulePermissions]) => (
+                <div key={module} className="rounded-md border border-[rgba(15,23,42,0.06)] p-4">
+                  <h4 className="mb-3 font-medium text-[#0F172A]">{module}</h4>
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    {modulePermissions.map((permission) => (
+                      <label
+                        key={permission.id}
+                        className="flex items-start gap-3 rounded-md bg-[#F8FAFC] p-3"
+                      >
+                        <Checkbox
+                          checked={formValues.permissionIds.includes(permission.id)}
+                          onCheckedChange={(checked) => togglePermission(permission.id, Boolean(checked))}
+                          className="mt-0.5 border-[#22D3EE] data-[state=checked]:border-[#22D3EE] data-[state=checked]:bg-[#0891B2]"
+                        />
+                        <div>
+                          <p className="text-sm font-medium text-[#0F172A]">{permission.name}</p>
+                          <p className="text-xs text-[#94A3B8]">{permission.code}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <DialogFooter className="gap-3 pt-2">
+            <Button type="button" variant="outline" onClick={onClose} className="rounded-md">
+              Cancel
+            </Button>
+            <Button type="submit" disabled={saving} className="rounded-md bg-[#0891B2] text-white hover:bg-[#0891B2]/90">
+              {saving ? (
+                <>
+                  <RefreshCw size={16} className="mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Shield size={16} className="mr-2" />
+                  {role ? "Update Role" : "Create Role"}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 const UserProfileDialog = ({
   isOpen,
   onClose,
   user,
+  metrics,
+  role,
+  userActivity,
   onEdit,
+  onManagePermissions,
+  onChangeRole,
 }: {
   isOpen: boolean;
   onClose: () => void;
-  user: User | null;
+  user: UserRecord | null;
+  metrics: UserMetrics;
+  role: ApiRole | null;
+  userActivity: AuditLogItem[];
   onEdit: () => void;
+  onManagePermissions: () => void;
+  onChangeRole: () => void;
 }) => {
-  if (!user) return null;
+  if (!user) {
+    return null;
+  }
 
   const statusColors = getStatusColor(user.status);
-  const roleInfo = getRoleInfo(user.role);
+  const roleVisual = getRoleVisual(user.roleName);
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[700px] p-0 rounded-md overflow-hidden max-h-[90vh] overflow-y-auto">
-        {/* Header with Cover */}
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-md p-0 sm:max-w-[760px]">
         <div className="relative h-32 bg-[#F1F5F9]">
-          <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-10" />
+          <div className="absolute inset-0 opacity-10" />
           <Button
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="absolute top-4 right-4 h-8 w-8 rounded-md bg-white/20 hover:bg-white/30 text-[#0F172A]"
+            className="absolute right-4 top-4 h-8 w-8 rounded-md bg-white/20 text-[#0F172A] hover:bg-white/30"
           >
             <X size={16} />
           </Button>
         </div>
 
-        {/* Profile Section */}
         <div className="px-6 pb-6">
           <div className="relative -mt-16 mb-6">
             <div className="flex items-end gap-6">
@@ -1231,63 +1335,56 @@ const UserProfileDialog = ({
                   <img
                     src={user.avatarUrl}
                     alt={user.fullName}
-                    className="w-28 h-28 rounded-md object-cover border-4 border-white card-shadow"
+                    className="h-28 w-28 rounded-md border-4 border-white object-cover shadow-lg"
                   />
                 ) : (
-                  <div className="w-28 h-28 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] text-3xl font-bold border-4 border-white card-shadow">
+                  <div className="flex h-28 w-28 items-center justify-center rounded-md border-4 border-white bg-[#F1F5F9] text-3xl font-bold text-[#0F172A] shadow-lg">
                     {getInitials(user.fullName)}
                   </div>
                 )}
                 {user.isOnline && (
-                  <span className="absolute bottom-1 right-1 w-5 h-5 bg-green-500 rounded-full border-3 border-white" />
+                  <span className="absolute bottom-1 right-1 h-5 w-5 rounded-full border-4 border-white bg-green-500" />
                 )}
               </div>
               <div className="flex-1 pb-2">
-                <div className="flex items-center gap-3 mb-1">
-                  <h2 className="text-xl sm:text-2xl font-bold text-[#0F172A]">{user.fullName}</h2>
+                <div className="mb-1 flex flex-wrap items-center gap-3">
+                  <h2 className="text-2xl font-bold text-[#0F172A]">{user.fullName}</h2>
                   <span
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium"
-                    style={{ backgroundColor: `${roleInfo.color}15`, color: roleInfo.color }}
+                    className="inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium"
+                    style={{ backgroundColor: `${roleVisual.color}15`, color: roleVisual.color }}
                   >
-                    <roleInfo.icon size={12} />
-                    {roleInfo.name}
+                    <roleVisual.icon size={12} />
+                    {user.roleName}
                   </span>
                 </div>
                 <p className="text-[#94A3B8]">{user.position || "Team Member"}</p>
               </div>
-              <Button onClick={onEdit} className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md">
+              <Button onClick={onEdit} className="rounded-md bg-[#0891B2] text-white hover:bg-[#0891B2]/90">
                 <Pencil size={16} className="mr-2" />
                 Edit Profile
               </Button>
             </div>
           </div>
 
-          {/* Status & Quick Info */}
-          <div className="flex items-center gap-4 mb-6">
-            <span className={cn(
-              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium",
-              statusColors.bg, statusColors.text
-            )}>
-              <span className={cn("w-2 h-2 rounded-full", statusColors.dot)} />
+          <div className="mb-6 flex flex-wrap items-center gap-4">
+            <span className={cn("inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium", statusColors.bg, statusColors.text)}>
+              <span className={cn("h-2 w-2 rounded-full", statusColors.dot)} />
               {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
             </span>
             {user.department && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm bg-white/5 text-[#475569]">
+              <span className="inline-flex items-center gap-1.5 rounded-md bg-[#F8FAFC] px-3 py-1.5 text-sm text-[#475569]">
                 <Building2 size={14} />
                 {user.department}
               </span>
             )}
-            {user.location && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm bg-white/5 text-[#475569]">
-                <MapPin size={14} />
-                {user.location}
-              </span>
-            )}
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-[#F8FAFC] px-3 py-1.5 text-sm text-[#475569]">
+              <MapPin size={14} />
+              {user.position || "No title assigned"}
+            </span>
           </div>
 
-          {/* Tabs */}
           <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="w-full justify-start mb-6 p-1 bg-white/5 rounded-md">
+            <TabsList className="mb-6 w-full justify-start rounded-md bg-[#F8FAFC] p-1">
               <TabsTrigger value="overview" className="rounded-md data-[state=active]:bg-white">
                 Overview
               </TabsTrigger>
@@ -1299,36 +1396,31 @@ const UserProfileDialog = ({
               </TabsTrigger>
             </TabsList>
 
-            {/* Overview Tab */}
             <TabsContent value="overview" className="space-y-6">
-              {/* Stats Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                <div className="p-4 bg-[#F8FAFC] rounded-md text-center">
-                  <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">{user.tasksCompleted || 0}</p>
-                  <p className="text-sm text-[#94A3B8]">Tasks Completed</p>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-md bg-[#F8FAFC] p-4 text-center">
+                  <p className="text-2xl font-bold text-[#0F172A]">{metrics.tasksCompleted}</p>
+                  <p className="text-sm text-[#94A3B8]">Task Logs</p>
                 </div>
-                <div className="p-4 bg-[#F8FAFC] rounded-md text-center">
-                  <p className="text-xl sm:text-2xl font-bold text-[#0891B2]">{user.projectsCount || 0}</p>
-                  <p className="text-sm text-[#94A3B8]">Projects</p>
+                <div className="rounded-md bg-[#F8FAFC] p-4 text-center">
+                  <p className="text-2xl font-bold text-[#0891B2]">{metrics.projectsCount}</p>
+                  <p className="text-sm text-[#94A3B8]">Project Logs</p>
                 </div>
-                <div className="p-4 bg-[#F8FAFC] rounded-md text-center">
-                  <p className="text-xl sm:text-2xl font-bold text-[#D97706]">{user.loginCount || 0}</p>
-                  <p className="text-sm text-[#94A3B8]">Total Logins</p>
+                <div className="rounded-md bg-[#F8FAFC] p-4 text-center">
+                  <p className="text-2xl font-bold text-[#D97706]">{metrics.loginCount}</p>
+                  <p className="text-sm text-[#94A3B8]">Login Events</p>
                 </div>
-                <div className="p-4 bg-[#F8FAFC] rounded-md text-center">
-                  <p className="text-xl sm:text-2xl font-bold text-purple-500">
-                    {user.teams?.length || 0}
-                  </p>
-                  <p className="text-sm text-[#94A3B8]">Teams</p>
+                <div className="rounded-md bg-[#F8FAFC] p-4 text-center">
+                  <p className="text-2xl font-bold text-[#8B5CF6]">{role?.permissions.length || 0}</p>
+                  <p className="text-sm text-[#94A3B8]">Permissions</p>
                 </div>
               </div>
 
-              {/* Contact Information */}
               <div className="space-y-4">
                 <h3 className="font-semibold text-[#0F172A]">Contact Information</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center gap-3 p-4 bg-[#F8FAFC] rounded-md">
-                    <div className="w-10 h-10 rounded-md bg-[#0891B2]/10 flex items-center justify-center">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="flex items-center gap-3 rounded-md bg-[#F8FAFC] p-4">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[#0891B2]/10">
                       <Mail size={18} className="text-[#0891B2]" />
                     </div>
                     <div>
@@ -1336,8 +1428,8 @@ const UserProfileDialog = ({
                       <p className="text-sm font-medium text-[#0F172A]">{user.email}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 p-4 bg-[#F8FAFC] rounded-md">
-                    <div className="w-10 h-10 rounded-md bg-[#D97706]/10 flex items-center justify-center">
+                  <div className="flex items-center gap-3 rounded-md bg-[#F8FAFC] p-4">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[#D97706]/10">
                       <Phone size={18} className="text-[#D97706]" />
                     </div>
                     <div>
@@ -1348,142 +1440,95 @@ const UserProfileDialog = ({
                 </div>
               </div>
 
-              {/* Account Details */}
               <div className="space-y-4">
                 <h3 className="font-semibold text-[#0F172A]">Account Details</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 bg-[#F8FAFC] rounded-md">
-                    <p className="text-xs text-[#475569] mb-1">Member Since</p>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="rounded-md bg-[#F8FAFC] p-4">
+                    <p className="mb-1 text-xs text-[#475569]">Member Since</p>
                     <p className="text-sm font-medium text-[#0F172A]">{formatDate(user.createdAt)}</p>
                   </div>
-                  <div className="p-4 bg-[#F8FAFC] rounded-md">
-                    <p className="text-xs text-[#475569] mb-1">Last Login</p>
-                    <p className="text-sm font-medium text-[#0F172A]">
-                      {user.lastLogin ? getRelativeTime(user.lastLogin) : "Never"}
-                    </p>
+                  <div className="rounded-md bg-[#F8FAFC] p-4">
+                    <p className="mb-1 text-xs text-[#475569]">Last Login</p>
+                    <p className="text-sm font-medium text-[#0F172A]">{getRelativeTime(user.lastLogin)}</p>
                   </div>
                 </div>
               </div>
-
-              {/* Teams */}
-              {user.teams && user.teams.length > 0 && (
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-[#0F172A]">Teams</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {user.teams.map((team) => (
-                      <span
-                        key={team}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0891B2]/10 text-[#0891B2] rounded-md text-sm font-medium"
-                      >
-                        <UsersRound size={14} />
-                        {team}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
             </TabsContent>
 
-            {/* Activity Tab */}
             <TabsContent value="activity" className="space-y-4">
               <h3 className="font-semibold text-[#0F172A]">Recent Activity</h3>
               <div className="space-y-3">
-                {activityLogs
-                  .filter((log) => log.userId === user.id)
-                  .slice(0, 5)
-                  .map((log) => (
-                    <div
-                      key={log.id}
-                      className="flex items-start gap-4 p-4 bg-[#F8FAFC] rounded-md"
-                    >
-                      <div className="w-10 h-10 rounded-md bg-[#0891B2]/10 flex items-center justify-center flex-shrink-0">
-                        {log.action === "login" && <LogIn size={18} className="text-[#0891B2]" />}
-                        {log.action === "logout" && <LogOut size={18} className="text-[#94A3B8]" />}
-                        {log.action === "update_profile" && <UserCog size={18} className="text-[#D97706]" />}
-                        {log.action === "create_task" && <Plus size={18} className="text-green-500" />}
-                        {log.action === "complete_task" && <CheckCircle2 size={18} className="text-green-500" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-[#0F172A]">{log.description}</p>
-                        <div className="flex items-center gap-3 mt-1 text-xs text-[#475569]">
-                          <span>{getRelativeTime(log.timestamp)}</span>
-                          {log.ip && <span>IP: {log.ip}</span>}
-                          {log.device && <span>{log.device}</span>}
-                        </div>
+                {userActivity.slice(0, 10).map((log) => (
+                  <div key={log.id} className="flex items-start gap-4 rounded-md bg-[#F8FAFC] p-4">
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md bg-[#0891B2]/10">
+                      {log.action === "LOGIN" && <LogIn size={18} className="text-[#0891B2]" />}
+                      {log.action === "LOGOUT" && <LogOut size={18} className="text-[#64748B]" />}
+                      {log.action === "UPDATE" && <UserCog size={18} className="text-[#D97706]" />}
+                      {!["LOGIN", "LOGOUT", "UPDATE"].includes(log.action) && (
+                        <Activity size={18} className="text-[#475569]" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-[#0F172A]">{log.description}</p>
+                      <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-[#475569]">
+                        <span>{getRelativeTime(log.createdAt)}</span>
+                        {log.module && <span>Module: {log.module}</span>}
+                        {log.ipAddress && <span>IP: {log.ipAddress}</span>}
                       </div>
                     </div>
-                  ))}
-                {activityLogs.filter((log) => log.userId === user.id).length === 0 && (
-                  <div className="text-center py-8 text-[#94A3B8]">
-                    No activity recorded yet
                   </div>
+                ))}
+                {userActivity.length === 0 && (
+                  <div className="py-8 text-center text-[#94A3B8]">No activity recorded yet</div>
                 )}
               </div>
             </TabsContent>
 
-            {/* Permissions Tab */}
             <TabsContent value="permissions" className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-[#0F172A]">Role & Permissions</h3>
-                <Button variant="outline" size="sm" className="rounded-md">
+                <Button variant="outline" size="sm" className="rounded-md" onClick={onManagePermissions}>
                   <Settings size={14} className="mr-2" />
                   Manage Permissions
                 </Button>
               </div>
 
-              {/* Current Role */}
-              <div className="p-4 rounded-md border border-[rgba(15,23,42,0.06)]">
+              <div className="rounded-md border border-[rgba(15,23,42,0.06)] p-4">
                 <div className="flex items-center gap-4">
                   <div
-                    className="w-12 h-12 rounded-md flex items-center justify-center"
-                    style={{ backgroundColor: `${roleInfo.color}15` }}
+                    className="flex h-12 w-12 items-center justify-center rounded-md"
+                    style={{ backgroundColor: `${roleVisual.color}15` }}
                   >
-                    <roleInfo.icon size={24} style={{ color: roleInfo.color }} />
+                    <roleVisual.icon size={24} style={{ color: roleVisual.color }} />
                   </div>
                   <div className="flex-1">
-                    <p className="font-semibold text-[#0F172A]">{roleInfo.name}</p>
-                    <p className="text-sm text-[#94A3B8]">{roleInfo.description}</p>
+                    <p className="font-semibold text-[#0F172A]">{user.roleName}</p>
+                    <p className="text-sm text-[#94A3B8]">{role?.description || "Role details are managed per tenant."}</p>
                   </div>
-                  <Button variant="outline" size="sm" className="rounded-md">
+                  <Button variant="outline" size="sm" className="rounded-md" onClick={onChangeRole}>
                     Change Role
                   </Button>
                 </div>
               </div>
 
-              {/* Permissions List */}
               <div className="space-y-3">
                 <h4 className="text-sm font-medium text-[#475569]">Granted Permissions</h4>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { name: "View Dashboard", granted: true },
-                    { name: "Manage Projects", granted: roleInfo.id !== "viewer" },
-                    { name: "Edit Tasks", granted: roleInfo.id !== "viewer" },
-                    { name: "View Reports", granted: true },
-                    { name: "Manage Team", granted: roleInfo.id === "admin" || roleInfo.id === "manager" },
-                    { name: "Access Settings", granted: roleInfo.id === "admin" },
-                    { name: "Manage Users", granted: roleInfo.id === "admin" },
-                    { name: "Delete Records", granted: roleInfo.id === "admin" },
-                  ].map((perm) => (
-                    <div
-                      key={perm.name}
-                      className={cn(
-                        "flex items-center gap-3 p-3 rounded-md",
-                        perm.granted ? "bg-green-50" : "bg-[#F8FAFC]"
-                      )}
-                    >
-                      {perm.granted ? (
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  {role?.permissions.length ? (
+                    role.permissions.map((permission) => (
+                      <div key={permission.id} className="flex items-center gap-3 rounded-md bg-green-50 p-3">
                         <CheckCircle2 size={16} className="text-green-500" />
-                      ) : (
-                        <X size={16} className="text-[#475569]" />
-                      )}
-                      <span className={cn(
-                        "text-sm",
-                        perm.granted ? "text-green-700" : "text-[#475569]"
-                      )}>
-                        {perm.name}
-                      </span>
+                        <div>
+                          <p className="text-sm text-green-700">{permission.name}</p>
+                          <p className="text-xs text-green-600">{permission.code}</p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="rounded-md bg-[#F8FAFC] p-4 text-sm text-[#94A3B8]">
+                      No permissions are assigned to this role yet.
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             </TabsContent>
@@ -1494,34 +1539,40 @@ const UserProfileDialog = ({
   );
 };
 
-// ============================================
-// INVITE USERS DIALOG
-// ============================================
-
 const InviteUsersDialog = ({
   isOpen,
   onClose,
+  roles,
   onInvite,
 }: {
   isOpen: boolean;
   onClose: () => void;
-  onInvite: (emails: string[], role: string) => void;
+  roles: ApiRole[];
+  onInvite: (emails: string[], roleId: string) => Promise<void>;
 }) => {
   const [emails, setEmails] = useState("");
-  const [role, setRole] = useState("staff");
+  const [roleId, setRoleId] = useState("");
   const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && !roleId) {
+      setRoleId(roles.find((role) => !role.isDefault)?.id || roles[0]?.id || "");
+    }
+  }, [isOpen, roleId, roles]);
 
   const handleInvite = async () => {
     const emailList = emails
       .split(/[,\n]/)
-      .map((e) => e.trim())
-      .filter((e) => e.length > 0);
+      .map((value) => value.trim())
+      .filter(Boolean);
 
-    if (emailList.length === 0) return;
+    if (!emailList.length || !roleId) {
+      return;
+    }
 
     setSending(true);
     try {
-      await onInvite(emailList, role);
+      await onInvite(emailList, roleId);
       onClose();
       setEmails("");
     } finally {
@@ -1530,88 +1581,80 @@ const InviteUsersDialog = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px] p-0 rounded-md overflow-hidden">
-        <div className="p-6 border-b border-[rgba(15,23,42,0.06)] bg-[#F0FDFA]">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="rounded-md p-0 sm:max-w-[520px]">
+        <div className="border-b border-[rgba(15,23,42,0.06)] bg-white p-6">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-[#0F172A]">
-              Invite Team Members
-            </DialogTitle>
+            <DialogTitle className="text-xl font-bold text-[#0F172A]">Invite Team Members</DialogTitle>
             <DialogDescription className="text-[#94A3B8]">
-              Send invitations to join your workspace
+              Send secure invitations to join this workspace.
             </DialogDescription>
           </DialogHeader>
         </div>
 
-        <div className="p-6 space-y-5">
-          {/* Email Input */}
+        <div className="space-y-5 p-6">
           <div className="space-y-2">
             <Label className="text-sm font-medium text-[#475569]">
               Email Addresses <span className="text-red-500">*</span>
             </Label>
             <Textarea
               value={emails}
-              onChange={(e) => setEmails(e.target.value)}
-              placeholder="Enter email addresses (separated by comma or new line)&#10;e.g., john@example.com, jane@example.com"
+              onChange={(event) => setEmails(event.target.value)}
+              placeholder={"one@company.com\ntwo@company.com"}
               rows={4}
-              className="rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 resize-none"
+              className="resize-none rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
             />
-            <p className="text-xs text-[#475569]">
-              You can invite multiple users at once
-            </p>
+            <p className="text-xs text-[#475569]">Separate multiple email addresses with commas or new lines.</p>
           </div>
 
-          {/* Role Selection */}
           <div className="space-y-2">
             <Label className="text-sm font-medium text-[#475569]">Assign Role</Label>
-            <div className="grid grid-cols-2 gap-3">
-              {roles.filter((r) => r.id !== "admin").map((r) => (
-                <motion.button
-                  key={r.id}
-                  type="button"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setRole(r.id)}
-                  className={cn(
-                    "flex items-center gap-3 p-4 rounded-md border-2 text-left transition-all",
-                    role === r.id
-                      ? "border-[#22D3EE] bg-[#0891B2]/5"
-                      : "border-[rgba(15,23,42,0.06)] hover:border-slate-300"
-                  )}
-                >
-                  <div
-                    className="w-10 h-10 rounded-md flex items-center justify-center"
-                    style={{ backgroundColor: `${r.color}15` }}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {roles.map((role) => {
+                const roleVisual = getRoleVisual(role.name);
+                return (
+                  <motion.button
+                    key={role.id}
+                    type="button"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setRoleId(role.id)}
+                    className={cn(
+                      "flex items-center gap-3 rounded-md border-2 p-4 text-left transition-all",
+                      roleId === role.id
+                        ? "border-[#22D3EE] bg-[#0891B2]/5"
+                        : "border-[rgba(15,23,42,0.06)] hover:border-slate-300",
+                    )}
                   >
-                    <r.icon size={20} style={{ color: r.color }} />
-                  </div>
-                  <div>
-                    <p className="font-medium text-[#0F172A]">{r.name}</p>
-                    <p className="text-xs text-[#94A3B8]">{r.description}</p>
-                  </div>
-                  {role === r.id && (
-                    <CheckCircle2 size={18} className="text-[#0891B2] ml-auto" />
-                  )}
-                </motion.button>
-              ))}
+                    <div
+                      className="flex h-10 w-10 items-center justify-center rounded-md"
+                      style={{ backgroundColor: `${roleVisual.color}15` }}
+                    >
+                      <roleVisual.icon size={20} style={{ color: roleVisual.color }} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-[#0F172A]">{role.name}</p>
+                      <p className="truncate text-xs text-[#94A3B8]">{role.description || "Tenant role"}</p>
+                    </div>
+                    {roleId === role.id && <CheckCircle2 size={18} className="text-[#0891B2]" />}
+                  </motion.button>
+                );
+              })}
             </div>
           </div>
 
-          {/* Preview */}
           {emails.trim() && (
-            <div className="p-4 bg-[#F8FAFC] rounded-md">
-              <p className="text-sm font-medium text-[#0F172A] mb-2">
-                Invitations will be sent to:
-              </p>
+            <div className="rounded-md bg-[#F8FAFC] p-4">
+              <p className="mb-2 text-sm font-medium text-[#0F172A]">Invitations will be sent to:</p>
               <div className="flex flex-wrap gap-2">
                 {emails
                   .split(/[,\n]/)
-                  .map((e) => e.trim())
-                  .filter((e) => e.length > 0)
-                  .map((email, i) => (
+                  .map((value) => value.trim())
+                  .filter(Boolean)
+                  .map((email) => (
                     <span
-                      key={i}
-                      className="inline-flex items-center gap-1 px-2 py-1 bg-white rounded-md text-sm border border-[rgba(15,23,42,0.06)]"
+                      key={email}
+                      className="inline-flex items-center gap-1 rounded-md border border-[rgba(15,23,42,0.06)] bg-white px-2 py-1 text-sm"
                     >
                       <Mail size={12} className="text-[#475569]" />
                       {email}
@@ -1622,14 +1665,14 @@ const InviteUsersDialog = ({
           )}
         </div>
 
-        <DialogFooter className="p-6 pt-0 gap-3">
+        <DialogFooter className="gap-3 p-6 pt-0">
           <Button variant="outline" onClick={onClose} className="rounded-md">
             Cancel
           </Button>
           <Button
             onClick={handleInvite}
-            disabled={sending || !emails.trim()}
-            className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
+            disabled={sending || !emails.trim() || !roleId}
+            className="rounded-md bg-[#0891B2] text-white hover:bg-[#0891B2]/90"
           >
             {sending ? (
               <>
@@ -1649,157 +1692,231 @@ const InviteUsersDialog = ({
   );
 };
 
-// ============================================
-// ROLES MANAGEMENT COMPONENT
-// ============================================
-
-const RolesSection = () => {
+const RolesSection = ({
+  roles,
+  onCreate,
+  onEdit,
+  onDuplicate,
+  onDelete,
+}: {
+  roles: ApiRole[];
+  onCreate: () => void;
+  onEdit: (role: ApiRole) => void;
+  onDuplicate: (role: ApiRole) => void;
+  onDelete: (role: ApiRole) => void;
+}) => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold text-[#0F172A]">Roles & Permissions</h2>
-          <p className="text-sm text-[#94A3B8]">Manage user roles and access levels</p>
+          <p className="text-sm text-[#94A3B8]">Manage real tenant roles and permission sets</p>
         </div>
-        <Button className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md">
+        <Button onClick={onCreate} className="rounded-md bg-[#0891B2] text-white hover:bg-[#0891B2]/90">
           <Plus size={16} className="mr-2" />
           Create Role
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {roles.map((role, index) => (
-          <motion.div
-            key={role.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            whileHover={{ y: -4 }}
-            className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-5 hover:border-[#22D3EE]/30 hover:shadow-lg  transition-all"
-          >
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-12 h-12 rounded-md flex items-center justify-center"
-                  style={{ backgroundColor: `${role.color}15` }}
-                >
-                  <role.icon size={24} style={{ color: role.color }} />
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {roles.map((role, index) => {
+          const roleVisual = getRoleVisual(role.name);
+          return (
+            <motion.div
+              key={role.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.08 }}
+              whileHover={{ y: -4 }}
+              className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-5 transition-all hover:border-[#22D3EE]/30 hover:shadow-lg"
+            >
+              <div className="mb-4 flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="flex h-12 w-12 items-center justify-center rounded-md"
+                    style={{ backgroundColor: `${roleVisual.color}15` }}
+                  >
+                    <roleVisual.icon size={24} style={{ color: roleVisual.color }} />
+                  </div>
+                  <div>
+                    <div className="mb-1 flex flex-wrap items-center gap-2">
+                      <h3 className="font-semibold text-[#0F172A]">{role.name}</h3>
+                      {role.isDefault && <Badge className="rounded-md bg-[#0891B2]/10 text-[#0891B2]">Default</Badge>}
+                      {role.isSystemRole && <Badge variant="secondary" className="rounded-md">System</Badge>}
+                    </div>
+                    <p className="text-sm text-[#94A3B8]">{role.description || "Tenant role without a description"}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-semibold text-[#0F172A]">{role.name}</h3>
-                  <p className="text-sm text-[#94A3B8]">{role.description}</p>
-                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md">
+                      <MoreVertical size={16} />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-44 rounded-md">
+                    <DropdownMenuItem onClick={() => onEdit(role)} className="rounded-md">
+                      <Pencil size={14} className="mr-2" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onDuplicate(role)} className="rounded-md">
+                      <Copy size={14} className="mr-2" />
+                      Duplicate
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => onDelete(role)}
+                      className="rounded-md text-red-600 focus:text-red-600"
+                      disabled={role.isSystemRole || role.isDefault || role.employeesCount > 0}
+                    >
+                      <Trash2 size={14} className="mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md">
-                    <MoreVertical size={16} />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-40 rounded-md">
-                  <DropdownMenuItem className="rounded-md">
-                    <Pencil size={14} className="mr-2" /> Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="rounded-md">
-                    <Copy size={14} className="mr-2" /> Duplicate
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="rounded-md text-red-600" disabled={role.id === "admin"}>
-                    <Trash2 size={14} className="mr-2" /> Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
 
-            <div className="flex items-center justify-between pt-4 border-t border-[rgba(15,23,42,0.06)]">
-              <div className="flex items-center gap-2">
-                <Users size={14} className="text-[#475569]" />
-                <span className="text-sm text-[#94A3B8]">{role.userCount} users</span>
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  {role.permissions.slice(0, 5).map((permission) => (
+                    <span
+                      key={permission.id}
+                      className="rounded-md bg-[#F8FAFC] px-2 py-1 text-xs text-[#475569]"
+                    >
+                      {permission.name}
+                    </span>
+                  ))}
+                  {role.permissions.length > 5 && (
+                    <span className="rounded-md bg-[#F8FAFC] px-2 py-1 text-xs text-[#475569]">
+                      +{role.permissions.length - 5} more
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center justify-between border-t border-[rgba(15,23,42,0.06)] pt-4">
+                  <div className="flex items-center gap-2">
+                    <Users size={14} className="text-[#475569]" />
+                    <span className="text-sm text-[#94A3B8]">{role.employeesCount} users</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Shield size={14} className="text-[#475569]" />
+                    <span className="text-sm text-[#94A3B8]">{role.permissions.length} permissions</span>
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Shield size={14} className="text-[#475569]" />
-                <span className="text-sm text-[#94A3B8]">
-                  {role.permissions.includes("all") ? "Full Access" : `${role.permissions.length} permissions`}
-                </span>
-              </div>
-            </div>
-          </motion.div>
-        ))}
+            </motion.div>
+          );
+        })}
       </div>
     </div>
   );
 };
 
-// ============================================
-// DEPARTMENTS SECTION
-// ============================================
-
-const DepartmentsSection = () => {
+const DepartmentsSection = ({
+  departments,
+  onCreate,
+  onEdit,
+  onViewMembers,
+  onDelete,
+}: {
+  departments: DepartmentEntity[];
+  onCreate: () => void;
+  onEdit: (department: DepartmentEntity) => void;
+  onViewMembers: (department: DepartmentEntity) => void;
+  onDelete: (department: DepartmentEntity) => void;
+}) => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold text-[#0F172A]">Departments</h2>
-          <p className="text-sm text-[#94A3B8]">Organize users by department</p>
+          <p className="text-sm text-[#94A3B8]">Tenant department data shared with employee management</p>
         </div>
-        <Button className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md">
+        <Button onClick={onCreate} className="rounded-md bg-[#0891B2] text-white hover:bg-[#0891B2]/90">
           <Plus size={16} className="mr-2" />
           Add Department
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {departments.map((dept, index) => (
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {departments.map((department, index) => (
           <motion.div
-            key={dept.id}
+            key={department.id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
+            transition={{ delay: index * 0.08 }}
             whileHover={{ y: -4 }}
-            className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-5 hover:border-[#22D3EE]/30 hover:shadow-lg  transition-all cursor-pointer group"
+            className="group cursor-pointer rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-5 transition-all hover:border-[#22D3EE]/30 hover:shadow-lg"
+            onClick={() => onViewMembers(department)}
           >
-            <div className="flex items-start justify-between mb-4">
+            <div className="mb-4 flex items-start justify-between">
               <div
-                className="w-12 h-12 rounded-md flex items-center justify-center"
-                style={{ backgroundColor: `${dept.color}15` }}
+                className="flex h-12 w-12 items-center justify-center rounded-md"
+                style={{ backgroundColor: `${department.color}15` }}
               >
-                <Building2 size={24} style={{ color: dept.color }} />
+                <Building2 size={24} style={{ color: department.color }} />
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="h-8 w-8 rounded-md opacity-0 transition-opacity group-hover:opacity-100"
+                    onClick={(event) => event.stopPropagation()}
                   >
                     <MoreVertical size={16} />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-40 rounded-md">
-                  <DropdownMenuItem className="rounded-md">
-                    <Pencil size={14} className="mr-2" /> Edit
+                <DropdownMenuContent align="end" className="w-44 rounded-md">
+                  <DropdownMenuItem
+                    onClick={(event) => {
+                      event.preventDefault();
+                      onEdit(department);
+                    }}
+                    className="rounded-md"
+                  >
+                    <Pencil size={14} className="mr-2" />
+                    Edit
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="rounded-md">
-                    <Users size={14} className="mr-2" /> View Members
+                  <DropdownMenuItem
+                    onClick={(event) => {
+                      event.preventDefault();
+                      onViewMembers(department);
+                    }}
+                    className="rounded-md"
+                  >
+                    <Users size={14} className="mr-2" />
+                    View Members
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="rounded-md text-red-600">
-                    <Trash2 size={14} className="mr-2" /> Delete
+                  <DropdownMenuItem
+                    onClick={(event) => {
+                      event.preventDefault();
+                      onDelete(department);
+                    }}
+                    className="rounded-md text-red-600 focus:text-red-600"
+                  >
+                    <Trash2 size={14} className="mr-2" />
+                    Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
 
-            <h3 className="font-semibold text-[#0F172A] mb-1 group-hover:text-[#0891B2] transition-colors">
-              {dept.name}
+            <h3 className="mb-1 font-semibold text-[#0F172A] transition-colors group-hover:text-[#0891B2]">
+              {department.name}
             </h3>
-            {dept.head && (
-              <p className="text-sm text-[#94A3B8] mb-3">Head: {dept.head}</p>
+            {department.headName && (
+              <p className="mb-3 text-sm text-[#94A3B8]">Head: {department.headName}</p>
             )}
 
-            <div className="flex items-center gap-2 pt-3 border-t border-[rgba(15,23,42,0.06)]">
-              <Users size={14} className="text-[#475569]" />
-              <span className="text-sm text-[#94A3B8]">{dept.userCount} members</span>
+            <div className="space-y-3">
+              <p className="line-clamp-2 text-sm text-[#475569]">{department.description}</p>
+              <div className="flex items-center justify-between border-t border-[rgba(15,23,42,0.06)] pt-3">
+                <div className="flex items-center gap-2">
+                  <Users size={14} className="text-[#475569]" />
+                  <span className="text-sm text-[#94A3B8]">{department.employeeCount} members</span>
+                </div>
+                <span className="text-sm text-[#94A3B8]">${department.budget.toLocaleString()}</span>
+              </div>
             </div>
           </motion.div>
         ))}
@@ -1808,62 +1925,64 @@ const DepartmentsSection = () => {
   );
 };
 
-// ============================================
-// ACTIVITY LOG SECTION
-// ============================================
-
-const ActivityLogSection = ({ users }: { users: User[] }) => {
-  const getUserById = (id: number) => users.find((u) => u.id === id);
-
-  const getActionIcon = (action: string) => {
-    switch (action) {
-      case "login":
-        return <LogIn size={16} className="text-green-500" />;
-      case "logout":
-        return <LogOut size={16} className="text-[#94A3B8]" />;
-      case "update_profile":
-        return <UserCog size={16} className="text-[#D97706]" />;
-      case "create_task":
-        return <Plus size={16} className="text-[#0891B2]" />;
-      case "complete_task":
-        return <CheckCircle2 size={16} className="text-green-500" />;
-      default:
-        return <Activity size={16} className="text-[#475569]" />;
+const ActivityLogSection = ({
+  logs,
+  usersById,
+  filterAction,
+  onFilterChange,
+  onExport,
+}: {
+  logs: AuditLogItem[];
+  usersById: Map<string, UserRecord>;
+  filterAction: string;
+  onFilterChange: (value: string) => void;
+  onExport: () => void;
+}) => {
+  const filteredLogs = useMemo(() => {
+    if (filterAction === "all") {
+      return logs;
     }
-  };
+    return logs.filter((log) => log.action === filterAction);
+  }, [logs, filterAction]);
+
+  const actionOptions = useMemo(() => {
+    return ["all", ...new Set(logs.map((log) => log.action))];
+  }, [logs]);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold text-[#0F172A]">Activity Log</h2>
-          <p className="text-sm text-[#94A3B8]">Recent user activities and actions</p>
+          <p className="text-sm text-[#94A3B8]">Tenant-wide employee and user activity for this workspace</p>
         </div>
         <div className="flex items-center gap-2">
-          <Select defaultValue="all">
-            <SelectTrigger className="w-40 h-9 rounded-md border-[rgba(15,23,42,0.06)]">
+          <Select value={filterAction} onValueChange={onFilterChange}>
+            <SelectTrigger className="h-9 w-44 rounded-md border-[rgba(15,23,42,0.06)]">
               <SelectValue placeholder="Filter by action" />
             </SelectTrigger>
             <SelectContent className="rounded-md">
-              <SelectItem value="all" className="rounded-md">All Actions</SelectItem>
-              <SelectItem value="login" className="rounded-md">Logins</SelectItem>
-              <SelectItem value="logout" className="rounded-md">Logouts</SelectItem>
-              <SelectItem value="update" className="rounded-md">Updates</SelectItem>
+              {actionOptions.map((action) => (
+                <SelectItem key={action} value={action} className="rounded-md">
+                  {action === "all" ? "All Actions" : action.replace(/_/g, " ")}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
-          <Button variant="outline" className="rounded-md">
+          <Button variant="outline" className="rounded-md" onClick={onExport}>
             <Download size={16} className="mr-2" />
             Export
           </Button>
         </div>
       </div>
 
-      <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden">
+      <div className="overflow-hidden rounded-md border border-[rgba(15,23,42,0.06)] bg-white">
         <Table>
           <TableHeader>
             <TableRow className="bg-[#F8FAFC]">
               <TableHead>User</TableHead>
               <TableHead>Action</TableHead>
+              <TableHead>Module</TableHead>
               <TableHead>Description</TableHead>
               <TableHead>Device</TableHead>
               <TableHead>IP Address</TableHead>
@@ -1871,8 +1990,9 @@ const ActivityLogSection = ({ users }: { users: User[] }) => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {activityLogs.map((log) => {
-              const user = getUserById(log.userId);
+            {filteredLogs.map((log) => {
+              const user = log.user?.id ? usersById.get(log.user.id) : undefined;
+              const device = parseDevice(log.userAgent);
               return (
                 <TableRow key={log.id} className="hover:bg-[#F8FAFC]">
                   <TableCell>
@@ -1881,48 +2001,54 @@ const ActivityLogSection = ({ users }: { users: User[] }) => {
                         <img
                           src={user.avatarUrl}
                           alt={user.fullName}
-                          className="w-8 h-8 rounded-md object-cover"
+                          className="h-8 w-8 rounded-md object-cover"
                         />
                       ) : (
-                        <div className="w-8 h-8 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] text-xs font-bold">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#F1F5F9] text-xs font-bold text-[#0F172A]">
                           {user ? getInitials(user.fullName) : "?"}
                         </div>
                       )}
                       <span className="font-medium text-[#0F172A]">
-                        {user?.fullName || "Unknown User"}
+                        {user?.fullName || (log.user ? `${log.user.firstName} ${log.user.lastName}`.trim() : "Unknown User")}
                       </span>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      {getActionIcon(log.action)}
-                      <span className="text-sm text-[#475569] capitalize">
-                        {log.action.replace("_", " ")}
-                      </span>
+                      {log.action === "LOGIN" && <LogIn size={16} className="text-green-500" />}
+                      {log.action === "LOGOUT" && <LogOut size={16} className="text-[#64748B]" />}
+                      {!["LOGIN", "LOGOUT"].includes(log.action) && <Activity size={16} className="text-[#475569]" />}
+                      <span className="text-sm capitalize text-[#475569]">{log.action.replace(/_/g, " ").toLowerCase()}</span>
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm text-[#475569]">{log.module || "-"}</span>
                   </TableCell>
                   <TableCell>
                     <span className="text-sm text-[#94A3B8]">{log.description}</span>
                   </TableCell>
                   <TableCell>
                     <span className="inline-flex items-center gap-1 text-sm text-[#94A3B8]">
-                      {log.device === "Desktop" ? (
-                        <Monitor size={14} />
-                      ) : (
-                        <Smartphone size={14} />
-                      )}
-                      {log.device || "-"}
+                      {device === "Mobile" ? <Smartphone size={14} /> : <Monitor size={14} />}
+                      {device}
                     </span>
                   </TableCell>
                   <TableCell>
-                    <span className="text-sm text-[#475569] font-mono">{log.ip || "-"}</span>
+                    <span className="font-mono text-sm text-[#475569]">{log.ipAddress || "-"}</span>
                   </TableCell>
                   <TableCell>
-                    <span className="text-sm text-[#94A3B8]">{getRelativeTime(log.timestamp)}</span>
+                    <span className="text-sm text-[#94A3B8]">{getRelativeTime(log.createdAt)}</span>
                   </TableCell>
                 </TableRow>
               );
             })}
+            {filteredLogs.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={7} className="py-10 text-center text-[#94A3B8]">
+                  No activity found for the selected filter.
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </div>
@@ -1930,127 +2056,216 @@ const ActivityLogSection = ({ users }: { users: User[] }) => {
   );
 };
 
-// ============================================
-// MAIN USERS PAGE COMPONENT
-// ============================================
-
 export default function UsersPage() {
   const { toast } = useToast();
 
-  // State
-  const [users, setUsers] = useState<User[]>(initialUsers);
-  const [loading, setLoading] = useState(false);
+  const [users, setUsers] = useState<UserRecord[]>([]);
+  const [roles, setRoles] = useState<ApiRole[]>([]);
+  const [permissions, setPermissions] = useState<ApiPermission[]>([]);
+  const [departments, setDepartments] = useState<DepartmentEntity[]>([]);
+  const [employees, setEmployees] = useState<ApiEmployee[]>([]);
+  const [activityLogs, setActivityLogs] = useState<AuditLogItem[]>([]);
+
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("users");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [filterRole, setFilterRole] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterDepartment, setFilterDepartment] = useState("all");
+  const [activityFilter, setActivityFilter] = useState("all");
 
-  // Dialogs
   const [showUserForm, setShowUserForm] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editingUser, setEditingUser] = useState<UserRecord | null>(null);
   const [showUserProfile, setShowUserProfile] = useState(false);
-  const [viewingUser, setViewingUser] = useState<User | null>(null);
+  const [viewingUser, setViewingUser] = useState<UserRecord | null>(null);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deletingUser, setDeletingUser] = useState<User | null>(null);
+  const [showRoleForm, setShowRoleForm] = useState(false);
+  const [editingRole, setEditingRole] = useState<ApiRole | null>(null);
+  const [showDepartmentDialog, setShowDepartmentDialog] = useState(false);
+  const [editingDepartment, setEditingDepartment] = useState<DepartmentEntity | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
 
-  // Load users from API
-  const loadUsers = async () => {
+  const loadPageData = async () => {
     setLoading(true);
-    try {
-      const data = await getUsers() as any[];
-      const mapped = (data || []).map((u: any) => ({
-        id: u.id,
-        fullName: u.fullName || `${u.firstName || ""} ${u.lastName || ""}`.trim(),
-        email: u.email || "",
-        phone: u.phone || "",
-        role: u.role?.name?.toLowerCase() || "staff",
-        department: u.department || "General",
-        position: u.position || "Team Member",
-        avatarUrl: u.avatar || "",
-        status: u.isActive ? "active" : "inactive",
-        lastLogin: u.lastLogin || "",
-        createdAt: u.createdAt || new Date().toISOString(),
-        updatedAt: u.updatedAt,
-        isOnline: false,
-        permissions: u.permissions || [],
-        teams: u.teams || [],
-        manager: u.manager || "",
-        location: u.location || "",
-        bio: u.bio || "",
-        skills: u.skills || [],
-        loginCount: u.loginCount || 0,
-        tasksCompleted: u.tasksCompleted || 0,
-        projectsCount: u.projectsCount || 0,
-      }));
-      setUsers(mapped.length > 0 ? mapped : initialUsers);
-    } catch (e) {
-      console.error("Failed loading users", e);
-      // Use initial data on error
-      setUsers(initialUsers);
-    } finally {
-      setLoading(false);
+
+    const [
+      usersResult,
+      rolesResult,
+      permissionsResult,
+      departmentsResult,
+      employeesResult,
+      activityLogsResult,
+    ] = await Promise.allSettled([
+      getUsers({ limit: 200, sortBy: "createdAt", sortOrder: "desc" }),
+      fetchRoles(),
+      fetchAllPermissions(),
+      getDepartments(),
+      fetchEmployees(),
+      getAuditLogs({ limit: 200, sortBy: "createdAt", sortOrder: "desc" }),
+    ]);
+
+    if (usersResult.status === "fulfilled") {
+      setUsers(usersResult.value.map(mapUserRecord));
+    } else {
+      toast({
+        title: "Users Unavailable",
+        description: "The user list could not be loaded right now.",
+        variant: "destructive",
+      });
+      setUsers([]);
     }
+
+    if (rolesResult.status === "fulfilled") {
+      setRoles(rolesResult.value);
+    } else {
+      setRoles([]);
+    }
+
+    if (permissionsResult.status === "fulfilled") {
+      setPermissions(permissionsResult.value);
+    } else {
+      setPermissions([]);
+    }
+
+    if (departmentsResult.status === "fulfilled") {
+      setDepartments(departmentsResult.value);
+    } else {
+      setDepartments([]);
+    }
+
+    if (employeesResult.status === "fulfilled") {
+      setEmployees(employeesResult.value);
+    } else {
+      setEmployees([]);
+    }
+
+    if (activityLogsResult.status === "fulfilled") {
+      setActivityLogs(activityLogsResult.value);
+    } else {
+      setActivityLogs([]);
+    }
+
+    setLoading(false);
   };
 
   useEffect(() => {
-    loadUsers();
+    void loadPageData();
   }, []);
 
-  // Filtered users
+  const userMetricsById = useMemo(() => {
+    const metrics = new Map<string, UserMetrics>();
+
+    activityLogs.forEach((log) => {
+      const userId = log.user?.id;
+      if (!userId) {
+        return;
+      }
+
+      const current = metrics.get(userId) || {
+        loginCount: 0,
+        tasksCompleted: 0,
+        projectsCount: 0,
+      };
+
+      if (log.action === "LOGIN") {
+        current.loginCount += 1;
+      }
+      if (log.module === "tasks") {
+        current.tasksCompleted += 1;
+      }
+      if (log.module === "projects") {
+        current.projectsCount += 1;
+      }
+
+      metrics.set(userId, current);
+    });
+
+    return metrics;
+  }, [activityLogs]);
+
+  const usersWithMetrics = useMemo(() => {
+    return users.map((user) => ({
+      ...user,
+      metrics: userMetricsById.get(user.id) || {
+        loginCount: 0,
+        tasksCompleted: 0,
+        projectsCount: 0,
+      },
+    }));
+  }, [userMetricsById, users]);
+
+  const usersById = useMemo(() => {
+    return new Map(users.map((user) => [user.id, user]));
+  }, [users]);
+
   const filteredUsers = useMemo(() => {
-    let result = [...users];
+    let result = [...usersWithMetrics];
 
     if (searchTerm) {
-      result = result.filter(
-        (u) =>
-          u.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          u.position?.toLowerCase().includes(searchTerm.toLowerCase())
+      const query = searchTerm.toLowerCase();
+      result = result.filter((user) =>
+        user.fullName.toLowerCase().includes(query)
+        || user.email.toLowerCase().includes(query)
+        || user.position.toLowerCase().includes(query)
+        || user.department.toLowerCase().includes(query),
       );
     }
 
     if (filterRole !== "all") {
-      result = result.filter((u) => u.role === filterRole);
+      result = result.filter((user) => user.roleId === filterRole);
     }
 
     if (filterStatus !== "all") {
-      result = result.filter((u) => u.status === filterStatus);
+      result = result.filter((user) => user.status === filterStatus);
     }
 
     if (filterDepartment !== "all") {
-      result = result.filter((u) => u.department === filterDepartment);
+      result = result.filter((user) => user.department === filterDepartment);
     }
 
     return result;
-  }, [users, searchTerm, filterRole, filterStatus, filterDepartment]);
+  }, [filterDepartment, filterRole, filterStatus, searchTerm, usersWithMetrics]);
 
-  // Stats
-  const stats = useMemo(() => ({
-    totalUsers: users.length,
-    activeUsers: users.filter((u) => u.status === "active").length,
-    pendingUsers: users.filter((u) => u.status === "pending").length,
-    onlineUsers: users.filter((u) => u.isOnline).length,
-  }), [users]);
+  const allVisibleSelected = filteredUsers.length > 0 && filteredUsers.every((user) => selectedUsers.includes(user.id));
 
-  // Handlers
-  const handleSelectUser = (userId: number) => {
-    setSelectedUsers((prev) =>
-      prev.includes(userId)
-        ? prev.filter((id) => id !== userId)
-        : [...prev, userId]
+  const stats = useMemo(() => {
+    return {
+      totalUsers: users.length,
+      activeUsers: users.filter((user) => user.status === "active").length,
+      pendingUsers: users.filter((user) => user.status === "pending").length,
+      onlineUsers: users.filter((user) => user.isOnline).length,
+    };
+  }, [users]);
+
+  const departmentDialogEmployees = useMemo(
+    () => employees.map(mapEmployeeForDepartmentDialog),
+    [employees],
+  );
+
+  const viewingUserRole = useMemo(() => {
+    if (!viewingUser?.roleId) {
+      return null;
+    }
+    return roles.find((role) => role.id === viewingUser.roleId) || null;
+  }, [roles, viewingUser]);
+
+  const viewingUserActivity = useMemo(() => {
+    if (!viewingUser) {
+      return [];
+    }
+    return activityLogs.filter((log) => log.user?.id === viewingUser.id);
+  }, [activityLogs, viewingUser]);
+
+  const handleSelectUser = (userId: string) => {
+    setSelectedUsers((current) =>
+      current.includes(userId) ? current.filter((id) => id !== userId) : [...current, userId],
     );
   };
 
   const handleSelectAll = () => {
-    if (selectedUsers.length === filteredUsers.length) {
-      setSelectedUsers([]);
-    } else {
-      setSelectedUsers(filteredUsers.map((u) => u.id));
-    }
+    setSelectedUsers(allVisibleSelected ? [] : filteredUsers.map((user) => user.id));
   };
 
   const handleCreateUser = () => {
@@ -2058,236 +2273,403 @@ export default function UsersPage() {
     setShowUserForm(true);
   };
 
-  const handleEditUser = (user: User) => {
+  const handleEditUser = (user: UserRecord) => {
     setEditingUser(user);
     setShowUserForm(true);
   };
 
-  const handleViewUser = (user: User) => {
+  const handleViewUser = (user: UserRecord) => {
     setViewingUser(user);
     setShowUserProfile(true);
   };
 
-  const handleDeleteUser = (user: User) => {
-    setDeletingUser(user);
-    setShowDeleteConfirm(true);
+  const openDeleteDialog = (target: DeleteTarget) => {
+    setDeleteTarget(target);
   };
 
-  const confirmDelete = async () => {
-    if (!deletingUser) return;
+  const handleSendEmail = (user: UserRecord) => {
+    window.location.href = `mailto:${encodeURIComponent(user.email)}`;
+  };
 
+  const handleResetPassword = async (user: UserRecord) => {
     try {
-      await deleteUserApi(deletingUser.id);
-
-      setUsers((prev) => prev.filter((u) => u.id !== deletingUser.id));
+      await requestUserPasswordReset(user.email);
       toast({
-        title: "User Deleted",
-        description: `${deletingUser.fullName} has been removed.`,
+        title: "Reset Email Sent",
+        description: `A password reset email was sent to ${user.email}.`,
       });
-    } catch (e) {
-      // For demo, just remove locally
-      setUsers((prev) => prev.filter((u) => u.id !== deletingUser.id));
+    } catch (error) {
+      console.error("Failed to send password reset email", error);
       toast({
-        title: "User Deleted",
-        description: `${deletingUser.fullName} has been removed.`,
+        title: "Reset Failed",
+        description: `Could not send a password reset email to ${user.email}.`,
+        variant: "destructive",
       });
     }
-
-    setShowDeleteConfirm(false);
-    setDeletingUser(null);
   };
 
-  const handleSubmitUser = async (data: Partial<User>) => {
+  const handleStatusChange = async (userId: string, status: UserStatus) => {
     try {
-      const fullName = (data.fullName || "").trim();
-      const [firstName = "", ...restNames] = fullName.split(" ");
-      const lastName = restNames.join(" ").trim();
+      await updateUserStatusApi(userId, toApiStatus(status));
+      await loadPageData();
+      toast({
+        title: "Status Updated",
+        description: `User status changed to ${status}.`,
+      });
+    } catch (error) {
+      console.error("Failed to update user status", error);
+      toast({
+        title: "Update Failed",
+        description: "The user status could not be updated.",
+        variant: "destructive",
+      });
+    }
+  };
 
+  const handleSubmitUser = async (values: UserFormValues) => {
+    const { firstName, lastName } = splitFullName(values.fullName);
+
+    try {
       if (editingUser) {
-        // Update existing user
         await updateUserApi(editingUser.id, {
-          firstName: firstName || undefined,
-          lastName: lastName || undefined,
-          phone: data.phone || null,
-          isActive: data.status ? data.status === "active" : undefined,
+          firstName,
+          lastName,
+          phone: values.phone || null,
+          department: values.department || null,
+          position: values.position || null,
+          status: toApiStatus(values.status),
         });
 
-        setUsers((prev) =>
-          prev.map((u) =>
-            u.id === editingUser.id ? { ...u, ...data, updatedAt: new Date().toISOString() } : u
-          )
-        );
+        if (values.roleId && values.roleId !== editingUser.roleId) {
+          await updateUserRoleApi(editingUser.id, values.roleId);
+        }
 
         toast({
           title: "User Updated",
-          description: `${data.fullName} has been updated successfully.`,
+          description: `${values.fullName} was updated successfully.`,
         });
       } else {
-        // Create new user
-        const resData = await createUserApi({
-          email: data.email,
-          password: "ChangeMe123!",
-          firstName: firstName || "User",
-          lastName: lastName || "Account",
-          phone: data.phone || null,
-          isActive: data.status ? data.status !== "inactive" : true,
-        }) as any;
+        if (values.sendInviteEmail) {
+          const response = await inviteUserApi({
+            email: values.email.trim(),
+            firstName,
+            lastName,
+            phone: values.phone || null,
+            roleId: values.roleId,
+            department: values.department || null,
+            position: values.position || null,
+          });
 
-        const newUser: User = {
-          id: resData?.id || Date.now(),
-          fullName: data.fullName || "",
-          email: data.email || "",
-          phone: data.phone,
-          role: data.role || "staff",
-          department: data.department,
-          position: data.position,
-          status: (data.status as User["status"]) || "pending",
-          createdAt: new Date().toISOString(),
-          location: data.location,
-          bio: data.bio,
-          loginCount: 0,
-          tasksCompleted: 0,
-          projectsCount: 0,
-        };
+          const inviteDetails = response as InviteWorkspaceUserResponse;
+          toast({
+            title: "Invitation Sent",
+            description: inviteDetails.inviteEmailSent
+              ? `${values.email} was invited successfully.`
+              : inviteDetails.temporaryPassword
+                ? `User created. Temporary password: ${inviteDetails.temporaryPassword}`
+                : `${values.email} was invited successfully.`,
+          });
+        } else {
+          await createUserApi({
+            email: values.email.trim(),
+            password: "ChangeMe123!",
+            firstName,
+            lastName,
+            phone: values.phone || null,
+            roleId: values.roleId,
+            department: values.department || null,
+            position: values.position || null,
+          });
 
-        setUsers((prev) => [newUser, ...prev]);
-
-        toast({
-          title: "User Created",
-          description: `${data.fullName} has been added successfully.`,
-        });
-      }
-    } catch (e) {
-      // Handle error - for demo, proceed with local update
-      if (editingUser) {
-        setUsers((prev) =>
-          prev.map((u) =>
-            u.id === editingUser.id ? { ...u, ...data } : u
-          )
-        );
-      } else {
-        const newUser: User = {
-          id: Date.now(),
-          fullName: data.fullName || "",
-          email: data.email || "",
-          role: data.role || "staff",
-          status: "pending",
-          createdAt: new Date().toISOString(),
-          loginCount: 0,
-          tasksCompleted: 0,
-          projectsCount: 0,
-        };
-        setUsers((prev) => [newUser, ...prev]);
+          toast({
+            title: "User Created",
+            description: `${values.fullName} was added successfully.`,
+          });
+        }
       }
 
+      await loadPageData();
+    } catch (error) {
+      console.error("Failed to save user", error);
       toast({
-        title: editingUser ? "User Updated" : "User Created",
-        description: `${data.fullName} has been ${editingUser ? "updated" : "added"} successfully.`,
+        title: "Save Failed",
+        description: "The user could not be saved.",
+        variant: "destructive",
       });
     }
   };
 
-  const handleStatusChange = (userId: number, status: User["status"]) => {
-    setUsers((prev) =>
-      prev.map((u) => (u.id === userId ? { ...u, status } : u))
+  const handleInviteUsers = async (emails: string[], roleId: string) => {
+    const results = await Promise.allSettled(
+      emails.map((email) => {
+        const { firstName, lastName } = splitFullName(email.split("@")[0].replace(/[._-]/g, " "));
+        return inviteUserApi({
+          email,
+          firstName,
+          lastName,
+          roleId,
+        });
+      }),
     );
+
+    const successCount = results.filter((result) => result.status === "fulfilled").length;
+    const failedCount = results.length - successCount;
+
+    await loadPageData();
+
     toast({
-      title: "Status Updated",
-      description: `User status changed to ${status}.`,
+      title: successCount ? "Invitations Processed" : "Invitations Failed",
+      description: failedCount
+        ? `${successCount} invitation(s) sent, ${failedCount} failed.`
+        : `${successCount} invitation(s) have been sent.`,
+      variant: failedCount && !successCount ? "destructive" : undefined,
     });
   };
 
-  const handleInviteUsers = async (emails: string[], role: string) => {
-    // Simulate sending invitations
-    const newUsers: User[] = emails.map((email, index) => ({
-      id: Date.now() + index,
-      fullName: email.split("@")[0].replace(/[._]/g, " "),
-      email,
-      role,
-      status: "pending" as const,
-      createdAt: new Date().toISOString(),
-      loginCount: 0,
-      tasksCompleted: 0,
-      projectsCount: 0,
-    }));
-
-    setUsers((prev) => [...newUsers, ...prev]);
-
-    toast({
-      title: "Invitations Sent",
-      description: `${emails.length} invitation(s) have been sent.`,
-    });
-  };
-
-  const handleBulkAction = (action: "delete" | "activate" | "deactivate" | "suspend") => {
-    switch (action) {
-      case "delete":
-        setUsers((prev) => prev.filter((u) => !selectedUsers.includes(u.id)));
-        toast({
-          title: "Users Deleted",
-          description: `${selectedUsers.length} user(s) have been deleted.`,
-        });
-        break;
-      case "activate":
-        setUsers((prev) =>
-          prev.map((u) =>
-            selectedUsers.includes(u.id) ? { ...u, status: "active" as const } : u
-          )
-        );
-        toast({
-          title: "Users Activated",
-          description: `${selectedUsers.length} user(s) have been activated.`,
-        });
-        break;
-      case "deactivate":
-        setUsers((prev) =>
-          prev.map((u) =>
-            selectedUsers.includes(u.id) ? { ...u, status: "inactive" as const } : u
-          )
-        );
-        toast({
-          title: "Users Deactivated",
-          description: `${selectedUsers.length} user(s) have been deactivated.`,
-        });
-        break;
-      case "suspend":
-        setUsers((prev) =>
-          prev.map((u) =>
-            selectedUsers.includes(u.id) ? { ...u, status: "suspended" as const } : u
-          )
-        );
-        toast({
-          title: "Users Suspended",
-          description: `${selectedUsers.length} user(s) have been suspended.`,
-        });
-        break;
+  const handleBulkAction = async (action: BulkAction) => {
+    if (!selectedUsers.length) {
+      return;
     }
+
+    const tasks =
+      action === "delete"
+        ? selectedUsers.map((userId) => deleteUserApi(userId))
+        : selectedUsers.map((userId) =>
+            updateUserStatusApi(
+              userId,
+              action === "activate"
+                ? "ACTIVE"
+                : action === "deactivate"
+                  ? "INACTIVE"
+                  : "SUSPENDED",
+            ),
+          );
+
+    const results = await Promise.allSettled(tasks);
+    const successCount = results.filter((result) => result.status === "fulfilled").length;
+    const failedCount = results.length - successCount;
+
     setSelectedUsers([]);
+    await loadPageData();
+
+    toast({
+      title: failedCount ? "Bulk Action Completed with Errors" : "Bulk Action Completed",
+      description: failedCount
+        ? `${successCount} user(s) updated, ${failedCount} failed.`
+        : `${successCount} user(s) updated successfully.`,
+      variant: failedCount ? "destructive" : undefined,
+    });
+  };
+
+  const handleRoleSubmit = async (values: RoleFormValues) => {
+    try {
+      if (editingRole) {
+        await updateRoleApi(editingRole.id, {
+          name: values.name,
+          description: values.description || undefined,
+          permissionIds: values.permissionIds,
+        });
+        toast({
+          title: "Role Updated",
+          description: `${values.name} was updated successfully.`,
+        });
+      } else {
+        await createRoleApi({
+          name: values.name,
+          description: values.description || undefined,
+          permissionIds: values.permissionIds,
+        });
+        toast({
+          title: "Role Created",
+          description: `${values.name} was created successfully.`,
+        });
+      }
+
+      await loadPageData();
+    } catch (error) {
+      console.error("Failed to save role", error);
+      toast({
+        title: "Role Save Failed",
+        description: "The role could not be saved.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDuplicateRole = async (role: ApiRole) => {
+    try {
+      await createRoleApi({
+        name: `${role.name} Copy`,
+        description: role.description || undefined,
+        permissionIds: role.permissions.map((permission) => permission.id),
+      });
+
+      await loadPageData();
+      toast({
+        title: "Role Duplicated",
+        description: `${role.name} was duplicated successfully.`,
+      });
+    } catch (error) {
+      console.error("Failed to duplicate role", error);
+      toast({
+        title: "Duplicate Failed",
+        description: "The role could not be duplicated.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDepartmentSubmit = async (values: {
+    name: string;
+    code: string;
+    description: string;
+    headId?: string;
+    budget: string;
+    color: string;
+  }) => {
+    try {
+      const payload = {
+        name: values.name,
+        code: values.code,
+        description: values.description,
+        headId: values.headId || null,
+        budget: Number(values.budget),
+        color: values.color,
+      };
+
+      if (editingDepartment) {
+        await updateDepartmentApi(editingDepartment.id, payload);
+        toast({
+          title: "Department Updated",
+          description: `${values.name} was updated successfully.`,
+        });
+      } else {
+        await createDepartment(payload);
+        toast({
+          title: "Department Created",
+          description: `${values.name} was added successfully.`,
+        });
+      }
+
+      await loadPageData();
+    } catch (error) {
+      console.error("Failed to save department", error);
+      toast({
+        title: "Department Save Failed",
+        description: "The department could not be saved.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleViewMembers = (department: DepartmentEntity) => {
+    setActiveTab("users");
+    setFilterDepartment(department.name);
+    toast({
+      title: "Department Filter Applied",
+      description: `Showing users in ${department.name}.`,
+    });
+  };
+
+  const handleManagePermissions = () => {
+    if (!viewingUser?.roleId) {
+      return;
+    }
+
+    const matchingRole = roles.find((role) => role.id === viewingUser.roleId);
+    setShowUserProfile(false);
+    setActiveTab("roles");
+
+    if (matchingRole) {
+      setEditingRole(matchingRole);
+      setShowRoleForm(true);
+    }
+  };
+
+  const handleExportAuditLogs = async () => {
+    try {
+      const blob = await exportAuditLogs({ limit: 5000, sortBy: "createdAt", sortOrder: "desc" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Failed to export audit logs", error);
+      toast({
+        title: "Export Failed",
+        description: "Audit logs could not be exported.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) {
+      return;
+    }
+
+    try {
+      if (deleteTarget.type === "user") {
+        await deleteUserApi(deleteTarget.id);
+        toast({
+          title: "User Deleted",
+          description: `${deleteTarget.name} was removed from the workspace.`,
+        });
+      }
+
+      if (deleteTarget.type === "role") {
+        await deleteRoleApi(deleteTarget.id);
+        toast({
+          title: "Role Deleted",
+          description: `${deleteTarget.name} was deleted successfully.`,
+        });
+      }
+
+      if (deleteTarget.type === "department") {
+        await deleteDepartmentApi(deleteTarget.id);
+        toast({
+          title: "Department Deleted",
+          description: `${deleteTarget.name} was deleted successfully.`,
+        });
+      }
+
+      await loadPageData();
+    } catch (error) {
+      console.error("Failed to delete item", error);
+      toast({
+        title: "Delete Failed",
+        description:
+          deleteTarget.type === "department"
+            ? "Departments with active employees cannot be deleted."
+            : deleteTarget.type === "role"
+              ? "Roles assigned to active users cannot be deleted."
+              : `The selected ${deleteTarget.type} could not be deleted.`,
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteTarget(null);
+    }
   };
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
-
-      <main
-        className={cn(
-          "flex-1 transition-all duration-300"
-        )}
-      >
-        {/* Header */}
-        <header className="crm-module-header sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-[rgba(15,23,42,0.06)]">
+      <main className="flex-1 transition-all duration-300">
+        <header className="crm-module-header sticky top-0 z-30 border-b border-[rgba(15,23,42,0.06)] bg-white/80 backdrop-blur-md">
           <div className="px-6 py-4">
             <div className="flex items-center justify-between">
-              {/* Title & Breadcrumb */}
               <div>
-                <div className="hidden sm:flex items-center gap-2 text-sm text-[#94A3B8] mb-1">
+                <div className="mb-1 hidden items-center gap-2 text-sm text-[#94A3B8] sm:flex">
                   <span>Dashboard</span>
                   <ChevronRight size={14} />
-                  <span className="text-[#0891B2] font-medium">Users</span>
+                  <span className="font-medium text-[#0891B2]">Users</span>
                 </div>
-                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">User Management</h1>
+                <h1 className="text-xl font-bold text-[#0F172A] sm:text-2xl">User Management</h1>
               </div>
 
-              {/* Header Actions */}
               <div className="flex items-center gap-3">
                 <Button
                   variant="outline"
@@ -2297,10 +2679,7 @@ export default function UsersPage() {
                   <MailPlus size={16} className="mr-2" />
                   Invite Users
                 </Button>
-                <Button
-                  onClick={handleCreateUser}
-                  className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
-                >
+                <Button onClick={handleCreateUser} className="rounded-md bg-[#0891B2] text-white hover:bg-[#0891B2]/90">
                   <UserPlus size={16} className="mr-2" />
                   Add User
                 </Button>
@@ -2311,8 +2690,8 @@ export default function UsersPage() {
                   iconSize={20}
                 />
 
-                <div className="flex items-center gap-3 pl-3 border-l border-[rgba(15,23,42,0.06)]">
-                  <div className="h-10 w-10 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] font-bold ">
+                <div className="flex items-center gap-3 border-l border-[rgba(15,23,42,0.06)] pl-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[#F1F5F9] font-bold text-[#0F172A]">
                     SA
                   </div>
                   <div className="hidden sm:block">
@@ -2325,7 +2704,6 @@ export default function UsersPage() {
             </div>
           </div>
 
-          {/* Tabs */}
           <div className="px-6">
             <div className="flex items-center gap-1">
               {[
@@ -2338,10 +2716,10 @@ export default function UsersPage() {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
-                    "flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all",
+                    "flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-all",
                     activeTab === tab.id
-                      ? "text-[#0891B2] border-[#22D3EE]"
-                      : "text-[#94A3B8] border-transparent hover:text-slate-200"
+                      ? "border-[#22D3EE] text-[#0891B2]"
+                      : "border-transparent text-[#94A3B8] hover:text-[#475569]",
                   )}
                 >
                   <tab.icon size={16} />
@@ -2352,79 +2730,43 @@ export default function UsersPage() {
           </div>
         </header>
 
-        {/* Content */}
         <div className="p-6">
-          {/* Users Tab */}
           {activeTab === "users" && (
             <div className="space-y-6">
-              {/* Stats Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard
-                  title="Total Users"
-                  value={stats.totalUsers}
-                  change={12}
-                  changeLabel="vs last month"
-                  icon={Users}
-                  color="teal"
-                  delay={0}
-                />
-                <StatCard
-                  title="Active Users"
-                  value={stats.activeUsers}
-                  change={8}
-                  changeLabel="vs last month"
-                  icon={UserCheck}
-                  color="green"
-                  delay={0.1}
-                />
-                <StatCard
-                  title="Online Now"
-                  value={stats.onlineUsers}
-                  icon={Activity}
-                  color="blue"
-                  delay={0.2}
-                />
-                <StatCard
-                  title="Pending Invites"
-                  value={stats.pendingUsers}
-                  icon={Clock}
-                  color="gold"
-                  delay={0.3}
-                />
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <StatCard title="Total Users" value={stats.totalUsers} change={12} changeLabel="vs last month" icon={Users} color="teal" delay={0} />
+                <StatCard title="Active Users" value={stats.activeUsers} change={8} changeLabel="vs last month" icon={UserCheck} color="green" delay={0.08} />
+                <StatCard title="Online Now" value={stats.onlineUsers} icon={Activity} color="blue" delay={0.16} />
+                <StatCard title="Pending Invites" value={stats.pendingUsers} icon={Clock} color="gold" delay={0.24} />
               </div>
 
-              {/* Toolbar */}
-              <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-md border border-[rgba(15,23,42,0.06)]">
-                <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-4 rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4">
+                <div className="flex flex-wrap items-center gap-3">
                   <Checkbox
-                    checked={selectedUsers.length > 0 && selectedUsers.length === filteredUsers.length}
+                    checked={allVisibleSelected}
                     onCheckedChange={handleSelectAll}
-                    className="data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
+                    className="border-[#22D3EE] data-[state=checked]:border-[#22D3EE] data-[state=checked]:bg-[#0891B2]"
                   />
 
-                  {/* Search */}
                   <div className="relative">
                     <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                     <Input
                       value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
+                      onChange={(event) => setSearchTerm(event.target.value)}
                       placeholder="Search users..."
-                      className="h-10 w-64 pl-9 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
+                      className="h-10 w-64 rounded-md border-[rgba(15,23,42,0.06)] pl-9 focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
                     />
                   </div>
 
-                  {/* Bulk Actions */}
                   <AnimatePresence>
                     {selectedUsers.length > 0 && (
                       <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-[#0891B2]/10 rounded-md"
+                        className="flex items-center gap-2 rounded-md bg-[#0891B2]/10 px-3 py-1.5"
                       >
-                        <span className="text-sm font-medium text-[#0891B2]">
-                          {selectedUsers.length} selected
-                        </span>
+                        <span className="text-sm font-medium text-[#0891B2]">{selectedUsers.length} selected</span>
                         <div className="h-4 w-px bg-[#0891B2]/30" />
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -2433,41 +2775,26 @@ export default function UsersPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="start" className="w-48 rounded-md">
-                            <DropdownMenuItem
-                              onClick={() => handleBulkAction("activate")}
-                              className="rounded-md"
-                            >
+                            <DropdownMenuItem onClick={() => handleBulkAction("activate")} className="rounded-md">
                               <UserCheck size={14} className="mr-2" />
                               Activate
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleBulkAction("deactivate")}
-                              className="rounded-md"
-                            >
+                            <DropdownMenuItem onClick={() => handleBulkAction("deactivate")} className="rounded-md">
                               <UserX size={14} className="mr-2" />
                               Deactivate
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleBulkAction("suspend")}
-                              className="rounded-md"
-                            >
+                            <DropdownMenuItem onClick={() => handleBulkAction("suspend")} className="rounded-md">
                               <ShieldOff size={14} className="mr-2" />
                               Suspend
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => handleBulkAction("delete")}
-                              className="rounded-md text-red-600 focus:text-red-600"
-                            >
+                            <DropdownMenuItem onClick={() => handleBulkAction("delete")} className="rounded-md text-red-600 focus:text-red-600">
                               <Trash2 size={14} className="mr-2" />
                               Delete
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
-                        <button
-                          onClick={() => setSelectedUsers([])}
-                          className="p-1 rounded-md hover:bg-[#0891B2]/20"
-                        >
+                        <button onClick={() => setSelectedUsers([])} className="rounded-md p-1 hover:bg-[#0891B2]/20">
                           <X size={14} className="text-[#0891B2]" />
                         </button>
                       </motion.div>
@@ -2475,10 +2802,9 @@ export default function UsersPage() {
                   </AnimatePresence>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  {/* Filters */}
+                <div className="flex flex-wrap items-center gap-2">
                   <Select value={filterRole} onValueChange={setFilterRole}>
-                    <SelectTrigger className="w-32 h-10 rounded-md border-[rgba(15,23,42,0.06)]">
+                    <SelectTrigger className="h-10 w-36 rounded-md border-[rgba(15,23,42,0.06)]">
                       <SelectValue placeholder="Role" />
                     </SelectTrigger>
                     <SelectContent className="rounded-md">
@@ -2492,41 +2818,39 @@ export default function UsersPage() {
                   </Select>
 
                   <Select value={filterStatus} onValueChange={setFilterStatus}>
-                    <SelectTrigger className="w-32 h-10 rounded-md border-[rgba(15,23,42,0.06)]">
+                    <SelectTrigger className="h-10 w-36 rounded-md border-[rgba(15,23,42,0.06)]">
                       <SelectValue placeholder="Status" />
                     </SelectTrigger>
                     <SelectContent className="rounded-md">
                       <SelectItem value="all" className="rounded-md">All Status</SelectItem>
-                      <SelectItem value="active" className="rounded-md">Active</SelectItem>
-                      <SelectItem value="inactive" className="rounded-md">Inactive</SelectItem>
-                      <SelectItem value="pending" className="rounded-md">Pending</SelectItem>
-                      <SelectItem value="suspended" className="rounded-md">Suspended</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <Select value={filterDepartment} onValueChange={setFilterDepartment}>
-                    <SelectTrigger className="w-40 h-10 rounded-md border-[rgba(15,23,42,0.06)]">
-                      <SelectValue placeholder="Department" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-md">
-                      <SelectItem value="all" className="rounded-md">All Departments</SelectItem>
-                      {departments.map((dept) => (
-                        <SelectItem key={dept.id} value={dept.name} className="rounded-md">
-                          {dept.name}
+                      {STATUS_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value} className="rounded-md">
+                          {option.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
 
-                  {/* View Toggle */}
-                  <div className="flex items-center p-1 bg-white/5 rounded-md">
+                  <Select value={filterDepartment} onValueChange={setFilterDepartment}>
+                    <SelectTrigger className="h-10 w-44 rounded-md border-[rgba(15,23,42,0.06)]">
+                      <SelectValue placeholder="Department" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-md">
+                      <SelectItem value="all" className="rounded-md">All Departments</SelectItem>
+                      {departments.map((department) => (
+                        <SelectItem key={department.id} value={department.name} className="rounded-md">
+                          {department.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <div className="flex items-center rounded-md bg-[#F8FAFC] p-1">
                     <button
                       onClick={() => setViewMode("grid")}
                       className={cn(
-                        "p-2 rounded-md transition-all",
-                        viewMode === "grid"
-                          ? "bg-white text-[#0891B2] shadow-sm"
-                          : "text-[#94A3B8] hover:text-slate-200"
+                        "rounded-md p-2 transition-all",
+                        viewMode === "grid" ? "bg-white text-[#0891B2] shadow-sm" : "text-[#94A3B8] hover:text-[#475569]",
                       )}
                     >
                       <LayoutGrid size={18} />
@@ -2534,59 +2858,55 @@ export default function UsersPage() {
                     <button
                       onClick={() => setViewMode("list")}
                       className={cn(
-                        "p-2 rounded-md transition-all",
-                        viewMode === "list"
-                          ? "bg-white text-[#0891B2] shadow-sm"
-                          : "text-[#94A3B8] hover:text-slate-200"
+                        "rounded-md p-2 transition-all",
+                        viewMode === "list" ? "bg-white text-[#0891B2] shadow-sm" : "text-[#94A3B8] hover:text-[#475569]",
                       )}
                     >
                       <List size={18} />
                     </button>
                   </div>
 
-                  <Button
-                    variant="outline"
-                    onClick={loadUsers}
-                    className="rounded-md border-[rgba(15,23,42,0.06)]"
-                  >
+                  <Button variant="outline" onClick={() => void loadPageData()} className="rounded-md border-[rgba(15,23,42,0.06)]">
                     <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
                   </Button>
                 </div>
               </div>
 
-              {/* Users Grid/List */}
               {loading ? (
                 <div className="flex items-center justify-center py-20">
                   <RefreshCw size={32} className="animate-spin text-[#0891B2]" />
                 </div>
               ) : viewMode === "grid" ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   <AnimatePresence>
                     {filteredUsers.map((user, index) => (
                       <UserCard
                         key={user.id}
                         user={user}
+                        metrics={user.metrics}
                         isSelected={selectedUsers.includes(user.id)}
                         onSelect={() => handleSelectUser(user.id)}
                         onView={() => handleViewUser(user)}
                         onEdit={() => handleEditUser(user)}
-                        onDelete={() => handleDeleteUser(user)}
-                        onStatusChange={(status) => handleStatusChange(user.id, status)}
-                        delay={index * 0.05}
+                        onDelete={() => openDeleteDialog({ type: "user", id: user.id, name: user.fullName })}
+                        onSendEmail={() => handleSendEmail(user)}
+                        onResetPassword={() => void handleResetPassword(user)}
+                        onStatusChange={(status) => void handleStatusChange(user.id, status)}
+                        delay={index * 0.04}
                       />
                     ))}
                   </AnimatePresence>
                 </div>
               ) : (
-                <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden">
+                <div className="overflow-hidden rounded-md border border-[rgba(15,23,42,0.06)] bg-white">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-[#F8FAFC]">
                         <TableHead className="w-12">
                           <Checkbox
-                            checked={selectedUsers.length === filteredUsers.length}
+                            checked={allVisibleSelected}
                             onCheckedChange={handleSelectAll}
-                            className="data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
+                            className="border-[#22D3EE] data-[state=checked]:border-[#22D3EE] data-[state=checked]:bg-[#0891B2]"
                           />
                         </TableHead>
                         <TableHead>User</TableHead>
@@ -2602,51 +2922,36 @@ export default function UsersPage() {
                         <UserRow
                           key={user.id}
                           user={user}
+                          metrics={user.metrics}
                           isSelected={selectedUsers.includes(user.id)}
                           onSelect={() => handleSelectUser(user.id)}
                           onView={() => handleViewUser(user)}
                           onEdit={() => handleEditUser(user)}
-                          onDelete={() => handleDeleteUser(user)}
-                          onStatusChange={(status) => handleStatusChange(user.id, status)}
+                          onDelete={() => openDeleteDialog({ type: "user", id: user.id, name: user.fullName })}
+                          onSendEmail={() => handleSendEmail(user)}
+                          onResetPassword={() => void handleResetPassword(user)}
+                          onStatusChange={(status) => void handleStatusChange(user.id, status)}
                         />
                       ))}
                     </TableBody>
                   </Table>
-
-                  {filteredUsers.length === 0 && (
-                    <div className="text-center py-12">
-                      <Users size={48} className="mx-auto text-[#475569] mb-4" />
-                      <h3 className="text-lg font-semibold text-[#0F172A] mb-2">No users found</h3>
-                      <p className="text-[#94A3B8]">
-                        {searchTerm
-                          ? `No users match "${searchTerm}"`
-                          : "Add your first user to get started"}
-                      </p>
-                    </div>
-                  )}
                 </div>
               )}
 
-              {/* Empty State for Grid */}
-              {viewMode === "grid" && filteredUsers.length === 0 && !loading && (
+              {!loading && filteredUsers.length === 0 && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="flex flex-col items-center justify-center py-20 bg-white rounded-md border border-[rgba(15,23,42,0.06)]"
+                  className="flex flex-col items-center justify-center rounded-md border border-[rgba(15,23,42,0.06)] bg-white py-20"
                 >
-                  <div className="w-20 h-20 rounded-md bg-white/5 flex items-center justify-center mb-4">
+                  <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-md bg-[#F8FAFC]">
                     <Users size={40} className="text-[#475569]" />
                   </div>
-                  <h3 className="text-lg font-semibold text-[#0F172A] mb-2">No users found</h3>
-                  <p className="text-[#94A3B8] text-center mb-6">
-                    {searchTerm
-                      ? `No users match "${searchTerm}"`
-                      : "Add your first user to get started"}
+                  <h3 className="mb-2 text-lg font-semibold text-[#0F172A]">No users found</h3>
+                  <p className="mb-6 text-center text-[#94A3B8]">
+                    {searchTerm ? `No users match "${searchTerm}"` : "Add your first user to get started"}
                   </p>
-                  <Button
-                    onClick={handleCreateUser}
-                    className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
-                  >
+                  <Button onClick={handleCreateUser} className="rounded-md bg-[#0891B2] text-white hover:bg-[#0891B2]/90">
                     <UserPlus size={16} className="mr-2" />
                     Add User
                   </Button>
@@ -2655,18 +2960,50 @@ export default function UsersPage() {
             </div>
           )}
 
-          {/* Roles Tab */}
-          {activeTab === "roles" && <RolesSection />}
+          {activeTab === "roles" && (
+            <RolesSection
+              roles={roles}
+              onCreate={() => {
+                setEditingRole(null);
+                setShowRoleForm(true);
+              }}
+              onEdit={(role) => {
+                setEditingRole(role);
+                setShowRoleForm(true);
+              }}
+              onDuplicate={(role) => void handleDuplicateRole(role)}
+              onDelete={(role) => openDeleteDialog({ type: "role", id: role.id, name: role.name })}
+            />
+          )}
 
-          {/* Departments Tab */}
-          {activeTab === "departments" && <DepartmentsSection />}
+          {activeTab === "departments" && (
+            <DepartmentsSection
+              departments={departments}
+              onCreate={() => {
+                setEditingDepartment(null);
+                setShowDepartmentDialog(true);
+              }}
+              onEdit={(department) => {
+                setEditingDepartment(department);
+                setShowDepartmentDialog(true);
+              }}
+              onViewMembers={handleViewMembers}
+              onDelete={(department) => openDeleteDialog({ type: "department", id: department.id, name: department.name })}
+            />
+          )}
 
-          {/* Activity Log Tab */}
-          {activeTab === "activity" && <ActivityLogSection users={users} />}
+          {activeTab === "activity" && (
+            <ActivityLogSection
+              logs={activityLogs}
+              usersById={usersById}
+              filterAction={activityFilter}
+              onFilterChange={setActivityFilter}
+              onExport={() => void handleExportAuditLogs()}
+            />
+          )}
         </div>
       </main>
 
-      {/* User Form Dialog */}
       <UserFormDialog
         isOpen={showUserForm}
         onClose={() => {
@@ -2674,10 +3011,35 @@ export default function UsersPage() {
           setEditingUser(null);
         }}
         user={editingUser}
+        roles={roles}
+        departments={departments}
         onSubmit={handleSubmitUser}
       />
 
-      {/* User Profile Dialog */}
+      <RoleFormDialog
+        open={showRoleForm}
+        role={editingRole}
+        permissions={permissions}
+        onClose={() => {
+          setShowRoleForm(false);
+          setEditingRole(null);
+        }}
+        onSubmit={handleRoleSubmit}
+      />
+
+      <AddDepartmentDialog
+        open={showDepartmentDialog}
+        onOpenChange={(open) => {
+          setShowDepartmentDialog(open);
+          if (!open) {
+            setEditingDepartment(null);
+          }
+        }}
+        employees={departmentDialogEmployees}
+        editingDepartment={toDepartmentDialogEntity(editingDepartment)}
+        onSubmit={handleDepartmentSubmit}
+      />
+
       <UserProfileDialog
         isOpen={showUserProfile}
         onClose={() => {
@@ -2685,7 +3047,17 @@ export default function UsersPage() {
           setViewingUser(null);
         }}
         user={viewingUser}
+        metrics={viewingUser ? userMetricsById.get(viewingUser.id) || { loginCount: 0, tasksCompleted: 0, projectsCount: 0 } : { loginCount: 0, tasksCompleted: 0, projectsCount: 0 }}
+        role={viewingUserRole}
+        userActivity={viewingUserActivity}
         onEdit={() => {
+          setShowUserProfile(false);
+          if (viewingUser) {
+            handleEditUser(viewingUser);
+          }
+        }}
+        onManagePermissions={handleManagePermissions}
+        onChangeRole={() => {
           setShowUserProfile(false);
           if (viewingUser) {
             handleEditUser(viewingUser);
@@ -2693,30 +3065,28 @@ export default function UsersPage() {
         }}
       />
 
-      {/* Invite Users Dialog */}
       <InviteUsersDialog
         isOpen={showInviteDialog}
         onClose={() => setShowInviteDialog(false)}
+        roles={roles}
         onInvite={handleInviteUsers}
       />
 
-      {/* Delete Confirmation */}
-      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+      <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent className="rounded-md">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-[#0F172A]">Delete User?</AlertDialogTitle>
+            <AlertDialogTitle className="text-[#0F172A]">
+              Delete {deleteTarget?.type ? `${deleteTarget.type.charAt(0).toUpperCase()}${deleteTarget.type.slice(1)}` : "Item"}?
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>{deletingUser?.fullName}</strong>? This action cannot be undone.
+              Are you sure you want to delete <strong>{deleteTarget?.name}</strong>? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="rounded-md">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDelete}
-              className="bg-red-500 hover:bg-red-600 text-[#0F172A] rounded-md"
-            >
+            <AlertDialogAction onClick={() => void confirmDelete()} className="rounded-md bg-red-500 text-white hover:bg-red-600">
               <Trash2 size={16} className="mr-2" />
-              Delete User
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

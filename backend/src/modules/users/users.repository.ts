@@ -9,6 +9,8 @@ const tenantMembershipInclude = (tenantId: string) => ({
     select: {
       id: true,
       isActive: true,
+      department: true,
+      position: true,
       role: {
         select: {
           id: true,
@@ -65,6 +67,8 @@ export class UsersRepository {
                 create: {
                   tenantId,
                   roleId: data.roleId,
+                  department: data.department || null,
+                  position: data.position || null,
                   isActive: true,
                 },
               }
@@ -132,24 +136,51 @@ export class UsersRepository {
   }
 
   async update(id: string, tenantId: string, data: UpdateUserDto) {
-    await prisma.user.update({
-      where: { id },
-      data: {
-        ...(data.firstName !== undefined ? { firstName: data.firstName } : {}),
-        ...(data.lastName !== undefined ? { lastName: data.lastName } : {}),
-        ...(data.phone !== undefined ? { phone: data.phone } : {}),
-        ...(data.avatar !== undefined ? { avatar: data.avatar } : {}),
-        ...(data.status !== undefined ? { status: data.status } : {}),
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id },
+        data: {
+          ...(data.firstName !== undefined ? { firstName: data.firstName } : {}),
+          ...(data.lastName !== undefined ? { lastName: data.lastName } : {}),
+          ...(data.phone !== undefined ? { phone: data.phone } : {}),
+          ...(data.avatar !== undefined ? { avatar: data.avatar } : {}),
+          ...(data.status !== undefined ? { status: data.status } : {}),
+        },
+      });
+
+      if (data.department !== undefined || data.position !== undefined) {
+        await tx.employee.updateMany({
+          where: {
+            tenantId,
+            userId: id,
+          },
+          data: {
+            ...(data.department !== undefined ? { department: data.department } : {}),
+            ...(data.position !== undefined ? { position: data.position } : {}),
+          },
+        });
+      }
     });
 
     return this.findById(id, tenantId);
   }
 
   async updateStatus(id: string, tenantId: string, status: UserStatus) {
-    await prisma.user.update({
-      where: { id },
-      data: { status },
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id },
+        data: { status },
+      });
+
+      await tx.employee.updateMany({
+        where: {
+          tenantId,
+          userId: id,
+        },
+        data: {
+          isActive: status === 'ACTIVE' || status === 'PENDING_VERIFICATION',
+        },
+      });
     });
 
     return this.findById(id, tenantId);

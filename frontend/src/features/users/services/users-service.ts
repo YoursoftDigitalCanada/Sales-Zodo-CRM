@@ -6,6 +6,38 @@ export interface UserEntity {
     [key: string]: unknown;
 }
 
+export type WorkspaceUserStatus =
+    | "ACTIVE"
+    | "INACTIVE"
+    | "SUSPENDED"
+    | "PENDING_VERIFICATION";
+
+export interface WorkspaceUserEntity {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    fullName: string;
+    phone: string | null;
+    avatar: string | null;
+    status: WorkspaceUserStatus;
+    emailVerified: boolean;
+    lastLoginAt: string | null;
+    employeeId: string | null;
+    role: { id: string; name: string } | null;
+    department: string | null;
+    position: string | null;
+    membershipStatus: "active" | "invited" | "suspended";
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface InviteWorkspaceUserResponse {
+    user: WorkspaceUserEntity;
+    temporaryPassword?: string;
+    inviteEmailSent: boolean;
+}
+
 export interface DepartmentEntity {
     id: string;
     name: string;
@@ -135,19 +167,41 @@ export interface LeaveRequestEntity {
     rejectionReason?: string;
 }
 
-export async function getUsers(): Promise<UserEntity[]> {
-    const response = await api.get("/users");
-    return extractApiArray<UserEntity>(response.data);
+export async function getUsers(params?: Record<string, unknown>): Promise<WorkspaceUserEntity[]> {
+    const response = await api.get("/users", { params });
+    return extractApiArray<WorkspaceUserEntity>(response.data);
 }
 
-export async function createUser(data: Record<string, unknown>): Promise<UserEntity> {
+export async function createUser(data: Record<string, unknown>): Promise<WorkspaceUserEntity> {
     const response = await api.post("/users", data);
-    return response.data?.data || response.data;
+    return extractApiData<WorkspaceUserEntity>(response.data);
 }
 
-export async function updateUser(id: string | number, data: Record<string, unknown>): Promise<UserEntity> {
+export async function updateUser(id: string | number, data: Record<string, unknown>): Promise<WorkspaceUserEntity> {
     const response = await api.put(`/users/${id}`, data);
-    return response.data?.data || response.data;
+    return extractApiData<WorkspaceUserEntity>(response.data);
+}
+
+export async function inviteUser(data: Record<string, unknown>): Promise<InviteWorkspaceUserResponse> {
+    const response = await api.post("/users/invite", data);
+    return extractApiData<InviteWorkspaceUserResponse>(response.data);
+}
+
+export async function updateUserRole(id: string | number, roleId: string): Promise<WorkspaceUserEntity> {
+    const response = await api.put(`/users/${id}/role`, { roleId });
+    return extractApiData<WorkspaceUserEntity>(response.data);
+}
+
+export async function updateUserStatus(
+    id: string | number,
+    status: WorkspaceUserStatus,
+): Promise<WorkspaceUserEntity> {
+    const response = await api.patch(`/users/${id}/status`, { status });
+    return extractApiData<WorkspaceUserEntity>(response.data);
+}
+
+export async function requestUserPasswordReset(email: string): Promise<void> {
+    await api.post("/auth/forgot-password", { email });
 }
 
 export async function deleteUser(id: string | number): Promise<void> {

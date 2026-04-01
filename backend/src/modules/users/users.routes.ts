@@ -8,6 +8,7 @@ import {
   createUserSchema,
   inviteUserSchema,
   updateUserRoleSchema,
+  updateUserStatusSchema,
   updateUserSchema,
   userIdSchema,
   userQuerySchema,
@@ -24,7 +25,7 @@ router.post('/invite', requirePermission(PERMISSIONS.USERS_CREATE), validate(inv
 router.get('/:id', requirePermission(PERMISSIONS.USERS_VIEW), validate(userIdSchema), usersController.getById.bind(usersController));
 router.put('/:id', requirePermission(PERMISSIONS.USERS_UPDATE), validate(userIdSchema), validate(updateUserSchema), usersController.update.bind(usersController));
 router.put('/:id/role', requirePermission(PERMISSIONS.USERS_UPDATE), validate(userIdSchema), validate(updateUserRoleSchema), usersController.updateRole.bind(usersController));
-router.patch('/:id/status', requirePermission(PERMISSIONS.USERS_MANAGE_STATUS), validate(userIdSchema), usersController.updateStatus.bind(usersController));
+router.patch('/:id/status', requirePermission(PERMISSIONS.USERS_MANAGE_STATUS), validate(userIdSchema), validate(updateUserStatusSchema), usersController.updateStatus.bind(usersController));
 router.delete('/:id', requirePermission(PERMISSIONS.USERS_DELETE), validate(userIdSchema), usersController.delete.bind(usersController));
 
 export default router;

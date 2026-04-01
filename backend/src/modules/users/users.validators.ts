@@ -5,6 +5,8 @@ const baseUserFields = {
   firstName: z.string().min(1).max(100),
   lastName: z.string().min(1).max(100),
   phone: z.string().max(50).optional().nullable(),
+  department: z.string().max(100).optional().nullable(),
+  position: z.string().max(100).optional().nullable(),
   roleId: z.string().uuid().optional(),
 };
 
@@ -22,6 +24,8 @@ export const inviteUserSchema = z.object({
     firstName: z.string().max(100).optional().default(''),
     lastName: z.string().max(100).optional().default(''),
     phone: z.string().max(50).optional().nullable(),
+    department: z.string().max(100).optional().nullable(),
+    position: z.string().max(100).optional().nullable(),
     roleId: z.string().uuid(),
   }),
 });
@@ -33,12 +37,20 @@ export const updateUserSchema = z.object({
     phone: z.string().max(50).optional().nullable(),
     avatar: z.string().url().optional().nullable(),
     status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED', 'PENDING_VERIFICATION']).optional(),
+    department: z.string().max(100).optional().nullable(),
+    position: z.string().max(100).optional().nullable(),
   }),
 });
 
 export const updateUserRoleSchema = z.object({
   body: z.object({
     roleId: z.string().uuid(),
+  }),
+});
+
+export const updateUserStatusSchema = z.object({
+  body: z.object({
+    status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED', 'PENDING_VERIFICATION']),
   }),
 });
 

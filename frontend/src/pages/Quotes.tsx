@@ -571,13 +571,13 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
                   <Plus size={14} className="mr-1" />Add Item
                 </Button>
               </div>
-              <div className="border border-[rgba(15,23,42,0.06)] rounded-md overflow-hidden">
-                <table className="w-full text-sm">
+              <div className="border border-[rgba(15,23,42,0.06)] rounded-md overflow-x-auto">
+                <table className="w-full min-w-[640px] text-sm">
                   <thead><tr className="bg-[#F8FAFC] text-[#475569]">
                     <th className="text-left px-3 py-2 text-xs font-medium">Description</th>
                     <th className="text-center px-3 py-2 text-xs font-medium w-20">Qty</th>
-                    <th className="text-center px-3 py-2 text-xs font-medium w-24">Rate</th>
-                    <th className="text-right px-3 py-2 text-xs font-medium w-24">Amount</th>
+                    <th className="text-right px-3 py-2 text-xs font-medium w-32">Rate</th>
+                    <th className="text-right px-3 py-2 text-xs font-medium w-32">Amount</th>
                     <th className="w-10"></th>
                   </tr></thead>
                   <tbody>
@@ -588,8 +588,8 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
                         <td className="px-3 py-2"><Input type="number" value={item.quantity} onChange={e => updateItem(idx, "quantity", Number(e.target.value))}
                           className="h-8 rounded-md text-sm text-center" min={1} /></td>
                         <td className="px-3 py-2"><Input type="number" value={item.rate} onChange={e => updateItem(idx, "rate", Number(e.target.value))}
-                          className="h-8 rounded-md text-sm text-center" min={0} /></td>
-                        <td className="px-3 py-2 text-right font-medium text-[#0F172A]">{formatCurrency(item.amount)}</td>
+                          className="h-8 rounded-md text-sm text-right tabular-nums" min={0} /></td>
+                        <td className="px-3 py-2 text-right font-medium text-[#0F172A] whitespace-nowrap tabular-nums">{formatCurrency(item.amount)}</td>
                         <td className="px-2 py-2">
                           {formData.items.length > 1 && (
                             <button type="button" onClick={() => removeItem(idx)} className="p-1 rounded hover:bg-red-50 text-[#94A3B8] hover:text-red-500"><X size={14} /></button>

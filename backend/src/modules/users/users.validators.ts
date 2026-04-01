@@ -57,7 +57,7 @@ export const updateUserStatusSchema = z.object({
 export const userQuerySchema = z.object({
   query: z.object({
     page: z.coerce.number().int().min(1).default(1),
-    limit: z.coerce.number().int().min(1).max(100).default(20),
+    limit: z.coerce.number().int().min(1).max(200).default(20),
     search: z.string().optional(),
     status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED', 'PENDING_VERIFICATION']).optional(),
     sortBy: z.enum(['firstName', 'lastName', 'email', 'createdAt']).default('createdAt'),

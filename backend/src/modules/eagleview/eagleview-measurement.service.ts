@@ -42,6 +42,7 @@ const SANDBOX_OBLIQUE_DIRECTIONS: Array<{ direction: CardinalDirection; label: s
     { direction: 'south', label: 'South View' },
     { direction: 'west', label: 'West View' },
 ];
+const SANDBOX_LOOKUP_CACHE_TTL_MS = 30 * 60 * 1000;
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -132,8 +133,43 @@ interface SandboxImageCandidate {
 // ── Service ──────────────────────────────────────────────────────────────
 
 class EagleViewMeasurementService {
+    private readonly sandboxLookupCache = new Map<string, { expiresAt: number; report: ReportData }>();
+
     isSandboxMode(): boolean {
         return config.integrations.eagleview.environment === 'sandbox';
+    }
+
+    private buildSandboxCacheKey(address: OrderAddress): string {
+        const line1 = (address.addressLine1 || '').trim().toLowerCase();
+        const city = (address.city || '').trim().toLowerCase();
+        const state = (address.state || '').trim().toLowerCase();
+        const postalCode = (address.postalCode || '').trim().toLowerCase();
+        const country = (address.country || 'us').trim().toLowerCase();
+        const latitude = Number.isFinite(address.latitude) ? address.latitude?.toFixed(5) : '';
+        const longitude = Number.isFinite(address.longitude) ? address.longitude?.toFixed(5) : '';
+
+        return [line1, city, state, postalCode, country, latitude, longitude].join('|');
+    }
+
+    private getCachedSandboxLookup(address: OrderAddress): ReportData | null {
+        const cacheKey = this.buildSandboxCacheKey(address);
+        const cached = this.sandboxLookupCache.get(cacheKey);
+
+        if (!cached) return null;
+        if (cached.expiresAt < Date.now()) {
+            this.sandboxLookupCache.delete(cacheKey);
+            return null;
+        }
+
+        return cached.report;
+    }
+
+    private setCachedSandboxLookup(address: OrderAddress, report: ReportData): void {
+        const cacheKey = this.buildSandboxCacheKey(address);
+        this.sandboxLookupCache.set(cacheKey, {
+            expiresAt: Date.now() + SANDBOX_LOOKUP_CACHE_TTL_MS,
+            report,
+        });
     }
 
     private async getHeaders(): Promise<Record<string, string>> {
@@ -595,7 +631,15 @@ class EagleViewMeasurementService {
         return response.data;
     }
 
-    async lookupProperty(address: OrderAddress, maxRetries = 6, pollIntervalMs = 3000): Promise<ReportData> {
+    async lookupProperty(address: OrderAddress, maxRetries = 12, pollIntervalMs = 1500): Promise<ReportData> {
+        const cached = this.getCachedSandboxLookup(address);
+        if (cached) {
+            logger.info('[EagleView] Returning cached sandbox property result', {
+                address: this.formatLookupAddress(address),
+            });
+            return cached;
+        }
+
         const jobId = await this.createSandboxPropertyRequest(address);
         logger.info('[EagleView] Polling sandbox property result', { jobId, maxRetries });
 
@@ -604,7 +648,9 @@ class EagleViewMeasurementService {
 
         try {
             for (let attempt = 0; attempt < maxRetries; attempt += 1) {
-                await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+                if (attempt > 0) {
+                    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+                }
                 latestPayload = await this.getSandboxPropertyResult(jobId);
                 latestStatus = this.readStringFromPaths(latestPayload, [['request', 'status']]) || '';
 
@@ -625,6 +671,7 @@ class EagleViewMeasurementService {
                         obliqueImages: report.obliqueImages?.length || 0,
                     });
 
+                    this.setCachedSandboxLookup(address, report);
                     return report;
                 }
 

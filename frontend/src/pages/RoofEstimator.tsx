@@ -405,10 +405,29 @@ export default function RoofEstimator() {
 
   // Load data
   useEffect(() => {
+    let isMounted = true;
+
     (async () => {
       setLoading(true);
-      const results = await Promise.allSettled([
-        withTimeout(getEstimates(), 15000, "Estimator list"),
+      try {
+        const estimateList = await withTimeout(getEstimates(), 45000, "Estimator list");
+        if (!isMounted) return;
+        setEstimates(estimateList);
+      } catch (error: any) {
+        if (!isMounted) return;
+        setEstimates([]);
+        toast({
+          title: "Estimator unavailable",
+          description: error?.message || "Failed to load estimator records.",
+          variant: "destructive",
+        });
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+
+      const secondaryResults = await Promise.allSettled([
         withTimeout(getEstimateStatistics(), 15000, "Estimator statistics"),
         withTimeout(checkAiHealth(), 8000, "AI health check"),
         withTimeout(getWallet().catch(() => null), 8000, "Wallet"),
@@ -419,52 +438,19 @@ export default function RoofEstimator() {
         ),
       ]);
 
-      const [estimatesResult, statsResult, aiHealthResult, walletResult, transactionsResult] = results;
+      if (!isMounted) return;
 
-      if (estimatesResult.status === "fulfilled") {
-        setEstimates(estimatesResult.value);
-      } else {
-        setEstimates([]);
-      }
+      const [statsResult, aiHealthResult, walletResult, transactionsResult] = secondaryResults;
 
-      if (statsResult.status === "fulfilled") {
-        setStats(statsResult.value);
-      } else {
-        setStats(null);
-      }
-
-      if (aiHealthResult.status === "fulfilled") {
-        setAiOnline(aiHealthResult.value);
-      } else {
-        setAiOnline(false);
-      }
-
-      if (walletResult.status === "fulfilled" && walletResult.value) {
-        setWallet(walletResult.value);
-      } else {
-        setWallet(null);
-      }
-
-      if (transactionsResult.status === "fulfilled") {
-        setTransactions(transactionsResult.value.data || []);
-      } else {
-        setTransactions([]);
-      }
-
-      const failedMessages = results
-        .filter((result): result is PromiseRejectedResult => result.status === "rejected")
-        .map((result) => result.reason?.message || "Some estimator data could not be loaded.");
-
-      if (failedMessages.length > 0) {
-        toast({
-          title: "Estimator loaded partially",
-          description: failedMessages[0],
-          variant: "destructive",
-        });
-      }
-
-      setLoading(false);
+      setStats(statsResult.status === "fulfilled" ? statsResult.value : null);
+      setAiOnline(aiHealthResult.status === "fulfilled" ? aiHealthResult.value : false);
+      setWallet(walletResult.status === "fulfilled" && walletResult.value ? walletResult.value : null);
+      setTransactions(transactionsResult.status === "fulfilled" ? transactionsResult.value.data || [] : []);
     })();
+
+    return () => {
+      isMounted = false;
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Filtered list

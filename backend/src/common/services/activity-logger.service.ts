@@ -1,5 +1,6 @@
 import { AuditAction } from '@prisma/client';
 import { auditService } from '../../modules/audit/audit.service';
+import { requestContextStore } from './request-context.store';
 import { logger } from '../utils/logger';
 
 /**
@@ -26,6 +27,10 @@ class ActivityLogger {
         metadata?: Record<string, any>;
     }): Promise<void> {
         try {
+            const context = requestContextStore.get();
+            const effectiveUserId = params.userId || context?.userId;
+            const effectiveIp = context?.ipAddress;
+            const effectiveUserAgent = context?.userAgent;
             await auditService.log({
                 tenantId: params.tenantId,
                 action: params.action as AuditAction,
@@ -33,7 +38,11 @@ class ActivityLogger {
                 description: params.description,
                 entityType: params.entityType,
                 entityId: params.entityId,
-                userId: params.userId,
+                userId: effectiveUserId,
+                ipAddress: effectiveIp,
+                userAgent: effectiveUserAgent,
+                requestMethod: context?.requestMethod,
+                requestPath: context?.requestPath,
                 newValues: params.metadata,
             });
         } catch (err) {

@@ -138,6 +138,7 @@ export interface AuditLogItem {
   description: string;
   entityType?: string;
   entityId?: string;
+  userAgent?: string;
   ipAddress?: string;
   createdAt: string;
   user?: {

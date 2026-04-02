@@ -4,6 +4,7 @@ import { authenticate, loadEmployee } from '../common/middleware/auth.middleware
 import { tenantContext } from '../common/middleware/tenant.middleware';
 import { moduleGuard } from '../common/middleware/module.middleware';
 import { stripTenantFromBody } from '../common/middleware/sanitize-body.middleware';
+import { requestContextStore } from '../common/services/request-context.store';
 
 // Core module routes
 import authRoutes from '../modules/auth/auth.routes';
@@ -140,6 +141,7 @@ export function registerRoutes(app: Application): void {
   const protectedRouter = Router();
   protectedRouter.use(authenticate);
   protectedRouter.use(tenantContext);
+  protectedRouter.use((req, _res, next) => requestContextStore.run(req, next));
   protectedRouter.use(moduleGuard);
 
   // CRM - Leads

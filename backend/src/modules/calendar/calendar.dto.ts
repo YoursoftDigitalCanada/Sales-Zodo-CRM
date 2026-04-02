@@ -64,14 +64,44 @@ export interface CalendarEventResponseDto {
     category: string | null;
     clientId: string | null;
     leadId: string | null;
-    attendees: { id: string; employeeId: string; status: string }[];
+    attendees: {
+        id: string;
+        employeeId: string;
+        status: string;
+        respondedAt: Date | null;
+        employee: {
+            id: string;
+            userId: string;
+            user: {
+                firstName: string;
+                lastName: string;
+                email: string;
+                avatar: string | null;
+            };
+        };
+    }[];
     createdBy: { id: string; firstName: string; lastName: string } | null;
     createdAt: Date;
     updatedAt: Date;
 }
 
 type CalendarEventWithRelations = CalendarEvent & {
-    attendees?: { id: string; employeeId: string; status: string; employee: { id: string; user: { firstName: string; lastName: string } } }[];
+    attendees?: {
+        id: string;
+        employeeId: string;
+        status: string;
+        respondedAt: Date | null;
+        employee: {
+            id: string;
+            userId: string;
+            user: {
+                firstName: string;
+                lastName: string;
+                email: string;
+                avatar: string | null;
+            };
+        };
+    }[];
     createdBy?: { id: string; user: { firstName: string; lastName: string } } | null;
 };
 
@@ -98,7 +128,22 @@ export function toCalendarEventResponseDto(e: CalendarEventWithRelations): Calen
         category: e.category,
         clientId: e.clientId ?? null,
         leadId: e.leadId ?? null,
-        attendees: (e.attendees || []).map((a) => ({ id: a.id, employeeId: a.employeeId, status: a.status })),
+        attendees: (e.attendees || []).map((a) => ({
+            id: a.id,
+            employeeId: a.employeeId,
+            status: a.status,
+            respondedAt: a.respondedAt ?? null,
+            employee: {
+                id: a.employee.id,
+                userId: a.employee.userId,
+                user: {
+                    firstName: a.employee.user.firstName,
+                    lastName: a.employee.user.lastName,
+                    email: a.employee.user.email,
+                    avatar: a.employee.user.avatar ?? null,
+                },
+            },
+        })),
         createdBy: e.createdBy ? { id: e.createdBy.id, firstName: e.createdBy.user.firstName, lastName: e.createdBy.user.lastName } : null,
         createdAt: e.createdAt,
         updatedAt: e.updatedAt,

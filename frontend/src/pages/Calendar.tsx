@@ -2056,8 +2056,11 @@ const CalendarPage = () => {
     meetingLink: e.meetingLink || undefined,
     attendees: e.attendees?.map((a: any) => ({
       id: a.employeeId || a.id,
-      name: a.employee ? `${a.employee.user?.firstName || ''} ${a.employee.user?.lastName || ''}`.trim() : 'Unknown',
-      email: '',
+      name: a.employee
+        ? `${a.employee.user?.firstName || ''} ${a.employee.user?.lastName || ''}`.trim() || 'Unknown'
+        : a.name || 'Unknown',
+      email: a.employee?.user?.email || a.email || '',
+      avatar: a.employee?.user?.avatar || a.avatar || undefined,
       status: a.status || 'pending',
     })) || [],
     status: 'scheduled',

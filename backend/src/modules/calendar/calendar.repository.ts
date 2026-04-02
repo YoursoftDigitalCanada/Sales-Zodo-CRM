@@ -2,7 +2,23 @@ import { Prisma, CalendarEventType } from '@prisma/client';
 import { CreateCalendarEventDto, UpdateCalendarEventDto, CalendarEventQueryDto } from './calendar.dto';
 import { prisma } from '../../config/database';
 const calendarEventInclude = {
-    attendees: { include: { employee: { include: { user: { select: { firstName: true, lastName: true } } } } } },
+    attendees: {
+        include: {
+            employee: {
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            firstName: true,
+                            lastName: true,
+                            email: true,
+                            avatar: true,
+                        },
+                    },
+                },
+            },
+        },
+    },
     createdBy: { include: { user: { select: { firstName: true, lastName: true } } } },
 };
 

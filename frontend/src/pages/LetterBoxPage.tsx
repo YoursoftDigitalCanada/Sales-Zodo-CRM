@@ -155,6 +155,10 @@ interface Email {
     name: string;
     email: string;
   }[];
+  bcc?: {
+    name: string;
+    email: string;
+  }[];
   subject: string;
   preview: string;
   body: string;
@@ -530,6 +534,7 @@ const buildAttachmentUrl = (value?: string) => {
 const mapEmailResponseToEmail = (e: EmailResponse): Email => {
   const toArr = Array.isArray(e.toAddresses) ? e.toAddresses : [];
   const ccArr = Array.isArray(e.ccAddresses) ? e.ccAddresses : [];
+  const bccArr = Array.isArray(e.bccAddresses) ? e.bccAddresses : [];
   const created = e.sentAt || e.receivedAt || e.createdAt;
   const d = created ? new Date(created) : new Date();
   const isToday = new Date().toDateString() === d.toDateString();
@@ -542,6 +547,7 @@ const mapEmailResponseToEmail = (e: EmailResponse): Email => {
     },
     to: toArr.map((a: any) => ({ name: a.name || a.email || "", email: a.email || "" })),
     cc: ccArr.length > 0 ? ccArr.map((a: any) => ({ name: a.name || a.email || "", email: a.email || "" })) : undefined,
+    bcc: bccArr.length > 0 ? bccArr.map((a: any) => ({ name: a.name || a.email || "", email: a.email || "" })) : undefined,
     subject: e.subject || "(No Subject)",
     preview: e.bodyText ? e.bodyText.slice(0, 120) : (e.bodyHtml ? e.bodyHtml.replace(/<[^>]+>/g, "").slice(0, 120) : ""),
     body: e.bodyHtml || plainTextToHtml(e.bodyText || "") || "",
@@ -589,6 +595,7 @@ const getInitialComposeValues = (
   preset?: {
     to?: string;
     cc?: string;
+    bcc?: string;
     subject?: string;
     bodyHtml?: string;
   },
@@ -597,6 +604,7 @@ const getInitialComposeValues = (
     return {
       to: preset.to || "",
       cc: preset.cc || "",
+      bcc: preset.bcc || "",
       subject: preset.subject || "",
       bodyHtml: preset.bodyHtml || "",
     };
@@ -609,6 +617,7 @@ const getInitialComposeValues = (
   return {
     to: replyTo ? replyTo.from.email : "",
     cc: "",
+    bcc: "",
     subject: replyTo ? `Re: ${replyTo.subject}` : forwardEmail ? `Fwd: ${forwardEmail.subject}` : "",
     bodyHtml: forwardedText ? plainTextToHtml(forwardedText) : "",
   };
@@ -640,11 +649,13 @@ const ComposeEmailDialog = ({
   const editorRef = useRef<HTMLDivElement | null>(null);
   const [to, setTo] = useState(replyTo ? replyTo.from.email : "");
   const [cc, setCc] = useState("");
+  const [bcc, setBcc] = useState("");
   const [subject, setSubject] = useState(
     replyTo ? `Re: ${replyTo.subject}` : forwardEmail ? `Fwd: ${forwardEmail.subject}` : ""
   );
   const [bodyHtml, setBodyHtml] = useState(getInitialComposeValues(replyTo, forwardEmail).bodyHtml);
   const [showCc, setShowCc] = useState(false);
+  const [showBcc, setShowBcc] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [isSending, setIsSending] = useState(false);
@@ -656,9 +667,11 @@ const ComposeEmailDialog = ({
     const initialValues = getInitialComposeValues(replyTo, forwardEmail, preset);
     setTo(initialValues.to);
     setCc(initialValues.cc || "");
+    setBcc(initialValues.bcc || "");
     setSubject(initialValues.subject);
     setBodyHtml(initialValues.bodyHtml);
     setShowCc(Boolean(initialValues.cc));
+    setShowBcc(Boolean(initialValues.bcc));
     setAttachments([]);
     setIsMinimized(false);
     setIsEditorFocused(false);
@@ -694,12 +707,14 @@ const ComposeEmailDialog = ({
     try {
       const toAddresses = to.split(/[,;]/).map((email) => email.trim()).filter(Boolean).map((email) => ({ email }));
       const ccAddresses = cc ? cc.split(/[,;]/).map((email) => email.trim()).filter(Boolean).map((email) => ({ email })) : undefined;
+      const bccAddresses = bcc ? bcc.split(/[,;]/).map((email) => email.trim()).filter(Boolean).map((email) => ({ email })) : undefined;
       const currentBodyHtml = (editorRef.current?.innerHTML || bodyHtml || "").trim();
       const bodyText = htmlToPlainText(currentBodyHtml).trim();
 
       await apiSendEmail({
         toAddresses,
         ccAddresses,
+        bccAddresses,
         subject,
         bodyHtml: currentBodyHtml,
         bodyText,
@@ -728,12 +743,14 @@ const ComposeEmailDialog = ({
       try {
         const toAddresses = to.split(/[,;]/).map((email) => email.trim()).filter(Boolean).map((email) => ({ email }));
         const ccAddresses = cc ? cc.split(/[,;]/).map((email) => email.trim()).filter(Boolean).map((email) => ({ email })) : undefined;
+        const bccAddresses = bcc ? bcc.split(/[,;]/).map((email) => email.trim()).filter(Boolean).map((email) => ({ email })) : undefined;
         const currentBodyHtml = (editorRef.current?.innerHTML || bodyHtml || "").trim();
         const bodyText = htmlToPlainText(currentBodyHtml).trim();
 
         await apiSaveDraft({
           toAddresses,
           ccAddresses,
+          bccAddresses,
           subject,
           bodyHtml: currentBodyHtml,
           bodyText,
@@ -778,12 +795,14 @@ const ComposeEmailDialog = ({
       try {
         const toAddresses = to.split(/[,;]/).map((email) => email.trim()).filter(Boolean).map((email) => ({ email }));
         const ccAddresses = cc ? cc.split(/[,;]/).map((email) => email.trim()).filter(Boolean).map((email) => ({ email })) : undefined;
+        const bccAddresses = bcc ? bcc.split(/[,;]/).map((email) => email.trim()).filter(Boolean).map((email) => ({ email })) : undefined;
         const currentBodyHtml = (editorRef.current?.innerHTML || bodyHtml || "").trim();
         const bodyText = htmlToPlainText(currentBodyHtml).trim();
 
         await apiSaveDraft({
           toAddresses,
           ccAddresses,
+          bccAddresses,
           subject,
           bodyHtml: currentBodyHtml,
           bodyText,
@@ -889,14 +908,26 @@ const ComposeEmailDialog = ({
                 placeholder="recipient@email.com"
                 className="flex-1 h-9 border-0 border-b border-[rgba(15,23,42,0.06)] rounded-none px-0 focus-visible:ring-0 focus-visible:border-[#22D3EE]"
               />
-              {!showCc && (
-                <button
-                  onClick={() => setShowCc(true)}
-                  className="text-xs text-[#475569] hover:text-[#0891B2]"
-                >
-                  Cc/Bcc
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                {!showCc && (
+                  <button
+                    type="button"
+                    onClick={() => setShowCc(true)}
+                    className="text-xs text-[#475569] hover:text-[#0891B2]"
+                  >
+                    Cc
+                  </button>
+                )}
+                {!showBcc && (
+                  <button
+                    type="button"
+                    onClick={() => setShowBcc(true)}
+                    className="text-xs text-[#475569] hover:text-[#0891B2]"
+                  >
+                    Bcc
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -904,12 +935,51 @@ const ComposeEmailDialog = ({
           {showCc && (
             <div className="flex items-center gap-3">
               <Label className="w-12 text-sm text-[#94A3B8]">Cc:</Label>
-              <Input
-                value={cc}
-                onChange={(e) => setCc(e.target.value)}
-                placeholder="cc@email.com"
-                className="flex-1 h-9 border-0 border-b border-[rgba(15,23,42,0.06)] rounded-none px-0 focus-visible:ring-0 focus-visible:border-[#22D3EE]"
-              />
+              <div className="flex flex-1 items-center gap-2">
+                <Input
+                  value={cc}
+                  onChange={(e) => setCc(e.target.value)}
+                  placeholder="cc@email.com"
+                  className="flex-1 h-9 border-0 border-b border-[rgba(15,23,42,0.06)] rounded-none px-0 focus-visible:ring-0 focus-visible:border-[#22D3EE]"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCc("");
+                    setShowCc(false);
+                  }}
+                  className="text-xs text-[#94A3B8] hover:text-[#475569]"
+                  aria-label="Remove cc"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Bcc */}
+          {showBcc && (
+            <div className="flex items-center gap-3">
+              <Label className="w-12 text-sm text-[#94A3B8]">Bcc:</Label>
+              <div className="flex flex-1 items-center gap-2">
+                <Input
+                  value={bcc}
+                  onChange={(e) => setBcc(e.target.value)}
+                  placeholder="bcc@email.com"
+                  className="flex-1 h-9 border-0 border-b border-[rgba(15,23,42,0.06)] rounded-none px-0 focus-visible:ring-0 focus-visible:border-[#22D3EE]"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBcc("");
+                    setShowBcc(false);
+                  }}
+                  className="text-xs text-[#94A3B8] hover:text-[#475569]"
+                  aria-label="Remove bcc"
+                >
+                  <X size={14} />
+                </button>
+              </div>
             </div>
           )}
 
@@ -1453,6 +1523,18 @@ const EmailDetailView = ({
                         <span className="text-[#475569]">To:</span>{" "}
                         <span className="text-[#475569]">{email.to.map((t) => t.email).join(", ")}</span>
                       </div>
+                      {email.cc && email.cc.length > 0 && (
+                        <div>
+                          <span className="text-[#475569]">Cc:</span>{" "}
+                          <span className="text-[#475569]">{email.cc.map((recipient) => recipient.email).join(", ")}</span>
+                        </div>
+                      )}
+                      {email.bcc && email.bcc.length > 0 && (
+                        <div>
+                          <span className="text-[#475569]">Bcc:</span>{" "}
+                          <span className="text-[#475569]">{email.bcc.map((recipient) => recipient.email).join(", ")}</span>
+                        </div>
+                      )}
                       <div>
                         <span className="text-[#475569]">Date:</span>{" "}
                         <span className="text-[#475569]">{email.date} at {email.time}</span>
@@ -1792,7 +1874,7 @@ const LetterBoxPage = () => {
   const [showCompose, setShowCompose] = useState(false);
   const [replyToEmail, setReplyToEmail] = useState<Email | undefined>(undefined);
   const [forwardEmail, setForwardEmail] = useState<Email | undefined>(undefined);
-  const [composePreset, setComposePreset] = useState<{ to?: string; cc?: string; subject?: string; bodyHtml?: string } | undefined>(undefined);
+  const [composePreset, setComposePreset] = useState<{ to?: string; cc?: string; bcc?: string; subject?: string; bodyHtml?: string } | undefined>(undefined);
   const [emailsLoading, setEmailsLoading] = useState(true);
   const [emailConfigured, setEmailConfigured] = useState<{ smtp: boolean; imap: boolean; mailboxAddress: string | null } | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);

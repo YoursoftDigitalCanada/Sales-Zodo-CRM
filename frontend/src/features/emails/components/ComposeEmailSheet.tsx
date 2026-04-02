@@ -51,10 +51,12 @@ export function ComposeEmailSheet({
 
   const [to, setTo] = useState("");
   const [cc, setCc] = useState("");
+  const [bcc, setBcc] = useState("");
   const [subject, setSubject] = useState("");
   const [bodyHtml, setBodyHtml] = useState("");
   const [attachments, setAttachments] = useState<File[]>([]);
   const [showCc, setShowCc] = useState(false);
+  const [showBcc, setShowBcc] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [isEditorFocused, setIsEditorFocused] = useState(false);
   const [mailboxStatus, setMailboxStatus] = useState<{
@@ -69,10 +71,12 @@ export function ComposeEmailSheet({
 
     setTo(defaultRecipientEmail || "");
     setCc("");
+    setBcc("");
     setSubject(defaultRecipientName ? `Regarding ${defaultRecipientName}` : "");
     setBodyHtml("");
     setAttachments([]);
     setShowCc(false);
+    setShowBcc(false);
     setIsEditorFocused(false);
 
     requestAnimationFrame(() => {
@@ -166,10 +170,18 @@ export function ComposeEmailSheet({
             .filter(Boolean)
             .map((email) => ({ email }))
         : undefined;
+      const bccAddresses = bcc
+        ? bcc
+            .split(/[,;]/)
+            .map((email) => email.trim())
+            .filter(Boolean)
+            .map((email) => ({ email }))
+        : undefined;
 
       await apiSendEmail({
         toAddresses,
         ccAddresses,
+        bccAddresses,
         subject,
         bodyHtml: currentBodyHtml || plainTextToHtml(bodyText),
         bodyText,
@@ -254,27 +266,76 @@ export function ComposeEmailSheet({
                 placeholder="recipient@email.com"
                 className="h-10 border-0 border-b border-[rgba(15,23,42,0.08)] rounded-none px-0 focus-visible:ring-0 focus-visible:border-[#14B8A6]"
               />
-              {!showCc && (
-                <button
-                  type="button"
-                  onClick={() => setShowCc(true)}
-                  className="text-xs font-medium text-[#14B8A6] hover:text-[#0D9488]"
-                >
-                  Cc
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                {!showCc && (
+                  <button
+                    type="button"
+                    onClick={() => setShowCc(true)}
+                    className="text-xs font-medium text-[#14B8A6] hover:text-[#0D9488]"
+                  >
+                    Cc
+                  </button>
+                )}
+                {!showBcc && (
+                  <button
+                    type="button"
+                    onClick={() => setShowBcc(true)}
+                    className="text-xs font-medium text-[#14B8A6] hover:text-[#0D9488]"
+                  >
+                    Bcc
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
           {showCc && (
             <div className="flex items-center gap-3">
               <Label className="w-14 text-sm text-[#64748B]">Cc</Label>
-              <Input
-                value={cc}
-                onChange={(e) => setCc(e.target.value)}
-                placeholder="cc@email.com"
-                className="flex-1 h-10 border-0 border-b border-[rgba(15,23,42,0.08)] rounded-none px-0 focus-visible:ring-0 focus-visible:border-[#14B8A6]"
-              />
+              <div className="flex flex-1 items-center gap-2">
+                <Input
+                  value={cc}
+                  onChange={(e) => setCc(e.target.value)}
+                  placeholder="cc@email.com"
+                  className="flex-1 h-10 border-0 border-b border-[rgba(15,23,42,0.08)] rounded-none px-0 focus-visible:ring-0 focus-visible:border-[#14B8A6]"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCc("");
+                    setShowCc(false);
+                  }}
+                  className="text-[#94A3B8] hover:text-[#475569]"
+                  aria-label="Remove cc"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {showBcc && (
+            <div className="flex items-center gap-3">
+              <Label className="w-14 text-sm text-[#64748B]">Bcc</Label>
+              <div className="flex flex-1 items-center gap-2">
+                <Input
+                  value={bcc}
+                  onChange={(e) => setBcc(e.target.value)}
+                  placeholder="bcc@email.com"
+                  className="flex-1 h-10 border-0 border-b border-[rgba(15,23,42,0.08)] rounded-none px-0 focus-visible:ring-0 focus-visible:border-[#14B8A6]"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBcc("");
+                    setShowBcc(false);
+                  }}
+                  className="text-[#94A3B8] hover:text-[#475569]"
+                  aria-label="Remove bcc"
+                >
+                  <X size={14} />
+                </button>
+              </div>
             </div>
           )}
 

@@ -65,7 +65,15 @@ class MailerService {
      */
     async sendMailWithConfig(
         smtpConfig: { host: string; port: number; user: string; pass: string; encryption?: string; senderName?: string; senderEmail?: string },
-        opts: { to: string | string[]; subject: string; html: string; text?: string; attachments?: Array<{ filename: string; content: Buffer; contentType?: string }> }
+        opts: {
+            to: string | string[];
+            cc?: string | string[];
+            bcc?: string | string[];
+            subject: string;
+            html: string;
+            text?: string;
+            attachments?: Array<{ filename: string; content: Buffer; contentType?: string }>;
+        }
     ): Promise<boolean> {
         const result = await this.sendMailWithConfigDetailed(smtpConfig, opts);
         return result.sent;
@@ -73,7 +81,15 @@ class MailerService {
 
     async sendMailWithConfigDetailed(
         smtpConfig: { host: string; port: number; user: string; pass: string; encryption?: string; senderName?: string; senderEmail?: string },
-        opts: { to: string | string[]; subject: string; html: string; text?: string; attachments?: Array<{ filename: string; content: Buffer; contentType?: string }> }
+        opts: {
+            to: string | string[];
+            cc?: string | string[];
+            bcc?: string | string[];
+            subject: string;
+            html: string;
+            text?: string;
+            attachments?: Array<{ filename: string; content: Buffer; contentType?: string }>;
+        }
     ): Promise<{ sent: boolean; error?: string }> {
         if (!nodemailer) {
             console.warn('⚠️ Skipping email — nodemailer not available');
@@ -109,6 +125,8 @@ class MailerService {
             const info = await transport.sendMail({
                 from: `"${fromName}" <${fromEmail}>`,
                 to: Array.isArray(opts.to) ? opts.to.join(', ') : opts.to,
+                cc: Array.isArray(opts.cc) ? opts.cc.join(', ') : opts.cc,
+                bcc: Array.isArray(opts.bcc) ? opts.bcc.join(', ') : opts.bcc,
                 subject: opts.subject,
                 html: opts.html,
                 text: opts.text,
@@ -187,6 +205,8 @@ class MailerService {
 
     async sendMail(opts: {
         to: string | string[];
+        cc?: string | string[];
+        bcc?: string | string[];
         subject: string;
         html: string;
         text?: string;
@@ -200,6 +220,8 @@ class MailerService {
             const info = await this.transporter.sendMail({
                 from: `"ZODO CRM" <${config.email.from || config.email.user}>`,
                 to: Array.isArray(opts.to) ? opts.to.join(', ') : opts.to,
+                cc: Array.isArray(opts.cc) ? opts.cc.join(', ') : opts.cc,
+                bcc: Array.isArray(opts.bcc) ? opts.bcc.join(', ') : opts.bcc,
                 subject: opts.subject,
                 html: opts.html,
                 text: opts.text,

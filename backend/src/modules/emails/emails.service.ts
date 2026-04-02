@@ -134,6 +134,12 @@ export class EmailsService {
         const toAddresses = Array.isArray(data.toAddresses)
             ? data.toAddresses.map((a: any) => typeof a === 'string' ? a : a.email).filter(Boolean)
             : [];
+        const ccAddresses = Array.isArray(data.ccAddresses)
+            ? data.ccAddresses.map((a: any) => typeof a === 'string' ? a : a.email).filter(Boolean)
+            : [];
+        const bccAddresses = Array.isArray(data.bccAddresses)
+            ? data.bccAddresses.map((a: any) => typeof a === 'string' ? a : a.email).filter(Boolean)
+            : [];
 
         if (toAddresses.length === 0) {
             await this.cleanupUploadedFiles(files);
@@ -154,6 +160,8 @@ export class EmailsService {
             },
             {
                 to: toAddresses,
+                cc: ccAddresses,
+                bcc: bccAddresses,
                 subject: data.subject,
                 html: data.bodyHtml || data.bodyText || '',
                 text: data.bodyText,
@@ -323,6 +331,12 @@ export class EmailsService {
                 const toAddresses = Array.isArray(draft.toAddresses)
                     ? draft.toAddresses.map((address: any) => typeof address === 'string' ? address : address.email).filter(Boolean)
                     : [];
+                const ccAddresses = Array.isArray(draft.ccAddresses)
+                    ? draft.ccAddresses.map((address: any) => typeof address === 'string' ? address : address.email).filter(Boolean)
+                    : [];
+                const bccAddresses = Array.isArray(draft.bccAddresses)
+                    ? draft.bccAddresses.map((address: any) => typeof address === 'string' ? address : address.email).filter(Boolean)
+                    : [];
 
                 if (toAddresses.length === 0) {
                     continue;
@@ -349,6 +363,8 @@ export class EmailsService {
                     },
                     {
                         to: toAddresses,
+                        cc: ccAddresses,
+                        bcc: bccAddresses,
                         subject: draft.subject,
                         html: draft.bodyHtml || draft.bodyText || '',
                         text: draft.bodyText || undefined,

@@ -42,7 +42,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { getInvoices, deleteInvoice, createInvoice, downloadInvoicePdf, printInvoicePdf, recordInvoicePayment, sendInvoice } from "@/services/invoiceService";
+import { getInvoices, getInvoiceById, deleteInvoice, createInvoice, downloadInvoicePdf, recordInvoicePayment, sendInvoice } from "@/services/invoiceService";
+import { printInvoiceDocument } from "@/features/invoices/utils/invoice-print";
 import {
   Bell,
   Plus,
@@ -324,6 +325,86 @@ const normalizeInvoice = (inv: any): Invoice => {
       : [],
     lastSent: inv?.sentAt || "",
     currency: inv?.currency || "CAD",
+  };
+};
+
+const readText = (value: unknown) => {
+  if (typeof value === "string") return value;
+  if (typeof value === "number") return String(value);
+  return "";
+};
+
+const mapInvoiceToPrintableDocument = (invoice: any) => {
+  const businessAddress =
+    invoice?.businessAddress && typeof invoice.businessAddress === "object" ? invoice.businessAddress : {};
+  const clientAddress =
+    invoice?.clientAddress && typeof invoice.clientAddress === "object" ? invoice.clientAddress : {};
+  const client =
+    invoice?.client && typeof invoice.client === "object" ? invoice.client : null;
+
+  const currency = readText(invoice?.currency) || "CAD";
+  const subtotal = Number(invoice?.subtotal) || 0;
+  const taxAmount = Number(invoice?.taxAmount) || 0;
+  const taxRate = Number(invoice?.taxRate) || 0;
+  const discountAmount = Number(invoice?.discountAmount) || 0;
+  const total = Number(invoice?.total) || 0;
+  const amountPaid = Number(invoice?.amountPaid) || 0;
+  const amountDue = Number(invoice?.amountDue ?? total - amountPaid) || 0;
+
+  return {
+    invoiceNumber: readText(invoice?.invoiceNumber),
+    invoiceDate: readText(invoice?.issueDate || invoice?.invoiceDate || invoice?.createdAt),
+    dueDate: readText(invoice?.dueDate),
+    currency,
+    amountDue,
+    amountDueLabel: "Amount Due",
+    brandName: readText(invoice?.businessName) || "Your Business",
+    billedBy: {
+      businessName: readText(invoice?.businessName),
+      email: readText(invoice?.businessEmail),
+      phone: readText(invoice?.businessPhone),
+      address: readText((businessAddress as Record<string, unknown>).address),
+      city: readText((businessAddress as Record<string, unknown>).city),
+      province: readText((businessAddress as Record<string, unknown>).province),
+      postalCode: readText((businessAddress as Record<string, unknown>).postalCode),
+      country: readText((businessAddress as Record<string, unknown>).country),
+      gstNumber: readText(invoice?.businessGstHstNumber),
+    },
+    billedTo: {
+      businessName:
+        readText(invoice?.clientBusinessName) ||
+        readText(invoice?.clientName) ||
+        readText(client?.clientName) ||
+        "Client",
+      email: readText(invoice?.clientEmail) || readText(client?.primaryEmail),
+      phone: readText(invoice?.clientPhone) || readText(client?.primaryPhone),
+      address: readText((clientAddress as Record<string, unknown>).address) || readText(client?.streetAddress),
+      city: readText((clientAddress as Record<string, unknown>).city) || readText(client?.city),
+      province: readText((clientAddress as Record<string, unknown>).province) || readText(client?.province),
+      postalCode: readText((clientAddress as Record<string, unknown>).postalCode) || readText(client?.postalCode),
+      country: readText((clientAddress as Record<string, unknown>).country) || readText(client?.country),
+      gstNumber: readText(invoice?.clientGstHstNumber),
+    },
+    items: Array.isArray(invoice?.items)
+      ? invoice.items.map((item: any) => ({
+          description: readText(item?.description || item?.itemName),
+          quantity: Number(item?.quantity) || 0,
+          rate: Number(item?.unitPrice ?? item?.rate) || 0,
+          amount: Number(item?.amount ?? item?.lineTotal) || 0,
+        }))
+      : [],
+    summaryLines: [
+      { label: "Subtotal", amount: subtotal, tone: "muted" as const },
+      ...(discountAmount > 0
+        ? [{ label: "Discount", amount: -discountAmount, tone: "positive" as const }]
+        : []),
+      ...(taxAmount > 0
+        ? [{ label: taxRate > 0 ? `Tax (${taxRate}%)` : "Tax", amount: taxAmount }]
+        : []),
+    ],
+    total,
+    notes: readText(invoice?.notes),
+    terms: readText(invoice?.terms),
   };
 };
 
@@ -1280,7 +1361,8 @@ const InvoicePage = () => {
 
   const handlePrintInvoice = async (invoice: Invoice) => {
     try {
-      await printInvoicePdf(invoice.id, `${invoice.invoiceNumber}.pdf`);
+      const detailedInvoice = await getInvoiceById(invoice.id);
+      await printInvoiceDocument(mapInvoiceToPrintableDocument(detailedInvoice));
     } catch (error) {
       toast({
         title: "Error",

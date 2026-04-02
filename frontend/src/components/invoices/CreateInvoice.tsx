@@ -99,7 +99,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { createInvoice, downloadInvoicePdf, getInvoiceById, printInvoicePdf, sendInvoice, updateInvoice } from "@/services/invoiceService";
+import { createInvoice, downloadInvoicePdf, getInvoiceById, sendInvoice, updateInvoice } from "@/services/invoiceService";
+import { printInvoiceDocument } from "@/features/invoices/utils/invoice-print";
 import { getClients } from "@/features/clients/services/clients-service";
 import { getProjectById, type ProjectEntity } from "@/features/projects/services/projects-service";
 import { useWorkspaceBranding } from "@/features/settings/context/workspace-branding";
@@ -1654,15 +1655,46 @@ const CreateInvoicePage = () => {
   };
 
   const handlePrintPreview = async () => {
-    if (!linkedInvoiceId) {
-      window.print();
-      return;
-    }
-
     try {
-      await printInvoicePdf(linkedInvoiceId);
+      const formValues = getValues();
+      const summaryLines = [
+        { label: "Subtotal", amount: totals.subtotal, tone: "muted" as const },
+        ...(totals.discount > 0
+          ? [{ label: "Discount", amount: -totals.discount, tone: "positive" as const }]
+          : []),
+        ...(taxRates.hst > 0
+          ? [{ label: `HST (${taxRates.hst}%)`, amount: totals.hst }]
+          : [
+              ...(taxRates.gst > 0 ? [{ label: `GST (${taxRates.gst}%)`, amount: totals.gst }] : []),
+              ...(taxRates.pst > 0 ? [{ label: `PST (${taxRates.pst}%)`, amount: totals.pst }] : []),
+            ]),
+      ];
+
+      await printInvoiceDocument({
+        invoiceNumber: formValues.invoiceNumber,
+        invoiceDate: formValues.invoiceDate,
+        dueDate: formValues.dueDate,
+        currency: formValues.currency,
+        amountDue: totals.total,
+        amountDueLabel: "Amount Due",
+        brandLogoUrl: workspaceBranding?.logoUrl || null,
+        brandName: workspaceBranding?.companyName || formValues.billedBy.businessName,
+        billedBy: formValues.billedBy,
+        billedTo: formValues.billedTo,
+        items: formValues.items.map((item) => ({
+          description: item.name,
+          details: item.description,
+          quantity: item.quantity,
+          rate: item.rate,
+          amount: item.amount,
+        })),
+        summaryLines,
+        total: totals.total,
+        notes: formValues.notes,
+        terms: formValues.terms,
+      });
     } catch (error) {
-      console.error("Failed to print invoice PDF:", error);
+      console.error("Failed to print invoice:", error);
       toast({
         title: "Error",
         description: "Failed to open the invoice for printing.",

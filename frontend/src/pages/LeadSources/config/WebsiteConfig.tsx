@@ -1,23 +1,12 @@
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import {
-    Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import {
-    Tabs, TabsContent, TabsList, TabsTrigger,
-} from "@/components/ui/tabs";
-import { Globe, Copy, CheckCircle2, Code, Webhook, ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Code, Webhook, ChevronDown, ChevronUp } from "lucide-react";
 import { SourceConfigProps } from "./types";
-
-const crmFieldOptions = [
-    "Full Name", "First Name", "Last Name", "Email", "Phone", "Phone (Secondary)",
-    "Address Line 1", "Address Line 2", "City", "State", "Zip Code",
-    "Service Needed", "Property Type", "Urgency", "Message/Notes", "-- Ignore --",
-];
-const transformOptions = ["None", "Uppercase", "Lowercase", "Title Case", "Phone Format (E.164)", "Split First/Last Name"];
+import FieldMappingEditor from "./FieldMappingEditor";
+import { LeadFieldMappingRow } from "./field-mapping-utils";
 
 const samplePayload = `{
   "name": "John Smith",
@@ -36,30 +25,15 @@ const WebsiteConfig = ({ formData, setFormData }: SourceConfigProps) => {
     const update = (key: string, val: any) =>
         setFormData({ ...formData, integrationConfig: { ...cfg, [key]: val } });
 
-    const [copied, setCopied] = useState<string | null>(null);
     const [showPayload, setShowPayload] = useState(false);
     const [activeTab, setActiveTab] = useState("wordpress");
 
-    const fieldMappings: { form: string; crm: string; transform: string }[] = cfg.field_mapping_rows || [
+    const fieldMappings: LeadFieldMappingRow[] = cfg.field_mapping_rows || [
         { form: "name", crm: "Full Name", transform: "None" },
         { form: "email", crm: "Email", transform: "Lowercase" },
         { form: "phone", crm: "Phone", transform: "Phone Format (E.164)" },
         { form: "address", crm: "Address Line 1", transform: "None" },
     ];
-
-    const updateMapping = (idx: number, key: string, val: string) => {
-        const next = [...fieldMappings];
-        (next[idx] as any)[key] = val;
-        update("field_mapping_rows", next);
-    };
-    const addMapping = () => update("field_mapping_rows", [...fieldMappings, { form: "", crm: "-- Ignore --", transform: "None" }]);
-    const removeMapping = (idx: number) => update("field_mapping_rows", fieldMappings.filter((_, i) => i !== idx));
-
-    const copy = (text: string, key: string) => {
-        navigator.clipboard.writeText(text);
-        setCopied(key);
-        setTimeout(() => setCopied(null), 2000);
-    };
 
     return (
         <div className="space-y-6">
@@ -195,51 +169,12 @@ const WebsiteConfig = ({ formData, setFormData }: SourceConfigProps) => {
                 )}
             </div>
 
-            {/* Field Mapping */}
-            <div>
-                <div className="flex items-center gap-2 mb-3">
-                    <Globe size={16} className="text-[#6637F4]" />
-                    <h4 className="font-semibold text-sm text-[#0F172A]">Field Mapping</h4>
-                </div>
-                <p className="text-xs text-[#94A3B8] mb-3">Map your form fields to CRM lead fields</p>
-
-                <div className="space-y-2">
-                    {/* Header */}
-                    <div className="grid grid-cols-[1fr_auto_1fr_1fr_auto] gap-2 text-[10px] font-semibold text-[#94A3B8] uppercase tracking-wider px-1">
-                        <span>Your Field</span>
-                        <span></span>
-                        <span>CRM Field</span>
-                        <span>Transform</span>
-                        <span></span>
-                    </div>
-
-                    {fieldMappings.map((m, i) => (
-                        <div key={i} className="grid grid-cols-[1fr_auto_1fr_1fr_auto] gap-2 items-center">
-                            <Input value={m.form} onChange={(e) => updateMapping(i, "form", e.target.value)} className="h-9 rounded-lg text-xs" placeholder="field_name" />
-                            <span className="text-[#94A3B8] text-xs">→</span>
-                            <Select value={m.crm} onValueChange={(v) => updateMapping(i, "crm", v)}>
-                                <SelectTrigger className="h-9 rounded-lg text-xs"><SelectValue /></SelectTrigger>
-                                <SelectContent className="rounded-xl max-h-60">
-                                    {crmFieldOptions.map((f) => <SelectItem key={f} value={f} className="rounded-lg text-xs">{f}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                            <Select value={m.transform} onValueChange={(v) => updateMapping(i, "transform", v)}>
-                                <SelectTrigger className="h-9 rounded-lg text-xs"><SelectValue /></SelectTrigger>
-                                <SelectContent className="rounded-xl">
-                                    {transformOptions.map((t) => <SelectItem key={t} value={t} className="rounded-lg text-xs">{t}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                            <button onClick={() => removeMapping(i)} className="p-1.5 rounded-lg hover:bg-red-50 text-[#94A3B8] hover:text-red-500 transition-colors">
-                                <Trash2 size={12} />
-                            </button>
-                        </div>
-                    ))}
-
-                    <Button variant="outline" size="sm" onClick={addMapping} className="rounded-lg text-xs">
-                        <Plus size={12} className="mr-1" /> Add Field
-                    </Button>
-                </div>
-            </div>
+            <FieldMappingEditor
+                rows={fieldMappings}
+                onChange={(rows) => update("field_mapping_rows", rows)}
+                title="Field Mapping"
+                description="Map your website form fields to CRM lead fields"
+            />
         </div>
     );
 };

@@ -26,6 +26,7 @@ import WebsiteConfig from "./config/WebsiteConfig";
 import GoogleAdsConfig from "./config/GoogleAdsConfig";
 import SocialMediaConfig from "./config/SocialMediaConfig";
 import EmailCampaignConfig from "./config/EmailCampaignConfig";
+import { buildLeadSourcePayload } from "./config/payload-utils";
 
 interface SourceTypeOption {
     type: string; name: string; category: string; icon: string; color: string; description: string; method: string;
@@ -92,6 +93,23 @@ const AddSourceDialog = ({ isOpen, onClose, onCreated }: Props) => {
         if (!selectedType) return;
         setSaving(true);
         try {
+            const connectionPayload = buildLeadSourcePayload({
+                selectedType: { type: selectedType.type as any },
+                formData,
+            });
+
+            if (
+                formData.integrationConfig?.connection_method === "api"
+                && !connectionPayload.apiEndpoint
+            ) {
+                toast({
+                    title: "API endpoint required",
+                    description: "Add an API endpoint or switch to webhook mode before creating this source.",
+                    variant: "destructive",
+                });
+                return;
+            }
+
             const payload: Record<string, any> = {
                 name: formData.name || `${selectedType.name} Source`,
                 description: formData.description || undefined,
@@ -108,9 +126,13 @@ const AddSourceDialog = ({ isOpen, onClose, onCreated }: Props) => {
                 notifyAssignee: formData.notifyAssignee,
                 costPerLead: formData.costPerLead ? parseFloat(formData.costPerLead) : undefined,
                 monthlyBudget: formData.monthlyBudget ? parseFloat(formData.monthlyBudget) : undefined,
-                integrationConfig: formData.integrationConfig,
+                integrationConfig: connectionPayload.integrationConfig,
+                apiEndpoint: connectionPayload.apiEndpoint,
+                fieldMapping: connectionPayload.fieldMapping,
+                defaultValues: connectionPayload.defaultValues,
+                integrationStatus: connectionPayload.integrationStatus,
             };
-            if (["WEBSITE", "EMAIL_CAMPAIGN"].includes(selectedType.type)) {
+            if (!payload.integrationStatus && ["WEBSITE", "EMAIL_CAMPAIGN"].includes(selectedType.type)) {
                 payload.integrationStatus = "CONNECTED";
             }
             await api.post("/lead-sources", payload);

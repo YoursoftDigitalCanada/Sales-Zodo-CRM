@@ -95,6 +95,7 @@ interface SourceDetail {
     integrationStatus: string;
     integrationConfig?: any;
     webhookUrl?: string;
+    apiEndpoint?: string;
     status: string;
     totalLeads: number;
     convertedLeads: number;
@@ -141,8 +142,10 @@ const LeadSourceDetail = () => {
     const [logs, setLogs] = useState<LogEntry[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [copied, setCopied] = useState(false);
+    const [copiedKey, setCopiedKey] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState("overview");
+    const [webhookSecret, setWebhookSecret] = useState("");
+    const [regeneratingSecret, setRegeneratingSecret] = useState(false);
 
     // Editable fields
     const [editName, setEditName] = useState("");
@@ -232,10 +235,39 @@ const LeadSourceDetail = () => {
         }
     };
 
-    const copyToClipboard = (text: string) => {
+    const copyToClipboard = (text: string, key: string) => {
         navigator.clipboard.writeText(text);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+        setCopiedKey(key);
+        setTimeout(() => setCopiedKey(null), 2000);
+    };
+
+    const regenerateWebhookSecret = async () => {
+        if (!id) return;
+        try {
+            setRegeneratingSecret(true);
+            const response = await api.post(`/lead-sources/${id}/webhook/regenerate`);
+            const secret = response.data?.data?.webhookSecret || "";
+            const nextWebhookUrl = response.data?.data?.webhookUrl || source?.webhookUrl || "";
+            setWebhookSecret(secret);
+            if (source) {
+                setSource({
+                    ...source,
+                    webhookUrl: nextWebhookUrl,
+                });
+            }
+            toast({
+                title: "Webhook secret regenerated",
+                description: "Copy the new secret now and update your Google Ads or social integration bridge.",
+            });
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error?.response?.data?.message || "Failed to regenerate webhook secret",
+                variant: "destructive",
+            });
+        } finally {
+            setRegeneratingSecret(false);
+        }
     };
 
     if (loading) {
@@ -468,15 +500,63 @@ const LeadSourceDetail = () => {
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            onClick={() => copyToClipboard(source.webhookUrl || "")}
+                                            onClick={() => copyToClipboard(source.webhookUrl || "", "webhook-url")}
                                             className="rounded-xl"
                                         >
-                                            {copied ? <CheckCircle2 size={14} className="text-green-500" /> : <Copy size={14} />}
+                                            {copiedKey === "webhook-url" ? <CheckCircle2 size={14} className="text-green-500" /> : <Copy size={14} />}
                                         </Button>
                                     </div>
                                     <p className="text-xs text-[#94A3B8]">
                                         Send a POST request with lead data to this URL to create leads automatically.
                                     </p>
+                                </div>
+                            )}
+
+                            {source.webhookUrl && (
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <Label className="text-sm text-[#475569]">Webhook Secret</Label>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={regenerateWebhookSecret}
+                                            disabled={regeneratingSecret}
+                                            className="rounded-xl text-xs"
+                                        >
+                                            {regeneratingSecret ? (
+                                                <Loader2 size={12} className="mr-1.5 animate-spin" />
+                                            ) : (
+                                                <RefreshCw size={12} className="mr-1.5" />
+                                            )}
+                                            Regenerate
+                                        </Button>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Input
+                                            value={webhookSecret || "Click Regenerate to reveal a fresh webhook secret"}
+                                            readOnly
+                                            className="h-10 rounded-xl bg-[#F7F7FB] font-mono text-xs"
+                                        />
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => copyToClipboard(webhookSecret, "webhook-secret")}
+                                            disabled={!webhookSecret}
+                                            className="rounded-xl"
+                                        >
+                                            {copiedKey === "webhook-secret" ? <CheckCircle2 size={14} className="text-green-500" /> : <Copy size={14} />}
+                                        </Button>
+                                    </div>
+                                    <p className="text-xs text-[#94A3B8]">
+                                        Include this in the <code className="font-mono">X-Webhook-Secret</code> header when posting Google Ads, Meta, or website leads.
+                                    </p>
+                                </div>
+                            )}
+
+                            {source.apiEndpoint && (
+                                <div className="space-y-2">
+                                    <Label className="text-sm text-[#475569]">API Endpoint</Label>
+                                    <Input value={source.apiEndpoint} readOnly className="h-10 rounded-xl bg-[#F7F7FB] font-mono text-xs" />
                                 </div>
                             )}
 
@@ -488,6 +568,12 @@ const LeadSourceDetail = () => {
                                 <div>
                                     <p className="text-[#94A3B8] text-xs">Category</p>
                                     <p className="text-[#0F172A] font-medium">{source.category}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[#94A3B8] text-xs">Connection Mode</p>
+                                    <p className="text-[#0F172A] font-medium capitalize">
+                                        {source.integrationConfig?.connection_method || (source.apiEndpoint ? "api" : source.webhookUrl ? "webhook" : "manual")}
+                                    </p>
                                 </div>
                                 <div>
                                     <p className="text-[#94A3B8] text-xs">Created</p>

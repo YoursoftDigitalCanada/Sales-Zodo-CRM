@@ -336,9 +336,7 @@ export class LeadSourceSyncService {
     if (!this.isRecord(rawLead)) return null;
 
     const integrationConfig = this.asRecord(source.integrationConfig);
-    const sourceMapping = this.asRecord(source.fieldMapping);
-    const configMapping = this.asRecord(integrationConfig.fieldMapping);
-    const mapping: Record<string, unknown> = { ...sourceMapping, ...configMapping };
+    const mapping = this.buildFieldMapping(source.fieldMapping, integrationConfig);
     const defaults: Record<string, unknown> = {
       ...this.asRecord(integrationConfig.defaultValues),
       ...this.asRecord(source.defaultValues),
@@ -468,7 +466,62 @@ export class LeadSourceSyncService {
       if (value !== undefined && value !== null && value !== '') return value;
     }
 
-    return undefined;
+      return undefined;
+  }
+
+  private buildFieldMapping(
+    sourceFieldMapping: unknown,
+    integrationConfig: Record<string, unknown>
+  ): Record<string, unknown> {
+    return {
+      ...this.asRecord(sourceFieldMapping),
+      ...this.asRecord(integrationConfig.fieldMapping),
+      ...this.convertFieldMappingRows(
+        integrationConfig.field_mapping_rows || integrationConfig.fieldMappingRows
+      ),
+    };
+  }
+
+  private convertFieldMappingRows(rowsValue: unknown): Record<string, string> {
+    if (!Array.isArray(rowsValue)) return {};
+
+    const crmFieldLabelToKey: Record<string, string> = {
+      'Full Name': 'fullName',
+      'First Name': 'firstName',
+      'Last Name': 'lastName',
+      Email: 'email',
+      Phone: 'phone',
+      'Phone (Secondary)': 'phoneSecondary',
+      Company: 'companyName',
+      'Job Title': 'jobTitle',
+      'Address Line 1': 'location',
+      'Address Line 2': 'locationLine2',
+      City: 'city',
+      State: 'state',
+      'Zip Code': 'zipCode',
+      Website: 'website',
+      'Potential Value': 'potentialValue',
+      Status: 'status',
+      Temperature: 'temperature',
+      'Service Needed': 'serviceNeeded',
+      'Property Type': 'propertyType',
+      Urgency: 'urgency',
+      'Message/Notes': 'notes',
+      'External ID': 'externalId',
+    };
+
+    return rowsValue.reduce<Record<string, string>>((acc, row) => {
+      if (!this.isRecord(row)) return acc;
+      const crmField = this.toString(row.crm);
+      const sourceField = this.toString(row.form);
+      if (!crmField || !sourceField || crmField === '-- Ignore --') return acc;
+
+      const internalKey = crmFieldLabelToKey[crmField];
+      if (!internalKey) return acc;
+
+      acc[internalKey] = sourceField;
+      return acc;
+    }, {});
   }
 
   private applyAuth(

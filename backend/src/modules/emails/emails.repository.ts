@@ -312,6 +312,17 @@ export class EmailsRepository {
         return prisma.email.update({ where: { id }, data: { deletedAt: new Date() } });
     }
 
+    async permanentlyDelete(id: string, tenantId: string, mailboxOwnerUserId: string) {
+        const existing = await prisma.email.findFirst({
+            where: {
+                id,
+                ...this.ownerWhere(tenantId, mailboxOwnerUserId),
+            },
+        });
+        if (!existing) throw new Error('Email not found or access denied');
+        return prisma.email.delete({ where: { id } });
+    }
+
     async findScheduledDraftsDue() {
         return prisma.email.findMany({
             where: {

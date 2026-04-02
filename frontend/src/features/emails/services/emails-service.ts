@@ -153,6 +153,10 @@ export async function deleteEmail(id: string): Promise<void> {
     await api.delete(`/emails/${id}`);
 }
 
+export async function permanentlyDeleteEmail(id: string): Promise<void> {
+    await api.delete(`/emails/${id}/permanent`);
+}
+
 export async function toggleStar(id: string, isStarred: boolean): Promise<EmailResponse> {
     const response = await api.patch(`/emails/${id}/star`, { isStarred });
     return response.data?.data || response.data;

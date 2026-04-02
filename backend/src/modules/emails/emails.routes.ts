@@ -66,6 +66,7 @@ router.patch('/:id/important', requirePermission(PERMISSIONS.EMAILS_VIEW), valid
 router.patch('/:id/labels', requirePermission(PERMISSIONS.EMAILS_VIEW), validate(updateEmailLabelsSchema), emailsController.setLabels.bind(emailsController));
 router.patch('/:id/snooze', requirePermission(PERMISSIONS.EMAILS_VIEW), validate(snoozeEmailSchema), emailsController.snooze.bind(emailsController));
 router.patch('/:id/folder', requirePermission(PERMISSIONS.EMAILS_VIEW), validate(emailIdSchema), emailsController.moveToFolder.bind(emailsController));
+router.delete('/:id/permanent', requirePermission(PERMISSIONS.EMAILS_DELETE), validate(emailIdSchema), emailsController.permanentlyDeleteEmail.bind(emailsController));
 router.delete('/:id', requirePermission(PERMISSIONS.EMAILS_DELETE), validate(emailIdSchema), emailsController.deleteEmail.bind(emailsController));
 router.use(cleanupUploadedEmailFilesOnError);
 

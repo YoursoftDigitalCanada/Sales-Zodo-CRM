@@ -55,6 +55,7 @@ import {
   snoozeEmail as apiSnoozeEmail,
   updateReadStatus as apiUpdateReadStatus,
   moveToFolder as apiMoveToFolder,
+  permanentlyDeleteEmail as apiPermanentlyDeleteEmail,
   getEmailLabels as apiGetEmailLabels,
   createEmailLabel as apiCreateEmailLabel,
   getMailboxSettings as apiGetMailboxSettings,
@@ -1339,6 +1340,8 @@ const EmailDetailView = ({
   onStar,
   onArchive,
   onDelete,
+  onMoveToSpam,
+  onDeletePermanently,
   onMarkRead,
   onPrint,
   onDownload,
@@ -1355,6 +1358,8 @@ const EmailDetailView = ({
   onStar: () => void;
   onArchive: () => void;
   onDelete: () => void;
+  onMoveToSpam: () => void;
+  onDeletePermanently: () => void;
   onMarkRead: () => void;
   onPrint: () => void;
   onDownload: () => void;
@@ -1463,6 +1468,11 @@ const EmailDetailView = ({
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={onMoveToSpam} className="rounded-md">
+                  <AlertCircle size={14} className="mr-2" />
+                  {email.folder === "spam" ? "Move to Inbox" : "Move to Spam"}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={onToggleImportant} className="rounded-md">
                   <Flag size={14} className="mr-2" />
                   {email.important ? "Remove Important" : "Mark as Important"}
@@ -1471,6 +1481,15 @@ const EmailDetailView = ({
                   <Clock size={14} className="mr-2" />
                   Snooze
                 </DropdownMenuItem>
+                {email.folder === "trash" ? (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={onDeletePermanently} className="rounded-md text-red-600 focus:text-red-600">
+                      <Trash2 size={14} className="mr-2" />
+                      Delete Permanently
+                    </DropdownMenuItem>
+                  </>
+                ) : null}
               </DropdownMenuContent>
             </DropdownMenu>
           </TooltipProvider>
@@ -2172,26 +2191,86 @@ const LetterBoxPage = () => {
     }
   };
 
-  const handleBulkAction = async (action: "archive" | "delete" | "read" | "unread") => {
+  const handleMoveToSpam = async (emailId: string) => {
+    const email = emails.find((entry) => entry.id === emailId);
+    if (!email) return;
+
+    const targetFolder = email.folder === "spam" ? "inbox" : "spam";
+    patchEmailInState(emailId, (current) => ({ ...current, folder: targetFolder }));
+    if (activeEmail?.id === emailId && targetFolder !== selectedFolder) {
+      setActiveEmail(null);
+    }
+
+    try {
+      const updated = await apiMoveToFolder(emailId, targetFolder === "spam" ? "SPAM" : "INBOX");
+      mergeEmailResponse(updated);
+      toast({
+        title: targetFolder === "spam" ? "Moved to Spam" : "Moved to Inbox",
+        description: targetFolder === "spam"
+          ? "The email has been moved to spam."
+          : "The email has been removed from spam.",
+      });
+    } catch {
+      patchEmailInState(emailId, (current) => ({ ...current, folder: email.folder }));
+      toast({
+        title: "Update Failed",
+        description: targetFolder === "spam" ? "Could not move the email to spam." : "Could not move the email back to inbox.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handlePermanentlyDeleteEmail = async (emailId: string) => {
+    const email = emails.find((entry) => entry.id === emailId);
+    if (!email) return;
+
+    setEmails((prev) => prev.filter((entry) => entry.id !== emailId));
+    if (activeEmail?.id === emailId) {
+      setActiveEmail(null);
+    }
+    setSelectedEmails((prev) => prev.filter((id) => id !== emailId));
+
+    try {
+      await apiPermanentlyDeleteEmail(emailId);
+      toast({ title: "Email Deleted Permanently", description: "The email has been removed permanently." });
+    } catch {
+      setEmails((prev) => [...prev, email].sort((a, b) => (b.sortAt || 0) - (a.sortAt || 0)));
+      toast({ title: "Delete Failed", description: "Could not permanently delete the email.", variant: "destructive" });
+      void loadEmails(true);
+    }
+  };
+
+  const handleBulkAction = async (action: "archive" | "delete" | "read" | "unread" | "spam" | "inbox" | "permanentDelete") => {
     const ids = [...selectedEmails];
     if (ids.length === 0) return;
 
     // Optimistic local update
-    setEmails((prev) => prev.map((e) => {
-      if (!ids.includes(e.id)) return e;
-      switch (action) {
-        case "archive":
-          return { ...e, folder: "archive" };
-        case "delete":
-          return { ...e, folder: "trash" };
-        case "read":
-          return { ...e, read: true };
-        case "unread":
-          return { ...e, read: false };
-        default:
-          return e;
+    if (action === "permanentDelete") {
+      setEmails((prev) => prev.filter((email) => !ids.includes(email.id)));
+      if (activeEmail && ids.includes(activeEmail.id)) {
+        setActiveEmail(null);
       }
-    }));
+    } else {
+      setEmails((prev) => prev.map((e) => {
+        if (!ids.includes(e.id)) return e;
+        switch (action) {
+          case "archive":
+            return { ...e, folder: "archive" };
+          case "delete":
+            return { ...e, folder: "trash" };
+          case "spam":
+            return { ...e, folder: "spam" };
+          case "inbox":
+            return { ...e, folder: "inbox" };
+          case "read":
+            return { ...e, read: true };
+          case "unread":
+            return { ...e, read: false };
+          default:
+            return e;
+        }
+      }));
+    }
     setSelectedEmails([]);
     toast({
       title: "Action Completed",
@@ -2204,8 +2283,11 @@ const LetterBoxPage = () => {
         switch (action) {
           case "archive": return apiMoveToFolder(id, 'ARCHIVE');
           case "delete": return apiMoveToFolder(id, 'TRASH');
+          case "spam": return apiMoveToFolder(id, 'SPAM');
+          case "inbox": return apiMoveToFolder(id, 'INBOX');
           case "read": return apiUpdateReadStatus(id, true);
           case "unread": return apiUpdateReadStatus(id, false);
+          case "permanentDelete": return apiPermanentlyDeleteEmail(id);
         }
       }));
     } catch {
@@ -2837,6 +2919,24 @@ const LetterBoxPage = () => {
                           <Flag size={14} className="mr-2" />
                           Mark Important
                         </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        {selectedFolder === "spam" ? (
+                          <DropdownMenuItem onClick={() => handleBulkAction("inbox")} className="rounded-md">
+                            <Inbox size={14} className="mr-2" />
+                            Move to Inbox
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem onClick={() => handleBulkAction("spam")} className="rounded-md">
+                            <AlertCircle size={14} className="mr-2" />
+                            Move to Spam
+                          </DropdownMenuItem>
+                        )}
+                        {selectedFolder === "trash" ? (
+                          <DropdownMenuItem onClick={() => handleBulkAction("permanentDelete")} className="rounded-md text-red-600 focus:text-red-600">
+                            <Trash2 size={14} className="mr-2" />
+                            Delete Permanently
+                          </DropdownMenuItem>
+                        ) : null}
                       </DropdownMenuContent>
                     </DropdownMenu>
                     <span className="text-sm text-[#94A3B8] ml-2">
@@ -2984,6 +3084,8 @@ const LetterBoxPage = () => {
                   onStar={() => handleStarEmail(activeEmail.id)}
                   onArchive={() => handleArchiveEmail(activeEmail.id)}
                   onDelete={() => handleDeleteEmail(activeEmail.id)}
+                  onMoveToSpam={() => handleMoveToSpam(activeEmail.id)}
+                  onDeletePermanently={() => handlePermanentlyDeleteEmail(activeEmail.id)}
                   onMarkRead={() => handleReadStatus(activeEmail.id, !activeEmail.read)}
                   onPrint={() => handlePrintEmail(activeEmail)}
                   onDownload={() => handleDownloadEmail(activeEmail)}

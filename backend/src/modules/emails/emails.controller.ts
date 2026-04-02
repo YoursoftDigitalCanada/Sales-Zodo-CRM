@@ -72,6 +72,13 @@ export class EmailsController {
         } catch (e) { next(e); }
     }
 
+    async permanentlyDeleteEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            await emailsService.permanentlyDeleteEmail(req.params.id, req.context.tenantId, req.context.userId, req.context.userId);
+            sendNoContent(res);
+        } catch (e) { next(e); }
+    }
+
     async toggleStar(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const { isStarred } = req.body;

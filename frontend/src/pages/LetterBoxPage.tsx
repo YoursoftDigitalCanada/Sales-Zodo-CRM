@@ -74,6 +74,7 @@ import {
   type UpdateMailboxSettingsPayload,
   type EmailResponse,
 } from "@/features/emails/services/emails-service";
+import { printEmailDocument } from "@/features/emails/utils/email-print";
 import { API_ORIGIN } from "@/services/api";
 import {
   Bell,
@@ -2553,36 +2554,26 @@ const LetterBoxPage = () => {
   };
 
   const handlePrintEmail = useCallback((email: Email) => {
-    const printWindow = window.open("", "_blank", "noopener,noreferrer,width=900,height=700");
-    if (!printWindow) {
-      toast({ title: "Print Blocked", description: "Please allow pop-ups to print this email.", variant: "destructive" });
-      return;
-    }
-
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>${escapeHtml(email.subject)}</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 24px; color: #0f172a; }
-            .meta { margin-bottom: 24px; color: #475569; }
-            .meta p { margin: 4px 0; }
-          </style>
-        </head>
-        <body>
-          <h1>${escapeHtml(email.subject)}</h1>
-          <div class="meta">
-            <p><strong>From:</strong> ${escapeHtml(email.from.name)} &lt;${escapeHtml(email.from.email)}&gt;</p>
-            <p><strong>To:</strong> ${escapeHtml(email.to.map((recipient) => recipient.email).join(", "))}</p>
-            <p><strong>Date:</strong> ${escapeHtml(`${email.date} ${email.time}`)}</p>
-          </div>
-          <div>${email.body}</div>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
+    void printEmailDocument({
+      subject: email.subject,
+      from: email.from,
+      to: email.to,
+      cc: email.cc,
+      bcc: email.bcc,
+      dateLabel: `${email.date} ${email.time}`,
+      bodyHtml: email.body,
+      attachments: (email.attachments || []).map((attachment) => ({
+        name: attachment.name,
+        size: attachment.size,
+        type: attachment.type,
+      })),
+    }).catch(() => {
+      toast({
+        title: "Print Failed",
+        description: "Could not open the email for printing.",
+        variant: "destructive",
+      });
+    });
   }, [toast]);
 
   const handleDownloadEmail = useCallback((email: Email) => {

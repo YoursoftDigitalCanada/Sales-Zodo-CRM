@@ -1732,6 +1732,16 @@ const RolesSection = ({
   onDuplicate: (role: ApiRole) => void;
   onDelete: (role: ApiRole) => void;
 }) => {
+  const [expandedRoleIds, setExpandedRoleIds] = useState<string[]>([]);
+
+  const toggleExpandedRole = (roleId: string) => {
+    setExpandedRoleIds((current) =>
+      current.includes(roleId)
+        ? current.filter((id) => id !== roleId)
+        : [...current, roleId],
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -1748,6 +1758,10 @@ const RolesSection = ({
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {roles.map((role, index) => {
           const roleVisual = getRoleVisual(role.name);
+          const isExpanded = expandedRoleIds.includes(role.id);
+          const visiblePermissions = isExpanded ? role.permissions : role.permissions.slice(0, 5);
+          const hiddenCount = Math.max(role.permissions.length - 5, 0);
+
           return (
             <motion.div
               key={role.id}
@@ -1803,8 +1817,13 @@ const RolesSection = ({
               </div>
 
               <div className="space-y-3">
-                <div className="flex flex-wrap gap-2">
-                  {role.permissions.slice(0, 5).map((permission) => (
+                <div
+                  className={cn(
+                    "flex flex-wrap gap-2",
+                    isExpanded && role.permissions.length > 12 && "max-h-40 overflow-y-auto pr-1",
+                  )}
+                >
+                  {visiblePermissions.map((permission) => (
                     <span
                       key={permission.id}
                       className="rounded-md bg-[#F8FAFC] px-2 py-1 text-xs text-[#475569]"
@@ -1812,12 +1831,20 @@ const RolesSection = ({
                       {permission.name}
                     </span>
                   ))}
-                  {role.permissions.length > 5 && (
-                    <span className="rounded-md bg-[#F8FAFC] px-2 py-1 text-xs text-[#475569]">
-                      +{role.permissions.length - 5} more
-                    </span>
-                  )}
                 </div>
+                {role.permissions.length > 5 && (
+                  <button
+                    type="button"
+                    onClick={() => toggleExpandedRole(role.id)}
+                    className="inline-flex items-center gap-2 rounded-md bg-[#F8FAFC] px-2.5 py-1.5 text-xs font-medium text-[#0891B2] transition-colors hover:bg-[#0891B2]/10"
+                  >
+                    <ChevronDown
+                      size={12}
+                      className={cn("transition-transform", isExpanded && "rotate-180")}
+                    />
+                    {isExpanded ? "Show less" : `+${hiddenCount} more`}
+                  </button>
+                )}
                 <div className="flex items-center justify-between border-t border-[rgba(15,23,42,0.06)] pt-4">
                   <div className="flex items-center gap-2">
                     <Users size={14} className="text-[#475569]" />

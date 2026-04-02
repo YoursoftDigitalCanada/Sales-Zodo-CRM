@@ -508,9 +508,12 @@ export interface EagleViewAddressInput {
  */
 export async function requestEagleViewInstant(address: string | EagleViewAddressInput): Promise<EagleViewReport> {
     try {
-        const res = await api.post("/eagleview/orders/instant", { address });
+        const res = await api.post("/eagleview/orders/instant", { address }, { timeout: 45000 });
         return res.data?.data;
     } catch (error: any) {
+        if (error?.code === "ECONNABORTED") {
+            throw new Error("EagleView took too long to respond. Please try again.");
+        }
         const message = error?.response?.data?.message || error?.message || 'Unable to fetch roof data from EagleView.';
         throw new Error(message);
     }

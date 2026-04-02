@@ -83,6 +83,22 @@ const fmtPct = (n: number | null | undefined) =>
 const short = (id: string) => id.slice(0, 8).toUpperCase();
 const fmtDate = (d: string) =>
   new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+const withTimeout = <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+
+  return new Promise<T>((resolve, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} took too long to load.`)), ms);
+
+    promise
+      .then(resolve)
+      .catch(reject)
+      .finally(() => {
+        if (timer) clearTimeout(timer);
+      });
+  });
+};
+
 const getEstimatePartyName = (estimate: RoofEstimate) => {
   const leadName = `${estimate.lead?.firstName || ""} ${estimate.lead?.lastName || ""}`.trim();
   return estimate.client?.clientName || leadName || estimate.lead?.companyName || "—";
@@ -391,24 +407,63 @@ export default function RoofEstimator() {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      try {
-        const [est, st, health, w, txns] = await Promise.all([
-          getEstimates(),
-          getEstimateStatistics(),
-          checkAiHealth(),
-          getWallet().catch(() => null),
+      const results = await Promise.allSettled([
+        withTimeout(getEstimates(), 15000, "Estimator list"),
+        withTimeout(getEstimateStatistics(), 15000, "Estimator statistics"),
+        withTimeout(checkAiHealth(), 8000, "AI health check"),
+        withTimeout(getWallet().catch(() => null), 8000, "Wallet"),
+        withTimeout(
           getTransactions(1, 10).catch(() => ({ data: [], total: 0, page: 1, limit: 10 })),
-        ]);
-        setEstimates(est);
-        setStats(st);
-        setAiOnline(health);
-        if (w) setWallet(w);
-        setTransactions(txns.data || []);
-      } catch (e: any) {
-        toast({ title: "Error", description: e?.message || "Failed to load estimates", variant: "destructive" });
-      } finally {
-        setLoading(false);
+          8000,
+          "Wallet transactions",
+        ),
+      ]);
+
+      const [estimatesResult, statsResult, aiHealthResult, walletResult, transactionsResult] = results;
+
+      if (estimatesResult.status === "fulfilled") {
+        setEstimates(estimatesResult.value);
+      } else {
+        setEstimates([]);
       }
+
+      if (statsResult.status === "fulfilled") {
+        setStats(statsResult.value);
+      } else {
+        setStats(null);
+      }
+
+      if (aiHealthResult.status === "fulfilled") {
+        setAiOnline(aiHealthResult.value);
+      } else {
+        setAiOnline(false);
+      }
+
+      if (walletResult.status === "fulfilled" && walletResult.value) {
+        setWallet(walletResult.value);
+      } else {
+        setWallet(null);
+      }
+
+      if (transactionsResult.status === "fulfilled") {
+        setTransactions(transactionsResult.value.data || []);
+      } else {
+        setTransactions([]);
+      }
+
+      const failedMessages = results
+        .filter((result): result is PromiseRejectedResult => result.status === "rejected")
+        .map((result) => result.reason?.message || "Some estimator data could not be loaded.");
+
+      if (failedMessages.length > 0) {
+        toast({
+          title: "Estimator loaded partially",
+          description: failedMessages[0],
+          variant: "destructive",
+        });
+      }
+
+      setLoading(false);
     })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

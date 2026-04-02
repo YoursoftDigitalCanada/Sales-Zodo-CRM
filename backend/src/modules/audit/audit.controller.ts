@@ -11,6 +11,33 @@ function escapeCsv(value: unknown): string {
   return stringValue;
 }
 
+function parseDevice(userAgent?: string): string {
+  const agent = String(userAgent || '').toLowerCase();
+  if (!agent) return '';
+  return /iphone|ipad|android|mobile/.test(agent) ? 'Mobile' : 'Desktop';
+}
+
+function resolveActorName(log: any): string {
+  if (log.user) {
+    const fullName = `${log.user.firstName || ''} ${log.user.lastName || ''}`.trim();
+    return fullName || log.user.email || '';
+  }
+
+  const publicActorLabel = log.newValues && typeof log.newValues === 'object'
+    ? String((log.newValues as Record<string, unknown>).publicActorLabel || (log.newValues as Record<string, unknown>).signedByName || '').trim()
+    : '';
+
+  if (publicActorLabel) {
+    return publicActorLabel;
+  }
+
+  if (String(log.requestPath || '').includes('/public/') || String(log.description || '').toLowerCase().includes('public link')) {
+    return 'Public Visitor';
+  }
+
+  return 'System';
+}
+
 export class AuditController {
   async getMany(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
@@ -30,13 +57,14 @@ export class AuditController {
       });
 
       const rows = [
-        ['Timestamp', 'Action', 'Module', 'Description', 'User', 'IP'],
+        ['Timestamp', 'Action', 'Module', 'Description', 'User', 'Device', 'IP'],
         ...result.data.map((log) => [
           log.createdAt.toISOString(),
           log.action,
           log.module,
           log.description,
-          log.user ? `${log.user.firstName} ${log.user.lastName}`.trim() : '',
+          resolveActorName(log),
+          parseDevice(log.userAgent),
           log.ipAddress || '',
         ]),
       ];

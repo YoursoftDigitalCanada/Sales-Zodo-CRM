@@ -845,7 +845,7 @@ export class QuotesService {
                 action: 'STATUS_CHANGE',
                 module: 'quotes',
                 description: `Estimate "${quote.quoteNumber}" viewed via public link`,
-                metadata: { viewCount: nextViewCount },
+                metadata: { viewCount: nextViewCount, publicActorLabel: 'Public Visitor' },
             });
         }
 
@@ -899,7 +899,7 @@ export class QuotesService {
                 action: 'STATUS_CHANGE',
                 module: 'quotes',
                 description: `Estimate "${quote.quoteNumber}" rejected via public link`,
-                metadata: { action: 'reject' },
+                metadata: { action: 'reject', publicActorLabel: 'Public Visitor' },
             });
 
             eventBus.emit('quote.statusChanged', {
@@ -1008,7 +1008,13 @@ export class QuotesService {
             action: 'STATUS_CHANGE',
             module: 'quotes',
             description: `Estimate "${quote.quoteNumber}" signed by ${signedByName}`,
-            metadata: { action: 'sign', signedByName, signatureType: normalizedSignatureType, signedPdfFileId },
+            metadata: {
+                action: 'sign',
+                signedByName,
+                publicActorLabel: signedByName,
+                signatureType: normalizedSignatureType,
+                signedPdfFileId,
+            },
         });
 
         eventBus.emit('quote.statusChanged', {

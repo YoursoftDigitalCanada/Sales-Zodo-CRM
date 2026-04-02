@@ -112,6 +112,7 @@ export function registerRoutes(app: Application): void {
   // =========================================================================
 
   apiRouter.use('/auth', authRoutes);
+  apiRouter.use('/public', (req, _res, next) => requestContextStore.run(req, next));
   apiRouter.use('/public', quotesPublicRoutes);
   apiRouter.use('/public', proposalsPublicRoutes);
   apiRouter.use('/webhooks/leads', leadSourceWebhooksRoutes);

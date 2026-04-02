@@ -365,6 +365,33 @@ function parseDevice(userAgent?: string): string {
   return /iphone|ipad|android|mobile/.test(agent) ? "Mobile" : "Desktop";
 }
 
+function resolveAuditActorName(log: AuditLogItem, user?: UserRecord): string {
+  if (user?.fullName) {
+    return user.fullName;
+  }
+
+  if (log.user) {
+    const fullName = `${log.user.firstName || ""} ${log.user.lastName || ""}`.trim();
+    return fullName || log.user.email || "Unknown User";
+  }
+
+  const publicActorLabel = typeof log.newValues?.publicActorLabel === "string"
+    ? log.newValues.publicActorLabel.trim()
+    : typeof log.newValues?.signedByName === "string"
+      ? log.newValues.signedByName.trim()
+      : "";
+
+  if (publicActorLabel) {
+    return publicActorLabel;
+  }
+
+  if ((log.requestPath || "").includes("/public/") || log.description.toLowerCase().includes("public link")) {
+    return "Public Visitor";
+  }
+
+  return "System";
+}
+
 function mapEmployeeForDepartmentDialog(employee: ApiEmployee): DepartmentDialogEmployee {
   return {
     id: employee.id,
@@ -1993,6 +2020,7 @@ const ActivityLogSection = ({
             {filteredLogs.map((log) => {
               const user = log.user?.id ? usersById.get(log.user.id) : undefined;
               const device = parseDevice(log.userAgent);
+              const actorName = resolveAuditActorName(log, user);
               return (
                 <TableRow key={log.id} className="hover:bg-[#F8FAFC]">
                   <TableCell>
@@ -2005,11 +2033,11 @@ const ActivityLogSection = ({
                         />
                       ) : (
                         <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#F1F5F9] text-xs font-bold text-[#0F172A]">
-                          {user ? getInitials(user.fullName) : "?"}
+                          {getInitials(actorName)}
                         </div>
                       )}
                       <span className="font-medium text-[#0F172A]">
-                        {user?.fullName || (log.user ? `${log.user.firstName} ${log.user.lastName}`.trim() : "Unknown User")}
+                        {actorName}
                       </span>
                     </div>
                   </TableCell>

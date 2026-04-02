@@ -355,13 +355,11 @@ export function useSignupWizard() {
       setOtpCode("");
 
       toast({
-        title: channel === "email" ? "Email OTP sent" : "Phone OTP ready",
+        title: channel === "email" ? "Email OTP sent" : "Phone OTP sent",
         description:
-          debugCode && channel === "email"
-            ? `Demo email OTP: ${debugCode}`
-            : channel === "phone"
-              ? "Use 123456 for phone verification in test mode."
-              : `We sent a 6-digit code to ${destination}.`,
+          debugCode
+            ? `Dev OTP: ${debugCode}`
+            : `We sent a 6-digit code to ${destination}.`,
       });
     } catch (error: any) {
       toast({
@@ -456,6 +454,8 @@ export function useSignupWizard() {
     setHasSentOtp(false);
     setOtpExpiresIn(0);
     setOtpSentTo("");
+    setOtpDebugCode(null);
+    setOtpCode("");
   };
 
   return {

@@ -44,6 +44,12 @@ const envSchema = z.object({
   SMTP_FROM: z.string().optional(),
   SETTINGS_ENCRYPTION_KEY: z.string().min(16).optional(),
 
+  // Twilio Verify
+  TWILIO_ACCOUNT_SID: z.string().optional(),
+  TWILIO_AUTH_TOKEN: z.string().optional(),
+  TWILIO_VERIFY_SERVICE_SID: z.string().optional(),
+  TWILIO_VERIFY_CHANNEL: z.enum(['sms', 'call', 'whatsapp']).default('sms'),
+
   // Frontend
   FRONTEND_URL: z.string().default('http://localhost:5173'),
 
@@ -136,6 +142,12 @@ export const config = {
   },
   settings: {
     encryptionKey: parsed.data.SETTINGS_ENCRYPTION_KEY || parsed.data.JWT_ACCESS_SECRET,
+  },
+  twilio: {
+    accountSid: parsed.data.TWILIO_ACCOUNT_SID,
+    authToken: parsed.data.TWILIO_AUTH_TOKEN,
+    verifyServiceSid: parsed.data.TWILIO_VERIFY_SERVICE_SID,
+    verifyChannel: parsed.data.TWILIO_VERIFY_CHANNEL,
   },
   frontend: {
     url: parsed.data.FRONTEND_URL,

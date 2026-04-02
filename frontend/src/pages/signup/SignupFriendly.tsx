@@ -747,7 +747,7 @@ export default function SignupFriendly() {
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 24 }}>
                         {([
                           { channel: "email" as const, title: "Email OTP", desc: `Verify via ${w.form.email || "email"}`, icon: Mail },
-                          { channel: "phone" as const, title: "Phone OTP", desc: "Test: use code 123456", icon: Phone },
+                          { channel: "phone" as const, title: "Phone OTP", desc: w.normalizedPhone || "Verify by SMS", icon: Phone },
                         ]).map((opt) => {
                           const sel = w.otpChannel === opt.channel;
                           return (
@@ -770,7 +770,7 @@ export default function SignupFriendly() {
                           <div>
                             <p style={{ fontSize: 14, fontWeight: 700, color: "#0F172A" }}>{w.hasSentOtp ? "Code sent ✓" : "Request code"}</p>
                             <p style={{ fontSize: 12, color: "#94A3B8", marginTop: 2 }}>
-                              {w.hasSentOtp && w.otpSentTo ? `Sent to ${w.otpSentTo}. Expires ${formatTimer(w.otpExpiresIn)}.` : w.otpChannel === "email" ? "We simulate delivery for now." : "Phone uses 123456 in test mode."}
+                              {w.hasSentOtp && w.otpSentTo ? `Sent to ${w.otpSentTo}. Expires ${formatTimer(w.otpExpiresIn)}.` : `We’ll send a 6-digit code to your ${w.otpChannel === "email" ? "email" : "phone"} when you request it.`}
                             </p>
                           </div>
                           <button

@@ -5,6 +5,7 @@ import {
 } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
 import { mailerService } from '../../common/services/mailer.service';
+import { twilioVerifyService } from '../../common/services/twilio-verify.service';
 import { logger } from '../../common/utils/logger';
 import { config } from '../../config';
 
@@ -14,7 +15,7 @@ interface SignupOtpRecord {
   email: string;
   phone?: string;
   channel: SignupOtpChannel;
-  otp: string;
+  otp?: string;
   expiresAt: number;
   createdAt: number;
   verifiedAt?: number;
@@ -22,10 +23,10 @@ interface SignupOtpRecord {
   attempts: number;
 }
 
-const OTP_TTL_MS = 5 * 60 * 1000;
+const EMAIL_OTP_TTL_MS = 5 * 60 * 1000;
+const PHONE_OTP_TTL_MS = 10 * 60 * 1000;
 const MAX_VERIFY_ATTEMPTS = 5;
 const MAX_SENDS_PER_TTL = 3;
-const STATIC_PHONE_OTP = '123456';
 
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
@@ -33,7 +34,11 @@ function normalizeEmail(email: string): string {
 
 function normalizePhone(phone?: string): string | undefined {
   const value = String(phone || '').trim();
-  return value || undefined;
+  if (!value) return undefined;
+
+  const hasPlusPrefix = value.startsWith('+');
+  const digitsOnly = value.replace(/\D/g, '');
+  return hasPlusPrefix ? `+${digitsOnly}` : digitsOnly;
 }
 
 function buildRecordKey(
@@ -78,6 +83,7 @@ class SignupOtpService {
 
     const email = normalizeEmail(params.email);
     const phone = normalizePhone(params.phone);
+    const ttlMs = params.channel === 'phone' ? PHONE_OTP_TTL_MS : EMAIL_OTP_TTL_MS;
 
     if (params.channel === 'phone' && !phone) {
       throw new BadRequestError('Phone number is required for phone verification');
@@ -98,26 +104,32 @@ class SignupOtpService {
       );
     }
 
-    const otp = params.channel === 'phone' ? STATIC_PHONE_OTP : generateOtp();
+    if (params.channel === 'phone' && !twilioVerifyService.isConfigured()) {
+      throw new ServiceUnavailableError(
+        'Phone OTP is not configured yet. Add Twilio Verify credentials to enable SMS verification.'
+      );
+    }
+
+    const otp = params.channel === 'email' ? generateOtp() : undefined;
     const record: SignupOtpRecord = {
       email,
       phone,
       channel: params.channel,
       otp,
       createdAt: now,
-      expiresAt: now + OTP_TTL_MS,
+      expiresAt: now + ttlMs,
       attempts: 0,
       sendCount: (existing?.expiresAt || 0) > now ? existing!.sendCount + 1 : 1,
     };
 
-    this.records.set(key, record);
-
     if (params.channel === 'email') {
+      this.records.set(key, record);
+      const emailOtp = otp as string;
       const sent = await mailerService.sendMail({
         to: email,
         subject: 'Your Zodo CRM verification code',
-        html: this.buildEmailTemplate(otp),
-        text: `Your Zodo CRM verification code is ${otp}. It expires in 5 minutes.`,
+        html: this.buildEmailTemplate(emailOtp),
+        text: `Your Zodo CRM verification code is ${emailOtp}. It expires in 5 minutes.`,
       });
 
       if (!sent) {
@@ -134,30 +146,46 @@ class SignupOtpService {
 
       logger.info('[Signup OTP] Email OTP delivered', {
         email,
-        expiresInSeconds: Math.ceil(OTP_TTL_MS / 1000),
+        expiresInSeconds: Math.ceil(EMAIL_OTP_TTL_MS / 1000),
       });
     } else {
-      logger.info('[Signup OTP] Static phone OTP requested', {
+      try {
+        await twilioVerifyService.sendVerification(phone!);
+        this.records.set(key, record);
+      } catch (error: any) {
+        logger.error('[Signup OTP] Failed to send Twilio Verify OTP', {
+          email,
+          phone,
+          error: error?.message || String(error),
+          code: error?.code,
+          status: error?.status,
+        });
+        throw new ServiceUnavailableError(
+          'Phone OTP could not be sent right now. Check Twilio Verify settings and try again.'
+        );
+      }
+
+      logger.info('[Signup OTP] Phone OTP delivered via Twilio Verify', {
         email,
         phone,
-        otp: STATIC_PHONE_OTP,
+        expiresInSeconds: Math.ceil(PHONE_OTP_TTL_MS / 1000),
       });
     }
 
     return {
       channel: params.channel,
-      expiresIn: Math.ceil(OTP_TTL_MS / 1000),
+      expiresIn: Math.ceil(ttlMs / 1000),
       destination: params.channel === 'email' ? maskEmail(email) : maskPhone(phone!),
-      ...(config.app.isDevelopment ? { debugCode: otp } : {}),
+      ...(config.app.isDevelopment && params.channel === 'email' && otp ? { debugCode: otp } : {}),
     };
   }
 
-  verifyOtp(params: {
+  async verifyOtp(params: {
     email: string;
     phone?: string;
     channel: SignupOtpChannel;
     otp: string;
-  }): { verified: true; expiresIn: number } {
+  }): Promise<{ verified: true; expiresIn: number }> {
     this.cleanupExpiredRecords();
 
     const email = normalizeEmail(params.email);
@@ -188,7 +216,39 @@ class SignupOtpService {
       );
     }
 
-    if (record.otp !== params.otp.trim()) {
+    const providedOtp = params.otp.trim();
+
+    if (params.channel === 'phone') {
+      if (!twilioVerifyService.isConfigured()) {
+        throw new ServiceUnavailableError(
+          'Phone OTP is not configured yet. Add Twilio Verify credentials to enable SMS verification.'
+        );
+      }
+
+      try {
+        const result = await twilioVerifyService.checkVerification(phone!, providedOtp);
+        if (!result.approved) {
+          record.attempts += 1;
+          this.records.set(key, record);
+          throw new BadRequestError('Invalid OTP. Please try again.', ErrorCodes.AUTH_OTP_INVALID);
+        }
+      } catch (error: any) {
+        if (error instanceof BadRequestError) {
+          throw error;
+        }
+
+        logger.error('[Signup OTP] Failed to verify Twilio OTP', {
+          email,
+          phone,
+          error: error?.message || String(error),
+          code: error?.code,
+          status: error?.status,
+        });
+        throw new ServiceUnavailableError(
+          'Phone OTP could not be verified right now. Please try again in a moment.'
+        );
+      }
+    } else if (record.otp !== providedOtp) {
       record.attempts += 1;
       this.records.set(key, record);
       throw new BadRequestError('Invalid OTP. Please try again.', ErrorCodes.AUTH_OTP_INVALID);

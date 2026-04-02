@@ -750,7 +750,7 @@ export default function SignupMinimal() {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 24 }}>
                   {([
                     { channel: "email" as const, title: "Email OTP", desc: `Verify via ${w.form.email || "email"}`, icon: Mail },
-                    { channel: "phone" as const, title: "Phone OTP", desc: "Use 123456 in test mode", icon: Phone },
+                    { channel: "phone" as const, title: "Phone OTP", desc: w.normalizedPhone || "Verify by SMS", icon: Phone },
                   ]).map((opt) => {
                     const selected = w.otpChannel === opt.channel;
                     return (
@@ -795,9 +795,7 @@ export default function SignupMinimal() {
                       <p style={{ fontSize: 12, color: "#94A3B8", marginTop: 2 }}>
                         {w.hasSentOtp && w.otpSentTo
                           ? `Sent to ${w.otpSentTo}. Expires in ${formatTimer(w.otpExpiresIn)}.`
-                          : w.otpChannel === "email"
-                            ? "We simulate email delivery for now."
-                            : "Phone verification uses static OTP 123456."}
+                          : `We’ll send a 6-digit code to your ${w.otpChannel === "email" ? "email" : "phone"} when requested.`}
                       </p>
                     </div>
                     <button

@@ -563,7 +563,7 @@ export default function SignupEnterprise() {
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 20 }}>
                           {([
                             { channel: "email" as const, title: "Email", desc: w.form.email || "email", icon: Mail },
-                            { channel: "phone" as const, title: "Phone", desc: "test: 123456", icon: Phone },
+                            { channel: "phone" as const, title: "Phone", desc: w.normalizedPhone || "Verify by SMS", icon: Phone },
                           ]).map((opt) => {
                             const sel = w.otpChannel === opt.channel;
                             return (
@@ -590,7 +590,7 @@ export default function SignupEnterprise() {
                             <div>
                               <p style={{ fontSize: 13, fontWeight: 600, color: "#0F172A" }}>{w.hasSentOtp ? "Code delivered" : "Request code"}</p>
                               <p style={{ fontSize: 11, color: "#94A3B8", marginTop: 2 }}>
-                                {w.hasSentOtp && w.otpSentTo ? `Sent to ${w.otpSentTo}. Expires ${formatTimer(w.otpExpiresIn)}.` : "Simulated delivery in development."}
+                                {w.hasSentOtp && w.otpSentTo ? `Sent to ${w.otpSentTo}. Expires ${formatTimer(w.otpExpiresIn)}.` : `We’ll send a 6-digit code to your ${w.otpChannel === "email" ? "email" : "phone"} when requested.`}
                               </p>
                             </div>
                             <button type="button" onClick={() => void w.requestOtp(w.otpChannel)} disabled={w.isSendingOtp} style={{

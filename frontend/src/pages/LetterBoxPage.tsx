@@ -2195,8 +2195,37 @@ const LetterBoxPage = () => {
     setDeleteConfirmation({ ids: uniqueIds, count: uniqueIds.length });
   };
 
-  const handleDeleteEmail = (emailId: string) => {
-    requestDeleteConfirmation([emailId]);
+  const handleDeleteEmail = async (emailId: string) => {
+    const email = emails.find((entry) => entry.id === emailId);
+    if (!email) return;
+    const previousActiveEmail = activeEmail;
+
+    if (email.folder === "trash") {
+      requestDeleteConfirmation([emailId]);
+      return;
+    }
+
+    patchEmailInState(emailId, (current) => ({ ...current, folder: "trash" }));
+    if (activeEmail?.id === emailId && selectedFolder !== "trash") {
+      setActiveEmail(null);
+    }
+
+    try {
+      const updated = await apiMoveToFolder(emailId, "TRASH");
+      mergeEmailResponse(updated);
+      toast({
+        title: "Moved to Trash",
+        description: "The email has been moved to trash.",
+      });
+    } catch {
+      patchEmailInState(emailId, (current) => ({ ...current, folder: email.folder }));
+      setActiveEmail(previousActiveEmail);
+      toast({
+        title: "Delete Failed",
+        description: "Could not move the email to trash.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleMoveToSpam = async (emailId: string) => {
@@ -2272,8 +2301,51 @@ const LetterBoxPage = () => {
     const ids = [...selectedEmails];
     if (ids.length === 0) return;
 
-    if (action === "delete" || action === "permanentDelete") {
+    if (action === "permanentDelete") {
       requestDeleteConfirmation(ids);
+      return;
+    }
+
+    if (action === "delete") {
+      const selectedEntries = emails.filter((email) => ids.includes(email.id));
+      const allInTrash = selectedEntries.length > 0 && selectedEntries.every((email) => email.folder === "trash");
+
+      if (allInTrash) {
+        requestDeleteConfirmation(ids);
+        return;
+      }
+
+      const previousEmails = emails;
+      const previousActiveEmail = activeEmail;
+
+      setEmails((prev) => prev.map((email) => (
+        ids.includes(email.id)
+          ? { ...email, folder: "trash" }
+          : email
+      )));
+      setSelectedEmails([]);
+      if (activeEmail && ids.includes(activeEmail.id) && selectedFolder !== "trash") {
+        setActiveEmail(null);
+      }
+
+      toast({
+        title: "Moved to Trash",
+        description: `${ids.length} email(s) moved to trash.`,
+      });
+
+      try {
+        const updatedEmails = await Promise.all(ids.map((id) => apiMoveToFolder(id, "TRASH")));
+        updatedEmails.forEach(mergeEmailResponse);
+      } catch {
+        setEmails(previousEmails);
+        setActiveEmail(previousActiveEmail);
+        toast({
+          title: "Delete Failed",
+          description: "Could not move the selected emails to trash.",
+          variant: "destructive",
+        });
+        void loadEmails(true);
+      }
       return;
     }
 

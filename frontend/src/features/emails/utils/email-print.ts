@@ -153,6 +153,7 @@ export function printEmailDocument(email: PrintableEmailDocument): Promise<void>
     iframe.style.pointerEvents = "none";
 
     let settled = false;
+    let printed = false;
 
     const cleanup = () => {
       if (settled) return;
@@ -176,6 +177,12 @@ export function printEmailDocument(email: PrintableEmailDocument): Promise<void>
         fail(new Error("Could not open email print preview."));
         return;
       }
+
+      if (printed) {
+        return;
+      }
+      printed = true;
+      iframe.onload = null;
 
       printWindow.addEventListener("afterprint", cleanup, { once: true });
 

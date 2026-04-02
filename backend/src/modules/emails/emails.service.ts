@@ -315,9 +315,6 @@ export class EmailsService {
     async permanentlyDeleteEmail(id: string, tenantId: string, mailboxOwnerUserId: string, actorUserId?: string) {
         const existing = await emailsRepository.findById(id, tenantId, mailboxOwnerUserId);
         if (!existing) throw new NotFoundError('Email not found', ErrorCodes.RESOURCE_NOT_FOUND);
-        if (existing.folder !== 'TRASH') {
-            throw new BadRequestError('Move the email to Trash before deleting it permanently', ErrorCodes.INVALID_INPUT);
-        }
 
         await Promise.allSettled((existing.attachments || []).map(async (attachment) => {
             try {

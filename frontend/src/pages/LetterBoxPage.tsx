@@ -35,6 +35,16 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -1683,6 +1693,11 @@ type MailboxFormState = {
   imapEncryption: "SSL/TLS" | "STARTTLS" | "NONE";
 };
 
+type DeleteConfirmationState = {
+  ids: string[];
+  count: number;
+} | null;
+
 const EMPTY_MAILBOX_FORM: MailboxFormState = {
   smtpHost: "",
   smtpPort: "587",
@@ -1901,6 +1916,7 @@ const LetterBoxPage = () => {
   const [mailboxSettings, setMailboxSettings] = useState<MailboxSettings | null>(null);
   const [mailboxForm, setMailboxForm] = useState<MailboxFormState>({ ...EMPTY_MAILBOX_FORM });
   const [mailboxSaving, setMailboxSaving] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<DeleteConfirmationState>(null);
   const autoSyncAttemptedRef = useRef(false);
 
   const refreshMailboxState = useCallback(async () => {
@@ -2173,22 +2189,14 @@ const LetterBoxPage = () => {
     }
   };
 
-  const handleDeleteEmail = async (emailId: string) => {
-    const email = emails.find((entry) => entry.id === emailId);
-    if (!email) return;
+  const requestDeleteConfirmation = (ids: string[]) => {
+    const uniqueIds = Array.from(new Set(ids.filter(Boolean)));
+    if (uniqueIds.length === 0) return;
+    setDeleteConfirmation({ ids: uniqueIds, count: uniqueIds.length });
+  };
 
-    patchEmailInState(emailId, (current) => ({ ...current, folder: "trash" }));
-    if (activeEmail?.id === emailId) {
-      setActiveEmail(null);
-    }
-    try {
-      const updated = await apiMoveToFolder(emailId, 'TRASH');
-      mergeEmailResponse(updated);
-      toast({ title: "Email Deleted", description: "The email has been moved to trash." });
-    } catch {
-      patchEmailInState(emailId, (current) => ({ ...current, folder: email.folder }));
-      toast({ title: "Delete Failed", description: "Could not delete the email.", variant: "destructive" });
-    }
+  const handleDeleteEmail = (emailId: string) => {
+    requestDeleteConfirmation([emailId]);
   };
 
   const handleMoveToSpam = async (emailId: string) => {
@@ -2220,22 +2228,42 @@ const LetterBoxPage = () => {
     }
   };
 
-  const handlePermanentlyDeleteEmail = async (emailId: string) => {
-    const email = emails.find((entry) => entry.id === emailId);
-    if (!email) return;
+  const handlePermanentlyDeleteEmail = (emailId: string) => {
+    requestDeleteConfirmation([emailId]);
+  };
 
-    setEmails((prev) => prev.filter((entry) => entry.id !== emailId));
-    if (activeEmail?.id === emailId) {
+  const confirmDeleteEmails = async () => {
+    const ids = deleteConfirmation?.ids || [];
+    if (ids.length === 0) return;
+
+    const previousEmails = emails;
+    const previousActiveEmail = activeEmail;
+    const previousSelectedEmails = selectedEmails;
+
+    setEmails((prev) => prev.filter((email) => !ids.includes(email.id)));
+    if (activeEmail && ids.includes(activeEmail.id)) {
       setActiveEmail(null);
     }
-    setSelectedEmails((prev) => prev.filter((id) => id !== emailId));
+    setSelectedEmails((prev) => prev.filter((id) => !ids.includes(id)));
+    setDeleteConfirmation(null);
 
     try {
-      await apiPermanentlyDeleteEmail(emailId);
-      toast({ title: "Email Deleted Permanently", description: "The email has been removed permanently." });
+      await Promise.all(ids.map((id) => apiPermanentlyDeleteEmail(id)));
+      toast({
+        title: ids.length === 1 ? "Email Deleted" : "Emails Deleted",
+        description: ids.length === 1
+          ? "The email has been permanently deleted and cannot be recovered."
+          : `${ids.length} emails have been permanently deleted and cannot be recovered.`,
+      });
     } catch {
-      setEmails((prev) => [...prev, email].sort((a, b) => (b.sortAt || 0) - (a.sortAt || 0)));
-      toast({ title: "Delete Failed", description: "Could not permanently delete the email.", variant: "destructive" });
+      setEmails(previousEmails);
+      setActiveEmail(previousActiveEmail);
+      setSelectedEmails(previousSelectedEmails);
+      toast({
+        title: "Delete Failed",
+        description: "Could not permanently delete the selected email.",
+        variant: "destructive",
+      });
       void loadEmails(true);
     }
   };
@@ -2244,33 +2272,29 @@ const LetterBoxPage = () => {
     const ids = [...selectedEmails];
     if (ids.length === 0) return;
 
-    // Optimistic local update
-    if (action === "permanentDelete") {
-      setEmails((prev) => prev.filter((email) => !ids.includes(email.id)));
-      if (activeEmail && ids.includes(activeEmail.id)) {
-        setActiveEmail(null);
-      }
-    } else {
-      setEmails((prev) => prev.map((e) => {
-        if (!ids.includes(e.id)) return e;
-        switch (action) {
-          case "archive":
-            return { ...e, folder: "archive" };
-          case "delete":
-            return { ...e, folder: "trash" };
-          case "spam":
-            return { ...e, folder: "spam" };
-          case "inbox":
-            return { ...e, folder: "inbox" };
-          case "read":
-            return { ...e, read: true };
-          case "unread":
-            return { ...e, read: false };
-          default:
-            return e;
-        }
-      }));
+    if (action === "delete" || action === "permanentDelete") {
+      requestDeleteConfirmation(ids);
+      return;
     }
+
+    // Optimistic local update
+    setEmails((prev) => prev.map((e) => {
+      if (!ids.includes(e.id)) return e;
+      switch (action) {
+        case "archive":
+          return { ...e, folder: "archive" };
+        case "spam":
+          return { ...e, folder: "spam" };
+        case "inbox":
+          return { ...e, folder: "inbox" };
+        case "read":
+          return { ...e, read: true };
+        case "unread":
+          return { ...e, read: false };
+        default:
+          return e;
+      }
+    }));
     setSelectedEmails([]);
     toast({
       title: "Action Completed",
@@ -2282,12 +2306,10 @@ const LetterBoxPage = () => {
       await Promise.all(ids.map((id) => {
         switch (action) {
           case "archive": return apiMoveToFolder(id, 'ARCHIVE');
-          case "delete": return apiMoveToFolder(id, 'TRASH');
           case "spam": return apiMoveToFolder(id, 'SPAM');
           case "inbox": return apiMoveToFolder(id, 'INBOX');
           case "read": return apiUpdateReadStatus(id, true);
           case "unread": return apiUpdateReadStatus(id, false);
-          case "permanentDelete": return apiPermanentlyDeleteEmail(id);
         }
       }));
     } catch {
@@ -3160,6 +3182,32 @@ const LetterBoxPage = () => {
         forwardEmail={forwardEmail}
         preset={composePreset}
       />
+
+      <AlertDialog open={Boolean(deleteConfirmation)} onOpenChange={(open) => !open && setDeleteConfirmation(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {deleteConfirmation?.count === 1 ? "Delete this email permanently?" : `Delete ${deleteConfirmation?.count || 0} emails permanently?`}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteConfirmation?.count === 1
+                ? "Do you really want to delete this email? It cannot be recovered after this action and will be removed from Inbox, Spam, Trash, and every other folder."
+                : `Do you really want to delete these ${deleteConfirmation?.count || 0} emails? They cannot be recovered after this action and will be removed from every folder.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                void confirmDeleteEmails();
+              }}
+              className="bg-[#DC2626] text-white hover:bg-[#B91C1C]"
+            >
+              Yes, Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

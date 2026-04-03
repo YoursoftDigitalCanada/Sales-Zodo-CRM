@@ -1,18 +1,29 @@
 // src/App.tsx
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { GlobalAiFloatingButton } from "@/components/ai/GlobalAiFloatingButton";
+import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Navigate, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Navigate, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { CopilotContextProvider } from "@/contexts/CopilotContext";
 import { Sidebar, SidebarSuppressionContext } from "@/components/Sidebar";
 import { getAccessToken } from "@/features/auth/lib/auth-storage";
 import { WorkspaceBrandingProvider, useWorkspaceBranding } from "@/features/settings/context/workspace-branding";
 import { canAccessModule, getDefaultAuthorizedRoute } from "@/lib/access-control";
 import { isOnboardingRequired } from "@/lib/enabled-features";
+import { toast } from "@/hooks/use-toast";
+import useIsMobile from "@/hooks/useIsMobile";
+import {
+  closeAiShortcutPanel,
+  openAiShortcutPanel,
+  triggerCreateUiAction,
+  triggerExportUiAction,
+  triggerImportUiAction,
+  triggerSaveUiAction,
+} from "@/lib/app-shortcuts";
 
 // Layout
 import Layout from "./components/Layout";
@@ -116,6 +127,16 @@ import RolesPage from "./pages/roles/RolesPage";
 
 const queryClient = new QueryClient();
 
+const resolveCreateRoute = (pathname: string): string | null => {
+  if (pathname.startsWith("/quotes")) return "/quotes?action=create";
+  if (pathname.startsWith("/invoice")) return "/invoice/create";
+  if (pathname.startsWith("/client-list")) return "/client-list/add";
+  if (pathname.startsWith("/projects") || pathname.startsWith("/kanban")) return "/projects/add";
+  if (pathname.startsWith("/inspections")) return "/inspections/new";
+  if (pathname.startsWith("/roof-estimator")) return "/roof-estimator/new";
+  return null;
+};
+
 const isPublicPath = (pathname: string): boolean => {
   if (pathname === "/" || pathname === "/login" || pathname === "/signup" || pathname === "/onboarding") {
     return true;
@@ -131,8 +152,11 @@ const isPublicPath = (pathname: string): boolean => {
 
 const AppRoutes = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { isMobile } = useIsMobile();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const { branding } = useWorkspaceBranding();
   const onboardingLocked =
     Boolean(getAccessToken()) &&
@@ -144,6 +168,149 @@ const AppRoutes = () => {
   );
   const companyName = branding?.companyName?.trim() || "ZODO CRM";
   const companyLogoUrl = branding?.logoUrl || null;
+
+  const toggleAppSidebar = useCallback(() => {
+    if (isMobile) {
+      setMobileOpen((current) => !current);
+      return;
+    }
+    setSidebarCollapsed((current) => !current);
+  }, [isMobile]);
+
+  const handleOpenHelp = useCallback(() => {
+    navigate("/help");
+  }, [navigate]);
+
+  const handleOpenAiAssistant = useCallback(() => {
+    openAiShortcutPanel();
+  }, []);
+
+  const handleCreateShortcut = useCallback(async () => {
+    const createRoute = resolveCreateRoute(location.pathname);
+    if (createRoute) {
+      navigate(createRoute);
+      return;
+    }
+
+    const triggered = await triggerCreateUiAction();
+    if (!triggered) {
+      setCommandPaletteOpen(true);
+      toast({
+        title: "Choose what to create",
+        description: "Pick a create action from the command palette.",
+      });
+    }
+  }, [location.pathname, navigate]);
+
+  const handleSaveShortcut = useCallback(async () => {
+    const triggered = await triggerSaveUiAction();
+    if (!triggered) {
+      toast({
+        title: "No form to save",
+        description: "Open a form or editor first, then press Command+S again.",
+      });
+    }
+  }, []);
+
+  const handleExportShortcut = useCallback(async () => {
+    const triggered = await triggerExportUiAction();
+    if (!triggered) {
+      toast({
+        title: "No export action found",
+        description: "This screen does not have a visible export action right now.",
+      });
+    }
+  }, []);
+
+  const handleImportShortcut = useCallback(async () => {
+    const triggered = await triggerImportUiAction();
+    if (!triggered) {
+      toast({
+        title: "No import action found",
+        description: "This screen does not have a visible import action right now.",
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const modifier = event.metaKey || event.ctrlKey;
+      if (!modifier) {
+        if (event.key === "Escape") {
+          setCommandPaletteOpen(false);
+          closeAiShortcutPanel();
+          setMobileOpen(false);
+        }
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+
+      if (key === "k" && !event.shiftKey) {
+        event.preventDefault();
+        setCommandPaletteOpen(true);
+        return;
+      }
+
+      if (key === "p" && event.shiftKey) {
+        event.preventDefault();
+        setCommandPaletteOpen(true);
+        return;
+      }
+
+      if (key === "n" && !event.shiftKey) {
+        event.preventDefault();
+        void handleCreateShortcut();
+        return;
+      }
+
+      if (key === "b" && !event.shiftKey) {
+        event.preventDefault();
+        toggleAppSidebar();
+        return;
+      }
+
+      if (key === "/" || key === "?") {
+        event.preventDefault();
+        handleOpenHelp();
+        return;
+      }
+
+      if (key === "a" && event.shiftKey) {
+        event.preventDefault();
+        handleOpenAiAssistant();
+        return;
+      }
+
+      if (key === "s" && !event.shiftKey) {
+        event.preventDefault();
+        void handleSaveShortcut();
+        return;
+      }
+
+      if (key === "e" && event.shiftKey) {
+        event.preventDefault();
+        void handleExportShortcut();
+        return;
+      }
+
+      if (key === "i" && event.shiftKey) {
+        event.preventDefault();
+        void handleImportShortcut();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    handleCreateShortcut,
+    handleExportShortcut,
+    handleImportShortcut,
+    handleOpenAiAssistant,
+    handleOpenHelp,
+    handleSaveShortcut,
+    toggleAppSidebar,
+  ]);
 
   if (onboardingLocked) {
     return <Navigate to="/onboarding" replace />;
@@ -745,7 +912,7 @@ const AppRoutes = () => {
               <span className="max-w-[180px] truncate text-sm font-bold text-[#0F172A] tracking-tight">{companyName}</span>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={() => { }} className="p-2 rounded-md hover:bg-[#F1F5F9] text-[#475569] touch-exempt" aria-label="Search">
+              <button onClick={() => setCommandPaletteOpen(true)} className="p-2 rounded-md hover:bg-[#F1F5F9] text-[#475569] touch-exempt" aria-label="Search">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
               </button>
             </div>
@@ -765,6 +932,16 @@ const AppRoutes = () => {
       ) : (
         routesContent
       )}
+      <GlobalCommandPalette
+        open={commandPaletteOpen}
+        onOpenChange={setCommandPaletteOpen}
+        onCreate={() => void handleCreateShortcut()}
+        onExport={() => void handleExportShortcut()}
+        onImport={() => void handleImportShortcut()}
+        onOpenHelp={handleOpenHelp}
+        onOpenAi={handleOpenAiAssistant}
+        onToggleSidebar={toggleAppSidebar}
+      />
       <GlobalAiFloatingButton />
     </>
   );

@@ -1,10 +1,11 @@
 // src/components/ai/GlobalAiFloatingButton.tsx
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, X, MessageCircle } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { AiCopilotPanel } from "./AiCopilotPanel";
 import { cn } from "@/lib/utils";
+import { APP_SHORTCUT_EVENTS } from "@/lib/app-shortcuts";
 
 // Pages where the FAB should NOT appear (public/auth routes)
 const HIDDEN_ROUTES = ["/", "/login", "/signup", "/onboarding"];
@@ -28,6 +29,19 @@ export function GlobalAiFloatingButton() {
     useEffect(() => {
         setIsOpen(false);
     }, [location.pathname]);
+
+    useEffect(() => {
+        const handleOpen = () => setIsOpen(true);
+        const handleClose = () => setIsOpen(false);
+
+        window.addEventListener(APP_SHORTCUT_EVENTS.openAi, handleOpen);
+        window.addEventListener(APP_SHORTCUT_EVENTS.closeAi, handleClose);
+
+        return () => {
+            window.removeEventListener(APP_SHORTCUT_EVENTS.openAi, handleOpen);
+            window.removeEventListener(APP_SHORTCUT_EVENTS.closeAi, handleClose);
+        };
+    }, []);
 
     if (isHiddenRoute) return null;
 

@@ -779,7 +779,7 @@ const LeadDetailPanel = ({
 const Pipeline = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { isMobile, width } = useIsMobile();
+  const { isMobile } = useIsMobile();
   const [pipeline, setPipeline] = useState<PipelineStage[]>(buildEmptyPipeline());
   const [searchQuery, setSearchQuery] = useState("");
   const [filterTemperature, setFilterTemperature] = useState("all");
@@ -932,15 +932,9 @@ const Pipeline = () => {
   );
   const activeFilterCount = Number(filterTemperature !== "all") + Number(filterSource !== "all");
   const hasDisplayedLeads = displayedPipeline.some((stage) => stage.leads.length > 0);
-  const enableNativePipelineDrag = useMemo(() => {
-    if (typeof window === "undefined") {
-      return !isMobile;
-    }
-
-    // Keep drag-and-drop available in responsive desktop view while preserving
-    // swipe-card interactions on actual touch-first phones.
-    return !isMobile || window.matchMedia("(pointer: fine)").matches || window.matchMedia("(hover: hover)").matches;
-  }, [isMobile, width]);
+  // Match the responsive Kanban board behavior by always using the board's
+  // native drag-and-drop path instead of switching mobile cards into swipe mode.
+  const enableNativePipelineDrag = true;
 
   // Find the stage color for the selected lead
   const selectedLeadStageColor = selectedLead

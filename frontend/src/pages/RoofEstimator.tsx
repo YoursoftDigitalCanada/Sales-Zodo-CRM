@@ -71,6 +71,13 @@ import {
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import useIsMobile from "@/hooks/useIsMobile";
+import {
+  ListCardSkeleton,
+  PullToRefreshIndicator,
+  SwipeActionCard,
+  usePullToRefresh,
+} from "@/features/clients/components/responsive-helpers";
 
 /* ─── Helpers ──────────────────────────────────────────────── */
 
@@ -375,6 +382,96 @@ function EstimateCard({
   );
 }
 
+function MobileEstimateCard({
+  est,
+  isSelected,
+  onSelect,
+  onView,
+  onEdit,
+  onDelete,
+}: {
+  est: RoofEstimate;
+  isSelected: boolean;
+  onSelect: (checked: boolean) => void;
+  onView: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <SwipeActionCard onView={onView} onDelete={onDelete} className="rounded-md">
+      <div
+        className={cn(
+          "rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm transition-colors",
+          isSelected && "border-[#22D3EE] bg-[#0891B2]/5"
+        )}
+        onClick={onView}
+      >
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={onSelect}
+              onClick={(e) => e.stopPropagation()}
+              className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
+            />
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#0891B2]/10 text-[#0891B2]">
+              <FileText size={16} />
+            </div>
+            <div className="min-w-0">
+              <div className="font-mono text-[11px] text-[#94A3B8]">{short(est.id)}</div>
+              <h3 className="truncate text-sm font-semibold text-[#0F172A]">{getEstimatePartyName(est)}</h3>
+              <p className="truncate text-xs text-[#475569]">{est.address}</p>
+            </div>
+          </div>
+          <StatusBadge status={est.status || "draft"} />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 border-t border-[rgba(15,23,42,0.06)] pt-3">
+          <div>
+            <p className="text-[11px] text-[#94A3B8]">Roof Area</p>
+            <p className="text-sm font-semibold text-[#0F172A]">{fmtArea(est.roofAreaSqft)}</p>
+          </div>
+          <div>
+            <p className="text-[11px] text-[#94A3B8]">Estimate</p>
+            <p className="text-sm font-semibold text-[#0F172A]">{fmt(est.finalEstimatePrice ?? est.totalEstimate)}</p>
+          </div>
+        </div>
+
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <p className="text-[11px] text-[#94A3B8]">{fmtDate(est.createdAt)}</p>
+          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+            {est.pdfUrl && (
+              <a
+                href={est.pdfUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-md p-2 text-emerald-600 transition-colors hover:bg-emerald-500/10"
+                title="View Report"
+              >
+                <Eye size={15} />
+              </a>
+            )}
+            <button
+              onClick={onEdit}
+              className="rounded-md p-2 text-[#D97706] transition-colors hover:bg-[#D97706]/10"
+              title="Edit"
+            >
+              <Pencil size={15} />
+            </button>
+            <button
+              onClick={onDelete}
+              className="rounded-md p-2 text-red-500 transition-colors hover:bg-red-500/10"
+              title="Delete"
+            >
+              <Trash2 size={15} />
+            </button>
+          </div>
+        </div>
+      </div>
+    </SwipeActionCard>
+  );
+}
+
 /* ─── Main Component ──────────────────────────────────────── */
 
 type ViewMode = "grid" | "table";
@@ -382,6 +479,7 @@ type ViewMode = "grid" | "table";
 export default function RoofEstimator() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isMobile, isTablet } = useIsMobile();
 
   const [estimates, setEstimates] = useState<RoofEstimate[]>([]);
   const [stats, setStats] = useState<EstimateStatistics | null>(null);
@@ -403,55 +501,54 @@ export default function RoofEstimator() {
   const [fundAmount, setFundAmount] = useState("");
   const [addingFunds, setAddingFunds] = useState(false);
 
+  const loadEstimatorData = useMemo(() => async () => {
+    setLoading(true);
+    try {
+      const estimateList = await withTimeout(getEstimates(), 45000, "Estimator list");
+      setEstimates(estimateList);
+    } catch (error: any) {
+      setEstimates([]);
+      toast({
+        title: "Estimator unavailable",
+        description: error?.message || "Failed to load estimator records.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+
+    const secondaryResults = await Promise.allSettled([
+      withTimeout(getEstimateStatistics(), 15000, "Estimator statistics"),
+      withTimeout(checkAiHealth(), 8000, "AI health check"),
+      withTimeout(getWallet().catch(() => null), 8000, "Wallet"),
+      withTimeout(
+        getTransactions(1, 10).catch(() => ({ data: [], total: 0, page: 1, limit: 10 })),
+        8000,
+        "Wallet transactions",
+      ),
+    ]);
+
+    const [statsResult, aiHealthResult, walletResult, transactionsResult] = secondaryResults;
+
+    setStats(statsResult.status === "fulfilled" ? statsResult.value : null);
+    setAiOnline(aiHealthResult.status === "fulfilled" ? aiHealthResult.value : false);
+    setWallet(walletResult.status === "fulfilled" && walletResult.value ? walletResult.value : null);
+    setTransactions(transactionsResult.status === "fulfilled" ? transactionsResult.value.data || [] : []);
+  }, [toast]);
+
   // Load data
   useEffect(() => {
     let isMounted = true;
 
     (async () => {
-      setLoading(true);
-      try {
-        const estimateList = await withTimeout(getEstimates(), 45000, "Estimator list");
-        if (!isMounted) return;
-        setEstimates(estimateList);
-      } catch (error: any) {
-        if (!isMounted) return;
-        setEstimates([]);
-        toast({
-          title: "Estimator unavailable",
-          description: error?.message || "Failed to load estimator records.",
-          variant: "destructive",
-        });
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-
-      const secondaryResults = await Promise.allSettled([
-        withTimeout(getEstimateStatistics(), 15000, "Estimator statistics"),
-        withTimeout(checkAiHealth(), 8000, "AI health check"),
-        withTimeout(getWallet().catch(() => null), 8000, "Wallet"),
-        withTimeout(
-          getTransactions(1, 10).catch(() => ({ data: [], total: 0, page: 1, limit: 10 })),
-          8000,
-          "Wallet transactions",
-        ),
-      ]);
-
+      await loadEstimatorData();
       if (!isMounted) return;
-
-      const [statsResult, aiHealthResult, walletResult, transactionsResult] = secondaryResults;
-
-      setStats(statsResult.status === "fulfilled" ? statsResult.value : null);
-      setAiOnline(aiHealthResult.status === "fulfilled" ? aiHealthResult.value : false);
-      setWallet(walletResult.status === "fulfilled" && walletResult.value ? walletResult.value : null);
-      setTransactions(transactionsResult.status === "fulfilled" ? transactionsResult.value.data || [] : []);
     })();
 
     return () => {
       isMounted = false;
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [loadEstimatorData]);
 
   // Filtered list
   const filtered = useMemo(() => {
@@ -529,16 +626,21 @@ export default function RoofEstimator() {
   };
 
   const allSelected = filtered.length > 0 && selectedEstimates.size === filtered.length;
+  const effectiveViewMode: ViewMode = isMobile ? "grid" : viewMode;
+  const { handlers, pullDistance, isRefreshing } = usePullToRefresh({
+    enabled: isMobile,
+    onRefresh: loadEstimatorData,
+  });
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-[#F8FAFC]" {...(isMobile ? handlers : {})}>
       {/* ── Header ───────────────────────────────────────── */}
       <header className="crm-module-header sticky top-0 z-30 backdrop-blur-xl bg-white/80 border-b border-[rgba(15,23,42,0.06)]/50">
-        <div className="flex h-16 items-center justify-between px-6">
-          <div className="flex items-center gap-2 text-sm">
+        <div className={cn("flex items-center justify-between", isMobile ? "min-h-16 px-4 py-3" : "h-16 px-6")}>
+          <div className={cn("flex items-center gap-2 text-sm", isMobile && "min-w-0")}>
             <span className="text-[#475569]">CRM</span>
             <ChevronRight size={16} className="text-[#475569]" />
-            <span className="font-medium text-[#0F172A]">AI Roof Estimator</span>
+            <span className="truncate font-medium text-[#0F172A]">AI Roof Estimator</span>
           </div>
           <div className="flex items-center gap-3">
             {aiOnline !== null && (
@@ -550,18 +652,21 @@ export default function RoofEstimator() {
                 {aiOnline ? "AI Online" : "AI Offline"}
               </span>
             )}
-            <Button
-              onClick={() => navigate("/roof-estimator/new")}
-              className="bg-[#0891B2] hover:bg-[#0E7490] text-white rounded-md shadow-sm"
-            >
-              <Plus size={18} className="mr-2" />
-              Create AI Estimate
-            </Button>
+            {!isMobile && (
+              <Button
+                onClick={() => navigate("/roof-estimator/new")}
+                className="bg-[#0891B2] hover:bg-[#0E7490] text-white rounded-md shadow-sm"
+              >
+                <Plus size={18} className="mr-2" />
+                Create AI Estimate
+              </Button>
+            )}
           </div>
         </div>
       </header>
 
-      <div className="px-6 py-6 max-w-[1600px] mx-auto">
+      <div className={cn("mx-auto max-w-[1600px]", isMobile ? "px-4 py-4 pb-24" : "px-6 py-6")}>
+        {isMobile && <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />}
         {/* ── Title ─────────────────────────────────────── */}
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-2">
@@ -578,7 +683,12 @@ export default function RoofEstimator() {
         </div>
 
         {/* ── Stats ─────────────────────────────────────── */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 mb-6">
+        <div className={cn(
+          "mb-6 gap-4",
+          isMobile
+            ? "flex overflow-x-auto pb-2 [&>*]:min-w-[240px] [&>*]:shrink-0"
+            : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
+        )}>
           <StatCard title="Total Estimates" value={stats ? String(stats.totalEstimates) : "—"} subtitle="All estimates" icon={ClipboardList} color="teal" delay={0} />
           <StatCard title="Total Revenue" value={stats ? fmt(stats.totalRevenue) : "—"} subtitle="Booked revenue" icon={DollarSign} color="gold" delay={0.05} />
           <StatCard title="Avg Roof Area" value={stats ? fmtArea(stats.avgRoofArea) : "—"} subtitle="Average per estimate" icon={Triangle} color="green" delay={0.1} />
@@ -628,7 +738,10 @@ export default function RoofEstimator() {
               </div>
 
               {/* Status filter tabs */}
-              <div className="flex items-center gap-1 bg-[#F1F5F9] rounded-md p-1">
+              <div className={cn(
+                "flex items-center gap-1 bg-[#F1F5F9] rounded-md p-1",
+                isMobile && "overflow-x-auto"
+              )}>
                 {[
                   { label: "All", val: "all", count: estimates.length },
                   { label: "Draft", val: "draft", count: draftCount },
@@ -639,7 +752,7 @@ export default function RoofEstimator() {
                     key={t.val}
                     onClick={() => setFilterStatus(t.val)}
                     className={cn(
-                      "px-3 py-1.5 rounded-md text-xs font-semibold transition-all",
+                      "px-3 py-1.5 rounded-md text-xs font-semibold transition-all whitespace-nowrap",
                       filterStatus === t.val
                         ? "bg-white text-[#0891B2] shadow-sm"
                         : "text-[#64748B] hover:text-[#0F172A]"
@@ -652,7 +765,8 @@ export default function RoofEstimator() {
             </div>
 
             {/* View toggle */}
-            <div className="flex items-center border border-[rgba(15,23,42,0.1)] rounded-md overflow-hidden">
+            {!isMobile && (
+              <div className="flex items-center border border-[rgba(15,23,42,0.1)] rounded-md overflow-hidden">
               <button
                 onClick={() => setViewMode("grid")}
                 className={cn(
@@ -675,7 +789,8 @@ export default function RoofEstimator() {
               >
                 <List size={16} />
               </button>
-            </div>
+              </div>
+            )}
           </div>
 
           {/* Bulk actions */}
@@ -699,9 +814,8 @@ export default function RoofEstimator() {
         {/* ── Estimates Table / Grid ──────────────────────── */}
         <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden">
           {loading ? (
-            <div className="flex items-center justify-center py-16 text-sm text-[#64748B]">
-              <Loader2 className="mr-2 h-5 w-5 animate-spin text-[#0891B2]" />
-              Loading estimates...
+            <div className="p-4 sm:p-6">
+              <ListCardSkeleton rows={isMobile ? 4 : 3} />
             </div>
           ) : filtered.length === 0 ? (
             <div className="py-16 text-center">
@@ -717,7 +831,7 @@ export default function RoofEstimator() {
                 Create AI Estimate
               </Button>
             </div>
-          ) : viewMode === "table" ? (
+          ) : effectiveViewMode === "table" ? (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -756,19 +870,31 @@ export default function RoofEstimator() {
               </table>
             </div>
           ) : (
-            <div className="p-6">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className={cn(isMobile ? "p-4" : "p-6")}>
+              <div className={cn("grid grid-cols-1 gap-4", !isMobile && "md:grid-cols-2 xl:grid-cols-3")}>
                 <AnimatePresence>
                   {filtered.map((est) => (
-                    <EstimateCard
-                      key={est.id}
-                      est={est}
-                      isSelected={selectedEstimates.has(est.id)}
-                      onSelect={() => toggleSelect(est.id)}
-                      onView={() => navigate(`/roof-estimator/${est.id}/edit`)}
-                      onEdit={() => navigate(`/roof-estimator/${est.id}/edit`)}
-                      onDelete={() => setDeleteId(est.id)}
-                    />
+                    isMobile ? (
+                      <MobileEstimateCard
+                        key={est.id}
+                        est={est}
+                        isSelected={selectedEstimates.has(est.id)}
+                        onSelect={() => toggleSelect(est.id)}
+                        onView={() => navigate(`/roof-estimator/${est.id}/edit`)}
+                        onEdit={() => navigate(`/roof-estimator/${est.id}/edit`)}
+                        onDelete={() => setDeleteId(est.id)}
+                      />
+                    ) : (
+                      <EstimateCard
+                        key={est.id}
+                        est={est}
+                        isSelected={selectedEstimates.has(est.id)}
+                        onSelect={() => toggleSelect(est.id)}
+                        onView={() => navigate(`/roof-estimator/${est.id}/edit`)}
+                        onEdit={() => navigate(`/roof-estimator/${est.id}/edit`)}
+                        onDelete={() => setDeleteId(est.id)}
+                      />
+                    )
                   ))}
                 </AnimatePresence>
               </div>
@@ -776,9 +902,12 @@ export default function RoofEstimator() {
           )}
 
           {/* Footer  */}
-          <div className="px-4 py-3 border-t border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]/60 flex items-center justify-between text-sm text-[#64748B]">
+          <div className={cn(
+            "border-t border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]/60 text-sm text-[#64748B]",
+            isMobile ? "px-4 py-3" : "flex items-center justify-between px-4 py-3"
+          )}>
             <span>Showing {filtered.length} of {estimates.length} estimates</span>
-            <span>{selectedEstimates.size > 0 ? `${selectedEstimates.size} selected` : ""}</span>
+            {!isMobile && <span>{selectedEstimates.size > 0 ? `${selectedEstimates.size} selected` : ""}</span>}
           </div>
         </div>
 
@@ -794,41 +923,77 @@ export default function RoofEstimator() {
               </div>
               <span className="text-xs text-[#94A3B8]">Last {transactions.length} transactions</span>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]/60">
-                    {["Date", "Type", "Amount", "Description", "Balance After"].map((h) => (
-                      <th key={h} className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-[#64748B]">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {transactions.map((tx) => (
-                    <tr key={tx.id} className="border-b border-[rgba(15,23,42,0.06)] last:border-0 hover:bg-[#F8FAFC]/80 transition-colors">
-                      <td className="py-3 px-4 text-sm text-[#64748B] whitespace-nowrap">{fmtDate(tx.createdAt)}</td>
-                      <td className="py-3 px-4">
-                        <span className={cn(
-                          "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold capitalize",
-                          tx.type === "credit" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
-                        )}>
-                          <span className={cn("w-1.5 h-1.5 rounded-full", tx.type === "credit" ? "bg-emerald-500" : "bg-red-500")} />
-                          {tx.type}
-                        </span>
-                      </td>
-                      <td className={cn("py-3 px-4 text-sm font-semibold", tx.type === "credit" ? "text-emerald-600" : "text-red-600")}>
+            {isMobile ? (
+              <div className="space-y-3 p-4">
+                {transactions.map((tx) => (
+                  <div key={tx.id} className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-4">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <span className="text-xs text-[#64748B]">{fmtDate(tx.createdAt)}</span>
+                      <span className={cn(
+                        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold capitalize",
+                        tx.type === "credit" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
+                      )}>
+                        <span className={cn("h-1.5 w-1.5 rounded-full", tx.type === "credit" ? "bg-emerald-500" : "bg-red-500")} />
+                        {tx.type}
+                      </span>
+                    </div>
+                    <div className="mb-2 text-sm font-semibold text-[#0F172A]">{tx.description}</div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className={cn("font-semibold", tx.type === "credit" ? "text-emerald-600" : "text-red-600")}>
                         {tx.type === "credit" ? "+" : "-"}{fmt(tx.amount)}
-                      </td>
-                      <td className="py-3 px-4 text-sm text-[#475569] max-w-[260px] truncate">{tx.description}</td>
-                      <td className="py-3 px-4 text-sm font-semibold text-[#0F172A]">{fmt(tx.balanceAfter)}</td>
+                      </span>
+                      <span className="text-[#475569]">Balance: <span className="font-semibold text-[#0F172A]">{fmt(tx.balanceAfter)}</span></span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]/60">
+                      {["Date", "Type", "Amount", "Description", "Balance After"].map((h) => (
+                        <th key={h} className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-[#64748B]">{h}</th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {transactions.map((tx) => (
+                      <tr key={tx.id} className="border-b border-[rgba(15,23,42,0.06)] last:border-0 hover:bg-[#F8FAFC]/80 transition-colors">
+                        <td className="py-3 px-4 text-sm text-[#64748B] whitespace-nowrap">{fmtDate(tx.createdAt)}</td>
+                        <td className="py-3 px-4">
+                          <span className={cn(
+                            "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold capitalize",
+                            tx.type === "credit" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
+                          )}>
+                            <span className={cn("w-1.5 h-1.5 rounded-full", tx.type === "credit" ? "bg-emerald-500" : "bg-red-500")} />
+                            {tx.type}
+                          </span>
+                        </td>
+                        <td className={cn("py-3 px-4 text-sm font-semibold", tx.type === "credit" ? "text-emerald-600" : "text-red-600")}>
+                          {tx.type === "credit" ? "+" : "-"}{fmt(tx.amount)}
+                        </td>
+                        <td className="py-3 px-4 text-sm text-[#475569] max-w-[260px] truncate">{tx.description}</td>
+                        <td className="py-3 px-4 text-sm font-semibold text-[#0F172A]">{fmt(tx.balanceAfter)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      {isMobile && (
+        <Button
+          onClick={() => navigate("/roof-estimator/new")}
+          size="icon"
+          className="fixed bottom-6 right-5 z-40 h-14 w-14 rounded-full bg-[#0891B2] shadow-[0_16px_36px_rgba(8,145,178,0.32)] hover:bg-[#0E7490]"
+        >
+          <Plus size={22} />
+        </Button>
+      )}
 
       {/* ── Delete Dialog ─────────────────────────────────── */}
       <AlertDialog open={!!deleteId} onOpenChange={(open) => (!open ? setDeleteId(null) : undefined)}>

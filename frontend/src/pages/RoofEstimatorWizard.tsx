@@ -32,6 +32,7 @@ import {
   updateQuote as updateLinkedQuote,
   type QuoteEntity,
 } from "@/features/quotes/services/quotes-service";
+import useIsMobile from "@/hooks/useIsMobile";
 
 interface OtherMaterial { name: string; qty: number; cost: number; }
 
@@ -333,6 +334,17 @@ const inputStyle: React.CSSProperties = {
   background: "#fff", color: "#0F172A", transition: "border-color .15s",
 };
 
+const responsiveGrid = (
+  isCompact: boolean,
+  desktopColumns: string,
+  mobileColumns = "1fr",
+  gap = 12,
+): React.CSSProperties => ({
+  display: "grid",
+  gridTemplateColumns: isCompact ? mobileColumns : desktopColumns,
+  gap,
+});
+
 function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
   return (
     <div style={{ marginBottom: 16 }}>
@@ -409,11 +421,14 @@ export default function RoofEstimatorWizard() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
+  const { isMobile, isTablet } = useIsMobile();
+  const isCompact = isMobile || isTablet;
 
   const [data, setData] = useState<WizardData>(DEFAULT_DATA);
   const [saving, setSaving] = useState(false);
   const [estimateId, setEstimateId] = useState<string | null>(id || null);
   const [activeSection, setActiveSection] = useState<SectionId>("client");
+  const [showMobilePreview, setShowMobilePreview] = useState(false);
 
   // Step 1: Client/Lead
   const [clients, setClients] = useState<ClientEntity[]>([]);
@@ -1294,6 +1309,7 @@ export default function RoofEstimatorWizard() {
             onSelectClient={handleSelectClient}
             onSelectLead={handleSelectLead}
             selectionLoading={selectionLoading}
+            isCompact={isCompact}
             hideHeader
           />
         );
@@ -1310,6 +1326,7 @@ export default function RoofEstimatorWizard() {
             eagleViewLoading={eagleViewLoading}
             eagleViewStatus={eagleViewStatus}
             eagleViewError={eagleViewError}
+            isCompact={isCompact}
             hideHeader
           />
         );
@@ -1321,13 +1338,14 @@ export default function RoofEstimatorWizard() {
             total={totalMaterialCost}
             otherMaterials={data.otherMaterials}
             onOtherMaterialsChange={(mats) => up("otherMaterials", mats)}
+            isCompact={isCompact}
             hideHeader
           />
         );
       case "labor":
-        return <Step4Labor data={data} up={up} total={totalLaborCost} hideHeader />;
+        return <Step4Labor data={data} up={up} total={totalLaborCost} isCompact={isCompact} hideHeader />;
       case "extras":
-        return <Step5Extras data={data} up={up} total={totalEquipmentCost} hideHeader />;
+        return <Step5Extras data={data} up={up} total={totalEquipmentCost} isCompact={isCompact} hideHeader />;
       case "profit":
         return (
           <Step6Profit
@@ -1338,6 +1356,7 @@ export default function RoofEstimatorWizard() {
             profitAmount={profitAmount}
             taxAmount={taxAmount}
             finalPrice={finalPrice}
+            isCompact={isCompact}
             hideHeader
           />
         );
@@ -1355,6 +1374,7 @@ export default function RoofEstimatorWizard() {
             roofSquares={roofSquares}
             pricePerSquare={pricePerSquare}
             walletBalance={walletBalance}
+            isCompact={isCompact}
             hideHeader
           />
         );
@@ -1364,7 +1384,12 @@ export default function RoofEstimatorWizard() {
   };
 
   return (
-    <div style={{ padding: "24px 24px 40px", maxWidth: 1440, margin: "0 auto", fontFamily: "'Inter',sans-serif" }}>
+    <div style={{
+      padding: isMobile ? "16px 16px 120px" : isTablet ? "20px 20px 40px" : "24px 24px 40px",
+      maxWidth: 1440,
+      margin: "0 auto",
+      fontFamily: "'Inter',sans-serif",
+    }}>
       <style>{`
         .roof-estimator-shell {
           display: grid;
@@ -1447,7 +1472,7 @@ export default function RoofEstimatorWizard() {
       </button>
 
       <div style={{ display: "flex", justifyContent: "space-between", gap: 20, alignItems: "flex-start", flexWrap: "wrap", marginBottom: 24 }}>
-        <div style={{ flex: 1, minWidth: 280 }}>
+        <div style={{ flex: 1, minWidth: isMobile ? 0 : 280 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
             <span style={{
               display: "inline-flex", alignItems: "center", gap: 6,
@@ -1474,7 +1499,13 @@ export default function RoofEstimatorWizard() {
             Capture contact details, pull EagleView roof measurements, price the job, and generate the estimate from one cleaner workspace.
           </p>
 
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+          <div style={{
+            display: "flex",
+            flexWrap: isMobile ? "nowrap" : "wrap",
+            gap: 10,
+            overflowX: isMobile ? "auto" : "visible",
+            paddingBottom: isMobile ? 4 : 0,
+          }}>
             {[
               { label: "Client", value: data.clientName || "Not selected" },
               { label: "Property", value: data.address || "Waiting for address" },
@@ -1484,7 +1515,8 @@ export default function RoofEstimatorWizard() {
               <div key={chip.label} style={{
                 padding: "10px 12px", borderRadius: 12, background: "#fff",
                 border: "1px solid #E2E8F0", boxShadow: "0 1px 3px rgba(15,23,42,.04)",
-                minWidth: 150,
+                minWidth: isMobile ? 180 : 150,
+                flexShrink: 0,
               }}>
                 <div style={{ fontSize: 10, color: "#94A3B8", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 4 }}>
                   {chip.label}
@@ -1497,7 +1529,7 @@ export default function RoofEstimatorWizard() {
 
         {walletBalance !== null && (
           <div style={{
-            minWidth: 240, maxWidth: 280, background: "#fff", borderRadius: 16,
+            minWidth: isMobile ? "100%" : 240, maxWidth: isMobile ? "100%" : 280, background: "#fff", borderRadius: 16,
             border: "1px solid #E2E8F0", boxShadow: "0 8px 28px rgba(15,23,42,.06)",
             padding: "16px 18px",
           }}>
@@ -1513,6 +1545,33 @@ export default function RoofEstimatorWizard() {
           </div>
         )}
       </div>
+
+      {isMobile && (
+        <button
+          type="button"
+          onClick={() => setShowMobilePreview((current) => !current)}
+          style={{
+            width: "100%",
+            marginBottom: 14,
+            padding: "12px 14px",
+            borderRadius: 14,
+            border: "1px solid #E2E8F0",
+            background: "#fff",
+            color: "#0F172A",
+            fontSize: 13,
+            fontWeight: 700,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            boxShadow: "0 6px 18px rgba(15,23,42,.05)",
+          }}
+        >
+          <span>{showMobilePreview ? "Hide live preview" : "Show live preview"}</span>
+          <span style={{ color: "#64748B", fontWeight: 600 }}>
+            {hasValidEagleViewMeasurement ? `${roofSquares.toFixed(1)} sq` : "No roof data"}
+          </span>
+        </button>
+      )}
 
       <div className="roof-estimator-shell">
         <aside className="roof-estimator-nav" style={{
@@ -1616,7 +1675,7 @@ export default function RoofEstimatorWizard() {
               <div style={{
                 padding: "10px 12px", borderRadius: 12,
                 background: "#fff", border: "1px solid #E2E8F0",
-                minWidth: 132,
+                minWidth: isMobile ? "100%" : 132,
               }}>
                 <div style={{ fontSize: 10, fontWeight: 800, color: "#94A3B8", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>
                   Current Focus
@@ -1633,7 +1692,16 @@ export default function RoofEstimatorWizard() {
           </div>
 
           <div className="roof-estimator-action-bar" style={{
-            marginTop: 18, paddingTop: 18, borderTop: "1px solid #E2E8F0",
+            marginTop: 18,
+            paddingTop: 18,
+            borderTop: "1px solid #E2E8F0",
+            position: isMobile ? "sticky" : "static",
+            bottom: isMobile ? 12 : "auto",
+            background: isMobile ? "rgba(255,255,255,.96)" : "transparent",
+            padding: isMobile ? "14px 12px calc(14px + env(safe-area-inset-bottom, 0px))" : undefined,
+            borderRadius: isMobile ? 18 : undefined,
+            boxShadow: isMobile ? "0 -10px 28px rgba(15,23,42,.08)" : "none",
+            zIndex: isMobile ? 20 : "auto",
           }}>
             {!currentSectionValidation.valid && (
               <div style={{ marginRight: "auto", fontSize: 12, color: activeSection === "address" || activeSection === "summary" ? "#DC2626" : "#64748B" }}>
@@ -1677,6 +1745,7 @@ export default function RoofEstimatorWizard() {
           </div>
         </div>
 
+        {(!isMobile || showMobilePreview) && (
         <aside className="roof-estimator-preview" style={{
           background: "#fff", borderRadius: 20,
           border: "1px solid #E2E8F0", boxShadow: "0 16px 36px rgba(15,23,42,.05)",
@@ -1706,7 +1775,7 @@ export default function RoofEstimatorWizard() {
                   />
                 )}
                 {obliquePreviewImages.length > 0 && (
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  <div style={{ ...responsiveGrid(isCompact, "1fr 1fr") }}>
                     {obliquePreviewImages.map((photo) => (
                       <PreviewImageCard
                         key={`${photo.label}-${photo.url.slice(0, 24)}`}
@@ -1731,7 +1800,7 @@ export default function RoofEstimatorWizard() {
             )}
           </div>
           <div style={{ padding: "16px 18px" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+            <div style={{ ...responsiveGrid(isCompact, "1fr 1fr"), marginBottom: 14 }}>
               <div style={{
                 padding: "10px 12px", borderRadius: 12, background: "#F8FAFC", border: "1px solid #E2E8F0",
               }}>
@@ -1748,7 +1817,7 @@ export default function RoofEstimatorWizard() {
             {data.address && (
               <div style={{ fontSize: 13, color: "#0F172A", fontWeight: 600, marginBottom: 10 }}>{data.address}</div>
             )}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <div style={{ ...responsiveGrid(isCompact, "1fr 1fr", "1fr 1fr", 8) }}>
               <MiniStat label="Roof Area" value={`${data.roofAreaSqft.toLocaleString()} sq ft`} />
               <MiniStat label="Squares" value={roofSquares.toFixed(1)} />
               <MiniStat label="Pitch" value={data.pitch || "—"} />
@@ -1803,6 +1872,7 @@ export default function RoofEstimatorWizard() {
             </div>
           </div>
         </aside>
+        )}
       </div>
     </div>
   );
@@ -1879,6 +1949,7 @@ function Step1ClientInfo({
   onSelectClient,
   onSelectLead,
   selectionLoading,
+  isCompact = false,
   hideHeader = false,
 }: {
   data: WizardData;
@@ -1892,6 +1963,7 @@ function Step1ClientInfo({
   onSelectClient: (clientId: string) => void;
   onSelectLead: (leadId: string) => void;
   selectionLoading: boolean;
+  isCompact?: boolean;
   hideHeader?: boolean;
 }) {
   const q = clientSearchQ.toLowerCase();
@@ -1930,7 +2002,7 @@ function Step1ClientInfo({
       )}
 
       <Field label="Estimate For">
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
+        <div style={responsiveGrid(isCompact, "repeat(3, minmax(0, 1fr))", "1fr", 8)}>
           {[
             { id: "client", label: "Client" },
             { id: "lead", label: "Lead" },
@@ -2050,7 +2122,7 @@ function Step1ClientInfo({
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      <div style={responsiveGrid(isCompact, "1fr 1fr")}>
         <Field label="Client / Contact Name">
           <input value={data.clientName} onChange={(e) => up("clientName", e.target.value)} style={inputStyle} placeholder="Full name" />
         </Field>
@@ -2070,7 +2142,7 @@ function Step1ClientInfo({
 
 /* ─── Step 2: Address & Roof Measurement ─────────────────── */
 
-function Step2Address({ data, up, suggestions, addressLoading, onAddressInput, onSelectAddress, satelliteLoading, eagleViewLoading, eagleViewStatus, eagleViewError, hideHeader = false }: {
+function Step2Address({ data, up, suggestions, addressLoading, onAddressInput, onSelectAddress, satelliteLoading, eagleViewLoading, eagleViewStatus, eagleViewError, isCompact = false, hideHeader = false }: {
   data: WizardData;
   up: <K extends keyof WizardData>(key: K, val: WizardData[K]) => void;
   suggestions: { description: string; placeId: string }[];
@@ -2081,6 +2153,7 @@ function Step2Address({ data, up, suggestions, addressLoading, onAddressInput, o
   eagleViewLoading: boolean;
   eagleViewStatus: string;
   eagleViewError: string;
+  isCompact?: boolean;
   hideHeader?: boolean;
 }) {
   return (
@@ -2167,7 +2240,7 @@ function Step2Address({ data, up, suggestions, addressLoading, onAddressInput, o
       )}
 
       {/* Measurement fields */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      <div style={responsiveGrid(isCompact, "1fr 1fr")}>
         <Field label="Roof Area (sq ft)">
           <NumberInput value={data.roofAreaSqft} onChange={(v) => up("roofAreaSqft", v)} suffix="sq ft" />
         </Field>
@@ -2211,12 +2284,13 @@ function Step2Address({ data, up, suggestions, addressLoading, onAddressInput, o
 
 /* ─── Step 2: Material Pricing ───────────────────────────── */
 
-function Step3Materials({ data, up, total, otherMaterials, onOtherMaterialsChange, hideHeader = false }: {
+function Step3Materials({ data, up, total, otherMaterials, onOtherMaterialsChange, isCompact = false, hideHeader = false }: {
   data: WizardData;
   up: <K extends keyof WizardData>(key: K, val: WizardData[K]) => void;
   total: number;
   otherMaterials: OtherMaterial[];
   onOtherMaterialsChange: (mats: OtherMaterial[]) => void;
+  isCompact?: boolean;
   hideHeader?: boolean;
 }) {
   const addMaterial = () => onOtherMaterialsChange([...otherMaterials, { name: "", qty: 1, cost: 0 }]);
@@ -2256,28 +2330,58 @@ function Step3Materials({ data, up, total, otherMaterials, onOtherMaterialsChang
         <input value={data.shingleType} onChange={(e) => up("shingleType", e.target.value)} style={inputStyle} placeholder="e.g. Architectural Shingles" />
       </Field>
 
-      {/* Material table header */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 120px 100px", gap: 8, marginBottom: 6, padding: "0 2px" }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase" }}>Material</span>
-        <span style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase" }}>Qty</span>
-        <span style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase" }}>Unit Price</span>
-        <span style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase", textAlign: "right" }}>Line Total</span>
-      </div>
-
-      {materials.map((mat) => (
-        <div key={mat.label} style={{
-          display: "grid", gridTemplateColumns: "1fr 80px 120px 100px", gap: 8,
-          alignItems: "center", padding: "6px 2px",
-          borderBottom: "1px solid #F1F5F9",
-        }}>
-          <span style={{ fontSize: 13, color: "#0F172A", fontWeight: 500 }}>{mat.label}</span>
-          <NumberInput value={data[mat.qtyKey] as number} onChange={(v) => up(mat.qtyKey, v as any)} />
-          <NumberInput value={data[mat.priceKey] as number} onChange={(v) => up(mat.priceKey, v as any)} prefix="$" />
-          <span style={{ fontSize: 13, fontWeight: 600, color: "#475569", textAlign: "right" }}>
-            {fmtLine(data[mat.qtyKey] as number, data[mat.priceKey] as number)}
-          </span>
+      {isCompact ? (
+        <div style={{ display: "grid", gap: 10 }}>
+          {materials.map((mat) => (
+            <div
+              key={mat.label}
+              style={{
+                border: "1px solid #E2E8F0",
+                borderRadius: 12,
+                padding: 12,
+                background: "#F8FAFC",
+              }}
+            >
+              <div style={{ fontSize: 13, color: "#0F172A", fontWeight: 700, marginBottom: 10 }}>{mat.label}</div>
+              <div style={responsiveGrid(true, "1fr 80px 120px", "1fr 1fr", 10)}>
+                <Field label="Qty">
+                  <NumberInput value={data[mat.qtyKey] as number} onChange={(v) => up(mat.qtyKey, v as any)} />
+                </Field>
+                <Field label="Unit Price">
+                  <NumberInput value={data[mat.priceKey] as number} onChange={(v) => up(mat.priceKey, v as any)} prefix="$" />
+                </Field>
+              </div>
+              <div style={{ fontSize: 12, color: "#64748B" }}>
+                Line total: <strong style={{ color: "#0F172A" }}>{fmtLine(data[mat.qtyKey] as number, data[mat.priceKey] as number)}</strong>
+              </div>
+            </div>
+          ))}
         </div>
-      ))}
+      ) : (
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 120px 100px", gap: 8, marginBottom: 6, padding: "0 2px" }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase" }}>Material</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase" }}>Qty</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase" }}>Unit Price</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase", textAlign: "right" }}>Line Total</span>
+          </div>
+
+          {materials.map((mat) => (
+            <div key={mat.label} style={{
+              display: "grid", gridTemplateColumns: "1fr 80px 120px 100px", gap: 8,
+              alignItems: "center", padding: "6px 2px",
+              borderBottom: "1px solid #F1F5F9",
+            }}>
+              <span style={{ fontSize: 13, color: "#0F172A", fontWeight: 500 }}>{mat.label}</span>
+              <NumberInput value={data[mat.qtyKey] as number} onChange={(v) => up(mat.qtyKey, v as any)} />
+              <NumberInput value={data[mat.priceKey] as number} onChange={(v) => up(mat.priceKey, v as any)} prefix="$" />
+              <span style={{ fontSize: 13, fontWeight: 600, color: "#475569", textAlign: "right" }}>
+                {fmtLine(data[mat.qtyKey] as number, data[mat.priceKey] as number)}
+              </span>
+            </div>
+          ))}
+        </>
+      )}
 
       {/* Other Materials — dynamic rows */}
       <div style={{ marginTop: 20, borderTop: "1px solid #E2E8F0", paddingTop: 16 }}>
@@ -2295,7 +2399,7 @@ function Step3Materials({ data, up, total, otherMaterials, onOtherMaterialsChang
         {otherMaterials.length === 0 && (
           <div style={{ fontSize: 12, color: "#94A3B8", padding: "10px 0" }}>No additional materials added yet.</div>
         )}
-        {otherMaterials.length > 0 && (
+        {!isCompact && otherMaterials.length > 0 && (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 120px 100px 36px", gap: 8, marginBottom: 6 }}>
             <span style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase" }}>Name</span>
             <span style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase" }}>Qty</span>
@@ -2305,24 +2409,52 @@ function Step3Materials({ data, up, total, otherMaterials, onOtherMaterialsChang
           </div>
         )}
         {otherMaterials.map((m, idx) => (
-          <div key={idx} style={{ display: "grid", gridTemplateColumns: "1fr 80px 120px 100px 36px", gap: 8, alignItems: "center", marginBottom: 6 }}>
-            <input value={m.name} onChange={(e) => updateMaterial(idx, "name", e.target.value)}
-              placeholder="e.g. Drip Edge" style={inputStyle} />
-            <NumberInput value={m.qty} onChange={(v) => updateMaterial(idx, "qty", v)} />
-            <NumberInput value={m.cost} onChange={(v) => updateMaterial(idx, "cost", v)} prefix="$" />
-            <span style={{ fontSize: 13, fontWeight: 600, color: "#475569", textAlign: "right" }}>
-              {fmtLine(m.qty || 1, m.cost || 0)}
-            </span>
-            <button onClick={() => removeMaterial(idx)} title="Remove" style={{
-              width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center",
-              borderRadius: 6, border: "1px solid #FEE2E2", background: "#FFF5F5",
-              color: "#EF4444", cursor: "pointer", flexShrink: 0,
-            }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-              </svg>
-            </button>
-          </div>
+          isCompact ? (
+            <div key={idx} style={{ border: "1px solid #E2E8F0", borderRadius: 12, padding: 12, background: "#FFFFFF", marginBottom: 8 }}>
+              <Field label="Name">
+                <input value={m.name} onChange={(e) => updateMaterial(idx, "name", e.target.value)}
+                  placeholder="e.g. Drip Edge" style={inputStyle} />
+              </Field>
+              <div style={responsiveGrid(true, "1fr 80px 120px", "1fr 1fr", 10)}>
+                <Field label="Qty">
+                  <NumberInput value={m.qty} onChange={(v) => updateMaterial(idx, "qty", v)} />
+                </Field>
+                <Field label="Unit Price">
+                  <NumberInput value={m.cost} onChange={(v) => updateMaterial(idx, "cost", v)} prefix="$" />
+                </Field>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                <span style={{ fontSize: 12, color: "#64748B" }}>Total: <strong style={{ color: "#0F172A" }}>{fmtLine(m.qty || 1, m.cost || 0)}</strong></span>
+                <button onClick={() => removeMaterial(idx)} title="Remove" style={{
+                  padding: "8px 10px",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  borderRadius: 8, border: "1px solid #FEE2E2", background: "#FFF5F5",
+                  color: "#EF4444", cursor: "pointer", flexShrink: 0,
+                }}>
+                  Remove
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div key={idx} style={{ display: "grid", gridTemplateColumns: "1fr 80px 120px 100px 36px", gap: 8, alignItems: "center", marginBottom: 6 }}>
+              <input value={m.name} onChange={(e) => updateMaterial(idx, "name", e.target.value)}
+                placeholder="e.g. Drip Edge" style={inputStyle} />
+              <NumberInput value={m.qty} onChange={(v) => updateMaterial(idx, "qty", v)} />
+              <NumberInput value={m.cost} onChange={(v) => updateMaterial(idx, "cost", v)} prefix="$" />
+              <span style={{ fontSize: 13, fontWeight: 600, color: "#475569", textAlign: "right" }}>
+                {fmtLine(m.qty || 1, m.cost || 0)}
+              </span>
+              <button onClick={() => removeMaterial(idx)} title="Remove" style={{
+                width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center",
+                borderRadius: 6, border: "1px solid #FEE2E2", background: "#FFF5F5",
+                color: "#EF4444", cursor: "pointer", flexShrink: 0,
+              }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+              </button>
+            </div>
+          )
         ))}
       </div>
 
@@ -2340,10 +2472,11 @@ function Step3Materials({ data, up, total, otherMaterials, onOtherMaterialsChang
 
 /* ─── Step 3: Labor Inputs ───────────────────────────────── */
 
-function Step4Labor({ data, up, total, hideHeader = false }: {
+function Step4Labor({ data, up, total, isCompact = false, hideHeader = false }: {
   data: WizardData;
   up: <K extends keyof WizardData>(key: K, val: WizardData[K]) => void;
   total: number;
+  isCompact?: boolean;
   hideHeader?: boolean;
 }) {
   return (
@@ -2355,7 +2488,7 @@ function Step4Labor({ data, up, total, hideHeader = false }: {
         </>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      <div style={responsiveGrid(isCompact, "1fr 1fr")}>
         <Field label="Cost Per Square (optional)"><NumberInput value={data.laborCostPerSquare} onChange={(v) => up("laborCostPerSquare", v)} prefix="$" /></Field>
         <Field label="Number of Laborers"><NumberInput value={data.numberOfLaborers} onChange={(v) => up("numberOfLaborers", v)} /></Field>
         <Field label="Days Required"><NumberInput value={data.daysRequired} onChange={(v) => up("daysRequired", v)} /></Field>
@@ -2380,10 +2513,11 @@ function Step4Labor({ data, up, total, hideHeader = false }: {
 
 /* ─── Step 4: Equipment & Extras ─────────────────────────── */
 
-function Step5Extras({ data, up, total, hideHeader = false }: {
+function Step5Extras({ data, up, total, isCompact = false, hideHeader = false }: {
   data: WizardData;
   up: <K extends keyof WizardData>(key: K, val: WizardData[K]) => void;
   total: number;
+  isCompact?: boolean;
   hideHeader?: boolean;
 }) {
   return (
@@ -2395,7 +2529,7 @@ function Step5Extras({ data, up, total, hideHeader = false }: {
         </>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      <div style={responsiveGrid(isCompact, "1fr 1fr")}>
         <Field label="Dumpster"><NumberInput value={data.dumpsterCost} onChange={(v) => up("dumpsterCost", v)} prefix="$" /></Field>
         <Field label="Permit"><NumberInput value={data.permitCost} onChange={(v) => up("permitCost", v)} prefix="$" /></Field>
         <Field label="Delivery Fee"><NumberInput value={data.deliveryFee} onChange={(v) => up("deliveryFee", v)} prefix="$" /></Field>
@@ -2417,10 +2551,11 @@ function Step5Extras({ data, up, total, hideHeader = false }: {
 
 /* ─── Step 5: Profit & Overhead ──────────────────────────── */
 
-function Step6Profit({ data, up, subtotal, overheadAmount, profitAmount, taxAmount, finalPrice, hideHeader = false }: {
+function Step6Profit({ data, up, subtotal, overheadAmount, profitAmount, taxAmount, finalPrice, isCompact = false, hideHeader = false }: {
   data: WizardData;
   up: <K extends keyof WizardData>(key: K, val: WizardData[K]) => void;
   subtotal: number; overheadAmount: number; profitAmount: number; taxAmount: number; finalPrice: number;
+  isCompact?: boolean;
   hideHeader?: boolean;
 }) {
   return (
@@ -2432,7 +2567,7 @@ function Step6Profit({ data, up, subtotal, overheadAmount, profitAmount, taxAmou
         </>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+      <div style={responsiveGrid(isCompact, "1fr 1fr 1fr")}>
         <Field label="Overhead %"><NumberInput value={data.overheadPercent} onChange={(v) => up("overheadPercent", v)} suffix="%" /></Field>
         <Field label="Profit Margin %"><NumberInput value={data.profitMarginPercent} onChange={(v) => up("profitMarginPercent", v)} suffix="%" /></Field>
         <Field label="Tax %"><NumberInput value={data.taxPercent} onChange={(v) => up("taxPercent", v)} suffix="%" /></Field>
@@ -2473,12 +2608,13 @@ function Step6Profit({ data, up, subtotal, overheadAmount, profitAmount, taxAmou
 /* ─── Step 6: Final Summary ──────────────────────────────── */
 
 function Step7Final({ data, totalMaterialCost, totalLaborCost, totalEquipmentCost,
-  overheadAmount, profitAmount, taxAmount, finalPrice, roofSquares, pricePerSquare, walletBalance, hideHeader = false }: {
+  overheadAmount, profitAmount, taxAmount, finalPrice, roofSquares, pricePerSquare, walletBalance, isCompact = false, hideHeader = false }: {
   data: WizardData;
   totalMaterialCost: number; totalLaborCost: number; totalEquipmentCost: number;
   overheadAmount: number; profitAmount: number; taxAmount: number;
   finalPrice: number; roofSquares: number; pricePerSquare: number;
   walletBalance: number | null;
+  isCompact?: boolean;
   hideHeader?: boolean;
 }) {
   return (
@@ -2496,7 +2632,7 @@ function Step7Final({ data, totalMaterialCost, totalLaborCost, totalEquipmentCos
         border: "1px solid #E2E8F0",
       }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: "#0F172A", marginBottom: 8 }}>👤 Client Information</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 12 }}>
+        <div style={{ ...responsiveGrid(isCompact, "1fr 1fr"), fontSize: 12 }}>
           <div><span style={{ color: "#94A3B8" }}>Name</span><div style={{ color: "#0F172A", fontWeight: 500 }}>{data.clientName || "—"}</div></div>
           <div><span style={{ color: "#94A3B8" }}>Email</span><div style={{ color: "#0F172A", fontWeight: 500 }}>{data.clientEmail || "—"}</div></div>
           <div><span style={{ color: "#94A3B8" }}>Phone</span><div style={{ color: "#0F172A", fontWeight: 500 }}>{data.clientPhone || "—"}</div></div>
@@ -2510,7 +2646,7 @@ function Step7Final({ data, totalMaterialCost, totalLaborCost, totalEquipmentCos
         border: "1px solid #E2E8F0",
       }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: "#0F172A", marginBottom: 8 }}>🏠 Property Details</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, fontSize: 12 }}>
+        <div style={{ ...responsiveGrid(isCompact, "1fr 1fr 1fr"), fontSize: 12 }}>
           <div><span style={{ color: "#94A3B8" }}>Address</span><div style={{ color: "#0F172A", fontWeight: 500 }}>{data.address || "—"}</div></div>
           <div><span style={{ color: "#94A3B8" }}>Roof Area</span><div style={{ color: "#0F172A", fontWeight: 500 }}>{data.roofAreaSqft.toLocaleString()} sq ft</div></div>
           <div><span style={{ color: "#94A3B8" }}>Roof Squares</span><div style={{ color: "#0F172A", fontWeight: 500 }}>{roofSquares.toFixed(1)}</div></div>
@@ -2581,7 +2717,9 @@ function Step7Final({ data, totalMaterialCost, totalLaborCost, totalEquipmentCos
         marginTop: 16, padding: "14px 18px", borderRadius: 12,
         background: "linear-gradient(135deg, rgba(102,55,244,.06), rgba(102,55,244,.02))",
         border: "1px solid rgba(102,55,244,.15)",
-        display: "flex", alignItems: "center", justifyContent: "space-between",
+        display: "flex", alignItems: isCompact ? "stretch" : "center", justifyContent: "space-between",
+        flexDirection: isCompact ? "column" : "row",
+        gap: 12,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{

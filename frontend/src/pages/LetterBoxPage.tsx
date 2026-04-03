@@ -75,6 +75,7 @@ import {
   type EmailResponse,
 } from "@/features/emails/services/emails-service";
 import { printEmailDocument } from "@/features/emails/utils/email-print";
+import { isEditableElement } from "@/lib/app-shortcuts";
 import { API_ORIGIN } from "@/services/api";
 import {
   Bell,
@@ -2636,6 +2637,67 @@ const LetterBoxPage = () => {
       setIsRefreshing(false);
     }
   };
+
+  useEffect(() => {
+    const handleMailboxShortcuts = (event: KeyboardEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.altKey ||
+        event.shiftKey ||
+        isEditableElement(event.target) ||
+        showCompose ||
+        showMailboxSettings ||
+        Boolean(deleteConfirmation)
+      ) {
+        return;
+      }
+
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        if (filteredEmails.length === 0) return;
+
+        event.preventDefault();
+
+        const currentIndex = activeEmail
+          ? filteredEmails.findIndex((email) => email.id === activeEmail.id)
+          : -1;
+        const nextIndex = event.key === "ArrowDown"
+          ? Math.min(currentIndex + 1, filteredEmails.length - 1)
+          : currentIndex <= 0
+            ? 0
+            : currentIndex - 1;
+
+        const nextEmail = filteredEmails[nextIndex];
+        if (nextEmail) {
+          void handleOpenEmail(nextEmail);
+        }
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+
+      if (key === "r" && activeEmail) {
+        event.preventDefault();
+        handleReply();
+        return;
+      }
+
+      if (key === "e" && activeEmail) {
+        event.preventDefault();
+        void handleArchiveEmail(activeEmail.id);
+      }
+    };
+
+    window.addEventListener("keydown", handleMailboxShortcuts);
+    return () => window.removeEventListener("keydown", handleMailboxShortcuts);
+  }, [
+    activeEmail,
+    deleteConfirmation,
+    filteredEmails,
+    showCompose,
+    showMailboxSettings,
+  ]);
 
   const handleSaveMailboxSettings = async () => {
     const smtpHost = mailboxForm.smtpHost.trim();

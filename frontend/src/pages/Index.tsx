@@ -13,6 +13,7 @@ import {
   type DashboardQuote,
 } from "@/features/dashboard";
 import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   getNotifications,
   markAllAsRead as markAllNotificationsRead,
@@ -204,6 +205,196 @@ const stageToLeadStatus: Record<RevenuePipelineStage, LeadStatusValue> = {
 };
 
 const sectionCardClassName = "bg-white rounded-md border border-[rgba(15,23,42,0.06)] card-shadow overflow-hidden";
+
+function DashboardSectionHeaderSkeleton() {
+  return (
+    <div className="p-5 border-b border-[rgba(15,23,42,0.06)]">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-9 w-9 rounded-md bg-[#F1F5F9]" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-36 bg-[#F1F5F9]" />
+            <Skeleton className="h-3 w-48 bg-[#F1F5F9]" />
+          </div>
+        </div>
+        <Skeleton className="h-4 w-24 bg-[#F1F5F9]" />
+      </div>
+    </div>
+  );
+}
+
+function DashboardActionCenterSkeleton() {
+  return (
+    <div className={sectionCardClassName}>
+      <DashboardSectionHeaderSkeleton />
+      <div className="divide-y divide-[rgba(15,23,42,0.04)]">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="flex items-center gap-3 px-5 py-4">
+            <Skeleton className="h-8 w-8 rounded-md bg-[#F1F5F9]" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-3.5 w-3/4 bg-[#F1F5F9]" />
+              <Skeleton className="h-3 w-1/2 bg-[#F1F5F9]" />
+            </div>
+            <Skeleton className="h-3 w-20 bg-[#F1F5F9]" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DashboardAlertSkeleton() {
+  return (
+    <div className="rounded-md border border-red-200/15 bg-[#FF2E2D]/5 px-5 py-4">
+      <div className="flex items-start gap-3">
+        <Skeleton className="h-9 w-9 rounded-md bg-white/70" />
+        <div className="flex-1 space-y-3">
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-40 bg-white/70" />
+            <Skeleton className="h-3 w-56 bg-white/70" />
+          </div>
+          <Skeleton className="h-7 w-32 bg-white/70" />
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <Skeleton className="h-3 w-24 bg-white/70" />
+              <Skeleton className="h-3 w-16 bg-white/70" />
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <Skeleton className="h-3 w-28 bg-white/70" />
+              <Skeleton className="h-3 w-16 bg-white/70" />
+            </div>
+          </div>
+          <Skeleton className="h-8 w-36 rounded-md bg-white/70" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DashboardKanbanSkeleton() {
+  return (
+    <div className={sectionCardClassName}>
+      <DashboardSectionHeaderSkeleton />
+      <div className="overflow-x-auto">
+        <div className="grid min-w-[980px] grid-cols-5 gap-4 p-5">
+          {Array.from({ length: 5 }).map((_, columnIndex) => (
+            <div
+              key={columnIndex}
+              className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F7F7FB] p-3 min-h-[360px]"
+            >
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <Skeleton className="h-4 w-20 bg-white" />
+                <Skeleton className="h-5 w-8 rounded bg-white" />
+              </div>
+              <div className="space-y-3">
+                {Array.from({ length: 2 }).map((__, cardIndex) => (
+                  <div key={cardIndex} className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4">
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 space-y-2">
+                          <Skeleton className="h-4 w-28 bg-[#F1F5F9]" />
+                          <Skeleton className="h-3 w-full bg-[#F1F5F9]" />
+                        </div>
+                        <Skeleton className="h-3 w-14 bg-[#F1F5F9]" />
+                      </div>
+                      <div className="flex gap-2">
+                        <Skeleton className="h-5 w-12 rounded bg-[#F1F5F9]" />
+                        <Skeleton className="h-5 w-20 rounded bg-[#F1F5F9]" />
+                      </div>
+                      <div className="space-y-2">
+                        <Skeleton className="h-3 w-16 bg-[#F1F5F9]" />
+                        <Skeleton className="h-3 w-24 bg-[#F1F5F9]" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DashboardJobsSkeleton() {
+  return (
+    <div className={sectionCardClassName}>
+      <DashboardSectionHeaderSkeleton />
+      <div className="grid gap-4 p-5 md:grid-cols-2">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-32 bg-[#F1F5F9]" />
+                <Skeleton className="h-3 w-24 bg-[#F1F5F9]" />
+              </div>
+              <Skeleton className="h-5 w-16 rounded bg-[#F1F5F9]" />
+            </div>
+            <div className="mt-4 space-y-3">
+              <Skeleton className="h-3 w-full bg-[#F1F5F9]" />
+              <Skeleton className="h-3 w-full bg-[#F1F5F9]" />
+              <Skeleton className="h-3 w-full bg-[#F1F5F9]" />
+              <Skeleton className="h-3 w-full bg-[#F1F5F9]" />
+            </div>
+            <div className="mt-4 flex items-center justify-between gap-3 border-t border-[rgba(15,23,42,0.06)] pt-4">
+              <Skeleton className="h-3 w-20 bg-[#F1F5F9]" />
+              <Skeleton className="h-8 w-20 rounded-md bg-[#F1F5F9]" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DashboardClientsSkeleton() {
+  return (
+    <div className={sectionCardClassName}>
+      <DashboardSectionHeaderSkeleton />
+      <div className="divide-y divide-[rgba(15,23,42,0.04)]">
+        {Array.from({ length: 5 }).map((_, index) => (
+          <div key={index} className="px-5 py-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1 space-y-2">
+                <Skeleton className="h-4 w-28 bg-[#F1F5F9]" />
+                <Skeleton className="h-3 w-32 bg-[#F1F5F9]" />
+              </div>
+              <Skeleton className="h-8 w-28 rounded-md bg-[#F1F5F9]" />
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Skeleton className="h-8 w-16 rounded-md bg-[#F1F5F9]" />
+              <Skeleton className="h-8 w-28 rounded-md bg-[#F1F5F9]" />
+              <Skeleton className="h-8 w-24 rounded-md bg-[#F1F5F9]" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DashboardQueueSkeleton() {
+  return (
+    <div className={sectionCardClassName}>
+      <DashboardSectionHeaderSkeleton />
+      <div className="divide-y divide-[rgba(15,23,42,0.04)]">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="px-5 py-4 flex items-center justify-between gap-3">
+            <div className="min-w-0 flex-1 space-y-2">
+              <Skeleton className="h-4 w-32 bg-[#F1F5F9]" />
+              <Skeleton className="h-3 w-28 bg-[#F1F5F9]" />
+            </div>
+            <div className="space-y-2 text-right">
+              <Skeleton className="ml-auto h-3 w-16 bg-[#F1F5F9]" />
+              <Skeleton className="ml-auto h-3 w-20 bg-[#F1F5F9]" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function getColorClasses(color: ThemeColor) {
   return themeColors[color] || themeColors.teal;
@@ -1322,108 +1513,117 @@ const Index = () => {
           {hasAnyDashboardModuleAccess ? (
             <>
               <div className="grid grid-cols-1 gap-4 md:gap-6 xl:grid-cols-[1.4fr,0.9fr]">
-                <motion.section
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.05 }}
-                  className={sectionCardClassName}
-                >
-                  <div className="p-5 border-b border-[rgba(15,23,42,0.06)]">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-md bg-[#0891B2]/10 flex items-center justify-center">
-                          <Target size={16} className="text-[#0891B2]" />
-                        </div>
-                        <div>
-                          <h2 className="text-sm font-semibold text-[#0F172A]">What should I do today?</h2>
-                          <p className="text-[11px] text-[#94A3B8]">Work the tasks that move revenue fastest</p>
-                        </div>
-                      </div>
-                      {dashboardAccess.canViewLeads ? (
-                        <button
-                          onClick={() => navigate("/leads/pipeline")}
-                          className="text-xs text-[#0891B2] font-medium hover:underline flex items-center gap-1"
-                        >
-                          Open Pipeline
-                          <ArrowUpRight size={12} />
-                        </button>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <div className="divide-y divide-[rgba(15,23,42,0.04)]">
-                    {actionCenterItems.length > 0 ? actionCenterItems.map((item) => {
-                      const toneClasses = item.tone === "danger"
-                        ? { bg: "bg-[#FF2E2D]/10", text: "text-[#FF2E2D]" }
-                        : item.tone === "warning"
-                          ? { bg: "bg-[#D97706]/10", text: "text-[#D97706]" }
-                          : { bg: "bg-[#01C44A]/10", text: "text-[#01C44A]" };
-
-                      return (
-                        <button
-                          key={item.id}
-                          onClick={() => navigate(item.path)}
-                          className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-[#F7F7FB] transition-colors"
-                        >
-                          <div className={cn("w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0", toneClasses.bg)}>
-                            {item.tone === "danger" ? (
-                              <AlertTriangle size={14} className={toneClasses.text} />
-                            ) : item.tone === "warning" ? (
-                              <FileText size={14} className={toneClasses.text} />
-                            ) : (
-                              <Calendar size={14} className={toneClasses.text} />
-                            )}
+                {isLoading ? (
+                  <>
+                    <DashboardActionCenterSkeleton />
+                    <DashboardAlertSkeleton />
+                  </>
+                ) : (
+                  <>
+                    <motion.section
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.05 }}
+                      className={sectionCardClassName}
+                    >
+                      <div className="p-5 border-b border-[rgba(15,23,42,0.06)]">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-md bg-[#0891B2]/10 flex items-center justify-center">
+                              <Target size={16} className="text-[#0891B2]" />
+                            </div>
+                            <div>
+                              <h2 className="text-sm font-semibold text-[#0F172A]">What should I do today?</h2>
+                              <p className="text-[11px] text-[#94A3B8]">Work the tasks that move revenue fastest</p>
+                            </div>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-semibold text-[#0F172A]">{item.label}</p>
-                            <p className="text-[11px] text-[#475569]">{item.detail}</p>
-                          </div>
-                          <span className="text-[11px] font-medium text-[#0891B2] whitespace-nowrap">{item.actionLabel}</span>
-                        </button>
-                      );
-                    }) : (
-                      <div className="px-5 py-6 text-sm text-[#475569]">
-                        No action center items are available for this account yet.
+                          {dashboardAccess.canViewLeads ? (
+                            <button
+                              onClick={() => navigate("/leads/pipeline")}
+                              className="text-xs text-[#0891B2] font-medium hover:underline flex items-center gap-1"
+                            >
+                              Open Pipeline
+                              <ArrowUpRight size={12} />
+                            </button>
+                          ) : null}
+                        </div>
                       </div>
-                    )}
-                  </div>
-                </motion.section>
 
-                <motion.section
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }}
-                  className="rounded-md border border-red-200/15 bg-[#FF2E2D]/5 px-5 py-4"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="w-9 h-9 rounded-md bg-[#FF2E2D]/10 flex items-center justify-center flex-shrink-0">
-                      <AlertTriangle size={16} className="text-[#FF2E2D]" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h2 className="text-sm font-semibold text-[#0F172A]">Missed Revenue Alert</h2>
-                      <p className="text-[11px] text-[#475569] mt-1">Lost momentum that can still be recovered this week.</p>
-                      <p className="text-lg font-bold text-[#FF2E2D] mt-3">{formatMoney(missedRevenueValue)}</p>
-                      <div className="mt-4 space-y-2">
-                        <div className="flex items-center justify-between gap-3 text-xs">
-                          <span className="text-[#475569]">No follow-up</span>
-                          <span className="font-semibold text-[#0F172A]">{formatMoney(stalledLeadValue)}</span>
+                      <div className="divide-y divide-[rgba(15,23,42,0.04)]">
+                        {actionCenterItems.length > 0 ? actionCenterItems.map((item) => {
+                          const toneClasses = item.tone === "danger"
+                            ? { bg: "bg-[#FF2E2D]/10", text: "text-[#FF2E2D]" }
+                            : item.tone === "warning"
+                              ? { bg: "bg-[#D97706]/10", text: "text-[#D97706]" }
+                              : { bg: "bg-[#01C44A]/10", text: "text-[#01C44A]" };
+
+                          return (
+                            <button
+                              key={item.id}
+                              onClick={() => navigate(item.path)}
+                              className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-[#F7F7FB] transition-colors"
+                            >
+                              <div className={cn("w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0", toneClasses.bg)}>
+                                {item.tone === "danger" ? (
+                                  <AlertTriangle size={14} className={toneClasses.text} />
+                                ) : item.tone === "warning" ? (
+                                  <FileText size={14} className={toneClasses.text} />
+                                ) : (
+                                  <Calendar size={14} className={toneClasses.text} />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-semibold text-[#0F172A]">{item.label}</p>
+                                <p className="text-[11px] text-[#475569]">{item.detail}</p>
+                              </div>
+                              <span className="text-[11px] font-medium text-[#0891B2] whitespace-nowrap">{item.actionLabel}</span>
+                            </button>
+                          );
+                        }) : (
+                          <div className="px-5 py-6 text-sm text-[#475569]">
+                            No action center items are available for this account yet.
+                          </div>
+                        )}
+                      </div>
+                    </motion.section>
+
+                    <motion.section
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 }}
+                      className="rounded-md border border-red-200/15 bg-[#FF2E2D]/5 px-5 py-4"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="w-9 h-9 rounded-md bg-[#FF2E2D]/10 flex items-center justify-center flex-shrink-0">
+                          <AlertTriangle size={16} className="text-[#FF2E2D]" />
                         </div>
-                        <div className="flex items-center justify-between gap-3 text-xs">
-                          <span className="text-[#475569]">Estimate not sent</span>
-                          <span className="font-semibold text-[#0F172A]">{formatMoney(estimateNotSentValue)}</span>
+                        <div className="flex-1 min-w-0">
+                          <h2 className="text-sm font-semibold text-[#0F172A]">Missed Revenue Alert</h2>
+                          <p className="text-[11px] text-[#475569] mt-1">Lost momentum that can still be recovered this week.</p>
+                          <p className="text-lg font-bold text-[#FF2E2D] mt-3">{formatMoney(missedRevenueValue)}</p>
+                          <div className="mt-4 space-y-2">
+                            <div className="flex items-center justify-between gap-3 text-xs">
+                              <span className="text-[#475569]">No follow-up</span>
+                              <span className="font-semibold text-[#0F172A]">{formatMoney(stalledLeadValue)}</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-3 text-xs">
+                              <span className="text-[#475569]">Estimate not sent</span>
+                              <span className="font-semibold text-[#0F172A]">{formatMoney(estimateNotSentValue)}</span>
+                            </div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="mt-4"
+                            onClick={() => navigate(draftEstimates.length > 0 ? "/quotes" : "/leads/pipeline")}
+                          >
+                            Recover Revenue
+                          </Button>
                         </div>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-4"
-                        onClick={() => navigate(draftEstimates.length > 0 ? "/quotes" : "/leads/pipeline")}
-                      >
-                        Recover Revenue
-                      </Button>
-                    </div>
-                  </div>
-                </motion.section>
+                    </motion.section>
+                  </>
+                )}
               </div>
 
               <motion.section
@@ -1491,6 +1691,9 @@ const Index = () => {
               </motion.section>
 
               {dashboardAccess.canViewLeads ? (
+                isLoading ? (
+                  <DashboardKanbanSkeleton />
+                ) : (
                 <motion.section
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -1597,173 +1800,182 @@ const Index = () => {
                     </div>
                   </div>
                 </motion.section>
+                )
               ) : null}
 
               <div className="grid grid-cols-1 gap-4 md:gap-6 xl:grid-cols-[1.2fr,0.8fr]">
                 {dashboardAccess.canViewProjects ? (
-                  <motion.section
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.25 }}
-                    className={sectionCardClassName}
-                  >
-                    <div className="p-5 border-b border-[rgba(15,23,42,0.06)]">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-md bg-[#0891B2]/10 flex items-center justify-center">
-                            <Briefcase size={16} className="text-[#0891B2]" />
+                  isLoading ? (
+                    <DashboardJobsSkeleton />
+                  ) : (
+                    <motion.section
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.25 }}
+                      className={sectionCardClassName}
+                    >
+                      <div className="p-5 border-b border-[rgba(15,23,42,0.06)]">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-md bg-[#0891B2]/10 flex items-center justify-center">
+                              <Briefcase size={16} className="text-[#0891B2]" />
+                            </div>
+                            <div>
+                              <h2 className="text-sm font-semibold text-[#0F172A]">Active Jobs</h2>
+                              <p className="text-[11px] text-[#94A3B8]">Production work already sold and scheduled</p>
+                            </div>
                           </div>
-                          <div>
-                            <h2 className="text-sm font-semibold text-[#0F172A]">Active Jobs</h2>
-                            <p className="text-[11px] text-[#94A3B8]">Production work already sold and scheduled</p>
-                          </div>
+                          <button
+                            onClick={() => navigate("/projects")}
+                            className="text-xs text-[#0891B2] font-medium hover:underline flex items-center gap-1"
+                          >
+                            View Jobs
+                            <ArrowUpRight size={12} />
+                          </button>
                         </div>
-                        <button
-                          onClick={() => navigate("/projects")}
-                          className="text-xs text-[#0891B2] font-medium hover:underline flex items-center gap-1"
-                        >
-                          View Jobs
-                          <ArrowUpRight size={12} />
-                        </button>
                       </div>
-                    </div>
 
-                    <div className="grid gap-4 p-5 md:grid-cols-2">
-                      {activeJobs.length > 0 ? activeJobs.map((job) => (
-                        <div key={job.id} className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="text-sm font-semibold text-[#0F172A] line-clamp-1">{job.name}</p>
-                              <p className="text-[11px] text-[#94A3B8] line-clamp-1">{job.client}</p>
+                      <div className="grid gap-4 p-5 md:grid-cols-2">
+                        {activeJobs.length > 0 ? activeJobs.map((job) => (
+                          <div key={job.id} className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold text-[#0F172A] line-clamp-1">{job.name}</p>
+                                <p className="text-[11px] text-[#94A3B8] line-clamp-1">{job.client}</p>
+                              </div>
+                              <span className={cn("px-2 py-0.5 rounded text-[10px] font-semibold whitespace-nowrap", getJobStatusBadgeClasses(job.status))}>
+                                {job.statusLabel}
+                              </span>
                             </div>
-                            <span className={cn("px-2 py-0.5 rounded text-[10px] font-semibold whitespace-nowrap", getJobStatusBadgeClasses(job.status))}>
-                              {job.statusLabel}
-                            </span>
-                          </div>
 
-                          <div className="mt-4 space-y-3 text-xs">
-                            <div className="flex items-start gap-2 text-[#475569]">
-                              <MapPin size={13} className="mt-0.5 flex-shrink-0 text-[#94A3B8]" />
-                              <span>{job.address}</span>
+                            <div className="mt-4 space-y-3 text-xs">
+                              <div className="flex items-start gap-2 text-[#475569]">
+                                <MapPin size={13} className="mt-0.5 flex-shrink-0 text-[#94A3B8]" />
+                                <span>{job.address}</span>
+                              </div>
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="text-[#94A3B8]">Value</span>
+                                <span className="font-semibold text-[#0F172A]">{formatMoney(job.value)}</span>
+                              </div>
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="text-[#94A3B8]">Crew</span>
+                                <span className="font-medium text-[#475569]">{job.crew}</span>
+                              </div>
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="text-[#94A3B8]">Deadline</span>
+                                <span className="font-medium text-[#475569]">{job.deadline}</span>
+                              </div>
                             </div>
-                            <div className="flex items-center justify-between gap-3">
-                              <span className="text-[#94A3B8]">Value</span>
-                              <span className="font-semibold text-[#0F172A]">{formatMoney(job.value)}</span>
-                            </div>
-                            <div className="flex items-center justify-between gap-3">
-                              <span className="text-[#94A3B8]">Crew</span>
-                              <span className="font-medium text-[#475569]">{job.crew}</span>
-                            </div>
-                            <div className="flex items-center justify-between gap-3">
-                              <span className="text-[#94A3B8]">Deadline</span>
-                              <span className="font-medium text-[#475569]">{job.deadline}</span>
-                            </div>
-                          </div>
 
-                          <div className="mt-4 flex items-center justify-between gap-3 border-t border-[rgba(15,23,42,0.06)] pt-4">
-                            <span className="text-[11px] text-[#94A3B8]">{job.type}</span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => navigate("/projects")}
-                            >
-                              View Job
-                            </Button>
-                          </div>
-                        </div>
-                      )) : (
-                        <div className="md:col-span-2 rounded-md border border-dashed border-[rgba(15,23,42,0.08)] bg-[#F7F7FB] px-4 py-10 text-center text-sm text-[#475569]">
-                          No active jobs are on the board yet.
-                        </div>
-                      )}
-                    </div>
-                  </motion.section>
-                ) : null}
-
-                {dashboardAccess.canViewClients ? (
-                  <motion.section
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className={sectionCardClassName}
-                  >
-                    <div className="p-5 border-b border-[rgba(15,23,42,0.06)]">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-md bg-[#0891B2]/10 flex items-center justify-center">
-                            <Users size={16} className="text-[#0891B2]" />
-                          </div>
-                          <div>
-                            <h2 className="text-sm font-semibold text-[#0F172A]">Recent Clients</h2>
-                            <p className="text-[11px] text-[#94A3B8]">Recent homeowners and commercial accounts</p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => navigate("/client-list")}
-                          className="text-xs text-[#0891B2] font-medium hover:underline flex items-center gap-1"
-                        >
-                          View Clients
-                          <ArrowUpRight size={12} />
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="divide-y divide-[rgba(15,23,42,0.04)]">
-                      {recentClients.length > 0 ? recentClients.map((client) => (
-                        <div key={client.id} className="px-5 py-4">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="text-sm font-semibold text-[#0F172A]">{client.name}</p>
-                              <p className="text-[11px] text-[#94A3B8]">
-                                {client.lastContacted ? `Last contacted ${formatDateLabel(client.lastContacted)}` : "Newly added client"}
-                              </p>
-                            </div>
-                            {dashboardAccess.canViewAiAssistant ? (
+                            <div className="mt-4 flex items-center justify-between gap-3 border-t border-[rgba(15,23,42,0.06)] pt-4">
+                              <span className="text-[11px] text-[#94A3B8]">{job.type}</span>
                               <Button
                                 variant="ghost"
                                 size="sm"
+                                onClick={() => navigate("/projects")}
+                              >
+                                View Job
+                              </Button>
+                            </div>
+                          </div>
+                        )) : (
+                          <div className="md:col-span-2 rounded-md border border-dashed border-[rgba(15,23,42,0.08)] bg-[#F7F7FB] px-4 py-10 text-center text-sm text-[#475569]">
+                            No active jobs are on the board yet.
+                          </div>
+                        )}
+                      </div>
+                    </motion.section>
+                  )
+                ) : null}
+
+                {dashboardAccess.canViewClients ? (
+                  isLoading ? (
+                    <DashboardClientsSkeleton />
+                  ) : (
+                    <motion.section
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3 }}
+                      className={sectionCardClassName}
+                    >
+                      <div className="p-5 border-b border-[rgba(15,23,42,0.06)]">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-md bg-[#0891B2]/10 flex items-center justify-center">
+                              <Users size={16} className="text-[#0891B2]" />
+                            </div>
+                            <div>
+                              <h2 className="text-sm font-semibold text-[#0F172A]">Recent Clients</h2>
+                              <p className="text-[11px] text-[#94A3B8]">Recent homeowners and commercial accounts</p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => navigate("/client-list")}
+                            className="text-xs text-[#0891B2] font-medium hover:underline flex items-center gap-1"
+                          >
+                            View Clients
+                            <ArrowUpRight size={12} />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="divide-y divide-[rgba(15,23,42,0.04)]">
+                        {recentClients.length > 0 ? recentClients.map((client) => (
+                          <div key={client.id} className="px-5 py-4">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold text-[#0F172A]">{client.name}</p>
+                                <p className="text-[11px] text-[#94A3B8]">
+                                  {client.lastContacted ? `Last contacted ${formatDateLabel(client.lastContacted)}` : "Newly added client"}
+                                </p>
+                              </div>
+                              {dashboardAccess.canViewAiAssistant ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => navigate("/quotes")}
+                                >
+                                  <Sparkles />
+                                  <span>Send estimate?</span>
+                                </Button>
+                              ) : null}
+                            </div>
+
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleClientCall(client)}
+                              >
+                                <PhoneCall />
+                                <span>Call</span>
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
                                 onClick={() => navigate("/quotes")}
                               >
-                                <Sparkles />
-                                <span>Send estimate?</span>
+                                <FileText />
+                                <span>Send Estimate</span>
                               </Button>
-                            ) : null}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => navigate("/projects")}
+                              >
+                                <Briefcase />
+                                <span>View Jobs</span>
+                              </Button>
+                            </div>
                           </div>
-
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleClientCall(client)}
-                            >
-                              <PhoneCall />
-                              <span>Call</span>
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => navigate("/quotes")}
-                            >
-                              <FileText />
-                              <span>Send Estimate</span>
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => navigate("/projects")}
-                            >
-                              <Briefcase />
-                              <span>View Jobs</span>
-                            </Button>
+                        )) : (
+                          <div className="px-5 py-8 text-sm text-[#475569]">
+                            No recent clients are available yet.
                           </div>
-                        </div>
-                      )) : (
-                        <div className="px-5 py-8 text-sm text-[#475569]">
-                          No recent clients are available yet.
-                        </div>
-                      )}
-                    </div>
-                  </motion.section>
+                        )}
+                      </div>
+                    </motion.section>
+                  )
                 ) : null}
               </div>
 
@@ -1775,6 +1987,9 @@ const Index = () => {
                   className="grid grid-cols-1 gap-4 md:gap-6 xl:grid-cols-3"
                 >
                   {dashboardAccess.canViewQuotes ? (
+                    isLoading ? (
+                      <DashboardQueueSkeleton />
+                    ) : (
                     <div className={sectionCardClassName}>
                       <div className="p-5 border-b border-[rgba(15,23,42,0.06)]">
                         <h2 className="text-sm font-semibold text-[#0F172A]">Estimate Queue</h2>
@@ -1800,9 +2015,13 @@ const Index = () => {
                         ) : null}
                       </div>
                     </div>
+                    )
                   ) : null}
 
                   {dashboardAccess.canViewSiteVisits ? (
+                    isLoading ? (
+                      <DashboardQueueSkeleton />
+                    ) : (
                     <div className={sectionCardClassName}>
                       <div className="p-5 border-b border-[rgba(15,23,42,0.06)]">
                         <h2 className="text-sm font-semibold text-[#0F172A]">Inspections</h2>
@@ -1832,9 +2051,13 @@ const Index = () => {
                         ) : null}
                       </div>
                     </div>
+                    )
                   ) : null}
 
                   {dashboardAccess.canViewInvoices ? (
+                    isLoading ? (
+                      <DashboardQueueSkeleton />
+                    ) : (
                     <div className={sectionCardClassName}>
                       <div className="p-5 border-b border-[rgba(15,23,42,0.06)]">
                         <h2 className="text-sm font-semibold text-[#0F172A]">Pending Payments</h2>
@@ -1865,6 +2088,7 @@ const Index = () => {
                         ) : null}
                       </div>
                     </div>
+                    )
                   ) : null}
                 </motion.section>
               ) : null}

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTheme } from "next-themes";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   AlertTriangle,
@@ -65,6 +66,7 @@ import {
 } from "@/features/settings/services/settings-service";
 import { useWorkspaceBranding } from "@/features/settings/context/workspace-branding";
 import { getUserLocalizationSnapshot } from "@/lib/user-localization";
+import { syncLegacyThemeStorage } from "@/lib/workspace-theme";
 
 type SettingsTab = "general" | "company" | "billing" | "email" | "security" | "notifications" | "team";
 
@@ -280,6 +282,7 @@ export default function SettingsPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { setTheme } = useTheme();
   const { updateBranding } = useWorkspaceBranding();
   const userLocalization = useMemo(() => getUserLocalizationSnapshot(), []);
   const [activeTab, setActiveTab] = useState<SettingsTab>(routeMap[location.pathname] || "general");
@@ -369,7 +372,11 @@ export default function SettingsPage() {
       getRoles(),
     ]);
 
-    if (generalResult.status === "fulfilled") setGeneral(generalResult.value);
+    if (generalResult.status === "fulfilled") {
+      setGeneral(generalResult.value);
+      setTheme(generalResult.value.theme);
+      syncLegacyThemeStorage(generalResult.value.theme);
+    }
     if (companyResult.status === "fulfilled") setCompany(companyResult.value);
     if (billingResult.status === "fulfilled") setBilling(billingResult.value);
     if (billingInvoicesResult.status === "fulfilled") setBillingInvoices(billingInvoicesResult.value);
@@ -408,6 +415,8 @@ export default function SettingsPage() {
     try {
       const next = await updateGeneralSettings(general);
       setGeneral(next);
+      setTheme(next.theme);
+      syncLegacyThemeStorage(next.theme);
       toast({ title: "General settings updated", description: "Workspace preferences saved successfully." });
     } catch (error) {
       toast({ title: "Save failed", description: getErrorMessage(error), variant: "destructive" });

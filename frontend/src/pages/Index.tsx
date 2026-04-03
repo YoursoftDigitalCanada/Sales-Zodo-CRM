@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent, type ElementType } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useTheme } from "next-themes";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/dashboard/StatCard";
@@ -48,6 +49,7 @@ import { cn } from "@/lib/utils";
 import useIsMobile from "@/hooks/useIsMobile";
 import { canAccessFeature, canAccessModule } from "@/lib/access-control";
 import { useWorkspaceBranding } from "@/features/settings/context/workspace-branding";
+import { syncLegacyThemeStorage } from "@/lib/workspace-theme";
 
 type ThemeColor = "teal" | "gold" | "navy" | "green" | "blue" | "purple";
 type RevenuePipelineStage = "lead" | "contacted" | "estimate-sent" | "negotiation" | "won" | "lost";
@@ -674,8 +676,10 @@ const Index = () => {
   const { isMobile } = useIsMobile();
   const { toast } = useToast();
   const { branding } = useWorkspaceBranding();
+  const { resolvedTheme, setTheme } = useTheme();
   const companyName = branding?.companyName?.trim() || "ZODO CRM";
   const companyLogoUrl = branding?.logoUrl || null;
+  const isDarkMode = resolvedTheme === "dark";
   const dashboardAccess = useMemo(() => ({
     canViewLeads: canAccessFeature(dashboardWidgetConfig.leads.featureId) && canAccessModule(dashboardWidgetConfig.leads.permissionModule),
     canViewInvoices: canAccessFeature(dashboardWidgetConfig.invoices.featureId) && canAccessModule(dashboardWidgetConfig.invoices.permissionModule),
@@ -692,7 +696,6 @@ const Index = () => {
   const [user, setUser] = useState<User | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<BellNotification[]>([]);
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchModal, setShowSearchModal] = useState(false);
@@ -722,16 +725,6 @@ const Index = () => {
       setUser(JSON.parse(storedUser));
     } catch {
       console.error("Failed to parse user data");
-    }
-  }, []);
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("theme");
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const shouldBeDark = savedTheme === "dark" || (!savedTheme && prefersDark);
-    setIsDarkMode(shouldBeDark);
-    if (shouldBeDark) {
-      document.documentElement.classList.add("dark");
     }
   }, []);
 
@@ -830,15 +823,9 @@ const Index = () => {
   };
 
   const toggleDarkMode = () => {
-    const nextMode = !isDarkMode;
-    setIsDarkMode(nextMode);
-    localStorage.setItem("theme", nextMode ? "dark" : "light");
-
-    if (nextMode) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+    const nextMode = isDarkMode ? "light" : "dark";
+    setTheme(nextMode);
+    syncLegacyThemeStorage(nextMode);
   };
 
   const handleMarkAllAsRead = async () => {

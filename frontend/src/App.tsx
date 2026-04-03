@@ -8,10 +8,12 @@ import { GlobalAiFloatingButton } from "@/components/ai/GlobalAiFloatingButton";
 import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Routes, Route, useLocation, useNavigate } from "react-router-dom";
+import { ThemeProvider, useTheme } from "next-themes";
 import { CopilotContextProvider } from "@/contexts/CopilotContext";
 import { Sidebar, SidebarSuppressionContext } from "@/components/Sidebar";
 import { getAccessToken } from "@/features/auth/lib/auth-storage";
 import { WorkspaceBrandingProvider, useWorkspaceBranding } from "@/features/settings/context/workspace-branding";
+import { getGeneralSettings } from "@/features/settings/services/settings-service";
 import { canAccessModule, getDefaultAuthorizedRoute } from "@/lib/access-control";
 import { isOnboardingRequired } from "@/lib/enabled-features";
 import { toast } from "@/hooks/use-toast";
@@ -24,6 +26,12 @@ import {
   triggerImportUiAction,
   triggerSaveUiAction,
 } from "@/lib/app-shortcuts";
+import {
+  normalizeWorkspaceTheme,
+  readStoredWorkspaceTheme,
+  syncLegacyThemeStorage,
+  WORKSPACE_THEME_STORAGE_KEY,
+} from "@/lib/workspace-theme";
 
 // Layout
 import Layout from "./components/Layout";
@@ -126,6 +134,58 @@ import DocumentsPage from "./pages/Documents";
 import RolesPage from "./pages/roles/RolesPage";
 
 const queryClient = new QueryClient();
+
+const WorkspaceThemeSync = () => {
+  const { theme, setTheme } = useTheme();
+  const accessToken = getAccessToken();
+
+  useEffect(() => {
+    const storedTheme = readStoredWorkspaceTheme();
+    if (!storedTheme) {
+      return;
+    }
+
+    setTheme(storedTheme);
+    syncLegacyThemeStorage(storedTheme);
+  }, [setTheme]);
+
+  useEffect(() => {
+    if (!theme || theme === "system") {
+      return;
+    }
+
+    syncLegacyThemeStorage(normalizeWorkspaceTheme(theme));
+  }, [theme]);
+
+  useEffect(() => {
+    if (!accessToken) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadWorkspaceTheme = async () => {
+      try {
+        const general = await getGeneralSettings();
+        if (cancelled) return;
+
+        const nextTheme = normalizeWorkspaceTheme(general.theme);
+        setTheme(nextTheme);
+        syncLegacyThemeStorage(nextTheme);
+      } catch {
+        // Non-blocking: keep the last stored theme if settings are unavailable.
+      }
+    };
+
+    void loadWorkspaceTheme();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken, setTheme]);
+
+  return null;
+};
 
 const resolveCreateRoute = (pathname: string): string | null => {
   if (pathname.startsWith("/quotes")) return "/quotes?action=create";
@@ -949,17 +1009,20 @@ const AppRoutes = () => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <WorkspaceBrandingProvider>
-          <CopilotContextProvider>
-            <AppRoutes />
-          </CopilotContextProvider>
-        </WorkspaceBrandingProvider>
-      </BrowserRouter>
-    </TooltipProvider>
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey={WORKSPACE_THEME_STORAGE_KEY}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <WorkspaceBrandingProvider>
+            <CopilotContextProvider>
+              <WorkspaceThemeSync />
+              <AppRoutes />
+            </CopilotContextProvider>
+          </WorkspaceBrandingProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 

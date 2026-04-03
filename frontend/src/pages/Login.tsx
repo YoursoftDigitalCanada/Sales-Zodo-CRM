@@ -11,6 +11,7 @@ import {
   setEnabledFeatures,
   setOnboardingCompleted,
 } from "@/lib/enabled-features";
+import { syncLegacyThemeStorage } from "@/lib/workspace-theme";
 import logo from "../Images/Logo/logo.png";
 
 /* ────── shared css-in-js tokens (mirrors the spec) ───── */
@@ -107,7 +108,10 @@ const LoginPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [dark, setDark] = useState(() => localStorage.getItem("zodo-theme") === "dark");
+  const [dark, setDark] = useState(() => {
+    const storedTheme = localStorage.getItem("zodo-workspace-theme") || localStorage.getItem("zodo-theme");
+    return storedTheme === "dark";
+  });
   const [emailTouched, setEmailTouched] = useState(false);
   const [pwTouched, setPwTouched] = useState(false);
   const [capsLock, setCapsLock] = useState(false);
@@ -118,7 +122,7 @@ const LoginPage = () => {
   useEffect(() => { emailRef.current?.focus(); }, []);
   useEffect(() => {
     if (dark) document.body.classList.add("dark"); else document.body.classList.remove("dark");
-    localStorage.setItem("zodo-theme", dark ? "dark" : "light");
+    syncLegacyThemeStorage(dark ? "dark" : "light");
   }, [dark]);
 
   const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);

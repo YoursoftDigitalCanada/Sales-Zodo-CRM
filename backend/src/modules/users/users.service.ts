@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import { UserStatus } from '@prisma/client';
 import { BadRequestError, NotFoundError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
-import { mailerService } from '../../common/services/mailer.service';
+import { tenantMailerService } from '../../common/services/tenant-mailer.service';
 import { DEFAULT_EMAIL_TEMPLATES } from '../settings/settings.constants';
 import { settingsManager } from '../settings/settings.manager';
 import { settingsRepository } from '../settings/settings.repository';
@@ -87,43 +87,36 @@ export class UsersService {
     );
 
     const settings = await settingsRepository.ensure(tenantId);
-    const smtp = await settingsRepository.getSmtpConfig(tenantId);
     let inviteEmailSent = false;
 
-    if (smtp.host && smtp.user && smtp.pass) {
+    try {
       const inviteTemplate = DEFAULT_EMAIL_TEMPLATES.TEAM_INVITE;
       const workspaceName = settings.tenant?.name || 'Your workspace';
-      inviteEmailSent = await mailerService.sendMailWithConfig(
-        {
-          host: smtp.host,
-          port: smtp.port,
-          user: smtp.user,
-          pass: smtp.pass,
-          senderName: smtp.senderName || workspaceName,
-          senderEmail: smtp.senderEmail || smtp.user,
-        },
-        {
-          to: data.email,
-          subject: interpolateTemplate(inviteTemplate.subject, {
-            workspaceName,
-            firstName,
-            roleName: role.name,
-            temporaryPassword,
-          }),
-          html: interpolateTemplate(inviteTemplate.bodyHtml, {
-            workspaceName,
-            firstName,
-            roleName: role.name,
-            temporaryPassword,
-          }),
-          text: interpolateTemplate(inviteTemplate.bodyText, {
-            workspaceName,
-            firstName,
-            roleName: role.name,
-            temporaryPassword,
-          }),
-        }
-      );
+      const delivery = await tenantMailerService.sendTenantEmail({
+        tenantId,
+        to: data.email,
+        subject: interpolateTemplate(inviteTemplate.subject, {
+          workspaceName,
+          firstName,
+          roleName: role.name,
+          temporaryPassword,
+        }),
+        html: interpolateTemplate(inviteTemplate.bodyHtml, {
+          workspaceName,
+          firstName,
+          roleName: role.name,
+          temporaryPassword,
+        }),
+        text: interpolateTemplate(inviteTemplate.bodyText, {
+          workspaceName,
+          firstName,
+          roleName: role.name,
+          temporaryPassword,
+        }),
+      });
+      inviteEmailSent = delivery.sent;
+    } catch {
+      inviteEmailSent = false;
     }
 
     return {

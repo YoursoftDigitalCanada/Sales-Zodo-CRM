@@ -4,7 +4,7 @@ import { NotFoundError, BadRequestError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
 import { activityLogger } from '../../common/services/activity-logger.service';
 import { eventBus } from '../../common/events/event-bus';
-import { mailerService } from '../../common/services/mailer.service';
+import { tenantMailerService } from '../../common/services/tenant-mailer.service';
 import { config } from '../../config';
 import { prisma } from '../../config/database';
 import { createHash, randomUUID } from 'crypto';
@@ -760,18 +760,26 @@ export class QuotesService {
 </body>
 </html>`;
 
-        await mailerService.sendMail({
+        const delivery = await tenantMailerService.sendTenantEmail({
+            tenantId,
+            preferredUserId: actorUserId,
             to: recipient.email,
             subject: `Estimate ${q.quoteNumber} ready for signature`,
             html,
             text: `Hi ${recipient.name}, your estimate ${q.quoteNumber} for ${this.formatCurrency(Number(q.total), q.currency || 'CAD')} is ready to review and sign: ${publicLink}`,
             attachments: emailAttachments.length > 0 ? emailAttachments : undefined,
         });
+        if (!delivery.sent) {
+            throw new BadRequestError(
+                delivery.error || 'Estimate email could not be sent. Configure your mailbox in Settings > Email and try again.',
+            );
+        }
 
         quoteSignatureReminderService.cancelReminder(dto.id);
         quoteSignatureReminderService.scheduleReminder({
             tenantId,
             quoteId: dto.id,
+            senderUserId: actorUserId,
             recipientName: recipient.name,
             recipientEmail: recipient.email,
             publicLink,

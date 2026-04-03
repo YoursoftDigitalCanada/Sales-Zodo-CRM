@@ -4,8 +4,8 @@ import {
   ServiceUnavailableError,
 } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
-import { mailerService } from '../../common/services/mailer.service';
 import { twilioVerifyService } from '../../common/services/twilio-verify.service';
+import { tenantMailerService } from '../../common/services/tenant-mailer.service';
 import { logger } from '../../common/utils/logger';
 import { config } from '../../config';
 
@@ -125,7 +125,7 @@ class SignupOtpService {
     if (params.channel === 'email') {
       this.records.set(key, record);
       const emailOtp = otp as string;
-      const sent = await mailerService.sendMail({
+      const sent = await tenantMailerService.sendSignupEmail({
         to: email,
         subject: 'Your Zodo CRM verification code',
         html: this.buildEmailTemplate(emailOtp),

@@ -1,10 +1,11 @@
 import { prisma } from '../../config/database';
 import { logger } from '../../common/utils/logger';
-import { mailerService } from '../../common/services/mailer.service';
+import { tenantMailerService } from '../../common/services/tenant-mailer.service';
 
 interface ScheduledReminder {
     tenantId: string;
     quoteId: string;
+    senderUserId?: string;
     recipientName: string;
     recipientEmail: string;
     publicLink: string;
@@ -79,7 +80,9 @@ class QuoteSignatureReminderService {
                     continue;
                 }
 
-                await mailerService.sendMail({
+                const delivery = await tenantMailerService.sendTenantEmail({
+                    tenantId: reminder.tenantId,
+                    preferredUserId: reminder.senderUserId,
                     to: reminder.recipientEmail,
                     subject: schedule.subject,
                     html: `
@@ -93,6 +96,15 @@ class QuoteSignatureReminderService {
 </div>`,
                     text: `${schedule.message} Review and sign your estimate here: ${reminder.publicLink}`,
                 });
+                if (!delivery.sent) {
+                    logger.warn('[QuoteReminder] Email reminder delivery failed', {
+                        quoteId,
+                        day: schedule.day,
+                        recipientEmail: reminder.recipientEmail,
+                        error: delivery.error,
+                    });
+                    continue;
+                }
 
                 this.sentKeys.add(sentKey);
             }

@@ -4,7 +4,7 @@ import {
 } from '../../common/events/event-bus';
 import { prisma } from '../../config/database';
 import { logger } from '../../common/utils/logger';
-import { mailerService } from '../../common/services/mailer.service';
+import { tenantMailerService } from '../../common/services/tenant-mailer.service';
 import { smsService } from '../../common/services/sms.service';
 import { communicationLogService } from '../communication-logs/communication-log.service';
 import { tasksService } from '../tasks/tasks.service';
@@ -416,7 +416,7 @@ export class Stage6ProjectWorkflowService {
 
             // Final Auto 4: Client completion email
             client?.primaryEmail
-                ? this.sendCompletionEmail(client.primaryEmail, client.clientName, event.projectName)
+                ? this.sendCompletionEmail(event.tenantId, client.primaryEmail, client.clientName, event.projectName)
                 : Promise.resolve(),
 
             // Final Auto 5: Schedule future follow-ups
@@ -543,7 +543,7 @@ export class Stage6ProjectWorkflowService {
 
     // ── Helper: Send completion email ───────────────────────────────────
 
-    private async sendCompletionEmail(to: string, clientName: string, projectName: string): Promise<void> {
+    private async sendCompletionEmail(tenantId: string, to: string, clientName: string, projectName: string): Promise<void> {
         const firstName = clientName.split(' ')[0];
 
         const html = `
@@ -581,11 +581,16 @@ export class Stage6ProjectWorkflowService {
 </body>
 </html>`.trim();
 
-        await mailerService.sendMail({
+        const delivery = await tenantMailerService.sendTenantEmail({
+            tenantId,
             to,
             subject: 'Your roof is complete!',
             html,
         });
+        if (!delivery.sent) {
+            logger.warn('[Stage6] Completion email delivery failed', { tenantId, to, error: delivery.error });
+            return;
+        }
 
         logger.info('[Stage6] Completion email sent', { to });
     }

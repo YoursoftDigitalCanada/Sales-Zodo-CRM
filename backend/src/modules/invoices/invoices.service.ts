@@ -6,10 +6,9 @@ import { ErrorCodes } from '../../common/errors/errorCodes';
 import { eventBus } from '../../common/events/event-bus';
 import { clientLifecycleService } from '../../common/services/client-lifecycle.service';
 import { activityLogger } from '../../common/services/activity-logger.service';
-import { mailerService } from '../../common/services/mailer.service';
+import { tenantMailerService } from '../../common/services/tenant-mailer.service';
 import { prisma } from '../../config/database';
 import { config } from '../../config';
-import { mailboxRepository } from '../emails/mailbox.repository';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -387,56 +386,20 @@ export class InvoicesService {
             attachments?: InvoiceEmailAttachment[];
         }) => Promise<{ sent: boolean; error?: string }>;
     }> {
-        if (actorUserId) {
-            const mailboxConfig = await mailboxRepository.getRuntimeConfig(actorUserId);
-            const hasMailboxSmtp = Boolean(
-                mailboxConfig
-                && mailboxConfig.tenantId === tenantId
-                && mailboxConfig.smtp.host
-                && mailboxConfig.smtp.user
-                && mailboxConfig.smtp.pass,
-            );
+        const sender = await tenantMailerService.getTenantSender(tenantId, actorUserId);
 
-            if (mailboxConfig && hasMailboxSmtp) {
-                const senderName = mailboxConfig.smtp.senderName || 'ZODO CRM';
-                const senderEmail = mailboxConfig.smtp.senderEmail || mailboxConfig.smtp.user;
-                return {
-                    senderName,
-                    senderEmail,
-                    send: (options) => mailerService.sendMailWithConfigDetailed(
-                        {
-                            host: mailboxConfig.smtp.host,
-                            port: mailboxConfig.smtp.port,
-                            user: mailboxConfig.smtp.user,
-                            pass: mailboxConfig.smtp.pass,
-                            encryption: mailboxConfig.smtp.encryption,
-                            senderName,
-                            senderEmail,
-                        },
-                        options,
-                    ),
-                };
-            }
-        }
-
-        const hasGlobalSmtp = Boolean(config.email.host && config.email.user && config.email.pass);
-        if (hasGlobalSmtp) {
-            const senderEmail = config.email.from || config.email.user || 'no-reply@zodo.ca';
-            return {
-                senderName: 'ZODO CRM',
-                senderEmail,
-                send: async (options) => {
-                    const sent = await mailerService.sendMail(options);
-                    return sent
-                        ? { sent: true }
-                        : { sent: false, error: 'Server SMTP delivery failed. Check the configured SMTP host, port, and credentials.' };
-                },
-            };
-        }
-
-        throw new ServiceUnavailableError(
-            'Invoice email delivery requires SMTP configuration. Configure Letter Box > My Mailbox for your user or set server SMTP env credentials.',
-        );
+        return {
+            senderName: sender.senderName,
+            senderEmail: sender.senderEmail,
+            send: async (options) => {
+                const delivery = await tenantMailerService.sendTenantEmail({
+                    tenantId,
+                    preferredUserId: actorUserId,
+                    ...options,
+                });
+                return { sent: delivery.sent, error: delivery.error };
+            },
+        };
     }
 
     private buildInvoiceEmailContent(params: {

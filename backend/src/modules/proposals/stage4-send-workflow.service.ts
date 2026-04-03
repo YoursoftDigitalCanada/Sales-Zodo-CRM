@@ -5,7 +5,7 @@ import {
 } from '../../common/events/event-bus';
 import { prisma } from '../../config/database';
 import { logger } from '../../common/utils/logger';
-import { mailerService } from '../../common/services/mailer.service';
+import { tenantMailerService } from '../../common/services/tenant-mailer.service';
 import { smsService } from '../../common/services/sms.service';
 import { communicationLogService } from '../communication-logs/communication-log.service';
 import { tasksService } from '../tasks/tasks.service';
@@ -132,27 +132,34 @@ export class Stage4SendWorkflowService {
             logger.warn('[Stage4] Could not attach proposal PDF', { err: err.message });
         }
 
-        const sent = await mailerService.sendMail({
+        const delivery = await tenantMailerService.sendTenantEmail({
+            tenantId: event.tenantId,
+            preferredUserId: event.ownerUserId || event.salesRepId,
             to: event.leadEmail,
             subject: 'Your Roofing Proposal – Review & Accept Online',
             html,
+            attachments: attachments.length > 0 ? attachments : undefined,
         });
+        const sent = delivery.sent;
 
         // Log in CommunicationLog
-        await communicationLogService.createSafe({
-            tenantId: event.tenantId,
-            leadId: event.leadId,
-            type: 'EMAIL',
-            direction: 'OUTBOUND',
-            subject: 'Your Roofing Proposal – Review & Accept Online',
-            content: `Proposal ${event.quoteNumber} sent to ${event.leadName} via email`,
-            to: event.leadEmail,
-        });
+        if (sent) {
+            await communicationLogService.createSafe({
+                tenantId: event.tenantId,
+                leadId: event.leadId,
+                type: 'EMAIL',
+                direction: 'OUTBOUND',
+                subject: 'Your Roofing Proposal – Review & Accept Online',
+                content: `Proposal ${event.quoteNumber} sent to ${event.leadName} via email`,
+                to: event.leadEmail,
+            });
+        }
 
         logger.info('[Stage4] Proposal email sent', {
             proposalId: event.proposalId,
             to: event.leadEmail,
             success: sent,
+            error: delivery.error,
         });
     }
 
@@ -326,6 +333,7 @@ export class Stage4SendWorkflowService {
             tenantId: event.tenantId,
             proposalId: event.proposalId,
             leadId: event.leadId,
+            senderUserId: event.ownerUserId || event.salesRepId,
             leadName: event.leadName,
             leadEmail: event.leadEmail,
             leadPhone: event.leadPhone,

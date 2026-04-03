@@ -1,6 +1,6 @@
 import { prisma } from '../../config/database';
 import { logger } from '../../common/utils/logger';
-import { mailerService } from '../../common/services/mailer.service';
+import { tenantMailerService } from '../../common/services/tenant-mailer.service';
 import { smsService } from '../../common/services/sms.service';
 import { communicationLogService } from '../communication-logs/communication-log.service';
 import { CommunicationType } from '@prisma/client';
@@ -21,6 +21,7 @@ interface ScheduledReminder {
     tenantId: string;
     proposalId: string;
     leadId: string;
+    senderUserId?: string;
     leadName: string;
     leadEmail?: string;
     leadPhone?: string;
@@ -166,11 +167,21 @@ class ProposalReminderService {
                 proposalLink: proposalUrl,
             });
 
-            await mailerService.sendMail({
+            const delivery = await tenantMailerService.sendTenantEmail({
+                tenantId: reminder.tenantId,
+                preferredUserId: reminder.senderUserId,
                 to: reminder.leadEmail,
                 subject: schedule.subject,
                 html,
             });
+            if (!delivery.sent) {
+                logger.warn('[ProposalReminder] Email reminder delivery failed', {
+                    proposalId: reminder.proposalId,
+                    leadEmail: reminder.leadEmail,
+                    error: delivery.error,
+                });
+                return;
+            }
 
             await communicationLogService.createSafe({
                 tenantId: reminder.tenantId,

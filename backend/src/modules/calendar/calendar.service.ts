@@ -4,7 +4,7 @@ import { NotFoundError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
 import { activityLogger } from '../../common/services/activity-logger.service';
 import { eventBus } from '../../common/events/event-bus';
-import { mailerService } from '../../common/services/mailer.service';
+import { tenantMailerService } from '../../common/services/tenant-mailer.service';
 import { prisma } from '../../config/database';
 import { notificationManager } from '../notifications/notifications.manager';
 
@@ -253,11 +253,12 @@ export class CalendarService {
         // Email to lead
         if (lead.email) {
             emails.push(
-                mailerService.sendMail({
+                tenantMailerService.sendTenantEmail({
+                    tenantId,
                     to: lead.email,
                     subject: `Meeting Scheduled: ${event.title || 'Upcoming Meeting'}`,
                     html: buildMeetingEmailHtml({ ...emailOpts, recipientName: leadName, isLead: true }),
-                })
+                }).then((result) => result.sent)
             );
         }
 
@@ -266,11 +267,13 @@ export class CalendarService {
         const emp = lead.assignedTo?.user;
         if (!hasExplicitAttendees && emp?.email) {
             emails.push(
-                mailerService.sendMail({
+                tenantMailerService.sendTenantEmail({
+                    tenantId,
+                    preferredUserId: event.createdBy?.userId,
                     to: emp.email,
                     subject: `Meeting Scheduled with ${leadName}`,
                     html: buildMeetingEmailHtml({ ...emailOpts, recipientName: `${emp.firstName} ${emp.lastName}`, isLead: false }),
-                })
+                }).then((result) => result.sent)
             );
         }
 
@@ -322,7 +325,9 @@ export class CalendarService {
                         eventTitle: event.title,
                     },
                 }),
-                mailerService.sendMail({
+                tenantMailerService.sendTenantEmail({
+                    tenantId,
+                    preferredUserId: event.createdBy?.userId,
                     to: recipientEmail,
                     subject,
                     html: buildCalendarAssignmentEmailHtml({
@@ -338,7 +343,7 @@ export class CalendarService {
                         notes: event.notes || undefined,
                         subjectLabel,
                     }),
-                }),
+                }).then((result) => result.sent),
             ];
         });
 

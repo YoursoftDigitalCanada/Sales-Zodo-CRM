@@ -55,7 +55,7 @@ import { leadsService } from '../leads/leads.service';
 import { filesService } from '../files/files.service';
 import { analyticsService } from '../analytics/analytics.service';
 import { analyticsRepository } from '../analytics/analytics.repository';
-import { mailerService } from '../../common/services/mailer.service';
+import { tenantMailerService } from '../../common/services/tenant-mailer.service';
 import { smsService } from '../../common/services/sms.service';
 import { foldersService } from '../folders/folders.service';
 import { communicationLogService } from '../communication-logs/communication-log.service';
@@ -353,12 +353,16 @@ export class AutomationService {
                         `;
                     const text = `Hi ${firstName},\n\nThank you for contacting ${tenantName}. A member of our team will reach out shortly to discuss your project.\n\nBest regards,\n${tenantName}`;
 
-                    await mailerService.sendMail({
+                    const delivery = await tenantMailerService.sendTenantEmail({
+                        tenantId: event.tenantId,
                         to: event.email,
                         subject,
                         html,
                         text,
                     });
+                    if (!delivery.sent) {
+                        throw new Error(delivery.error || 'Tenant mailbox delivery failed');
+                    }
 
                     await communicationLogService.createSafe({
                         tenantId: event.tenantId,

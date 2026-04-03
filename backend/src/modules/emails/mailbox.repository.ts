@@ -72,6 +72,72 @@ export interface MailboxRuntimeConfig {
   };
 }
 
+type MailboxUserRecord = {
+  id: string;
+  tenantId: string | null;
+  firstName: string;
+  lastName: string;
+  preferences: Prisma.JsonValue;
+};
+
+function toRuntimeConfig(user: MailboxUserRecord): MailboxRuntimeConfig | null {
+  if (!user.tenantId) {
+    return null;
+  }
+
+  const mailbox = getMailboxConfig(user.preferences);
+  const smtp = toObject(mailbox.smtp);
+  const imap = toObject(mailbox.imap);
+  const senderName = String(smtp.senderName ?? [user.firstName, user.lastName].filter(Boolean).join(' ').trim());
+  const normalizedSmtp = normalizeSmtpTransportConfig({
+    host: String(smtp.host ?? ''),
+    port: Number(smtp.port ?? 587),
+    user: decryptSecret(String(smtp.username ?? '')),
+    pass: decryptSecret(String(smtp.password ?? '')),
+    encryption: String(smtp.encryption ?? 'STARTTLS') as EmailEncryption,
+    senderName,
+    senderEmail: String(smtp.senderEmail ?? ''),
+  });
+  const normalizedImap = normalizeImapTransportConfig({
+    host: String(imap.host ?? ''),
+    port: Number(imap.port ?? 993),
+    user: decryptSecret(String(imap.username ?? '')),
+    pass: decryptSecret(String(imap.password ?? '')),
+    encryption: String(imap.encryption ?? 'SSL/TLS') as EmailEncryption,
+  });
+
+  return {
+    tenantId: user.tenantId,
+    userId: user.id,
+    mailboxAddress: getMailboxAddress(mailbox),
+    smtp: {
+      host: normalizedSmtp.host,
+      port: normalizedSmtp.port,
+      user: normalizedSmtp.user,
+      pass: normalizedSmtp.pass,
+      encryption: normalizedSmtp.encryption as EmailEncryption,
+      senderName: normalizedSmtp.senderName,
+      senderEmail: normalizedSmtp.senderEmail,
+    },
+    imap: {
+      host: normalizedImap.host,
+      port: normalizedImap.port,
+      user: normalizedImap.user,
+      pass: normalizedImap.pass,
+      encryption: normalizedImap.encryption as EmailEncryption,
+    },
+  };
+}
+
+function hasConfiguredSmtp(config: MailboxRuntimeConfig | null): config is MailboxRuntimeConfig {
+  return Boolean(
+    config
+    && config.smtp.host
+    && config.smtp.user
+    && config.smtp.pass
+  );
+}
+
 export class MailboxRepository {
   async getMailboxSettings(userId: string): Promise<MailboxSettingsResponseDto> {
     const user = await prisma.user.findUnique({
@@ -222,53 +288,43 @@ export class MailboxRepository {
       },
     });
 
-    if (!user?.tenantId) {
-      return null;
+    return user ? toRuntimeConfig(user) : null;
+  }
+
+  async findConfiguredSmtpForTenant(tenantId: string, preferredUserId?: string): Promise<MailboxRuntimeConfig | null> {
+    if (preferredUserId) {
+      const preferred = await this.getRuntimeConfig(preferredUserId);
+      if (preferred?.tenantId === tenantId && hasConfiguredSmtp(preferred)) {
+        return preferred;
+      }
     }
 
-    const mailbox = getMailboxConfig(user.preferences);
-    const smtp = toObject(mailbox.smtp);
-    const imap = toObject(mailbox.imap);
-    const senderName = String(smtp.senderName ?? [user.firstName, user.lastName].filter(Boolean).join(' ').trim());
-    const normalizedSmtp = normalizeSmtpTransportConfig({
-      host: String(smtp.host ?? ''),
-      port: Number(smtp.port ?? 587),
-      user: decryptSecret(String(smtp.username ?? '')),
-      pass: decryptSecret(String(smtp.password ?? '')),
-      encryption: String(smtp.encryption ?? 'STARTTLS') as EmailEncryption,
-      senderName,
-      senderEmail: String(smtp.senderEmail ?? ''),
-    });
-    const normalizedImap = normalizeImapTransportConfig({
-      host: String(imap.host ?? ''),
-      port: Number(imap.port ?? 993),
-      user: decryptSecret(String(imap.username ?? '')),
-      pass: decryptSecret(String(imap.password ?? '')),
-      encryption: String(imap.encryption ?? 'SSL/TLS') as EmailEncryption,
-    });
-    const runtime: MailboxRuntimeConfig = {
-      tenantId: user.tenantId,
-      userId: user.id,
-      mailboxAddress: getMailboxAddress(mailbox),
-      smtp: {
-        host: normalizedSmtp.host,
-        port: normalizedSmtp.port,
-        user: normalizedSmtp.user,
-        pass: normalizedSmtp.pass,
-        encryption: normalizedSmtp.encryption as EmailEncryption,
-        senderName: normalizedSmtp.senderName,
-        senderEmail: normalizedSmtp.senderEmail,
+    const users = await prisma.user.findMany({
+      where: {
+        tenantId,
+        status: 'ACTIVE',
       },
-      imap: {
-        host: normalizedImap.host,
-        port: normalizedImap.port,
-        user: normalizedImap.user,
-        pass: normalizedImap.pass,
-        encryption: normalizedImap.encryption as EmailEncryption,
+      orderBy: [
+        { updatedAt: 'desc' },
+        { createdAt: 'asc' },
+      ],
+      select: {
+        id: true,
+        tenantId: true,
+        firstName: true,
+        lastName: true,
+        preferences: true,
       },
-    };
+    });
 
-    return runtime;
+    for (const user of users) {
+      const runtime = toRuntimeConfig(user);
+      if (hasConfiguredSmtp(runtime)) {
+        return runtime;
+      }
+    }
+
+    return null;
   }
 
   async listUsersWithImapConfigured(): Promise<MailboxRuntimeConfig[]> {

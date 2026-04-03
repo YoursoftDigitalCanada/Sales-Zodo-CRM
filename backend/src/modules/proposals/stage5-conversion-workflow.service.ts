@@ -4,7 +4,7 @@ import {
 } from '../../common/events/event-bus';
 import { prisma } from '../../config/database';
 import { logger } from '../../common/utils/logger';
-import { mailerService } from '../../common/services/mailer.service';
+import { tenantMailerService } from '../../common/services/tenant-mailer.service';
 import { smsService } from '../../common/services/sms.service';
 import { communicationLogService } from '../communication-logs/communication-log.service';
 import { clientsService } from '../clients/clients.service';
@@ -475,21 +475,32 @@ export class Stage5ConversionWorkflowService {
         if (event.clientEmail) {
             const html = this.buildConfirmationEmailHtml({ firstName, leadName: event.leadName });
 
-            await mailerService.sendMail({
+            const delivery = await tenantMailerService.sendTenantEmail({
+                tenantId: event.tenantId,
+                preferredUserId: event.ownerUserId,
                 to: event.clientEmail,
                 subject: 'Thank you! Your roofing project is confirmed',
                 html,
             });
+            if (!delivery.sent) {
+                logger.warn('[Stage5] Client confirmation email delivery failed', {
+                    tenantId: event.tenantId,
+                    to: event.clientEmail,
+                    error: delivery.error,
+                });
+            }
 
-            await communicationLogService.createSafe({
-                tenantId: event.tenantId,
-                leadId: event.leadId,
-                type: 'EMAIL',
-                direction: 'OUTBOUND',
-                subject: 'Thank you! Your roofing project is confirmed',
-                content: `Confirmation email sent after proposal acceptance`,
-                to: event.clientEmail,
-            });
+            if (delivery.sent) {
+                await communicationLogService.createSafe({
+                    tenantId: event.tenantId,
+                    leadId: event.leadId,
+                    type: 'EMAIL',
+                    direction: 'OUTBOUND',
+                    subject: 'Thank you! Your roofing project is confirmed',
+                    content: `Confirmation email sent after proposal acceptance`,
+                    to: event.clientEmail,
+                });
+            }
         }
 
         // ── Internal notification: Sales Rep ────────────────────────────

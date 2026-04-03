@@ -211,14 +211,18 @@ class MailerService {
         html: string;
         text?: string;
         attachments?: Array<{ filename: string; content: Buffer; contentType?: string }>;
+        fromName?: string;
+        fromEmail?: string;
     }): Promise<boolean> {
         if (!this.transporter) {
             console.warn('⚠️ Skipping email — SMTP not configured');
             return false;
         }
         try {
+            const fromName = opts.fromName || 'ZODO CRM';
+            const fromEmail = opts.fromEmail || config.email.from || config.email.user;
             const info = await this.transporter.sendMail({
-                from: `"ZODO CRM" <${config.email.from || config.email.user}>`,
+                from: `"${fromName}" <${fromEmail}>`,
                 to: Array.isArray(opts.to) ? opts.to.join(', ') : opts.to,
                 cc: Array.isArray(opts.cc) ? opts.cc.join(', ') : opts.cc,
                 bcc: Array.isArray(opts.bcc) ? opts.bcc.join(', ') : opts.bcc,

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { authService } from './auth.service';
 import { sendSuccess, sendCreated, sendNoContent } from '../../common/utils/responseFormatter';
+import { getRequestIp } from '../../common/utils/request-ip';
 import {
   LoginInput,
   RegisterInput,
@@ -19,7 +20,7 @@ export class AuthController {
       const input: LoginInput = req.body;
       const metadata = {
         userAgent: req.headers['user-agent'],
-        ipAddress: req.ip || req.socket.remoteAddress,
+        ipAddress: getRequestIp(req),
       };
 
       const result = await authService.login(input, metadata);
@@ -96,7 +97,7 @@ export class AuthController {
       const { refreshToken } = req.body;
       const metadata = {
         userAgent: req.headers['user-agent'],
-        ipAddress: req.ip || req.socket.remoteAddress,
+        ipAddress: getRequestIp(req),
       };
 
       const result = await authService.refreshToken(refreshToken, metadata);
@@ -199,7 +200,7 @@ export class AuthController {
 
       const metadata = {
         userAgent: req.headers['user-agent'],
-        ipAddress: req.ip || req.socket.remoteAddress,
+        ipAddress: getRequestIp(req),
         sourceTenantId,
       };
 

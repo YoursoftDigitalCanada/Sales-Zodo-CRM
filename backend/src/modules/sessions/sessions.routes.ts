@@ -10,6 +10,7 @@ router.use(authenticate);
 router.use(loadEmployee);
 
 router.get('/', sessionsController.getMany.bind(sessionsController));
+router.get('/current-status', sessionsController.getCurrentStatus.bind(sessionsController));
 router.delete('/:id', validate(sessionIdSchema), sessionsController.revoke.bind(sessionsController));
 
 export default router;

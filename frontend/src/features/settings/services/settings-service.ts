@@ -129,6 +129,16 @@ export interface SessionInfo {
   lastActive: string;
   createdAt: string;
   current: boolean;
+  scheduledLogoutAt?: string | null;
+}
+
+export interface CurrentSessionStatus {
+  active: boolean;
+  current: boolean;
+  warning: boolean;
+  reason: string | null;
+  logoutAt: string | null;
+  secondsRemaining: number | null;
 }
 
 export interface AuditLogItem {
@@ -327,6 +337,11 @@ export async function getSessions(): Promise<SessionInfo[]> {
 
 export async function revokeSession(id: string): Promise<void> {
   await api.delete(`/sessions/${id}`);
+}
+
+export async function getCurrentSessionStatus(): Promise<CurrentSessionStatus> {
+  const response = await api.get("/sessions/current-status");
+  return extractData<CurrentSessionStatus>(response.data);
 }
 
 export async function getAuditLogs(params?: Record<string, unknown>): Promise<AuditLogItem[]> {

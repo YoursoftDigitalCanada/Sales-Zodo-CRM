@@ -6,6 +6,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { GlobalAiFloatingButton } from "@/components/ai/GlobalAiFloatingButton";
 import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
+import { SessionTakeoverGuard } from "@/components/SessionTakeoverGuard";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { ThemeProvider, useTheme } from "next-themes";
@@ -1002,6 +1003,7 @@ const AppRoutes = () => {
         onOpenAi={handleOpenAiAssistant}
         onToggleSidebar={toggleAppSidebar}
       />
+      <SessionTakeoverGuard />
       <GlobalAiFloatingButton />
     </>
   );

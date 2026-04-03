@@ -4,6 +4,8 @@ import { UnauthorizedError } from '../errors/HttpErrors';
 import { ErrorCodes } from '../errors/errorCodes';
 import { prisma } from '../../config/database';
 import { logger } from '../utils/logger';
+import { authManager } from '../../modules/auth/auth.manager';
+import { settingsManager } from '../../modules/settings/settings.manager';
 
 /**
  * Authentication middleware
@@ -64,12 +66,57 @@ export async function authenticate(
       );
     }
 
+    if (decoded.sessionId) {
+      const session = await authManager.getSessionById(decoded.sessionId);
+
+      if (!session || session.userId !== decoded.userId) {
+        throw new UnauthorizedError(
+          'Session not found. Please log in again.',
+          ErrorCodes.AUTH_TOKEN_INVALID
+        );
+      }
+
+      if (session.revokedAt) {
+        throw new UnauthorizedError(
+          'Your session has been revoked. Please log in again.',
+          ErrorCodes.AUTH_TOKEN_INVALID
+        );
+      }
+
+      if (session.expiresAt <= new Date()) {
+        await authRepositorySafeRevoke(decoded.sessionId, 'SESSION_TIMEOUT');
+        throw new UnauthorizedError(
+          'Your session has expired. Please log in again.',
+          ErrorCodes.AUTH_TOKEN_EXPIRED
+        );
+      }
+
+      if (session.forceLogoutAt && session.forceLogoutAt <= new Date()) {
+        await authRepositorySafeRevoke(decoded.sessionId, session.revokedReason || 'REPLACED_BY_NEW_LOGIN');
+        throw new UnauthorizedError(
+          'This device was signed out because your account was used on another device.',
+          ErrorCodes.AUTH_TOKEN_INVALID
+        );
+      }
+
+      if (decoded.tenantId) {
+        const timeoutMinutes = await settingsManager.getSessionTimeoutMinutes(decoded.tenantId);
+        const shouldTouch = !session.lastSeenAt || Date.now() - session.lastSeenAt.getTime() > 60 * 1000;
+
+        if (shouldTouch) {
+          const nextExpiry = new Date(Date.now() + timeoutMinutes * 60 * 1000);
+          await authManager.touchSession(decoded.sessionId, nextExpiry);
+        }
+      }
+    }
+
     // Attach user context to request
     req.user = {
       userId: decoded.userId,
       email: decoded.email,
       tenantId: decoded.tenantId ?? '',
       employeeId: decoded.employeeId,
+      sessionId: decoded.sessionId,
       role: decoded.role,
       requestId: req.requestId || '',
     };
@@ -113,6 +160,7 @@ export async function optionalAuthenticate(
           email: decoded.email,
           tenantId: decoded.tenantId ?? '',
           employeeId: decoded.employeeId,
+          sessionId: decoded.sessionId,
           role: decoded.role,
           requestId: req.requestId || '',
         };
@@ -125,6 +173,27 @@ export async function optionalAuthenticate(
     next();
   } catch (error) {
     next(error);
+  }
+}
+
+async function authRepositorySafeRevoke(sessionId: string, reason: string): Promise<void> {
+  try {
+    const session = await authManager.getSessionById(sessionId);
+    if (session && !session.revokedAt) {
+      await prisma.refreshToken.update({
+        where: { id: sessionId },
+        data: {
+          revokedAt: new Date(),
+          revokedReason: reason,
+        },
+      });
+    }
+  } catch (error) {
+    logger.warn('Failed to revoke expired session during auth check', {
+      sessionId,
+      reason,
+      error,
+    });
   }
 }
 

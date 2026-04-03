@@ -7,4 +7,14 @@ export interface SessionResponseDto {
   lastActive: Date;
   createdAt: Date;
   current: boolean;
+  scheduledLogoutAt?: Date | null;
+}
+
+export interface CurrentSessionStatusDto {
+  active: boolean;
+  current: boolean;
+  warning: boolean;
+  reason: string | null;
+  logoutAt: Date | null;
+  secondsRemaining: number | null;
 }

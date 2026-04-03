@@ -360,9 +360,13 @@ export class AuthManager {
         userId,
         revokedAt: null,
         expiresAt: { gt: new Date() },
+        OR: [
+          { forceLogoutAt: null },
+          { forceLogoutAt: { gt: new Date() } },
+        ],
       },
       orderBy: {
-        createdAt: 'desc',
+        lastSeenAt: 'desc',
       },
     });
 
@@ -371,8 +375,46 @@ export class AuthManager {
       userAgent: token.userAgent,
       ipAddress: token.ipAddress,
       createdAt: token.createdAt,
+      lastSeenAt: token.lastSeenAt,
       expiresAt: token.expiresAt,
+      forceLogoutAt: token.forceLogoutAt,
+      revokedReason: token.revokedReason,
     }));
+  }
+
+  async getSessionById(sessionId: string) {
+    return prisma.refreshToken.findUnique({
+      where: { id: sessionId },
+    });
+  }
+
+  async touchSession(sessionId: string, expiresAt: Date): Promise<void> {
+    await prisma.refreshToken.updateMany({
+      where: {
+        id: sessionId,
+        revokedAt: null,
+      },
+      data: {
+        lastSeenAt: new Date(),
+        expiresAt,
+      },
+    });
+  }
+
+  async scheduleForcedLogoutForOtherSessions(userId: string, currentSessionId: string, forceLogoutAt: Date): Promise<void> {
+    await prisma.refreshToken.updateMany({
+      where: {
+        userId,
+        id: { not: currentSessionId },
+        revokedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      data: {
+        warningIssuedAt: new Date(),
+        forceLogoutAt,
+        revokedReason: 'REPLACED_BY_NEW_LOGIN',
+      },
+    });
   }
 
   /**

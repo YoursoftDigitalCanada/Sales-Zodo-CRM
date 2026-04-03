@@ -6,6 +6,7 @@ export interface TokenPayload {
   email: string;
   tenantId?: string;
   employeeId?: string;
+  sessionId?: string;
   role?: string;
   type: 'access' | 'refresh';
 }

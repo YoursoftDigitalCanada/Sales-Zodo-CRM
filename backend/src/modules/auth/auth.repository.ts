@@ -70,9 +70,11 @@ export class AuthRepository {
   }
 
   async createRefreshToken(data: {
+    id?: string;
     token: string;
     userId: string;
     expiresAt: Date;
+    lastSeenAt?: Date;
     userAgent?: string;
     ipAddress?: string;
   }) {
@@ -118,6 +120,56 @@ export class AuthRepository {
       data: {
         revokedAt: new Date(),
         replacedBy,
+      },
+    });
+  }
+
+  async findRefreshTokenById(id: string) {
+    return prisma.refreshToken.findUnique({
+      where: { id },
+    });
+  }
+
+  async touchRefreshToken(id: string, expiresAt: Date) {
+    return prisma.refreshToken.updateMany({
+      where: {
+        id,
+        revokedAt: null,
+      },
+      data: {
+        lastSeenAt: new Date(),
+        expiresAt,
+      },
+    });
+  }
+
+  async scheduleForcedLogoutForOtherSessions(
+    userId: string,
+    currentSessionId: string,
+    forceLogoutAt: Date,
+    reason: string,
+  ) {
+    return prisma.refreshToken.updateMany({
+      where: {
+        userId,
+        id: { not: currentSessionId },
+        revokedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      data: {
+        warningIssuedAt: new Date(),
+        forceLogoutAt,
+        revokedReason: reason,
+      },
+    });
+  }
+
+  async revokeRefreshTokenById(id: string, reason?: string) {
+    return prisma.refreshToken.update({
+      where: { id },
+      data: {
+        revokedAt: new Date(),
+        revokedReason: reason,
       },
     });
   }

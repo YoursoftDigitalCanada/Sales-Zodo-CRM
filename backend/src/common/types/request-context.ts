@@ -22,6 +22,9 @@ export interface TenantContext {
     /** Employee UUID within the tenant (from JWT, if user is an employee) */
     employeeId?: string;
 
+    /** Session UUID backing this device login (from JWT, if available) */
+    sessionId?: string;
+
     /** Tenant name — cached from DB to avoid redundant lookups */
     tenantName?: string;
 
@@ -53,6 +56,9 @@ export interface RequestContext {
     /** Employee UUID within the tenant (from JWT, if user is an employee) */
     employeeId?: string;
 
+    /** Session UUID backing this device login (from JWT, if available) */
+    sessionId?: string;
+
     /** Role name resolved by loadEmployee middleware (e.g., "Owner", "Admin", "Member") */
     role?: string;
 
@@ -69,6 +75,7 @@ export interface AuthContext {
     email: string;
     tenantId?: string;
     employeeId?: string;
+    sessionId?: string;
 }
 
 /**

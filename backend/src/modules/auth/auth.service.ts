@@ -38,6 +38,7 @@ import {
   normalizeSignupPlan,
 } from './signup-access';
 import { signupOtpService } from './signup-otp.service';
+import { authManager } from './auth.manager';
 
 export class AuthService {
   async sendSignupOtp(input: SignupOtpSendInput): Promise<{
@@ -835,11 +836,13 @@ export class AuthService {
     role: string,
     metadata: { userAgent?: string; ipAddress?: string }
   ): Promise<TokenResponse> {
+    const sessionId = uuidv4();
     const tokenPayload = {
       userId,
       email,
       tenantId,
       employeeId,
+      sessionId,
       role,
     };
 
@@ -859,12 +862,20 @@ export class AuthService {
 
     // Store refresh token
     await authRepository.createRefreshToken({
+      id: sessionId,
       token: refreshToken,
       userId,
       expiresAt: effectiveExpiry,
+      lastSeenAt: new Date(),
       userAgent: metadata.userAgent,
       ipAddress: metadata.ipAddress,
     });
+
+    await authManager.scheduleForcedLogoutForOtherSessions(
+      userId,
+      sessionId,
+      new Date(Date.now() + 30 * 1000),
+    );
 
     // Parse access token expiry for response
     const accessExpiresAt = getTokenExpiry(accessToken);

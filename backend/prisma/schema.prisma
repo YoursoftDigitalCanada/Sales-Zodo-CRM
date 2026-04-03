@@ -793,14 +793,20 @@ model RefreshToken {
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt   DateTime
   createdAt   DateTime  @default(now())
+  lastSeenAt  DateTime  @default(now())
   revokedAt   DateTime?
   replacedBy  String?   // For token rotation
+  revokedReason String?
+  forceLogoutAt DateTime?
+  warningIssuedAt DateTime?
   userAgent   String?
   ipAddress   String?
 
   @@index([userId])
   @@index([token])
   @@index([expiresAt])
+  @@index([userId, revokedAt, expiresAt])
+  @@index([userId, forceLogoutAt])
 }
 
 model Employee {

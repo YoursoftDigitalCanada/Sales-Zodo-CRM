@@ -53,6 +53,7 @@ import {
 import { NotificationBell } from "@/components/NotificationBell";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+import useIsMobile from "@/hooks/useIsMobile";
 import {
   sendEmail as apiSendEmail,
   saveDraft as apiSaveDraft,
@@ -1179,6 +1180,7 @@ const EmailListItem = ({
   labels,
   isSelected,
   isActive,
+  isMobile = false,
   onSelect,
   onClick,
   onStar,
@@ -1190,6 +1192,7 @@ const EmailListItem = ({
   labels: EmailLabel[];
   isSelected: boolean;
   isActive: boolean;
+  isMobile?: boolean;
   onSelect: () => void;
   onClick: () => void;
   onStar: () => void;
@@ -1214,11 +1217,13 @@ const EmailListItem = ({
     >
       {/* Checkbox & Star */}
       <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-        <Checkbox
-          checked={isSelected}
-          onCheckedChange={onSelect}
-          className="data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
-        />
+        {!isMobile ? (
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={onSelect}
+            className="data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
+          />
+        ) : null}
         <button
           onClick={onStar}
           className="p-1 rounded-md hover:bg-slate-200 transition-colors"
@@ -1294,6 +1299,7 @@ const EmailListItem = ({
       </div>
 
       {/* Quick Actions (on hover) */}
+      {!isMobile ? (
       <div
         className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
         onClick={(e) => e.stopPropagation()}
@@ -1334,6 +1340,7 @@ const EmailListItem = ({
           </Tooltip>
         </TooltipProvider>
       </div>
+      ) : null}
     </motion.div>
   );
 };
@@ -1345,6 +1352,7 @@ const EmailListItem = ({
 const EmailDetailView = ({
   email,
   labels,
+  isMobile = false,
   onClose,
   onReply,
   onReplyAll,
@@ -1363,6 +1371,7 @@ const EmailDetailView = ({
 }: {
   email: Email;
   labels: EmailLabel[];
+  isMobile?: boolean;
   onClose: () => void;
   onReply: () => void;
   onReplyAll: () => void;
@@ -1389,17 +1398,17 @@ const EmailDetailView = ({
       className="h-full flex flex-col bg-white"
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-[rgba(15,23,42,0.06)]">
+      <div className={cn("flex items-center justify-between border-b border-[rgba(15,23,42,0.06)]", isMobile ? "p-3" : "p-4")}>
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="h-9 w-9 rounded-md lg:hidden"
+            className={cn("h-9 w-9 rounded-md", isMobile ? "inline-flex" : "lg:hidden")}
           >
             <ArrowLeft size={18} />
           </Button>
-          <h2 className="text-lg font-semibold text-[#0F172A] truncate max-w-[400px]">
+          <h2 className={cn("font-semibold text-[#0F172A] truncate", isMobile ? "max-w-[190px] text-base" : "max-w-[400px] text-lg")}>
             {email.subject}
           </h2>
         </div>
@@ -1509,9 +1518,9 @@ const EmailDetailView = ({
       </div>
 
       {/* Email Content */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className={cn("flex-1 overflow-y-auto", isMobile ? "p-4" : "p-6")}>
         {/* Sender Info */}
-        <div className="flex items-start justify-between mb-6">
+        <div className={cn("mb-6", isMobile ? "space-y-4" : "flex items-start justify-between")}>
           <div className="flex items-start gap-4">
             {email.from.avatar ? (
               <img
@@ -1576,9 +1585,9 @@ const EmailDetailView = ({
               </div>
             </div>
           </div>
-          <div className="text-right">
+          <div className={cn(isMobile ? "space-y-2" : "text-right")}>
             <span className="text-sm text-[#94A3B8]">{email.date}, {email.time}</span>
-            <div className="flex items-center gap-1 mt-2 justify-end">
+            <div className={cn("flex items-center gap-1 mt-2", isMobile ? "justify-start flex-wrap" : "justify-end")}>
               {emailLabels.map((label) => (
                 <span
                   key={label.id}
@@ -1604,7 +1613,7 @@ const EmailDetailView = ({
             <h4 className="text-sm font-semibold text-[#0F172A] mb-3">
               Attachments ({email.attachments.length})
             </h4>
-            <div className="flex flex-wrap gap-3">
+            <div className={cn("flex flex-wrap gap-3", isMobile && "flex-col")}>
               {email.attachments.map((attachment) => (
                 <motion.div
                   key={attachment.id}
@@ -1645,7 +1654,7 @@ const EmailDetailView = ({
 
       {/* Reply Actions */}
       <div className="p-4 border-t border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]">
-        <div className="flex items-center gap-3">
+        <div className={cn("flex items-center gap-3", isMobile && "grid grid-cols-1")}>
           <Button
             onClick={onReply}
             variant="outline"
@@ -1893,6 +1902,7 @@ const MailboxSettingsDialog = ({
 );
 
 const LetterBoxPage = () => {
+  const { isMobile } = useIsMobile();
   const { toast } = useToast();
 
   // State
@@ -2826,8 +2836,8 @@ const LetterBoxPage = () => {
       >
         {/* Header */}
         <header className="crm-module-header sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-[rgba(15,23,42,0.06)]">
-          <div className="px-6 py-4">
-            <div className="flex items-center justify-between">
+          <div className={cn(isMobile ? "px-3 py-3" : "px-6 py-4")}>
+            <div className="flex items-center justify-between gap-3">
               {/* Title & Breadcrumb */}
               <div>
                 <div className="hidden sm:flex items-center gap-2 text-sm text-[#94A3B8] mb-1">
@@ -2839,7 +2849,7 @@ const LetterBoxPage = () => {
               </div>
 
               {/* Header Actions */}
-              <div className="flex items-center gap-3">
+              <div className={cn("flex items-center gap-3", isMobile && "gap-2")}>
                 {emailConfigured?.mailboxAddress ? (
                   <Badge variant="outline" className="hidden md:inline-flex border-[rgba(15,23,42,0.08)] bg-white text-[#0F172A]">
                     {emailConfigured.mailboxAddress}
@@ -2856,12 +2866,12 @@ const LetterBoxPage = () => {
                 </Button>
 
                 <NotificationBell
-                  buttonClassName="border-0 bg-white/5 p-2.5 hover:bg-slate-200"
+                  buttonClassName={cn("border-0 bg-white/5 hover:bg-slate-200", isMobile ? "p-2" : "p-2.5")}
                   iconClassName="text-[#475569]"
-                  iconSize={20}
+                  iconSize={isMobile ? 18 : 20}
                 />
 
-                <div className="flex items-center gap-3 pl-3 border-l border-[rgba(15,23,42,0.06)]">
+                <div className={cn("flex items-center gap-3 pl-3 border-l border-[rgba(15,23,42,0.06)]", isMobile && "gap-2 pl-2")}>
                   <div className="h-10 w-10 rounded-md bg-[#F1F5F9] flex items-center justify-center text-[#0F172A] font-bold ">
                     SA
                   </div>
@@ -2877,6 +2887,155 @@ const LetterBoxPage = () => {
         </header>
 
         {/* Main Layout */}
+        {isMobile ? (
+          <div className="flex flex-1 min-h-0 overflow-hidden">
+            {activeEmail ? (
+              <div className="flex-1 bg-white">
+                <EmailDetailView
+                  email={activeEmail}
+                  labels={availableLabels}
+                  isMobile
+                  onClose={() => setActiveEmail(null)}
+                  onReply={handleReply}
+                  onReplyAll={handleReplyAll}
+                  onForward={handleForward}
+                  onStar={() => handleStarEmail(activeEmail.id)}
+                  onArchive={() => handleArchiveEmail(activeEmail.id)}
+                  onDelete={() => handleDeleteEmail(activeEmail.id)}
+                  onMoveToSpam={() => handleMoveToSpam(activeEmail.id)}
+                  onDeletePermanently={() => handlePermanentlyDeleteEmail(activeEmail.id)}
+                  onMarkRead={() => handleReadStatus(activeEmail.id, !activeEmail.read)}
+                  onPrint={() => handlePrintEmail(activeEmail)}
+                  onDownload={() => handleDownloadEmail(activeEmail)}
+                  onToggleLabel={(labelId) => handleToggleLabel(activeEmail.id, labelId)}
+                  onToggleImportant={() => handleToggleImportant(activeEmail.id)}
+                  onSnooze={() => handleSnoozeEmail(activeEmail.id)}
+                />
+              </div>
+            ) : (
+              <div className="flex flex-1 flex-col bg-white">
+                <div className="space-y-3 border-b border-[rgba(15,23,42,0.06)] p-3">
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={selectedFolder}
+                      onValueChange={(value) => {
+                        setSelectedFolder(value);
+                        setSelectedEmails([]);
+                        setActiveEmail(null);
+                      }}
+                    >
+                      <SelectTrigger className="h-10 flex-1 rounded-md border-[rgba(15,23,42,0.06)]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {folderCounts.map((folder) => (
+                          <SelectItem key={folder.id} value={folder.id}>
+                            {folder.name} {folder.count > 0 ? `(${folder.count})` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={handleRefresh}
+                      disabled={isRefreshing}
+                      className="h-10 w-10 rounded-md border-[rgba(15,23,42,0.06)]"
+                    >
+                      <RefreshCw size={16} className={isRefreshing ? "animate-spin" : ""} />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setShowMailboxSettings(true)}
+                      className="h-10 w-10 rounded-md border-[rgba(15,23,42,0.06)]"
+                    >
+                      <Settings size={16} />
+                    </Button>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
+                      <Input
+                        value={searchTerm}
+                        onChange={(event) => setSearchTerm(event.target.value)}
+                        placeholder="Search emails..."
+                        className="h-10 rounded-md border-[rgba(15,23,42,0.06)] pl-9"
+                      />
+                    </div>
+                    <Button
+                      className="h-10 rounded-md bg-[#0891B2] px-4 text-white hover:bg-[#0891B2]/90"
+                      onClick={() => {
+                        setReplyToEmail(undefined);
+                        setForwardEmail(undefined);
+                        setShowCompose(true);
+                      }}
+                    >
+                      <MailPlus size={16} className="mr-2" />
+                      Compose
+                    </Button>
+                  </div>
+
+                  {selectedEmails.length > 0 ? (
+                    <div className="flex items-center gap-2 overflow-x-auto">
+                      <span className="text-xs font-medium text-[#475569]">{selectedEmails.length} selected</span>
+                      <Button variant="outline" size="sm" onClick={() => handleBulkAction("archive")} className="rounded-md">
+                        <Archive size={14} className="mr-1" />
+                        Archive
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleBulkAction("delete")} className="rounded-md text-red-600 border-red-200 hover:bg-red-50">
+                        <Trash2 size={14} className="mr-1" />
+                        Delete
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="flex-1 overflow-y-auto">
+                  {filteredEmails.length > 0 ? (
+                    <AnimatePresence>
+                      {filteredEmails.map((email) => (
+                        <EmailListItem
+                          key={email.id}
+                          email={email}
+                          labels={availableLabels}
+                          isSelected={selectedEmails.includes(email.id)}
+                          isActive={activeEmail?.id === email.id}
+                          isMobile
+                          onSelect={() => handleSelectEmail(email.id)}
+                          onClick={() => void handleOpenEmail(email)}
+                          onStar={() => handleStarEmail(email.id)}
+                          onMarkRead={() => handleReadStatus(email.id, !email.read)}
+                          onArchive={() => handleArchiveEmail(email.id)}
+                          onDelete={() => handleDeleteEmail(email.id)}
+                        />
+                      ))}
+                    </AnimatePresence>
+                  ) : (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex h-full flex-col items-center justify-center px-6 py-20 text-center"
+                    >
+                      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#F1F5F9]">
+                        <Inbox size={30} className="text-[#475569]" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-[#0F172A]">
+                        {searchTerm ? "No emails found" : "No emails here"}
+                      </h3>
+                      <p className="mt-2 max-w-xs text-sm text-[#94A3B8]">
+                        {searchTerm
+                          ? `No emails match "${searchTerm}". Try a different search.`
+                          : `Your ${selectedFolder} is empty.`}
+                      </p>
+                    </motion.div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
         <div className="flex flex-1 min-h-0 overflow-hidden">
           {/* Folders Sidebar */}
           <aside className="w-64 border-r border-[rgba(15,23,42,0.06)] bg-white p-4 flex flex-col min-h-0 overflow-y-auto">
@@ -3282,6 +3441,7 @@ const LetterBoxPage = () => {
             )}
           </AnimatePresence>
         </div>
+        )}
       </main>
 
       <MailboxSettingsDialog

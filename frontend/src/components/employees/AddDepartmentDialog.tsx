@@ -28,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { Employee, Department } from './types';
 
 const departmentFormSchema = z.object({
@@ -69,6 +70,7 @@ export const AddDepartmentDialog: React.FC<AddDepartmentDialogProps> = ({
   onSubmit,
   editingDepartment,
 }) => {
+  const { isMobile } = useIsMobile();
   const form = useForm<DepartmentFormValues>({
     resolver: zodResolver(departmentFormSchema),
     defaultValues: {
@@ -109,7 +111,13 @@ export const AddDepartmentDialog: React.FC<AddDepartmentDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent
+        className={
+          isMobile
+            ? "left-0 top-auto bottom-0 max-h-[88vh] max-w-none translate-x-0 translate-y-0 overflow-y-auto rounded-t-3xl px-4 pb-8 pt-6"
+            : "max-w-lg"
+        }
+      >
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold text-[#0F172A]">
             {editingDepartment ? 'Edit Department' : 'Create New Department'}

@@ -6,6 +6,8 @@ import {
   Bell,
   Building2,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Clock3,
   CreditCard,
   Download,
@@ -67,6 +69,7 @@ import {
 import { useWorkspaceBranding } from "@/features/settings/context/workspace-branding";
 import { getUserLocalizationSnapshot } from "@/lib/user-localization";
 import { syncLegacyThemeStorage } from "@/lib/workspace-theme";
+import useIsMobile from "@/hooks/useIsMobile";
 
 type SettingsTab = "general" | "company" | "billing" | "email" | "security" | "notifications" | "team";
 
@@ -202,7 +205,7 @@ function SaveButton({
     <button
       onClick={onClick}
       disabled={loading}
-      className="inline-flex items-center gap-2 rounded-md bg-[#0891B2] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#0E7490] disabled:cursor-not-allowed disabled:opacity-70"
+      className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-[#0891B2] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#0E7490] disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
     >
       {loading ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
       {loading ? "Saving..." : label}
@@ -279,6 +282,7 @@ function UsageBar({
 }
 
 export default function SettingsPage() {
+  const { isMobile } = useIsMobile();
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -332,6 +336,40 @@ export default function SettingsPage() {
       return nextUrl;
     });
   }, []);
+
+  const activeTabItem = settingsTabs.find((tab) => tab.id === activeTab);
+  const showMobileSettingsIndex = isMobile && location.pathname === "/settings";
+  const mobileSettingsGroups = [
+    {
+      label: "Workspace",
+      items: [
+        settingsTabs.find((tab) => tab.id === "general"),
+        settingsTabs.find((tab) => tab.id === "company"),
+        settingsTabs.find((tab) => tab.id === "billing"),
+      ].filter(Boolean) as SettingsTabItem[],
+    },
+    {
+      label: "Communication",
+      items: [
+        settingsTabs.find((tab) => tab.id === "email"),
+        {
+          id: "integrations-external",
+          label: "Integrations",
+          description: "Connected apps and external tools",
+          icon: Globe2,
+          path: "/settings/integrations",
+        },
+      ],
+    },
+    {
+      label: "Security & Team",
+      items: [
+        settingsTabs.find((tab) => tab.id === "security"),
+        settingsTabs.find((tab) => tab.id === "notifications"),
+        settingsTabs.find((tab) => tab.id === "team"),
+      ].filter(Boolean) as Array<SettingsTabItem | { id: string; label: string; description: string; icon: typeof Settings; path: string }>,
+    },
+  ];
 
   const selectedTemplate = useMemo(
     () => emailSettings?.templates.find((template) => template.id === selectedTemplateId) || null,
@@ -661,6 +699,54 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
       <div className="mx-auto flex max-w-[1500px] flex-col gap-6 px-4 py-6 sm:px-6 xl:flex-row">
+        {isMobile ? (
+          showMobileSettingsIndex ? (
+            <div className="space-y-5">
+              <div className="rounded-md bg-[linear-gradient(135deg,#0891B2_0%,#0E7490_55%,#0F172A_100%)] p-5 text-white shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-md bg-white/15 p-3">
+                    <Settings size={22} />
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-semibold">Settings</h1>
+                    <p className="mt-1 text-sm text-white/75">Manage workspace preferences, billing, email, security, and connected tools.</p>
+                  </div>
+                </div>
+              </div>
+
+              {mobileSettingsGroups.map((group) => (
+                <div key={group.label} className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm">
+                  <h2 className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-[#64748B]">{group.label}</h2>
+                  <div className="space-y-2">
+                    {group.items.map((item) => {
+                      const Icon = item.icon;
+                      const path = "path" in item ? item.path : reverseRouteMap[item.id];
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => navigate(path)}
+                          className="flex w-full items-center gap-3 rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-4 py-4 text-left transition hover:border-[#22D3EE] hover:bg-white"
+                        >
+                          <div className="rounded-md bg-white p-2.5 shadow-sm">
+                            <Icon size={18} className="text-[#0891B2]" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-[#0F172A]">{item.label}</p>
+                            <p className="mt-1 text-xs text-[#64748B]">{item.description}</p>
+                          </div>
+                          <ChevronRight size={16} className="text-[#94A3B8]" />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null
+        ) : null}
+
+        {!isMobile && (
         <aside className="xl:sticky xl:top-6 xl:h-[calc(100vh-3rem)] xl:w-[320px] xl:flex-shrink-0">
           <div className="overflow-hidden rounded-md border border-[rgba(15,23,42,0.06)] bg-white/90 p-5 shadow-sm backdrop-blur">
             <div className="mb-6 rounded-md bg-[linear-gradient(135deg,#0891B2_0%,#0E7490_55%,#0F172A_100%)] p-5 text-white">
@@ -701,8 +787,33 @@ export default function SettingsPage() {
             </div>
           </div>
         </aside>
+        )}
 
+        {(!isMobile || !showMobileSettingsIndex) && (
         <main className="flex-1 space-y-6">
+          {isMobile && activeTabItem ? (
+            <div className="sticky top-0 z-10 -mx-4 border-b border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]/95 px-4 pb-4 pt-1 backdrop-blur sm:hidden">
+              <button
+                type="button"
+                onClick={() => navigate("/settings")}
+                className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-[#0891B2]"
+              >
+                <ChevronLeft size={16} />
+                Back to settings
+              </button>
+              <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-md bg-[#0891B2]/10 p-2.5">
+                    <activeTabItem.icon size={18} className="text-[#0891B2]" />
+                  </div>
+                  <div>
+                    <h1 className="text-lg font-semibold text-[#0F172A]">{activeTabItem.label}</h1>
+                    <p className="mt-1 text-xs text-[#64748B]">{activeTabItem.description}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
           {activeTab === "general" && (
             <div className="space-y-6">
               {general ? (
@@ -1376,6 +1487,7 @@ export default function SettingsPage() {
             )
           )}
         </main>
+        )}
       </div>
     </div>
   );

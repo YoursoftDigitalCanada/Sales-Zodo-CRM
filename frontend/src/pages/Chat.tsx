@@ -33,6 +33,7 @@ import {
   getMyEmployeeProfile,
   type EmployeeProfileEntity,
 } from "@/features/users/services/users-service";
+import useIsMobile from "@/hooks/useIsMobile";
 
 const CONVERSATION_POLL_INTERVAL_MS = 8000;
 const MESSAGE_POLL_INTERVAL_MS = 5000;
@@ -218,6 +219,7 @@ function removeConversationParam(
 }
 
 export default function ChatPage() {
+  const { isMobile } = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [directoryUsers, setDirectoryUsers] = useState<User[]>([]);
@@ -728,55 +730,67 @@ export default function ChatPage() {
   return (
     <div className="flex h-screen bg-[#F8FAFC]">
       <div className="flex-1 flex overflow-hidden">
-        <ChatSidebar
-          conversations={visibleConversations}
-          selectedConversation={selectedConversation}
-          currentUser={currentUser}
-          showArchived={showArchived}
-          showStarredOnly={showStarredOnly}
-          onSelectConversation={handleSelectConversation}
-          onNewChat={() => {
-            setNewChatTab("direct");
-            setShowNewChatDialog(true);
-          }}
-          onNewGroup={() => {
-            setNewChatTab("group");
-            setShowNewChatDialog(true);
-          }}
-          onToggleArchived={handleToggleArchivedView}
-          onToggleStarred={handleToggleStarredView}
-          onOpenSettings={handleOpenSidebarSettings}
-          onPinConversation={handlePinConversation}
-          onMuteConversation={handleMuteConversation}
-          onDeleteConversation={handleDeleteConversation}
-        />
+        {(!isMobile || !selectedConversation) ? (
+          <ChatSidebar
+            conversations={visibleConversations}
+            selectedConversation={selectedConversation}
+            currentUser={currentUser}
+            showArchived={showArchived}
+            showStarredOnly={showStarredOnly}
+            onSelectConversation={handleSelectConversation}
+            onNewChat={() => {
+              setNewChatTab("direct");
+              setShowNewChatDialog(true);
+            }}
+            onNewGroup={() => {
+              setNewChatTab("group");
+              setShowNewChatDialog(true);
+            }}
+            onToggleArchived={handleToggleArchivedView}
+            onToggleStarred={handleToggleStarredView}
+            onOpenSettings={handleOpenSidebarSettings}
+            onPinConversation={handlePinConversation}
+            onMuteConversation={handleMuteConversation}
+            onDeleteConversation={handleDeleteConversation}
+            className={isMobile ? "w-full border-r-0" : undefined}
+          />
+        ) : null}
 
-        <ChatWindow
-          conversation={selectedConversation}
-          messages={visibleMessages}
-          currentUser={currentUser}
-          isTyping={false}
-          showInfoPanel={showInfoPanel}
-          onToggleInfoPanel={() => setShowInfoPanel((prev) => !prev)}
-          onSendMessage={handleSendMessage}
-          onReactMessage={handleReactMessage}
-          onForwardMessage={handleForwardMessage}
-          onStarMessage={handleStarMessage}
-          onEditMessage={handleEditMessage}
-          onDeleteMessage={handleDeleteMessage}
-          onDownloadAttachment={handleDownloadAttachment}
-          onVoiceCall={() => handleVoiceCall(selectedConversation?.participants.find((user) => user.id !== currentUser.id))}
-          onVideoCall={() => handleVideoCall(selectedConversation?.participants.find((user) => user.id !== currentUser.id))}
-          onSearchInChat={handleSearchInChat}
-          onArchiveConversation={() => selectedConversation && handleArchiveConversation(selectedConversation.id)}
-          onPinConversation={() => selectedConversation && handlePinConversation(selectedConversation.id)}
-          onMuteConversation={() => selectedConversation && handleMuteConversation(selectedConversation.id)}
-          onDeleteConversation={() => selectedConversation && handleDeleteConversation(selectedConversation.id)}
-          onNewChat={() => {
-            setNewChatTab("direct");
-            setShowNewChatDialog(true);
-          }}
-        />
+        {(!isMobile || selectedConversation) ? (
+          <ChatWindow
+            conversation={selectedConversation}
+            messages={visibleMessages}
+            currentUser={currentUser}
+            isTyping={false}
+            showInfoPanel={showInfoPanel}
+            onToggleInfoPanel={() => setShowInfoPanel((prev) => !prev)}
+            onSendMessage={handleSendMessage}
+            onReactMessage={handleReactMessage}
+            onForwardMessage={handleForwardMessage}
+            onStarMessage={handleStarMessage}
+            onEditMessage={handleEditMessage}
+            onDeleteMessage={handleDeleteMessage}
+            onDownloadAttachment={handleDownloadAttachment}
+            onVoiceCall={() => handleVoiceCall(selectedConversation?.participants.find((user) => user.id !== currentUser.id))}
+            onVideoCall={() => handleVideoCall(selectedConversation?.participants.find((user) => user.id !== currentUser.id))}
+            onSearchInChat={handleSearchInChat}
+            onArchiveConversation={() => selectedConversation && handleArchiveConversation(selectedConversation.id)}
+            onPinConversation={() => selectedConversation && handlePinConversation(selectedConversation.id)}
+            onMuteConversation={() => selectedConversation && handleMuteConversation(selectedConversation.id)}
+            onDeleteConversation={() => selectedConversation && handleDeleteConversation(selectedConversation.id)}
+            onNewChat={() => {
+              setNewChatTab("direct");
+              setShowNewChatDialog(true);
+            }}
+            onBack={isMobile ? () => {
+              setSelectedConversationId(null);
+              setMessages([]);
+              setShowInfoPanel(false);
+              removeConversationParam(searchParams, setSearchParams);
+            } : undefined}
+            isMobile={isMobile}
+          />
+        ) : null}
 
         <AnimatePresence>
           {showInfoPanel && selectedConversation && (
@@ -793,6 +807,7 @@ export default function ChatPage() {
               onArchive={() => handleArchiveConversation(selectedConversation.id)}
               onDelete={() => handleDeleteConversation(selectedConversation.id)}
               onDownloadAttachment={handleDownloadAttachment}
+              isMobile={isMobile}
             />
           )}
         </AnimatePresence>

@@ -19,6 +19,7 @@ import { ComposeEmailSheet } from "@/features/emails/components/ComposeEmailShee
 import { WhatsAppActionButton } from "@/features/whatsapp/components/WhatsAppActionButton";
 import { ActivityTimeline } from "@/components/ActivityTimeline";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import {
   Mail, Phone, MapPin, Tag, User, Calendar, Plus, MoreHorizontal,
   Pencil, MessageSquare, FileText, CheckSquare, TrendingUp, FolderOpen,
@@ -226,6 +227,7 @@ const ClientDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isMobile } = useIsMobile();
   const [client, setClient] = useState<ClientData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [relatedLeadId, setRelatedLeadId] = useState<string | null>(null);
@@ -430,7 +432,7 @@ const ClientDetailPage = () => {
   const lastContactedDate = lastEmail?.sentAt ? new Date(lastEmail.sentAt).toLocaleDateString() : null;
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB]">
+    <div className="min-h-screen bg-[#F9FAFB] pb-24 md:pb-0">
       <style>{`
         @keyframes fadeSlideUp {
           from { opacity: 0; transform: translateY(12px); }
@@ -864,6 +866,41 @@ const ClientDetailPage = () => {
                 {savingTask ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}Add Task
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {isMobile && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#E5E7EB] bg-white/95 px-4 py-3 backdrop-blur">
+          <div className="mx-auto grid max-w-[640px] grid-cols-3 gap-2">
+            {client.primaryPhone ? (
+              <Button asChild variant="outline" className="h-11 rounded-md">
+                <a href={`tel:${client.primaryPhone}`}>
+                  <PhoneCall size={15} className="mr-2" />
+                  Call
+                </a>
+              </Button>
+            ) : (
+              <Button variant="outline" className="h-11 rounded-md" disabled>
+                <PhoneCall size={15} className="mr-2" />
+                Call
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              className="h-11 rounded-md"
+              onClick={() => setShowComposeEmail(true)}
+            >
+              <Mail size={15} className="mr-2" />
+              Email
+            </Button>
+            <Button
+              className="h-11 rounded-md bg-[#14B8A6] text-white hover:bg-[#0D9488]"
+              onClick={() => navigate(`/client-list/${id}/edit`)}
+            >
+              <Pencil size={15} className="mr-2" />
+              Edit
+            </Button>
           </div>
         </div>
       )}

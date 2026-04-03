@@ -20,6 +20,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { Employee } from './types';
 import { 
   getEmployeeStatusConfig, 
@@ -43,15 +51,51 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
   onDelete,
   index = 0,
 }) => {
+  const { isMobile } = useIsMobile();
+  const [isActionsOpen, setIsActionsOpen] = React.useState(false);
   const statusConfig = getEmployeeStatusConfig(employee.status);
   const employmentConfig = getEmploymentTypeConfig(employee.employmentType);
+  const actionMenu = (
+    <>
+      <Button
+        variant="ghost"
+        className="w-full justify-start rounded-md"
+        onClick={() => {
+          onView?.(employee);
+          setIsActionsOpen(false);
+        }}
+      >
+        View Profile
+      </Button>
+      <Button
+        variant="ghost"
+        className="w-full justify-start rounded-md"
+        onClick={() => {
+          onEdit?.(employee);
+          setIsActionsOpen(false);
+        }}
+      >
+        Edit Employee
+      </Button>
+      <Button
+        variant="ghost"
+        className="w-full justify-start rounded-md text-red-600 hover:bg-red-50 hover:text-red-700"
+        onClick={() => {
+          onDelete?.(employee);
+          setIsActionsOpen(false);
+        }}
+      >
+        Delete Employee
+      </Button>
+    </>
+  );
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.05 }}
-      whileHover={{ y: -4 }}
+      whileHover={isMobile ? undefined : { y: -4 }}
       className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] shadow-sm overflow-hidden group"
     >
       {/* Header with gradient */}
@@ -62,32 +106,61 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
         }}
       >
         <div className="absolute top-3 right-3">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-8 w-8 bg-white/20 hover:bg-white/30 text-[#0F172A]"
+          {isMobile ? (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 bg-white/30 hover:bg-white/40 text-[#0F172A]"
+                onClick={() => setIsActionsOpen(true)}
               >
                 <MoreVertical className="w-4 h-4" />
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onView?.(employee)}>
-                View Profile
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onEdit?.(employee)}>
-                Edit Employee
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                onClick={() => onDelete?.(employee)}
-                className="text-red-600"
-              >
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              <Sheet open={isActionsOpen} onOpenChange={setIsActionsOpen}>
+                <SheetContent
+                  side="bottom"
+                  className="rounded-t-3xl border-[rgba(15,23,42,0.06)] px-5 pb-8 pt-10"
+                >
+                  <SheetHeader className="mb-4 text-left">
+                    <SheetTitle>
+                      {employee.firstName} {employee.lastName}
+                    </SheetTitle>
+                    <SheetDescription>Employee actions</SheetDescription>
+                  </SheetHeader>
+                  <div className="space-y-2">
+                    {actionMenu}
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </>
+          ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8 bg-white/20 hover:bg-white/30 text-[#0F172A]"
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => onView?.(employee)}>
+                  View Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onEdit?.(employee)}>
+                  Edit Employee
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={() => onDelete?.(employee)}
+                  className="text-red-600"
+                >
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
 
@@ -176,7 +249,7 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
         {/* Action Button */}
         <Button 
           variant="outline" 
-          className="w-full mt-4 group-hover:bg-[#0891B2] group-hover:text-[#0F172A] group-hover:border-[#22D3EE] transition-colors"
+          className="mt-4 w-full transition-colors group-hover:border-[#22D3EE] group-hover:bg-[#0891B2] group-hover:text-[#0F172A]"
           onClick={() => onView?.(employee)}
         >
           View Profile

@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+import useIsMobile from "@/hooks/useIsMobile";
 import {
   Headphones, Search, Plus, X, Eye, Pencil, Trash2, MoreVertical, RefreshCw,
   Sparkles, CheckCircle2, Clock, AlertTriangle, XCircle, MessageSquare,
@@ -205,6 +206,7 @@ const timeAgo = (d: string) => {
 // MAIN COMPONENT
 // ============================================
 const SupportPage = () => {
+  const { isMobile } = useIsMobile();
   const location = useLocation();
   const { toast } = useToast();
   const initialTab = location.pathname.includes("knowledge-base") ? "kb" : location.pathname.includes("faq") ? "faq" : "tickets";
@@ -424,11 +426,11 @@ const SupportPage = () => {
   ];
 
   return (
-    <div className="flex h-screen bg-[#F8FAFC]">
+    <div className="flex min-h-screen bg-[#F8FAFC]">
       <div className="flex-1 overflow-auto">
-        <div className="p-6 max-w-[1400px] mx-auto">
+        <div className={cn("max-w-[1400px] mx-auto", isMobile ? "p-3" : "p-6")}>
           {/* Header */}
-          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between mb-6">
+          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className={cn("mb-6 flex", isMobile ? "flex-col gap-4" : "items-center justify-between")}>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-md bg-[#0891B2]/10 flex items-center justify-center"><Headphones size={20} className="text-[#0891B2]" /></div>
               <div>
@@ -436,7 +438,7 @@ const SupportPage = () => {
                 <p className="text-sm text-[#94A3B8]">{stats.open} open tickets · {stats.totalArticles} articles · {stats.totalFaqs} FAQs</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className={cn("flex items-center gap-3", isMobile && "flex-wrap")}>
               <Button variant="outline" size="sm" className="rounded-md border-[rgba(15,23,42,0.06)]" onClick={() => { loadTickets(); toast({ title: "Refreshed" }); }}>
                 <RefreshCw size={16} className={cn("mr-2", isLoading && "animate-spin")} />Refresh
               </Button>
@@ -451,7 +453,7 @@ const SupportPage = () => {
                 </div>
               )}
               {activeTab === "tickets" && (
-                <Button size="sm" className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md" onClick={() => setIsFormOpen(true)}>
+                <Button size="sm" className={cn("bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md", isMobile && "flex-1")} onClick={() => setIsFormOpen(true)}>
                   <Plus size={16} className="mr-2" />New Ticket
                 </Button>
               )}
@@ -466,7 +468,8 @@ const SupportPage = () => {
                   <Sparkles size={12} className="text-[#0891B2]" /><span className="text-xs font-semibold text-[#0891B2]">AI Insights</span>
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className={cn(isMobile ? "-mx-1 overflow-x-auto pb-1" : "")}>
+                <div className={cn("grid gap-3", isMobile ? "grid-flow-col auto-cols-[280px] px-1" : "grid-cols-1 md:grid-cols-3")}>
                 {aiInsights.map((ins, i) => {
                   const InsIcon = ins.icon;
                   return (
@@ -479,12 +482,14 @@ const SupportPage = () => {
                     </div>
                   );
                 })}
+                </div>
               </div>
             </motion.div>
           )}
 
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className={cn("mb-6", isMobile ? "-mx-1 overflow-x-auto pb-1" : "")}>
+            <div className={cn("grid gap-4", isMobile ? "grid-flow-col auto-cols-[180px] px-1" : "grid-cols-2 md:grid-cols-4")}>
             {[
               { label: "Open Tickets", value: stats.open, icon: AlertTriangle, color: "text-amber-600", bg: "bg-amber-100" },
               { label: "In Progress", value: stats.inProgress, icon: Clock, color: "text-blue-600", bg: "bg-blue-100" },
@@ -500,10 +505,12 @@ const SupportPage = () => {
                 </div>
               </motion.div>
             ))}
+            </div>
           </div>
 
           {/* Tabs */}
-          <div className="flex items-center gap-1 mb-6 bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-1">
+          <div className={cn("mb-6 bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-1", isMobile ? "overflow-x-auto" : "flex items-center gap-1")}>
+            <div className={cn("flex items-center gap-1", isMobile && "min-w-max")}>
             {tabs.map(tab => (
               <button key={tab.id} onClick={() => { setActiveTab(tab.id); setSearchQuery(""); setStatusFilter("all"); }}
                 className={cn("flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-all flex-1 justify-center",
@@ -513,6 +520,7 @@ const SupportPage = () => {
                   activeTab === tab.id ? "bg-white/20 text-white" : "bg-[#F1F5F9] text-[#475569]")}>{tab.count}</span>
               </button>
             ))}
+            </div>
           </div>
 
           {/* Search */}
@@ -530,8 +538,8 @@ const SupportPage = () => {
           {activeTab === "tickets" && (
             <div className="space-y-3">
               {/* Toolbar: Status filter pills */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
+              <div className={cn("mb-4", isMobile ? "space-y-3" : "flex items-center justify-between")}>
+                <div className={cn("flex items-center gap-2", isMobile && "overflow-x-auto pb-1")}>
                   {["all", "open", "in-progress", "waiting", "resolved", "closed"].map(s => (
                     <button key={s} onClick={() => setStatusFilter(s)}
                       className={cn("px-3 py-1.5 rounded-full text-xs font-medium transition-colors capitalize",
@@ -563,7 +571,7 @@ const SupportPage = () => {
                         whileHover={{ y: -2 }}
                         className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4 hover:border-[#22D3EE]/30 hover:shadow-lg transition-all cursor-pointer group"
                         onClick={() => { setCurrentTicket(ticket); setIsDetailOpen(true); }}>
-                        <div className="flex items-start gap-4">
+                        <div className={cn("flex items-start gap-4", isMobile && "flex-col gap-3")}>
                           <div className={cn("w-10 h-10 rounded-md flex items-center justify-center shrink-0", sc.bg)}>
                             <StatusIcon size={18} className={sc.color} />
                           </div>
@@ -584,7 +592,7 @@ const SupportPage = () => {
                           </div>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
-                              <button className="p-2 rounded-md hover:bg-white/10 text-[#475569] opacity-0 group-hover:opacity-100 transition-all"><MoreVertical size={16} /></button>
+                              <button className={cn("p-2 rounded-md hover:bg-white/10 text-[#475569] transition-all", isMobile ? "self-end opacity-100" : "opacity-0 group-hover:opacity-100")}><MoreVertical size={16} /></button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48 rounded-md">
                               <DropdownMenuItem onClick={() => { setCurrentTicket(ticket); setIsDetailOpen(true); }} className="rounded-md"><Eye size={14} className="mr-2" />View</DropdownMenuItem>
@@ -686,7 +694,10 @@ const SupportPage = () => {
 
       {/* Create Ticket Dialog */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="sm:max-w-[500px] p-0 rounded-md overflow-hidden">
+        <DialogContent className={cn(
+          "p-0 overflow-hidden",
+          isMobile ? "h-[100dvh] w-screen max-w-none rounded-none border-0" : "sm:max-w-[500px] rounded-md",
+        )}>
           <div className="p-6 border-b border-[rgba(15,23,42,0.06)]">
             <DialogHeader><DialogTitle className="text-xl font-bold text-[#0F172A]">Create Support Ticket</DialogTitle>
               <DialogDescription className="text-[#94A3B8]">Describe your issue and we'll get back to you.</DialogDescription></DialogHeader>
@@ -783,7 +794,10 @@ const SupportPage = () => {
 
       {/* Ticket Detail Dialog */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="sm:max-w-[600px] p-0 rounded-md overflow-hidden max-h-[90vh] overflow-y-auto">
+        <DialogContent className={cn(
+          "p-0 overflow-hidden overflow-y-auto",
+          isMobile ? "h-[100dvh] w-screen max-w-none rounded-none border-0" : "sm:max-w-[600px] rounded-md max-h-[90vh]",
+        )}>
           {currentTicket && (() => {
             const sc = statusConfig[currentTicket.status]; const StatusIcon = sc.icon;
             return (<>

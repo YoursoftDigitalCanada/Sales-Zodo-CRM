@@ -13,6 +13,7 @@ import {
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,6 +36,11 @@ import {
   EmployeeStatus,
   EmploymentType,
 } from '@/components/employees';
+import {
+  PullToRefreshIndicator,
+  SwipeActionCard,
+  usePullToRefresh,
+} from '@/features/clients/components/responsive-helpers';
 import { getStoredEmployee, isStoredEmployeeAdmin } from '@/features/auth/lib/auth-storage';
 import { getDepartments, getEmployees } from '@/features/users';
 import api from '@/lib/axios';
@@ -280,6 +286,7 @@ const mapEmployeeData = (data: ApiEmployee[], departments: Department[]): Employ
 
 const AllEmployeesPage: React.FC = () => {
   const navigate = useNavigate();
+  const { isMobile } = useIsMobile();
   const isAdminUser = isStoredEmployeeAdmin(getStoredEmployee());
   const [searchParams] = useSearchParams();
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -302,6 +309,7 @@ const AllEmployeesPage: React.FC = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
+  const effectiveViewMode = isMobile ? 'grid' : viewMode;
 
   useEffect(() => {
     if (!isAdminUser) {
@@ -616,8 +624,16 @@ const AllEmployeesPage: React.FC = () => {
     toast.info(`Opening email client for ${selectedIds.length} recipients`);
   };
 
+  const { handlers: pullHandlers, pullDistance, isRefreshing } = usePullToRefresh({
+    enabled: isMobile && !isLoading,
+    onRefresh: async () => {
+      await refreshData(false);
+    },
+  });
+
   return (
-    <div className="p-6 space-y-6 bg-[#F8FAFC] min-h-screen">
+    <div className="min-h-screen space-y-6 bg-[#F8FAFC] p-4 sm:p-6" {...pullHandlers}>
+      <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">All Employees</h1>
@@ -625,7 +641,7 @@ const AllEmployeesPage: React.FC = () => {
             Manage your team members and their information
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="hidden items-center gap-3 sm:flex">
           <Button variant="outline" className="gap-2">
             <Upload className="w-4 h-4" />
             Import
@@ -654,7 +670,7 @@ const AllEmployeesPage: React.FC = () => {
       <EmployeeFilters
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
-        viewMode={viewMode}
+        viewMode={effectiveViewMode}
         onViewModeChange={setViewMode}
         departments={departments}
         filters={filters}
@@ -668,8 +684,9 @@ const AllEmployeesPage: React.FC = () => {
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
-          className="flex items-center justify-between p-4 bg-[#0891B2]/10 rounded-md border border-[#22D3EE]/20"
+          className="rounded-md border border-[#22D3EE]/20 bg-[#0891B2]/10 p-4"
         >
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[#0891B2]/20">
               <Users className="w-5 h-5 text-[#0891B2]" />
@@ -683,7 +700,7 @@ const AllEmployeesPage: React.FC = () => {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => setSelectedIds([])}>
               Clear Selection
             </Button>
@@ -700,21 +717,42 @@ const AllEmployeesPage: React.FC = () => {
               Delete
             </Button>
           </div>
+          </div>
         </motion.div>
       )}
 
       {!isLoading && filteredEmployees.length > 0 ? (
-        viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        effectiveViewMode === 'grid' ? (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 sm:gap-6">
             {filteredEmployees.map((employee, index) => (
-              <EmployeeCard
-                key={employee.id}
-                employee={employee}
-                onView={handleViewEmployee}
-                onEdit={handleEditEmployee}
-                onDelete={handleDeleteEmployee}
-                index={index}
-              />
+              isMobile ? (
+                <SwipeActionCard
+                  key={employee.id}
+                  onView={() => handleViewEmployee(employee)}
+                  onDelete={() => handleDeleteEmployee(employee)}
+                  onLongPress={() => handleSelectOne(employee.id, !selectedIds.includes(employee.id))}
+                  className={selectedIds.includes(employee.id) ? 'rounded-2xl ring-2 ring-[#22D3EE]/30' : undefined}
+                  primaryLabel="View"
+                  secondaryLabel="Delete"
+                >
+                  <EmployeeCard
+                    employee={employee}
+                    onView={handleViewEmployee}
+                    onEdit={handleEditEmployee}
+                    onDelete={handleDeleteEmployee}
+                    index={index}
+                  />
+                </SwipeActionCard>
+              ) : (
+                <EmployeeCard
+                  key={employee.id}
+                  employee={employee}
+                  onView={handleViewEmployee}
+                  onEdit={handleEditEmployee}
+                  onDelete={handleDeleteEmployee}
+                  index={index}
+                />
+              )
             ))}
           </div>
         ) : (
@@ -796,6 +834,17 @@ const AllEmployeesPage: React.FC = () => {
             </Button>
           ) : null}
         </div>
+      )}
+
+      {isMobile && (
+        <Button
+          onClick={() => setIsAddDialogOpen(true)}
+          size="icon"
+          className="fixed bottom-24 right-4 z-30 h-14 w-14 rounded-full bg-[#0891B2] text-white shadow-lg hover:bg-[#0891B2]/90 sm:hidden"
+          aria-label="Add Employee"
+        >
+          <Plus className="h-5 w-5" />
+        </Button>
       )}
 
       <AddEmployeeDialog

@@ -34,6 +34,8 @@ interface ChatWindowProps {
   onMuteConversation: () => void;
   onDeleteConversation: () => void;
   onNewChat: () => void;
+  onBack?: () => void;
+  isMobile?: boolean;
 }
 
 export function ChatWindow({
@@ -58,6 +60,8 @@ export function ChatWindow({
   onMuteConversation,
   onDeleteConversation,
   onNewChat,
+  onBack,
+  isMobile = false,
 }: ChatWindowProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
@@ -110,11 +114,12 @@ export function ChatWindow({
         onPinConversation={onPinConversation}
         onMuteConversation={onMuteConversation}
         onDeleteConversation={onDeleteConversation}
+        onBack={onBack}
       />
 
       {/* Messages Area */}
-      <ScrollArea className="flex-1 p-6">
-        <div className="max-w-3xl mx-auto space-y-4">
+      <ScrollArea className={isMobile ? "flex-1 px-3 py-4" : "flex-1 p-6"}>
+        <div className={cn("mx-auto space-y-4", isMobile ? "max-w-full" : "max-w-3xl")}>
           {/* Date Separator */}
           <div className="flex items-center justify-center my-4">
             <div className="bg-white px-4 py-1.5 rounded-full text-xs text-[#475569] shadow-sm border border-[rgba(15,23,42,0.06)]">
@@ -144,6 +149,7 @@ export function ChatWindow({
                 onDelete={onDeleteMessage}
                 onCopy={(content) => navigator.clipboard.writeText(content)}
                 onDownloadAttachment={onDownloadAttachment}
+                enableSwipeReply={isMobile}
               />
             );
           })}

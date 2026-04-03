@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   AlertCircle,
@@ -30,6 +30,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getFiles, type FileResponse } from "@/features/files/services/files-service";
 import { RoofingStageRail } from "@/features/projects/components/RoofingStageRail";
 import { getProjectById, type ProjectEntity } from "@/features/projects/services/projects-service";
@@ -63,6 +64,7 @@ import {
 } from "@/features/projects/roofing-operations";
 import { createTask, getTasks, type TaskEntity } from "@/features/tasks/services/tasks-service";
 import { getEmployees } from "@/features/users/services/users-service";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { cn } from "@/lib/utils";
 
 function readText(value: unknown): string {
@@ -194,6 +196,7 @@ export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isMobile } = useIsMobile();
 
   const [project, setProject] = useState<ProjectEntity | null>(null);
   const [tasks, setTasks] = useState<TaskEntity[]>([]);
@@ -204,6 +207,7 @@ export default function ProjectDetailPage() {
   const [loadingFiles, setLoadingFiles] = useState(false);
   const [showAddTask, setShowAddTask] = useState(false);
   const [creatingTask, setCreatingTask] = useState(false);
+  const [mobileSection, setMobileSection] = useState<"overview" | "tasks" | "files" | "timeline">("overview");
   const [newTask, setNewTask] = useState({
     title: "",
     description: "",
@@ -212,6 +216,10 @@ export default function ProjectDetailPage() {
     dueDate: "",
     assignedToId: "none",
   });
+  const overviewRef = useRef<HTMLDivElement | null>(null);
+  const tasksRef = useRef<HTMLDivElement | null>(null);
+  const filesRef = useRef<HTMLDivElement | null>(null);
+  const timelineRef = useRef<HTMLDivElement | null>(null);
 
   const fetchProject = useCallback(async () => {
     if (!id) return;
@@ -333,6 +341,17 @@ export default function ProjectDetailPage() {
     return groupFilesByCategory(buildRoofingFileBuckets(project, files as Array<Record<string, unknown>>));
   }, [files, project]);
 
+  const scrollToSection = useCallback((section: "overview" | "tasks" | "files" | "timeline") => {
+    setMobileSection(section);
+    const refs = {
+      overview: overviewRef,
+      tasks: tasksRef,
+      files: filesRef,
+      timeline: timelineRef,
+    } as const;
+    refs[section].current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#F8FAFC]">
@@ -453,7 +472,7 @@ export default function ProjectDetailPage() {
   })();
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-10">
+    <div className="min-h-screen bg-[#F8FAFC] pb-28 md:pb-10">
       <div className="mx-auto max-w-[1400px] px-4 py-5 md:px-6 md:py-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Button variant="outline" className="rounded-md" onClick={() => navigate("/projects")}>
@@ -544,6 +563,20 @@ export default function ProjectDetailPage() {
           </CardContent>
         </Card>
 
+        {isMobile && (
+          <div className="sticky top-3 z-20 mt-4 overflow-x-auto rounded-2xl bg-white/95 p-2 shadow-sm backdrop-blur">
+            <Tabs value={mobileSection} onValueChange={(value) => scrollToSection(value as "overview" | "tasks" | "files" | "timeline")}>
+              <TabsList className="inline-flex w-max rounded-2xl bg-[#F8FAFC]">
+                <TabsTrigger value="overview" className="rounded-xl px-4">Overview</TabsTrigger>
+                <TabsTrigger value="tasks" className="rounded-xl px-4">Tasks</TabsTrigger>
+                <TabsTrigger value="files" className="rounded-xl px-4">Files</TabsTrigger>
+                <TabsTrigger value="timeline" className="rounded-xl px-4">Timeline</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+        )}
+
+        <div ref={overviewRef}>
         <Card className="mt-6 rounded-md border-[rgba(15,23,42,0.08)] shadow-sm hover:shadow-lg transition-all">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-semibold text-[#0F172A]">Financial Visibility</CardTitle>
@@ -745,7 +778,9 @@ export default function ProjectDetailPage() {
             </div>
           </CardContent>
         </Card>
+        </div>
 
+        <div ref={tasksRef}>
         <Card className="mt-6 rounded-md border-[rgba(15,23,42,0.08)] shadow-sm hover:shadow-lg transition-all">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-semibold text-[#0F172A]">Production</CardTitle>
@@ -841,7 +876,9 @@ export default function ProjectDetailPage() {
             </div>
           </CardContent>
         </Card>
+        </div>
 
+        <div ref={filesRef}>
         <Card className="mt-6 rounded-md border-[rgba(15,23,42,0.08)] shadow-sm hover:shadow-lg transition-all">
           <CardHeader className="pb-2">
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -935,7 +972,9 @@ export default function ProjectDetailPage() {
             )}
           </CardContent>
         </Card>
+        </div>
 
+        <div ref={timelineRef}>
         <Card className="mt-6 rounded-md border-[rgba(15,23,42,0.08)] shadow-sm hover:shadow-lg transition-all">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-semibold text-[#0F172A]">Files</CardTitle>
@@ -1017,7 +1056,39 @@ export default function ProjectDetailPage() {
             <ActivityTimeline entityType="Project" entityId={id!} />
           </CardContent>
         </Card>
+        </div>
       </div>
+
+      {isMobile ? (
+        <div className="fixed inset-x-4 bottom-4 z-40 grid grid-cols-3 gap-2 rounded-2xl border border-[rgba(15,23,42,0.08)] bg-white/95 p-2 shadow-2xl backdrop-blur">
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-xl"
+            onClick={() => navigate(`/projects/${id}/edit`)}
+          >
+            <Pencil className="mr-1.5 h-4 w-4" />
+            Update
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-xl"
+            onClick={() => setShowAddTask(true)}
+          >
+            <Plus className="mr-1.5 h-4 w-4" />
+            Task
+          </Button>
+          <Button
+            type="button"
+            className="rounded-xl bg-[#0E7490] hover:bg-[#155E75]"
+            onClick={() => navigate(`/filemanager?projectId=${encodeURIComponent(id || "")}`)}
+          >
+            <Download className="mr-1.5 h-4 w-4" />
+            File
+          </Button>
+        </div>
+      ) : null}
 
       <Dialog open={showAddTask} onOpenChange={setShowAddTask}>
         <DialogContent className="rounded-md sm:max-w-[560px]">

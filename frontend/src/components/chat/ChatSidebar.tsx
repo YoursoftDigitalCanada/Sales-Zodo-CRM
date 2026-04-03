@@ -47,6 +47,7 @@ interface ChatSidebarProps {
   onPinConversation: (conversationId: string) => void;
   onMuteConversation: (conversationId: string) => void;
   onDeleteConversation: (conversationId: string) => void;
+  className?: string;
 }
 
 export function ChatSidebar({
@@ -64,6 +65,7 @@ export function ChatSidebar({
   onPinConversation,
   onMuteConversation,
   onDeleteConversation,
+  className,
 }: ChatSidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<FilterType>("all");
@@ -87,7 +89,7 @@ export function ChatSidebar({
     });
 
   return (
-    <div className="w-80 bg-white border-r border-[rgba(15,23,42,0.06)] flex flex-col">
+    <div className={cn("w-80 bg-white border-r border-[rgba(15,23,42,0.06)] flex flex-col", className)}>
       {/* Header */}
       <div className="p-4 border-b border-[rgba(15,23,42,0.06)]">
         <div className="flex items-center justify-between mb-4">

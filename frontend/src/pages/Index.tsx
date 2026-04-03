@@ -398,6 +398,49 @@ function DashboardQueueSkeleton() {
   );
 }
 
+function DashboardMobileQuickActionsSkeleton() {
+  return (
+    <div className={sectionCardClassName}>
+      <div className="p-4 border-b border-[rgba(15,23,42,0.06)]">
+        <Skeleton className="h-4 w-28 bg-[#F1F5F9]" />
+        <Skeleton className="mt-2 h-3 w-40 bg-[#F1F5F9]" />
+      </div>
+      <div className="grid grid-cols-2 gap-3 p-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4">
+            <Skeleton className="h-10 w-10 rounded-md bg-[#F1F5F9]" />
+            <Skeleton className="mt-4 h-4 w-20 bg-[#F1F5F9]" />
+            <Skeleton className="mt-2 h-3 w-full bg-[#F1F5F9]" />
+            <Skeleton className="mt-2 h-3 w-4/5 bg-[#F1F5F9]" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DashboardMobileListSkeleton({ rows = 3 }: { rows?: number }) {
+  return (
+    <div className={sectionCardClassName}>
+      <DashboardSectionHeaderSkeleton />
+      <div className="divide-y divide-[rgba(15,23,42,0.04)]">
+        {Array.from({ length: rows }).map((_, index) => (
+          <div key={index} className="px-4 py-4">
+            <div className="flex items-start gap-3">
+              <Skeleton className="h-9 w-9 rounded-md bg-[#F1F5F9]" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <Skeleton className="h-4 w-2/3 bg-[#F1F5F9]" />
+                <Skeleton className="h-3 w-full bg-[#F1F5F9]" />
+                <Skeleton className="h-3 w-3/4 bg-[#F1F5F9]" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function getColorClasses(color: ThemeColor) {
   return themeColors[color] || themeColors.teal;
 }
@@ -696,6 +739,7 @@ const Index = () => {
   const [user, setUser] = useState<User | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<BellNotification[]>([]);
+  const [isNotificationsLoading, setIsNotificationsLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchModal, setShowSearchModal] = useState(false);
@@ -707,6 +751,7 @@ const Index = () => {
   const [quotes, setQuotes] = useState<EstimateItem[]>([]);
   const [siteVisits, setSiteVisits] = useState<SiteVisitItem[]>([]);
   const [clients, setClients] = useState<ClientItem[]>([]);
+  const [pendingTasksCount, setPendingTasksCount] = useState(0);
 
   const notificationRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -748,6 +793,7 @@ const Index = () => {
         setQuotes(data.quotes.map(mapQuote));
         setSiteVisits(data.inspections.map(mapInspection));
         setClients(data.clients.map(mapClient));
+        setPendingTasksCount(data.pendingTasks);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
         setLeads([]);
@@ -756,17 +802,21 @@ const Index = () => {
         setQuotes([]);
         setSiteVisits([]);
         setClients([]);
+        setPendingTasksCount(0);
       } finally {
         setIsLoading(false);
       }
     };
 
     const loadNotifications = async () => {
+      setIsNotificationsLoading(true);
       try {
         const data = await getNotifications({ limit: 10 });
         setNotifications(data.map(mapApiNotification));
       } catch (error) {
         console.error("Failed to fetch notifications for dashboard:", error);
+      } finally {
+        setIsNotificationsLoading(false);
       }
     };
 
@@ -1154,6 +1204,29 @@ const Index = () => {
     { id: "won" as const, title: "Won", leads: leads.filter((lead) => lead.stage === "won") },
   ]), [leads]);
 
+  const mobilePipelineColumns = useMemo(() => (
+    kanbanColumns.map((column) => ({
+      ...column,
+      totalValue: column.leads.reduce((sum, lead) => sum + lead.value, 0),
+    }))
+  ), [kanbanColumns]);
+
+  const totalPipelineCards = useMemo(() => (
+    mobilePipelineColumns.reduce((sum, column) => sum + column.leads.length, 0)
+  ), [mobilePipelineColumns]);
+
+  const recentActivity = useMemo(() => notifications.slice(0, 4), [notifications]);
+
+  const mobileActionCenterPath = dashboardAccess.canViewTasks
+    ? "/tasks"
+    : dashboardAccess.canViewLeads
+      ? "/leads/pipeline"
+      : dashboardAccess.canViewInvoices
+        ? "/invoice"
+        : dashboardAccess.canViewQuotes
+          ? "/quotes"
+          : "/notifications";
+
   const hasAnyDashboardModuleAccess =
     dashboardAccess.canViewLeads ||
     dashboardAccess.canViewInvoices ||
@@ -1449,7 +1522,10 @@ const Index = () => {
         </header>
 
         <div className={cn("space-y-4 md:space-y-6 page-enter", isMobile ? "p-3" : "p-4 md:p-6")}>
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className={cn(
+            "flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between",
+            isMobile && `${sectionCardClassName} p-4`,
+          )}>
             <div>
               <h1 className="text-xl font-bold text-[#0F172A]">
                 {getGreeting()}, {user ? user.firstName : "there"}
@@ -1472,22 +1548,6 @@ const Index = () => {
             </div>
           </div>
 
-          {isMobile ? (
-            <div className="flex flex-wrap gap-2">
-              {quickActions.slice(0, 3).map((action) => (
-                <Button
-                  key={action.id}
-                  variant={action.variant}
-                  size="sm"
-                  onClick={() => navigate(action.path)}
-                >
-                  <action.icon />
-                  <span>{action.label}</span>
-                </Button>
-              ))}
-            </div>
-          ) : null}
-
           {!hasAnyDashboardModuleAccess ? (
             <div className={`${sectionCardClassName} px-5 py-4`}>
               <h2 className="text-sm font-semibold text-[#0F172A]">Dashboard Access Limited</h2>
@@ -1498,7 +1558,540 @@ const Index = () => {
           ) : null}
 
           {hasAnyDashboardModuleAccess ? (
-            <>
+            isMobile ? (
+              <>
+                {quickActions.length > 0 ? (
+                  <motion.section
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.03 }}
+                    className={sectionCardClassName}
+                  >
+                    <div className="p-4 border-b border-[rgba(15,23,42,0.06)]">
+                      <h2 className="text-sm font-semibold text-[#0F172A]">Quick Actions</h2>
+                      <p className="mt-1 text-[11px] text-[#94A3B8]">Jump straight into the work that moves revenue today.</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 p-4">
+                      {quickActions.map((action) => (
+                        <button
+                          key={action.id}
+                          onClick={() => navigate(action.path)}
+                          className={cn(
+                            "rounded-md border p-4 text-left transition-colors",
+                            action.variant === "default"
+                              ? "border-[#0891B2]/15 bg-[#0891B2]/5"
+                              : "border-[rgba(15,23,42,0.06)] bg-white",
+                          )}
+                        >
+                          <div className={cn(
+                            "flex h-10 w-10 items-center justify-center rounded-md",
+                            action.variant === "default" ? "bg-[#0891B2]/10 text-[#0891B2]" : "bg-[#F1F5F9] text-[#475569]",
+                          )}>
+                            <action.icon size={18} />
+                          </div>
+                          <p className="mt-4 text-sm font-semibold text-[#0F172A]">{action.label}</p>
+                          <p className="mt-1 line-clamp-2 text-[11px] text-[#475569]">{action.description}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </motion.section>
+                ) : isLoading ? (
+                  <DashboardMobileQuickActionsSkeleton />
+                ) : null}
+
+                {isLoading ? (
+                  <DashboardMobileListSkeleton rows={4} />
+                ) : (
+                  <motion.section
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.06 }}
+                    className={sectionCardClassName}
+                  >
+                    <div className="flex items-center justify-between gap-3 border-b border-[rgba(15,23,42,0.06)] p-4">
+                      <div>
+                        <h2 className="text-sm font-semibold text-[#0F172A]">Tasks & Follow-up</h2>
+                        <p className="mt-1 text-[11px] text-[#94A3B8]">
+                          {dashboardAccess.canViewTasks
+                            ? `${pendingTasksCount} open task${pendingTasksCount === 1 ? "" : "s"} plus follow-up work across the CRM`
+                            : "Priority work from leads, estimates, inspections, and collections"}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => navigate(mobileActionCenterPath)}
+                        className="text-xs font-medium text-[#0891B2] hover:underline"
+                      >
+                        Open
+                      </button>
+                    </div>
+                    <div className="divide-y divide-[rgba(15,23,42,0.04)]">
+                      {actionCenterItems.length > 0 ? actionCenterItems.map((item) => {
+                        const toneClasses = item.tone === "danger"
+                          ? { bg: "bg-[#FF2E2D]/10", text: "text-[#FF2E2D]" }
+                          : item.tone === "warning"
+                            ? { bg: "bg-[#D97706]/10", text: "text-[#D97706]" }
+                            : { bg: "bg-[#01C44A]/10", text: "text-[#01C44A]" };
+
+                        return (
+                          <button
+                            key={item.id}
+                            onClick={() => navigate(item.path)}
+                            className="w-full px-4 py-4 text-left transition-colors hover:bg-[#F7F7FB]"
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className={cn("mt-0.5 flex h-9 w-9 items-center justify-center rounded-md", toneClasses.bg)}>
+                                {item.tone === "danger" ? (
+                                  <AlertTriangle size={15} className={toneClasses.text} />
+                                ) : item.tone === "warning" ? (
+                                  <FileText size={15} className={toneClasses.text} />
+                                ) : (
+                                  <Calendar size={15} className={toneClasses.text} />
+                                )}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-semibold text-[#0F172A]">{item.label}</p>
+                                <p className="mt-1 text-[11px] text-[#475569]">{item.detail}</p>
+                                <p className="mt-2 text-[11px] font-medium text-[#0891B2]">{item.actionLabel}</p>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      }) : (
+                        <div className="px-4 py-6 text-sm text-[#475569]">
+                          No priority work is queued for this account right now.
+                        </div>
+                      )}
+                    </div>
+                  </motion.section>
+                )}
+
+                <motion.section
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.08 }}
+                  className="space-y-3"
+                >
+                  <div>
+                    <h2 className="text-sm font-semibold text-[#0F172A]">Revenue Snapshot</h2>
+                    <p className="mt-1 text-[11px] text-[#94A3B8]">Pipeline, estimates, and collections in one swipeable row.</p>
+                  </div>
+                  <div className="-mx-1 overflow-x-auto pb-1">
+                    <div className="flex gap-3 px-1">
+                      <div className="min-w-[250px] flex-none">
+                        <StatCard
+                          title="Total Potential Revenue"
+                          value={formatMoney(totalPotentialRevenue)}
+                          subtitle="Open pipeline plus receivables"
+                          trend={totalPotentialTrend}
+                          comparison="hot share"
+                          icon={DollarSign}
+                          color="orange"
+                          isLoading={isLoading}
+                          lastUpdated="Updated just now"
+                          aiInsight={totalPotentialRevenue > 0 ? "Focus on pipeline and collections today" : undefined}
+                        />
+                      </div>
+                      <div className="min-w-[250px] flex-none">
+                        <StatCard
+                          title="Hot Leads Value"
+                          value={formatMoney(hotLeadsValue)}
+                          subtitle={`${hotLeads.length} hot roofing opportunities`}
+                          trend={hotLeadsTrend}
+                          comparison="of open leads"
+                          icon={Target}
+                          color="yellow"
+                          isLoading={isLoading}
+                          lastUpdated="Updated just now"
+                          aiInsight={hotLeads.length > 0 ? "Call these first for fastest revenue" : undefined}
+                        />
+                      </div>
+                      <div className="min-w-[250px] flex-none">
+                        <StatCard
+                          title="Estimates Sent Value"
+                          value={formatMoney(estimatesSentValue)}
+                          subtitle={`${sentEstimates.length} estimate${sentEstimates.length === 1 ? "" : "s"} out with clients`}
+                          trend={estimatesSentTrend}
+                          comparison="sent rate"
+                          icon={FileText}
+                          color="cyan"
+                          isLoading={isLoading}
+                          lastUpdated="Updated just now"
+                          aiInsight={sentEstimates.length > 0 ? "Follow up before validity dates expire" : undefined}
+                        />
+                      </div>
+                      <div className="min-w-[250px] flex-none">
+                        <StatCard
+                          title="Pending Payments Value"
+                          value={formatMoney(pendingPaymentsValue)}
+                          subtitle={`${pendingPayments.length} invoice${pendingPayments.length === 1 ? "" : "s"} awaiting payment`}
+                          trend={pendingPaymentsTrend}
+                          comparison="receivable mix"
+                          icon={Receipt}
+                          color="green"
+                          isLoading={isLoading}
+                          lastUpdated="Updated just now"
+                          aiInsight={pendingPayments.length > 0 ? "Collection follow-up is revenue protection" : undefined}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </motion.section>
+
+                {isNotificationsLoading ? (
+                  <DashboardMobileListSkeleton rows={3} />
+                ) : (
+                  <motion.section
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className={sectionCardClassName}
+                  >
+                    <div className="flex items-center justify-between gap-3 border-b border-[rgba(15,23,42,0.06)] p-4">
+                      <div>
+                        <h2 className="text-sm font-semibold text-[#0F172A]">Recent Activity</h2>
+                        <p className="mt-1 text-[11px] text-[#94A3B8]">The latest alerts and updates from your workspace.</p>
+                      </div>
+                      <button
+                        onClick={() => navigate("/notifications")}
+                        className="text-xs font-medium text-[#0891B2] hover:underline"
+                      >
+                        View all
+                      </button>
+                    </div>
+                    <div className="divide-y divide-[rgba(15,23,42,0.04)]">
+                      {recentActivity.length > 0 ? recentActivity.map((notification) => {
+                        const colors = getColorClasses(notification.color);
+                        return (
+                          <button
+                            key={notification.id}
+                            onClick={() => navigate("/notifications")}
+                            className="flex w-full items-start gap-3 px-4 py-4 text-left transition-colors hover:bg-[#F7F7FB]"
+                          >
+                            <div className={cn("flex h-9 w-9 items-center justify-center rounded-md", colors.light)}>
+                              <notification.icon size={15} className={colors.text} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-semibold text-[#0F172A] line-clamp-1">{notification.title}</p>
+                                {!notification.read ? <span className="h-1.5 w-1.5 rounded-full bg-[#0891B2]" /> : null}
+                              </div>
+                              <p className="mt-1 line-clamp-2 text-[11px] text-[#475569]">{notification.message}</p>
+                              <p className="mt-2 text-[11px] text-[#94A3B8]">{notification.time}</p>
+                            </div>
+                          </button>
+                        );
+                      }) : (
+                        <div className="px-4 py-6 text-sm text-[#475569]">
+                          No recent activity has come in yet.
+                        </div>
+                      )}
+                    </div>
+                  </motion.section>
+                )}
+
+                {dashboardAccess.canViewInvoices ? (
+                  isLoading ? (
+                    <DashboardMobileListSkeleton rows={3} />
+                  ) : (
+                    <motion.section
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.12 }}
+                      className={sectionCardClassName}
+                    >
+                      <div className="flex items-center justify-between gap-3 border-b border-[rgba(15,23,42,0.06)] p-4">
+                        <div>
+                          <h2 className="text-sm font-semibold text-[#0F172A]">Invoices</h2>
+                          <p className="mt-1 text-[11px] text-[#94A3B8]">Invoices waiting for payment or collection follow-up.</p>
+                        </div>
+                        <button
+                          onClick={() => navigate("/invoice")}
+                          className="text-xs font-medium text-[#0891B2] hover:underline"
+                        >
+                          Open
+                        </button>
+                      </div>
+                      <div className="divide-y divide-[rgba(15,23,42,0.04)]">
+                        {pendingPayments.length > 0 ? pendingPayments.slice(0, 4).map((invoice) => (
+                          <button
+                            key={invoice.id}
+                            onClick={() => navigate("/invoice")}
+                            className="w-full px-4 py-4 text-left transition-colors hover:bg-[#F7F7FB]"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold text-[#0F172A] line-clamp-1">{invoice.client}</p>
+                                <p className="mt-1 text-[11px] text-[#94A3B8]">{invoice.invoiceNo} · Due {invoice.dueDate}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm font-semibold text-[#0F172A]">{formatMoney(invoice.outstandingAmount)}</p>
+                                <p className={cn(
+                                  "mt-1 text-[11px] font-medium",
+                                  invoice.status === "overdue" ? "text-[#FF2E2D]" : "text-[#D97706]",
+                                )}>
+                                  {invoice.status === "overdue" ? "Overdue" : "Pending"}
+                                </p>
+                              </div>
+                            </div>
+                          </button>
+                        )) : (
+                          <div className="px-4 py-6 text-sm text-[#475569]">
+                            No invoices are waiting on action right now.
+                          </div>
+                        )}
+                      </div>
+                    </motion.section>
+                  )
+                ) : null}
+
+                {dashboardAccess.canViewLeads ? (
+                  isLoading ? (
+                    <DashboardMobileListSkeleton rows={5} />
+                  ) : (
+                    <motion.section
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.14 }}
+                      className={sectionCardClassName}
+                    >
+                      <div className="flex items-center justify-between gap-3 border-b border-[rgba(15,23,42,0.06)] p-4">
+                        <div>
+                          <h2 className="text-sm font-semibold text-[#0F172A]">Pipeline Snapshot</h2>
+                          <p className="mt-1 text-[11px] text-[#94A3B8]">
+                            {totalPipelineCards} lead{totalPipelineCards === 1 ? "" : "s"} across the revenue funnel
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => navigate("/leads/pipeline")}
+                          className="text-xs font-medium text-[#0891B2] hover:underline"
+                        >
+                          View
+                        </button>
+                      </div>
+                      <div className="space-y-4 p-4">
+                        {mobilePipelineColumns.map((column) => {
+                          const width = totalPipelineCards > 0
+                            ? Math.max(8, Math.round((column.leads.length / totalPipelineCards) * 100))
+                            : 0;
+
+                          return (
+                            <div key={column.id}>
+                              <div className="flex items-center justify-between gap-3">
+                                <div>
+                                  <p className="text-sm font-semibold text-[#0F172A]">{column.title}</p>
+                                  <p className="text-[11px] text-[#94A3B8]">{column.leads.length} lead{column.leads.length === 1 ? "" : "s"}</p>
+                                </div>
+                                <p className="text-sm font-semibold text-[#0F172A]">{formatMoney(column.totalValue)}</p>
+                              </div>
+                              <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#E2E8F0]">
+                                <div
+                                  className="h-full rounded-full bg-[#0891B2]"
+                                  style={{ width: `${width}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </motion.section>
+                  )
+                ) : null}
+
+                {dashboardAccess.canViewProjects ? (
+                  isLoading ? (
+                    <DashboardMobileListSkeleton rows={3} />
+                  ) : (
+                    <motion.section
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.16 }}
+                      className={sectionCardClassName}
+                    >
+                      <div className="flex items-center justify-between gap-3 border-b border-[rgba(15,23,42,0.06)] p-4">
+                        <div>
+                          <h2 className="text-sm font-semibold text-[#0F172A]">Active Jobs</h2>
+                          <p className="mt-1 text-[11px] text-[#94A3B8]">Production work already sold and underway.</p>
+                        </div>
+                        <button
+                          onClick={() => navigate("/projects")}
+                          className="text-xs font-medium text-[#0891B2] hover:underline"
+                        >
+                          View
+                        </button>
+                      </div>
+                      <div className="divide-y divide-[rgba(15,23,42,0.04)]">
+                        {activeJobs.length > 0 ? activeJobs.map((job) => (
+                          <button
+                            key={job.id}
+                            onClick={() => navigate("/projects")}
+                            className="w-full px-4 py-4 text-left transition-colors hover:bg-[#F7F7FB]"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold text-[#0F172A] line-clamp-1">{job.name}</p>
+                                <p className="mt-1 text-[11px] text-[#94A3B8] line-clamp-1">{job.client} · {job.deadline}</p>
+                              </div>
+                              <span className={cn("rounded px-2 py-0.5 text-[10px] font-semibold", getJobStatusBadgeClasses(job.status))}>
+                                {job.statusLabel}
+                              </span>
+                            </div>
+                          </button>
+                        )) : (
+                          <div className="px-4 py-6 text-sm text-[#475569]">
+                            No active jobs are on the board yet.
+                          </div>
+                        )}
+                      </div>
+                    </motion.section>
+                  )
+                ) : null}
+
+                {dashboardAccess.canViewClients ? (
+                  isLoading ? (
+                    <DashboardMobileListSkeleton rows={3} />
+                  ) : (
+                    <motion.section
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.18 }}
+                      className={sectionCardClassName}
+                    >
+                      <div className="flex items-center justify-between gap-3 border-b border-[rgba(15,23,42,0.06)] p-4">
+                        <div>
+                          <h2 className="text-sm font-semibold text-[#0F172A]">Recent Clients</h2>
+                          <p className="mt-1 text-[11px] text-[#94A3B8]">Recent homeowners and commercial accounts.</p>
+                        </div>
+                        <button
+                          onClick={() => navigate("/client-list")}
+                          className="text-xs font-medium text-[#0891B2] hover:underline"
+                        >
+                          View
+                        </button>
+                      </div>
+                      <div className="divide-y divide-[rgba(15,23,42,0.04)]">
+                        {recentClients.length > 0 ? recentClients.map((client) => (
+                          <div key={client.id} className="px-4 py-4">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold text-[#0F172A]">{client.name}</p>
+                                <p className="mt-1 text-[11px] text-[#94A3B8]">
+                                  {client.lastContacted ? `Last contacted ${formatDateLabel(client.lastContacted)}` : "Newly added client"}
+                                </p>
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleClientCall(client)}
+                              >
+                                <PhoneCall />
+                                <span>Call</span>
+                              </Button>
+                            </div>
+                          </div>
+                        )) : (
+                          <div className="px-4 py-6 text-sm text-[#475569]">
+                            No recent clients are available yet.
+                          </div>
+                        )}
+                      </div>
+                    </motion.section>
+                  )
+                ) : null}
+
+                {(dashboardAccess.canViewQuotes || dashboardAccess.canViewSiteVisits) ? (
+                  <div className="grid grid-cols-1 gap-4">
+                    {dashboardAccess.canViewQuotes ? (
+                      isLoading ? (
+                        <DashboardMobileListSkeleton rows={3} />
+                      ) : (
+                        <motion.section
+                          initial={{ opacity: 0, y: 16 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.2 }}
+                          className={sectionCardClassName}
+                        >
+                          <div className="border-b border-[rgba(15,23,42,0.06)] p-4">
+                            <h2 className="text-sm font-semibold text-[#0F172A]">Estimate Queue</h2>
+                            <p className="mt-1 text-[11px] text-[#94A3B8]">Drafts and sent estimates ready for follow-up.</p>
+                          </div>
+                          <div className="divide-y divide-[rgba(15,23,42,0.04)]">
+                            {[...draftEstimates, ...sentEstimates].slice(0, 4).map((estimate) => (
+                              <button
+                                key={estimate.id}
+                                onClick={() => navigate("/quotes")}
+                                className="w-full px-4 py-4 text-left transition-colors hover:bg-[#F7F7FB]"
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-semibold text-[#0F172A] line-clamp-1">{estimate.recipientName}</p>
+                                    <p className="mt-1 text-[11px] text-[#94A3B8]">
+                                      {estimate.quoteNumber} · {isEstimateDraft(estimate) ? "Draft" : "Sent"}
+                                    </p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-sm font-semibold text-[#0F172A]">{formatMoney(estimate.total)}</p>
+                                    <p className="mt-1 text-[11px] text-[#94A3B8]">Valid {formatDateLabel(estimate.validUntil)}</p>
+                                  </div>
+                                </div>
+                              </button>
+                            ))}
+                            {draftEstimates.length + sentEstimates.length === 0 ? (
+                              <div className="px-4 py-6 text-sm text-[#475569]">No estimates are in the queue yet.</div>
+                            ) : null}
+                          </div>
+                        </motion.section>
+                      )
+                    ) : null}
+
+                    {dashboardAccess.canViewSiteVisits ? (
+                      isLoading ? (
+                        <DashboardMobileListSkeleton rows={3} />
+                      ) : (
+                        <motion.section
+                          initial={{ opacity: 0, y: 16 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.22 }}
+                          className={sectionCardClassName}
+                        >
+                          <div className="border-b border-[rgba(15,23,42,0.06)] p-4">
+                            <h2 className="text-sm font-semibold text-[#0F172A]">Inspections</h2>
+                            <p className="mt-1 text-[11px] text-[#94A3B8]">Upcoming inspections and property visits.</p>
+                          </div>
+                          <div className="divide-y divide-[rgba(15,23,42,0.04)]">
+                            {siteVisits
+                              .filter((visit) => visit.scheduledAt)
+                              .sort((left, right) => (left.scheduledAt?.getTime() || 0) - (right.scheduledAt?.getTime() || 0))
+                              .slice(0, 4)
+                              .map((visit) => (
+                                <button
+                                  key={visit.id}
+                                  onClick={() => navigate("/inspections")}
+                                  className="w-full px-4 py-4 text-left transition-colors hover:bg-[#F7F7FB]"
+                                >
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                      <p className="text-sm font-semibold text-[#0F172A]">{visit.clientName}</p>
+                                      <p className="mt-1 line-clamp-1 text-[11px] text-[#94A3B8]">{visit.address}</p>
+                                    </div>
+                                    <div className="text-right">
+                                      <p className="text-sm font-semibold text-[#0F172A]">{formatTimeLabel(visit.scheduledAt)}</p>
+                                      <p className="mt-1 text-[11px] text-[#94A3B8]">{formatDateTimeLabel(visit.scheduledAt)}</p>
+                                    </div>
+                                  </div>
+                                </button>
+                              ))}
+                            {siteVisits.filter((visit) => visit.scheduledAt).length === 0 ? (
+                              <div className="px-4 py-6 text-sm text-[#475569]">No inspections are scheduled yet.</div>
+                            ) : null}
+                          </div>
+                        </motion.section>
+                      )
+                    ) : null}
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <>
               <div className="grid grid-cols-1 gap-4 md:gap-6 xl:grid-cols-[1.4fr,0.9fr]">
                 {isLoading ? (
                   <>
@@ -2079,7 +2672,8 @@ const Index = () => {
                   ) : null}
                 </motion.section>
               ) : null}
-            </>
+              </>
+            )
           ) : null}
         </div>
 

@@ -42,6 +42,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -61,6 +69,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import {
   ProjectEntity,
@@ -88,6 +97,8 @@ import {
   getRoofingStageMeta,
 } from "@/features/projects/roofing-operations";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { SwipeActionCard } from "@/features/clients/components/responsive-helpers";
 
 function useDebouncedValue<T>(value: T, delay = 300): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -536,6 +547,56 @@ const ProjectCard = ({
   );
 };
 
+const MobileJobCard = ({
+  project,
+  onView,
+  onArchive,
+}: {
+  project: ProjectEntity;
+  onView: () => void;
+  onArchive: () => void;
+}) => {
+  const stage = getRoofingStage(project);
+  const stageMeta = getRoofingStageMeta(stage);
+  const clientName = getProjectClientName(project);
+  const dueDate = project.estimatedEndDate ?? project.dueDate ?? project.endDate;
+
+  return (
+    <SwipeActionCard
+      onView={onView}
+      onDelete={onArchive}
+      primaryLabel="View"
+      secondaryLabel="Archive"
+    >
+      <div
+        className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm"
+        onClick={onView}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="truncate text-base font-semibold text-[#0F172A]">{project.name}</p>
+            <p className="mt-1 truncate text-sm text-[#475569]">{clientName || "No client assigned"}</p>
+          </div>
+          <Badge className={cn("rounded-full border px-2.5 py-1 text-[11px] font-semibold", stageMeta.border, stageMeta.softBg, stageMeta.accentText)}>
+            {stageMeta.label}
+          </Badge>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="rounded-xl bg-[#F8FAFC] px-3 py-2">
+            <p className="text-[10px] uppercase tracking-wider text-[#94A3B8]">Status</p>
+            <p className="mt-1 text-sm font-semibold text-[#0F172A]">{getProjectPriorityLabel(project)}</p>
+          </div>
+          <div className="rounded-xl bg-[#F8FAFC] px-3 py-2">
+            <p className="text-[10px] uppercase tracking-wider text-[#94A3B8]">Due Date</p>
+            <p className="mt-1 text-sm font-semibold text-[#0F172A]">{formatTimelineDate(dueDate)}</p>
+          </div>
+        </div>
+      </div>
+    </SwipeActionCard>
+  );
+};
+
 // ============================================
 // LOADING SKELETONS
 // ============================================
@@ -581,19 +642,23 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
 
 type ViewMode = "grid" | "table";
 const PRIORITY_OPTIONS = ["ALL", "Low", "Medium", "High"] as const;
+type JobsTab = "active" | "archived" | "templates";
 
 export default function ProjectsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { isMobile } = useIsMobile();
 
   const [search, setSearch] = useState("");
   const [stageFilter, setStageFilter] = useState<string>("ALL");
   const [priorityFilter, setPriorityFilter] = useState<string>("ALL");
   const [jobTypeFilter, setJobTypeFilter] = useState<string>("ALL");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [jobsTab, setJobsTab] = useState<JobsTab>("active");
   const [selectedProjects, setSelectedProjects] = useState<Set<string | number>>(new Set());
   const [pendingDelete, setPendingDelete] = useState<ProjectEntity | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const debouncedSearch = useDebouncedValue(search, 250);
 
@@ -641,10 +706,37 @@ export default function ProjectsPage() {
     return ["ALL", ...values.sort((a, b) => a.localeCompare(b))];
   }, [allProjects]);
 
+  const tabCounts = useMemo(() => {
+    return allProjects.reduce(
+      (acc, project) => {
+        const rawStatus = String(project.status || "").toUpperCase();
+        if (rawStatus === "ARCHIVED") {
+          acc.archived += 1;
+        } else if (rawStatus === "DRAFT") {
+          acc.templates += 1;
+        } else {
+          acc.active += 1;
+        }
+        return acc;
+      },
+      { active: 0, archived: 0, templates: 0 }
+    );
+  }, [allProjects]);
+
   const filteredProjects = useMemo(() => {
     const needle = debouncedSearch.trim().toLowerCase();
 
     return allProjects.filter((project) => {
+      const rawStatus = String(project.status || "").toUpperCase();
+      const isArchivedJob = rawStatus === "ARCHIVED";
+      const isTemplateJob = rawStatus === "DRAFT";
+      const matchesTab =
+        jobsTab === "active"
+          ? !isArchivedJob && !isTemplateJob
+          : jobsTab === "archived"
+          ? isArchivedJob
+          : isTemplateJob;
+
       const stage = getRoofingStage(project);
       const priority = getProjectPriorityLabel(project);
       const jobType = getProjectJobType(project);
@@ -656,9 +748,9 @@ export default function ProjectsPage() {
       const matchesPriority = priorityFilter === "ALL" || priority === priorityFilter;
       const matchesJobType = jobTypeFilter === "ALL" || jobType === jobTypeFilter;
 
-      return matchesSearch && matchesStage && matchesPriority && matchesJobType;
+      return matchesTab && matchesSearch && matchesStage && matchesPriority && matchesJobType;
     });
-  }, [allProjects, debouncedSearch, jobTypeFilter, priorityFilter, stageFilter]);
+  }, [allProjects, debouncedSearch, jobTypeFilter, jobsTab, priorityFilter, stageFilter]);
 
   const orderedProjects = useMemo(() => {
     return [...filteredProjects].sort((first, second) => {
@@ -712,7 +804,7 @@ export default function ProjectsPage() {
   const allSelected = orderedProjects.length > 0 && selectedProjects.size === orderedProjects.length;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-[#F8FAFC] pb-24 md:pb-0">
       <main className="flex-1 transition-all duration-300">
         {/* ============================================ */}
         {/* HEADER — matches Client List header */}
@@ -738,7 +830,7 @@ export default function ProjectsPage() {
               </motion.button>
               <Button
                 onClick={() => navigate("/projects/add")}
-                className="bg-[#0891B2] hover:bg-[#0E7490] text-white rounded-md shadow-sm"
+                className={cn("bg-[#0891B2] hover:bg-[#0E7490] text-white rounded-md shadow-sm", isMobile && "hidden")}
               >
                 <Plus size={18} className="mr-2" />
                 Create Roofing Job
@@ -765,16 +857,43 @@ export default function ProjectsPage() {
             </div>
           </div>
 
+          {isMobile && (
+            <div className="mb-4 overflow-x-auto">
+              <Tabs value={jobsTab} onValueChange={(value) => setJobsTab(value as JobsTab)}>
+                <TabsList className="inline-flex w-max rounded-2xl bg-white p-1">
+                  <TabsTrigger value="active" className="rounded-xl px-4">
+                    Active ({tabCounts.active})
+                  </TabsTrigger>
+                  <TabsTrigger value="archived" className="rounded-xl px-4">
+                    Archived ({tabCounts.archived})
+                  </TabsTrigger>
+                  <TabsTrigger value="templates" className="rounded-xl px-4">
+                    Templates ({tabCounts.templates})
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+          )}
+
           {/* ============================================ */}
           {/* STAT CARDS — matches Client List */}
           {/* ============================================ */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 mb-6">
-            <StatCard title="Total Jobs" value={metricsProjects.length} subtitle="Across portfolio" icon={ClipboardList} color="teal" delay={0} />
-            <StatCard title="In Production" value={productionCount} subtitle="In field execution" icon={HardHat} color="gold" delay={0.05} />
-            <StatCard title="Completed" value={completedCount} subtitle="Finished / invoiced" icon={CheckCircle2} color="green" delay={0.1} />
-            <StatCard title="Contract Value" value={formatCurrency(totalContractValue)} subtitle="Total booked revenue" icon={CircleDollarSign} color="navy" delay={0.15} />
-            <StatCard title="Actual Cost" value={formatCurrency(totalActualCost)} subtitle="Materials & labor" icon={AlertCircle} color="red" delay={0.2} />
-            <StatCard title="Gross Profit" value={formatCurrency(totalGrossProfit)} subtitle="Contract minus cost" icon={TrendingUp} color="green" delay={0.25} />
+          <div className={cn(
+            "mb-6",
+            isMobile ? "flex gap-3 overflow-x-auto pb-2" : "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
+          )}>
+            {[
+              { title: "Total Jobs", value: metricsProjects.length, subtitle: "Across portfolio", icon: ClipboardList, color: "teal" as const, delay: 0 },
+              { title: "In Production", value: productionCount, subtitle: "In field execution", icon: HardHat, color: "gold" as const, delay: 0.05 },
+              { title: "Completed", value: completedCount, subtitle: "Finished / invoiced", icon: CheckCircle2, color: "green" as const, delay: 0.1 },
+              { title: "Contract Value", value: formatCurrency(totalContractValue), subtitle: "Total booked revenue", icon: CircleDollarSign, color: "navy" as const, delay: 0.15 },
+              { title: "Actual Cost", value: formatCurrency(totalActualCost), subtitle: "Materials & labor", icon: AlertCircle, color: "red" as const, delay: 0.2 },
+              { title: "Gross Profit", value: formatCurrency(totalGrossProfit), subtitle: "Contract minus cost", icon: TrendingUp, color: "green" as const, delay: 0.25 },
+            ].map((card) => (
+              <div key={card.title} className={cn(isMobile && "min-w-[220px] flex-shrink-0")}>
+                <StatCard {...card} />
+              </div>
+            ))}
           </div>
 
           {/* ============================================ */}
@@ -796,45 +915,54 @@ export default function ProjectsPage() {
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Select value={stageFilter} onValueChange={setStageFilter}>
-                    <SelectTrigger className="w-[140px] rounded-md border-[rgba(15,23,42,0.1)]">
-                      <SelectValue placeholder="Stage" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-md">
-                      <SelectItem value="ALL">All Stages</SelectItem>
-                      {ROOFING_STAGE_ORDER.map((stageKey) => (
-                        <SelectItem key={stageKey} value={stageKey}>
-                          {getRoofingStageMeta(stageKey).label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {isMobile ? (
+                    <Button variant="outline" className="rounded-md" onClick={() => setFiltersOpen(true)}>
+                      <Filter size={16} className="mr-2" />
+                      Filters
+                    </Button>
+                  ) : (
+                    <>
+                      <Select value={stageFilter} onValueChange={setStageFilter}>
+                        <SelectTrigger className="w-[140px] rounded-md border-[rgba(15,23,42,0.1)]">
+                          <SelectValue placeholder="Stage" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-md">
+                          <SelectItem value="ALL">All Stages</SelectItem>
+                          {ROOFING_STAGE_ORDER.map((stageKey) => (
+                            <SelectItem key={stageKey} value={stageKey}>
+                              {getRoofingStageMeta(stageKey).label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
 
-                  <Select value={jobTypeFilter} onValueChange={setJobTypeFilter}>
-                    <SelectTrigger className="w-[140px] rounded-md border-[rgba(15,23,42,0.1)]">
-                      <SelectValue placeholder="Job Type" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-md">
-                      {jobTypeOptions.map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {option === "ALL" ? "All Job Types" : option}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                      <Select value={jobTypeFilter} onValueChange={setJobTypeFilter}>
+                        <SelectTrigger className="w-[140px] rounded-md border-[rgba(15,23,42,0.1)]">
+                          <SelectValue placeholder="Job Type" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-md">
+                          {jobTypeOptions.map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option === "ALL" ? "All Job Types" : option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
 
-                  <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                    <SelectTrigger className="w-[140px] rounded-md border-[rgba(15,23,42,0.1)]">
-                      <SelectValue placeholder="Priority" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-md">
-                      {PRIORITY_OPTIONS.map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {option === "ALL" ? "All Priorities" : option}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                      <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                        <SelectTrigger className="w-[140px] rounded-md border-[rgba(15,23,42,0.1)]">
+                          <SelectValue placeholder="Priority" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-md">
+                          {PRIORITY_OPTIONS.map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option === "ALL" ? "All Priorities" : option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </>
+                  )}
 
                   {hasActiveFilters && (
                     <Button
@@ -855,7 +983,7 @@ export default function ProjectsPage() {
               </div>
 
               {/* Right side: View toggle */}
-              <div className="flex items-center gap-2">
+              <div className={cn("flex items-center gap-2", isMobile && "hidden")}>
                 <div className="flex items-center border border-[rgba(15,23,42,0.1)] rounded-md overflow-hidden">
                   <button
                     onClick={() => setViewMode("grid")}
@@ -922,6 +1050,17 @@ export default function ProjectsPage() {
             ) : orderedProjects.length === 0 ? (
               <div className="p-6">
                 <EmptyState onCreate={() => navigate("/projects/add")} />
+              </div>
+            ) : isMobile ? (
+              <div className="p-4 space-y-3">
+                {orderedProjects.map((project) => (
+                  <MobileJobCard
+                    key={project.id}
+                    project={project}
+                    onView={() => navigate(`/projects/${project.id}`)}
+                    onArchive={() => setPendingDelete(project)}
+                  />
+                ))}
               </div>
             ) : viewMode === "table" ? (
               /* TABLE VIEW */
@@ -993,6 +1132,90 @@ export default function ProjectsPage() {
           </div>
         </div>
       </main>
+
+      {isMobile && (
+        <Button
+          size="icon"
+          className="fixed bottom-6 right-5 z-40 h-14 w-14 rounded-full bg-[#0891B2] shadow-[0_16px_36px_rgba(8,145,178,0.35)] hover:bg-[#0E7490]"
+          onClick={() => navigate("/projects/add")}
+        >
+          <Plus size={22} />
+        </Button>
+      )}
+
+      <Drawer open={isMobile && filtersOpen} onOpenChange={setFiltersOpen}>
+        <DrawerContent className="max-h-[85dvh]">
+          <DrawerHeader>
+            <DrawerTitle>Filter Jobs</DrawerTitle>
+            <DrawerDescription>Refine active, archived, or template jobs on mobile.</DrawerDescription>
+          </DrawerHeader>
+          <div className="space-y-4 px-4 pb-4">
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-[#475569]">Stage</label>
+              <Select value={stageFilter} onValueChange={setStageFilter}>
+                <SelectTrigger className="rounded-md">
+                  <SelectValue placeholder="Stage" />
+                </SelectTrigger>
+                <SelectContent className="rounded-md">
+                  <SelectItem value="ALL">All Stages</SelectItem>
+                  {ROOFING_STAGE_ORDER.map((stageKey) => (
+                    <SelectItem key={stageKey} value={stageKey}>
+                      {getRoofingStageMeta(stageKey).label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-[#475569]">Job Type</label>
+              <Select value={jobTypeFilter} onValueChange={setJobTypeFilter}>
+                <SelectTrigger className="rounded-md">
+                  <SelectValue placeholder="Job Type" />
+                </SelectTrigger>
+                <SelectContent className="rounded-md">
+                  {jobTypeOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option === "ALL" ? "All Job Types" : option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-[#475569]">Priority</label>
+              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                <SelectTrigger className="rounded-md">
+                  <SelectValue placeholder="Priority" />
+                </SelectTrigger>
+                <SelectContent className="rounded-md">
+                  {PRIORITY_OPTIONS.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option === "ALL" ? "All Priorities" : option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DrawerFooter className="border-t bg-white">
+            <Button
+              variant="outline"
+              className="rounded-md"
+              onClick={() => {
+                setSearch("");
+                setStageFilter("ALL");
+                setPriorityFilter("ALL");
+                setJobTypeFilter("ALL");
+              }}
+            >
+              Clear Filters
+            </Button>
+            <Button className="rounded-md bg-[#0891B2] hover:bg-[#0E7490]" onClick={() => setFiltersOpen(false)}>
+              Apply Filters
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
 
       {/* Archive Dialog */}
       <AlertDialog open={Boolean(pendingDelete)} onOpenChange={(open) => (!open ? setPendingDelete(null) : undefined)}>

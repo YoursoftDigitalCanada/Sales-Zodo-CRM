@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import {
   AttendanceStatsCards,
   AttendanceSummaryCard,
@@ -240,6 +241,7 @@ const mergeActiveAttendanceRecord = (
 };
 
 const AttendancePage: React.FC = () => {
+  const { isMobile } = useIsMobile();
   const storedEmployee = getStoredEmployee();
   const currentEmployeeId = typeof storedEmployee?.id === 'string' ? storedEmployee.id : undefined;
   const isAdminUser = isStoredEmployeeAdmin(storedEmployee);
@@ -634,8 +636,78 @@ const AttendancePage: React.FC = () => {
     }
   };
 
+  const renderAttendanceCards = (items: AttendanceRecord[]) => (
+    <div className="space-y-3">
+      {items.length === 0 ? (
+        <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-6 text-center text-sm text-[#475569]">
+          No attendance records found for the current view.
+        </div>
+      ) : (
+        items.map((record) => {
+          const statusConfig = getAttendanceStatusConfig(record.status);
+          return (
+            <div
+              key={record.id}
+              className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-semibold text-[#0F172A]">{record.employeeName}</p>
+                  <p className="text-sm text-[#475569]">{format(record.date, 'MMM d, yyyy')}</p>
+                </div>
+                <Badge className={`${statusConfig.color} border-0`}>
+                  {statusConfig.label}
+                </Badge>
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-[#F8FAFC] p-3">
+                  <p className="text-xs text-[#64748B]">Check In</p>
+                  <p className="mt-1 text-sm font-medium text-[#0F172A]">
+                    {record.checkIn ? format(record.checkIn, 'h:mm a') : '—'}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-[#F8FAFC] p-3">
+                  <p className="text-xs text-[#64748B]">Check Out</p>
+                  <p className="mt-1 text-sm font-medium text-[#0F172A]">
+                    {record.checkOut ? format(record.checkOut, 'h:mm a') : '—'}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-[#F8FAFC] p-3">
+                  <p className="text-xs text-[#64748B]">Work Hours</p>
+                  <p className="mt-1 text-sm font-medium text-[#0F172A]">
+                    {record.workHours > 0 ? formatWorkHours(record.workHours) : '—'}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-[#F8FAFC] p-3">
+                  <p className="text-xs text-[#64748B]">Location</p>
+                  <p className="mt-1 text-sm font-medium text-[#0F172A]">
+                    {record.status === 'on-leave'
+                      ? record.location || 'On Leave'
+                      : record.location || (record.isRemote ? 'Remote' : 'Office')}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => setDetailsRecord(record)}>
+                  View Details
+                </Button>
+                {record.status !== 'on-leave' && (
+                  <Button variant="outline" className="flex-1" onClick={() => handleEditRecord(record)}>
+                    Edit Record
+                  </Button>
+                )}
+              </div>
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+
   return (
-    <div className="p-6 space-y-6 bg-[#F8FAFC] min-h-screen">
+    <div className="min-h-screen space-y-6 bg-[#F8FAFC] p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Attendance</h1>
@@ -646,7 +718,7 @@ const AttendancePage: React.FC = () => {
         <div className="flex items-center gap-3">
           <Button
             variant="outline"
-            className="gap-2"
+            className="w-full gap-2 sm:w-auto"
             onClick={exportRecords}
             disabled={isLoading || filteredRecords.length === 0}
           >
@@ -671,7 +743,7 @@ const AttendancePage: React.FC = () => {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         {isAdminUser && (
-          <TabsList className="bg-white">
+          <TabsList className="w-full justify-start overflow-x-auto bg-white sm:w-auto">
             <TabsTrigger value="overview" className="gap-2">
               <BarChart3 className="w-4 h-4" />
               Overview
@@ -724,11 +796,13 @@ const AttendancePage: React.FC = () => {
             <h3 className="text-lg font-semibold text-[#0F172A] mb-4">
               Today's Attendance
             </h3>
-            <AttendanceTable
-              records={todaysRecords}
-              onEdit={handleEditRecord}
-              onViewDetails={setDetailsRecord}
-            />
+            {isMobile ? renderAttendanceCards(todaysRecords) : (
+              <AttendanceTable
+                records={todaysRecords}
+                onEdit={handleEditRecord}
+                onViewDetails={setDetailsRecord}
+              />
+            )}
           </div>
         </TabsContent>
         )}
@@ -775,11 +849,13 @@ const AttendancePage: React.FC = () => {
             </Select>
           </div>
 
-          <AttendanceTable
-            records={filteredRecords}
-            onEdit={handleEditRecord}
-            onViewDetails={setDetailsRecord}
-          />
+          {isMobile ? renderAttendanceCards(filteredRecords) : (
+            <AttendanceTable
+              records={filteredRecords}
+              onEdit={handleEditRecord}
+              onViewDetails={setDetailsRecord}
+            />
+          )}
         </TabsContent>
         )}
 
@@ -877,7 +953,7 @@ const AttendancePage: React.FC = () => {
           setDetailsRecord(null);
         }
       }}>
-        <DialogContent className="sm:max-w-[520px]">
+        <DialogContent className={isMobile ? "left-0 top-auto bottom-0 max-h-[88vh] max-w-none translate-x-0 translate-y-0 overflow-y-auto rounded-t-3xl px-4 pb-8 pt-6" : "sm:max-w-[520px]"}>
           <DialogHeader>
             <DialogTitle>Attendance Details</DialogTitle>
             <DialogDescription>
@@ -1013,7 +1089,7 @@ const AttendancePage: React.FC = () => {
           setEditForm(null);
         }
       }}>
-        <DialogContent className="sm:max-w-[560px]">
+        <DialogContent className={isMobile ? "left-0 top-auto bottom-0 max-h-[92vh] max-w-none translate-x-0 translate-y-0 overflow-y-auto rounded-t-3xl px-4 pb-8 pt-6" : "sm:max-w-[560px]"}>
           <DialogHeader>
             <DialogTitle>Edit Attendance Record</DialogTitle>
             <DialogDescription>

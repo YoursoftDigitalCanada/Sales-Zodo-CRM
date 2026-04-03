@@ -117,6 +117,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { cn } from "@/lib/utils";
 import {
   createDepartment,
@@ -526,6 +527,7 @@ const UserCard = ({
   onSendEmail,
   onResetPassword,
   onStatusChange,
+  isMobile = false,
   delay = 0,
 }: {
   user: UserRecord;
@@ -538,6 +540,7 @@ const UserCard = ({
   onSendEmail: () => void;
   onResetPassword: () => void;
   onStatusChange: (status: UserStatus) => void;
+  isMobile?: boolean;
   delay?: number;
 }) => {
   const statusColors = getStatusColor(user.status);
@@ -557,7 +560,10 @@ const UserCard = ({
       )}
     >
       <div
-        className="absolute left-4 top-4 z-10 opacity-0 transition-opacity group-hover:opacity-100"
+        className={cn(
+          "absolute left-4 top-4 z-10 transition-opacity",
+          isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+        )}
         onClick={(event) => event.stopPropagation()}
       >
         <Checkbox
@@ -568,7 +574,10 @@ const UserCard = ({
       </div>
 
       <div
-        className="absolute right-4 top-4 z-10 opacity-0 transition-opacity group-hover:opacity-100"
+        className={cn(
+          "absolute right-4 top-4 z-10 transition-opacity",
+          isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+        )}
         onClick={(event) => event.stopPropagation()}
       >
         <DropdownMenu>
@@ -851,6 +860,7 @@ const UserFormDialog = ({
   departments: DepartmentEntity[];
   onSubmit: (values: UserFormValues) => Promise<void>;
 }) => {
+  const { isMobile } = useIsMobile();
   const [formData, setFormData] = useState<UserFormValues>({
     fullName: "",
     email: "",
@@ -907,7 +917,7 @@ const UserFormDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-md p-0 sm:max-w-[600px]">
+      <DialogContent className={isMobile ? "left-0 top-auto bottom-0 max-h-[92vh] max-w-none translate-x-0 translate-y-0 overflow-y-auto rounded-t-3xl p-0" : "max-h-[90vh] overflow-y-auto rounded-md p-0 sm:max-w-[600px]"}>
         <div className="sticky top-0 z-10 border-b border-[rgba(15,23,42,0.06)] bg-white p-6">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-[#0F172A]">
@@ -1147,6 +1157,7 @@ const RoleFormDialog = ({
   onClose: () => void;
   onSubmit: (values: RoleFormValues) => Promise<void>;
 }) => {
+  const { isMobile } = useIsMobile();
   const [formValues, setFormValues] = useState<RoleFormValues>({
     name: "",
     description: "",
@@ -1206,7 +1217,7 @@ const RoleFormDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-md p-0 sm:max-w-[760px]">
+      <DialogContent className={isMobile ? "left-0 top-auto bottom-0 max-h-[92vh] max-w-none translate-x-0 translate-y-0 overflow-y-auto rounded-t-3xl p-0" : "max-h-[90vh] overflow-y-auto rounded-md p-0 sm:max-w-[760px]"}>
         <div className="sticky top-0 z-10 border-b border-[rgba(15,23,42,0.06)] bg-white p-6">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-[#0F172A]">
@@ -1332,6 +1343,7 @@ const UserProfileDialog = ({
   onManagePermissions: () => void;
   onChangeRole: () => void;
 }) => {
+  const { isMobile } = useIsMobile();
   if (!user) {
     return null;
   }
@@ -1341,7 +1353,7 @@ const UserProfileDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-md p-0 sm:max-w-[760px]">
+      <DialogContent className={isMobile ? "left-0 top-auto bottom-0 max-h-[92vh] max-w-none translate-x-0 translate-y-0 overflow-y-auto rounded-t-3xl p-0" : "max-h-[90vh] overflow-y-auto rounded-md p-0 sm:max-w-[760px]"}>
         <div className="relative h-32 bg-[#F1F5F9]">
           <div className="absolute inset-0 opacity-10" />
           <Button
@@ -1725,12 +1737,14 @@ const RolesSection = ({
   onEdit,
   onDuplicate,
   onDelete,
+  isMobile = false,
 }: {
   roles: ApiRole[];
   onCreate: () => void;
   onEdit: (role: ApiRole) => void;
   onDuplicate: (role: ApiRole) => void;
   onDelete: (role: ApiRole) => void;
+  isMobile?: boolean;
 }) => {
   const [expandedRoleIds, setExpandedRoleIds] = useState<string[]>([]);
 
@@ -1744,12 +1758,12 @@ const RolesSection = ({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold text-[#0F172A]">Roles & Permissions</h2>
           <p className="text-sm text-[#94A3B8]">Manage real tenant roles and permission sets</p>
         </div>
-        <Button onClick={onCreate} className="rounded-md bg-[#0891B2] text-white hover:bg-[#0891B2]/90">
+        <Button onClick={onCreate} className="rounded-md bg-[#0891B2] text-white hover:bg-[#0891B2]/90 sm:w-auto">
           <Plus size={16} className="mr-2" />
           Create Role
         </Button>
@@ -1790,7 +1804,7 @@ const RolesSection = ({
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md">
+                    <Button variant="ghost" size="icon" className={cn("h-8 w-8 rounded-md", isMobile && "opacity-100")}>
                       <MoreVertical size={16} />
                     </Button>
                   </DropdownMenuTrigger>
@@ -1870,16 +1884,18 @@ const DepartmentsSection = ({
   onEdit,
   onViewMembers,
   onDelete,
+  isMobile = false,
 }: {
   departments: DepartmentEntity[];
   onCreate: () => void;
   onEdit: (department: DepartmentEntity) => void;
   onViewMembers: (department: DepartmentEntity) => void;
   onDelete: (department: DepartmentEntity) => void;
+  isMobile?: boolean;
 }) => {
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold text-[#0F172A]">Departments</h2>
           <p className="text-sm text-[#94A3B8]">Tenant department data shared with employee management</p>
@@ -1913,7 +1929,10 @@ const DepartmentsSection = ({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 rounded-md opacity-0 transition-opacity group-hover:opacity-100"
+                    className={cn(
+                      "h-8 w-8 rounded-md transition-opacity",
+                      isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+                    )}
                     onClick={(event) => event.stopPropagation()}
                   >
                     <MoreVertical size={16} />
@@ -1985,12 +2004,14 @@ const ActivityLogSection = ({
   filterAction,
   onFilterChange,
   onExport,
+  isMobile = false,
 }: {
   logs: AuditLogItem[];
   usersById: Map<string, UserRecord>;
   filterAction: string;
   onFilterChange: (value: string) => void;
   onExport: () => void;
+  isMobile?: boolean;
 }) => {
   const filteredLogs = useMemo(() => {
     if (filterAction === "all") {
@@ -2005,14 +2026,14 @@ const ActivityLogSection = ({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold text-[#0F172A]">Activity Log</h2>
           <p className="text-sm text-[#94A3B8]">Tenant-wide employee and user activity for this workspace</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <Select value={filterAction} onValueChange={onFilterChange}>
-            <SelectTrigger className="h-9 w-44 rounded-md border-[rgba(15,23,42,0.06)]">
+            <SelectTrigger className="h-9 w-full rounded-md border-[rgba(15,23,42,0.06)] sm:w-44">
               <SelectValue placeholder="Filter by action" />
             </SelectTrigger>
             <SelectContent className="rounded-md">
@@ -2030,89 +2051,140 @@ const ActivityLogSection = ({
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-md border border-[rgba(15,23,42,0.06)] bg-white">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-[#F8FAFC]">
-              <TableHead>User</TableHead>
-              <TableHead>Action</TableHead>
-              <TableHead>Module</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead>Device</TableHead>
-              <TableHead>IP Address</TableHead>
-              <TableHead>Time</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredLogs.map((log) => {
-              const user = log.user?.id ? usersById.get(log.user.id) : undefined;
-              const device = parseDevice(log.userAgent);
-              const actorName = resolveAuditActorName(log, user);
-              return (
-                <TableRow key={log.id} className="hover:bg-[#F8FAFC]">
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      {user?.avatarUrl ? (
-                        <img
-                          src={user.avatarUrl}
-                          alt={user.fullName}
-                          className="h-8 w-8 rounded-md object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#F1F5F9] text-xs font-bold text-[#0F172A]">
-                          {getInitials(actorName)}
-                        </div>
-                      )}
-                      <span className="font-medium text-[#0F172A]">
-                        {actorName}
+      {isMobile ? (
+        <div className="space-y-3">
+          {filteredLogs.map((log) => {
+            const user = log.user?.id ? usersById.get(log.user.id) : undefined;
+            const device = parseDevice(log.userAgent);
+            const actorName = resolveAuditActorName(log, user);
+            return (
+              <div key={log.id} className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm">
+                <div className="flex items-start gap-3">
+                  {user?.avatarUrl ? (
+                    <img
+                      src={user.avatarUrl}
+                      alt={user.fullName}
+                      className="h-10 w-10 rounded-xl object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F1F5F9] text-xs font-bold text-[#0F172A]">
+                      {getInitials(actorName)}
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-medium text-[#0F172A]">{actorName}</p>
+                      <span className="text-xs text-[#94A3B8]">{getRelativeTime(log.createdAt)}</span>
+                    </div>
+                    <p className="mt-1 text-sm text-[#475569]">{log.description}</p>
+                    <div className="mt-3 flex flex-wrap gap-2 text-xs text-[#64748B]">
+                      <span className="rounded-full bg-[#F8FAFC] px-2.5 py-1 capitalize">
+                        {log.action.replace(/_/g, " ").toLowerCase()}
                       </span>
+                      <span className="rounded-full bg-[#F8FAFC] px-2.5 py-1">{log.module || "-"}</span>
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#F8FAFC] px-2.5 py-1">
+                        {device === "Mobile" ? <Smartphone size={12} /> : <Monitor size={12} />}
+                        {device}
+                      </span>
+                      <span className="rounded-full bg-[#F8FAFC] px-2.5 py-1 font-mono">{log.ipAddress || "-"}</span>
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      {log.action === "LOGIN" && <LogIn size={16} className="text-green-500" />}
-                      {log.action === "LOGOUT" && <LogOut size={16} className="text-[#64748B]" />}
-                      {!["LOGIN", "LOGOUT"].includes(log.action) && <Activity size={16} className="text-[#475569]" />}
-                      <span className="text-sm capitalize text-[#475569]">{log.action.replace(/_/g, " ").toLowerCase()}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm text-[#475569]">{log.module || "-"}</span>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm text-[#94A3B8]">{log.description}</span>
-                  </TableCell>
-                  <TableCell>
-                    <span className="inline-flex items-center gap-1 text-sm text-[#94A3B8]">
-                      {device === "Mobile" ? <Smartphone size={14} /> : <Monitor size={14} />}
-                      {device}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <span className="font-mono text-sm text-[#475569]">{log.ipAddress || "-"}</span>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm text-[#94A3B8]">{getRelativeTime(log.createdAt)}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {filteredLogs.length === 0 && (
+            <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white py-10 text-center text-[#94A3B8]">
+              No activity found for the selected filter.
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-md border border-[rgba(15,23,42,0.06)] bg-white">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-[#F8FAFC]">
+                <TableHead>User</TableHead>
+                <TableHead>Action</TableHead>
+                <TableHead>Module</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Device</TableHead>
+                <TableHead>IP Address</TableHead>
+                <TableHead>Time</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredLogs.map((log) => {
+                const user = log.user?.id ? usersById.get(log.user.id) : undefined;
+                const device = parseDevice(log.userAgent);
+                const actorName = resolveAuditActorName(log, user);
+                return (
+                  <TableRow key={log.id} className="hover:bg-[#F8FAFC]">
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        {user?.avatarUrl ? (
+                          <img
+                            src={user.avatarUrl}
+                            alt={user.fullName}
+                            className="h-8 w-8 rounded-md object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#F1F5F9] text-xs font-bold text-[#0F172A]">
+                            {getInitials(actorName)}
+                          </div>
+                        )}
+                        <span className="font-medium text-[#0F172A]">
+                          {actorName}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {log.action === "LOGIN" && <LogIn size={16} className="text-green-500" />}
+                        {log.action === "LOGOUT" && <LogOut size={16} className="text-[#64748B]" />}
+                        {!["LOGIN", "LOGOUT"].includes(log.action) && <Activity size={16} className="text-[#475569]" />}
+                        <span className="text-sm capitalize text-[#475569]">{log.action.replace(/_/g, " ").toLowerCase()}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm text-[#475569]">{log.module || "-"}</span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm text-[#94A3B8]">{log.description}</span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="inline-flex items-center gap-1 text-sm text-[#94A3B8]">
+                        {device === "Mobile" ? <Smartphone size={14} /> : <Monitor size={14} />}
+                        {device}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-mono text-sm text-[#475569]">{log.ipAddress || "-"}</span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm text-[#94A3B8]">{getRelativeTime(log.createdAt)}</span>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+              {filteredLogs.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} className="py-10 text-center text-[#94A3B8]">
+                    No activity found for the selected filter.
                   </TableCell>
                 </TableRow>
-              );
-            })}
-            {filteredLogs.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={7} className="py-10 text-center text-[#94A3B8]">
-                  No activity found for the selected filter.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   );
 };
 
 export default function UsersPage() {
   const { toast } = useToast();
+  const { isMobile } = useIsMobile();
 
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [roles, setRoles] = useState<ApiRole[]>([]);
@@ -2725,7 +2797,7 @@ export default function UsersPage() {
                 <h1 className="text-xl font-bold text-[#0F172A] sm:text-2xl">User Management</h1>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="hidden items-center gap-3 sm:flex">
                 <Button
                   variant="outline"
                   onClick={() => setShowInviteDialog(true)}
@@ -2760,7 +2832,7 @@ export default function UsersPage() {
           </div>
 
           <div className="px-6">
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 overflow-x-auto">
               {[
                 { id: "users", label: "All Users", icon: Users },
                 { id: "roles", label: "Roles", icon: Shield },
@@ -2803,13 +2875,13 @@ export default function UsersPage() {
                     className="border-[#22D3EE] data-[state=checked]:border-[#22D3EE] data-[state=checked]:bg-[#0891B2]"
                   />
 
-                  <div className="relative">
+                  <div className="relative w-full sm:w-auto">
                     <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                     <Input
                       value={searchTerm}
                       onChange={(event) => setSearchTerm(event.target.value)}
                       placeholder="Search users..."
-                      className="h-10 w-64 rounded-md border-[rgba(15,23,42,0.06)] pl-9 focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
+                      className="h-10 w-full rounded-md border-[rgba(15,23,42,0.06)] pl-9 focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 sm:w-64"
                     />
                   </div>
 
@@ -2859,7 +2931,7 @@ export default function UsersPage() {
 
                 <div className="flex flex-wrap items-center gap-2">
                   <Select value={filterRole} onValueChange={setFilterRole}>
-                    <SelectTrigger className="h-10 w-36 rounded-md border-[rgba(15,23,42,0.06)]">
+                    <SelectTrigger className="h-10 w-full rounded-md border-[rgba(15,23,42,0.06)] sm:w-36">
                       <SelectValue placeholder="Role" />
                     </SelectTrigger>
                     <SelectContent className="rounded-md">
@@ -2873,7 +2945,7 @@ export default function UsersPage() {
                   </Select>
 
                   <Select value={filterStatus} onValueChange={setFilterStatus}>
-                    <SelectTrigger className="h-10 w-36 rounded-md border-[rgba(15,23,42,0.06)]">
+                    <SelectTrigger className="h-10 w-full rounded-md border-[rgba(15,23,42,0.06)] sm:w-36">
                       <SelectValue placeholder="Status" />
                     </SelectTrigger>
                     <SelectContent className="rounded-md">
@@ -2887,7 +2959,7 @@ export default function UsersPage() {
                   </Select>
 
                   <Select value={filterDepartment} onValueChange={setFilterDepartment}>
-                    <SelectTrigger className="h-10 w-44 rounded-md border-[rgba(15,23,42,0.06)]">
+                    <SelectTrigger className="h-10 w-full rounded-md border-[rgba(15,23,42,0.06)] sm:w-44">
                       <SelectValue placeholder="Department" />
                     </SelectTrigger>
                     <SelectContent className="rounded-md">
@@ -2900,7 +2972,7 @@ export default function UsersPage() {
                     </SelectContent>
                   </Select>
 
-                  <div className="flex items-center rounded-md bg-[#F8FAFC] p-1">
+                  <div className="hidden items-center rounded-md bg-[#F8FAFC] p-1 sm:flex">
                     <button
                       onClick={() => setViewMode("grid")}
                       className={cn(
@@ -2931,7 +3003,7 @@ export default function UsersPage() {
                 <div className="flex items-center justify-center py-20">
                   <RefreshCw size={32} className="animate-spin text-[#0891B2]" />
                 </div>
-              ) : viewMode === "grid" ? (
+              ) : isMobile || viewMode === "grid" ? (
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   <AnimatePresence>
                     {filteredUsers.map((user, index) => (
@@ -2947,6 +3019,7 @@ export default function UsersPage() {
                         onSendEmail={() => handleSendEmail(user)}
                         onResetPassword={() => void handleResetPassword(user)}
                         onStatusChange={(status) => void handleStatusChange(user.id, status)}
+                        isMobile={isMobile}
                         delay={index * 0.04}
                       />
                     ))}
@@ -3028,6 +3101,7 @@ export default function UsersPage() {
               }}
               onDuplicate={(role) => void handleDuplicateRole(role)}
               onDelete={(role) => openDeleteDialog({ type: "role", id: role.id, name: role.name })}
+              isMobile={isMobile}
             />
           )}
 
@@ -3044,6 +3118,7 @@ export default function UsersPage() {
               }}
               onViewMembers={handleViewMembers}
               onDelete={(department) => openDeleteDialog({ type: "department", id: department.id, name: department.name })}
+              isMobile={isMobile}
             />
           )}
 
@@ -3054,10 +3129,36 @@ export default function UsersPage() {
               filterAction={activityFilter}
               onFilterChange={setActivityFilter}
               onExport={() => void handleExportAuditLogs()}
+              isMobile={isMobile}
             />
           )}
         </div>
       </main>
+
+      {isMobile && (
+        <Button
+          onClick={() => {
+            if (activeTab === "users") {
+              handleCreateUser();
+              return;
+            }
+            if (activeTab === "roles") {
+              setEditingRole(null);
+              setShowRoleForm(true);
+              return;
+            }
+            if (activeTab === "departments") {
+              setEditingDepartment(null);
+              setShowDepartmentDialog(true);
+            }
+          }}
+          size="icon"
+          className="fixed bottom-24 right-4 z-30 h-14 w-14 rounded-full bg-[#0891B2] text-white shadow-lg hover:bg-[#0891B2]/90 sm:hidden"
+          aria-label="Create Team Item"
+        >
+          <Plus size={20} />
+        </Button>
+      )}
 
       <UserFormDialog
         isOpen={showUserForm}

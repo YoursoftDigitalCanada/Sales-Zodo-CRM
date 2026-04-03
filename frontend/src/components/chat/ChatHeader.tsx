@@ -62,8 +62,8 @@ export function ChatHeader({
   const displayName = getConversationName(conversation, currentUser.id);
 
   return (
-    <div className="bg-white border-b border-[rgba(15,23,42,0.06)] px-6 py-4 flex items-center justify-between">
-      <div className="flex items-center gap-4">
+    <div className="bg-white border-b border-[rgba(15,23,42,0.06)] px-3 py-3 sm:px-6 sm:py-4 flex items-center justify-between">
+      <div className="flex items-center gap-3 sm:gap-4 min-w-0">
         {/* Mobile back button */}
         {onBack && (
           <button onClick={onBack} className="lg:hidden p-2 hover:bg-white/10 rounded-md">
@@ -91,8 +91,8 @@ export function ChatHeader({
         </div>
 
         {/* Info */}
-        <div>
-          <h2 className="font-semibold text-[#0F172A]">{displayName}</h2>
+        <div className="min-w-0">
+          <h2 className="font-semibold text-[#0F172A] truncate">{displayName}</h2>
           <p className="text-sm text-[#475569]">
             {conversation.type === "group" ? (
               `${conversation.participants.length} members`
@@ -109,14 +109,14 @@ export function ChatHeader({
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1 sm:gap-2">
         <Tooltip>
           <TooltipTrigger asChild>
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={onVoiceCall}
-              className="p-2.5 hover:bg-white/10 rounded-md transition-all"
+              className="hidden sm:flex p-2.5 hover:bg-white/10 rounded-md transition-all"
             >
               <Phone size={18} className="text-[#475569]" />
             </motion.button>
@@ -130,7 +130,7 @@ export function ChatHeader({
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={onVideoCall}
-              className="p-2.5 hover:bg-white/10 rounded-md transition-all"
+              className="hidden sm:flex p-2.5 hover:bg-white/10 rounded-md transition-all"
             >
               <Video size={18} className="text-[#475569]" />
             </motion.button>
@@ -145,7 +145,7 @@ export function ChatHeader({
               whileTap={{ scale: 0.95 }}
               onClick={onToggleInfoPanel}
               className={cn(
-                "p-2.5 rounded-md transition-all",
+                "p-2 rounded-md transition-all sm:p-2.5",
                 showInfoPanel ? "bg-[#0891B2] text-white" : "hover:bg-white/10 text-[#475569]"
               )}
             >
@@ -160,7 +160,7 @@ export function ChatHeader({
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="p-2.5 hover:bg-white/10 rounded-md transition-all"
+              className="p-2 rounded-md hover:bg-white/10 transition-all sm:p-2.5"
             >
               <MoreVertical size={18} className="text-[#475569]" />
             </motion.button>

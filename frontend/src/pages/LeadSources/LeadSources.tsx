@@ -7,6 +7,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import {
     Select,
     SelectContent,
@@ -31,6 +32,14 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+    Drawer,
+    DrawerContent,
+    DrawerDescription,
+    DrawerFooter,
+    DrawerHeader,
+    DrawerTitle,
+} from "@/components/ui/drawer";
 import {
     Phone,
     Mail,
@@ -69,6 +78,8 @@ import {
     Filter,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { ListCardSkeleton, SwipeActionCard } from "@/features/clients/components/responsive-helpers";
 import AddSourceDialog from "./AddSourceDialog";
 
 // ── TYPES ──────────────────────────────────────────────────────────
@@ -359,10 +370,75 @@ const SourceCard = ({
     );
 };
 
+const MobileSourceCard = ({
+    source,
+    onOpen,
+    onDelete,
+}: {
+    source: LeadSourceItem;
+    onOpen: () => void;
+    onDelete: () => void;
+}) => {
+    const Icon = sourceTypeIcons[source.sourceType] || Globe;
+    const color = source.color || sourceTypeColors[source.sourceType] || "#6637F4";
+    const conversionRate = source.totalLeads > 0
+        ? Math.round((source.convertedLeads / source.totalLeads) * 100)
+        : 0;
+
+    return (
+        <SwipeActionCard
+            onView={onOpen}
+            onDelete={onDelete}
+            primaryLabel="View"
+            secondaryLabel="Delete"
+        >
+            <div onClick={onOpen} className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm">
+                <div className="flex items-start gap-3">
+                    <div
+                        className="flex h-12 w-12 items-center justify-center rounded-2xl"
+                        style={{ backgroundColor: `${color}15` }}
+                    >
+                        <Icon size={22} style={{ color }} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                                <p className="truncate text-base font-semibold text-[#0F172A]">{source.name}</p>
+                                <p className="truncate text-sm text-[#475569]">
+                                    {sourceTypeLabels[source.sourceType] || source.sourceType}
+                                </p>
+                            </div>
+                            <ConnectionBadge status={source.integrationStatus} />
+                        </div>
+
+                        <div className="mt-3 grid grid-cols-3 gap-2">
+                            <div className="rounded-xl bg-[#F8FAFC] px-3 py-2">
+                                <p className="text-[10px] uppercase tracking-wider text-[#94A3B8]">Leads</p>
+                                <p className="mt-1 text-sm font-semibold text-[#0F172A]">{source.totalLeads}</p>
+                            </div>
+                            <div className="rounded-xl bg-[#F8FAFC] px-3 py-2">
+                                <p className="text-[10px] uppercase tracking-wider text-[#94A3B8]">Conv.</p>
+                                <p className="mt-1 text-sm font-semibold text-[#0F172A]">{conversionRate}%</p>
+                            </div>
+                            <div className="rounded-xl bg-[#F8FAFC] px-3 py-2">
+                                <p className="text-[10px] uppercase tracking-wider text-[#94A3B8]">Revenue</p>
+                                <p className="mt-1 text-sm font-semibold text-[#0F172A]">
+                                    ${Math.round(Number(source.totalRevenue || 0)).toLocaleString()}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </SwipeActionCard>
+    );
+};
+
 // ── MAIN PAGE COMPONENT ────────────────────────────────────────────
 const LeadSourcesPage = () => {
     const navigate = useNavigate();
     const { toast } = useToast();
+    const { isMobile } = useIsMobile();
 
     const [sources, setSources] = useState<LeadSourceItem[]>([]);
     const [stats, setStats] = useState<StatsSummary | null>(null);
@@ -373,6 +449,7 @@ const LeadSourcesPage = () => {
     const [addDialogOpen, setAddDialogOpen] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [sourceToDelete, setSourceToDelete] = useState<LeadSourceItem | null>(null);
+    const [filtersOpen, setFiltersOpen] = useState(false);
 
     // Fetch sources and stats
     const fetchData = async () => {
@@ -482,7 +559,10 @@ const LeadSourcesPage = () => {
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => setAddDialogOpen(true)}
-                                className="flex items-center gap-2 px-4 py-2.5 bg-[#6637F4] text-white text-sm font-medium rounded-xl hover:bg-[#6637F4]/90 transition-colors shadow-sm shadow-[#6637F4]/25"
+                                className={cn(
+                                    "flex items-center gap-2 px-4 py-2.5 bg-[#6637F4] text-white text-sm font-medium rounded-xl hover:bg-[#6637F4]/90 transition-colors shadow-sm shadow-[#6637F4]/25",
+                                    isMobile && "hidden"
+                                )}
                             >
                                 <Plus size={16} />
                                 Add Source
@@ -525,13 +605,23 @@ const LeadSourcesPage = () => {
 
                     {/* Stats Cards */}
                     {stats && (
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                            <StatCard title="Total Sources" value={stats.totalSources} subtitle="All channels" icon={Target} color="#6637F4" delay={0} />
-                            <StatCard title="Active Sources" value={stats.activeSources} subtitle="Receiving leads" icon={Activity} color="#10B981" delay={0.05} />
-                            <StatCard title="Total Leads" value={stats.totalLeads} subtitle="All time" icon={Users} color="#6366F1" delay={0.1} />
-                            <StatCard title="Converted" value={stats.totalConverted} subtitle="Won leads" icon={TrendingUp} color="#F59E0B" delay={0.15} />
-                            <StatCard title="Revenue" value={`$${Math.round(stats.totalRevenue).toLocaleString()}`} subtitle="Total attributed" icon={DollarSign} color="#10B981" delay={0.2} />
-                            <StatCard title="Conversion" value={`${stats.avgConversionRate}%`} subtitle="Avg rate" icon={BarChart3} color="#EC4899" delay={0.25} />
+                        <div className={cn(
+                            isMobile
+                                ? "flex gap-3 overflow-x-auto pb-2"
+                                : "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4"
+                        )}>
+                            {[
+                                { title: "Total Sources", value: stats.totalSources, subtitle: "All channels", icon: Target, color: "#6637F4", delay: 0 },
+                                { title: "Active Sources", value: stats.activeSources, subtitle: "Receiving leads", icon: Activity, color: "#10B981", delay: 0.05 },
+                                { title: "Total Leads", value: stats.totalLeads, subtitle: "All time", icon: Users, color: "#6366F1", delay: 0.1 },
+                                { title: "Converted", value: stats.totalConverted, subtitle: "Won leads", icon: TrendingUp, color: "#F59E0B", delay: 0.15 },
+                                { title: "Revenue", value: `$${Math.round(stats.totalRevenue).toLocaleString()}`, subtitle: "Total attributed", icon: DollarSign, color: "#10B981", delay: 0.2 },
+                                { title: "Conversion", value: `${stats.avgConversionRate}%`, subtitle: "Avg rate", icon: BarChart3, color: "#EC4899", delay: 0.25 },
+                            ].map((card) => (
+                                <div key={card.title} className={cn(isMobile && "min-w-[220px] flex-shrink-0")}>
+                                    <StatCard {...card} />
+                                </div>
+                            ))}
                         </div>
                     )}
 
@@ -552,37 +642,44 @@ const LeadSourcesPage = () => {
                             />
                         </div>
 
-                        <Select value={filterType} onValueChange={setFilterType}>
-                            <SelectTrigger className="h-10 w-[160px] rounded-xl border-[rgba(15,23,42,0.08)] bg-[#F7F7FB]">
-                                <Filter size={14} className="mr-2 text-[#94A3B8]" />
-                                <SelectValue placeholder="Type" />
-                            </SelectTrigger>
-                            <SelectContent className="rounded-xl">
-                                <SelectItem value="all" className="rounded-lg">All Types</SelectItem>
-                                {Object.entries(sourceTypeLabels).map(([key, label]) => (
-                                    <SelectItem key={key} value={key} className="rounded-lg">{label}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        {isMobile ? (
+                            <Button variant="outline" className="h-10 rounded-xl" onClick={() => setFiltersOpen(true)}>
+                                <Filter size={14} className="mr-2" />
+                                Filters
+                            </Button>
+                        ) : (
+                            <>
+                                <Select value={filterType} onValueChange={setFilterType}>
+                                    <SelectTrigger className="h-10 w-[160px] rounded-xl border-[rgba(15,23,42,0.08)] bg-[#F7F7FB]">
+                                        <Filter size={14} className="mr-2 text-[#94A3B8]" />
+                                        <SelectValue placeholder="Type" />
+                                    </SelectTrigger>
+                                    <SelectContent className="rounded-xl">
+                                        <SelectItem value="all" className="rounded-lg">All Types</SelectItem>
+                                        {Object.entries(sourceTypeLabels).map(([key, label]) => (
+                                            <SelectItem key={key} value={key} className="rounded-lg">{label}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
 
-                        <Select value={filterStatus} onValueChange={setFilterStatus}>
-                            <SelectTrigger className="h-10 w-[140px] rounded-xl border-[rgba(15,23,42,0.08)] bg-[#F7F7FB]">
-                                <SelectValue placeholder="Status" />
-                            </SelectTrigger>
-                            <SelectContent className="rounded-xl">
-                                <SelectItem value="all" className="rounded-lg">All Status</SelectItem>
-                                <SelectItem value="ACTIVE" className="rounded-lg">Active</SelectItem>
-                                <SelectItem value="PAUSED" className="rounded-lg">Paused</SelectItem>
-                                <SelectItem value="INACTIVE" className="rounded-lg">Inactive</SelectItem>
-                            </SelectContent>
-                        </Select>
+                                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                                    <SelectTrigger className="h-10 w-[140px] rounded-xl border-[rgba(15,23,42,0.08)] bg-[#F7F7FB]">
+                                        <SelectValue placeholder="Status" />
+                                    </SelectTrigger>
+                                    <SelectContent className="rounded-xl">
+                                        <SelectItem value="all" className="rounded-lg">All Status</SelectItem>
+                                        <SelectItem value="ACTIVE" className="rounded-lg">Active</SelectItem>
+                                        <SelectItem value="PAUSED" className="rounded-lg">Paused</SelectItem>
+                                        <SelectItem value="INACTIVE" className="rounded-lg">Inactive</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </>
+                        )}
                     </motion.div>
 
                     {/* Source Cards Grid */}
                     {isLoading ? (
-                        <div className="flex items-center justify-center py-20">
-                            <Loader2 size={32} className="animate-spin text-[#6637F4]" />
-                        </div>
+                        <ListCardSkeleton rows={4} />
                     ) : filteredSources.length === 0 ? (
                         <motion.div
                             initial={{ opacity: 0 }}
@@ -609,28 +706,54 @@ const LeadSourcesPage = () => {
                             )}
                         </motion.div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                            <AnimatePresence>
+                        isMobile ? (
+                            <div className="space-y-3">
                                 {filteredSources.map((source) => (
-                                    <SourceCard
+                                    <MobileSourceCard
                                         key={source.id}
                                         source={source}
-                                        onView={() => navigate(`/lead-sources/${source.id}`)}
-                                        onEdit={() => navigate(`/lead-sources/${source.id}`)}
-                                        onPause={() => handlePause(source.id)}
-                                        onResume={() => handleResume(source.id)}
-                                        onTest={() => handleTest(source.id)}
+                                        onOpen={() => navigate(`/lead-sources/${source.id}`)}
                                         onDelete={() => {
                                             setSourceToDelete(source);
                                             setDeleteDialogOpen(true);
                                         }}
                                     />
                                 ))}
-                            </AnimatePresence>
-                        </div>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                <AnimatePresence>
+                                    {filteredSources.map((source) => (
+                                        <SourceCard
+                                            key={source.id}
+                                            source={source}
+                                            onView={() => navigate(`/lead-sources/${source.id}`)}
+                                            onEdit={() => navigate(`/lead-sources/${source.id}`)}
+                                            onPause={() => handlePause(source.id)}
+                                            onResume={() => handleResume(source.id)}
+                                            onTest={() => handleTest(source.id)}
+                                            onDelete={() => {
+                                                setSourceToDelete(source);
+                                                setDeleteDialogOpen(true);
+                                            }}
+                                        />
+                                    ))}
+                                </AnimatePresence>
+                            </div>
+                        )
                     )}
                 </div>
             </main>
+
+            {isMobile && (
+                <Button
+                    size="icon"
+                    className="fixed bottom-6 right-5 z-40 h-14 w-14 rounded-full bg-[#6637F4] shadow-[0_16px_36px_rgba(102,55,244,0.35)] hover:bg-[#6637F4]/90"
+                    onClick={() => setAddDialogOpen(true)}
+                >
+                    <Plus size={22} />
+                </Button>
+            )}
 
             {/* Add Source Dialog */}
             <AddSourceDialog
@@ -638,6 +761,60 @@ const LeadSourcesPage = () => {
                 onClose={() => setAddDialogOpen(false)}
                 onCreated={handleSourceCreated}
             />
+
+            <Drawer open={isMobile && filtersOpen} onOpenChange={setFiltersOpen}>
+                <DrawerContent className="max-h-[85dvh]">
+                    <DrawerHeader>
+                        <DrawerTitle>Filter Sources</DrawerTitle>
+                        <DrawerDescription>Refine the mobile lead source list.</DrawerDescription>
+                    </DrawerHeader>
+                    <div className="space-y-4 px-4 pb-4">
+                        <div className="space-y-2">
+                            <Label className="text-xs font-medium text-[#475569]">Source Type</Label>
+                            <Select value={filterType} onValueChange={setFilterType}>
+                                <SelectTrigger className="rounded-xl">
+                                    <SelectValue placeholder="All Types" />
+                                </SelectTrigger>
+                                <SelectContent className="rounded-xl">
+                                    <SelectItem value="all" className="rounded-lg">All Types</SelectItem>
+                                    {Object.entries(sourceTypeLabels).map(([key, label]) => (
+                                        <SelectItem key={key} value={key} className="rounded-lg">{label}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-xs font-medium text-[#475569]">Status</Label>
+                            <Select value={filterStatus} onValueChange={setFilterStatus}>
+                                <SelectTrigger className="rounded-xl">
+                                    <SelectValue placeholder="All Status" />
+                                </SelectTrigger>
+                                <SelectContent className="rounded-xl">
+                                    <SelectItem value="all" className="rounded-lg">All Status</SelectItem>
+                                    <SelectItem value="ACTIVE" className="rounded-lg">Active</SelectItem>
+                                    <SelectItem value="PAUSED" className="rounded-lg">Paused</SelectItem>
+                                    <SelectItem value="INACTIVE" className="rounded-lg">Inactive</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <DrawerFooter className="border-t bg-white">
+                        <Button
+                            variant="outline"
+                            className="rounded-xl"
+                            onClick={() => {
+                                setFilterType("all");
+                                setFilterStatus("all");
+                            }}
+                        >
+                            Clear Filters
+                        </Button>
+                        <Button className="rounded-xl bg-[#6637F4] hover:bg-[#6637F4]/90" onClick={() => setFiltersOpen(false)}>
+                            Apply Filters
+                        </Button>
+                    </DrawerFooter>
+                </DrawerContent>
+            </Drawer>
 
             {/* Delete Confirmation */}
             <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

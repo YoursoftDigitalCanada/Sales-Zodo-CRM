@@ -20,6 +20,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { Department } from './types';
 import { formatCurrency, getInitials } from './utils';
 
@@ -40,16 +48,56 @@ export const DepartmentCard: React.FC<DepartmentCardProps> = ({
   index = 0,
   totalEmployees,
 }) => {
+  const { isMobile } = useIsMobile();
+  const [isActionsOpen, setIsActionsOpen] = React.useState(false);
   const employeePercentage = totalEmployees > 0 
     ? Math.round((department.employeeCount / totalEmployees) * 100) 
     : 0;
+
+  const actionContent = (
+    <>
+      <Button
+        variant="ghost"
+        className="w-full justify-start rounded-md"
+        onClick={() => {
+          onViewEmployees?.(department);
+          setIsActionsOpen(false);
+        }}
+      >
+        <Users className="mr-2 h-4 w-4" />
+        View Employees
+      </Button>
+      <Button
+        variant="ghost"
+        className="w-full justify-start rounded-md"
+        onClick={() => {
+          onEdit?.(department);
+          setIsActionsOpen(false);
+        }}
+      >
+        <Edit className="mr-2 h-4 w-4" />
+        Edit Department
+      </Button>
+      <Button
+        variant="ghost"
+        className="w-full justify-start rounded-md text-red-600 hover:bg-red-50 hover:text-red-700"
+        onClick={() => {
+          onDelete?.(department);
+          setIsActionsOpen(false);
+        }}
+      >
+        <Trash2 className="mr-2 h-4 w-4" />
+        Delete Department
+      </Button>
+    </>
+  );
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.1 }}
-      whileHover={{ y: -4 }}
+      whileHover={isMobile ? undefined : { y: -4 }}
       className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] shadow-sm overflow-hidden group"
     >
       {/* Color Strip */}
@@ -86,31 +134,50 @@ export const DepartmentCard: React.FC<DepartmentCardProps> = ({
               </Badge>
             </div>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
+          {isMobile ? (
+            <>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsActionsOpen(true)}>
                 <MoreVertical className="w-4 h-4" />
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onViewEmployees?.(department)}>
-                <Users className="mr-2 h-4 w-4" />
-                View Employees
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onEdit?.(department)}>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit Department
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                onClick={() => onDelete?.(department)}
-                className="text-red-600"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              <Sheet open={isActionsOpen} onOpenChange={setIsActionsOpen}>
+                <SheetContent side="bottom" className="rounded-t-3xl border-[rgba(15,23,42,0.06)] px-5 pb-8 pt-10">
+                  <SheetHeader className="mb-4 text-left">
+                    <SheetTitle>{department.name}</SheetTitle>
+                    <SheetDescription>Department actions</SheetDescription>
+                  </SheetHeader>
+                  <div className="space-y-2">
+                    {actionContent}
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </>
+          ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => onViewEmployees?.(department)}>
+                  <Users className="mr-2 h-4 w-4" />
+                  View Employees
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onEdit?.(department)}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit Department
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={() => onDelete?.(department)}
+                  className="text-red-600"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
 
         {/* Description */}

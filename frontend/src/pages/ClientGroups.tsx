@@ -47,6 +47,14 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -91,6 +99,13 @@ import {
 } from "@/components/ui/popover";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/useIsMobile";
+import {
+  ListCardSkeleton,
+  PullToRefreshIndicator,
+  SwipeActionCard,
+  usePullToRefresh,
+} from "@/features/clients/components/responsive-helpers";
 import {
   Users,
   UserPlus,
@@ -816,6 +831,61 @@ const GroupCard = ({
   );
 };
 
+const MobileGroupCard = ({
+  group,
+  onView,
+  onDelete,
+}: {
+  group: ClientGroup;
+  onView: () => void;
+  onDelete: () => void;
+}) => {
+  const IconComponent = groupIcons[group.icon] || Users;
+  const typeInfo = getTypeInfo(group.type);
+
+  return (
+    <SwipeActionCard onView={onView} onDelete={onDelete}>
+      <div
+        className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-4"
+        onClick={onView}
+      >
+        <div className="flex items-start gap-3">
+          <div
+            className="flex h-12 w-12 items-center justify-center rounded-2xl"
+            style={{ backgroundColor: `${group.color}15` }}
+          >
+            <IconComponent size={22} style={{ color: group.color }} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-base font-semibold text-[#0F172A]">{group.name}</p>
+                <p className="truncate text-sm text-[#475569]">{group.description || typeInfo.name}</p>
+              </div>
+              <span
+                className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                style={{ backgroundColor: `${group.color}10`, color: group.color }}
+              >
+                {typeInfo.name}
+              </span>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <div className="rounded-xl bg-[#F8FAFC] px-3 py-2">
+                <p className="text-[10px] uppercase tracking-wider text-[#94A3B8]">Members</p>
+                <p className="mt-1 text-sm font-semibold text-[#0F172A]">{group.memberCount}</p>
+              </div>
+              <div className="rounded-xl bg-[#F8FAFC] px-3 py-2">
+                <p className="text-[10px] uppercase tracking-wider text-[#94A3B8]">Revenue</p>
+                <p className="mt-1 text-sm font-semibold text-[#0F172A]">{formatCurrency(group.totalRevenue)}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </SwipeActionCard>
+  );
+};
+
 // ============================================
 // GROUP TABLE ROW COMPONENT
 // ============================================
@@ -835,6 +905,7 @@ const GroupTableRow = ({
 }) => {
   const IconComponent = groupIcons[group.icon] || Users;
   const typeInfo = getTypeInfo(group.type);
+  const { isTablet } = useIsMobile();
 
   return (
     <TableRow className="group hover:bg-[#F8FAFC] cursor-pointer" onClick={onClick}>
@@ -894,16 +965,20 @@ const GroupTableRow = ({
           {formatCurrency(group.totalRevenue)}
         </span>
       </TableCell>
-      <TableCell>
-        <span className="text-sm text-[#475569]">
-          {formatCurrency(group.avgRevenue)}
-        </span>
-      </TableCell>
-      <TableCell>
-        <span className="text-sm text-[#94A3B8]">
-          {formatDate(group.createdAt)}
-        </span>
-      </TableCell>
+      {!isTablet && (
+        <TableCell>
+          <span className="text-sm text-[#475569]">
+            {formatCurrency(group.avgRevenue)}
+          </span>
+        </TableCell>
+      )}
+      {!isTablet && (
+        <TableCell>
+          <span className="text-sm text-[#94A3B8]">
+            {formatDate(group.createdAt)}
+          </span>
+        </TableCell>
+      )}
       <TableCell>
         <div
           className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -1218,6 +1293,7 @@ const ManageMembersDialog = ({
   allClients: Client[];
   onUpdateMembers: (members: Client[]) => void;
 }) => {
+  const { isMobile } = useIsMobile();
   const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -1258,14 +1334,33 @@ const ManageMembersDialog = ({
 
   const IconComponent = groupIcons[group.icon] || Users;
 
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] p-0 rounded-md overflow-hidden max-h-[80vh]">
+  const content = (
+    <>
         <div
           className="p-6 border-b border-[rgba(15,23,42,0.06)]"
           style={{ background: `linear-gradient(to right, ${group.color}10, transparent)` }}
         >
-          <DialogHeader>
+          {isMobile ? (
+            <DrawerHeader className="p-0 text-left">
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-12 h-12 rounded-md flex items-center justify-center"
+                  style={{ backgroundColor: `${group.color}20` }}
+                >
+                  <IconComponent size={24} style={{ color: group.color }} />
+                </div>
+                <div>
+                  <DrawerTitle className="text-xl font-bold text-[#0F172A]">
+                    Manage Members
+                  </DrawerTitle>
+                  <DrawerDescription className="text-[#94A3B8]">
+                    {group.name} • {selectedMembers.size} members selected
+                  </DrawerDescription>
+                </div>
+              </div>
+            </DrawerHeader>
+          ) : (
+            <DialogHeader>
             <div className="flex items-center gap-3">
               <div
                 className="w-12 h-12 rounded-md flex items-center justify-center"
@@ -1280,9 +1375,10 @@ const ManageMembersDialog = ({
                 <DialogDescription className="text-[#94A3B8]">
                   {group.name} • {selectedMembers.size} members selected
                 </DialogDescription>
+                </div>
               </div>
-            </div>
-          </DialogHeader>
+            </DialogHeader>
+          )}
         </div>
 
         <div className="p-4 border-b border-[rgba(15,23,42,0.06)]">
@@ -1352,21 +1448,40 @@ const ManageMembersDialog = ({
           </div>
         </div>
 
-        <DialogFooter className="p-6 pt-4 border-t border-[rgba(15,23,42,0.06)] gap-3">
+        <div className="p-6 pt-4 border-t border-[rgba(15,23,42,0.06)]">
           <div className="flex-1 text-sm text-[#94A3B8]">
             {selectedMembers.size} of {allClients.length} clients selected
           </div>
-          <Button variant="outline" onClick={onClose} className="rounded-md">
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSave}
-            className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
-          >
-            <Check size={16} className="mr-2" />
-            Save Changes
-          </Button>
-        </DialogFooter>
+          <div className="mt-3 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <Button variant="outline" onClick={onClose} className="rounded-md">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSave}
+              className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
+            >
+              <Check size={16} className="mr-2" />
+              Save Changes
+            </Button>
+          </div>
+        </div>
+      </>
+  );
+
+  if (isMobile) {
+    return (
+      <Drawer open={isOpen} onOpenChange={onClose}>
+        <DrawerContent className="max-h-[90vh] rounded-t-[24px] border-none bg-white">
+          <div className="overflow-y-auto">{content}</div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[600px] p-0 rounded-md overflow-hidden max-h-[80vh]">
+        {content}
       </DialogContent>
     </Dialog>
   );
@@ -1389,6 +1504,7 @@ const GroupDetailsDialog = ({
   onEdit: () => void;
   onManageMembers: () => void;
 }) => {
+  const { isMobile } = useIsMobile();
   if (!group) return null;
 
   const IconComponent = groupIcons[group.icon] || Users;
@@ -1400,9 +1516,8 @@ const GroupDetailsDialog = ({
     ? Math.round(group.members.reduce((acc, m) => acc + m.projectsCount, 0) / group.members.length)
     : 0;
 
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[700px] p-0 rounded-md overflow-hidden max-h-[90vh] overflow-y-auto">
+  const content = (
+    <>
         {/* Header */}
         <div
           className="p-6 border-b border-[rgba(15,23,42,0.06)]"
@@ -1574,7 +1689,8 @@ const GroupDetailsDialog = ({
           </div>
         </div>
 
-        <DialogFooter className="p-6 pt-0 gap-3 border-t border-[rgba(15,23,42,0.06)]">
+        <div className="border-t border-[rgba(15,23,42,0.06)] p-6 pt-0">
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
           <Button variant="outline" className="rounded-md gap-2">
             <Mail size={16} />
             Email Group
@@ -1590,7 +1706,25 @@ const GroupDetailsDialog = ({
             <Pencil size={16} />
             Edit Group
           </Button>
-        </DialogFooter>
+          </div>
+        </div>
+      </>
+  );
+
+  if (isMobile) {
+    return (
+      <Drawer open={isOpen} onOpenChange={onClose}>
+        <DrawerContent className="max-h-[92vh] rounded-t-[24px] border-none bg-white">
+          <div className="overflow-y-auto">{content}</div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[700px] p-0 rounded-md overflow-hidden max-h-[90vh] overflow-y-auto">
+        {content}
       </DialogContent>
     </Dialog>
   );
@@ -1602,6 +1736,7 @@ const GroupDetailsDialog = ({
 
 const ClientGroupsPage = () => {
   const { toast } = useToast();
+  const { isMobile, isTablet } = useIsMobile();
 
   // State
   const [groups, setGroups] = useState<ClientGroup[]>([]);
@@ -1618,6 +1753,11 @@ const ClientGroupsPage = () => {
   const [isMembersOpen, setIsMembersOpen] = useState(false);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [currentGroup, setCurrentGroup] = useState<ClientGroup | null>(null);
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isOffline, setIsOffline] = useState(
+    typeof window !== "undefined" ? !window.navigator.onLine : false
+  );
 
   // ── Fetch data from API ───────────────────────────
   const fetchData = useCallback(async () => {
@@ -1682,8 +1822,10 @@ const ClientGroupsPage = () => {
 
       setGroups(normGroups);
       setClients(normClients);
+      setLoadError(null);
     } catch (err) {
       console.error('Failed to load groups', err);
+      setLoadError("Failed to load client groups");
       toast({ title: 'Error', description: 'Failed to load client groups', variant: 'destructive' });
     } finally {
       setLoading(false);
@@ -1691,6 +1833,21 @@ const ClientGroupsPage = () => {
   }, [toast]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  const { handlers, pullDistance, isRefreshing } = usePullToRefresh({
+    enabled: isMobile,
+    onRefresh: fetchData,
+  });
 
   // Continue from where the code was cut off...
 
@@ -1735,11 +1892,12 @@ const ClientGroupsPage = () => {
     const topGroup = groups.reduce((max, g) =>
       g.totalRevenue > max.totalRevenue ? g : max, groups[0]
     );
+    const totalMembers = groups.reduce((acc, g) => acc + g.memberCount, 0);
 
     return {
       totalGroups: groups.length,
       totalClients: clients.length,
-      avgGroupSize: Math.round(groups.reduce((acc, g) => acc + g.memberCount, 0) / groups.length),
+      avgGroupSize: groups.length > 0 ? Math.round(totalMembers / groups.length) : 0,
       totalRevenue,
       topGroup: topGroup?.name || "N/A",
     };
@@ -1880,14 +2038,22 @@ const ClientGroupsPage = () => {
   // RENDER
   // ============================================
 
-  return (
-    <div className="flex h-screen bg-[#F8FAFC]">
+  const hasActiveFilters =
+    Boolean(searchQuery) || selectedType !== "all" || sortBy !== "name";
 
-      <main className="flex-1 overflow-auto">
+  return (
+    <div className="flex min-h-screen bg-[#F8FAFC]" {...handlers}>
+      <PullToRefreshIndicator
+        visible={isMobile && (pullDistance > 0 || isRefreshing)}
+        distance={pullDistance}
+        isRefreshing={isRefreshing}
+      />
+
+      <main className="flex-1 overflow-auto pb-24 md:pb-0">
         {/* Header */}
         <div className="crm-module-header sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-[rgba(15,23,42,0.06)]">
-          <div className="px-8 py-6">
-            <div className="flex items-center justify-between mb-6">
+          <div className="px-4 py-5 sm:px-6 lg:px-8">
+            <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <div className="hidden sm:flex items-center gap-2 text-sm text-[#94A3B8] mb-1">
                   <Link to="/dashboard" className="hover:text-[#0891B2]">
@@ -1906,172 +2072,297 @@ const ClientGroupsPage = () => {
                 </p>
               </div>
 
-              <div className="flex items-center gap-3">
-                <Button variant="outline" className="rounded-md gap-2">
-                  <Upload size={16} />
-                  Import
-                </Button>
-                <Button variant="outline" className="rounded-md gap-2">
-                  <Download size={16} />
-                  Export
-                </Button>
-                <Button
-                  onClick={handleCreateGroup}
-                  className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md gap-2"
-                >
-                  <Plus size={16} />
-                  Create Group
-                </Button>
+              <div className="flex items-center gap-2 sm:gap-3">
+                {!isMobile && (
+                  <Button variant="outline" className="rounded-md gap-2">
+                    <Upload size={16} />
+                    Import
+                  </Button>
+                )}
+                {!isMobile && (
+                  <Button variant="outline" className="rounded-md gap-2">
+                    <Download size={16} />
+                    Export
+                  </Button>
+                )}
+                {!isMobile && (
+                  <Button
+                    onClick={handleCreateGroup}
+                    className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md gap-2"
+                  >
+                    <Plus size={16} />
+                    Create Group
+                  </Button>
+                )}
+                {isMobile && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="rounded-md"
+                    onClick={fetchData}
+                    aria-label="Refresh groups"
+                  >
+                    <RefreshCw size={16} />
+                  </Button>
+                )}
+                {isMobile && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="rounded-md"
+                    onClick={() => setIsFilterDrawerOpen(true)}
+                    aria-label="Open filters"
+                  >
+                    <Filter size={16} />
+                  </Button>
+                )}
               </div>
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
-              <StatCard
-                title="Total Groups"
-                value={stats.totalGroups}
-                icon={Layers}
-                color="#8B5CF6"
-                delay={0}
-              />
-              <StatCard
-                title="Total Clients"
-                value={stats.totalClients}
-                icon={Users}
-                color="#3B82F6"
-                delay={0.05}
-              />
-              <StatCard
-                title="Avg Group Size"
-                value={stats.avgGroupSize}
-                subtitle="clients per group"
-                icon={Target}
-                color="#10B981"
-                delay={0.1}
-              />
-              <StatCard
-                title="Total Revenue"
-                value={formatCurrency(stats.totalRevenue)}
-                icon={CircleDollarSign}
-                color="#22D3EE"
-                trend={{ value: 12.5, label: "vs last month" }}
-                delay={0.15}
-              />
-              <StatCard
-                title="Top Group"
-                value={stats.topGroup}
-                subtitle="by revenue"
-                icon={Crown}
-                color="#FBBF24"
-                delay={0.2}
-              />
+            <div
+              className={cn(
+                "gap-3 sm:gap-4",
+                isMobile
+                  ? "flex overflow-x-auto pb-1"
+                  : "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5"
+              )}
+            >
+              {[
+                {
+                  title: "Total Groups",
+                  value: stats.totalGroups,
+                  icon: Layers,
+                  color: "#8B5CF6",
+                  delay: 0,
+                },
+                {
+                  title: "Total Clients",
+                  value: stats.totalClients,
+                  icon: Users,
+                  color: "#3B82F6",
+                  delay: 0.05,
+                },
+                {
+                  title: "Avg Group Size",
+                  value: stats.avgGroupSize,
+                  subtitle: "clients per group",
+                  icon: Target,
+                  color: "#10B981",
+                  delay: 0.1,
+                },
+                {
+                  title: "Total Revenue",
+                  value: formatCurrency(stats.totalRevenue),
+                  icon: CircleDollarSign,
+                  color: "#22D3EE",
+                  trend: { value: 12.5, label: "vs last month" },
+                  delay: 0.15,
+                },
+                {
+                  title: "Top Group",
+                  value: stats.topGroup,
+                  subtitle: "by revenue",
+                  icon: Crown,
+                  color: "#FBBF24",
+                  delay: 0.2,
+                },
+              ].map((card) => (
+                <div
+                  key={card.title}
+                  className={cn(isMobile && "min-w-[220px] flex-none")}
+                >
+                  <StatCard {...card} />
+                </div>
+              ))}
             </div>
           </div>
 
           {/* Filters Bar */}
-          <div className="px-4 py-3 sm:px-6 sm:py-4 lg:px-8 border-t border-[rgba(15,23,42,0.06)] flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 flex-1">
-              {/* Search */}
-              <div className="relative w-80">
-                <Search
-                  size={16}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]"
-                />
-                <Input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search groups..."
-                  className="pl-9 h-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-[#22D3EE]/20"
-                />
+          <div className="border-t border-[rgba(15,23,42,0.06)] px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
+            {isMobile ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Search
+                      size={16}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]"
+                    />
+                    <Input
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search groups..."
+                      className="h-10 rounded-md border-[rgba(15,23,42,0.06)] pl-9 focus:border-[#22D3EE] focus:ring-[#22D3EE]/20"
+                    />
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="rounded-md"
+                    onClick={() => setViewMode((prev) => (prev === "grid" ? "list" : "grid"))}
+                    aria-label="Toggle layout"
+                  >
+                    {viewMode === "grid" ? <List size={16} /> : <LayoutGrid size={16} />}
+                  </Button>
+                </div>
+                <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                  <Badge className="rounded-full bg-[#0891B2]/10 px-3 py-1 text-[#0891B2]">
+                    {filteredGroups.length} groups
+                  </Badge>
+                  {selectedType !== "all" && (
+                    <Badge variant="outline" className="rounded-full px-3 py-1">
+                      {getTypeInfo(selectedType).name}
+                    </Badge>
+                  )}
+                  {sortBy !== "name" && (
+                    <Badge variant="outline" className="rounded-full px-3 py-1 capitalize">
+                      Sort: {sortBy}
+                    </Badge>
+                  )}
+                  {hasActiveFilters && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSearchQuery("");
+                        setSelectedType("all");
+                        setSortBy("name");
+                      }}
+                      className="h-8 rounded-full px-3 text-[#94A3B8]"
+                    >
+                      <X size={14} className="mr-1" />
+                      Clear
+                    </Button>
+                  )}
+                </div>
               </div>
+            ) : (
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-1 items-center gap-3">
+                  {/* Search */}
+                  <div className={cn("relative", isTablet ? "w-full max-w-sm" : "w-80")}>
+                    <Search
+                      size={16}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]"
+                    />
+                    <Input
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search groups..."
+                      className="pl-9 h-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-[#22D3EE]/20"
+                    />
+                  </div>
 
-              {/* Type Filter */}
-              <Select value={selectedType} onValueChange={setSelectedType}>
-                <SelectTrigger className="w-44 h-10 rounded-md">
-                  <Filter size={14} className="mr-2 text-[#475569]" />
-                  <SelectValue placeholder="Filter by type" />
-                </SelectTrigger>
-                <SelectContent className="rounded-md">
-                  <SelectItem value="all" className="rounded-md">
-                    All Types
-                  </SelectItem>
-                  {groupTypes.map((type) => (
-                    <SelectItem key={type.id} value={type.id} className="rounded-md">
-                      {type.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                  {/* Type Filter */}
+                  <Select value={selectedType} onValueChange={setSelectedType}>
+                    <SelectTrigger className="w-44 h-10 rounded-md">
+                      <Filter size={14} className="mr-2 text-[#475569]" />
+                      <SelectValue placeholder="Filter by type" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-md">
+                      <SelectItem value="all" className="rounded-md">
+                        All Types
+                      </SelectItem>
+                      {groupTypes.map((type) => (
+                        <SelectItem key={type.id} value={type.id} className="rounded-md">
+                          {type.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
 
-              {/* Sort */}
-              <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
-                <SelectTrigger className="w-40 h-10 rounded-md">
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent className="rounded-md">
-                  <SelectItem value="name" className="rounded-md">
-                    Name
-                  </SelectItem>
-                  <SelectItem value="members" className="rounded-md">
-                    Members
-                  </SelectItem>
-                  <SelectItem value="revenue" className="rounded-md">
-                    Revenue
-                  </SelectItem>
-                  <SelectItem value="created" className="rounded-md">
-                    Date Created
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+                  {/* Sort */}
+                  <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+                    <SelectTrigger className="w-40 h-10 rounded-md">
+                      <SelectValue placeholder="Sort by" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-md">
+                      <SelectItem value="name" className="rounded-md">
+                        Name
+                      </SelectItem>
+                      <SelectItem value="members" className="rounded-md">
+                        Members
+                      </SelectItem>
+                      <SelectItem value="revenue" className="rounded-md">
+                        Revenue
+                      </SelectItem>
+                      <SelectItem value="created" className="rounded-md">
+                        Date Created
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
 
-              {/* Clear Filters */}
-              {(searchQuery || selectedType !== "all") && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setSearchQuery("");
-                    setSelectedType("all");
-                  }}
-                  className="rounded-md text-[#94A3B8]"
-                >
-                  <X size={14} className="mr-1" />
-                  Clear
-                </Button>
-              )}
-            </div>
+                  {/* Clear Filters */}
+                  {hasActiveFilters && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSearchQuery("");
+                        setSelectedType("all");
+                        setSortBy("name");
+                      }}
+                      className="rounded-md text-[#94A3B8]"
+                    >
+                      <X size={14} className="mr-1" />
+                      Clear
+                    </Button>
+                  )}
+                </div>
 
-            {/* View Toggle */}
-            <div className="flex items-center gap-1 bg-white/5 p-1 rounded-md">
-              <Button
-                variant={viewMode === "grid" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("grid")}
-                className={cn(
-                  "rounded-md h-8 w-8 p-0",
-                  viewMode === "grid" && "bg-white"
-                )}
-              >
-                <LayoutGrid size={16} />
-              </Button>
-              <Button
-                variant={viewMode === "list" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("list")}
-                className={cn(
-                  "rounded-md h-8 w-8 p-0",
-                  viewMode === "list" && "bg-white"
-                )}
-              >
-                <List size={16} />
-              </Button>
-            </div>
+                {/* View Toggle */}
+                <div className="flex items-center gap-1 bg-white/5 p-1 rounded-md">
+                  <Button
+                    variant={viewMode === "grid" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode("grid")}
+                    className={cn(
+                      "rounded-md h-8 w-8 p-0",
+                      viewMode === "grid" && "bg-white"
+                    )}
+                  >
+                    <LayoutGrid size={16} />
+                  </Button>
+                  <Button
+                    variant={viewMode === "list" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode("list")}
+                    className={cn(
+                      "rounded-md h-8 w-8 p-0",
+                      viewMode === "list" && "bg-white"
+                    )}
+                  >
+                    <List size={16} />
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Content */}
         <div className="p-4 sm:p-6 lg:p-8">
-          {filteredGroups.length === 0 ? (
+          {isOffline && (
+            <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+              You&apos;re offline. Showing the most recently loaded client groups.
+            </div>
+          )}
+
+          {loading ? (
+            <ListCardSkeleton count={isMobile ? 4 : 6} />
+          ) : loadError ? (
+            <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-[rgba(15,23,42,0.08)] bg-white px-6 py-16 text-center">
+              <div className="mb-4 rounded-full bg-red-50 p-4 text-red-500">
+                <AlertCircle size={28} />
+              </div>
+              <h3 className="text-lg font-semibold text-[#0F172A]">Couldn&apos;t load client groups</h3>
+              <p className="mt-2 max-w-md text-sm text-[#475569]">{loadError}</p>
+              <Button onClick={fetchData} className="mt-5 bg-[#0891B2] text-white hover:bg-[#0891B2]/90">
+                <RefreshCw size={16} className="mr-2" />
+                Retry
+              </Button>
+            </div>
+          ) : filteredGroups.length === 0 ? (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -2081,23 +2372,49 @@ const ClientGroupsPage = () => {
                 <Folder size={32} className="text-[#475569]" />
               </div>
               <h3 className="text-lg font-semibold text-[#0F172A] mb-2">
-                No groups found
+                {hasActiveFilters ? "No matching groups" : "No groups found"}
               </h3>
               <p className="text-[#94A3B8] mb-6 text-center max-w-md">
-                {searchQuery || selectedType !== "all"
-                  ? "Try adjusting your search or filters"
-                  : "Create your first client group to start organizing your clients"}
+                {hasActiveFilters
+                  ? "Try adjusting your search or filters to find a group."
+                  : "Create your first client group to start organizing your clients."}
               </p>
-              <Button
-                onClick={handleCreateGroup}
-                className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md gap-2"
-              >
-                <Plus size={16} />
-                Create Group
-              </Button>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                {hasActiveFilters && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setSelectedType("all");
+                      setSortBy("name");
+                    }}
+                    className="rounded-md"
+                  >
+                    Clear Filters
+                  </Button>
+                )}
+                <Button
+                  onClick={handleCreateGroup}
+                  className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md gap-2"
+                >
+                  <Plus size={16} />
+                  Create Group
+                </Button>
+              </div>
             </motion.div>
+          ) : isMobile ? (
+            <div className="space-y-4">
+              {filteredGroups.map((group) => (
+                <MobileGroupCard
+                  key={group.id}
+                  group={group}
+                  onView={() => handleViewGroup(group)}
+                  onDelete={() => handleDeleteGroup(group)}
+                />
+              ))}
+            </div>
           ) : viewMode === "grid" ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className={cn("grid gap-6", isTablet ? "grid-cols-2" : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3")}>
               <AnimatePresence mode="popLayout">
                 {filteredGroups.map((group, index) => (
                   <GroupCard
@@ -2125,8 +2442,8 @@ const ClientGroupsPage = () => {
                     <TableHead className="font-semibold">Type</TableHead>
                     <TableHead className="font-semibold">Members</TableHead>
                     <TableHead className="font-semibold">Total Revenue</TableHead>
-                    <TableHead className="font-semibold">Avg Revenue</TableHead>
-                    <TableHead className="font-semibold">Created</TableHead>
+                    {!isTablet && <TableHead className="font-semibold">Avg Revenue</TableHead>}
+                    {!isTablet && <TableHead className="font-semibold">Created</TableHead>}
                     <TableHead className="w-[100px]"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -2154,6 +2471,80 @@ const ClientGroupsPage = () => {
           )}
         </div>
       </main>
+
+      {isMobile && (
+        <Button
+          onClick={handleCreateGroup}
+          size="icon"
+          className="fixed bottom-6 right-5 z-40 h-14 w-14 rounded-full bg-[#0891B2] text-white shadow-lg hover:bg-[#0891B2]/90"
+          aria-label="Create group"
+        >
+          <Plus size={22} />
+        </Button>
+      )}
+
+      <Drawer open={isFilterDrawerOpen} onOpenChange={setIsFilterDrawerOpen}>
+        <DrawerContent className="rounded-t-[24px] border-none bg-white">
+          <DrawerHeader>
+            <DrawerTitle>Filter Client Groups</DrawerTitle>
+            <DrawerDescription>
+              Narrow down groups by type and sort order.
+            </DrawerDescription>
+          </DrawerHeader>
+          <div className="space-y-5 px-4 pb-4">
+            <div className="space-y-2">
+              <Label htmlFor="mobile-group-type">Group Type</Label>
+              <Select value={selectedType} onValueChange={setSelectedType}>
+                <SelectTrigger id="mobile-group-type" className="h-11 rounded-md">
+                  <SelectValue placeholder="All Types" />
+                </SelectTrigger>
+                <SelectContent className="rounded-md">
+                  <SelectItem value="all">All Types</SelectItem>
+                  {groupTypes.map((type) => (
+                    <SelectItem key={type.id} value={type.id}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="mobile-group-sort">Sort By</Label>
+              <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
+                <SelectTrigger id="mobile-group-sort" className="h-11 rounded-md">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-md">
+                  <SelectItem value="name">Name</SelectItem>
+                  <SelectItem value="members">Members</SelectItem>
+                  <SelectItem value="revenue">Revenue</SelectItem>
+                  <SelectItem value="created">Date Created</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DrawerFooter className="flex-row gap-3">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => {
+                setSearchQuery("");
+                setSelectedType("all");
+                setSortBy("name");
+              }}
+            >
+              Clear
+            </Button>
+            <Button
+              className="flex-1 bg-[#0891B2] text-white hover:bg-[#0891B2]/90"
+              onClick={() => setIsFilterDrawerOpen(false)}
+            >
+              Apply
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
 
       {/* Dialogs */}
       <GroupFormDialog

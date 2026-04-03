@@ -28,6 +28,14 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { NotificationBell } from "@/components/NotificationBell";
 import {
   AlertDialog,
@@ -97,6 +105,13 @@ import {
   Columns,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/useIsMobile";
+import {
+  ListCardSkeleton,
+  PullToRefreshIndicator,
+  SwipeActionCard,
+  usePullToRefresh,
+} from "@/features/clients/components/responsive-helpers";
 
 // ============================================
 // CONFIGURATION
@@ -233,7 +248,7 @@ const StatCard = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
       whileHover={{ y: -4 }}
-      className="relative bg-white rounded-md p-5 border border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg  transition-all overflow-hidden group"
+      className="relative min-w-[220px] flex-1 bg-white rounded-md p-5 border border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg transition-all overflow-hidden group md:min-w-0"
     >
       <div className={cn("absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-10 group-hover:opacity-20 transition-all", colors.bg)} />
 
@@ -703,6 +718,89 @@ const ContactCard = ({
   );
 };
 
+const MobileContactCard = ({
+  contact,
+  isSelected,
+  onSelect,
+  onView,
+  onDelete,
+  onSendEmail,
+  onCall,
+}: {
+  contact: Contact;
+  isSelected: boolean;
+  onSelect: (checked: boolean) => void;
+  onView: () => void;
+  onDelete: () => void;
+  onSendEmail: () => void;
+  onCall: () => void;
+}) => {
+  const typeColor = getTypeColor(contact.type);
+
+  return (
+    <SwipeActionCard
+      onView={onView}
+      onDelete={onDelete}
+      onLongPress={() => onSelect(!isSelected)}
+      className="shadow-sm"
+    >
+      <div
+        className={cn(
+          "rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-4",
+          isSelected && "border-[#22D3EE] bg-[#0891B2]/5"
+        )}
+        onClick={onView}
+      >
+        <div className="flex items-start gap-3">
+          {contact.avatar ? (
+            <img src={contact.avatar} alt={contact.contactPerson} className="h-12 w-12 rounded-2xl object-cover" />
+          ) : (
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F1F5F9] font-semibold text-[#0F172A]">
+              {getInitials(contact.contactPerson)}
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-base font-semibold text-[#0F172A]">{contact.contactPerson}</p>
+                <p className="truncate text-sm text-[#475569]">{contact.clientName}</p>
+              </div>
+              <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold", typeColor.bg, typeColor.text)}>
+                <span className={cn("h-1.5 w-1.5 rounded-full", typeColor.dot)} />
+                {contact.type}
+              </span>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onCall();
+                }}
+                className="rounded-xl bg-[#F8FAFC] px-3 py-2 text-left"
+              >
+                <p className="text-[10px] uppercase tracking-wider text-[#94A3B8]">Call</p>
+                <p className="mt-1 truncate text-sm font-medium text-[#0F172A]">{contact.contactNo || "-"}</p>
+              </button>
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onSendEmail();
+                }}
+                className="rounded-xl bg-[#F8FAFC] px-3 py-2 text-left"
+              >
+                <p className="text-[10px] uppercase tracking-wider text-[#94A3B8]">Email</p>
+                <p className="mt-1 truncate text-sm font-medium text-[#0F172A]">{contact.contactEmail || "-"}</p>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </SwipeActionCard>
+  );
+};
+
 // ============================================
 // ADD/EDIT CONTACT DIALOG
 // ============================================
@@ -720,6 +818,7 @@ const ContactDialog = ({
   contact?: Contact | null;
   clients: { id: number; clientName: string }[];
 }) => {
+  const { isMobile } = useIsMobile();
   const [formData, setFormData] = useState({
     contactPerson: "",
     clientId: "",
@@ -782,19 +881,8 @@ const ContactDialog = ({
 
   const isEditMode = Boolean(contact);
 
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[550px] p-0 rounded-md overflow-hidden">
-        {/* Header */}
-        <div className="p-6 border-b border-[rgba(15,23,42,0.06)] bg-[#F0FDFA]">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-[#0F172A]">
-              {isEditMode ? "Edit Contact" : "Add New Contact"}
-            </DialogTitle>
-          </DialogHeader>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+  const formBody = (
+    <form onSubmit={handleSubmit} className={cn("space-y-5", isMobile ? "px-4 pb-4" : "p-6 max-h-[70vh] overflow-y-auto")}>
           {/* Contact Name */}
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2 space-y-2">
@@ -979,6 +1067,37 @@ const ContactDialog = ({
             </Button>
           </DialogFooter>
         </form>
+  );
+
+  if (isMobile) {
+    return (
+      <Drawer open={isOpen} onOpenChange={onClose}>
+        <DrawerContent className="max-h-[90vh] rounded-t-[24px] border-none bg-white">
+          <DrawerHeader className="border-b border-[rgba(15,23,42,0.06)] bg-[#F0FDFA] px-4 pb-4 text-left">
+            <DrawerTitle className="text-xl font-bold text-[#0F172A]">
+              {isEditMode ? "Edit Contact" : "Add New Contact"}
+            </DrawerTitle>
+            <DrawerDescription>
+              Update contact details without leaving the client module.
+            </DrawerDescription>
+          </DrawerHeader>
+          <div className="overflow-y-auto py-4">{formBody}</div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[550px] p-0 rounded-md overflow-hidden">
+        <div className="p-6 border-b border-[rgba(15,23,42,0.06)] bg-[#F0FDFA]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-[#0F172A]">
+              {isEditMode ? "Edit Contact" : "Add New Contact"}
+            </DialogTitle>
+          </DialogHeader>
+        </div>
+        {formBody}
       </DialogContent>
     </Dialog>
   );
@@ -991,6 +1110,7 @@ const ContactDialog = ({
 const ClientContactListPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isMobile, isTablet } = useIsMobile();
 
   // State
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -1012,6 +1132,12 @@ const ClientContactListPage = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [isHeroCollapsed, setIsHeroCollapsed] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isOffline, setIsOffline] = useState(
+    typeof window !== "undefined" ? !window.navigator.onLine : false
+  );
 
   // ============================================
   // EFFECTS
@@ -1031,6 +1157,17 @@ const ClientContactListPage = () => {
   useEffect(() => {
     fetchContacts();
     fetchClients();
+  }, []);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
   }, []);
 
   // ============================================
@@ -1060,8 +1197,10 @@ const ClientContactListPage = () => {
         notes: "",
       }));
       setContacts(mapped);
+      setLoadError(null);
     } catch (error) {
       console.error("Network error:", error);
+      setLoadError("Failed to load contacts");
       toast({
         title: "Error",
         description: "Failed to load contacts",
@@ -1217,6 +1356,15 @@ const ClientContactListPage = () => {
     currentPage * pageSize
   );
 
+  const responsiveColumns = useMemo(() => {
+    if (!isTablet) return columns;
+    const allowed = new Set(["contactPerson", "clientName", "designation", "contactEmail", "contactNo", "type"]);
+    return columns.map((column) => ({
+      ...column,
+      visible: column.visible && allowed.has(column.key),
+    }));
+  }, [columns, isTablet]);
+
   // Stats
   const stats = useMemo(() => ({
     total: contacts.length,
@@ -1278,18 +1426,29 @@ const ClientContactListPage = () => {
     setContactDialogOpen(true);
   };
 
+  const { handlers, pullDistance, isRefreshing } = usePullToRefresh({
+    enabled: isMobile,
+    onRefresh: fetchContacts,
+  });
+
   // ============================================
   // RENDER
   // ============================================
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div
+      className="min-h-screen bg-[#F8FAFC]"
+      onTouchStart={handlers.onTouchStart}
+      onTouchMove={handlers.onTouchMove}
+      onTouchEnd={handlers.onTouchEnd}
+    >
 
       <main
         className={cn(
           "flex-1 transition-all duration-300"
         )}
       >
+        <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
         {/* Header */}
         <header className="crm-module-header sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-[rgba(15,23,42,0.06)]/50">
           <div className="flex h-20 items-center justify-between px-6">
@@ -1312,7 +1471,7 @@ const ClientContactListPage = () => {
                 className="flex items-center gap-2 px-4 py-2.5 bg-[#0891B2] text-white text-sm font-medium rounded-md  hover:bg-[#0891B2]/90 transition-colors"
               >
                 <UserPlus size={16} />
-                <span>Add Contact</span>
+                <span>{isMobile ? "Add" : "Add Contact"}</span>
               </motion.button>
 
               <NotificationBell
@@ -1341,12 +1500,12 @@ const ClientContactListPage = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="relative overflow-hidden rounded-3xl bg-[#F1F5F9] p-8"
+            className={cn("relative overflow-hidden rounded-3xl bg-[#F1F5F9]", isMobile ? "p-4" : "p-8")}
           >
             <div className="absolute top-0 right-0 w-64 h-64 bg-[#0891B2]/10 rounded-full blur-3xl" />
             <div className="absolute bottom-0 left-1/2 w-48 h-48 bg-[#D97706]/10 rounded-full blur-3xl" />
 
-            <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
               <div>
                 <motion.div
                   initial={{ opacity: 0, x: -20 }}
@@ -1359,10 +1518,21 @@ const ClientContactListPage = () => {
                     Contact Management
                   </span>
                 </motion.div>
-                <h1 className="text-3xl lg:text-4xl font-bold text-[#0F172A] mb-2">
-                  Client <span className="text-[#0891B2]">Contacts</span>
-                </h1>
-                <p className="text-[#475569] text-lg max-w-xl">
+                <div className="flex items-center justify-between gap-3">
+                  <h1 className="mb-2 text-2xl font-bold text-[#0F172A] lg:text-4xl">
+                    Client <span className="text-[#0891B2]">Contacts</span>
+                  </h1>
+                  {isMobile ? (
+                    <button
+                      type="button"
+                      onClick={() => setIsHeroCollapsed((value) => !value)}
+                      className="rounded-full bg-white/70 px-3 py-1 text-xs font-semibold text-[#0F172A]"
+                    >
+                      {isHeroCollapsed ? "Expand" : "Collapse"}
+                    </button>
+                  ) : null}
+                </div>
+                <p className={cn("max-w-xl text-[#475569]", isMobile ? "text-sm" : "text-lg", isHeroCollapsed && isMobile && "hidden")}>
                   Manage your business contacts. You have{" "}
                   <span className="text-[#0891B2] font-semibold">
                     {stats.total} contacts
@@ -1372,7 +1542,7 @@ const ClientContactListPage = () => {
               </div>
 
               {/* Quick Actions */}
-              <div className="flex gap-3">
+              <div className={cn("flex gap-3", isHeroCollapsed && isMobile && "hidden")}>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <motion.button
@@ -1410,7 +1580,7 @@ const ClientContactListPage = () => {
           </motion.div>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className={cn("gap-4", isMobile ? "flex overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none]" : "grid grid-cols-2 md:grid-cols-4")}>
             <StatCard
               title="Total Contacts"
               value={stats.total}
@@ -1452,142 +1622,156 @@ const ClientContactListPage = () => {
             transition={{ delay: 0.2 }}
             className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4"
           >
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-              <div className="flex flex-wrap items-center gap-3">
-                {/* Search */}
+            {isMobile ? (
+              <div className="space-y-3">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#475569]" />
                   <Input
                     placeholder="Search contacts..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-64 h-10 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
+                    className="h-11 rounded-xl border-[rgba(15,23,42,0.06)] pl-10 focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
                   />
                 </div>
-
-                {/* Type Filter */}
-                <Select value={filterType} onValueChange={setFilterType}>
-                  <SelectTrigger className="w-36 h-10 rounded-md border-[rgba(15,23,42,0.06)]">
-                    <SelectValue placeholder="Type" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-md">
-                    {typeOptions.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value} className="rounded-md">
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {/* Clear */}
-                {(searchTerm || filterType !== "all") && (
+                <div className="flex items-center gap-2">
                   <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setSearchTerm("");
-                      setFilterType("all");
-                    }}
-                    className="h-10 text-[#94A3B8] hover:text-red-600"
+                    variant="outline"
+                    onClick={() => setIsFilterDrawerOpen(true)}
+                    className="h-10 flex-1 rounded-xl border-[rgba(15,23,42,0.06)]"
                   >
-                    <X size={14} className="mr-1" />
-                    Clear
+                    <Filter size={14} className="mr-2" />
+                    Filters
                   </Button>
-                )}
-              </div>
-
-              <div className="flex items-center gap-3">
-                {/* Bulk Actions */}
-                <AnimatePresence>
-                  {selectedContacts.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.9 }}
-                      className="flex items-center gap-2 px-3 py-1.5 bg-[#0891B2]/10 rounded-md"
+                  <div className="flex items-center rounded-xl bg-[#F8FAFC] p-1">
+                    <button
+                      onClick={() => setViewMode("table")}
+                      className={cn("rounded-lg p-2 transition-colors", viewMode === "table" ? "bg-white text-[#0891B2] shadow-sm" : "text-[#475569]")}
                     >
-                      <span className="text-sm font-medium text-[#0891B2]">
-                        {selectedContacts.length} selected
-                      </span>
-                      <Button size="sm" variant="ghost" className="h-7 text-red-600 hover:bg-red-100">
-                        <Trash2 size={14} className="mr-1" />
-                        Delete
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setSelectedContacts([])} className="h-7">
-                        <X size={14} />
-                      </Button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* Columns */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-10 rounded-md border-[rgba(15,23,42,0.06)]">
-                      <Columns size={14} className="mr-2" />
-                      Columns
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-48 rounded-md">
-                    <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
-                    {columns.map((col) => (
-                      <DropdownMenuCheckboxItem
-                        key={col.key}
-                        checked={col.visible}
-                        onCheckedChange={(checked) => {
-                          setColumns((prev) =>
-                            prev.map((c) =>
-                              c.key === col.key ? { ...c, visible: checked } : c
-                            )
-                          );
-                        }}
-                        className="rounded-md"
-                      >
-                        {col.label}
-                      </DropdownMenuCheckboxItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                {/* View Toggle */}
-                <div className="flex items-center bg-white/5 rounded-md p-1">
-                  <button
-                    onClick={() => setViewMode("table")}
-                    className={cn(
-                      "p-2 rounded-md transition-colors",
-                      viewMode === "table"
-                        ? "bg-white text-[#0891B2] shadow-sm"
-                        : "text-[#475569] hover:text-[#475569]"
-                    )}
-                  >
-                    <List size={16} />
-                  </button>
-                  <button
-                    onClick={() => setViewMode("grid")}
-                    className={cn(
-                      "p-2 rounded-md transition-colors",
-                      viewMode === "grid"
-                        ? "bg-white text-[#0891B2] shadow-sm"
-                        : "text-[#475569] hover:text-[#475569]"
-                    )}
-                  >
-                    <LayoutGrid size={16} />
-                  </button>
+                      <List size={16} />
+                    </button>
+                    <button
+                      onClick={() => setViewMode("grid")}
+                      className={cn("rounded-lg p-2 transition-colors", viewMode === "grid" ? "bg-white text-[#0891B2] shadow-sm" : "text-[#475569]")}
+                    >
+                      <LayoutGrid size={16} />
+                    </button>
+                  </div>
+                  <Button variant="outline" size="icon" onClick={fetchContacts} disabled={isLoading} className="h-10 w-10 rounded-xl border-[rgba(15,23,42,0.06)]">
+                    <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
+                  </Button>
                 </div>
-
-                {/* Refresh */}
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={fetchContacts}
-                  disabled={isLoading}
-                  className="h-10 w-10 rounded-md border-[rgba(15,23,42,0.06)]"
-                >
-                  <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
-                </Button>
               </div>
-            </div>
+            ) : (
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#475569]" />
+                    <Input
+                      placeholder="Search contacts..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-64 h-10 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
+                    />
+                  </div>
+                  <Select value={filterType} onValueChange={setFilterType}>
+                    <SelectTrigger className="w-36 h-10 rounded-md border-[rgba(15,23,42,0.06)]">
+                      <SelectValue placeholder="Type" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-md">
+                      {typeOptions.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value} className="rounded-md">
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {(searchTerm || filterType !== "all") && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSearchTerm("");
+                        setFilterType("all");
+                      }}
+                      className="h-10 text-[#94A3B8] hover:text-red-600"
+                    >
+                      <X size={14} className="mr-1" />
+                      Clear
+                    </Button>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <AnimatePresence>
+                    {selectedContacts.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-[#0891B2]/10 rounded-md"
+                      >
+                        <span className="text-sm font-medium text-[#0891B2]">{selectedContacts.length} selected</span>
+                        <Button size="sm" variant="ghost" className="h-7 text-red-600 hover:bg-red-100">
+                          <Trash2 size={14} className="mr-1" />
+                          Delete
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setSelectedContacts([])} className="h-7">
+                          <X size={14} />
+                        </Button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-10 rounded-md border-[rgba(15,23,42,0.06)]">
+                        <Columns size={14} className="mr-2" />
+                        Columns
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-48 rounded-md">
+                      <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
+                      {columns.map((col) => (
+                        <DropdownMenuCheckboxItem
+                          key={col.key}
+                          checked={col.visible}
+                          onCheckedChange={(checked) => {
+                            setColumns((prev) =>
+                              prev.map((c) => (c.key === col.key ? { ...c, visible: checked } : c))
+                            );
+                          }}
+                          className="rounded-md"
+                        >
+                          {col.label}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <div className="flex items-center bg-white/5 rounded-md p-1">
+                    <button
+                      onClick={() => setViewMode("table")}
+                      className={cn("p-2 rounded-md transition-colors", viewMode === "table" ? "bg-white text-[#0891B2] shadow-sm" : "text-[#475569] hover:text-[#475569]")}
+                    >
+                      <List size={16} />
+                    </button>
+                    <button
+                      onClick={() => setViewMode("grid")}
+                      className={cn("p-2 rounded-md transition-colors", viewMode === "grid" ? "bg-white text-[#0891B2] shadow-sm" : "text-[#475569] hover:text-[#475569]")}
+                    >
+                      <LayoutGrid size={16} />
+                    </button>
+                  </div>
+                  <Button variant="outline" size="icon" onClick={fetchContacts} disabled={isLoading} className="h-10 w-10 rounded-md border-[rgba(15,23,42,0.06)]">
+                    <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
+                  </Button>
+                </div>
+              </div>
+            )}
           </motion.div>
+
+          {isOffline && contacts.length > 0 ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+              You&apos;re offline. Showing the latest loaded contact data.
+            </div>
+          ) : null}
 
           {/* Content */}
           <motion.div
@@ -1597,11 +1781,27 @@ const ClientContactListPage = () => {
             className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden"
           >
             {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-20">
-                <div className="w-16 h-16 rounded-md bg-[#0891B2]/10 flex items-center justify-center mb-4">
-                  <Loader2 className="w-8 h-8 text-[#0891B2] animate-spin" />
+              <div className="p-4 md:p-6">
+                <ListCardSkeleton rows={isMobile ? 4 : 3} />
+              </div>
+            ) : loadError ? (
+              <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50">
+                  <Trash2 className="h-8 w-8 text-red-400" />
                 </div>
-                <p className="text-[#94A3B8]">Loading contacts...</p>
+                <h3 className="text-lg font-semibold text-[#0F172A]">Couldn&apos;t load contacts</h3>
+                <p className="mt-2 text-sm text-[#94A3B8]">{loadError}</p>
+                <Button onClick={fetchContacts} className="mt-5 rounded-xl bg-[#0891B2] text-white hover:bg-[#0891B2]/90">
+                  Retry
+                </Button>
+              </div>
+            ) : isOffline && contacts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-50">
+                  <RefreshCw className="h-8 w-8 text-amber-500" />
+                </div>
+                <h3 className="text-lg font-semibold text-[#0F172A]">You&apos;re offline</h3>
+                <p className="mt-2 text-sm text-[#94A3B8]">Reconnect to load the latest contact list.</p>
               </div>
             ) : filteredContacts.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20">
@@ -1640,6 +1840,26 @@ const ClientContactListPage = () => {
                   )}
                 </Button>
               </div>
+            ) : isMobile ? (
+              <div className="space-y-3 p-3">
+                <AnimatePresence mode="popLayout">
+                  {paginatedContacts.map((contact) => (
+                    <MobileContactCard
+                      key={contact.id}
+                      contact={contact}
+                      isSelected={selectedContacts.includes(contact.id)}
+                      onSelect={(checked) => handleSelectContact(contact.id, checked)}
+                      onView={() => navigate(`/client-list/${contact.clientId || contact.id}`)}
+                      onDelete={() => {
+                        setContactToDelete(contact);
+                        setDeleteDialogOpen(true);
+                      }}
+                      onSendEmail={() => handleSendEmail(contact)}
+                      onCall={() => handleCall(contact)}
+                    />
+                  ))}
+                </AnimatePresence>
+              </div>
             ) : viewMode === "table" ? (
               /* Table View */
               <div className="responsive-table">
@@ -1664,7 +1884,7 @@ const ClientContactListPage = () => {
                       </th>
 
                       {/* Dynamic Column Headers */}
-                      {columns.filter((c) => c.visible).map((col) => (
+                      {responsiveColumns.filter((c) => c.visible).map((col) => (
                         <th key={col.key} className="py-4 px-4 text-left">
                           {col.sortable ? (
                             <button
@@ -1716,7 +1936,7 @@ const ClientContactListPage = () => {
                           onToggleFavorite={() => handleToggleFavorite(contact.id)}
                           onSendEmail={() => handleSendEmail(contact)}
                           onCall={() => handleCall(contact)}
-                          columns={columns}
+                          columns={responsiveColumns}
                         />
                       ))}
                     </AnimatePresence>
@@ -1772,24 +1992,26 @@ const ClientContactListPage = () => {
                   </p>
 
                   {/* Page Size Selector */}
-                  <Select
-                    value={String(pageSize)}
-                    onValueChange={(val) => {
-                      setPageSize(Number(val));
-                      setCurrentPage(1);
-                    }}
-                  >
-                    <SelectTrigger className="w-20 h-8 rounded-md border-[rgba(15,23,42,0.06)] text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-md">
-                      {[10, 25, 50, 100].map((size) => (
-                        <SelectItem key={size} value={String(size)} className="rounded-md">
-                          {size}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {!isMobile ? (
+                    <Select
+                      value={String(pageSize)}
+                      onValueChange={(val) => {
+                        setPageSize(Number(val));
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <SelectTrigger className="w-20 h-8 rounded-md border-[rgba(15,23,42,0.06)] text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-md">
+                        {[10, 25, 50, 100].map((size) => (
+                          <SelectItem key={size} value={String(size)} className="rounded-md">
+                            {size}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : null}
                 </div>
 
                 {/* Pagination Controls */}
@@ -1896,6 +2118,62 @@ const ClientContactListPage = () => {
             </div>
           </div>
         </footer>
+
+        {isMobile ? (
+          <>
+            <button
+              type="button"
+              onClick={openAddDialog}
+              className="fixed bottom-24 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#0891B2] text-white shadow-xl transition-transform active:scale-95"
+              aria-label="Add Contact"
+            >
+              <UserPlus size={22} />
+            </button>
+            <Drawer open={isFilterDrawerOpen} onOpenChange={setIsFilterDrawerOpen}>
+              <DrawerContent className="max-h-[80vh] rounded-t-[24px] border-none bg-white">
+                <DrawerHeader className="px-5 pb-2 text-left">
+                  <DrawerTitle className="text-[#0F172A]">Filter Contacts</DrawerTitle>
+                  <DrawerDescription>
+                    Narrow the contact list by contact type.
+                  </DrawerDescription>
+                </DrawerHeader>
+                <div className="space-y-4 px-5 pb-6">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-[#475569]">Type</Label>
+                    <Select value={filterType} onValueChange={setFilterType}>
+                      <SelectTrigger className="h-11 rounded-xl border-[rgba(15,23,42,0.06)]">
+                        <SelectValue placeholder="Type" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-md">
+                        {typeOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value} className="rounded-md">
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <DrawerFooter className="border-t border-[rgba(15,23,42,0.06)] px-5 pb-6 pt-4">
+                  <Button onClick={() => setIsFilterDrawerOpen(false)} className="h-11 rounded-xl bg-[#0891B2] text-white hover:bg-[#0891B2]/90">
+                    Apply Filters
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSearchTerm("");
+                      setFilterType("all");
+                      setIsFilterDrawerOpen(false);
+                    }}
+                    className="h-11 rounded-xl"
+                  >
+                    Clear Filters
+                  </Button>
+                </DrawerFooter>
+              </DrawerContent>
+            </Drawer>
+          </>
+        ) : null}
       </main>
 
       {/* ============================================ */}

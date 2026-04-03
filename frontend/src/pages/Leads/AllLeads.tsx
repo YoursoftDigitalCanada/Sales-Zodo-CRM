@@ -75,10 +75,25 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import AddressAutocompleteInput from "@/components/address/AddressAutocompleteInput";
 import { ComposeEmailSheet } from "@/features/emails/components/ComposeEmailSheet";
+import {
+  ListCardSkeleton,
+  PullToRefreshIndicator,
+  SwipeActionCard,
+  usePullToRefresh,
+} from "@/features/clients/components/responsive-helpers";
 import {
   Search,
   Plus,
@@ -150,7 +165,7 @@ import {
   FileX2,
   type LucideIcon,
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 // ============================================
 // TYPES
@@ -833,6 +848,105 @@ const LeadCard = ({
   );
 };
 
+const MobileLeadCard = ({
+  lead,
+  isSelected,
+  onSelect,
+  onOpen,
+  onQualify,
+  onArchive,
+}: {
+  lead: Lead;
+  isSelected: boolean;
+  onSelect: () => void;
+  onOpen: () => void;
+  onQualify: () => void;
+  onArchive: () => void;
+}) => {
+  const statusInfo = getStatusInfo(lead.status);
+  const tempInfo = getTemperatureInfo(lead.temperature);
+  const TempIcon = tempInfo.icon;
+
+  return (
+    <SwipeActionCard
+      onView={onQualify}
+      onDelete={onArchive}
+      onLongPress={onSelect}
+      primaryLabel="Qualify"
+      secondaryLabel="Archive"
+      primaryIcon={CheckCircle2}
+      secondaryIcon={FileX2}
+    >
+      <div
+        className={cn(
+          "rounded-2xl border bg-white p-4 shadow-sm transition-all",
+          isSelected
+            ? "border-[#6637F4] ring-2 ring-[#6637F4]/15"
+            : "border-[rgba(15,23,42,0.06)]"
+        )}
+        onClick={onOpen}
+      >
+        <div className="flex items-start gap-3">
+          <Avatar className="h-12 w-12 border border-white shadow-sm">
+            <AvatarImage src={lead.avatar} />
+            <AvatarFallback className="bg-[#F1F5F9] text-[#0F172A] font-semibold">
+              {getInitials(lead.firstName, lead.lastName)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-base font-semibold text-[#0F172A]">
+                  {lead.firstName} {lead.lastName}
+                </p>
+                <p className="truncate text-sm text-[#475569]">
+                  {lead.companyName || "No company"}
+                </p>
+              </div>
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={onSelect}
+                onClick={(event) => event.stopPropagation()}
+                className="mt-0.5 data-[state=checked]:bg-[#6637F4] data-[state=checked]:border-[#6637F4]"
+              />
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span
+                className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                style={{ backgroundColor: statusInfo.bgColor, color: statusInfo.color }}
+              >
+                <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: statusInfo.color }} />
+                {statusInfo.name}
+              </span>
+              <span
+                className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                style={{ backgroundColor: tempInfo.bg, color: tempInfo.color }}
+              >
+                <TempIcon size={12} />
+                {tempInfo.label}
+              </span>
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <div className="rounded-xl bg-[#F8FAFC] px-3 py-2">
+                <p className="text-[10px] uppercase tracking-wider text-[#94A3B8]">Value</p>
+                <p className="mt-1 text-sm font-semibold text-[#0F172A]">
+                  {formatCurrency(lead.potentialValue, lead.currency)}
+                </p>
+              </div>
+              <div className="rounded-xl bg-[#F8FAFC] px-3 py-2">
+                <p className="text-[10px] uppercase tracking-wider text-[#94A3B8]">Stage</p>
+                <p className="mt-1 text-sm font-semibold text-[#0F172A]">{statusInfo.name}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </SwipeActionCard>
+  );
+};
+
 // ============================================
 // LEAD ROW COMPONENT (TABLE VIEW)
 // ============================================
@@ -1052,6 +1166,7 @@ export const LeadFormDialog = ({
   lead: Lead | null;
   onSubmit: (data: Partial<Lead>) => Promise<boolean>;
 }) => {
+  const { isMobile } = useIsMobile();
   type LeadFormTab = "basic" | "property" | "service" | "qualification" | "insurance" | "assessment" | "details";
 
   const [formData, setFormData] = useState({
@@ -1525,7 +1640,14 @@ export const LeadFormDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[780px] p-0 rounded-md overflow-hidden max-h-[90vh] overflow-y-auto">
+      <DialogContent
+        className={cn(
+          "overflow-hidden p-0",
+          isMobile
+            ? "max-h-[92dvh] w-[calc(100vw-16px)] max-w-none rounded-t-[24px] rounded-b-none border-none p-0 sm:max-w-none"
+            : "sm:max-w-[780px] rounded-md max-h-[90vh] overflow-y-auto"
+        )}
+      >
         <div className="p-6 border-b border-[rgba(15,23,42,0.06)] bg-[#F0EEFF] sticky top-0 bg-white z-10">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-[#0F172A]">
@@ -1539,7 +1661,7 @@ export const LeadFormDialog = ({
 
         <form onSubmit={handleSubmit} className="p-6">
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="bg-white/5 rounded-md p-1 mb-6 flex flex-wrap gap-1">
+            <TabsList className="mb-6 flex w-full flex-wrap gap-1 overflow-x-auto bg-white/5 p-1 rounded-md">
               <TabsTrigger value="basic" className="rounded-md data-[state=active]:bg-white text-xs sm:text-sm">
                 Basic Info
               </TabsTrigger>
@@ -2486,7 +2608,7 @@ export const LeadFormDialog = ({
             </TabsContent>
           </Tabs>
 
-          <DialogFooter className="pt-6 gap-3 sm:justify-between">
+          <DialogFooter className={cn("gap-3 pt-6 sm:justify-between", isMobile && "sticky bottom-0 -mx-6 -mb-6 border-t bg-white px-6 py-4")}>
             <Button type="button" variant="outline" onClick={onClose} className="rounded-md">
               Cancel
             </Button>
@@ -3343,7 +3465,9 @@ const mapApiLead = (apiLead: any): Lead => ({
 const AllLeads = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const importFileInputRef = useRef<HTMLInputElement | null>(null);
+  const { isMobile, isTablet } = useIsMobile();
 
   // State
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -3385,6 +3509,11 @@ const AllLeads = () => {
   // Side panel state
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const [sidePanelLead, setSidePanelLead] = useState<Lead | null>(null);
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isOffline, setIsOffline] = useState(
+    typeof window !== "undefined" ? !window.navigator.onLine : false
+  );
 
   const loadLeads = useCallback(async () => {
     try {
@@ -3392,8 +3521,10 @@ const AllLeads = () => {
       const response = await getLeads();
       const apiLeads = Array.isArray(response) ? response : [];
       setLeads(apiLeads.map(mapApiLead));
+      setLoadError(null);
     } catch (error) {
       console.error("Failed to fetch leads:", error);
+      setLoadError("Failed to load leads.");
       toast({ title: "Error", description: "Failed to load leads.", variant: "destructive" });
     } finally {
       setLoading(false);
@@ -3438,6 +3569,36 @@ const AllLeads = () => {
     void loadLeads();
     void loadLookupData();
   }, [loadLeads, loadLookupData]);
+
+  useEffect(() => {
+    const editLeadId = (location.state as { editLeadId?: string } | null)?.editLeadId;
+    if (!editLeadId || leads.length === 0) {
+      return;
+    }
+
+    const leadToEdit = leads.find((lead) => lead.id === editLeadId);
+    if (leadToEdit) {
+      setCurrentLead(leadToEdit);
+      setIsFormOpen(true);
+      window.history.replaceState({}, document.title);
+    }
+  }, [leads, location.state]);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  const { handlers, pullDistance, isRefreshing } = usePullToRefresh({
+    enabled: isMobile,
+    onRefresh: loadLeads,
+  });
 
   // Filtered and sorted leads
   const filteredLeads = useMemo(() => {
@@ -3995,6 +4156,10 @@ const AllLeads = () => {
     }
   };
 
+  const handleArchiveLead = useCallback((lead: Lead) => {
+    void handleStatusChange(lead, LeadStatus.LOST);
+  }, [handleStatusChange]);
+
   // Handle meeting scheduled after QUALIFIED prompt
   const handleMeetingSchedule = async (meetingData: Record<string, unknown>) => {
     if (!pendingQualifiedLead) return;
@@ -4493,11 +4658,20 @@ const AllLeads = () => {
   const wonCount = leads.filter((l) => l.status === "WON").length;
   const lostCount = leads.filter((l) => l.status === "LOST").length;
   const totalValue = leads.reduce((acc, l) => acc + l.potentialValue, 0);
+  const hasActiveFilters =
+    Boolean(searchQuery) ||
+    selectedSource !== "all" ||
+    selectedStatus !== "all" ||
+    selectedTemperature !== "all";
 
   return (
-    <div className="min-h-screen bg-[#F7F7FB]">
+    <div
+      className="min-h-screen bg-[#F7F7FB]"
+      {...(isMobile ? handlers : {})}
+    >
+      <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
 
-      <main className="flex-1">
+      <main className="flex-1 pb-24 md:pb-0">
         {/* Header */}
         <header className="crm-module-header sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-[rgba(15,23,42,0.06)]">
           <div className="px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
@@ -4563,52 +4737,71 @@ const AllLeads = () => {
         </header>
 
         <div className="p-4 sm:p-6 lg:p-8">
+          {isOffline && (
+            <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              You’re offline. Showing the latest cached leads until the connection comes back.
+            </div>
+          )}
+
           {/* Stats Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4 lg:gap-6 mb-4 lg:mb-8">
-            <StatCard
-              title="Total Leads"
-              value={leads.length}
-              change={12.5}
-              changeLabel="vs last month"
-              icon={Target}
-              color="#6637F4"
-              sparklineData={[3, 5, 4, 7, 6, 8, leads.length || 10]}
-            />
-            <StatCard
-              title="Hot Leads"
-              value={hotCount}
-              icon={Flame}
-              color="#EF4444"
-              delay={0.1}
-              sparklineData={[1, 2, 1, 3, 2, 4, hotCount || 1]}
-            />
-            <StatCard
-              title="Qualified"
-              value={qualifiedCount}
-              icon={UserCheck}
-              color="#F59E0B"
-              delay={0.2}
-              sparklineData={[0, 1, 2, 1, 3, 2, qualifiedCount || 1]}
-            />
-            <StatCard
-              title="Won Deals"
-              value={wonCount}
-              change={8.3}
-              changeLabel="this month"
-              icon={CheckCircle2}
-              color="#10B981"
-              delay={0.3}
-              sparklineData={[0, 1, 0, 2, 1, 2, wonCount || 1]}
-            />
-            <StatCard
-              title="Total Value"
-              value={formatCurrency(totalValue)}
-              change={15.2}
-              icon={DollarSign}
-              color="#FBBF24"
-              delay={0.4}
-              sparklineData={[1000, 2500, 1800, 3200, 2800, 4100, totalValue || 1000]}
-            />
+          <div
+            className={cn(
+              "mb-4 lg:mb-8",
+              isMobile
+                ? "flex gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none]"
+                : "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4 lg:gap-6"
+            )}
+          >
+            {[
+              {
+                title: "Total Leads",
+                value: leads.length,
+                change: 12.5,
+                changeLabel: "vs last month",
+                icon: Target,
+                color: "#6637F4",
+                sparklineData: [3, 5, 4, 7, 6, 8, leads.length || 10],
+              },
+              {
+                title: "Hot Leads",
+                value: hotCount,
+                icon: Flame,
+                color: "#EF4444",
+                delay: 0.1,
+                sparklineData: [1, 2, 1, 3, 2, 4, hotCount || 1],
+              },
+              {
+                title: "Qualified",
+                value: qualifiedCount,
+                icon: UserCheck,
+                color: "#F59E0B",
+                delay: 0.2,
+                sparklineData: [0, 1, 2, 1, 3, 2, qualifiedCount || 1],
+              },
+              {
+                title: "Won Deals",
+                value: wonCount,
+                change: 8.3,
+                changeLabel: "this month",
+                icon: CheckCircle2,
+                color: "#10B981",
+                delay: 0.3,
+                sparklineData: [0, 1, 0, 2, 1, 2, wonCount || 1],
+              },
+              {
+                title: "Total Value",
+                value: formatCurrency(totalValue),
+                change: 15.2,
+                icon: DollarSign,
+                color: "#FBBF24",
+                delay: 0.4,
+                sparklineData: [1000, 2500, 1800, 3200, 2800, 4100, totalValue || 1000],
+              },
+            ].map((card) => (
+              <div key={card.title} className={cn(isMobile && "min-w-[220px] flex-shrink-0")}>
+                <StatCard {...card} />
+              </div>
+            ))}
           </div>
 
           {/* Main Content */}
@@ -4645,7 +4838,7 @@ const AllLeads = () => {
                     </TabsList>
                   </div>
 
-                  <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                  <div className={cn("flex items-center gap-1 sm:gap-2 flex-shrink-0", isMobile && "hidden")}>
                     <Button
                       variant={viewMode === "list" ? "secondary" : "ghost"}
                       size="icon"
@@ -4666,134 +4859,160 @@ const AllLeads = () => {
                 </div>
 
                 {/* Search & Filters */}
-                {/* Search & Filters — stacked on mobile, row on desktop */}
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                  <div className="relative flex-1 sm:max-w-md">
-                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
-                    <Input
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search leads..."
-                      className="pl-9 h-10 rounded-md border-[rgba(15,23,42,0.06)] w-full"
-                    />
+                {isMobile ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
+                        <Input
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          placeholder="Search leads..."
+                          className="h-10 rounded-md border-[rgba(15,23,42,0.06)] pl-9"
+                        />
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-10 w-10 rounded-md border-[rgba(15,23,42,0.06)]"
+                        onClick={() => setIsFilterDrawerOpen(true)}
+                      >
+                        <Filter size={16} />
+                      </Button>
+                    </div>
+                    <p className="text-xs text-[#94A3B8]">
+                      Swipe right to qualify, swipe left to archive, long press to multi-select.
+                    </p>
                   </div>
+                ) : (
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                    <div className="relative flex-1 sm:max-w-md">
+                      <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
+                      <Input
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search leads..."
+                        className="pl-9 h-10 rounded-md border-[rgba(15,23,42,0.06)] w-full"
+                      />
+                    </div>
 
-                  <div className="flex items-center gap-2 overflow-x-auto">
-                    <Select value={selectedSource} onValueChange={setSelectedSource}>
-                      <SelectTrigger className="w-[120px] sm:w-[150px] h-9 sm:h-10 rounded-md border-[rgba(15,23,42,0.06)] text-xs sm:text-sm flex-shrink-0">
-                        <SelectValue placeholder="Source" />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-md">
-                        <SelectItem value="all" className="rounded-md">All Sources</SelectItem>
-                        {Object.entries(sourceIconMap).map(([key, { icon: Icon, color }]) => (
-                          <SelectItem key={key} value={key} className="rounded-md">
+                    <div className="flex items-center gap-2 overflow-x-auto">
+                      <Select value={selectedSource} onValueChange={setSelectedSource}>
+                        <SelectTrigger className="w-[120px] sm:w-[150px] h-9 sm:h-10 rounded-md border-[rgba(15,23,42,0.06)] text-xs sm:text-sm flex-shrink-0">
+                          <SelectValue placeholder="Source" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-md">
+                          <SelectItem value="all" className="rounded-md">All Sources</SelectItem>
+                          {Object.entries(sourceIconMap).map(([key, { icon: Icon, color }]) => (
+                            <SelectItem key={key} value={key} className="rounded-md">
+                              <div className="flex items-center gap-2">
+                                <Icon size={14} style={{ color }} />
+                                {key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                        <SelectTrigger className="w-[110px] sm:w-[140px] h-9 sm:h-10 rounded-md border-[rgba(15,23,42,0.06)] text-xs sm:text-sm flex-shrink-0">
+                          <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-md">
+                          <SelectItem value="all" className="rounded-md">All Statuses</SelectItem>
+                          {leadStatuses.map((status) => (
+                            <SelectItem key={status.id} value={status.id} className="rounded-md">
+                              <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: status.color }} />
+                                {status.name}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      <Select value={selectedTemperature} onValueChange={setSelectedTemperature}>
+                        <SelectTrigger className="hidden sm:flex w-[130px] h-10 rounded-md border-[rgba(15,23,42,0.06)]">
+                          <SelectValue placeholder="Temperature" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-md">
+                          <SelectItem value="all" className="rounded-md">All</SelectItem>
+                          <SelectItem value="hot" className="rounded-md">
                             <div className="flex items-center gap-2">
-                              <Icon size={14} style={{ color }} />
-                              {key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
+                              <Flame size={14} className="text-red-500" /> Hot
                             </div>
                           </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                      <SelectTrigger className="w-[110px] sm:w-[140px] h-9 sm:h-10 rounded-md border-[rgba(15,23,42,0.06)] text-xs sm:text-sm flex-shrink-0">
-                        <SelectValue placeholder="Status" />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-md">
-                        <SelectItem value="all" className="rounded-md">All Statuses</SelectItem>
-                        {leadStatuses.map((status) => (
-                          <SelectItem key={status.id} value={status.id} className="rounded-md">
+                          <SelectItem value="warm" className="rounded-md">
                             <div className="flex items-center gap-2">
-                              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: status.color }} />
-                              {status.name}
+                              <ThermometerSun size={14} className="text-yellow-500" /> Warm
                             </div>
                           </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          <SelectItem value="cold" className="rounded-md">
+                            <div className="flex items-center gap-2">
+                              <Snowflake size={14} className="text-blue-500" /> Cold
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
 
-                    <Select value={selectedTemperature} onValueChange={setSelectedTemperature}>
-                      <SelectTrigger className="hidden sm:flex w-[130px] h-10 rounded-md border-[rgba(15,23,42,0.06)]">
-                        <SelectValue placeholder="Temperature" />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-md">
-                        <SelectItem value="all" className="rounded-md">All</SelectItem>
-                        <SelectItem value="hot" className="rounded-md">
-                          <div className="flex items-center gap-2">
-                            <Flame size={14} className="text-red-500" /> Hot
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="warm" className="rounded-md">
-                          <div className="flex items-center gap-2">
-                            <ThermometerSun size={14} className="text-yellow-500" /> Warm
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="cold" className="rounded-md">
-                          <div className="flex items-center gap-2">
-                            <Snowflake size={14} className="text-blue-500" /> Cold
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="rounded-md gap-1 sm:gap-2 h-9 sm:h-10 text-xs sm:text-sm flex-shrink-0">
-                          <Filter size={14} />
-                          <span className="hidden sm:inline">Sort</span>
-                          {sortOrder === "asc" ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48 rounded-md">
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setSortBy("date");
-                            setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
-                          }}
-                          className="rounded-md"
-                        >
-                          <Calendar size={14} className="mr-2" />
-                          Date Added
-                          {sortBy === "date" && <Check size={14} className="ml-auto text-[#6637F4]" />}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setSortBy("score");
-                            setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
-                          }}
-                          className="rounded-md"
-                        >
-                          <Target size={14} className="mr-2" />
-                          Lead Score
-                          {sortBy === "score" && <Check size={14} className="ml-auto text-[#6637F4]" />}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setSortBy("value");
-                            setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
-                          }}
-                          className="rounded-md"
-                        >
-                          <DollarSign size={14} className="mr-2" />
-                          Value
-                          {sortBy === "value" && <Check size={14} className="ml-auto text-[#6637F4]" />}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setSortBy("name");
-                            setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
-                          }}
-                          className="rounded-md"
-                        >
-                          <User size={14} className="mr-2" />
-                          Name
-                          {sortBy === "name" && <Check size={14} className="ml-auto text-[#6637F4]" />}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" className="rounded-md gap-1 sm:gap-2 h-9 sm:h-10 text-xs sm:text-sm flex-shrink-0">
+                            <Filter size={14} />
+                            <span className="hidden sm:inline">Sort</span>
+                            {sortOrder === "asc" ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48 rounded-md">
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSortBy("date");
+                              setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+                            }}
+                            className="rounded-md"
+                          >
+                            <Calendar size={14} className="mr-2" />
+                            Date Added
+                            {sortBy === "date" && <Check size={14} className="ml-auto text-[#6637F4]" />}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSortBy("score");
+                              setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+                            }}
+                            className="rounded-md"
+                          >
+                            <Target size={14} className="mr-2" />
+                            Lead Score
+                            {sortBy === "score" && <Check size={14} className="ml-auto text-[#6637F4]" />}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSortBy("value");
+                              setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+                            }}
+                            className="rounded-md"
+                          >
+                            <DollarSign size={14} className="mr-2" />
+                            Value
+                            {sortBy === "value" && <Check size={14} className="ml-auto text-[#6637F4]" />}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSortBy("name");
+                              setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+                            }}
+                            className="rounded-md"
+                          >
+                            <User size={14} className="mr-2" />
+                            Name
+                            {sortBy === "name" && <Check size={14} className="ml-auto text-[#6637F4]" />}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Active Filter Chips */}
                 {(selectedSource !== "all" || selectedStatus !== "all" || selectedTemperature !== "all" || searchQuery) && (
@@ -4924,8 +5143,83 @@ const AllLeads = () => {
             </div>
 
             {/* Content */}
-            <AnimatePresence mode="wait">
-              {viewMode === "list" ? (
+            {loading ? (
+              <div className="p-3 sm:p-6">
+                <ListCardSkeleton rows={isMobile ? 4 : 3} />
+              </div>
+            ) : loadError ? (
+              <div className="p-6">
+                <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-center">
+                  <AlertCircle size={28} className="mx-auto mb-3 text-red-500" />
+                  <p className="font-semibold text-red-900">Couldn’t load leads</p>
+                  <p className="mt-1 text-sm text-red-700">{loadError}</p>
+                  <Button className="mt-4 rounded-md" onClick={() => void loadLeads()}>
+                    Try Again
+                  </Button>
+                </div>
+              </div>
+            ) : isMobile ? (
+              <div className="p-3 space-y-3">
+                {filteredLeads.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-[rgba(15,23,42,0.12)] bg-[#F8FAFC] px-4 py-12 text-center">
+                    <Target size={40} className="mx-auto mb-3 text-[#94A3B8]" />
+                    <p className="font-semibold text-[#0F172A]">
+                      {hasActiveFilters ? "No matching leads" : "No leads yet"}
+                    </p>
+                    <p className="mt-1 text-sm text-[#475569]">
+                      {hasActiveFilters
+                        ? "Try clearing a filter or changing your search."
+                        : "Add your first lead to start building the pipeline."}
+                    </p>
+                    <div className="mt-4 flex items-center justify-center gap-2">
+                      {hasActiveFilters && (
+                        <Button
+                          variant="outline"
+                          className="rounded-md"
+                          onClick={() => {
+                            setSearchQuery("");
+                            setSelectedSource("all");
+                            setSelectedStatus("all");
+                            setSelectedTemperature("all");
+                          }}
+                        >
+                          Clear Filters
+                        </Button>
+                      )}
+                      {!hasActiveFilters && (
+                        <Button
+                          className="rounded-md bg-[#6637F4] hover:bg-[#6637F4]/90"
+                          onClick={() => {
+                            setCurrentLead(null);
+                            setIsFormOpen(true);
+                          }}
+                        >
+                          <Plus size={16} className="mr-2" />
+                          Add Lead
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  filteredLeads.map((lead) => (
+                    <MobileLeadCard
+                      key={lead.id}
+                      lead={lead}
+                      isSelected={selectedLeads.has(lead.id)}
+                      onSelect={() => toggleSelectLead(lead.id)}
+                      onOpen={() => {
+                        setSidePanelLead(lead);
+                        setIsSidePanelOpen(true);
+                      }}
+                      onQualify={() => handleStatusChange(lead, LeadStatus.QUALIFIED)}
+                      onArchive={() => handleArchiveLead(lead)}
+                    />
+                  ))
+                )}
+              </div>
+            ) : (
+              <AnimatePresence mode="wait">
+                {viewMode === "list" ? (
                 <div className="responsive-table">
                   <Table>
                     <TableHeader>
@@ -4991,46 +5285,99 @@ const AllLeads = () => {
                     </TableBody>
                   </Table>
                 </div>
-              ) : (
-                <div className="p-3 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
-                  {filteredLeads.length === 0 ? (
-                    <div className="col-span-3 text-center py-12">
-                      <Target size={48} className="text-[#475569] mx-auto mb-3" />
-                      <p className="text-[#94A3B8] font-medium">No leads found</p>
-                      <p className="text-[#475569] text-sm">Try adjusting your filters</p>
-                    </div>
-                  ) : (
-                    filteredLeads.map((lead, index) => (
-                      <LeadCard
-                        key={lead.id}
-                        lead={lead}
-                        isSelected={selectedLeads.has(lead.id)}
-                        onSelect={() => toggleSelectLead(lead.id)}
-                        onView={() => {
-                          setSidePanelLead(lead);
-                          setIsSidePanelOpen(true);
-                        }}
-                        onEdit={() => {
-                          setCurrentLead(lead);
-                          setIsFormOpen(true);
-                        }}
-                        onDelete={() => {
-                          setLeadToDelete(lead);
-                          setIsDeleteAlertOpen(true);
-                        }}
-                        onEmail={() => openLeadEmailComposer(lead)}
-                        onCall={() => handleCallLead(lead)}
-                        onStatusChange={(status) => handleStatusChange(lead, status)}
-                        delay={index * 0.05}
-                      />
-                    ))
-                  )}
-                </div>
-              )}
-            </AnimatePresence>
+                ) : (
+                  <div className="p-3 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+                    {filteredLeads.length === 0 ? (
+                      <div className="col-span-3 text-center py-12">
+                        <Target size={48} className="text-[#475569] mx-auto mb-3" />
+                        <p className="text-[#94A3B8] font-medium">No leads found</p>
+                        <p className="text-[#475569] text-sm">Try adjusting your filters</p>
+                      </div>
+                    ) : (
+                      filteredLeads.map((lead, index) => (
+                        <LeadCard
+                          key={lead.id}
+                          lead={lead}
+                          isSelected={selectedLeads.has(lead.id)}
+                          onSelect={() => toggleSelectLead(lead.id)}
+                          onView={() => {
+                            setSidePanelLead(lead);
+                            setIsSidePanelOpen(true);
+                          }}
+                          onEdit={() => {
+                            setCurrentLead(lead);
+                            setIsFormOpen(true);
+                          }}
+                          onDelete={() => {
+                            setLeadToDelete(lead);
+                            setIsDeleteAlertOpen(true);
+                          }}
+                          onEmail={() => openLeadEmailComposer(lead)}
+                          onCall={() => handleCallLead(lead)}
+                          onStatusChange={(status) => handleStatusChange(lead, status)}
+                          delay={index * 0.05}
+                        />
+                      ))
+                    )}
+                  </div>
+                )}
+              </AnimatePresence>
+            )}
           </motion.div>
         </div>
       </main>
+
+      {isMobile && (
+        <>
+          {selectedLeads.size > 0 && (
+            <div className="fixed inset-x-4 bottom-4 z-40 rounded-2xl border border-[rgba(15,23,42,0.08)] bg-white/95 p-3 shadow-2xl backdrop-blur">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-sm font-semibold text-[#0F172A]">
+                  {selectedLeads.size} selected
+                </span>
+                <button
+                  onClick={() => setSelectedLeads(new Set())}
+                  className="text-xs font-medium text-[#94A3B8]"
+                >
+                  Clear
+                </button>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <Button size="sm" variant="outline" className="rounded-xl" onClick={handleBulkEmail}>
+                  <Mail size={14} className="mr-1" />
+                  Email
+                </Button>
+                <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setIsBulkAssignOpen(true)}>
+                  <UserCheck size={14} className="mr-1" />
+                  Assign
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-xl text-red-600 border-red-200"
+                  onClick={() => void handleBulkDelete()}
+                >
+                  <Trash2 size={14} className="mr-1" />
+                  Delete
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {selectedLeads.size === 0 && (
+            <Button
+              onClick={() => {
+                setCurrentLead(null);
+                setIsFormOpen(true);
+              }}
+              size="icon"
+              className="fixed bottom-6 right-5 z-40 h-14 w-14 rounded-full bg-[#6637F4] shadow-[0_16px_36px_rgba(102,55,244,0.35)] hover:bg-[#6637F4]/90"
+            >
+              <Plus size={22} />
+            </Button>
+          )}
+        </>
+      )}
 
       {/* Dialogs */}
       <input
@@ -5220,6 +5567,115 @@ const AllLeads = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Drawer open={isMobile && isFilterDrawerOpen} onOpenChange={setIsFilterDrawerOpen}>
+        <DrawerContent className="max-h-[90dvh]">
+          <DrawerHeader>
+            <DrawerTitle>Filter Leads</DrawerTitle>
+            <DrawerDescription>Refine the mobile lead list and sort order.</DrawerDescription>
+          </DrawerHeader>
+          <div className="space-y-4 px-4 pb-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-[#475569]">Lead Source</Label>
+              <Select value={selectedSource} onValueChange={setSelectedSource}>
+                <SelectTrigger className="rounded-md">
+                  <SelectValue placeholder="All Sources" />
+                </SelectTrigger>
+                <SelectContent className="rounded-md">
+                  <SelectItem value="all" className="rounded-md">All Sources</SelectItem>
+                  {Object.entries(sourceIconMap).map(([key, { icon: Icon, color }]) => (
+                    <SelectItem key={key} value={key} className="rounded-md">
+                      <div className="flex items-center gap-2">
+                        <Icon size={14} style={{ color }} />
+                        {key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-[#475569]">Status</Label>
+              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                <SelectTrigger className="rounded-md">
+                  <SelectValue placeholder="All Statuses" />
+                </SelectTrigger>
+                <SelectContent className="rounded-md">
+                  <SelectItem value="all" className="rounded-md">All Statuses</SelectItem>
+                  {leadStatuses.map((status) => (
+                    <SelectItem key={status.id} value={status.id} className="rounded-md">
+                      {status.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-[#475569]">Temperature</Label>
+              <Select value={selectedTemperature} onValueChange={setSelectedTemperature}>
+                <SelectTrigger className="rounded-md">
+                  <SelectValue placeholder="All Temperatures" />
+                </SelectTrigger>
+                <SelectContent className="rounded-md">
+                  <SelectItem value="all" className="rounded-md">All</SelectItem>
+                  <SelectItem value="hot" className="rounded-md">Hot</SelectItem>
+                  <SelectItem value="warm" className="rounded-md">Warm</SelectItem>
+                  <SelectItem value="cold" className="rounded-md">Cold</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-[#475569]">Sort By</Label>
+              <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
+                <SelectTrigger className="rounded-md">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-md">
+                  <SelectItem value="date" className="rounded-md">Date Added</SelectItem>
+                  <SelectItem value="score" className="rounded-md">Lead Score</SelectItem>
+                  <SelectItem value="value" className="rounded-md">Value</SelectItem>
+                  <SelectItem value="name" className="rounded-md">Name</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-[#475569]">Sort Order</Label>
+              <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as typeof sortOrder)}>
+                <SelectTrigger className="rounded-md">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-md">
+                  <SelectItem value="desc" className="rounded-md">Descending</SelectItem>
+                  <SelectItem value="asc" className="rounded-md">Ascending</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DrawerFooter className="border-t bg-white">
+            <Button
+              variant="outline"
+              className="rounded-md"
+              onClick={() => {
+                setSearchQuery("");
+                setSelectedSource("all");
+                setSelectedStatus("all");
+                setSelectedTemperature("all");
+                setSortBy("date");
+                setSortOrder("desc");
+              }}
+            >
+              Clear Filters
+            </Button>
+            <Button className="rounded-md bg-[#6637F4] hover:bg-[#6637F4]/90" onClick={() => setIsFilterDrawerOpen(false)}>
+              Apply Filters
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
 
       {/* Lead Side Panel */}
       <Sheet open={isSidePanelOpen} onOpenChange={setIsSidePanelOpen}>

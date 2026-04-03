@@ -3,18 +3,36 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import {
+  createInvoice,
   getInvoiceById,
+  recordInvoicePayment,
   sendInvoice,
-  markInvoiceAsPaid,
   downloadInvoicePdf,
 } from "@/services/invoiceService";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import {
   ArrowLeft,
   Send,
   Download,
-  Pencil,
   Loader2,
   CheckCircle2,
   Receipt,
@@ -32,6 +50,9 @@ import {
   Phone,
   MapPin,
   CreditCard,
+  Copy,
+  BanknoteIcon,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -186,9 +207,14 @@ const InvoiceDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isMobile } = useIsMobile();
   const [invoice, setInvoice] = useState<InvoiceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [paymentSheetOpen, setPaymentSheetOpen] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("BANK_TRANSFER");
+  const [paymentNotes, setPaymentNotes] = useState("");
 
   useEffect(() => {
     if (!id) return;
@@ -216,16 +242,70 @@ const InvoiceDetailPage = () => {
     }
   };
 
-  const handleMarkPaid = async () => {
+  const handleRecordPayment = async () => {
     if (!invoice) return;
     setActionLoading("paid");
     try {
-      await markInvoiceAsPaid(invoice.id);
-      toast({ title: "Paid!", description: `Invoice ${invoice.invoiceNumber} marked as paid.` });
+      await recordInvoicePayment(invoice.id, {
+        amount: Number(paymentAmount),
+        paymentMethod: paymentMethod as
+          | "CASH"
+          | "CREDIT_CARD"
+          | "CHECK"
+          | "BANK_TRANSFER"
+          | "E_TRANSFER"
+          | "OTHER",
+        notes: paymentNotes || undefined,
+      });
+      toast({
+        title: "Payment Recorded",
+        description: `Payment recorded against ${invoice.invoiceNumber}.`,
+      });
       const updated = await getInvoiceById(invoice.id);
       setInvoice(updated);
+      setPaymentSheetOpen(false);
+      setPaymentNotes("");
     } catch {
-      toast({ title: "Error", description: "Failed to mark as paid.", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to record payment.", variant: "destructive" });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleDuplicate = async () => {
+    if (!invoice || !invoice.client?.id) {
+      toast({
+        title: "Client required",
+        description: "This invoice cannot be duplicated because its client record is missing.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setActionLoading("duplicate");
+    try {
+      const duplicate = await createInvoice({
+        clientId: invoice.client.id,
+        invoiceNumber: `INV-${Date.now().toString().slice(-6)}`,
+        invoiceDate: new Date().toISOString(),
+        dueDate: invoice.dueDate || new Date(Date.now() + 30 * 86400000).toISOString(),
+        currency: invoice.currency || "CAD",
+        discountAmount: invoice.discountAmount || 0,
+        notes: invoice.notes,
+        items: invoice.items.map((item, index) => ({
+          description: item.description,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          amount: item.amount,
+          sortOrder: index,
+        })),
+      } as any);
+      toast({
+        title: "Invoice Duplicated",
+        description: `Created ${duplicate.invoiceNumber}.`,
+      });
+      navigate(`/invoice/${duplicate.id}/edit`);
+    } catch {
+      toast({ title: "Error", description: "Failed to duplicate invoice.", variant: "destructive" });
     } finally {
       setActionLoading(null);
     }
@@ -243,6 +323,21 @@ const InvoiceDetailPage = () => {
       setActionLoading(null);
     }
   };
+
+  useEffect(() => {
+    if (!invoice) return;
+    const outstanding = Math.max(Number(invoice.amountDue || invoice.total - invoice.amountPaid), 0);
+    setPaymentAmount(outstanding > 0 ? String(outstanding) : "");
+  }, [invoice]);
+
+  const paymentMethodOptions = [
+    { value: "BANK_TRANSFER", label: "Bank Transfer", icon: Building2 },
+    { value: "CASH", label: "Cash", icon: BanknoteIcon },
+    { value: "CREDIT_CARD", label: "Credit / Debit Card", icon: CreditCard },
+    { value: "E_TRANSFER", label: "E-Transfer", icon: Wallet },
+    { value: "CHECK", label: "Cheque", icon: FileText },
+    { value: "OTHER", label: "Other", icon: Receipt },
+  ];
 
   // Loading state
   if (loading) {
@@ -323,7 +418,7 @@ const InvoiceDetailPage = () => {
                   variant="outline"
                   onClick={handleSend}
                   disabled={!!actionLoading}
-                  className="rounded-md border-[rgba(15,23,42,0.06)]"
+                  className={cn("rounded-md border-[rgba(15,23,42,0.06)]", isMobile && "hidden")}
                 >
                   {actionLoading === "send" ? <Loader2 size={14} className="animate-spin mr-1.5" /> : <Send size={14} className="mr-1.5" />}
                   Send
@@ -331,12 +426,12 @@ const InvoiceDetailPage = () => {
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={handleMarkPaid}
+                  onClick={() => setPaymentSheetOpen(true)}
                   disabled={!!actionLoading}
-                  className="rounded-md border-green-200 text-green-600 hover:bg-green-50"
+                  className={cn("rounded-md border-green-200 text-green-600 hover:bg-green-50", isMobile && "hidden")}
                 >
                   {actionLoading === "paid" ? <Loader2 size={14} className="animate-spin mr-1.5" /> : <CreditCard size={14} className="mr-1.5" />}
-                  Mark Paid
+                  Record Payment
                 </Button>
               </>
             )}
@@ -345,27 +440,36 @@ const InvoiceDetailPage = () => {
               variant="outline"
               onClick={handleDownload}
               disabled={!!actionLoading}
-              className="rounded-md border-[rgba(15,23,42,0.06)]"
+              className={cn("rounded-md border-[rgba(15,23,42,0.06)]", isMobile && "hidden")}
             >
               {actionLoading === "download" ? <Loader2 size={14} className="animate-spin mr-1.5" /> : <Download size={14} className="mr-1.5" />}
               PDF
             </Button>
-            <Button
-              size="sm"
-              onClick={() => navigate(`/invoice/${invoice.id}/edit`)}
-              className="rounded-md bg-[#0891B2] hover:bg-[#0891B2]/90 text-white"
-            >
-              <Pencil size={14} className="mr-1.5" />
-              Edit
-            </Button>
+            {!isMobile && (
+              <Button
+                size="sm"
+                onClick={handleDuplicate}
+                disabled={!!actionLoading}
+                className="rounded-md bg-[#0891B2] hover:bg-[#0891B2]/90 text-white"
+              >
+                {actionLoading === "duplicate" ? <Loader2 size={14} className="animate-spin mr-1.5" /> : <Copy size={14} className="mr-1.5" />}
+                Duplicate
+              </Button>
+            )}
           </div>
         </div>
       </header>
 
       {/* Content */}
-      <div className="p-6 max-w-5xl mx-auto space-y-6">
+      <div className={cn("max-w-5xl mx-auto space-y-6 p-6", isMobile && "pb-28 px-4 pt-4")}>
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div
+          className={cn(
+            isMobile
+              ? "flex gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              : "grid grid-cols-1 gap-4 md:grid-cols-4"
+          )}
+        >
           {[
             { label: "Total Amount", value: formatCurrency(invoice.total, invoice.currency), icon: DollarSign, color: "bg-[#0891B2]/10 text-[#0891B2]" },
             { label: "Amount Paid", value: formatCurrency(invoice.amountPaid, invoice.currency), icon: CheckCircle2, color: "bg-green-100 text-green-600" },
@@ -377,7 +481,7 @@ const InvoiceDetailPage = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
-              className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-5"
+              className={cn("bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-5", isMobile && "min-w-[220px]")}
             >
               <div className="flex items-center justify-between mb-2">
                 <p className="text-xs text-[#94A3B8] uppercase tracking-wider">{card.label}</p>
@@ -417,33 +521,62 @@ const InvoiceDetailPage = () => {
 
         {/* Line Items */}
         <SectionCard title="Invoice Items" icon={Receipt}>
-          <div className="overflow-hidden rounded-md border border-[rgba(15,23,42,0.06)]">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-[#F8FAFC]">
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">#</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">Description</th>
-                  <th className="text-right py-3 px-4 text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">Qty</th>
-                  <th className="text-right py-3 px-4 text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">Rate</th>
-                  <th className="text-right py-3 px-4 text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(invoice.items || []).map((item, index) => (
-                  <tr key={item.id || index} className="border-t border-[rgba(15,23,42,0.06)] hover:bg-[#F8FAFC]/50">
-                    <td className="py-3 px-4 text-[#94A3B8]">{index + 1}</td>
-                    <td className="py-3 px-4 text-[#0F172A] font-medium">{item.description || "-"}</td>
-                    <td className="py-3 px-4 text-right text-[#475569]">{Number(item.quantity || 0).toFixed(2)}</td>
-                    <td className="py-3 px-4 text-right text-[#475569]">{formatCurrency(item.unitPrice, invoice.currency)}</td>
-                    <td className="py-3 px-4 text-right font-semibold text-[#0F172A]">{formatCurrency(item.amount, invoice.currency)}</td>
+          {isMobile ? (
+            <div className="space-y-3">
+              {(invoice.items || []).map((item, index) => (
+                <div
+                  key={item.id || index}
+                  className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-xs uppercase tracking-wide text-[#94A3B8]">Item {index + 1}</p>
+                      <p className="mt-1 text-sm font-semibold text-[#0F172A]">{item.description || "-"}</p>
+                    </div>
+                    <p className="text-sm font-semibold text-[#0891B2]">{formatCurrency(item.amount, invoice.currency)}</p>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+                    <div className="rounded-xl bg-white px-3 py-2">
+                      <p className="text-[11px] uppercase tracking-wide text-[#94A3B8]">Qty</p>
+                      <p className="mt-1 text-sm font-medium text-[#0F172A]">{Number(item.quantity || 0).toFixed(2)}</p>
+                    </div>
+                    <div className="rounded-xl bg-white px-3 py-2">
+                      <p className="text-[11px] uppercase tracking-wide text-[#94A3B8]">Rate</p>
+                      <p className="mt-1 text-sm font-medium text-[#0F172A]">{formatCurrency(item.unitPrice, invoice.currency)}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-md border border-[rgba(15,23,42,0.06)]">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-[#F8FAFC]">
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">#</th>
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">Description</th>
+                    <th className="text-right py-3 px-4 text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">Qty</th>
+                    <th className="text-right py-3 px-4 text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">Rate</th>
+                    <th className="text-right py-3 px-4 text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">Amount</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {(invoice.items || []).map((item, index) => (
+                    <tr key={item.id || index} className="border-t border-[rgba(15,23,42,0.06)] hover:bg-[#F8FAFC]/50">
+                      <td className="py-3 px-4 text-[#94A3B8]">{index + 1}</td>
+                      <td className="py-3 px-4 text-[#0F172A] font-medium">{item.description || "-"}</td>
+                      <td className="py-3 px-4 text-right text-[#475569]">{Number(item.quantity || 0).toFixed(2)}</td>
+                      <td className="py-3 px-4 text-right text-[#475569]">{formatCurrency(item.unitPrice, invoice.currency)}</td>
+                      <td className="py-3 px-4 text-right font-semibold text-[#0F172A]">{formatCurrency(item.amount, invoice.currency)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           {/* Totals */}
-          <div className="mt-4 ml-auto max-w-xs space-y-2 text-sm">
+          <div className={cn("mt-4 space-y-2 text-sm", isMobile ? "w-full" : "ml-auto max-w-xs")}>
             <div className="flex justify-between py-1">
               <span className="text-[#94A3B8]">Subtotal</span>
               <span className="text-[#0F172A] font-medium">{formatCurrency(invoice.subtotal, invoice.currency)}</span>
@@ -533,6 +666,130 @@ const InvoiceDetailPage = () => {
           Invoice #{invoice.invoiceNumber} · Created {formatDate(invoice.createdAt)} · {invoice.currency}
         </motion.div>
       </div>
+
+      <Drawer open={paymentSheetOpen} onOpenChange={setPaymentSheetOpen}>
+        <DrawerContent className="max-h-[88dvh]">
+          <DrawerHeader>
+            <DrawerTitle>Record Payment</DrawerTitle>
+            <DrawerDescription>
+              Apply a payment to {invoice.invoiceNumber} without leaving the invoice.
+            </DrawerDescription>
+          </DrawerHeader>
+          <div className="space-y-5 px-5 pb-6">
+            <div className="rounded-2xl bg-[#F8FAFC] p-4">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-[#94A3B8]">Outstanding</span>
+                <span className="font-semibold text-[#0F172A]">{formatCurrency(invoice.amountDue, invoice.currency)}</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-[#475569]">Amount</label>
+              <Input
+                inputMode="decimal"
+                value={paymentAmount}
+                onChange={(event) => setPaymentAmount(event.target.value)}
+                className="h-11 rounded-xl border-[rgba(15,23,42,0.06)]"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-[#475569]">Method</label>
+              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                <SelectTrigger className="h-11 rounded-xl border-[rgba(15,23,42,0.06)]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  {paymentMethodOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-[#475569]">Notes</label>
+              <Textarea
+                value={paymentNotes}
+                onChange={(event) => setPaymentNotes(event.target.value)}
+                placeholder="Reference number, confirmation note, or collection details..."
+                className="min-h-[96px] rounded-2xl border-[rgba(15,23,42,0.06)]"
+              />
+            </div>
+          </div>
+          <DrawerFooter className="border-t bg-white">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 rounded-xl"
+              onClick={() => setPaymentSheetOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="h-11 rounded-xl bg-[#0891B2] text-white hover:bg-[#0891B2]/90"
+              onClick={handleRecordPayment}
+              disabled={!!actionLoading || !paymentAmount}
+            >
+              {actionLoading === "paid" ? <Loader2 size={16} className="mr-2 animate-spin" /> : <CreditCard size={16} className="mr-2" />}
+              Record Payment
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+
+      {isMobile && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[rgba(15,23,42,0.06)] bg-white/95 px-3 py-3 backdrop-blur">
+          <div className="grid grid-cols-4 gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={handleSend}
+              disabled={!!actionLoading || invoice.status?.toUpperCase() === "PAID" || invoice.status?.toUpperCase() === "CANCELLED"}
+              className="h-11 rounded-xl border-[rgba(15,23,42,0.06)] px-2 text-xs"
+            >
+              <Send size={14} className="mr-1.5" />
+              Send
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setPaymentSheetOpen(true)}
+              disabled={invoice.status?.toUpperCase() === "PAID" || invoice.status?.toUpperCase() === "CANCELLED"}
+              className="h-11 rounded-xl border-[rgba(15,23,42,0.06)] px-2 text-xs"
+            >
+              <CreditCard size={14} className="mr-1.5" />
+              Payment
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={handleDownload}
+              disabled={!!actionLoading}
+              className="h-11 rounded-xl border-[rgba(15,23,42,0.06)] px-2 text-xs"
+            >
+              <Download size={14} className="mr-1.5" />
+              PDF
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleDuplicate}
+              disabled={!!actionLoading}
+              className="h-11 rounded-xl bg-[#0891B2] px-2 text-xs text-white hover:bg-[#0891B2]/90"
+            >
+              <Copy size={14} className="mr-1.5" />
+              Duplicate
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -10,8 +10,17 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -23,6 +32,13 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
+import { useIsMobile } from "@/hooks/useIsMobile";
+import {
+  ListCardSkeleton,
+  PullToRefreshIndicator,
+  SwipeActionCard,
+  usePullToRefresh,
+} from "@/features/clients/components/responsive-helpers";
 import { cn } from "@/lib/utils";
 import {
   Plus, Search, Eye, Pencil, Trash2, MoreVertical, MoreHorizontal, Filter,
@@ -46,6 +62,14 @@ import { createProjectFromQuote } from "@/features/projects";
 import { getClients, type ClientEntity } from "@/features/clients/services/clients-service";
 import { getLeads, type LeadEntity } from "@/features/leads/services/leads-service";
 import { getEstimates, type RoofEstimate } from "@/features/roof-estimator";
+
+const mobileQuoteTabs = [
+  { value: "all", label: "All" },
+  { value: "draft", label: "Draft" },
+  { value: "sent", label: "Sent" },
+  { value: "accepted", label: "Signed" },
+  { value: "expired", label: "Expired" },
+] as const;
 
 // ============================================
 // STAT CARD
@@ -300,6 +324,88 @@ const QuoteCard = ({ quote, isSelected, onSelect, onView, onEdit, onDelete, onSe
         </div>
       </div>
     </motion.div>
+  );
+};
+
+const MobileQuoteCard = ({
+  quote,
+  isSelected,
+  onTap,
+  onQuickAction,
+}: {
+  quote: Quote;
+  isSelected: boolean;
+  onTap: () => void;
+  onQuickAction: () => void;
+}) => {
+  const statusConfig = getStatusConfig(quote.status);
+  const StatusIcon = statusConfig.icon;
+  const expired = isExpired(quote.validUntil, quote.status);
+  const recipientLabel = quote.leadId ? "Lead" : "Client";
+  const quickLabel =
+    canSendForSignature(quote.status) ? "Send" : isSignedQuote(quote.status) && !quote.linkedProjectId ? "Convert" : "View";
+
+  return (
+    <motion.button
+      type="button"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      onClick={onTap}
+      className={cn(
+        "w-full rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-4 text-left shadow-sm transition-all",
+        isSelected && "border-[#22D3EE] bg-[#0891B2]/5"
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex items-start gap-3">
+          <div className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl", expired ? "bg-amber-100" : "bg-[#0891B2]/10")}>
+            <FileStack size={18} className={expired ? "text-amber-600" : "text-[#0891B2]"} />
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-[#0F172A]">{quote.quoteNumber}</p>
+            <p className="truncate text-sm text-[#475569]">{quote.leadId ? quote.leadName || quote.clientName : quote.clientName}</p>
+            <div className="mt-1 inline-flex rounded-full bg-[#F8FAFC] px-2 py-1 text-[11px] font-medium text-[#475569]">
+              {recipientLabel}
+            </div>
+          </div>
+        </div>
+        <span className={cn("inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold", statusConfig.bg, statusConfig.text)}>
+          <StatusIcon size={11} />
+          {quote.status}
+        </span>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <div className="rounded-xl bg-[#F8FAFC] px-3 py-2">
+          <p className="text-[11px] uppercase tracking-wide text-[#94A3B8]">Amount</p>
+          <p className="mt-1 text-base font-semibold text-[#0F172A]">{formatCurrency(quote.total)}</p>
+        </div>
+        <div className="rounded-xl bg-[#F8FAFC] px-3 py-2">
+          <p className="text-[11px] uppercase tracking-wide text-[#94A3B8]">Valid Until</p>
+          <p className={cn("mt-1 text-sm font-semibold", expired ? "text-amber-600" : "text-[#0F172A]")}>
+            {formatDate(quote.validUntil)}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 flex items-center justify-between gap-3 border-t border-[rgba(15,23,42,0.06)] pt-3">
+        <div>
+          <p className="text-xs text-[#94A3B8]">Created</p>
+          <p className="text-sm font-medium text-[#475569]">{formatDate(quote.createdAt)}</p>
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          onClick={(event) => {
+            event.stopPropagation();
+            onQuickAction();
+          }}
+          className="h-9 rounded-xl bg-[#0891B2] px-3 text-white hover:bg-[#0891B2]/90"
+        >
+          {quickLabel}
+        </Button>
+      </div>
+    </motion.button>
   );
 };
 
@@ -845,11 +951,13 @@ const QuotesPage = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
+  const { isMobile } = useIsMobile();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
+  const [mobileStatusTab, setMobileStatusTab] = useState<(typeof mobileQuoteTabs)[number]["value"]>("all");
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [selectedQuotes, setSelectedQuotes] = useState<Set<string>>(new Set());
   const [currentQuote, setCurrentQuote] = useState<Quote | null>(null);
@@ -858,6 +966,10 @@ const QuotesPage = () => {
   const [deleteQuoteId, setDeleteQuoteId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [dismissedInsights, setDismissedInsights] = useState<string[]>([]);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [isOffline, setIsOffline] = useState(
+    typeof window !== "undefined" ? !window.navigator.onLine : false
+  );
   const itemsPerPage = 10;
 
   // Fetch quotes from API
@@ -874,7 +986,23 @@ const QuotesPage = () => {
     }
   }, [toast]);
 
+  const { handlers, pullDistance, isRefreshing } = usePullToRefresh({
+    enabled: isMobile,
+    onRefresh: fetchQuotes,
+  });
+
   useEffect(() => { fetchQuotes(); }, [fetchQuotes]);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     if (searchParams.get("action") === "create") {
@@ -935,11 +1063,19 @@ const QuotesPage = () => {
   // Filtered quotes
   const filteredQuotes = useMemo(() => {
     let result = [...quotes];
+    const activeStatusFilter = isMobile ? mobileStatusTab : statusFilter;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter(qt => qt.quoteNumber.toLowerCase().includes(q) || qt.title.toLowerCase().includes(q) || qt.clientName.toLowerCase().includes(q));
     }
-    if (statusFilter !== "all") result = result.filter(qt => qt.status === statusFilter);
+    if (activeStatusFilter !== "all") {
+      result = result.filter((qt) => {
+        if (activeStatusFilter === "accepted") {
+          return isSignedQuote(qt.status);
+        }
+        return qt.status === activeStatusFilter;
+      });
+    }
     if (dateFilter !== "all") {
       const now = new Date();
       result = result.filter(qt => {
@@ -954,7 +1090,11 @@ const QuotesPage = () => {
       });
     }
     return result;
-  }, [quotes, searchQuery, statusFilter, dateFilter]);
+  }, [dateFilter, isMobile, mobileStatusTab, quotes, searchQuery, statusFilter]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [dateFilter, mobileStatusTab, searchQuery, statusFilter]);
 
   const totalPages = Math.ceil(filteredQuotes.length / itemsPerPage);
   const paginatedQuotes = filteredQuotes.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -1110,6 +1250,43 @@ const QuotesPage = () => {
     }
   };
 
+  const handleExport = () => {
+    const data = filteredQuotes.map((quote) => ({
+      "Quote #": quote.quoteNumber,
+      Recipient: quote.leadId ? quote.leadName || quote.clientName : quote.clientName,
+      Status: quote.status,
+      "Valid Until": formatDate(quote.validUntil),
+      Total: quote.total,
+    }));
+
+    const csv = [
+      Object.keys(data[0] || {}).join(","),
+      ...data.map((row) => Object.values(row).join(",")),
+    ].join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "quotes.csv";
+    anchor.click();
+
+    toast({ title: "Exported", description: "Quotes exported to CSV successfully." });
+  };
+
+  const handleMobileQuickAction = (quote: Quote) => {
+    if (canSendForSignature(quote.status)) {
+      handleSendQuote(quote.id);
+      return;
+    }
+    if (isSignedQuote(quote.status) && !quote.linkedProjectId) {
+      handleConvertToJob(quote.id);
+      return;
+    }
+    setCurrentQuote(quote);
+    setIsDetailOpen(true);
+  };
+
   const toggleSelectAll = (checked: boolean) => {
     if (checked) setSelectedQuotes(new Set(paginatedQuotes.map(q => q.id)));
     else setSelectedQuotes(new Set());
@@ -1117,10 +1294,27 @@ const QuotesPage = () => {
 
   return (
     <div className="flex h-screen bg-[#F8FAFC]">
-      <div className="flex-1 overflow-auto">
-        <div className="p-6 max-w-[1600px] mx-auto">
+      <div
+        className="flex-1 overflow-auto"
+        onTouchStart={isMobile ? handlers.onTouchStart : undefined}
+        onTouchMove={isMobile ? handlers.onTouchMove : undefined}
+        onTouchEnd={isMobile ? handlers.onTouchEnd : undefined}
+      >
+        <div className={cn("max-w-[1600px] mx-auto p-6", isMobile && "px-4 pb-24 pt-4")}>
+          <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
+
+          {isOffline && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-4 flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+            >
+              <AlertTriangle size={16} className="shrink-0" />
+              You&apos;re offline. Showing the latest loaded quotes until the connection comes back.
+            </motion.div>
+          )}
           {/* Header */}
-          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between mb-6">
+          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className={cn("mb-6 flex items-center justify-between", isMobile && "items-start gap-3")}>
             <div>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-md bg-[#0891B2]/10 flex items-center justify-center">
@@ -1136,13 +1330,21 @@ const QuotesPage = () => {
               <Button variant="outline" size="sm" className="rounded-md border-[rgba(15,23,42,0.06)]" onClick={() => fetchQuotes()} disabled={loading}>
                 <RefreshCw size={16} className={`mr-2 ${loading ? "animate-spin" : ""}`} />Refresh
               </Button>
-              <Button variant="outline" size="sm" className="rounded-md border-[rgba(15,23,42,0.06)]">
-                <Download size={16} className="mr-2" />Export
-              </Button>
-              <Button size="sm" className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
-                onClick={() => { setCurrentQuote(null); setIsFormOpen(true); }}>
-                <Plus size={16} className="mr-2" />New Quote
-              </Button>
+              {isMobile ? (
+                <Button variant="outline" size="sm" className="rounded-md border-[rgba(15,23,42,0.06)]" onClick={() => setFiltersOpen(true)}>
+                  <Filter size={16} />
+                </Button>
+              ) : (
+                <>
+                  <Button variant="outline" size="sm" className="rounded-md border-[rgba(15,23,42,0.06)]" onClick={handleExport}>
+                    <Download size={16} className="mr-2" />Export
+                  </Button>
+                  <Button size="sm" className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
+                    onClick={() => { setCurrentQuote(null); setIsFormOpen(true); }}>
+                    <Plus size={16} className="mr-2" />New Quote
+                  </Button>
+                </>
+              )}
             </div>
           </motion.div>
 
@@ -1190,15 +1392,148 @@ const QuotesPage = () => {
           </AnimatePresence>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-            <StatCard title="Total Pipeline" value={formatCurrency(stats.totalValue)} subtitle={`${stats.totalCount} quotes`} icon={DollarSign} color="teal" trend={{ value: 12, positive: true }} delay={0} />
-            <StatCard title="Signed Value" value={formatCurrency(stats.acceptedValue)} subtitle="Contracts ready to convert" icon={CheckCircle2} color="green" trend={{ value: 8, positive: true }} delay={0.05} />
-            <StatCard title="Pending" value={formatCurrency(stats.pendingValue)} subtitle="Awaiting response" icon={Clock3} color="gold" delay={0.1} />
-            <StatCard title="Win Rate" value={`${stats.conversionRate}%`} subtitle="Conversion rate" icon={Target} color="purple" trend={{ value: 3, positive: true }} delay={0.15} />
-            <StatCard title="Avg. Value" value={formatCurrency(stats.avgValue)} subtitle="Per quote" icon={TrendingUp} color="blue" delay={0.2} />
-            <StatCard title="Expiring Soon" value={stats.expiringSoonCount} subtitle="Within 7 days" icon={AlertTriangle} color="red" delay={0.25} />
+          <div
+            className={cn(
+              "mb-6",
+              isMobile
+                ? "flex gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                : "grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6"
+            )}
+          >
+            <div className={cn(isMobile && "min-w-[220px]")}><StatCard title="Total Pipeline" value={formatCurrency(stats.totalValue)} subtitle={`${stats.totalCount} quotes`} icon={DollarSign} color="teal" trend={{ value: 12, positive: true }} delay={0} /></div>
+            <div className={cn(isMobile && "min-w-[220px]")}><StatCard title="Signed Value" value={formatCurrency(stats.acceptedValue)} subtitle="Contracts ready to convert" icon={CheckCircle2} color="green" trend={{ value: 8, positive: true }} delay={0.05} /></div>
+            <div className={cn(isMobile && "min-w-[220px]")}><StatCard title="Pending" value={formatCurrency(stats.pendingValue)} subtitle="Awaiting response" icon={Clock3} color="gold" delay={0.1} /></div>
+            <div className={cn(isMobile && "min-w-[220px]")}><StatCard title="Win Rate" value={`${stats.conversionRate}%`} subtitle="Conversion rate" icon={Target} color="purple" trend={{ value: 3, positive: true }} delay={0.15} /></div>
+            <div className={cn(isMobile && "min-w-[220px]")}><StatCard title="Avg. Value" value={formatCurrency(stats.avgValue)} subtitle="Per quote" icon={TrendingUp} color="blue" delay={0.2} /></div>
+            <div className={cn(isMobile && "min-w-[220px]")}><StatCard title="Expiring Soon" value={stats.expiringSoonCount} subtitle="Within 7 days" icon={AlertTriangle} color="red" delay={0.25} /></div>
           </div>
 
+          {isMobile ? (
+            <div className="space-y-4">
+              <div className="space-y-3 rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm">
+                <div className="relative">
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
+                  <Input
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder="Search quotes..."
+                    className="h-11 rounded-xl border-[rgba(15,23,42,0.06)] pl-10"
+                  />
+                  {searchQuery && (
+                    <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8]">
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between gap-3">
+                  <div className="overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    <Tabs value={mobileStatusTab} onValueChange={(value) => setMobileStatusTab(value as (typeof mobileQuoteTabs)[number]["value"])}>
+                      <TabsList className="inline-flex w-max rounded-2xl bg-[#F8FAFC] p-1">
+                        {mobileQuoteTabs.map((tab) => (
+                          <TabsTrigger key={tab.value} value={tab.value} className="rounded-xl px-4 text-xs">
+                            {tab.label}
+                          </TabsTrigger>
+                        ))}
+                      </TabsList>
+                    </Tabs>
+                  </div>
+                  <Button type="button" variant="outline" onClick={() => setFiltersOpen(true)} className="h-10 rounded-xl border-[rgba(15,23,42,0.06)] px-3">
+                    <Filter size={16} className="mr-2" />
+                    Filter
+                  </Button>
+                </div>
+
+                <p className="text-xs text-[#94A3B8]">
+                  Swipe right to view, swipe left to delete, and long press a quote to start multi-select.
+                </p>
+              </div>
+
+              {selectedQuotes.size > 0 && (
+                <div className="sticky top-4 z-20 rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-3 shadow-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm font-medium text-[#0F172A]">{selectedQuotes.size} selected</span>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" onClick={handleBulkSend} className="h-9 rounded-xl bg-[#0891B2] text-white hover:bg-[#0891B2]/90">
+                        <Send size={14} className="mr-1.5" />
+                        Send
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={handleBulkDelete} className="h-9 rounded-xl border-red-200 text-red-600 hover:bg-red-50">
+                        <Trash2 size={14} className="mr-1.5" />
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {loading ? (
+                <ListCardSkeleton rows={4} />
+              ) : filteredQuotes.length === 0 ? (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-10 text-center shadow-sm">
+                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#F1F5F9]">
+                    <FileStack size={32} className="text-[#94A3B8]" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-[#0F172A]">No quotes found</h3>
+                  <p className="mt-2 text-sm text-[#94A3B8]">Create a quote to start building your pipeline.</p>
+                </motion.div>
+              ) : (
+                <div className="space-y-3">
+                  {paginatedQuotes.map((quote) => {
+                    const isSelected = selectedQuotes.has(quote.id);
+                    return (
+                      <SwipeActionCard
+                        key={quote.id}
+                        onView={() => { setCurrentQuote(quote); setIsDetailOpen(true); }}
+                        onDelete={() => setDeleteQuoteId(quote.id)}
+                        onLongPress={() => {
+                          const nextSelection = new Set(selectedQuotes);
+                          if (isSelected) nextSelection.delete(quote.id);
+                          else nextSelection.add(quote.id);
+                          setSelectedQuotes(nextSelection);
+                        }}
+                        primaryLabel="View"
+                        secondaryLabel="Delete"
+                      >
+                        <MobileQuoteCard
+                          quote={quote}
+                          isSelected={isSelected}
+                          onTap={() => { setCurrentQuote(quote); setIsDetailOpen(true); }}
+                          onQuickAction={() => handleMobileQuickAction(quote)}
+                        />
+                      </SwipeActionCard>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className="flex items-center justify-between rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white px-4 py-3 text-sm text-[#475569] shadow-sm">
+                <span>
+                  Showing {filteredQuotes.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1}-
+                  {Math.min(currentPage * itemsPerPage, filteredQuotes.length)} of {filteredQuotes.length}
+                </span>
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="outline" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={currentPage === 1} className="h-9 rounded-xl border-[rgba(15,23,42,0.06)] px-3">
+                      <ChevronLeft size={16} />
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))} disabled={currentPage === totalPages} className="h-9 rounded-xl border-[rgba(15,23,42,0.06)] px-3">
+                      <ChevronRight size={16} />
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <Button
+                type="button"
+                onClick={() => { setCurrentQuote(null); setIsFormOpen(true); }}
+                className="fixed bottom-5 right-5 z-40 h-14 w-14 rounded-full bg-[#0891B2] p-0 text-white shadow-lg hover:bg-[#0891B2]/90"
+              >
+                <Plus size={22} />
+              </Button>
+            </div>
+          ) : (
+          <>
           {/* Toolbar */}
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
             className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4 mb-6">
@@ -1349,6 +1684,52 @@ const QuotesPage = () => {
               </AnimatePresence>
             </div>
           )}
+          </>
+          )}
+
+          <Drawer open={isMobile && filtersOpen} onOpenChange={setFiltersOpen}>
+            <DrawerContent className="max-h-[85dvh] rounded-t-[24px] border-none bg-white px-0">
+              <DrawerHeader className="px-5 pb-2 text-left">
+                <DrawerTitle className="text-[#0F172A]">Filter Quotes</DrawerTitle>
+                <DrawerDescription>
+                  Refine the mobile quotes list by date range or export the current results.
+                </DrawerDescription>
+              </DrawerHeader>
+              <div className="space-y-5 px-5 pb-6 pt-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-[#475569]">Date range</label>
+                  <Select value={dateFilter} onValueChange={setDateFilter}>
+                    <SelectTrigger className="h-11 rounded-xl border-[rgba(15,23,42,0.06)]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      {dateFilterOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-[#475569]">Export</label>
+                  <Button type="button" variant="outline" onClick={handleExport} className="h-11 w-full rounded-xl border-[rgba(15,23,42,0.06)]">
+                    <Download size={16} className="mr-2" />
+                    Export current results
+                  </Button>
+                </div>
+              </div>
+              <DrawerFooter className="border-t border-[rgba(15,23,42,0.06)] bg-white px-5 pb-6 pt-4">
+                <Button type="button" variant="outline" className="h-11 rounded-xl" onClick={() => { setDateFilter("all"); setFiltersOpen(false); }}>
+                  Clear filters
+                </Button>
+                <Button type="button" className="h-11 rounded-xl bg-[#0891B2] text-white hover:bg-[#0891B2]/90" onClick={() => setFiltersOpen(false)}>
+                  Apply
+                </Button>
+              </DrawerFooter>
+            </DrawerContent>
+          </Drawer>
         </div>
       </div>
 

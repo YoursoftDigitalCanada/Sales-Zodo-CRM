@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 // import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import {
@@ -27,6 +27,7 @@ import { getEmails } from "@/features/emails/services/emails-service";
 import { ComposeEmailSheet } from "@/features/emails/components/ComposeEmailSheet";
 import { WhatsAppActionButton } from "@/features/whatsapp/components/WhatsAppActionButton";
 import { ActivityTimeline } from "@/components/ActivityTimeline";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import {
     ArrowLeft, Loader2, Mail, Phone, MapPin, Building2, Globe, Briefcase,
     Tag, Calendar, Clock, DollarSign, TrendingUp, Thermometer, User, Users,
@@ -452,10 +453,14 @@ const LeadDetailPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { toast } = useToast();
+    const { isMobile } = useIsMobile();
     const [lead, setLead] = useState<LeadData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState("overview");
     const [showConvertDialog, setShowConvertDialog] = useState(false);
+    const infoSectionRef = useRef<HTMLDivElement | null>(null);
+    const notesSectionRef = useRef<HTMLDivElement | null>(null);
+    const activitySectionRef = useRef<HTMLDivElement | null>(null);
 
     // Notes state
     const [notes, setNotes] = useState<NoteEntry[]>([]);
@@ -663,6 +668,16 @@ const LeadDetailPage = () => {
 
     useEffect(() => { fetchEmails(); }, [fetchEmails]);
 
+    const scrollToSection = useCallback((section: "overview" | "notes" | "activity") => {
+        setActiveTab(section);
+        const targetMap = {
+            overview: infoSectionRef,
+            notes: notesSectionRef,
+            activity: activitySectionRef,
+        } as const;
+        targetMap[section].current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, []);
+
     const handleSaveClaim = async (data: Record<string, unknown>) => {
         try {
             if (editingClaim) {
@@ -755,7 +770,7 @@ const LeadDetailPage = () => {
     // ── Render ────────────────────────────────────────────────────────────
 
     return (
-        <div className="min-h-screen bg-[#F9FAFB]">
+        <div className="min-h-screen bg-[#F9FAFB] pb-24 md:pb-0">
             <style>{`
                 @keyframes fadeSlideUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
             `}</style>
@@ -843,11 +858,34 @@ const LeadDetailPage = () => {
                     ))}
                 </div>
 
+                {isMobile && (
+                    <div className="sticky top-[78px] z-20 -mx-1 overflow-x-auto rounded-2xl bg-white/95 px-1 py-2 shadow-sm backdrop-blur">
+                        <div className="flex gap-2 px-1">
+                            {[
+                                { id: "overview", label: "Info" },
+                                { id: "notes", label: "Notes" },
+                                { id: "activity", label: "Activity" },
+                            ].map((tab) => (
+                                <Button
+                                    key={tab.id}
+                                    type="button"
+                                    variant={activeTab === tab.id ? "default" : "outline"}
+                                    size="sm"
+                                    className={activeTab === tab.id ? "bg-[#14B8A6] hover:bg-[#0D9488]" : ""}
+                                    onClick={() => scrollToSection(tab.id as "overview" | "notes" | "activity")}
+                                >
+                                    {tab.label}
+                                </Button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 {/* ═══════════ CARD GRID ═══════════ */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
                     {/* CARD 1: Contact & Lead Info */}
-                    <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 200ms both' }}>
+                    <div ref={infoSectionRef} className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 200ms both' }}>
                         <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#F1F5F9]">
                             <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#CCFBF1] flex items-center justify-center"><User size={14} className="text-[#0D9488]" /></div><h3 className="text-sm font-semibold text-[#111827]">Contact Information</h3></div>
                         </div>
@@ -1098,7 +1136,7 @@ const LeadDetailPage = () => {
                     </div>
 
                     {/* CARD 12: Notes */}
-                    <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 1080ms both' }}>
+                    <div ref={notesSectionRef} className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 1080ms both' }}>
                         <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#F1F5F9]">
                             <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#FEF9C3] flex items-center justify-center"><FileText size={14} className="text-[#CA8A04]" /></div><h3 className="text-sm font-semibold text-[#111827]">Notes</h3></div>
                         </div>
@@ -1113,7 +1151,7 @@ const LeadDetailPage = () => {
                     </div>
 
                     {/* CARD 13: Activity Timeline */}
-                    <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 1160ms both' }}>
+                    <div ref={activitySectionRef} className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 1160ms both' }}>
                         <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#F1F5F9]">
                             <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#EFF6FF] flex items-center justify-center"><Clock size={14} className="text-[#2563EB]" /></div><h3 className="text-sm font-semibold text-[#111827]">Recent Activity</h3></div>
                         </div>
@@ -1129,6 +1167,39 @@ const LeadDetailPage = () => {
                     )}
                 </div>
             </div>
+
+            {isMobile && (
+                <div className="fixed inset-x-4 bottom-4 z-40 grid grid-cols-3 gap-2 rounded-2xl border border-[rgba(15,23,42,0.08)] bg-white/95 p-2 shadow-2xl backdrop-blur">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="rounded-xl"
+                        disabled={!lead.phone}
+                        onClick={() => lead.phone && (window.location.href = `tel:${lead.phone}`)}
+                    >
+                        <Phone size={15} className="mr-1.5" />
+                        Call
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="rounded-xl"
+                        disabled={!lead.email}
+                        onClick={() => setShowComposeEmail(true)}
+                    >
+                        <Mail size={15} className="mr-1.5" />
+                        Email
+                    </Button>
+                    <Button
+                        type="button"
+                        className="rounded-xl bg-[#14B8A6] hover:bg-[#0D9488]"
+                        onClick={() => navigate("/leads", { state: { editLeadId: lead.id } })}
+                    >
+                        <Pencil size={15} className="mr-1.5" />
+                        Edit
+                    </Button>
+                </div>
+            )}
 
             {/* Convert Dialog */}
             {showConvertDialog && lead && (

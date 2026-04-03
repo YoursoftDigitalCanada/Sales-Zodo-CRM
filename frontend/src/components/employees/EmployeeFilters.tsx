@@ -15,9 +15,18 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { Department, EmployeeStatus, EmploymentType } from './types';
 
 interface FilterState {
@@ -49,6 +58,7 @@ export const EmployeeFilters: React.FC<EmployeeFiltersProps> = ({
   sortBy,
   onSortChange,
 }) => {
+  const { isMobile } = useIsMobile();
   const statusOptions: { value: EmployeeStatus; label: string }[] = [
     { value: 'active', label: 'Active' },
     { value: 'inactive', label: 'Inactive' },
@@ -97,9 +107,96 @@ export const EmployeeFilters: React.FC<EmployeeFiltersProps> = ({
     });
   };
 
+  const filterPanel = (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h4 className="font-medium text-[#0F172A]">Filters</h4>
+        {activeFiltersCount > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearFilters}
+            className="h-8 text-[#475569] hover:text-slate-200"
+          >
+            Clear all
+          </Button>
+        )}
+      </div>
+
+      <Separator />
+
+      <div className="space-y-3">
+        <Label className="text-sm font-medium">Department</Label>
+        <div className="space-y-2 max-h-32 overflow-y-auto">
+          {departments.map((dept) => (
+            <div key={dept.id} className="flex items-center space-x-2">
+              <Checkbox
+                id={`dept-${dept.id}`}
+                checked={filters.departments.includes(dept.id)}
+                onCheckedChange={() => handleDepartmentToggle(dept.id)}
+              />
+              <label
+                htmlFor={`dept-${dept.id}`}
+                className="cursor-pointer text-sm text-slate-200"
+              >
+                {dept.name}
+              </label>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <Separator />
+
+      <div className="space-y-3">
+        <Label className="text-sm font-medium">Status</Label>
+        <div className="space-y-2">
+          {statusOptions.map((option) => (
+            <div key={option.value} className="flex items-center space-x-2">
+              <Checkbox
+                id={`status-${option.value}`}
+                checked={filters.statuses.includes(option.value)}
+                onCheckedChange={() => handleStatusToggle(option.value)}
+              />
+              <label
+                htmlFor={`status-${option.value}`}
+                className="cursor-pointer text-sm text-slate-200"
+              >
+                {option.label}
+              </label>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <Separator />
+
+      <div className="space-y-3">
+        <Label className="text-sm font-medium">Employment Type</Label>
+        <div className="space-y-2">
+          {employmentTypeOptions.map((option) => (
+            <div key={option.value} className="flex items-center space-x-2">
+              <Checkbox
+                id={`type-${option.value}`}
+                checked={filters.employmentTypes.includes(option.value)}
+                onCheckedChange={() => handleEmploymentTypeToggle(option.value)}
+              />
+              <label
+                htmlFor={`type-${option.value}`}
+                className="cursor-pointer text-sm text-slate-200"
+              >
+                {option.label}
+              </label>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row">
         {/* Search Input */}
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
@@ -113,7 +210,7 @@ export const EmployeeFilters: React.FC<EmployeeFiltersProps> = ({
 
         {/* Sort Select */}
         <Select value={sortBy} onValueChange={onSortChange}>
-          <SelectTrigger className="w-[180px] bg-white">
+          <SelectTrigger className="w-full bg-white sm:w-[180px]">
             <SelectValue placeholder="Sort by" />
           </SelectTrigger>
           <SelectContent>
@@ -125,109 +222,52 @@ export const EmployeeFilters: React.FC<EmployeeFiltersProps> = ({
           </SelectContent>
         </Select>
 
-        {/* Filter Popover */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className="gap-2">
-              <SlidersHorizontal className="w-4 h-4" />
-              Filters
-              {activeFiltersCount > 0 && (
-                <Badge className="ml-1 bg-[#0891B2] hover:bg-[#0891B2]">
-                  {activeFiltersCount}
-                </Badge>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-80" align="end">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h4 className="font-medium text-[#0F172A]">Filters</h4>
+        {isMobile ? (
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" className="w-full gap-2 sm:w-auto">
+                <SlidersHorizontal className="w-4 h-4" />
+                Filters
                 {activeFiltersCount > 0 && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={clearFilters}
-                    className="h-8 text-[#475569] hover:text-slate-200"
-                  >
-                    Clear all
-                  </Button>
+                  <Badge className="ml-1 bg-[#0891B2] hover:bg-[#0891B2]">
+                    {activeFiltersCount}
+                  </Badge>
                 )}
+              </Button>
+            </SheetTrigger>
+            <SheetContent
+              side="bottom"
+              className="max-h-[85vh] rounded-t-3xl border-[rgba(15,23,42,0.06)] px-5 pb-8 pt-10"
+            >
+              <SheetHeader className="mb-4 text-left">
+                <SheetTitle>Employee Filters</SheetTitle>
+                <SheetDescription>
+                  Filter employees by department, status, and employment type.
+                </SheetDescription>
+              </SheetHeader>
+              <div className="overflow-y-auto pr-1">
+                {filterPanel}
               </div>
-
-              <Separator />
-
-              {/* Department Filter */}
-              <div className="space-y-3">
-                <Label className="text-sm font-medium">Department</Label>
-                <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {departments.map((dept) => (
-                    <div key={dept.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`dept-${dept.id}`}
-                        checked={filters.departments.includes(dept.id)}
-                        onCheckedChange={() => handleDepartmentToggle(dept.id)}
-                      />
-                      <label
-                        htmlFor={`dept-${dept.id}`}
-                        className="text-sm text-slate-200 cursor-pointer"
-                      >
-                        {dept.name}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Status Filter */}
-              <div className="space-y-3">
-                <Label className="text-sm font-medium">Status</Label>
-                <div className="space-y-2">
-                  {statusOptions.map((option) => (
-                    <div key={option.value} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`status-${option.value}`}
-                        checked={filters.statuses.includes(option.value)}
-                        onCheckedChange={() => handleStatusToggle(option.value)}
-                      />
-                      <label
-                        htmlFor={`status-${option.value}`}
-                        className="text-sm text-slate-200 cursor-pointer"
-                      >
-                        {option.label}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Employment Type Filter */}
-              <div className="space-y-3">
-                <Label className="text-sm font-medium">Employment Type</Label>
-                <div className="space-y-2">
-                  {employmentTypeOptions.map((option) => (
-                    <div key={option.value} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`type-${option.value}`}
-                        checked={filters.employmentTypes.includes(option.value)}
-                        onCheckedChange={() => handleEmploymentTypeToggle(option.value)}
-                      />
-                      <label
-                        htmlFor={`type-${option.value}`}
-                        className="text-sm text-slate-200 cursor-pointer"
-                      >
-                        {option.label}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
+            </SheetContent>
+          </Sheet>
+        ) : (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <SlidersHorizontal className="w-4 h-4" />
+                Filters
+                {activeFiltersCount > 0 && (
+                  <Badge className="ml-1 bg-[#0891B2] hover:bg-[#0891B2]">
+                    {activeFiltersCount}
+                  </Badge>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80" align="end">
+              {filterPanel}
+            </PopoverContent>
+          </Popover>
+        )}
 
         {/* View Mode Toggle */}
         <div className="flex rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-1">

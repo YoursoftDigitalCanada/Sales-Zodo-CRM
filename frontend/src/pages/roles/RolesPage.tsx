@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { useToast } from "@/hooks/use-toast";
 import {
     Shield, Plus, Search, CheckCircle2, XCircle, Clock,
@@ -61,6 +62,7 @@ function buildPermMap(role: ApiRole, allPerms: ApiPermission[]): Record<string, 
 
 export default function RolesPage() {
     const { toast } = useToast();
+    const { isMobile } = useIsMobile();
     const [activeTab, setActiveTab] = useState<RolesTab>("roles");
     const [loading, setLoading] = useState(true);
 
@@ -249,7 +251,7 @@ export default function RolesPage() {
 
     if (loading) {
         return (
-            <div className="flex h-screen bg-[#F8FAFC] items-center justify-center">
+            <div className="flex min-h-screen bg-[#F8FAFC] items-center justify-center">
                 <div className="flex items-center gap-3 text-[#94A3B8]">
                     <Loader2 size={24} className="animate-spin" />
                     <span className="text-sm font-medium">Loading roles…</span>
@@ -259,11 +261,11 @@ export default function RolesPage() {
     }
 
     return (
-        <div className="flex h-screen bg-[#F8FAFC]">
+        <div className="flex min-h-screen bg-[#F8FAFC]">
             <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
                 {/* Header */}
                 <header className="crm-module-header bg-white border-b border-[rgba(15,23,42,0.06)] px-6 py-4 flex-shrink-0">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-lg bg-[#0891B2]/10 flex items-center justify-center">
                                 <Shield size={20} className="text-[#0891B2]" />
@@ -273,7 +275,7 @@ export default function RolesPage() {
                                 <p className="text-sm text-[#475569] mt-0.5">Manage access control and team permissions</p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                             <button onClick={handleExport} className="flex items-center gap-2 h-9 px-4 border border-[rgba(15,23,42,0.12)] bg-white text-[#475569] rounded-lg text-sm font-medium hover:bg-[#F8FAFC]">
                                 <Download size={14} /> Export
                             </button>
@@ -284,7 +286,7 @@ export default function RolesPage() {
                     </div>
 
                     {/* Tabs */}
-                    <div className="flex items-center gap-1 mt-4 border-b border-[rgba(15,23,42,0.06)] -mb-4 -mx-6 px-6">
+                    <div className="mt-4 flex items-center gap-1 overflow-x-auto border-b border-[rgba(15,23,42,0.06)] -mb-4 -mx-6 px-6">
                         {rolesTabs.map((tab) => (
                             <button
                                 key={tab.id}
@@ -409,52 +411,85 @@ export default function RolesPage() {
 
                                 {currentMatrixRole && (
                                     <div className="bg-white rounded-lg card-shadow overflow-hidden">
-                                        <div className="responsive-table">
-                                            <table className="w-full text-xs">
-                                                <thead>
-                                                    <tr className="bg-[#F8FAFC] border-b border-[rgba(15,23,42,0.08)]">
-                                                        <th className="text-left py-3 px-4 text-[#475569] font-semibold w-48">Module</th>
-                                                        <th className="text-center py-3 px-4 text-[#475569] font-semibold">View</th>
-                                                        <th className="text-center py-3 px-4 text-[#475569] font-semibold">Create</th>
-                                                        <th className="text-center py-3 px-4 text-[#475569] font-semibold">Edit / Update</th>
-                                                        <th className="text-center py-3 px-4 text-[#475569] font-semibold">Delete</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {moduleNames.map((mod) => {
-                                                        const perms = editedPerms[mod] || [];
-                                                        const actions = ["view", "create", "update", "delete"];
-                                                        return (
-                                                            <tr key={mod} className="border-b border-[rgba(15,23,42,0.04)] hover:bg-[#F8FAFC]">
-                                                                <td className="py-3 px-4">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: MODULE_COLORS[mod] || "#94A3B8" }} />
-                                                                        <span className="font-medium text-[#0F172A] capitalize">{mod.replace(/-/g, " ")}</span>
-                                                                    </div>
-                                                                </td>
+                                        {isMobile ? (
+                                            <div className="space-y-3 p-4">
+                                                {moduleNames.map((mod) => {
+                                                    const perms = editedPerms[mod] || [];
+                                                    const actions = ["view", "create", "update", "delete"];
+                                                    return (
+                                                        <div key={mod} className="rounded-2xl border border-[rgba(15,23,42,0.06)] p-4">
+                                                            <div className="mb-3 flex items-center gap-2">
+                                                                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: MODULE_COLORS[mod] || "#94A3B8" }} />
+                                                                <span className="font-medium capitalize text-[#0F172A]">{mod.replace(/-/g, " ")}</span>
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-2">
                                                                 {actions.map((action) => (
-                                                                    <td key={action} className="py-3 px-4 text-center">
-                                                                        <button
-                                                                            onClick={() => handleTogglePermission(mod, action)}
-                                                                            className={cn(
-                                                                                "w-7 h-7 rounded-lg flex items-center justify-center transition-all",
-                                                                                perms.includes(action)
-                                                                                    ? "bg-[#0891B2] text-white"
-                                                                                    : "bg-[#F1F5F9] text-[#CBD5E1] hover:bg-[#E2E8F0]"
-                                                                            )}
-                                                                        >
-                                                                            {perms.includes(action) ? <Check size={14} /> : <X size={14} />}
-                                                                        </button>
-                                                                    </td>
+                                                                    <button
+                                                                        key={action}
+                                                                        onClick={() => handleTogglePermission(mod, action)}
+                                                                        className={cn(
+                                                                            "flex items-center justify-between rounded-xl border px-3 py-2 text-xs font-medium capitalize",
+                                                                            perms.includes(action)
+                                                                                ? "border-[#0891B2]/20 bg-[#0891B2] text-white"
+                                                                                : "border-[rgba(15,23,42,0.08)] bg-[#F8FAFC] text-[#475569]"
+                                                                        )}
+                                                                    >
+                                                                        <span>{action === "update" ? "edit" : action}</span>
+                                                                        {perms.includes(action) ? <Check size={13} /> : <X size={13} />}
+                                                                    </button>
                                                                 ))}
-                                                            </tr>
-                                                        );
-                                                    })}
-                                                </tbody>
-                                            </table>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
                                         </div>
-                                        {/* Summary */}
-                                        <div className="px-4 py-3 bg-[#F8FAFC] border-t border-[rgba(15,23,42,0.06)] flex items-center justify-between text-xs">
+                                        ) : (
+                                            <div className="responsive-table overflow-x-auto">
+                                                <table className="w-full text-xs">
+                                                    <thead>
+                                                        <tr className="bg-[#F8FAFC] border-b border-[rgba(15,23,42,0.08)]">
+                                                            <th className="text-left py-3 px-4 text-[#475569] font-semibold w-48">Module</th>
+                                                            <th className="text-center py-3 px-4 text-[#475569] font-semibold">View</th>
+                                                            <th className="text-center py-3 px-4 text-[#475569] font-semibold">Create</th>
+                                                            <th className="text-center py-3 px-4 text-[#475569] font-semibold">Edit / Update</th>
+                                                            <th className="text-center py-3 px-4 text-[#475569] font-semibold">Delete</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {moduleNames.map((mod) => {
+                                                            const perms = editedPerms[mod] || [];
+                                                            const actions = ["view", "create", "update", "delete"];
+                                                            return (
+                                                                <tr key={mod} className="border-b border-[rgba(15,23,42,0.04)] hover:bg-[#F8FAFC]">
+                                                                    <td className="py-3 px-4">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: MODULE_COLORS[mod] || "#94A3B8" }} />
+                                                                            <span className="font-medium text-[#0F172A] capitalize">{mod.replace(/-/g, " ")}</span>
+                                                                        </div>
+                                                                    </td>
+                                                                    {actions.map((action) => (
+                                                                        <td key={action} className="py-3 px-4 text-center">
+                                                                            <button
+                                                                                onClick={() => handleTogglePermission(mod, action)}
+                                                                                className={cn(
+                                                                                    "w-7 h-7 rounded-lg flex items-center justify-center transition-all",
+                                                                                    perms.includes(action)
+                                                                                        ? "bg-[#0891B2] text-white"
+                                                                                        : "bg-[#F1F5F9] text-[#CBD5E1] hover:bg-[#E2E8F0]"
+                                                                                )}
+                                                                            >
+                                                                                {perms.includes(action) ? <Check size={14} /> : <X size={14} />}
+                                                                            </button>
+                                                                        </td>
+                                                                    ))}
+                                                                </tr>
+                                                            );
+                                                        })}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        )}
+                                        <div className="px-4 py-3 bg-[#F8FAFC] border-t border-[rgba(15,23,42,0.06)] flex flex-col gap-2 text-xs sm:flex-row sm:items-center sm:justify-between">
                                             <span className="text-[#94A3B8]">
                                                 <strong className="text-[#0F172A]">{Object.values(editedPerms).reduce((s, a) => s + a.length, 0)}</strong> permissions active across <strong className="text-[#0F172A]">{moduleNames.length}</strong> modules
                                             </span>
@@ -511,7 +546,58 @@ export default function RolesPage() {
                                 </div>
 
                                 <div className="bg-white rounded-lg card-shadow overflow-hidden">
-                                    <div className="responsive-table">
+                                    {isMobile ? (
+                                        <div className="space-y-3 p-4">
+                                            {filteredEmployees.map((emp) => {
+                                                const initials = `${(emp.user?.firstName || "?")[0]}${(emp.user?.lastName || "?")[0]}`.toUpperCase();
+                                                const status = emp.isActive ? "active" : "suspended";
+                                                return (
+                                                    <div key={emp.id} className="rounded-2xl border border-[rgba(15,23,42,0.06)] p-4">
+                                                        <div className="flex items-start justify-between gap-3">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0891B2]/10 text-[10px] font-bold text-[#0891B2]">{initials}</div>
+                                                                <div>
+                                                                    <p className="font-medium text-[#0F172A]">{emp.user?.firstName} {emp.user?.lastName}</p>
+                                                                    <p className="text-xs text-[#94A3B8]">{emp.user?.email}</p>
+                                                                </div>
+                                                            </div>
+                                                            <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-semibold",
+                                                                status === "active" ? "bg-[#16A34A]/10 text-[#16A34A]" : "bg-[#DC2626]/10 text-[#DC2626]"
+                                                            )}>
+                                                                {status === "active" ? <CheckCircle2 size={10} /> : <XCircle size={10} />}
+                                                                {status.charAt(0).toUpperCase() + status.slice(1)}
+                                                            </span>
+                                                        </div>
+                                                        <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
+                                                            <div className="rounded-xl bg-[#F8FAFC] p-3">
+                                                                <p className="text-[#94A3B8]">Department</p>
+                                                                <p className="mt-1 font-medium text-[#0F172A]">{emp.department || emp.position || "—"}</p>
+                                                            </div>
+                                                            <div className="rounded-xl bg-[#F8FAFC] p-3">
+                                                                <p className="text-[#94A3B8]">Last Login</p>
+                                                                <p className="mt-1 font-medium text-[#0F172A]">{emp.user?.lastLoginAt ? new Date(emp.user.lastLoginAt).toLocaleDateString() : "Never"}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="mt-3 space-y-2">
+                                                            <select
+                                                                className="h-10 w-full rounded-xl border border-[rgba(15,23,42,0.12)] bg-[#F8FAFC] px-3 text-sm text-[#475569] focus:outline-none"
+                                                                value={emp.role?.id || ""}
+                                                                onChange={(e) => handleChangeUserRole(emp.id, e.target.value)}
+                                                            >
+                                                                {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                                                            </select>
+                                                            <button onClick={() => handleToggleUserStatus(emp.id)} className={cn("w-full rounded-xl px-3 py-2 text-sm font-medium",
+                                                                emp.isActive ? "text-[#DC2626] border border-[#DC2626]/20 hover:bg-[#DC2626]/5" : "text-[#16A34A] border border-[#16A34A]/20 hover:bg-[#16A34A]/5"
+                                                            )}>
+                                                                {emp.isActive ? "Suspend" : "Activate"}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : (
+                                    <div className="responsive-table overflow-x-auto">
                                         <table className="w-full text-xs">
                                             <thead>
                                                 <tr className="bg-[#F8FAFC] border-b border-[rgba(15,23,42,0.08)]">
@@ -572,6 +658,7 @@ export default function RolesPage() {
                                             </tbody>
                                         </table>
                                     </div>
+                                    )}
                                     {filteredEmployees.length === 0 && (
                                         <p className="text-center text-sm text-[#94A3B8] py-8">No users match your search criteria.</p>
                                     )}

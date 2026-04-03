@@ -16,6 +16,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -44,8 +52,10 @@ import {
 } from "@/components/ui/popover";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import api from "@/lib/axios";
 import { ComposeEmailSheet } from "@/features/emails/components/ComposeEmailSheet";
+import { ListCardSkeleton, SwipeActionCard } from "@/features/clients/components/responsive-helpers";
 import {
   Search,
   Plus,
@@ -331,13 +341,14 @@ const parseTagNames = (input: string[] | string | undefined): string[] => {
 // ============================================
 
 const PipelineLeadCard = ({
-  lead, stageColor, onOpenRecord, onPreview, onEdit, onDelete,
+  lead, stageColor, onOpenRecord, onPreview, onEdit, onDelete, isMobile = false,
 }: {
   lead: Lead; stageColor: string;
   onOpenRecord: () => void;
   onPreview: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  isMobile?: boolean;
 }) => {
   const tempInfo = getTemperatureInfo(lead.temperature);
   const TempIcon = tempInfo.icon;
@@ -353,11 +364,11 @@ const PipelineLeadCard = ({
     (e.target as HTMLElement).style.opacity = "1";
   };
 
-  return (
+  const content = (
     <div
-      draggable
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
+      draggable={!isMobile}
+      onDragStart={isMobile ? undefined : handleDragStart}
+      onDragEnd={isMobile ? undefined : handleDragEnd}
       className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4 cursor-grab active:cursor-grabbing hover:shadow-lg hover:border-slate-300 transition-all group"
       onClick={onOpenRecord}
     >
@@ -385,25 +396,27 @@ const PipelineLeadCard = ({
           >
             <TempIcon size={10} />
           </span>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-              <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
-                <MoreVertical size={14} />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40 rounded-md">
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPreview(); }} className="rounded-md text-sm">
-                <Eye size={14} className="mr-2" /> View
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }} className="rounded-md text-sm">
-                <Pencil size={14} className="mr-2" /> Edit
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="rounded-md text-sm text-red-600">
-                <Trash2 size={14} className="mr-2" /> Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {!isMobile && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
+                  <MoreVertical size={14} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40 rounded-md">
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPreview(); }} className="rounded-md text-sm">
+                  <Eye size={14} className="mr-2" /> View
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }} className="rounded-md text-sm">
+                  <Pencil size={14} className="mr-2" /> Edit
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="rounded-md text-sm text-red-600">
+                  <Trash2 size={14} className="mr-2" /> Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
 
@@ -443,6 +456,12 @@ const PipelineLeadCard = ({
       </div>
     </div>
   );
+
+  if (isMobile) {
+    return <SwipeActionCard onView={onPreview} onDelete={onDelete}>{content}</SwipeActionCard>;
+  }
+
+  return content;
 };
 
 // ============================================
@@ -450,7 +469,7 @@ const PipelineLeadCard = ({
 // ============================================
 
 const PipelineColumn = ({
-  stage, onLeadOpenRecord, onLeadPreview, onLeadEdit, onLeadDelete, onAddLead, onDropLead,
+  stage, onLeadOpenRecord, onLeadPreview, onLeadEdit, onLeadDelete, onAddLead, onDropLead, isMobile = false,
 }: {
   stage: PipelineStage;
   onLeadOpenRecord: (lead: Lead) => void;
@@ -459,6 +478,7 @@ const PipelineColumn = ({
   onLeadDelete: (lead: Lead) => void;
   onAddLead: (stageId: string) => void;
   onDropLead: (leadId: string, targetStageId: string) => void;
+  isMobile?: boolean;
 }) => {
   const StageIcon = stage.icon;
   const totalValue = stage.leads.reduce((acc, lead) => acc + lead.value, 0);
@@ -531,9 +551,9 @@ const PipelineColumn = ({
             : "bg-[#F7F7FB]/50"
         )}
         style={{ borderColor: isDragOver ? undefined : `${stage.color} 20` }}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
+        onDragOver={isMobile ? undefined : handleDragOver}
+        onDragLeave={isMobile ? undefined : handleDragLeave}
+        onDrop={isMobile ? undefined : handleDrop}
       >
         {isDragOver && (
           <div className="flex items-center justify-center py-3 px-4 bg-blue-100/60 rounded-md border-2 border-dashed border-blue-300 text-[#6637F4] text-sm font-medium">
@@ -551,6 +571,7 @@ const PipelineColumn = ({
               onPreview={() => onLeadPreview(lead)}
               onEdit={() => onLeadEdit(lead)}
               onDelete={() => onLeadDelete(lead)}
+              isMobile={isMobile}
             />
           ))}
         </AnimatePresence>
@@ -598,7 +619,7 @@ const LeadDetailPanel = ({
       animate={{ x: 0 }}
       exit={{ x: "100%" }}
       transition={{ type: "spring", damping: 25, stiffness: 300 }}
-      className="fixed top-0 right-0 h-full w-[420px] glass-2xl border-l border-[rgba(15,23,42,0.06)] z-50 flex flex-col"
+      className="fixed top-0 right-0 h-full w-full sm:w-[420px] glass-2xl border-l border-[rgba(15,23,42,0.06)] z-50 flex flex-col"
     >
       {/* Header */}
       <div className="p-6 border-b border-[rgba(15,23,42,0.06)]" style={{ background: `linear - gradient(135deg, ${stageColor}10, transparent)` }}>
@@ -752,6 +773,7 @@ const LeadDetailPanel = ({
 const Pipeline = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { isMobile } = useIsMobile();
   const [pipeline, setPipeline] = useState<PipelineStage[]>(buildEmptyPipeline());
   const [searchQuery, setSearchQuery] = useState("");
   const [filterTemperature, setFilterTemperature] = useState("all");
@@ -763,6 +785,7 @@ const Pipeline = () => {
   const [leadDialogMode, setLeadDialogMode] = useState<"create" | "edit">("create");
   const [editingLead, setEditingLead] = useState<LeadFormLead>(null);
   const [emailComposerTarget, setEmailComposerTarget] = useState<{ to: string; name: string; leadId?: string } | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   // ── Conversion dialog state ──
   const [convertingLead, setConvertingLead] = useState<{ lead: Lead; sourceStageId: string } | null>(null);
@@ -1440,7 +1463,7 @@ const Pipeline = () => {
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="hidden md:flex items-center gap-4 mr-4">
+                <div className={cn("hidden md:flex items-center gap-4 mr-4", isMobile && "hidden")}>
                   <div className="text-center">
                     <p className="text-xs text-[#94A3B8]">Total Leads</p>
                     <p className="text-lg font-bold text-[#0F172A]">{totalLeads}</p>
@@ -1467,76 +1490,88 @@ const Pipeline = () => {
                   />
                 </div>
 
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="rounded-md gap-2">
-                      <Filter size={16} />
-                      Filter
-                      {activeFilterCount > 0 && (
-                        <span className="inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full bg-[#6637F4]/10 text-[#6637F4] text-xs font-semibold">
-                          {activeFilterCount}
-                        </span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent align="end" className="w-72 rounded-md p-4 space-y-4">
-                    <div className="space-y-1">
-                      <h3 className="text-sm font-semibold text-[#0F172A]">Filter Pipeline</h3>
-                      <p className="text-xs text-[#64748B]">Narrow the board by temperature or source.</p>
-                    </div>
+                {isMobile ? (
+                  <Button variant="outline" className="rounded-md gap-2" onClick={() => setFiltersOpen(true)}>
+                    <Filter size={16} />
+                    {activeFilterCount > 0 && (
+                      <span className="inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full bg-[#6637F4]/10 text-[#6637F4] text-xs font-semibold">
+                        {activeFilterCount}
+                      </span>
+                    )}
+                  </Button>
+                ) : (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="rounded-md gap-2">
+                        <Filter size={16} />
+                        Filter
+                        {activeFilterCount > 0 && (
+                          <span className="inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full bg-[#6637F4]/10 text-[#6637F4] text-xs font-semibold">
+                            {activeFilterCount}
+                          </span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent align="end" className="w-72 rounded-md p-4 space-y-4">
+                      <div className="space-y-1">
+                        <h3 className="text-sm font-semibold text-[#0F172A]">Filter Pipeline</h3>
+                        <p className="text-xs text-[#64748B]">Narrow the board by temperature or source.</p>
+                      </div>
 
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium text-[#475569]">Temperature</Label>
-                      <Select value={filterTemperature} onValueChange={setFilterTemperature}>
-                        <SelectTrigger className="rounded-md">
-                          <SelectValue placeholder="All temperatures" />
-                        </SelectTrigger>
-                        <SelectContent className="rounded-md">
-                          <SelectItem value="all" className="rounded-md">All Temperatures</SelectItem>
-                          <SelectItem value="hot" className="rounded-md">Hot</SelectItem>
-                          <SelectItem value="warm" className="rounded-md">Warm</SelectItem>
-                          <SelectItem value="cold" className="rounded-md">Cold</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium text-[#475569]">Temperature</Label>
+                        <Select value={filterTemperature} onValueChange={setFilterTemperature}>
+                          <SelectTrigger className="rounded-md">
+                            <SelectValue placeholder="All temperatures" />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-md">
+                            <SelectItem value="all" className="rounded-md">All Temperatures</SelectItem>
+                            <SelectItem value="hot" className="rounded-md">Hot</SelectItem>
+                            <SelectItem value="warm" className="rounded-md">Warm</SelectItem>
+                            <SelectItem value="cold" className="rounded-md">Cold</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium text-[#475569]">Lead Source</Label>
-                      <Select value={filterSource} onValueChange={setFilterSource}>
-                        <SelectTrigger className="rounded-md">
-                          <SelectValue placeholder="All sources" />
-                        </SelectTrigger>
-                        <SelectContent className="rounded-md">
-                          <SelectItem value="all" className="rounded-md">All Sources</SelectItem>
-                          {sourceOptions.map((source) => (
-                            <SelectItem key={source} value={source} className="rounded-md">
-                              {source}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium text-[#475569]">Lead Source</Label>
+                        <Select value={filterSource} onValueChange={setFilterSource}>
+                          <SelectTrigger className="rounded-md">
+                            <SelectValue placeholder="All sources" />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-md">
+                            <SelectItem value="all" className="rounded-md">All Sources</SelectItem>
+                            {sourceOptions.map((source) => (
+                              <SelectItem key={source} value={source} className="rounded-md">
+                                {source}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="w-full justify-center rounded-md"
-                      onClick={() => {
-                        setFilterTemperature("all");
-                        setFilterSource("all");
-                      }}
-                    >
-                      Clear Filters
-                    </Button>
-                  </PopoverContent>
-                </Popover>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="w-full justify-center rounded-md"
+                        onClick={() => {
+                          setFilterTemperature("all");
+                          setFilterSource("all");
+                        }}
+                      >
+                        Clear Filters
+                      </Button>
+                    </PopoverContent>
+                  </Popover>
+                )}
 
                 <Button
                   className="bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-md gap-2"
                   onClick={() => openAddLeadDialog(null)}
+                  size={isMobile ? "icon" : "default"}
                 >
                   <Plus size={18} />
-                  Add Lead
+                  {!isMobile && "Add Lead"}
                 </Button>
               </div>
             </div>
@@ -1546,7 +1581,7 @@ const Pipeline = () => {
         {/* Pipeline Board */}
         <div className="p-4 sm:p-6 lg:p-8">
           {/* Pipeline Flow Indicator */}
-          <div className="mb-6 flex items-center justify-center">
+          <div className={cn("mb-6 flex items-center justify-center", isMobile && "justify-start overflow-x-auto")}>
             <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-md border border-[rgba(15,23,42,0.06)] shadow-sm">
               {displayedPipeline.map((stage, index) => (
                 <React.Fragment key={stage.id}>
@@ -1566,20 +1601,27 @@ const Pipeline = () => {
           </div>
 
           {/* Pipeline Columns */}
-          <div className="flex gap-6 overflow-x-auto pb-6 custom-scrollbar">
-            {displayedPipeline.map((stage) => (
-              <PipelineColumn
-                key={stage.id}
-                stage={stage}
-                onLeadOpenRecord={handleLeadOpenRecord}
-                onLeadPreview={handleLeadPreview}
-                onLeadEdit={handleLeadEdit}
-                onLeadDelete={handleLeadDelete}
-                onAddLead={handleAddLead}
-                onDropLead={handleDropLead}
-              />
-            ))}
-          </div>
+          {loading ? (
+            <div className="space-y-4">
+              <ListCardSkeleton rows={3} />
+            </div>
+          ) : (
+            <div className="flex gap-6 overflow-x-auto pb-6 custom-scrollbar">
+              {displayedPipeline.map((stage) => (
+                <PipelineColumn
+                  key={stage.id}
+                  stage={stage}
+                  onLeadOpenRecord={handleLeadOpenRecord}
+                  onLeadPreview={handleLeadPreview}
+                  onLeadEdit={handleLeadEdit}
+                  onLeadDelete={handleLeadDelete}
+                  onAddLead={handleAddLead}
+                  onDropLead={handleDropLead}
+                  isMobile={isMobile}
+                />
+              ))}
+            </div>
+          )}
 
           {!hasDisplayedLeads && !loading && (
             <div className="mt-4 rounded-xl border border-dashed border-[#D8D5F8] bg-white p-6 text-center">
@@ -1589,6 +1631,16 @@ const Pipeline = () => {
           )}
         </div>
       </main>
+
+      {isMobile && (
+        <Button
+          size="icon"
+          className="fixed bottom-6 right-5 z-40 h-14 w-14 rounded-full bg-[#6637F4] shadow-[0_16px_36px_rgba(102,55,244,0.35)] hover:bg-[#6637F4]/90"
+          onClick={() => openAddLeadDialog(null)}
+        >
+          <Plus size={22} />
+        </Button>
+      )}
 
       {/* Lead Detail Slide-over Panel */}
       <AnimatePresence>
@@ -1627,6 +1679,62 @@ const Pipeline = () => {
         defaultRecipientName={emailComposerTarget?.name || null}
         leadId={emailComposerTarget?.leadId}
       />
+
+      <Drawer open={isMobile && filtersOpen} onOpenChange={setFiltersOpen}>
+        <DrawerContent className="max-h-[85dvh]">
+          <DrawerHeader>
+            <DrawerTitle>Filter Pipeline</DrawerTitle>
+            <DrawerDescription>Narrow the board by temperature or source.</DrawerDescription>
+          </DrawerHeader>
+          <div className="space-y-4 px-4 pb-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-[#475569]">Temperature</Label>
+              <Select value={filterTemperature} onValueChange={setFilterTemperature}>
+                <SelectTrigger className="rounded-md">
+                  <SelectValue placeholder="All temperatures" />
+                </SelectTrigger>
+                <SelectContent className="rounded-md">
+                  <SelectItem value="all" className="rounded-md">All Temperatures</SelectItem>
+                  <SelectItem value="hot" className="rounded-md">Hot</SelectItem>
+                  <SelectItem value="warm" className="rounded-md">Warm</SelectItem>
+                  <SelectItem value="cold" className="rounded-md">Cold</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-[#475569]">Lead Source</Label>
+              <Select value={filterSource} onValueChange={setFilterSource}>
+                <SelectTrigger className="rounded-md">
+                  <SelectValue placeholder="All sources" />
+                </SelectTrigger>
+                <SelectContent className="rounded-md">
+                  <SelectItem value="all" className="rounded-md">All Sources</SelectItem>
+                  {sourceOptions.map((source) => (
+                    <SelectItem key={source} value={source} className="rounded-md">
+                      {source}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DrawerFooter className="border-t bg-white">
+            <Button
+              variant="outline"
+              className="rounded-md"
+              onClick={() => {
+                setFilterTemperature("all");
+                setFilterSource("all");
+              }}
+            >
+              Clear Filters
+            </Button>
+            <Button className="rounded-md bg-[#6637F4] hover:bg-[#6637F4]/90" onClick={() => setFiltersOpen(false)}>
+              Apply Filters
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
 
       {/* Convert Lead to Client Dialog */}
       <Dialog open={!!convertingLead} onOpenChange={(open) => { if (!open) handleConvertCancel(); }}>

@@ -50,6 +50,7 @@ import AddressAutocompleteInput from "@/components/address/AddressAutocompleteIn
 import { normalizeProvinceName } from "@/lib/address-utils";
 import { getClientById, createClient, updateClient } from "@/services/clientService";
 import { getEmployees } from "@/features/users";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 // ============================================
 // CANADIAN DATA
@@ -496,6 +497,7 @@ const AddClientPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isMobile } = useIsMobile();
 
   const isEditMode = Boolean(id);
 
@@ -710,10 +712,10 @@ const AddClientPage = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => navigate("/client-list")}
-                className="px-4 py-2.5 rounded-md border border-[rgba(15,23,42,0.06)] text-[#475569] hover:bg-[#F8FAFC] transition-colors flex items-center gap-2 font-medium"
+                className="hidden sm:flex px-4 py-2.5 rounded-md border border-[rgba(15,23,42,0.06)] text-[#475569] hover:bg-[#F8FAFC] transition-colors items-center gap-2 font-medium"
               >
                 <X size={16} />
-                <span className="hidden sm:inline">Cancel</span>
+                <span>Cancel</span>
               </motion.button>
 
               <motion.button
@@ -721,14 +723,14 @@ const AddClientPage = () => {
                 whileTap={{ scale: 0.95 }}
                 onClick={handleSubmit}
                 disabled={isLoading}
-                className="px-4 py-2.5 rounded-md bg-[#0891B2] text-white  hover:bg-[#0891B2]/90 transition-colors flex items-center gap-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="hidden sm:flex px-4 py-2.5 rounded-md bg-[#0891B2] text-white  hover:bg-[#0891B2]/90 transition-colors items-center gap-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <Loader2 size={16} className="animate-spin" />
                 ) : (
                   <Save size={16} />
                 )}
-                <span className="hidden sm:inline">
+                <span>
                   {isEditMode ? "Update" : "Save"} Client
                 </span>
               </motion.button>
@@ -820,7 +822,7 @@ const AddClientPage = () => {
           </motion.div>
 
           {/* Form Content */}
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6 pb-20 md:pb-0">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* ============================================ */}
               {/* LEFT COLUMN */}
@@ -1523,11 +1525,41 @@ const AddClientPage = () => {
                 </motion.div>
               </div>
             </div>
+
+            {isMobile && <div className="h-4" />}
+
+            {isMobile && (
+              <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[rgba(15,23,42,0.06)] bg-white/95 px-4 py-3 backdrop-blur">
+                <div className="mx-auto grid max-w-[640px] grid-cols-2 gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-11 rounded-md"
+                    onClick={() => navigate("/client-list")}
+                  >
+                    <X size={15} className="mr-2" />
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="h-11 rounded-md bg-[#0891B2] text-white hover:bg-[#0891B2]/90"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <Loader2 size={15} className="mr-2 animate-spin" />
+                    ) : (
+                      <Save size={15} className="mr-2" />
+                    )}
+                    {isEditMode ? "Update" : "Save"}
+                  </Button>
+                </div>
+              </div>
+            )}
           </form>
         </div>
 
         {/* Footer */}
-        <footer className="px-6 py-4 border-t border-[rgba(15,23,42,0.06)] bg-white mt-6">
+        <footer className="mt-6 hidden border-t border-[rgba(15,23,42,0.06)] bg-white px-6 py-4 md:block">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-[#475569] max-w-7xl mx-auto">
             <div className="flex items-center gap-2">
               <span>© {new Date().getFullYear()}</span>

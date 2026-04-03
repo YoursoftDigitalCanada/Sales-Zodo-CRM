@@ -46,6 +46,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { Department, Employee, EmploymentType, EmployeeStatus } from './types';
 
 const employeeFormSchema = z.object({
@@ -108,6 +109,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
   onSubmit,
   editingEmployee,
 }) => {
+  const { isMobile } = useIsMobile();
   const [showPortalPassword, setShowPortalPassword] = useState(false);
   const [activeStep, setActiveStep] = useState<EmployeeFormStep>('basic');
   const formSteps = editingEmployee ? EDIT_EMPLOYEE_FORM_STEPS : EMPLOYEE_FORM_STEPS;
@@ -250,7 +252,13 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent
+        className={
+          isMobile
+            ? "left-0 top-auto bottom-0 max-h-[92vh] max-w-none translate-x-0 translate-y-0 overflow-y-auto rounded-t-3xl px-4 pb-8 pt-6"
+            : "max-h-[90vh] max-w-2xl overflow-y-auto"
+        }
+      >
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold text-[#0F172A]">
             {editingEmployee ? 'Edit Employee' : 'Add New Employee'}

@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+import useIsMobile from "@/hooks/useIsMobile";
 import {
   Bell, BellOff, BellRing, Search, X, CheckCheck, Trash2,
   Archive, Mail, MailOpen, Users, Calendar,
@@ -106,6 +107,7 @@ const getInitials = (name: string) => name.split(" ").map(n => n[0]).join("").to
 // MAIN COMPONENT
 // ============================================
 const NotificationsPage = () => {
+  const { isMobile } = useIsMobile();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -244,9 +246,11 @@ const NotificationsPage = () => {
           !n.read ? "bg-[#0891B2]/5 hover:bg-[#0891B2]/8" : "hover:bg-[#F8FAFC]")}>
         {/* Checkbox + Icon */}
         <div className="flex items-center gap-3 pt-0.5" onClick={(e) => e.stopPropagation()}>
-          <Checkbox checked={selectedIds.has(n.id)}
-            onCheckedChange={(c) => { const s = new Set(selectedIds); c ? s.add(n.id) : s.delete(n.id); setSelectedIds(s); }}
-            className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]" />
+          {!isMobile ? (
+            <Checkbox checked={selectedIds.has(n.id)}
+              onCheckedChange={(c) => { const s = new Set(selectedIds); c ? s.add(n.id) : s.delete(n.id); setSelectedIds(s); }}
+              className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]" />
+          ) : null}
           <div className={cn("w-10 h-10 rounded-md flex items-center justify-center shrink-0", config.bg)}>
             {n.sender ? (
               <span className={cn("text-xs font-bold", config.color)}>{getInitials(n.sender.name)}</span>
@@ -268,6 +272,12 @@ const NotificationsPage = () => {
             </div>
             <div className="flex items-center gap-1 shrink-0">
               <span className="text-xs text-[#94A3B8] whitespace-nowrap">{formatTimestamp(n.timestamp)}</span>
+              {isMobile ? (
+                <motion.button whileTap={{ scale: 0.92 }} onClick={(e) => { e.stopPropagation(); toggleStar(n.id); }}
+                  className="p-1.5 rounded-md hover:bg-white/10 transition-colors" title={n.starred ? "Unstar" : "Star"}>
+                  {n.starred ? <Star size={14} className="text-amber-500 fill-amber-500" /> : <StarOff size={14} className="text-[#94A3B8]" />}
+                </motion.button>
+              ) : null}
             </div>
           </div>
           {/* Actions */}
@@ -282,7 +292,7 @@ const NotificationsPage = () => {
               </Button>
             )}
             <div className="flex-1" />
-            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className={cn("flex items-center gap-0.5 transition-opacity", isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
               <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={(e) => { e.stopPropagation(); toggleStar(n.id); }}
                 className="p-1.5 rounded-md hover:bg-white/10 transition-colors" title={n.starred ? "Unstar" : "Star"}>
                 {n.starred ? <Star size={14} className="text-amber-500 fill-amber-500" /> : <StarOff size={14} className="text-[#94A3B8]" />}
@@ -304,7 +314,7 @@ const NotificationsPage = () => {
         </div>
       </motion.div>
     );
-  }, [handleOpenNotification, selectedIds]);
+  }, [handleOpenNotification, isMobile, selectedIds]);
 
   const renderGroup = (title: string, items: Notification[]) => {
     if (items.length === 0) return null;
@@ -319,11 +329,11 @@ const NotificationsPage = () => {
   };
 
   return (
-    <div className="flex h-screen bg-[#F8FAFC]">
+    <div className="flex min-h-screen bg-[#F8FAFC]">
       <div className="flex-1 overflow-auto">
-        <div className="p-6 max-w-[1200px] mx-auto">
+        <div className={cn("max-w-[1200px] mx-auto", isMobile ? "p-3" : "p-6")}>
           {/* Header */}
-          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between mb-6">
+          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className={cn("mb-6 flex", isMobile ? "flex-col gap-4" : "items-center justify-between")}>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-md bg-[#0891B2]/10 flex items-center justify-center">
                 <Bell size={20} className="text-[#0891B2]" />
@@ -333,7 +343,7 @@ const NotificationsPage = () => {
                 <p className="text-sm text-[#94A3B8]">{stats.unread} unread · {stats.total} total</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className={cn("flex items-center gap-3", isMobile && "w-full flex-col")}>
               <Button variant="outline" size="sm" className="rounded-md border-[rgba(15,23,42,0.06)]"
                 onClick={fetchNotifications} disabled={loading}>
                 {loading ? <Loader2 size={16} className="mr-2 animate-spin" /> : <RefreshCw size={16} className="mr-2" />}Refresh
@@ -353,7 +363,8 @@ const NotificationsPage = () => {
                   <Sparkles size={12} className="text-[#0891B2]" /><span className="text-xs font-semibold text-[#0891B2]">AI Insights</span>
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className={cn(isMobile ? "-mx-1 overflow-x-auto pb-1" : "")}>
+                <div className={cn("grid gap-3", isMobile ? "grid-flow-col auto-cols-[280px] px-1" : "grid-cols-1 md:grid-cols-3")}>
                 {aiInsights.map((insight, i) => {
                   const InsIcon = insight.icon;
                   return (
@@ -369,12 +380,14 @@ const NotificationsPage = () => {
                     </div>
                   );
                 })}
+                </div>
               </div>
             </motion.div>
           )}
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+          <div className={cn("mb-6", isMobile ? "-mx-1 overflow-x-auto pb-1" : "")}>
+            <div className={cn("grid gap-3 sm:gap-4", isMobile ? "grid-flow-col auto-cols-[180px] px-1" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4")}>
             {[
               { label: "Unread", value: stats.unread, icon: BellRing, color: "text-[#0891B2]", bg: "bg-[#0891B2]/10", onClick: () => setStatusFilter("unread") },
               { label: "Starred", value: stats.starred, icon: Star, color: "text-amber-600", bg: "bg-amber-100", onClick: () => setStatusFilter("starred") },
@@ -395,19 +408,20 @@ const NotificationsPage = () => {
                 </div>
               </motion.div>
             ))}
+            </div>
           </div>
 
           {/* Toolbar */}
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             className="bg-white rounded-t-md border border-[rgba(15,23,42,0.06)] border-b-0 p-4">
-            <div className="flex items-center gap-3 flex-wrap">
+            <div className={cn("flex items-center gap-3 flex-wrap", isMobile && "flex-col items-stretch")}>
               <div className="relative flex-1 min-w-[200px]">
                 <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
                 <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
                   placeholder="Search notifications..." className="pl-10 rounded-md border-[rgba(15,23,42,0.06)] h-10" />
                 {searchQuery && <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8]"><X size={14} /></button>}
               </div>
-              <div className="flex border border-[rgba(15,23,42,0.06)] rounded-md overflow-hidden">
+              <div className={cn("flex border border-[rgba(15,23,42,0.06)] rounded-md overflow-hidden", isMobile && "overflow-x-auto")}>
                 {(["all", "unread", "read", "starred"] as const).map(s => (
                   <button key={s} onClick={() => setStatusFilter(s)}
                     className={cn("px-3 py-2 text-xs font-medium transition-colors capitalize",
@@ -417,7 +431,7 @@ const NotificationsPage = () => {
                 ))}
               </div>
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-[150px] rounded-md border-[rgba(15,23,42,0.06)] h-10"><SelectValue /></SelectTrigger>
+                <SelectTrigger className={cn("rounded-md border-[rgba(15,23,42,0.06)] h-10", isMobile ? "w-full" : "w-[150px]")}><SelectValue /></SelectTrigger>
                 <SelectContent>{categoryOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
               </Select>
             </div>
@@ -425,7 +439,7 @@ const NotificationsPage = () => {
             <AnimatePresence>
               {selectedIds.size > 0 && (
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-                  className="flex items-center gap-3 mt-3 pt-3 border-t border-[rgba(15,23,42,0.06)]">
+                  className={cn("mt-3 pt-3 border-t border-[rgba(15,23,42,0.06)]", isMobile ? "flex flex-wrap items-center gap-2" : "flex items-center gap-3")}>
                   <span className="text-sm text-[#475569]">{selectedIds.size} selected</span>
                   <Button size="sm" variant="outline" className="h-7 text-xs rounded-md" onClick={bulkMarkRead}>
                     <CheckCheck size={14} className="mr-1" />Mark Read

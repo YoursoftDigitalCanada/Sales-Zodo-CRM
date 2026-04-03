@@ -15,6 +15,14 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -56,6 +64,7 @@ import {
   FolderKanban,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { getKanbanTasks, createTask, updateTask, deleteTask } from "@/features/tasks";
 
 // ============================================
@@ -821,11 +830,13 @@ const TaskDialog = ({
 // ============================================
 
 const KanbanPage: React.FC = () => {
+  const { isMobile } = useIsMobile();
   // State
-    const [columns, setColumns] = useState<KanbanColumn[]>(defaultColumns);
+  const [columns, setColumns] = useState<KanbanColumn[]>(defaultColumns);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterPriority, setFilterPriority] = useState<string>("all");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
 
   // Dialog State
@@ -1116,36 +1127,45 @@ const KanbanPage: React.FC = () => {
                   placeholder="Search tasks..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-64 h-11 pl-10 pr-4 rounded-md bg-white/5 border-none text-sm placeholder:text-[#475569] focus:outline-none focus:ring-2 focus:ring-[#22D3EE]/20 focus:bg-white transition-all"
+                  className={cn(
+                    "h-11 pl-10 pr-4 rounded-md bg-white/5 border-none text-sm placeholder:text-[#475569] focus:outline-none focus:ring-2 focus:ring-[#22D3EE]/20 focus:bg-white transition-all",
+                    isMobile ? "w-[180px]" : "w-64"
+                  )}
                 />
               </div>
 
               {/* Priority Filter */}
-              <Select value={filterPriority} onValueChange={setFilterPriority}>
-                <SelectTrigger className="w-40 h-11 rounded-md border-[rgba(15,23,42,0.06)]">
-                  <div className="flex items-center gap-2">
-                    <Filter size={14} className="text-[#475569]" />
-                    <SelectValue placeholder="All Priorities" />
-                  </div>
-                </SelectTrigger>
-                <SelectContent className="rounded-md">
-                  <SelectItem value="all" className="rounded-md">
-                    All Priorities
-                  </SelectItem>
-                  <SelectItem value="urgent" className="rounded-md">
-                    Urgent
-                  </SelectItem>
-                  <SelectItem value="high" className="rounded-md">
-                    High
-                  </SelectItem>
-                  <SelectItem value="medium" className="rounded-md">
-                    Medium
-                  </SelectItem>
-                  <SelectItem value="low" className="rounded-md">
-                    Low
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              {isMobile ? (
+                <Button variant="outline" className="h-11 rounded-md" onClick={() => setFiltersOpen(true)}>
+                  <Filter size={16} />
+                </Button>
+              ) : (
+                <Select value={filterPriority} onValueChange={setFilterPriority}>
+                  <SelectTrigger className="w-40 h-11 rounded-md border-[rgba(15,23,42,0.06)]">
+                    <div className="flex items-center gap-2">
+                      <Filter size={14} className="text-[#475569]" />
+                      <SelectValue placeholder="All Priorities" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md">
+                    <SelectItem value="all" className="rounded-md">
+                      All Priorities
+                    </SelectItem>
+                    <SelectItem value="urgent" className="rounded-md">
+                      Urgent
+                    </SelectItem>
+                    <SelectItem value="high" className="rounded-md">
+                      High
+                    </SelectItem>
+                    <SelectItem value="medium" className="rounded-md">
+                      Medium
+                    </SelectItem>
+                    <SelectItem value="low" className="rounded-md">
+                      Low
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             {/* Right Section */}
@@ -1154,7 +1174,10 @@ const KanbanPage: React.FC = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => openAddDialog()}
-                className="flex items-center gap-2 px-4 py-2.5 bg-[#0891B2] text-white text-sm font-medium rounded-md  hover:bg-[#0891B2]/90 transition-colors"
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2.5 bg-[#0891B2] text-white text-sm font-medium rounded-md  hover:bg-[#0891B2]/90 transition-colors",
+                  isMobile && "hidden"
+                )}
               >
                 <Plus size={16} />
                 <span>Add Task</span>
@@ -1223,7 +1246,7 @@ const KanbanPage: React.FC = () => {
               </div>
 
               {/* Stats */}
-              <div className="flex gap-4">
+              <div className={cn("flex gap-4", isMobile && "overflow-x-auto pb-2")}>
                 {columns.slice(0, 2).map((col) => (
                   <motion.div
                     key={col.id}
@@ -1246,26 +1269,49 @@ const KanbanPage: React.FC = () => {
           </motion.div>
 
           {/* Kanban Columns — viewport-height constrained so all columns are equal */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" style={{ height: 'calc(100vh - 320px)', minHeight: '400px' }}>
-            {getFilteredColumns().map((column, index) => (
-              <motion.div
-                key={column.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 * index }}
-                className="h-full"
-              >
-                <KanbanColumnComponent
-                  column={column}
-                  onAddTask={() => openAddDialog(column.id)}
-                  onEditTask={openEditDialog}
-                  onDeleteTask={handleDeleteTask}
-                  onMoveTask={handleMoveTask}
-                  onDrop={handleMoveTask}
-                />
-              </motion.div>
-            ))}
-          </div>
+          {isMobile ? (
+            <div className="flex gap-4 overflow-x-auto pb-4">
+              {getFilteredColumns().map((column, index) => (
+                <motion.div
+                  key={column.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 * index }}
+                  className="min-w-[300px] max-w-[300px] flex-shrink-0"
+                >
+                  <KanbanColumnComponent
+                    column={column}
+                    onAddTask={() => openAddDialog(column.id)}
+                    onEditTask={openEditDialog}
+                    onDeleteTask={handleDeleteTask}
+                    onMoveTask={handleMoveTask}
+                    onDrop={handleMoveTask}
+                  />
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" style={{ height: 'calc(100vh - 320px)', minHeight: '400px' }}>
+              {getFilteredColumns().map((column, index) => (
+                <motion.div
+                  key={column.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 * index }}
+                  className="h-full"
+                >
+                  <KanbanColumnComponent
+                    column={column}
+                    onAddTask={() => openAddDialog(column.id)}
+                    onEditTask={openEditDialog}
+                    onDeleteTask={handleDeleteTask}
+                    onMoveTask={handleMoveTask}
+                    onDrop={handleMoveTask}
+                  />
+                </motion.div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Footer */}
@@ -1292,6 +1338,16 @@ const KanbanPage: React.FC = () => {
         </footer>
       </main>
 
+      {isMobile && (
+        <Button
+          size="icon"
+          className="fixed bottom-6 right-5 z-40 h-14 w-14 rounded-full bg-[#0891B2] shadow-[0_16px_36px_rgba(8,145,178,0.35)] hover:bg-[#0E7490]"
+          onClick={() => openAddDialog()}
+        >
+          <Plus size={22} />
+        </Button>
+      )}
+
       {/* Task Dialog */}
       <TaskDialog
         isOpen={isDialogOpen}
@@ -1303,6 +1359,38 @@ const KanbanPage: React.FC = () => {
         task={editingTask}
         defaultStatus={defaultStatus}
       />
+
+      <Drawer open={isMobile && filtersOpen} onOpenChange={setFiltersOpen}>
+        <DrawerContent className="max-h-[80dvh]">
+          <DrawerHeader>
+            <DrawerTitle>Filter Board</DrawerTitle>
+            <DrawerDescription>Show only tasks for a selected priority.</DrawerDescription>
+          </DrawerHeader>
+          <div className="space-y-4 px-4 pb-4">
+            <Label className="text-xs font-medium text-[#475569]">Priority</Label>
+            <Select value={filterPriority} onValueChange={setFilterPriority}>
+              <SelectTrigger className="rounded-md">
+                <SelectValue placeholder="All Priorities" />
+              </SelectTrigger>
+              <SelectContent className="rounded-md">
+                <SelectItem value="all" className="rounded-md">All Priorities</SelectItem>
+                <SelectItem value="urgent" className="rounded-md">Urgent</SelectItem>
+                <SelectItem value="high" className="rounded-md">High</SelectItem>
+                <SelectItem value="medium" className="rounded-md">Medium</SelectItem>
+                <SelectItem value="low" className="rounded-md">Low</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <DrawerFooter className="border-t bg-white">
+            <Button variant="outline" className="rounded-md" onClick={() => setFilterPriority("all")}>
+              Clear Filter
+            </Button>
+            <Button className="rounded-md bg-[#0891B2] hover:bg-[#0E7490]" onClick={() => setFiltersOpen(false)}>
+              Apply Filter
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
 
       {/* Custom Scrollbar Styles */}
       <style>{`

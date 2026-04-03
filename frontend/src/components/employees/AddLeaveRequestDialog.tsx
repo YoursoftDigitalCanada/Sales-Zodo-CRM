@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { LeaveType, LeaveBalance } from './types';
 import { getLeaveTypeConfig } from './utils';
 
@@ -55,6 +56,7 @@ export const AddLeaveRequestDialog: React.FC<AddLeaveRequestDialogProps> = ({
   onSubmit,
   leaveBalances,
 }) => {
+  const { isMobile } = useIsMobile();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const form = useForm<LeaveRequestFormValues>({
     resolver: zodResolver(leaveRequestSchema),
@@ -95,7 +97,13 @@ export const AddLeaveRequestDialog: React.FC<AddLeaveRequestDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent
+        className={
+          isMobile
+            ? "left-0 top-auto bottom-0 max-h-[88vh] max-w-none translate-x-0 translate-y-0 overflow-y-auto rounded-t-3xl px-4 pb-8 pt-6"
+            : "max-w-lg"
+        }
+      >
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold text-[#0F172A]">
             Request Time Off

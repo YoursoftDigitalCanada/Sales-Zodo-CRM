@@ -1,5 +1,5 @@
 // src/pages/InvoicePage.tsx
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 // import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
@@ -7,12 +7,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,6 +53,13 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { getInvoices, getInvoiceById, deleteInvoice, createInvoice, downloadInvoicePdf, recordInvoicePayment, sendInvoice } from "@/services/invoiceService";
 import { printInvoiceDocument } from "@/features/invoices/utils/invoice-print";
+import { useIsMobile } from "@/hooks/useIsMobile";
+import {
+  ListCardSkeleton,
+  PullToRefreshIndicator,
+  SwipeActionCard,
+  usePullToRefresh,
+} from "@/features/clients/components/responsive-helpers";
 import {
   Bell,
   Plus,
@@ -187,6 +203,14 @@ const dateFilterOptions = [
   { value: "quarter", label: "This Quarter" },
   { value: "year", label: "This Year" },
 ];
+
+const mobileStatusTabs = [
+  { value: "all", label: "All" },
+  { value: "draft", label: "Draft" },
+  { value: "sent", label: "Sent" },
+  { value: "paid", label: "Paid" },
+  { value: "overdue", label: "Overdue" },
+] as const;
 
 const backendStatusToUi: Record<string, string> = {
   DRAFT: "Draft",
@@ -891,6 +915,104 @@ const InvoiceCard = ({
   );
 };
 
+const MobileInvoiceCard = ({
+  invoice,
+  isSelected,
+  onTap,
+  onQuickAction,
+}: {
+  invoice: Invoice;
+  isSelected: boolean;
+  onTap: () => void;
+  onQuickAction: () => void;
+}) => {
+  const overdue = isOverdue(invoice.dueDate, invoice.status);
+  const statusConfig = getStatusConfig(overdue && invoice.status !== "Paid" ? "overdue" : invoice.status);
+  const StatusIcon = statusConfig.icon;
+  const amountDue = Math.max((invoice.total || 0) - (invoice.amountPaid || 0), 0);
+  const quickActionLabel =
+    invoice.status === "Draft"
+      ? "Send"
+      : ["Sent", "Partial", "Overdue"].includes(invoice.status)
+        ? "Record Payment"
+        : "View";
+
+  return (
+    <motion.button
+      type="button"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      onClick={onTap}
+      className={cn(
+        "w-full rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-4 text-left shadow-sm transition-all",
+        isSelected && "border-[#22D3EE] bg-[#0891B2]/5"
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3 min-w-0">
+          <div className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl", overdue ? "bg-red-100" : "bg-[#0891B2]/10")}>
+            <Receipt size={18} className={overdue ? "text-red-600" : "text-[#0891B2]"} />
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-[#0F172A]">{invoice.invoiceNumber}</p>
+            <p className="truncate text-sm text-[#475569]">{invoice.clientName}</p>
+            <p className="mt-1 text-xs text-[#94A3B8]">
+              Due {invoice.dueDate ? formatDate(invoice.dueDate) : "-"}
+            </p>
+          </div>
+        </div>
+        <span
+          className={cn(
+            "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold",
+            statusConfig.bg,
+            statusConfig.text
+          )}
+        >
+          <StatusIcon size={11} />
+          {overdue && invoice.status !== "Paid" ? "Overdue" : invoice.status}
+        </span>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <div className="rounded-xl bg-[#F8FAFC] px-3 py-2">
+          <p className="text-[11px] uppercase tracking-wide text-[#94A3B8]">Amount</p>
+          <p className="mt-1 text-base font-semibold text-[#0F172A]">{formatCurrency(invoice.total, invoice.currency)}</p>
+        </div>
+        <div className="rounded-xl bg-[#F8FAFC] px-3 py-2">
+          <p className="text-[11px] uppercase tracking-wide text-[#94A3B8]">Outstanding</p>
+          <p className={cn("mt-1 text-base font-semibold", amountDue > 0 ? "text-[#0F172A]" : "text-green-600")}>
+            {formatCurrency(amountDue, invoice.currency)}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 flex items-center justify-between gap-3 border-t border-[rgba(15,23,42,0.06)] pt-3">
+        <div className="min-w-0">
+          <p className="text-xs text-[#94A3B8]">Invoice date</p>
+          <p className="truncate text-sm font-medium text-[#475569]">{formatDate(invoice.invoiceDate)}</p>
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          variant={quickActionLabel === "View" ? "outline" : "default"}
+          onClick={(event) => {
+            event.stopPropagation();
+            onQuickAction();
+          }}
+          className={cn(
+            "h-9 shrink-0 rounded-xl px-3",
+            quickActionLabel === "View"
+              ? "border-[rgba(15,23,42,0.06)]"
+              : "bg-[#0891B2] text-white hover:bg-[#0891B2]/90"
+          )}
+        >
+          {quickActionLabel}
+        </Button>
+      </div>
+    </motion.button>
+  );
+};
+
 // ============================================
 // RECORD PAYMENT DIALOG
 // ============================================
@@ -1218,18 +1340,24 @@ const EmptyState = ({ onAdd }: { onAdd: () => void }) => (
 const InvoicePage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isMobile } = useIsMobile();
 
   // State
-    const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
   const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterDate, setFilterDate] = useState("all");
+  const [mobileStatusTab, setMobileStatusTab] = useState<(typeof mobileStatusTabs)[number]["value"]>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [user, setUser] = useState<AppUser | null>(null);
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [isOffline, setIsOffline] = useState(
+    typeof window !== "undefined" ? !window.navigator.onLine : false
+  );
 
   // Dialog State
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -1255,15 +1383,7 @@ const InvoicePage = () => {
     }
   }, []);
 
-  useEffect(() => {
-    loadInvoices();
-  }, []);
-
-  // ============================================
-  // API CALLS
-  // ============================================
-
-  const loadInvoices = async () => {
+  const loadInvoices = useCallback(async () => {
     setIsLoading(true);
     try {
       const data = await getInvoices();
@@ -1278,7 +1398,31 @@ const InvoicePage = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
+
+  const { handlers, pullDistance, isRefreshing } = usePullToRefresh({
+    enabled: isMobile,
+    onRefresh: loadInvoices,
+  });
+
+  useEffect(() => {
+    loadInvoices();
+  }, [loadInvoices]);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterDate, filterStatus, mobileStatusTab, searchTerm]);
 
   const handleDeleteInvoice = async () => {
     if (!invoiceToDelete) return;
@@ -1421,6 +1565,7 @@ const InvoicePage = () => {
 
   const filteredInvoices = useMemo(() => {
     let result = [...invoices];
+    const activeStatusFilter = isMobile ? mobileStatusTab : filterStatus;
 
     // Search
     if (searchTerm) {
@@ -1434,12 +1579,12 @@ const InvoicePage = () => {
     }
 
     // Status Filter
-    if (filterStatus !== "all") {
-      if (filterStatus === "overdue") {
+    if (activeStatusFilter !== "all") {
+      if (activeStatusFilter === "overdue") {
         result = result.filter((inv) => isOverdue(inv.dueDate, inv.status));
       } else {
         result = result.filter(
-          (inv) => inv.status?.toLowerCase() === filterStatus
+          (inv) => inv.status?.toLowerCase() === activeStatusFilter
         );
       }
     }
@@ -1477,7 +1622,7 @@ const InvoicePage = () => {
     result.sort((a, b) => new Date(b.invoiceDate).getTime() - new Date(a.invoiceDate).getTime());
 
     return result;
-  }, [invoices, searchTerm, filterStatus, filterDate]);
+  }, [filterDate, filterStatus, invoices, isMobile, mobileStatusTab, searchTerm]);
 
   // Pagination
   const totalPages = Math.ceil(filteredInvoices.length / pageSize);
@@ -1596,16 +1741,46 @@ const InvoicePage = () => {
     });
   };
 
+  const openDeleteDialog = (invoice: Invoice) => {
+    setInvoiceToDelete(invoice);
+    setDeleteDialogOpen(true);
+  };
+
+  const openSendDialog = (invoice: Invoice) => {
+    setInvoiceToSend(invoice);
+    setSendDialogOpen(true);
+  };
+
+  const openPaymentDialog = (invoice: Invoice) => {
+    setInvoiceForPayment(invoice);
+    setPaymentDialogOpen(true);
+  };
+
+  const handleMobileQuickAction = (invoice: Invoice) => {
+    if (invoice.status === "Draft") {
+      openSendDialog(invoice);
+      return;
+    }
+    if (["Sent", "Partial", "Overdue"].includes(invoice.status)) {
+      openPaymentDialog(invoice);
+      return;
+    }
+    navigate(`/invoice/${invoice.id}`);
+  };
+
   // ============================================
   // RENDER
   // ============================================
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
-<main
+      <main
         className={cn(
           "flex-1 transition-all duration-300"
         )}
+        onTouchStart={isMobile ? handlers.onTouchStart : undefined}
+        onTouchMove={isMobile ? handlers.onTouchMove : undefined}
+        onTouchEnd={isMobile ? handlers.onTouchEnd : undefined}
       >
         {/* ============================================ */}
         {/* HEADER */}
@@ -1638,11 +1813,23 @@ const InvoicePage = () => {
         {/* CONTENT */}
         {/* ============================================ */}
         <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+          <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
+
+          {isOffline && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+            >
+              <AlertTriangle size={16} className="shrink-0" />
+              You&apos;re offline. Showing the latest loaded invoice data until the connection comes back.
+            </motion.div>
+          )}
           {/* Page Title */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center justify-between"
+            className={cn("flex items-center justify-between", isMobile && "items-start gap-3")}
           >
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-md bg-[#F1F5F9] flex items-center justify-center ">
@@ -1664,28 +1851,48 @@ const InvoicePage = () => {
                 <RefreshCw size={18} />
               </motion.button>
 
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleExport}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-md border border-[rgba(15,23,42,0.06)] hover:bg-[#F8FAFC] text-[#475569] transition-colors"
-              >
-                <Download size={18} />
-                <span className="font-medium">Export</span>
-              </motion.button>
+              {isMobile ? (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setIsFilterDrawerOpen(true)}
+                  className="p-2.5 rounded-md border border-[rgba(15,23,42,0.06)] hover:bg-[#F8FAFC] text-[#475569] transition-colors"
+                >
+                  <Filter size={18} />
+                </motion.button>
+              ) : (
+                <>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleExport}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-md border border-[rgba(15,23,42,0.06)] hover:bg-[#F8FAFC] text-[#475569] transition-colors"
+                  >
+                    <Download size={18} />
+                    <span className="font-medium">Export</span>
+                  </motion.button>
 
-              <Button
-                onClick={() => navigate("/invoice/create")}
-                className="bg-[#F1F5F9]/90 hover:from-[#22D3EE]/90 hover:to-[#22D3EE] text-[#0F172A] rounded-md  px-5"
-              >
-                <Plus size={18} className="mr-2" />
-                New Invoice
-              </Button>
+                  <Button
+                    onClick={() => navigate("/invoice/create")}
+                    className="bg-[#F1F5F9]/90 hover:from-[#22D3EE]/90 hover:to-[#22D3EE] text-[#0F172A] rounded-md  px-5"
+                  >
+                    <Plus size={18} className="mr-2" />
+                    New Invoice
+                  </Button>
+                </>
+              )}
             </div>
           </motion.div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
+          <div
+            className={cn(
+              isMobile
+                ? "flex gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                : "grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5 sm:gap-4"
+            )}
+          >
+            <div className={cn(isMobile && "min-w-[220px]")}>
             <StatCard
               title="Total Invoiced"
               value={formatCurrency(stats.total)}
@@ -1694,6 +1901,8 @@ const InvoicePage = () => {
               color="teal"
               delay={0}
             />
+            </div>
+            <div className={cn(isMobile && "min-w-[220px]")}>
             <StatCard
               title="Paid"
               value={formatCurrency(stats.paid)}
@@ -1703,6 +1912,8 @@ const InvoicePage = () => {
               trend={{ value: 12, positive: true }}
               delay={0.1}
             />
+            </div>
+            <div className={cn(isMobile && "min-w-[220px]")}>
             <StatCard
               title="Pending"
               value={formatCurrency(stats.pending)}
@@ -1711,6 +1922,8 @@ const InvoicePage = () => {
               color="gold"
               delay={0.2}
             />
+            </div>
+            <div className={cn(isMobile && "min-w-[220px]")}>
             <StatCard
               title="Overdue"
               value={formatCurrency(stats.overdue)}
@@ -1719,6 +1932,8 @@ const InvoicePage = () => {
               color="red"
               delay={0.3}
             />
+            </div>
+            <div className={cn(isMobile && "min-w-[220px]")}>
             <StatCard
               title="Collection Rate"
               value={`${stats.total > 0 ? Math.round((stats.paid / stats.total) * 100) : 0}%`}
@@ -1728,8 +1943,150 @@ const InvoicePage = () => {
               trend={{ value: 5, positive: true }}
               delay={0.4}
             />
+            </div>
           </div>
 
+          {isMobile ? (
+            <div className="space-y-4 pb-24">
+              <div className="space-y-3 rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm">
+                <div className="relative">
+                  <Search
+                    size={18}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]"
+                  />
+                  <Input
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search invoices..."
+                    className="h-11 rounded-xl border-[rgba(15,23,42,0.06)] pl-10"
+                  />
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8]"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between gap-3">
+                  <div className="overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    <Tabs value={mobileStatusTab} onValueChange={(value) => setMobileStatusTab(value as (typeof mobileStatusTabs)[number]["value"])}>
+                      <TabsList className="inline-flex w-max rounded-2xl bg-[#F8FAFC] p-1">
+                        {mobileStatusTabs.map((tab) => (
+                          <TabsTrigger key={tab.value} value={tab.value} className="rounded-xl px-4 text-xs">
+                            {tab.label}
+                          </TabsTrigger>
+                        ))}
+                      </TabsList>
+                    </Tabs>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsFilterDrawerOpen(true)}
+                    className="h-10 rounded-xl border-[rgba(15,23,42,0.06)] px-3"
+                  >
+                    <Filter size={16} className="mr-2" />
+                    Filter
+                  </Button>
+                </div>
+
+                <p className="text-xs text-[#94A3B8]">
+                  Swipe right to view, swipe left to delete, and long press any invoice to start multi-select.
+                </p>
+              </div>
+
+              {selectedInvoices.length > 0 && (
+                <div className="sticky top-[88px] z-20 rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-3 shadow-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm font-medium text-[#0F172A]">
+                      {selectedInvoices.length} selected
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" onClick={handleBulkSend} className="h-9 rounded-xl bg-[#0891B2] text-white hover:bg-[#0891B2]/90">
+                        <Send size={14} className="mr-1.5" />
+                        Send
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={handleBulkDelete} className="h-9 rounded-xl border-red-200 text-red-600 hover:bg-red-50">
+                        <Trash2 size={14} className="mr-1.5" />
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {isLoading ? (
+                <ListCardSkeleton rows={4} />
+              ) : filteredInvoices.length === 0 ? (
+                <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white">
+                  <EmptyState onAdd={() => navigate("/invoice/create")} />
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {paginatedInvoices.map((invoice) => {
+                    const isSelected = selectedInvoices.includes(invoice.id);
+                    return (
+                      <SwipeActionCard
+                        key={invoice.id}
+                        onView={() => navigate(`/invoice/${invoice.id}`)}
+                        onDelete={() => openDeleteDialog(invoice)}
+                        onLongPress={() => handleSelectInvoice(invoice.id, !isSelected)}
+                        primaryLabel="View"
+                        secondaryLabel="Delete"
+                      >
+                        <MobileInvoiceCard
+                          invoice={invoice}
+                          isSelected={isSelected}
+                          onTap={() => navigate(`/invoice/${invoice.id}`)}
+                          onQuickAction={() => handleMobileQuickAction(invoice)}
+                        />
+                      </SwipeActionCard>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className="flex items-center justify-between rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white px-4 py-3 text-sm text-[#475569] shadow-sm">
+                <span>
+                  Showing {filteredInvoices.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}-
+                  {Math.min(currentPage * pageSize, filteredInvoices.length)} of {filteredInvoices.length}
+                </span>
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                      disabled={currentPage === 1}
+                      className="h-9 rounded-xl border-[rgba(15,23,42,0.06)] px-3"
+                    >
+                      <ChevronLeft size={16} />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                      disabled={currentPage === totalPages}
+                      className="h-9 rounded-xl border-[rgba(15,23,42,0.06)] px-3"
+                    >
+                      <ChevronRight size={16} />
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <Button
+                type="button"
+                onClick={() => navigate("/invoice/create")}
+                className="fixed bottom-5 right-5 z-40 h-14 w-14 rounded-full bg-[#0891B2] p-0 text-white shadow-lg hover:bg-[#0891B2]/90"
+              >
+                <Plus size={22} />
+              </Button>
+            </div>
+          ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
             {/* Main Content - 3 columns */}
             <div className="col-span-full lg:col-span-3 space-y-4">
@@ -2411,7 +2768,69 @@ const InvoicePage = () => {
               </motion.div>
             </div>
           </div>
+          )}
         </div>
+
+        <Drawer open={isMobile && isFilterDrawerOpen} onOpenChange={setIsFilterDrawerOpen}>
+          <DrawerContent className="max-h-[85dvh] rounded-t-[24px] border-none bg-white px-0">
+            <DrawerHeader className="px-5 pb-2 text-left">
+              <DrawerTitle className="text-[#0F172A]">Filter Invoices</DrawerTitle>
+              <DrawerDescription>
+                Refine the invoice list by time period and switch the mobile card style.
+              </DrawerDescription>
+            </DrawerHeader>
+            <div className="space-y-5 px-5 pb-6 pt-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[#475569]">Date range</label>
+                <Select value={filterDate} onValueChange={setFilterDate}>
+                  <SelectTrigger className="h-11 rounded-xl border-[rgba(15,23,42,0.06)]">
+                    <SelectValue placeholder="Period" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    {dateFilterOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[#475569]">Export</label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleExport}
+                  className="h-11 w-full rounded-xl border-[rgba(15,23,42,0.06)]"
+                >
+                  <Download size={16} className="mr-2" />
+                  Export current results
+                </Button>
+              </div>
+            </div>
+            <DrawerFooter className="border-t border-[rgba(15,23,42,0.06)] bg-white px-5 pb-6 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 rounded-xl"
+                onClick={() => {
+                  setFilterDate("all");
+                  setIsFilterDrawerOpen(false);
+                }}
+              >
+                Clear filters
+              </Button>
+              <Button
+                type="button"
+                className="h-11 rounded-xl bg-[#0891B2] text-white hover:bg-[#0891B2]/90"
+                onClick={() => setIsFilterDrawerOpen(false)}
+              >
+                Apply
+              </Button>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
 
         {/* ============================================ */}
         {/* DIALOGS */}

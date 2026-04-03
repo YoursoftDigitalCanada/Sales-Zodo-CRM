@@ -21,6 +21,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Conversation, Message, User } from "./types";
 import { StatusBadge } from "./StatusBadge";
 import { getInitials, getOtherParticipant, formatLastSeen } from "./utils";
@@ -38,6 +39,7 @@ interface UserInfoPanelProps {
   onArchive: () => void;
   onDelete: () => void;
   onDownloadAttachment: (attachmentId: string) => void;
+  isMobile?: boolean;
 }
 
 export function UserInfoPanel({
@@ -53,6 +55,7 @@ export function UserInfoPanel({
   onArchive,
   onDelete,
   onDownloadAttachment,
+  isMobile = false,
 }: UserInfoPanelProps) {
   const otherParticipant = getOtherParticipant(conversation, currentUser.id);
   const [showAllMedia, setShowAllMedia] = useState(false);
@@ -74,15 +77,8 @@ export function UserInfoPanel({
   const visibleMedia = showAllMedia ? sharedMedia : sharedMedia.slice(0, 6);
   const visibleFiles = showAllFiles ? sharedFiles : sharedFiles.slice(0, 4);
 
-  return (
-    <motion.div
-      initial={{ width: 0, opacity: 0 }}
-      animate={{ width: 320, opacity: 1 }}
-      exit={{ width: 0, opacity: 0 }}
-      transition={{ duration: 0.2 }}
-      className="bg-white border-l border-[rgba(15,23,42,0.06)] overflow-hidden"
-    >
-      <div className="w-80 h-full flex flex-col">
+  const panelContent = (
+      <div className={isMobile ? "h-full flex flex-col bg-white" : "w-80 h-full flex flex-col"}>
         {/* Header */}
         <div className="p-4 border-b border-[rgba(15,23,42,0.06)] flex items-center justify-between">
           <h3 className="font-semibold text-[#0F172A]">Contact Info</h3>
@@ -368,6 +364,27 @@ export function UserInfoPanel({
           </div>
         </ScrollArea>
       </div>
+  );
+
+  if (isMobile) {
+    return (
+      <Sheet open onOpenChange={(open) => !open && onClose()}>
+        <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl border-[rgba(15,23,42,0.06)] p-0">
+          {panelContent}
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  return (
+    <motion.div
+      initial={{ width: 0, opacity: 0 }}
+      animate={{ width: 320, opacity: 1 }}
+      exit={{ width: 0, opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="bg-white border-l border-[rgba(15,23,42,0.06)] overflow-hidden"
+    >
+      {panelContent}
     </motion.div>
   );
 }

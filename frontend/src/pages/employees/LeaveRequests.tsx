@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import {
   LeaveStats,
   LeaveRequestCard,
@@ -147,6 +148,7 @@ const deriveLeaveBalances = (requests: LeaveRequest[]): LeaveBalance[] => (
 );
 
 const LeaveRequestsPage: React.FC = () => {
+  const { isMobile } = useIsMobile();
   const storedEmployee = getStoredEmployee();
   const currentEmployeeId = typeof storedEmployee?.id === 'string' ? storedEmployee.id : undefined;
   const isAdminUser = isStoredEmployeeAdmin(storedEmployee);
@@ -162,6 +164,7 @@ const LeaveRequestsPage: React.FC = () => {
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [calendarAttendance, setCalendarAttendance] = useState<AttendanceRecord[]>([]);
+  const effectiveViewMode = isMobile ? 'cards' : viewMode;
 
   const refreshData = useCallback(async (showErrorToast = true) => {
     try {
@@ -377,7 +380,7 @@ const LeaveRequestsPage: React.FC = () => {
   ), [leaveRequests]);
 
   return (
-    <div className="p-6 space-y-6 bg-[#F8FAFC] min-h-screen">
+    <div className="min-h-screen space-y-6 bg-[#F8FAFC] p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Leave Requests</h1>
@@ -385,7 +388,7 @@ const LeaveRequestsPage: React.FC = () => {
             {isAdminUser ? 'Manage and approve employee leave requests' : 'Apply for leave and track your approval status'}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="hidden items-center gap-3 sm:flex">
           <Button variant="outline" className="gap-2" onClick={exportRequests} disabled={isLoading || filteredRequests.length === 0}>
             <Download className="w-4 h-4" />
             Export
@@ -411,7 +414,7 @@ const LeaveRequestsPage: React.FC = () => {
         <div className="lg:col-span-3 space-y-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-              <TabsList className="bg-white">
+              <TabsList className="w-full justify-start overflow-x-auto bg-white sm:w-auto">
                 <TabsTrigger value="all" className="gap-2">
                   All
                   <Badge variant="secondary" className="ml-1">
@@ -435,7 +438,7 @@ const LeaveRequestsPage: React.FC = () => {
                 </TabsTrigger>
               </TabsList>
 
-              <div className="flex rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-1">
+              <div className="hidden rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-1 sm:flex">
                 <Button
                   variant={viewMode === 'cards' ? 'default' : 'ghost'}
                   size="icon"
@@ -504,8 +507,8 @@ const LeaveRequestsPage: React.FC = () => {
 
             {(['all', 'pending', 'approved', 'rejected'] as const).map((tab) => (
               <TabsContent key={tab} value={tab} className="mt-0">
-                {viewMode === 'cards' ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {effectiveViewMode === 'cards' ? (
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     {filteredRequests.map((request, index) => (
                       <LeaveRequestCard
                         key={request.id}
@@ -647,6 +650,17 @@ const LeaveRequestsPage: React.FC = () => {
         onSubmit={handleAddLeaveRequest}
         leaveBalances={leaveBalances}
       />
+
+      {isMobile && (
+        <Button
+          onClick={() => setIsAddDialogOpen(true)}
+          size="icon"
+          className="fixed bottom-24 right-4 z-30 h-14 w-14 rounded-full bg-[#0891B2] text-white shadow-lg hover:bg-[#0891B2]/90 sm:hidden"
+          aria-label="Request Leave"
+        >
+          <Plus className="h-5 w-5" />
+        </Button>
+      )}
     </div>
   );
 };

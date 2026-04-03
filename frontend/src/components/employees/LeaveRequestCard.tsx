@@ -20,6 +20,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { LeaveRequest } from './types';
 import { getLeaveTypeConfig, getLeaveStatusConfig, getInitials } from './utils';
 
@@ -40,11 +48,54 @@ export const LeaveRequestCard: React.FC<LeaveRequestCardProps> = ({
   showActions = true,
   index = 0,
 }) => {
+  const { isMobile } = useIsMobile();
+  const [isActionsOpen, setIsActionsOpen] = React.useState(false);
   const leaveTypeConfig = getLeaveTypeConfig(request.leaveType);
   const statusConfig = getLeaveStatusConfig(request.status);
   const nameParts = request.employeeName.split(' ');
 
   const isPending = request.status === 'pending';
+  const actionItems = (
+    <>
+      <Button
+        variant="ghost"
+        className="w-full justify-start rounded-md"
+        onClick={() => {
+          onViewDetails?.(request);
+          setIsActionsOpen(false);
+        }}
+      >
+        <FileText className="mr-2 h-4 w-4" />
+        View Details
+      </Button>
+      {isPending && showActions && (
+        <>
+          <Button
+            variant="ghost"
+            className="w-full justify-start rounded-md text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
+            onClick={() => {
+              onApprove?.(request);
+              setIsActionsOpen(false);
+            }}
+          >
+            <Check className="mr-2 h-4 w-4" />
+            Approve
+          </Button>
+          <Button
+            variant="ghost"
+            className="w-full justify-start rounded-md text-red-600 hover:bg-red-50 hover:text-red-700"
+            onClick={() => {
+              onReject?.(request);
+              setIsActionsOpen(false);
+            }}
+          >
+            <X className="mr-2 h-4 w-4" />
+            Reject
+          </Button>
+        </>
+      )}
+    </>
+  );
 
   return (
     <motion.div
@@ -74,38 +125,57 @@ export const LeaveRequestCard: React.FC<LeaveRequestCardProps> = ({
             <Badge className={`${statusConfig.color} border-0`}>
               {statusConfig.label}
             </Badge>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+            {isMobile ? (
+              <>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsActionsOpen(true)}>
                   <MoreVertical className="w-4 h-4" />
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onViewDetails?.(request)}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  View Details
-                </DropdownMenuItem>
-                {isPending && showActions && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem 
-                      onClick={() => onApprove?.(request)}
-                      className="text-emerald-600"
-                    >
-                      <Check className="mr-2 h-4 w-4" />
-                      Approve
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => onReject?.(request)}
-                      className="text-red-600"
-                    >
-                      <X className="mr-2 h-4 w-4" />
-                      Reject
-                    </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                <Sheet open={isActionsOpen} onOpenChange={setIsActionsOpen}>
+                  <SheetContent side="bottom" className="rounded-t-3xl border-[rgba(15,23,42,0.06)] px-5 pb-8 pt-10">
+                    <SheetHeader className="mb-4 text-left">
+                      <SheetTitle>{request.employeeName}</SheetTitle>
+                      <SheetDescription>Leave request actions</SheetDescription>
+                    </SheetHeader>
+                    <div className="space-y-2">
+                      {actionItems}
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              </>
+            ) : (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <MoreVertical className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => onViewDetails?.(request)}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    View Details
+                  </DropdownMenuItem>
+                  {isPending && showActions && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem 
+                        onClick={() => onApprove?.(request)}
+                        className="text-emerald-600"
+                      >
+                        <Check className="mr-2 h-4 w-4" />
+                        Approve
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => onReject?.(request)}
+                        className="text-red-600"
+                      >
+                        <X className="mr-2 h-4 w-4" />
+                        Reject
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
 

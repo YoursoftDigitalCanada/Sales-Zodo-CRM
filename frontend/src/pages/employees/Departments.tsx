@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import {
   DepartmentStats,
   DepartmentCard,
@@ -26,6 +27,11 @@ import {
   Department,
   Employee,
 } from '@/components/employees';
+import {
+  PullToRefreshIndicator,
+  SwipeActionCard,
+  usePullToRefresh,
+} from '@/features/clients/components/responsive-helpers';
 import { getStoredEmployee, isStoredEmployeeAdmin } from '@/features/auth/lib/auth-storage';
 import {
   getDepartments as fetchDepartments,
@@ -140,6 +146,7 @@ const mapEmployeeData = (data: ApiEmployee[]): Employee[] =>
 
 const DepartmentsPage: React.FC = () => {
   const navigate = useNavigate();
+  const { isMobile } = useIsMobile();
   const isAdminUser = isStoredEmployeeAdmin(getStoredEmployee());
   const [departments, setDepartments] = useState<Department[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -149,6 +156,7 @@ const DepartmentsPage: React.FC = () => {
   const [sortBy, setSortBy] = useState('name');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState<Department | undefined>();
+  const effectiveViewMode = isMobile ? 'grid' : viewMode;
 
   useEffect(() => {
     if (!isAdminUser) {
@@ -253,6 +261,13 @@ const DepartmentsPage: React.FC = () => {
     navigate(`/employees?department=${encodeURIComponent(department.name)}`);
   };
 
+  const { handlers: pullHandlers, pullDistance, isRefreshing } = usePullToRefresh({
+    enabled: isMobile && !isLoading,
+    onRefresh: async () => {
+      await refreshData(false);
+    },
+  });
+
   const handleAddDepartment = async (data: DepartmentFormPayload) => {
     const payload = {
       ...data,
@@ -311,7 +326,8 @@ const DepartmentsPage: React.FC = () => {
   };
 
   return (
-    <div className="p-6 space-y-6 bg-[#F8FAFC] min-h-screen">
+    <div className="min-h-screen space-y-6 bg-[#F8FAFC] p-4 sm:p-6" {...pullHandlers}>
+      <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Departments</h1>
@@ -319,7 +335,7 @@ const DepartmentsPage: React.FC = () => {
             Manage organizational structure and departments
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="hidden items-center gap-3 sm:flex">
           <Button variant="outline" className="gap-2" onClick={handleExport}>
             <Download className="w-4 h-4" />
             Export
@@ -353,7 +369,7 @@ const DepartmentsPage: React.FC = () => {
         </div>
 
         <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger className="w-[180px] bg-white">
+          <SelectTrigger className="w-full bg-white sm:w-[180px]">
             <SelectValue placeholder="Sort by" />
           </SelectTrigger>
           <SelectContent>
@@ -384,18 +400,37 @@ const DepartmentsPage: React.FC = () => {
         </div>
       </div>
 
-      {!isLoading && viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {!isLoading && effectiveViewMode === 'grid' ? (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 sm:gap-6">
           {filteredDepartments.map((department, index) => (
-            <DepartmentCard
-              key={department.id}
-              department={department}
-              totalEmployees={stats.totalEmployees}
-              onEdit={handleEditDepartment}
-              onDelete={handleDeleteDepartment}
-              onViewEmployees={handleViewEmployees}
-              index={index}
-            />
+            isMobile ? (
+              <SwipeActionCard
+                key={department.id}
+                onView={() => handleViewEmployees(department)}
+                onDelete={() => handleDeleteDepartment(department)}
+                primaryLabel="View Team"
+                secondaryLabel="Delete"
+              >
+                <DepartmentCard
+                  department={department}
+                  totalEmployees={stats.totalEmployees}
+                  onEdit={handleEditDepartment}
+                  onDelete={handleDeleteDepartment}
+                  onViewEmployees={handleViewEmployees}
+                  index={index}
+                />
+              </SwipeActionCard>
+            ) : (
+              <DepartmentCard
+                key={department.id}
+                department={department}
+                totalEmployees={stats.totalEmployees}
+                onEdit={handleEditDepartment}
+                onDelete={handleDeleteDepartment}
+                onViewEmployees={handleViewEmployees}
+                index={index}
+              />
+            )
           ))}
         </div>
       ) : !isLoading ? (
@@ -405,7 +440,7 @@ const DepartmentsPage: React.FC = () => {
           onEdit={handleEditDepartment}
           onDelete={handleDeleteDepartment}
           onViewEmployees={handleViewEmployees}
-          viewMode={viewMode === 'list' ? 'list' : 'table'}
+          viewMode={effectiveViewMode === 'list' ? 'list' : 'table'}
         />
       ) : null}
 
@@ -430,6 +465,17 @@ const DepartmentsPage: React.FC = () => {
         onSubmit={handleAddDepartment}
         editingDepartment={editingDepartment}
       />
+
+      {isMobile && (
+        <Button
+          onClick={() => setIsAddDialogOpen(true)}
+          size="icon"
+          className="fixed bottom-24 right-4 z-30 h-14 w-14 rounded-full bg-[#0891B2] text-white shadow-lg hover:bg-[#0891B2]/90 sm:hidden"
+          aria-label="Add Department"
+        >
+          <Plus className="h-5 w-5" />
+        </Button>
+      )}
     </div>
   );
 };

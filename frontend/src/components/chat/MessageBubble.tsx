@@ -1,6 +1,7 @@
 // src/components/chat/MessageBubble.tsx
 
 import { motion } from "framer-motion";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import {
   Check,
@@ -42,6 +43,7 @@ interface MessageBubbleProps {
   onDelete?: (messageId: string) => void;
   onCopy?: (content: string) => void;
   onDownloadAttachment?: (attachmentId: string) => void;
+  enableSwipeReply?: boolean;
 }
 
 // Message Status Icon Component
@@ -65,13 +67,60 @@ export function MessageBubble({
   onDelete,
   onCopy,
   onDownloadAttachment,
+  enableSwipeReply = false,
 }: MessageBubbleProps) {
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
+  const [swipeOffset, setSwipeOffset] = useState(0);
+
+  const handleTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (!enableSwipeReply) return;
+    const touch = event.touches[0];
+    setTouchStartX(touch.clientX);
+    setTouchStartY(touch.clientY);
+  };
+
+  const handleTouchMove = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (!enableSwipeReply || touchStartX === null || touchStartY === null) return;
+    const touch = event.touches[0];
+    const deltaX = touch.clientX - touchStartX;
+    const deltaY = touch.clientY - touchStartY;
+
+    if (Math.abs(deltaY) > Math.abs(deltaX)) {
+      setSwipeOffset(0);
+      return;
+    }
+
+    setSwipeOffset(Math.max(0, Math.min(deltaX, 84)));
+  };
+
+  const handleTouchEnd = () => {
+    if (enableSwipeReply && swipeOffset >= 72) {
+      onReply?.(message);
+    }
+    setTouchStartX(null);
+    setTouchStartY(null);
+    setSwipeOffset(0);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className={cn("flex gap-3", isOwn ? "justify-end" : "justify-start")}
+      style={enableSwipeReply ? { x: swipeOffset } : undefined}
+      transition={enableSwipeReply ? { type: "spring", stiffness: 320, damping: 28 } : undefined}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      className={cn("relative flex gap-3", isOwn ? "justify-end" : "justify-start")}
     >
+      {enableSwipeReply && swipeOffset > 0 ? (
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 pl-1">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0891B2]/10 text-[#0891B2]">
+            <Reply size={14} />
+          </div>
+        </div>
+      ) : null}
       {/* Avatar (for others) */}
       {!isOwn && (
         <div className="w-8 flex-shrink-0">
@@ -87,7 +136,7 @@ export function MessageBubble({
       )}
 
       {/* Message Bubble */}
-      <div className={cn("max-w-[70%] group relative", isOwn ? "order-1" : "order-2")}>
+      <div className={cn("max-w-[78%] sm:max-w-[70%] group relative", isOwn ? "order-1" : "order-2")}>
         {/* Message Actions (on hover) */}
         <div
           className={cn(

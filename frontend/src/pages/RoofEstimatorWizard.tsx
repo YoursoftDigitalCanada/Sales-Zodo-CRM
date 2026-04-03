@@ -1987,6 +1987,9 @@ function Step1ClientInfo({
   hideHeader?: boolean;
 }) {
   const q = clientSearchQ.toLowerCase();
+  const selectorColumns = isCompact
+    ? "repeat(auto-fit, minmax(132px, 1fr))"
+    : "repeat(3, minmax(0, 1fr))";
 
   const filteredClients = q
     ? clients.filter((c) => {
@@ -2022,7 +2025,7 @@ function Step1ClientInfo({
       )}
 
       <Field label="Estimate For">
-        <div style={responsiveGrid(isCompact, "repeat(3, minmax(0, 1fr))", "repeat(3, minmax(0, 1fr))", 8)}>
+        <div style={{ display: "grid", gridTemplateColumns: selectorColumns, gap: 8 }}>
           {[
             { id: "client", label: "Client", icon: "👤" },
             { id: "lead", label: "Lead", icon: "🧲" },
@@ -2051,10 +2054,11 @@ function Step1ClientInfo({
                   justifyContent: "center",
                   gap: 6,
                   boxShadow: isActive ? "0 8px 18px rgba(8,145,178,.14)" : "none",
+                  minWidth: 0,
                 }}
               >
                 <span style={{ fontSize: 18, lineHeight: 1 }}>{option.icon}</span>
-                <span style={{ lineHeight: 1.1 }}>{option.label}</span>
+                <span style={{ lineHeight: 1.1, textAlign: "center", wordBreak: "break-word" }}>{option.label}</span>
               </button>
             );
           })}
@@ -2130,6 +2134,9 @@ function Step1ClientInfo({
           background: "#F8FAFC",
           fontSize: 12,
           color: "#64748B",
+          lineHeight: 1.6,
+          whiteSpace: "normal",
+          overflowWrap: "anywhere",
         }}>
           Manual entry is enabled. Type the contact details below if this estimate is not tied to an existing lead or client.
         </div>

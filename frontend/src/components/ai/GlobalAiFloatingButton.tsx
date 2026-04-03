@@ -17,6 +17,7 @@ export function GlobalAiFloatingButton() {
     const [showPulse, setShowPulse] = useState(true);
     const location = useLocation();
     const { isMobile } = useIsMobile();
+    const isRoofEstimatorRoute = location.pathname.startsWith("/roof-estimator");
 
     // Hide on public routes
     const isHiddenRoute = HIDDEN_ROUTES.includes(location.pathname);
@@ -60,7 +61,9 @@ export function GlobalAiFloatingButton() {
                         className="fixed right-4 z-[9998] md:right-6"
                         style={{
                             bottom: isMobile
-                                ? "calc(56px + env(safe-area-inset-bottom, 0px) + 20px)"
+                                ? isRoofEstimatorRoute
+                                    ? "calc(56px + env(safe-area-inset-bottom, 0px) + 108px)"
+                                    : "calc(56px + env(safe-area-inset-bottom, 0px) + 20px)"
                                 : "24px",
                         }}
                     >

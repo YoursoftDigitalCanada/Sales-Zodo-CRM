@@ -326,6 +326,10 @@ const ESTIMATE_SECTIONS: { id: SectionId; title: string; shortLabel: string; ico
   { id: "summary", title: "Estimate Summary", shortLabel: "Summary", icon: "📋", description: "Final review and generation." },
 ];
 
+const MOBILE_BOTTOM_NAV_HEIGHT = 56;
+const MOBILE_ACTION_BAR_OFFSET = `calc(${MOBILE_BOTTOM_NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px) + 12px)`;
+const MOBILE_PAGE_BOTTOM_PADDING = 212;
+
 /* ─── Styled Input ───────────────────────────────────────── */
 
 const inputStyle: React.CSSProperties = {
@@ -1385,7 +1389,7 @@ export default function RoofEstimatorWizard() {
 
   return (
     <div style={{
-      padding: isMobile ? "16px 16px 120px" : isTablet ? "20px 20px 40px" : "24px 24px 40px",
+      padding: isMobile ? `16px 16px ${MOBILE_PAGE_BOTTOM_PADDING}px` : isTablet ? "20px 20px 40px" : "24px 24px 40px",
       maxWidth: 1440,
       margin: "0 auto",
       fontFamily: "'Inter',sans-serif",
@@ -1439,6 +1443,7 @@ export default function RoofEstimatorWizard() {
         @media (max-width: 860px) {
           .roof-estimator-shell {
             grid-template-columns: 1fr;
+            gap: 16px;
           }
 
           .roof-estimator-nav {
@@ -1449,14 +1454,17 @@ export default function RoofEstimatorWizard() {
             flex-direction: row;
             overflow-x: auto;
             padding-bottom: 6px;
+            scroll-snap-type: x proximity;
           }
 
           .roof-estimator-nav-list > button {
-            min-width: 220px;
+            min-width: 168px;
+            scroll-snap-align: start;
           }
 
           .roof-estimator-action-bar {
-            flex-direction: column;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             align-items: stretch;
           }
         }
@@ -1686,7 +1694,7 @@ export default function RoofEstimatorWizard() {
               </div>
             </div>
 
-            <div style={{ padding: "24px" }}>
+            <div style={{ padding: isMobile ? "18px 16px" : "24px" }}>
               {renderActiveSection()}
             </div>
           </div>
@@ -1696,15 +1704,20 @@ export default function RoofEstimatorWizard() {
             paddingTop: 18,
             borderTop: "1px solid #E2E8F0",
             position: isMobile ? "sticky" : "static",
-            bottom: isMobile ? 12 : "auto",
+            bottom: isMobile ? MOBILE_ACTION_BAR_OFFSET : "auto",
             background: isMobile ? "rgba(255,255,255,.96)" : "transparent",
-            padding: isMobile ? "14px 12px calc(14px + env(safe-area-inset-bottom, 0px))" : undefined,
+            padding: isMobile ? "14px 12px 14px" : undefined,
             borderRadius: isMobile ? 18 : undefined,
             boxShadow: isMobile ? "0 -10px 28px rgba(15,23,42,.08)" : "none",
             zIndex: isMobile ? 20 : "auto",
           }}>
             {!currentSectionValidation.valid && (
-              <div style={{ marginRight: "auto", fontSize: 12, color: activeSection === "address" || activeSection === "summary" ? "#DC2626" : "#64748B" }}>
+              <div style={{
+                marginRight: isMobile ? 0 : "auto",
+                gridColumn: isMobile ? "1 / -1" : undefined,
+                fontSize: 12,
+                color: activeSection === "address" || activeSection === "summary" ? "#DC2626" : "#64748B",
+              }}>
                 {currentSectionValidation.message}
               </div>
             )}
@@ -1713,6 +1726,7 @@ export default function RoofEstimatorWizard() {
                 padding: "10px 18px", borderRadius: 8, border: "1px solid #CBD5E1",
                 background: "#fff", color: "#475569", fontSize: 13, fontWeight: 600,
                 cursor: "pointer", opacity: saving ? 0.7 : 1,
+                width: isMobile ? "100%" : undefined,
               }}>
                 Previous
               </button>
@@ -1725,6 +1739,9 @@ export default function RoofEstimatorWizard() {
                   fontSize: 13, fontWeight: 700, cursor: canGenerateEstimate ? "pointer" : "not-allowed",
                   display: "flex", alignItems: "center", gap: 6,
                   boxShadow: "0 2px 8px rgba(16,185,129,.25)", opacity: canGenerateEstimate ? 1 : 0.55,
+                  justifyContent: "center",
+                  width: isMobile ? "100%" : undefined,
+                  gridColumn: isMobile ? "1 / -1" : undefined,
                 }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                   Generate AI Estimate
@@ -1737,6 +1754,9 @@ export default function RoofEstimatorWizard() {
                 fontSize: 13, fontWeight: 700, cursor: "pointer",
                 display: "flex", alignItems: "center", gap: 6,
                 boxShadow: "0 2px 8px rgba(102,55,244,.25)", opacity: saving ? 0.7 : 1,
+                justifyContent: "center",
+                width: isMobile ? "100%" : undefined,
+                gridColumn: activeSection === "client" && isMobile ? "1 / -1" : undefined,
               }}>
                 Next
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
@@ -2002,11 +2022,11 @@ function Step1ClientInfo({
       )}
 
       <Field label="Estimate For">
-        <div style={responsiveGrid(isCompact, "repeat(3, minmax(0, 1fr))", "1fr", 8)}>
+        <div style={responsiveGrid(isCompact, "repeat(3, minmax(0, 1fr))", "repeat(3, minmax(0, 1fr))", 8)}>
           {[
-            { id: "client", label: "Client" },
-            { id: "lead", label: "Lead" },
-            { id: "manual", label: "Manual" },
+            { id: "client", label: "Client", icon: "👤" },
+            { id: "lead", label: "Lead", icon: "🧲" },
+            { id: "manual", label: "Manual", icon: "✍️" },
           ].map((option) => {
             const isActive = data.sourceType === option.id;
             return (
@@ -2024,9 +2044,17 @@ function Step1ClientInfo({
                   fontWeight: 700,
                   cursor: "pointer",
                   transition: "all .15s ease",
+                  minHeight: 76,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                  boxShadow: isActive ? "0 8px 18px rgba(8,145,178,.14)" : "none",
                 }}
               >
-                {option.label}
+                <span style={{ fontSize: 18, lineHeight: 1 }}>{option.icon}</span>
+                <span style={{ lineHeight: 1.1 }}>{option.label}</span>
               </button>
             );
           })}

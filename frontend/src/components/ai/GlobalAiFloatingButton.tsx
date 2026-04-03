@@ -6,6 +6,7 @@ import { useLocation } from "react-router-dom";
 import { AiCopilotPanel } from "./AiCopilotPanel";
 import { cn } from "@/lib/utils";
 import { APP_SHORTCUT_EVENTS } from "@/lib/app-shortcuts";
+import useIsMobile from "@/hooks/useIsMobile";
 
 // Pages where the FAB should NOT appear (public/auth routes)
 const HIDDEN_ROUTES = ["/", "/login", "/signup", "/onboarding"];
@@ -15,6 +16,7 @@ export function GlobalAiFloatingButton() {
     const [isHovered, setIsHovered] = useState(false);
     const [showPulse, setShowPulse] = useState(true);
     const location = useLocation();
+    const { isMobile } = useIsMobile();
 
     // Hide on public routes
     const isHiddenRoute = HIDDEN_ROUTES.includes(location.pathname);
@@ -55,7 +57,12 @@ export function GlobalAiFloatingButton() {
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0, opacity: 0 }}
                         transition={{ type: "spring", damping: 20, stiffness: 300 }}
-                        className="fixed bottom-6 right-6 z-[9998]"
+                        className="fixed right-4 z-[9998] md:right-6"
+                        style={{
+                            bottom: isMobile
+                                ? "calc(56px + env(safe-area-inset-bottom, 0px) + 20px)"
+                                : "24px",
+                        }}
                     >
                         {/* Pulse ring */}
                         {showPulse && (

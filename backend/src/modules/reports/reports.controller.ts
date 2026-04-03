@@ -12,6 +12,8 @@ export class ReportsController {
       dateFrom: req.query.dateFrom as string | undefined,
       dateTo: req.query.dateTo as string | undefined,
       salesRepId: req.query.salesRepId as string | undefined,
+      granularity: req.query.granularity as 'week' | 'month' | undefined,
+      reportType: req.query.reportType as 'sales' | 'revenue' | undefined,
     };
   }
 

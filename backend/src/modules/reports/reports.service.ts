@@ -32,6 +32,16 @@ interface ReportFilters {
   dateFrom?: string;
   dateTo?: string;
   salesRepId?: string;
+  granularity?: 'week' | 'month';
+  reportType?: 'sales' | 'revenue';
+}
+
+function escapeCsv(value: string | number): string {
+  const text = String(value);
+  if (text.includes(',') || text.includes('"') || text.includes('\n')) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+  return text;
 }
 
 // ─── Service ────────────────────────────────────────────────────────────────────
@@ -231,10 +241,64 @@ class ReportsService {
   // 4. Export CSV
   // ───────────────────────────────────────────────────────────────────────────
   async exportCsv(tenantId: string, filters: ReportFilters): Promise<string> {
+    if (filters.reportType === 'revenue') {
+      const [revenueSeries, reps] = await Promise.all([
+        this.getRevenueOverTime(tenantId, filters),
+        this.getSalesRepPerformance(tenantId, filters),
+      ]);
+
+      const totalRevenue = revenueSeries.reduce((sum, point) => sum + point.revenue, 0);
+      const completedProjects = revenueSeries.reduce((sum, point) => sum + point.count, 0);
+      const avgDealSize = completedProjects > 0 ? totalRevenue / completedProjects : 0;
+
+      const summarySection = [
+        'Metric,Value',
+        `${escapeCsv('Total Revenue')},${escapeCsv(Math.round(totalRevenue * 100) / 100)}`,
+        `${escapeCsv('Completed Projects')},${escapeCsv(completedProjects)}`,
+        `${escapeCsv('Average Deal Size')},${escapeCsv(Math.round(avgDealSize * 100) / 100)}`,
+      ];
+
+      const revenueSection = [
+        'Period,Revenue,Completed Projects',
+        ...revenueSeries.map((point) => (
+          [
+            escapeCsv(point.period),
+            escapeCsv(point.revenue),
+            escapeCsv(point.count),
+          ].join(',')
+        )),
+      ];
+
+      const repsSection = [
+        'Rep Name,Won Projects,Revenue,Avg Deal Size,Open Pipeline',
+        ...reps.map((rep) => (
+          [
+            escapeCsv(rep.name),
+            escapeCsv(rep.wonProjects),
+            escapeCsv(rep.revenue),
+            escapeCsv(rep.avgDealSize),
+            escapeCsv(rep.pipeline),
+          ].join(',')
+        )),
+      ];
+
+      return [...summarySection, '', ...revenueSection, '', ...repsSection].join('\n');
+    }
+
     const reps = await this.getSalesRepPerformance(tenantId, filters);
     const header = 'Rep Name,Total Projects,Won,Lost,Open,Win Rate (%),Revenue,Avg Deal Size,Pipeline';
     const rows = reps.map((r) =>
-      [r.name, r.totalProjects, r.wonProjects, r.lostProjects, r.openProjects, r.winRate, r.revenue, r.avgDealSize, r.pipeline].join(','),
+      [
+        escapeCsv(r.name),
+        escapeCsv(r.totalProjects),
+        escapeCsv(r.wonProjects),
+        escapeCsv(r.lostProjects),
+        escapeCsv(r.openProjects),
+        escapeCsv(r.winRate),
+        escapeCsv(r.revenue),
+        escapeCsv(r.avgDealSize),
+        escapeCsv(r.pipeline),
+      ].join(','),
     );
     return [header, ...rows].join('\n');
   }

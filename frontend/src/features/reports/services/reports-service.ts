@@ -44,6 +44,8 @@ export interface ReportFilters {
   granularity?: "week" | "month";
 }
 
+export type ReportType = "sales" | "revenue";
+
 // ─── Helpers ────────────────────────────────────────────────────────────────────
 
 function extractData<T>(responseData: unknown): T {
@@ -76,16 +78,19 @@ export async function getSalesReps(): Promise<SalesRep[]> {
   return Array.isArray(data) ? data : (data as any).items || [];
 }
 
-export async function exportReportCsv(filters: ReportFilters = {}): Promise<void> {
+export async function exportReportCsv(
+  filters: ReportFilters = {},
+  reportType: ReportType = "sales",
+): Promise<void> {
   const response = await api.get("/reports/export-csv", {
-    params: filters,
+    params: { ...filters, reportType },
     responseType: "blob",
   });
   const blob = new Blob([response.data as BlobPart], { type: "text/csv" });
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `sales-report-${new Date().toISOString().split("T")[0]}.csv`;
+  a.download = `${reportType}-report-${new Date().toISOString().split("T")[0]}.csv`;
   a.click();
   window.URL.revokeObjectURL(url);
 }

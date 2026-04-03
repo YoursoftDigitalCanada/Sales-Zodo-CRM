@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
+import { useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
   BarChart3, Target, Clock, Download, Filter,
@@ -58,6 +59,9 @@ const BAR_COLORS = ["#0891B2", "#0E7490", "#14B8A6", "#06B6D4", "#22D3EE", "#67E
 // ─── Component ──────────────────────────────────────────────────────────────────
 
 export default function ReportsPage() {
+  const location = useLocation();
+  const isRevenueReport = location.pathname.includes("/reports/revenue");
+
   // State
   const [loading, setLoading] = useState(true);
   const [datePreset, setDatePreset] = useState<DatePreset>("all");
@@ -122,7 +126,7 @@ export default function ReportsPage() {
   const handleExport = async () => {
     setExporting(true);
     try {
-      await exportReportCsv(filters);
+      await exportReportCsv(filters, isRevenueReport ? "revenue" : "sales");
     } catch (err) {
       console.error("Export failed:", err);
     } finally {
@@ -131,13 +135,35 @@ export default function ReportsPage() {
   };
 
   // Stat cards config
+  const totalRevenueFromSeries = useMemo(
+    () => revOverTime.reduce((sum, point) => sum + point.revenue, 0),
+    [revOverTime],
+  );
+  const totalCompletedFromSeries = useMemo(
+    () => revOverTime.reduce((sum, point) => sum + point.count, 0),
+    [revOverTime],
+  );
+  const topRevenueRep = useMemo(
+    () => [...repPerf].sort((left, right) => right.revenue - left.revenue)[0] || null,
+    [repPerf],
+  );
+
   const statCards = summary
-    ? [
-        { label: "Total Projects", value: formatNumber(summary.totalProjects), icon: BarChart3, color: "text-[#0891B2]", bg: "bg-[#0891B2]/10", change: `${summary.openProjects} open` },
-        { label: "Revenue Generated", value: formatCurrency(summary.totalRevenue), icon: DollarSign, color: "text-[#16A34A]", bg: "bg-[#16A34A]/10", change: `${summary.completedProjects} won` },
-        { label: "Win Rate", value: `${summary.winRate}%`, icon: Target, color: "text-[#D97706]", bg: "bg-[#D97706]/10", change: `${summary.cancelledProjects} lost` },
-        { label: "Avg Deal Cycle", value: `${summary.avgDealCycle} days`, icon: Clock, color: "text-[#7C3AED]", bg: "bg-[#7C3AED]/10", change: `$${formatNumber(summary.avgDealSize)} avg size` },
-      ]
+    ? (
+        isRevenueReport
+          ? [
+              { label: "Total Revenue", value: formatCurrency(totalRevenueFromSeries), icon: DollarSign, color: "text-[#16A34A]", bg: "bg-[#16A34A]/10", change: `${revOverTime.length} period${revOverTime.length === 1 ? "" : "s"}` },
+              { label: "Closed Jobs", value: formatNumber(totalCompletedFromSeries), icon: Target, color: "text-[#0891B2]", bg: "bg-[#0891B2]/10", change: `${repPerf.filter((rep) => rep.revenue > 0).length} active reps` },
+              { label: "Avg Deal Size", value: formatCurrency(totalCompletedFromSeries > 0 ? totalRevenueFromSeries / totalCompletedFromSeries : 0), icon: BarChart3, color: "text-[#D97706]", bg: "bg-[#D97706]/10", change: `${summary.openProjects} open jobs` },
+              { label: "Top Revenue Rep", value: topRevenueRep ? formatCurrency(topRevenueRep.revenue) : "$0", icon: Users, color: "text-[#7C3AED]", bg: "bg-[#7C3AED]/10", change: topRevenueRep?.name || "No revenue yet" },
+            ]
+          : [
+              { label: "Total Projects", value: formatNumber(summary.totalProjects), icon: BarChart3, color: "text-[#0891B2]", bg: "bg-[#0891B2]/10", change: `${summary.openProjects} open` },
+              { label: "Revenue Generated", value: formatCurrency(summary.totalRevenue), icon: DollarSign, color: "text-[#16A34A]", bg: "bg-[#16A34A]/10", change: `${summary.completedProjects} won` },
+              { label: "Win Rate", value: `${summary.winRate}%`, icon: Target, color: "text-[#D97706]", bg: "bg-[#D97706]/10", change: `${summary.cancelledProjects} lost` },
+              { label: "Avg Deal Cycle", value: `${summary.avgDealCycle} days`, icon: Clock, color: "text-[#7C3AED]", bg: "bg-[#7C3AED]/10", change: `$${formatNumber(summary.avgDealSize)} avg size` },
+            ]
+      )
     : [];
 
   // ─── Render ─────────────────────────────────────────────────────────────────
@@ -152,8 +178,10 @@ export default function ReportsPage() {
               <BarChart3 size={22} className="text-[#0891B2]" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-[#0F172A] sm:text-2xl">Sales Performance</h1>
-              <p className="text-sm text-[#64748B]">Real-time insights across your pipeline</p>
+              <h1 className="text-xl font-bold text-[#0F172A] sm:text-2xl">{isRevenueReport ? "Revenue Report" : "Sales Performance"}</h1>
+              <p className="text-sm text-[#64748B]">
+                {isRevenueReport ? "Revenue trends across completed jobs and top-producing reps" : "Real-time insights across your pipeline"}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -261,7 +289,9 @@ export default function ReportsPage() {
                 <div className="mb-4 flex items-center justify-between">
                   <div>
                     <h3 className="text-sm font-semibold text-[#0F172A]">Revenue Over Time</h3>
-                    <p className="mt-0.5 text-xs text-[#94A3B8]">Completed project revenue by period</p>
+                    <p className="mt-0.5 text-xs text-[#94A3B8]">
+                      {isRevenueReport ? "Recognized revenue from completed jobs by period" : "Completed project revenue by period"}
+                    </p>
                   </div>
                   <div className="flex gap-1 rounded-md border border-[rgba(15,23,42,0.06)] p-0.5">
                     <button onClick={() => setGranularity("week")} className={cn("rounded px-2 py-1 text-[10px] font-medium transition", granularity === "week" ? "bg-[#0891B2] text-white" : "text-[#64748B] hover:bg-[#F1F5F9]")}>Week</button>
@@ -294,20 +324,31 @@ export default function ReportsPage() {
                 className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm transition-all hover:shadow-lg"
               >
                 <div className="mb-4">
-                  <h3 className="text-sm font-semibold text-[#0F172A]">Win Rate by Sales Rep</h3>
-                  <p className="mt-0.5 text-xs text-[#94A3B8]">Percentage of closed deals won per rep</p>
+                  <h3 className="text-sm font-semibold text-[#0F172A]">
+                    {isRevenueReport ? "Revenue by Sales Rep" : "Win Rate by Sales Rep"}
+                  </h3>
+                  <p className="mt-0.5 text-xs text-[#94A3B8]">
+                    {isRevenueReport ? "Top-producing reps ranked by closed revenue" : "Percentage of closed deals won per rep"}
+                  </p>
                 </div>
                 {repPerf.length > 0 ? (
                   <ResponsiveContainer width="100%" height={280}>
                     <BarChart data={repPerf.slice(0, 8)} layout="vertical" margin={{ left: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(15,23,42,0.06)" horizontal={false} />
-                      <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11, fill: "#94A3B8" }} tickLine={false} axisLine={false} tickFormatter={(v: number) => `${v}%`} />
+                      <XAxis
+                        type="number"
+                        domain={isRevenueReport ? [0, "auto"] : [0, 100]}
+                        tick={{ fontSize: 11, fill: "#94A3B8" }}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(v: number) => (isRevenueReport ? formatCurrency(v) : `${v}%`)}
+                      />
                       <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "#475569" }} tickLine={false} axisLine={false} width={100} />
                       <Tooltip
                         contentStyle={{ background: "#fff", border: "1px solid rgba(15,23,42,0.06)", borderRadius: 6, fontSize: 12 }}
-                        formatter={(value: number) => [`${value}%`, "Win Rate"]}
+                        formatter={(value: number) => [isRevenueReport ? `$${value.toLocaleString()}` : `${value}%`, isRevenueReport ? "Revenue" : "Win Rate"]}
                       />
-                      <Bar dataKey="winRate" radius={[0, 4, 4, 0]} barSize={20}>
+                      <Bar dataKey={isRevenueReport ? "revenue" : "winRate"} radius={[0, 4, 4, 0]} barSize={20}>
                         {repPerf.slice(0, 8).map((_, i) => (
                           <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />
                         ))}
@@ -329,8 +370,12 @@ export default function ReportsPage() {
             >
               <div className="flex items-center justify-between border-b border-[rgba(15,23,42,0.06)] px-6 py-4">
                 <div>
-                  <h3 className="text-sm font-semibold text-[#0F172A]">Sales Rep Performance</h3>
-                  <p className="mt-0.5 text-xs text-[#94A3B8]">{repPerf.length} reps · Sorted by {sortField}</p>
+                  <h3 className="text-sm font-semibold text-[#0F172A]">
+                    {isRevenueReport ? "Revenue by Sales Rep" : "Sales Rep Performance"}
+                  </h3>
+                  <p className="mt-0.5 text-xs text-[#94A3B8]">
+                    {repPerf.length} reps · Sorted by {sortField}
+                  </p>
                 </div>
                 <div className="flex items-center gap-1 text-[10px] text-[#94A3B8]">
                   <Users size={12} /> Click headers to sort

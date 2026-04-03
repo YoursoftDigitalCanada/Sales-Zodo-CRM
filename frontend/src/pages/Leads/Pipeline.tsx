@@ -341,7 +341,7 @@ const parseTagNames = (input: string[] | string | undefined): string[] => {
 // ============================================
 
 const PipelineLeadCard = ({
-  lead, stageColor, onOpenRecord, onPreview, onEdit, onDelete, isMobile = false,
+  lead, stageColor, onOpenRecord, onPreview, onEdit, onDelete, isMobile = false, enableNativeDrag = true,
 }: {
   lead: Lead; stageColor: string;
   onOpenRecord: () => void;
@@ -349,6 +349,7 @@ const PipelineLeadCard = ({
   onEdit: () => void;
   onDelete: () => void;
   isMobile?: boolean;
+  enableNativeDrag?: boolean;
 }) => {
   const tempInfo = getTemperatureInfo(lead.temperature);
   const TempIcon = tempInfo.icon;
@@ -366,10 +367,13 @@ const PipelineLeadCard = ({
 
   const content = (
     <div
-      draggable={!isMobile}
-      onDragStart={isMobile ? undefined : handleDragStart}
-      onDragEnd={isMobile ? undefined : handleDragEnd}
-      className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4 cursor-grab active:cursor-grabbing hover:shadow-lg hover:border-slate-300 transition-all group"
+      draggable={enableNativeDrag}
+      onDragStart={enableNativeDrag ? handleDragStart : undefined}
+      onDragEnd={enableNativeDrag ? handleDragEnd : undefined}
+      className={cn(
+        "bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4 hover:shadow-lg hover:border-slate-300 transition-all group",
+        enableNativeDrag ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"
+      )}
       onClick={onOpenRecord}
     >
       {/* Header */}
@@ -457,7 +461,7 @@ const PipelineLeadCard = ({
     </div>
   );
 
-  if (isMobile) {
+  if (isMobile && !enableNativeDrag) {
     return <SwipeActionCard onView={onPreview} onDelete={onDelete}>{content}</SwipeActionCard>;
   }
 
@@ -469,7 +473,7 @@ const PipelineLeadCard = ({
 // ============================================
 
 const PipelineColumn = ({
-  stage, onLeadOpenRecord, onLeadPreview, onLeadEdit, onLeadDelete, onAddLead, onDropLead, isMobile = false,
+  stage, onLeadOpenRecord, onLeadPreview, onLeadEdit, onLeadDelete, onAddLead, onDropLead, isMobile = false, enableNativeDrag = true,
 }: {
   stage: PipelineStage;
   onLeadOpenRecord: (lead: Lead) => void;
@@ -479,6 +483,7 @@ const PipelineColumn = ({
   onAddLead: (stageId: string) => void;
   onDropLead: (leadId: string, targetStageId: string) => void;
   isMobile?: boolean;
+  enableNativeDrag?: boolean;
 }) => {
   const StageIcon = stage.icon;
   const totalValue = stage.leads.reduce((acc, lead) => acc + lead.value, 0);
@@ -551,9 +556,9 @@ const PipelineColumn = ({
             : "bg-[#F7F7FB]/50"
         )}
         style={{ borderColor: isDragOver ? undefined : `${stage.color} 20` }}
-        onDragOver={isMobile ? undefined : handleDragOver}
-        onDragLeave={isMobile ? undefined : handleDragLeave}
-        onDrop={isMobile ? undefined : handleDrop}
+        onDragOver={enableNativeDrag ? handleDragOver : undefined}
+        onDragLeave={enableNativeDrag ? handleDragLeave : undefined}
+        onDrop={enableNativeDrag ? handleDrop : undefined}
       >
         {isDragOver && (
           <div className="flex items-center justify-center py-3 px-4 bg-blue-100/60 rounded-md border-2 border-dashed border-blue-300 text-[#6637F4] text-sm font-medium">
@@ -572,6 +577,7 @@ const PipelineColumn = ({
               onEdit={() => onLeadEdit(lead)}
               onDelete={() => onLeadDelete(lead)}
               isMobile={isMobile}
+              enableNativeDrag={enableNativeDrag}
             />
           ))}
         </AnimatePresence>
@@ -773,7 +779,7 @@ const LeadDetailPanel = ({
 const Pipeline = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { isMobile } = useIsMobile();
+  const { isMobile, width } = useIsMobile();
   const [pipeline, setPipeline] = useState<PipelineStage[]>(buildEmptyPipeline());
   const [searchQuery, setSearchQuery] = useState("");
   const [filterTemperature, setFilterTemperature] = useState("all");
@@ -926,6 +932,15 @@ const Pipeline = () => {
   );
   const activeFilterCount = Number(filterTemperature !== "all") + Number(filterSource !== "all");
   const hasDisplayedLeads = displayedPipeline.some((stage) => stage.leads.length > 0);
+  const enableNativePipelineDrag = useMemo(() => {
+    if (typeof window === "undefined") {
+      return !isMobile;
+    }
+
+    // Keep drag-and-drop available in responsive desktop view while preserving
+    // swipe-card interactions on actual touch-first phones.
+    return !isMobile || window.matchMedia("(pointer: fine)").matches || window.matchMedia("(hover: hover)").matches;
+  }, [isMobile, width]);
 
   // Find the stage color for the selected lead
   const selectedLeadStageColor = selectedLead
@@ -1618,6 +1633,7 @@ const Pipeline = () => {
                   onAddLead={handleAddLead}
                   onDropLead={handleDropLead}
                   isMobile={isMobile}
+                  enableNativeDrag={enableNativePipelineDrag}
                 />
               ))}
             </div>

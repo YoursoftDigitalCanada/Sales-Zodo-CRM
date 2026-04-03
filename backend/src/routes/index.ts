@@ -13,6 +13,7 @@ import leadSourcesRoutes from '../modules/lead-sources/lead-sources.routes';
 import leadSourceWebhooksRoutes from '../modules/lead-sources/lead-source-webhooks.routes';
 import tagsRoutes from '../modules/tags/tags.routes';
 import notificationsRoutes from '../modules/notifications/notifications.routes';
+import dashboardRoutes from '../modules/dashboard/dashboard.routes';
 
 // CRM modules
 import clientsRoutes from '../modules/clients/clients.routes';
@@ -146,6 +147,7 @@ export function registerRoutes(app: Application): void {
   protectedRouter.use(moduleGuard);
 
   // CRM - Leads
+  protectedRouter.use('/dashboard', dashboardRoutes);
   protectedRouter.use('/leads', leadsRoutes);
   protectedRouter.use('/lead-sources', leadSourcesRoutes);
 

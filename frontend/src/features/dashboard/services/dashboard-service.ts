@@ -138,6 +138,51 @@ function extractDashboardArray<T>(payload: unknown): T[] {
   return extractApiArray<T>(payload);
 }
 
+function toBooleanQueryValue(value: boolean | undefined): string {
+  return value === false ? "false" : "true";
+}
+
+function toNumberValue(value: unknown): number {
+  const numberValue = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(numberValue) ? numberValue : 0;
+}
+
+function emptyDashboardPayload(): DashboardPayload {
+  return {
+    leads: [],
+    invoices: [],
+    projects: [],
+    quotes: [],
+    inspections: [],
+    clients: [],
+    projectsCount: 0,
+    clientsCount: 0,
+    pendingTasks: 0,
+    totalEarnings: 0,
+  };
+}
+
+function normalizeDashboardPayload(payload: unknown): DashboardPayload {
+  if (!payload || typeof payload !== "object") {
+    return emptyDashboardPayload();
+  }
+
+  const data = payload as Partial<DashboardPayload>;
+
+  return {
+    leads: Array.isArray(data.leads) ? data.leads : [],
+    invoices: Array.isArray(data.invoices) ? data.invoices : [],
+    projects: Array.isArray(data.projects) ? data.projects : [],
+    quotes: Array.isArray(data.quotes) ? data.quotes : [],
+    inspections: Array.isArray(data.inspections) ? data.inspections : [],
+    clients: Array.isArray(data.clients) ? data.clients : [],
+    projectsCount: toNumberValue(data.projectsCount),
+    clientsCount: toNumberValue(data.clientsCount),
+    pendingTasks: toNumberValue(data.pendingTasks),
+    totalEarnings: toNumberValue(data.totalEarnings),
+  };
+}
+
 // ── Helper: safe request that returns [] on failure ─────────────────────
 async function safeGet<T>(url: string, params?: Record<string, unknown>): Promise<T[]> {
   try {
@@ -149,9 +194,7 @@ async function safeGet<T>(url: string, params?: Record<string, unknown>): Promis
   }
 }
 
-// ── Fetch everything in parallel (resilient — one failure won't crash all) ──
-
-export async function fetchDashboardData(
+async function fetchDashboardDataLegacy(
   access: DashboardAccessOptions = {},
 ): Promise<DashboardPayload> {
   const [leads, invoices, projects, clients, tasks, quotes, inspections] = await Promise.all([
@@ -199,6 +242,40 @@ export async function fetchDashboardData(
     pendingTasks,
     totalEarnings,
   };
+}
+
+async function fetchDashboardSummary(
+  access: DashboardAccessOptions = {},
+): Promise<DashboardPayload> {
+  const params = {
+    includeLeads: toBooleanQueryValue(access.canViewLeads),
+    includeInvoices: toBooleanQueryValue(access.canViewInvoices),
+    includeProjects: toBooleanQueryValue(access.canViewProjects),
+    includeClients: toBooleanQueryValue(access.canViewClients),
+    includeTasks: toBooleanQueryValue(access.canViewTasks),
+    includeQuotes: toBooleanQueryValue(access.canViewQuotes),
+    includeInspections: toBooleanQueryValue(access.canViewInspections),
+  };
+
+  const response = await api.get("/dashboard/summary", { params });
+  const payload = response.data && typeof response.data === "object" && "data" in response.data
+    ? (response.data as { data?: unknown }).data
+    : response.data;
+
+  return normalizeDashboardPayload(payload);
+}
+
+// ── Prefer the aggregated backend summary, then fall back to legacy calls ──
+
+export async function fetchDashboardData(
+  access: DashboardAccessOptions = {},
+): Promise<DashboardPayload> {
+  try {
+    return await fetchDashboardSummary(access);
+  } catch (error) {
+    console.warn("Dashboard summary API unavailable, falling back to legacy fetches", error);
+    return fetchDashboardDataLegacy(access);
+  }
 }
 
 // Keep backward-compatible export name

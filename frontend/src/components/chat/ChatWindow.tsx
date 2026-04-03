@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Plus, MessageSquare } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 import { Conversation, Message, User, Attachment } from "./types";
 import { ChatHeader } from "./ChatHeader";
 import { ChatInput } from "./ChatInput";

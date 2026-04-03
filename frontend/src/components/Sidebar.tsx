@@ -410,19 +410,14 @@ const navigationItems: NavigationItem[] = [
   {
     title: "Reports",
     icon: BarChart3,
+    path: "javascript:void(0)",
     featureId: "reports",
     permissionModule: "analytics",
-    submenu: [
-      { title: "Sales Report", path: "/reports/sales", featureId: "reports" },
-      { title: "Revenue Report", path: "/reports/revenue", featureId: "reports" },
-      { title: "Expense Report", path: "/reports/expenses", featureId: "reports" },
-      { title: "Custom Reports", path: "/reports/custom", featureId: "reports", isPro: true },
-    ]
   },
   {
     title: "Analytics",
     icon: TrendingUp,
-    path: "/analytics",
+    path: "javascript:void(0)",
     featureId: "analytics",
     permissionModule: "analytics",
     isPro: true,

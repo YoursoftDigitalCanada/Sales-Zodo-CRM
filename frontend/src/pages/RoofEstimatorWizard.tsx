@@ -3,8 +3,6 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
-  autocompleteAddress,
-  getPlaceDetails,
   saveEstimate,
   updateEstimate,
   getEstimateById,
@@ -12,6 +10,7 @@ import {
   type SaveEstimatePayload,
   type EagleViewReport,
   type EstimatePhoto,
+  type PlaceDetailsResult,
 } from "@/features/roof-estimator/services/roof-estimator-service";
 import { useToast } from "@/hooks/use-toast";
 import { generateEstimatePDF, downloadPDFBlob } from "@/features/roof-estimator/utils/generate-estimate-pdf";
@@ -33,6 +32,7 @@ import {
   type QuoteEntity,
 } from "@/features/quotes/services/quotes-service";
 import useIsMobile from "@/hooks/useIsMobile";
+import AddressAutocompleteInput from "@/components/address/AddressAutocompleteInput";
 
 interface OtherMaterial { name: string; qty: number; cost: number; }
 
@@ -130,7 +130,7 @@ const readString = (value: unknown): string =>
   typeof value === "string" ? value.trim() : "";
 
 const isEagleViewSandboxPlace = (
-  details: Pick<Awaited<ReturnType<typeof getPlaceDetails>>, "city" | "state" | "country" | "postalCode">,
+  details: Pick<PlaceDetailsResult, "city" | "state" | "country" | "postalCode">,
 ): boolean => {
   const city = readString(details.city).toLowerCase();
   const state = readString(details.state).toLowerCase();
@@ -467,10 +467,7 @@ export default function RoofEstimatorWizard() {
   const [selectionLoading, setSelectionLoading] = useState(false);
 
   // Step 2 specific
-  const [addressSuggestions, setAddressSuggestions] = useState<{ description: string; placeId: string }[]>([]);
-  const [addressLoading, setAddressLoading] = useState(false);
   // const [detecting, setDetecting] = useState(false); // AI detection disabled
-  const [satelliteLoading, setSatelliteLoading] = useState(false);
   const [eagleViewLoading, setEagleViewLoading] = useState(false);
   const [eagleViewStatus, setEagleViewStatus] = useState<string>("");
   const [eagleViewError, setEagleViewError] = useState<string>("");
@@ -854,7 +851,7 @@ export default function RoofEstimatorWizard() {
 
   /* ── Address autocomplete ─────────────────────── */
 
-  const handleAddressInput = useCallback(async (val: string) => {
+  const handleAddressInput = useCallback((val: string) => {
     resetEagleViewMeasurement({
       address: val,
       placeId: "",
@@ -862,57 +859,35 @@ export default function RoofEstimatorWizard() {
       longitude: 0,
     });
     setEagleViewError("");
-    if (val.length < 3) { setAddressSuggestions([]); return; }
-    setAddressLoading(true);
-    try {
-      const results = await autocompleteAddress(val);
-      setAddressSuggestions(results);
-    } catch { /* silent */ }
-    finally { setAddressLoading(false); }
   }, [resetEagleViewMeasurement]);
 
-  const selectAddress = useCallback(async (desc: string, placeId: string) => {
+  const selectAddress = useCallback(async (details: PlaceDetailsResult) => {
+    const resolvedAddress = details.formattedAddress || details.addressLine1 || "";
+    const normalizedPlaceId = details.placeId || "";
+    const hasResolvedCoordinates = Number.isFinite(details.lat) && Number.isFinite(details.lng) && !(details.lat === 0 && details.lng === 0);
+    const hasStructuredSandboxFields = Boolean(details.city || details.state || details.postalCode || details.country);
+
     resetEagleViewMeasurement({
-      address: desc,
-      placeId,
-      latitude: 0,
-      longitude: 0,
+      address: resolvedAddress,
+      placeId: normalizedPlaceId,
+      latitude: hasResolvedCoordinates ? details.lat : 0,
+      longitude: hasResolvedCoordinates ? details.lng : 0,
     });
-    setAddressSuggestions([]);
     setEagleViewError("");
 
-    // Resolve the selected place into a precise structured address before ordering.
-    setSatelliteLoading(true);
-    let details: Awaited<ReturnType<typeof getPlaceDetails>> | null = null;
-    try {
-      details = await getPlaceDetails(placeId);
-      setData((prev) => ({
-        ...prev,
-        address: details?.formattedAddress || desc,
-        placeId,
-        latitude: details?.lat || 0,
-        longitude: details?.lng || 0,
-      }));
-    } catch {
-      resetEagleViewMeasurement({
-        address: desc,
-        placeId: "",
-        latitude: 0,
-        longitude: 0,
-      });
+    if (!resolvedAddress) {
       setEagleViewError("Could not load the selected property details.");
       toast({ title: "Warning", description: "Could not load the selected property details" });
-    } finally { setSatelliteLoading(false); }
+      return;
+    }
 
-    if (!details) return;
-
-    if (!isEagleViewSandboxPlace(details)) {
+    if (hasStructuredSandboxFields && !isEagleViewSandboxPlace(details)) {
       const message = "EagleView sandbox currently supports Omaha, Nebraska addresses only. Pick an Omaha address from autocomplete to continue.";
       resetEagleViewMeasurement({
-        address: details.formattedAddress || desc,
-        placeId,
-        latitude: details.lat,
-        longitude: details.lng,
+        address: resolvedAddress,
+        placeId: normalizedPlaceId,
+        latitude: hasResolvedCoordinates ? details.lat : 0,
+        longitude: hasResolvedCoordinates ? details.lng : 0,
       });
       setEagleViewError(message);
       toast({
@@ -928,15 +903,17 @@ export default function RoofEstimatorWizard() {
     setEagleViewStatus("Checking EagleView sandbox measurements…");
 
     try {
-      const report = await requestEagleViewInstant({
-        addressLine1: details.addressLine1,
-        city: details.city,
-        state: details.state,
-        postalCode: details.postalCode,
-        country: details.country,
-        latitude: details.lat,
-        longitude: details.lng,
-      });
+      const requestPayload = details.addressLine1 && (details.city || details.state || details.postalCode)
+        ? {
+            addressLine1: details.addressLine1,
+            city: details.city,
+            state: details.state,
+            postalCode: details.postalCode,
+            country: details.country,
+            ...(hasResolvedCoordinates ? { latitude: details.lat, longitude: details.lng } : {}),
+          }
+        : resolvedAddress;
+      const report = await requestEagleViewInstant(requestPayload);
 
       const roofArea = parseMeasurementNumber(report.area);
       const pitch = normalizePitch(report);
@@ -947,10 +924,10 @@ export default function RoofEstimatorWizard() {
       const previewSource = splitPreviewSource(report.imageDataUrl || report.imageUrl || "");
       setData((prev) => ({
         ...prev,
-        address: details?.formattedAddress || desc,
-        placeId,
-        latitude: details?.lat || 0,
-        longitude: details?.lng || 0,
+        address: resolvedAddress || prev.address,
+        placeId: normalizedPlaceId,
+        latitude: hasResolvedCoordinates ? details.lat : prev.latitude,
+        longitude: hasResolvedCoordinates ? details.lng : prev.longitude,
         roofAreaSqft: roofArea,
         pitch,
         roofType: report.roofType || prev.roofType,
@@ -968,10 +945,10 @@ export default function RoofEstimatorWizard() {
       });
     } catch (err: any) {
       resetEagleViewMeasurement({
-        address: details.formattedAddress || desc,
-        placeId,
-        latitude: details.lat,
-        longitude: details.lng,
+        address: resolvedAddress,
+        placeId: normalizedPlaceId,
+        latitude: hasResolvedCoordinates ? details.lat : 0,
+        longitude: hasResolvedCoordinates ? details.lng : 0,
       });
       const message = err?.message || "Unable to fetch roof data from EagleView.";
       setEagleViewError(message);
@@ -1365,11 +1342,8 @@ export default function RoofEstimatorWizard() {
           <Step2Address
             data={data}
             up={up}
-            suggestions={addressSuggestions}
-            addressLoading={addressLoading}
             onAddressInput={handleAddressInput}
             onSelectAddress={selectAddress}
-            satelliteLoading={satelliteLoading}
             eagleViewLoading={eagleViewLoading}
             eagleViewStatus={eagleViewStatus}
             eagleViewError={eagleViewError}
@@ -2247,14 +2221,11 @@ function Step1ClientInfo({
 
 /* ─── Step 2: Address & Roof Measurement ─────────────────── */
 
-function Step2Address({ data, up, suggestions, addressLoading, onAddressInput, onSelectAddress, satelliteLoading, eagleViewLoading, eagleViewStatus, eagleViewError, isCompact = false, hideHeader = false }: {
+function Step2Address({ data, up, onAddressInput, onSelectAddress, eagleViewLoading, eagleViewStatus, eagleViewError, isCompact = false, hideHeader = false }: {
   data: WizardData;
   up: <K extends keyof WizardData>(key: K, val: WizardData[K]) => void;
-  suggestions: { description: string; placeId: string }[];
-  addressLoading: boolean;
   onAddressInput: (val: string) => void;
-  onSelectAddress: (desc: string, placeId: string) => void;
-  satelliteLoading: boolean;
+  onSelectAddress: (details: PlaceDetailsResult) => void;
   eagleViewLoading: boolean;
   eagleViewStatus: string;
   eagleViewError: string;
@@ -2272,38 +2243,19 @@ function Step2Address({ data, up, suggestions, addressLoading, onAddressInput, o
 
       {/* Address input with autocomplete */}
       <Field label="Property Address" compact={isCompact}>
-        <div style={{ position: "relative" }}>
-          <input
-            placeholder="Start typing an address…"
-            value={data.address}
-            onChange={(e) => onAddressInput(e.target.value)}
-            style={isCompact ? inputStyleCompact : inputStyle}
-            id="wizard-address-input"
-          />
-          {addressLoading && <span style={{ position: "absolute", right: 12, top: 11, fontSize: 11, color: "#94A3B8" }}>Searching…</span>}
-          {suggestions.length > 0 && (
-            <div style={{
-              position: "absolute", top: "100%", left: 0, right: 0, zIndex: 50,
-              background: "#fff", border: "1px solid #E2E8F0", borderRadius: 8,
-              boxShadow: "0 8px 24px rgba(0,0,0,.12)", maxHeight: 220, overflow: "auto",
-            }}>
-              {suggestions.map((s, i) => (
-                <button key={i} onClick={() => onSelectAddress(s.description, s.placeId)} style={{
-                  display: "block", width: "100%", textAlign: "left", padding: "10px 14px",
-                  border: "none", background: "transparent", fontSize: 13, color: "#0F172A",
-                  cursor: "pointer", borderBottom: "1px solid #F1F5F9",
-                }} onMouseEnter={(e) => (e.currentTarget.style.background = "#F8FAFC")}
-                   onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-                  {s.description}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <AddressAutocompleteInput
+          id="wizard-address-input"
+          placeholder="Start typing an address…"
+          value={data.address}
+          onValueChange={onAddressInput}
+          onSelectAddress={(details) => void onSelectAddress(details)}
+          className={isCompact ? "h-10 rounded-md border-[rgba(15,23,42,0.06)] text-[12px] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20" : "h-11 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"}
+          iconClassName="text-[#475569]"
+        />
       </Field>
 
       {/* Status indicators */}
-      {(satelliteLoading || eagleViewLoading) && (
+      {eagleViewLoading && (
         <div style={{
           display: "flex", alignItems: "center", gap: 10, padding: "12px 16px",
           background: "rgba(102,55,244,.06)", borderRadius: 10, marginBottom: 16,
@@ -2311,7 +2263,7 @@ function Step2Address({ data, up, suggestions, addressLoading, onAddressInput, o
         }}>
           <div style={{ width: 16, height: 16, border: "2px solid #CBD5E1", borderTopColor: "#6637F4", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
           <div style={{ fontSize: 13, color: "#6637F4", fontWeight: 500 }}>
-            {satelliteLoading ? "Resolving selected address…" : eagleViewStatus || "Loading EagleView sandbox data…"}
+            {eagleViewStatus || "Loading EagleView sandbox data…"}
           </div>
         </div>
       )}

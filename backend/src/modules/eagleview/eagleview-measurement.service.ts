@@ -18,7 +18,8 @@ import { ServiceUnavailableError } from '../../common/errors/HttpErrors';
 import { logger } from '../../common/utils/logger';
 import { eagleViewAuthService } from './eagleview-auth.service';
 
-const BASE_URL = config.integrations.eagleview.baseUrl || 'https://sandbox.apis.eagleview.com';
+const SANDBOX_BASE_URL = 'https://sandbox.apis.eagleview.com';
+const BASE_URL = config.integrations.eagleview.baseUrl || SANDBOX_BASE_URL;
 const SANDBOX_PROPERTY_REQUEST_PATH = '/property/v2/request';
 const SANDBOX_PROPERTY_RESULT_PATH = '/property/v2/result';
 const SANDBOX_PROPERTY_IMAGE_PATH = '/property/v2/image';
@@ -137,6 +138,21 @@ class EagleViewMeasurementService {
 
     isSandboxMode(): boolean {
         return config.integrations.eagleview.environment === 'sandbox';
+    }
+
+    private getSandboxBaseUrl(): string {
+        return SANDBOX_BASE_URL;
+    }
+
+    isSandboxSupportedAddress(address: OrderAddress): boolean {
+        const city = (address.city || '').trim().toLowerCase();
+        const state = (address.state || '').trim().toLowerCase();
+        const postalCode = (address.postalCode || '').trim().toLowerCase();
+        const country = (address.country || 'us').trim().toLowerCase();
+        const looksLikeOmahaZip = /^681\d{2}$/.test(postalCode);
+        const looksLikeUsAddress = country === 'us' || country === 'usa' || country === 'united states';
+
+        return looksLikeUsAddress && state === 'ne' && (city === 'omaha' || looksLikeOmahaZip);
     }
 
     private buildSandboxCacheKey(address: OrderAddress): string {
@@ -527,7 +543,7 @@ class EagleViewMeasurementService {
     }
 
     private async fetchSandboxImageDataUrl(imageToken: string): Promise<string> {
-        const response = await axios.get(`${BASE_URL}${SANDBOX_PROPERTY_IMAGE_PATH}/${encodeURIComponent(imageToken)}`, {
+        const response = await axios.get(`${this.getSandboxBaseUrl()}${SANDBOX_PROPERTY_IMAGE_PATH}/${encodeURIComponent(imageToken)}`, {
             headers: await this.getSandboxHeaders(),
             responseType: 'arraybuffer',
             timeout: 30_000,
@@ -603,10 +619,10 @@ class EagleViewMeasurementService {
         const body = this.buildSandboxRequestBody(address);
         logger.info('[EagleView] Creating sandbox property request', {
             address: body.address.completeAddress,
-            baseUrl: BASE_URL,
+            baseUrl: this.getSandboxBaseUrl(),
         });
 
-        const response = await axios.post(`${BASE_URL}${SANDBOX_PROPERTY_REQUEST_PATH}`, body, {
+        const response = await axios.post(`${this.getSandboxBaseUrl()}${SANDBOX_PROPERTY_REQUEST_PATH}`, body, {
             headers: await this.getSandboxHeaders(),
             timeout: 30_000,
         });
@@ -623,7 +639,7 @@ class EagleViewMeasurementService {
     }
 
     private async getSandboxPropertyResult(jobId: string): Promise<unknown> {
-        const response = await axios.get(`${BASE_URL}${SANDBOX_PROPERTY_RESULT_PATH}/${encodeURIComponent(jobId)}`, {
+        const response = await axios.get(`${this.getSandboxBaseUrl()}${SANDBOX_PROPERTY_RESULT_PATH}/${encodeURIComponent(jobId)}`, {
             headers: await this.getSandboxHeaders(),
             timeout: 30_000,
         });
@@ -805,11 +821,9 @@ class EagleViewMeasurementService {
     }
 
     async getInstantMeasurement(address: OrderAddress): Promise<ReportData> {
-        if (this.isSandboxMode()) {
-            return this.lookupProperty(address);
-        }
-
-        return this.placeOrderAndWait(address);
+        // Sandbox-only estimator flow for now. Keep the production order path disabled
+        // until we intentionally switch the wizard back to report ordering.
+        return this.lookupProperty(address);
     }
 
     /**

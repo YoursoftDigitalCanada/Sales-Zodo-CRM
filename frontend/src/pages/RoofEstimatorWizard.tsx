@@ -129,6 +129,20 @@ const normalizeEstimatePhotos = (
 const readString = (value: unknown): string =>
   typeof value === "string" ? value.trim() : "";
 
+const isEagleViewSandboxPlace = (
+  details: Pick<Awaited<ReturnType<typeof getPlaceDetails>>, "city" | "state" | "country" | "postalCode">,
+): boolean => {
+  const city = readString(details.city).toLowerCase();
+  const state = readString(details.state).toLowerCase();
+  const country = readString(details.country).toLowerCase();
+  const postalCode = readString(details.postalCode).replace(/\s+/g, "").toLowerCase();
+  const looksLikeOmahaZip = /^681\d{2}$/.test(postalCode);
+
+  return (country === "us" || country === "usa" || country === "united states")
+    && state === "ne"
+    && (city === "omaha" || looksLikeOmahaZip);
+};
+
 const joinAddressParts = (...parts: unknown[]) =>
   parts
     .map((part) => readString(part))
@@ -327,15 +341,27 @@ const ESTIMATE_SECTIONS: { id: SectionId; title: string; shortLabel: string; ico
 ];
 
 const MOBILE_BOTTOM_NAV_HEIGHT = 56;
-const MOBILE_ACTION_BAR_OFFSET = `calc(${MOBILE_BOTTOM_NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px) + 12px)`;
-const MOBILE_PAGE_BOTTOM_PADDING = 212;
+const MOBILE_ACTION_BAR_OFFSET = `calc(${MOBILE_BOTTOM_NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px) + 8px)`;
+const MOBILE_PAGE_BOTTOM_PADDING = 180;
 
 /* ─── Styled Input ───────────────────────────────────────── */
 
-const inputStyle: React.CSSProperties = {
-  width: "100%", padding: "10px 14px", borderRadius: 8,
+const inputBaseStyle: React.CSSProperties = {
+  width: "100%", borderRadius: 8,
   border: "1px solid #CBD5E1", fontSize: 13, outline: "none",
   background: "#fff", color: "#0F172A", transition: "border-color .15s",
+  boxSizing: "border-box",
+};
+
+const inputStyle: React.CSSProperties = {
+  ...inputBaseStyle,
+  padding: "10px 14px",
+};
+
+const inputStyleCompact: React.CSSProperties = {
+  ...inputBaseStyle,
+  padding: "8px 10px",
+  fontSize: 12,
 };
 
 const responsiveGrid = (
@@ -349,10 +375,10 @@ const responsiveGrid = (
   gap,
 });
 
-function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
+function Field({ label, children, hint, compact }: { label: string; children: React.ReactNode; hint?: string; compact?: boolean }) {
   return (
-    <div style={{ marginBottom: 16 }}>
-      <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#475569", marginBottom: 5 }}>{label}</label>
+    <div style={{ marginBottom: compact ? 10 : 16 }}>
+      <label style={{ display: "block", fontSize: compact ? 11 : 12, fontWeight: 600, color: "#475569", marginBottom: compact ? 3 : 5 }}>{label}</label>
       {children}
       {hint && <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 3 }}>{hint}</div>}
     </div>
@@ -880,9 +906,26 @@ export default function RoofEstimatorWizard() {
 
     if (!details) return;
 
+    if (!isEagleViewSandboxPlace(details)) {
+      const message = "EagleView sandbox currently supports Omaha, Nebraska addresses only. Pick an Omaha address from autocomplete to continue.";
+      resetEagleViewMeasurement({
+        address: details.formattedAddress || desc,
+        placeId,
+        latitude: details.lat,
+        longitude: details.lng,
+      });
+      setEagleViewError(message);
+      toast({
+        title: "Sandbox Address Required",
+        description: message,
+        variant: "destructive",
+      });
+      return;
+    }
+
     // EagleView measurement order + imagery
     setEagleViewLoading(true);
-    setEagleViewStatus("Requesting EagleView measurements…");
+    setEagleViewStatus("Checking EagleView sandbox measurements…");
 
     try {
       const report = await requestEagleViewInstant({
@@ -943,7 +986,7 @@ export default function RoofEstimatorWizard() {
     }
   }, [resetEagleViewMeasurement, toast]);
 
-  // runAiDetection removed — using EagleView only
+  // Keep the wizard on the EagleView sandbox flow only.
 
   /* ── Create Estimate ──────────────────────────── */
 
@@ -1056,7 +1099,7 @@ export default function RoofEstimatorWizard() {
           taxRate: 0,
           discountAmount: 0,
           notes: data.notes?.trim() || `Generated from roof estimate ${estimateDocumentNumber}`,
-          terms: "See attached AI Estimate Report for EagleView measurements and estimate context.",
+          terms: "See attached estimate report for EagleView sandbox measurements and estimate context.",
           items: [
             {
               description: `Roofing quote for ${data.address}`,
@@ -1080,7 +1123,7 @@ export default function RoofEstimatorWizard() {
         throw new Error("Could not create the linked quote record.");
       }
 
-      const estimatePdfFileName = "AI Estimate Report.pdf";
+      const estimatePdfFileName = "Estimate Report.pdf";
       const quotePdfFileName = `${linkedQuote.quoteNumber}.pdf`;
 
       // Generate PDFs
@@ -1260,12 +1303,12 @@ export default function RoofEstimatorWizard() {
       // Charge wallet $20 for the estimate
       try {
         await chargeEstimate(savedId || "NEW");
-        toast({ title: "💳 Wallet Charged", description: "$20.00 deducted for AI estimate generation" });
+        toast({ title: "💳 Wallet Charged", description: "$20.00 deducted for estimate generation" });
       } catch {
         // Wallet charge failed silently — estimate is already saved
       }
 
-      toast({ title: "Estimate Completed", description: `AI Estimate Report and ${linkedQuote.quoteNumber} are ready.` });
+      toast({ title: "Estimate Completed", description: `Estimate Report and ${linkedQuote.quoteNumber} are ready.` });
       navigate("/roof-estimator");
     } catch (e: any) {
       toast({ title: "Error", description: e?.message || "Could not complete estimate", variant: "destructive" });
@@ -1389,7 +1432,7 @@ export default function RoofEstimatorWizard() {
 
   return (
     <div style={{
-      padding: isMobile ? `16px 16px ${MOBILE_PAGE_BOTTOM_PADDING}px` : isTablet ? "20px 20px 40px" : "24px 24px 40px",
+      padding: isMobile ? `12px 10px ${MOBILE_PAGE_BOTTOM_PADDING}px` : isTablet ? "20px 20px 40px" : "24px 24px 40px",
       maxWidth: 1440,
       margin: "0 auto",
       fontFamily: "'Inter',sans-serif",
@@ -1458,7 +1501,7 @@ export default function RoofEstimatorWizard() {
           }
 
           .roof-estimator-nav-list > button {
-            min-width: 168px;
+            min-width: 140px;
             scroll-snap-align: start;
           }
 
@@ -1468,18 +1511,42 @@ export default function RoofEstimatorWizard() {
             align-items: stretch;
           }
         }
+
+        @media (max-width: 768px) {
+          .roof-estimator-main input[type="number"],
+          .roof-estimator-main input[type="text"],
+          .roof-estimator-main input[type="email"],
+          .roof-estimator-main input[type="tel"],
+          .roof-estimator-main select,
+          .roof-estimator-main textarea {
+            padding: 8px 10px !important;
+            font-size: 12px !important;
+          }
+        }
+
+        @media (max-width: 390px) {
+          .roof-estimator-main input[type="number"],
+          .roof-estimator-main input[type="text"],
+          .roof-estimator-main input[type="email"],
+          .roof-estimator-main input[type="tel"],
+          .roof-estimator-main select,
+          .roof-estimator-main textarea {
+            padding: 7px 8px !important;
+            font-size: 11px !important;
+          }
+        }
       `}</style>
       {/* Back to list */}
       <button onClick={() => navigate("/roof-estimator")} style={{
         display: "flex", alignItems: "center", gap: 6, background: "none", border: "none",
-        color: "#64748B", fontSize: 13, fontWeight: 500, cursor: "pointer", marginBottom: 16,
+        color: "#64748B", fontSize: isMobile ? 12 : 13, fontWeight: 500, cursor: "pointer", marginBottom: isMobile ? 10 : 16,
         padding: 0,
       }}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
         Back to Estimates
       </button>
 
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 20, alignItems: "flex-start", flexWrap: "wrap", marginBottom: 24 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: isMobile ? 12 : 20, alignItems: "flex-start", flexWrap: "wrap", marginBottom: isMobile ? 14 : 24 }}>
         <div style={{ flex: 1, minWidth: isMobile ? 0 : 280 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
             <span style={{
@@ -1487,7 +1554,7 @@ export default function RoofEstimatorWizard() {
               padding: "6px 12px", borderRadius: 999, background: "rgba(15,23,42,.04)",
               border: "1px solid #E2E8F0", color: "#334155", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em",
             }}>
-              {estimateId ? "Editing Estimate" : "AI Estimate Workspace"}
+              {estimateId ? "Editing Estimate" : "EagleView Sandbox Workspace"}
             </span>
             {data.measurementSource === "eagleview" && (
               <span style={{
@@ -1500,17 +1567,19 @@ export default function RoofEstimatorWizard() {
             )}
           </div>
 
-          <h1 style={{ fontSize: 28, fontWeight: 900, color: "#0F172A", marginBottom: 6, letterSpacing: "-0.03em" }}>
-            {estimateId ? "Edit AI Estimate" : "Create AI Estimate"}
+          <h1 style={{ fontSize: isMobile ? 20 : 28, fontWeight: 900, color: "#0F172A", marginBottom: isMobile ? 4 : 6, letterSpacing: "-0.03em" }}>
+            {estimateId ? "Edit Estimate" : "Create Estimate"}
           </h1>
+          {!isMobile && (
           <p style={{ color: "#64748B", fontSize: 14, maxWidth: 760, lineHeight: 1.6, marginBottom: 14 }}>
             Capture contact details, pull EagleView roof measurements, price the job, and generate the estimate from one cleaner workspace.
           </p>
+          )}
 
           <div style={{
             display: "flex",
             flexWrap: isMobile ? "nowrap" : "wrap",
-            gap: 10,
+            gap: isMobile ? 6 : 10,
             overflowX: isMobile ? "auto" : "visible",
             paddingBottom: isMobile ? 4 : 0,
           }}>
@@ -1521,15 +1590,15 @@ export default function RoofEstimatorWizard() {
               { label: "Live Total", value: fmt(finalPrice) },
             ].map((chip) => (
               <div key={chip.label} style={{
-                padding: "10px 12px", borderRadius: 12, background: "#fff",
+                padding: isMobile ? "7px 10px" : "10px 12px", borderRadius: isMobile ? 10 : 12, background: "#fff",
                 border: "1px solid #E2E8F0", boxShadow: "0 1px 3px rgba(15,23,42,.04)",
-                minWidth: isMobile ? 180 : 150,
+                minWidth: isMobile ? 120 : 150,
                 flexShrink: 0,
               }}>
-                <div style={{ fontSize: 10, color: "#94A3B8", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 4 }}>
+                <div style={{ fontSize: isMobile ? 9 : 10, color: "#94A3B8", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".05em", marginBottom: isMobile ? 2 : 4 }}>
                   {chip.label}
                 </div>
-                <div style={{ fontSize: 13, color: "#0F172A", fontWeight: 700 }}>{chip.value}</div>
+                <div style={{ fontSize: isMobile ? 12 : 13, color: "#0F172A", fontWeight: 700 }}>{chip.value}</div>
               </div>
             ))}
           </div>
@@ -1560,18 +1629,18 @@ export default function RoofEstimatorWizard() {
           onClick={() => setShowMobilePreview((current) => !current)}
           style={{
             width: "100%",
-            marginBottom: 14,
-            padding: "12px 14px",
-            borderRadius: 14,
+            marginBottom: 10,
+            padding: "10px 12px",
+            borderRadius: 12,
             border: "1px solid #E2E8F0",
             background: "#fff",
             color: "#0F172A",
-            fontSize: 13,
+            fontSize: 12,
             fontWeight: 700,
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            boxShadow: "0 6px 18px rgba(15,23,42,.05)",
+            boxShadow: "0 4px 12px rgba(15,23,42,.05)",
           }}
         >
           <span>{showMobilePreview ? "Hide live preview" : "Show live preview"}</span>
@@ -1584,10 +1653,10 @@ export default function RoofEstimatorWizard() {
       <div className="roof-estimator-shell">
         <aside className="roof-estimator-nav" style={{
           background: "#fff",
-          borderRadius: 18,
+          borderRadius: isMobile ? 14 : 18,
           border: "1px solid #E2E8F0",
           boxShadow: "0 10px 30px rgba(15,23,42,.05)",
-          padding: 16,
+          padding: isMobile ? 10 : 16,
         }}>
           <div style={{ fontSize: 11, fontWeight: 800, color: "#94A3B8", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 12 }}>
             Estimator Sections
@@ -1604,7 +1673,7 @@ export default function RoofEstimatorWizard() {
                     background: isActive ? "linear-gradient(135deg, rgba(102,55,244,.10), rgba(102,55,244,.03))" : "#fff",
                     color: isActive ? "#4C1D95" : "#334155",
                     borderRadius: 16,
-                    padding: "12px 14px",
+                    padding: isMobile ? "8px 10px" : "12px 14px",
                     cursor: "pointer",
                     display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
                     textAlign: "left",
@@ -1613,16 +1682,16 @@ export default function RoofEstimatorWizard() {
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
                     <div style={{
-                      width: 38, height: 38, borderRadius: 12,
+                      width: isMobile ? 30 : 38, height: isMobile ? 30 : 38, borderRadius: isMobile ? 8 : 12,
                       background: isActive ? "#6637F4" : "#F8FAFC",
                       color: isActive ? "#fff" : "#64748B",
                       display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 18, flexShrink: 0,
+                      fontSize: isMobile ? 14 : 18, flexShrink: 0,
                     }}>
                       {section.icon}
                     </div>
                     <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: isActive ? "#4C1D95" : "#0F172A" }}>{section.shortLabel}</div>
+                      <div style={{ fontSize: isMobile ? 11 : 13, fontWeight: 800, color: isActive ? "#4C1D95" : "#0F172A" }}>{section.shortLabel}</div>
                       <div style={{ fontSize: 11, color: "#64748B", marginTop: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                         {sectionSummaries[section.id]}
                       </div>
@@ -1645,70 +1714,70 @@ export default function RoofEstimatorWizard() {
         <div className="roof-estimator-main">
           <div style={{
             background: "#fff",
-            borderRadius: 20,
+            borderRadius: isMobile ? 14 : 20,
             border: "1px solid #E2E8F0",
             boxShadow: "0 16px 36px rgba(15,23,42,.05)",
             overflow: "hidden",
           }}>
             <div style={{
-              padding: "22px 24px 18px",
+              padding: isMobile ? "14px 12px 12px" : "22px 24px 18px",
               borderBottom: "1px solid #E2E8F0",
               background: "linear-gradient(180deg, rgba(248,250,252,1) 0%, rgba(255,255,255,1) 100%)",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "flex-start",
-              gap: 16,
+              gap: isMobile ? 10 : 16,
               flexWrap: "wrap",
             }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 10 : 14 }}>
                 <div style={{
-                  width: 48, height: 48, borderRadius: 16,
+                  width: isMobile ? 36 : 48, height: isMobile ? 36 : 48, borderRadius: isMobile ? 10 : 16,
                   background: "linear-gradient(135deg,#6637F4,#4F46E5)",
                   color: "#fff",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 22,
+                  fontSize: isMobile ? 16 : 22,
                   boxShadow: "0 10px 24px rgba(102,55,244,.22)",
                 }}>
                   {activeSectionConfig.icon}
                 </div>
                 <div>
-                  <div style={{ fontSize: 20, fontWeight: 900, color: "#0F172A", letterSpacing: "-0.02em" }}>
+                  <div style={{ fontSize: isMobile ? 15 : 20, fontWeight: 900, color: "#0F172A", letterSpacing: "-0.02em" }}>
                     {activeSectionConfig.title}
                   </div>
-                  <div style={{ fontSize: 13, color: "#64748B", marginTop: 4, lineHeight: 1.5 }}>
+                  <div style={{ fontSize: isMobile ? 11 : 13, color: "#64748B", marginTop: isMobile ? 2 : 4, lineHeight: 1.5 }}>
                     {activeSectionConfig.description}
                   </div>
                 </div>
               </div>
               <div style={{
-                padding: "10px 12px", borderRadius: 12,
+                padding: isMobile ? "7px 10px" : "10px 12px", borderRadius: isMobile ? 8 : 12,
                 background: "#fff", border: "1px solid #E2E8F0",
                 minWidth: isMobile ? "100%" : 132,
               }}>
-                <div style={{ fontSize: 10, fontWeight: 800, color: "#94A3B8", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>
+                <div style={{ fontSize: isMobile ? 9 : 10, fontWeight: 800, color: "#94A3B8", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: isMobile ? 2 : 4 }}>
                   Current Focus
                 </div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: "#0F172A" }}>
+                <div style={{ fontSize: isMobile ? 12 : 14, fontWeight: 800, color: "#0F172A" }}>
                   Section {activeSectionIndex + 1} of {ESTIMATE_SECTIONS.length}
                 </div>
               </div>
             </div>
 
-            <div style={{ padding: isMobile ? "18px 16px" : "24px" }}>
+            <div style={{ padding: isMobile ? "14px 12px" : "24px" }}>
               {renderActiveSection()}
             </div>
           </div>
 
           <div className="roof-estimator-action-bar" style={{
-            marginTop: 18,
-            paddingTop: 18,
+            marginTop: isMobile ? 12 : 18,
+            paddingTop: isMobile ? 12 : 18,
             borderTop: "1px solid #E2E8F0",
             position: isMobile ? "sticky" : "static",
             bottom: isMobile ? MOBILE_ACTION_BAR_OFFSET : "auto",
             background: isMobile ? "rgba(255,255,255,.96)" : "transparent",
-            padding: isMobile ? "14px 12px 14px" : undefined,
-            borderRadius: isMobile ? 18 : undefined,
-            boxShadow: isMobile ? "0 -10px 28px rgba(15,23,42,.08)" : "none",
+            padding: isMobile ? "10px 10px 10px" : undefined,
+            borderRadius: isMobile ? 14 : undefined,
+            boxShadow: isMobile ? "0 -8px 20px rgba(15,23,42,.08)" : "none",
             zIndex: isMobile ? 20 : "auto",
           }}>
             {!currentSectionValidation.valid && (
@@ -1723,8 +1792,8 @@ export default function RoofEstimatorWizard() {
             )}
             {activeSection !== "client" && (
               <button onClick={handlePreviousSection} disabled={saving} style={{
-                padding: "10px 18px", borderRadius: 8, border: "1px solid #CBD5E1",
-                background: "#fff", color: "#475569", fontSize: 13, fontWeight: 600,
+                padding: isMobile ? "8px 14px" : "10px 18px", borderRadius: 8, border: "1px solid #CBD5E1",
+                background: "#fff", color: "#475569", fontSize: isMobile ? 12 : 13, fontWeight: 600,
                 cursor: "pointer", opacity: saving ? 0.7 : 1,
                 width: isMobile ? "100%" : undefined,
               }}>
@@ -1734,9 +1803,9 @@ export default function RoofEstimatorWizard() {
             {activeSection === "summary" ? (
               <>
                 <button onClick={handleComplete} disabled={!canGenerateEstimate} style={{
-                  padding: "10px 22px", borderRadius: 8, border: "none",
+                  padding: isMobile ? "8px 16px" : "10px 22px", borderRadius: 8, border: "none",
                   background: "linear-gradient(135deg,#10B981,#059669)", color: "#fff",
-                  fontSize: 13, fontWeight: 700, cursor: canGenerateEstimate ? "pointer" : "not-allowed",
+                  fontSize: isMobile ? 12 : 13, fontWeight: 700, cursor: canGenerateEstimate ? "pointer" : "not-allowed",
                   display: "flex", alignItems: "center", gap: 6,
                   boxShadow: "0 2px 8px rgba(16,185,129,.25)", opacity: canGenerateEstimate ? 1 : 0.55,
                   justifyContent: "center",
@@ -1744,14 +1813,14 @@ export default function RoofEstimatorWizard() {
                   gridColumn: isMobile ? "1 / -1" : undefined,
                 }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                  Generate AI Estimate
+                  Generate Estimate
                 </button>
               </>
             ) : (
               <button onClick={handleNextSection} disabled={saving} style={{
-                padding: "10px 22px", borderRadius: 8, border: "none",
+                padding: isMobile ? "8px 16px" : "10px 22px", borderRadius: 8, border: "none",
                 background: "linear-gradient(135deg,#6637F4,#4F46E5)", color: "#fff",
-                fontSize: 13, fontWeight: 700, cursor: "pointer",
+                fontSize: isMobile ? 12 : 13, fontWeight: 700, cursor: "pointer",
                 display: "flex", alignItems: "center", gap: 6,
                 boxShadow: "0 2px 8px rgba(102,55,244,.25)", opacity: saving ? 0.7 : 1,
                 justifyContent: "center",
@@ -1814,7 +1883,7 @@ export default function RoofEstimatorWizard() {
               }}>
                 <div>
                   <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                  <div style={{ fontSize: 12, marginTop: 6 }}>Enter address to load EagleView ortho and directional views</div>
+                  <div style={{ fontSize: 12, marginTop: 6 }}>Enter an Omaha, Nebraska address to load EagleView ortho and directional views</div>
                 </div>
               </div>
             )}
@@ -2024,8 +2093,8 @@ function Step1ClientInfo({
         </>
       )}
 
-      <Field label="Estimate For">
-        <div style={{ display: "grid", gridTemplateColumns: selectorColumns, gap: 8 }}>
+      <Field label="Estimate For" compact={isCompact}>
+        <div style={{ display: "grid", gridTemplateColumns: selectorColumns, gap: isCompact ? 6 : 8 }}>
           {[
             { id: "client", label: "Client", icon: "👤" },
             { id: "lead", label: "Lead", icon: "🧲" },
@@ -2038,27 +2107,27 @@ function Step1ClientInfo({
                 type="button"
                 onClick={() => onSourceTypeChange(option.id as WizardData["sourceType"])}
                 style={{
-                  padding: "10px 12px",
-                  borderRadius: 10,
+                  padding: isCompact ? "8px 8px" : "10px 12px",
+                  borderRadius: isCompact ? 8 : 10,
                   border: isActive ? "1px solid #0891B2" : "1px solid #CBD5E1",
                   background: isActive ? "rgba(8,145,178,.10)" : "#FFFFFF",
                   color: isActive ? "#0F172A" : "#475569",
-                  fontSize: 13,
+                  fontSize: isCompact ? 12 : 13,
                   fontWeight: 700,
                   cursor: "pointer",
                   transition: "all .15s ease",
-                  minHeight: 76,
+                  minHeight: isCompact ? 52 : 76,
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
                   justifyContent: "center",
-                  gap: 6,
+                  gap: isCompact ? 4 : 6,
                   boxShadow: isActive ? "0 8px 18px rgba(8,145,178,.14)" : "none",
                   minWidth: 0,
                 }}
               >
-                <span style={{ fontSize: 18, lineHeight: 1 }}>{option.icon}</span>
-                <span style={{ lineHeight: 1.1, textAlign: "center", wordBreak: "break-word" }}>{option.label}</span>
+                <span style={{ fontSize: isCompact ? 16 : 18, lineHeight: 1 }}>{option.icon}</span>
+                <span style={{ lineHeight: 1.1, textAlign: "center", wordBreak: "break-word", fontSize: isCompact ? 11 : undefined }}>{option.label}</span>
               </button>
             );
           })}
@@ -2067,17 +2136,18 @@ function Step1ClientInfo({
 
       {data.sourceType !== "manual" ? (
         <>
-          <Field label={`Filter ${selectionLabel}s`}>
+          <Field label={`Filter ${selectionLabel}s`} compact={isCompact}>
             <input
               placeholder={`Type a ${selectionLabel.toLowerCase()} name or email to filter…`}
               value={clientSearchQ}
               onChange={(e) => setClientSearchQ(e.target.value)}
-              style={inputStyle}
+              style={isCompact ? inputStyleCompact : inputStyle}
             />
           </Field>
 
           <Field
             label={`Select ${selectionLabel}`}
+            compact={isCompact}
             hint={selectionOptions.length > 0
               ? `${selectionOptions.length} ${selectionLabel.toLowerCase()}${selectionOptions.length === 1 ? "" : "s"} available`
               : `No ${selectionLabel.toLowerCase()}s match the current filter.`}
@@ -2093,7 +2163,7 @@ function Step1ClientInfo({
                 }
                 onSelectLead(value);
               }}
-              style={inputStyle}
+              style={isCompact ? inputStyleCompact : inputStyle}
               disabled={selectionLoading}
             >
               <option value="none">
@@ -2127,12 +2197,12 @@ function Step1ClientInfo({
         </>
       ) : (
         <div style={{
-          marginBottom: 14,
-          padding: "12px 14px",
-          borderRadius: 10,
+          marginBottom: isCompact ? 10 : 14,
+          padding: isCompact ? "8px 10px" : "12px 14px",
+          borderRadius: isCompact ? 8 : 10,
           border: "1px dashed #CBD5E1",
           background: "#F8FAFC",
-          fontSize: 12,
+          fontSize: isCompact ? 11 : 12,
           color: "#64748B",
           lineHeight: 1.6,
           whiteSpace: "normal",
@@ -2158,17 +2228,17 @@ function Step1ClientInfo({
       )}
 
       <div style={responsiveGrid(isCompact, "1fr 1fr")}>
-        <Field label="Client / Contact Name">
-          <input value={data.clientName} onChange={(e) => up("clientName", e.target.value)} style={inputStyle} placeholder="Full name" />
+        <Field label="Client / Contact Name" compact={isCompact}>
+          <input value={data.clientName} onChange={(e) => up("clientName", e.target.value)} style={isCompact ? inputStyleCompact : inputStyle} placeholder="Full name" />
         </Field>
-        <Field label="Company">
-          <input value={data.clientCompany} onChange={(e) => up("clientCompany", e.target.value)} style={inputStyle} placeholder="Company name" />
+        <Field label="Company" compact={isCompact}>
+          <input value={data.clientCompany} onChange={(e) => up("clientCompany", e.target.value)} style={isCompact ? inputStyleCompact : inputStyle} placeholder="Company name" />
         </Field>
-        <Field label="Email">
-          <input value={data.clientEmail} onChange={(e) => up("clientEmail", e.target.value)} style={inputStyle} placeholder="email@example.com" type="email" />
+        <Field label="Email" compact={isCompact}>
+          <input value={data.clientEmail} onChange={(e) => up("clientEmail", e.target.value)} style={isCompact ? inputStyleCompact : inputStyle} placeholder="email@example.com" type="email" />
         </Field>
-        <Field label="Phone">
-          <input value={data.clientPhone} onChange={(e) => up("clientPhone", e.target.value)} style={inputStyle} placeholder="(555) 000-0000" type="tel" />
+        <Field label="Phone" compact={isCompact}>
+          <input value={data.clientPhone} onChange={(e) => up("clientPhone", e.target.value)} style={isCompact ? inputStyleCompact : inputStyle} placeholder="(555) 000-0000" type="tel" />
         </Field>
       </div>
     </div>
@@ -2196,18 +2266,18 @@ function Step2Address({ data, up, suggestions, addressLoading, onAddressInput, o
       {!hideHeader && (
         <>
           <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A", marginBottom: 4 }}>📍 Address & Roof Measurement</h2>
-          <p style={{ fontSize: 13, color: "#64748B", marginBottom: 20 }}>Enter the property address — EagleView will provide roof measurements.</p>
+          <p style={{ fontSize: 13, color: "#64748B", marginBottom: 20 }}>Enter an Omaha, Nebraska property address and EagleView sandbox will provide the roof measurements.</p>
         </>
       )}
 
       {/* Address input with autocomplete */}
-      <Field label="Property Address">
+      <Field label="Property Address" compact={isCompact}>
         <div style={{ position: "relative" }}>
           <input
             placeholder="Start typing an address…"
             value={data.address}
             onChange={(e) => onAddressInput(e.target.value)}
-            style={inputStyle}
+            style={isCompact ? inputStyleCompact : inputStyle}
             id="wizard-address-input"
           />
           {addressLoading && <span style={{ position: "absolute", right: 12, top: 11, fontSize: 11, color: "#94A3B8" }}>Searching…</span>}
@@ -2241,7 +2311,7 @@ function Step2Address({ data, up, suggestions, addressLoading, onAddressInput, o
         }}>
           <div style={{ width: 16, height: 16, border: "2px solid #CBD5E1", borderTopColor: "#6637F4", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
           <div style={{ fontSize: 13, color: "#6637F4", fontWeight: 500 }}>
-            {satelliteLoading ? "Loading satellite image…" : eagleViewStatus || "Loading EagleView data…"}
+            {satelliteLoading ? "Resolving selected address…" : eagleViewStatus || "Loading EagleView sandbox data…"}
           </div>
         </div>
       )}
@@ -2266,47 +2336,47 @@ function Step2Address({ data, up, suggestions, addressLoading, onAddressInput, o
         <div style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{
             padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600,
-            background: data.measurementSource === "eagleview" ? "rgba(59,130,246,.12)" : "rgba(16,185,129,.12)",
-            color: data.measurementSource === "eagleview" ? "#1D4ED8" : "#047857",
+            background: "rgba(59,130,246,.12)",
+            color: "#1D4ED8",
           }}>
-            {data.measurementSource === "eagleview" ? "📡 EagleView Measurement" : "🤖 AI Satellite Detection"}
+            📡 EagleView Sandbox Measurement
           </span>
         </div>
       )}
 
       {/* Measurement fields */}
       <div style={responsiveGrid(isCompact, "1fr 1fr")}>
-        <Field label="Roof Area (sq ft)">
+        <Field label="Roof Area (sq ft)" compact={isCompact}>
           <NumberInput value={data.roofAreaSqft} onChange={(v) => up("roofAreaSqft", v)} suffix="sq ft" />
         </Field>
-        <Field label="Pitch">
-          <select value={data.pitch} onChange={(e) => up("pitch", e.target.value)} style={inputStyle}>
+        <Field label="Pitch" compact={isCompact}>
+          <select value={data.pitch} onChange={(e) => up("pitch", e.target.value)} style={isCompact ? inputStyleCompact : inputStyle}>
             <option value="">Select pitch</option>
             {["3/12","4/12","5/12","6/12","7/12","8/12","9/12","10/12","11/12","12/12"].map((p) => (
               <option key={p} value={p}>{p}</option>
             ))}
           </select>
         </Field>
-        <Field label="Roof Type">
-          <select value={data.roofType} onChange={(e) => up("roofType", e.target.value)} style={inputStyle}>
+        <Field label="Roof Type" compact={isCompact}>
+          <select value={data.roofType} onChange={(e) => up("roofType", e.target.value)} style={isCompact ? inputStyleCompact : inputStyle}>
             {["gable","hip","flat","mansard","gambrel","shed"].map((t) => (
               <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
             ))}
           </select>
         </Field>
-        <Field label="Stories">
+        <Field label="Stories" compact={isCompact}>
           <NumberInput value={data.stories} onChange={(v) => up("stories", v)} min={1} max={5} />
         </Field>
-        <Field label="Layers">
+        <Field label="Layers" compact={isCompact}>
           <NumberInput value={data.layers} onChange={(v) => up("layers", v)} min={1} max={5} />
         </Field>
-        <Field label="Waste %">
+        <Field label="Waste %" compact={isCompact}>
           <NumberInput value={data.wastePercent} onChange={(v) => up("wastePercent", v)} suffix="%" />
         </Field>
       </div>
 
-      <Field label="Tear-off Required?">
-        <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13 }}>
+      <Field label="Tear-off Required?" compact={isCompact}>
+        <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: isCompact ? 12 : 13 }}>
           <input type="checkbox" checked={data.tearOffRequired} onChange={(e) => up("tearOffRequired", e.target.checked)} />
           Yes, existing roof needs to be removed
         </label>
@@ -2361,8 +2431,8 @@ function Step3Materials({ data, up, total, otherMaterials, onOtherMaterialsChang
         </>
       )}
 
-      <Field label="Shingle Type">
-        <input value={data.shingleType} onChange={(e) => up("shingleType", e.target.value)} style={inputStyle} placeholder="e.g. Architectural Shingles" />
+      <Field label="Shingle Type" compact={isCompact}>
+        <input value={data.shingleType} onChange={(e) => up("shingleType", e.target.value)} style={isCompact ? inputStyleCompact : inputStyle} placeholder="e.g. Architectural Shingles" />
       </Field>
 
       {isCompact ? (
@@ -2524,10 +2594,10 @@ function Step4Labor({ data, up, total, isCompact = false, hideHeader = false }: 
       )}
 
       <div style={responsiveGrid(isCompact, "1fr 1fr")}>
-        <Field label="Cost Per Square (optional)"><NumberInput value={data.laborCostPerSquare} onChange={(v) => up("laborCostPerSquare", v)} prefix="$" /></Field>
-        <Field label="Number of Laborers"><NumberInput value={data.numberOfLaborers} onChange={(v) => up("numberOfLaborers", v)} /></Field>
-        <Field label="Days Required"><NumberInput value={data.daysRequired} onChange={(v) => up("daysRequired", v)} /></Field>
-        <Field label="Rate per Worker / Day"><NumberInput value={data.laborRatePerWorker} onChange={(v) => up("laborRatePerWorker", v)} prefix="$" /></Field>
+        <Field label="Cost Per Square (optional)" compact={isCompact}><NumberInput value={data.laborCostPerSquare} onChange={(v) => up("laborCostPerSquare", v)} prefix="$" /></Field>
+        <Field label="Number of Laborers" compact={isCompact}><NumberInput value={data.numberOfLaborers} onChange={(v) => up("numberOfLaborers", v)} /></Field>
+        <Field label="Days Required" compact={isCompact}><NumberInput value={data.daysRequired} onChange={(v) => up("daysRequired", v)} /></Field>
+        <Field label="Rate per Worker / Day" compact={isCompact}><NumberInput value={data.laborRatePerWorker} onChange={(v) => up("laborRatePerWorker", v)} prefix="$" /></Field>
       </div>
 
       <div style={{ fontSize: 13, color: "#64748B", padding: "12px 0", borderBottom: "1px solid #E2E8F0" }}>
@@ -2565,11 +2635,11 @@ function Step5Extras({ data, up, total, isCompact = false, hideHeader = false }:
       )}
 
       <div style={responsiveGrid(isCompact, "1fr 1fr")}>
-        <Field label="Dumpster"><NumberInput value={data.dumpsterCost} onChange={(v) => up("dumpsterCost", v)} prefix="$" /></Field>
-        <Field label="Permit"><NumberInput value={data.permitCost} onChange={(v) => up("permitCost", v)} prefix="$" /></Field>
-        <Field label="Delivery Fee"><NumberInput value={data.deliveryFee} onChange={(v) => up("deliveryFee", v)} prefix="$" /></Field>
-        <Field label="Equipment Rental"><NumberInput value={data.equipmentRentalCost} onChange={(v) => up("equipmentRentalCost", v)} prefix="$" /></Field>
-        <Field label="Disposal Fee"><NumberInput value={data.disposalFee} onChange={(v) => up("disposalFee", v)} prefix="$" /></Field>
+        <Field label="Dumpster" compact={isCompact}><NumberInput value={data.dumpsterCost} onChange={(v) => up("dumpsterCost", v)} prefix="$" /></Field>
+        <Field label="Permit" compact={isCompact}><NumberInput value={data.permitCost} onChange={(v) => up("permitCost", v)} prefix="$" /></Field>
+        <Field label="Delivery Fee" compact={isCompact}><NumberInput value={data.deliveryFee} onChange={(v) => up("deliveryFee", v)} prefix="$" /></Field>
+        <Field label="Equipment Rental" compact={isCompact}><NumberInput value={data.equipmentRentalCost} onChange={(v) => up("equipmentRentalCost", v)} prefix="$" /></Field>
+        <Field label="Disposal Fee" compact={isCompact}><NumberInput value={data.disposalFee} onChange={(v) => up("disposalFee", v)} prefix="$" /></Field>
       </div>
 
       <div style={{
@@ -2603,9 +2673,9 @@ function Step6Profit({ data, up, subtotal, overheadAmount, profitAmount, taxAmou
       )}
 
       <div style={responsiveGrid(isCompact, "1fr 1fr 1fr")}>
-        <Field label="Overhead %"><NumberInput value={data.overheadPercent} onChange={(v) => up("overheadPercent", v)} suffix="%" /></Field>
-        <Field label="Profit Margin %"><NumberInput value={data.profitMarginPercent} onChange={(v) => up("profitMarginPercent", v)} suffix="%" /></Field>
-        <Field label="Tax %"><NumberInput value={data.taxPercent} onChange={(v) => up("taxPercent", v)} suffix="%" /></Field>
+        <Field label="Overhead %" compact={isCompact}><NumberInput value={data.overheadPercent} onChange={(v) => up("overheadPercent", v)} suffix="%" /></Field>
+        <Field label="Profit Margin %" compact={isCompact}><NumberInput value={data.profitMarginPercent} onChange={(v) => up("profitMarginPercent", v)} suffix="%" /></Field>
+        <Field label="Tax %" compact={isCompact}><NumberInput value={data.taxPercent} onChange={(v) => up("taxPercent", v)} suffix="%" /></Field>
       </div>
 
       {/* Breakdown */}
@@ -2762,7 +2832,7 @@ function Step7Final({ data, totalMaterialCost, totalLaborCost, totalEquipmentCos
             background: "linear-gradient(135deg,#6637F4,#5429D9)", color: "#fff", fontSize: 16,
           }}>💳</div>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "#0F172A" }}>Generate AI Estimate — $20.00</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#0F172A" }}>Generate Estimate — $20.00</div>
             <div style={{ fontSize: 11, color: "#64748B" }}>This amount will be deducted from your wallet</div>
           </div>
         </div>

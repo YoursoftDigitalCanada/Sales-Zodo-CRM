@@ -28,7 +28,6 @@ import {
 import {
   getEstimates,
   getEstimateStatistics,
-  checkAiHealth,
   deleteEstimate,
   type RoofEstimate,
   type EstimateStatistics,
@@ -483,7 +482,6 @@ export default function RoofEstimator() {
 
   const [estimates, setEstimates] = useState<RoofEstimate[]>([]);
   const [stats, setStats] = useState<EstimateStatistics | null>(null);
-  const [aiOnline, setAiOnline] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -519,7 +517,6 @@ export default function RoofEstimator() {
 
     const secondaryResults = await Promise.allSettled([
       withTimeout(getEstimateStatistics(), 15000, "Estimator statistics"),
-      withTimeout(checkAiHealth(), 8000, "AI health check"),
       withTimeout(getWallet().catch(() => null), 8000, "Wallet"),
       withTimeout(
         getTransactions(1, 10).catch(() => ({ data: [], total: 0, page: 1, limit: 10 })),
@@ -528,10 +525,9 @@ export default function RoofEstimator() {
       ),
     ]);
 
-    const [statsResult, aiHealthResult, walletResult, transactionsResult] = secondaryResults;
+    const [statsResult, walletResult, transactionsResult] = secondaryResults;
 
     setStats(statsResult.status === "fulfilled" ? statsResult.value : null);
-    setAiOnline(aiHealthResult.status === "fulfilled" ? aiHealthResult.value : false);
     setWallet(walletResult.status === "fulfilled" && walletResult.value ? walletResult.value : null);
     setTransactions(transactionsResult.status === "fulfilled" ? transactionsResult.value.data || [] : []);
   }, [toast]);
@@ -640,25 +636,20 @@ export default function RoofEstimator() {
           <div className={cn("flex items-center gap-2 text-sm", isMobile && "min-w-0")}>
             <span className="text-[#475569]">CRM</span>
             <ChevronRight size={16} className="text-[#475569]" />
-            <span className="truncate font-medium text-[#0F172A]">AI Roof Estimator</span>
+            <span className="truncate font-medium text-[#0F172A]">EagleView Roof Estimator</span>
           </div>
           <div className="flex items-center gap-3">
-            {aiOnline !== null && (
-              <span className={cn(
-                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold",
-                aiOnline ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
-              )}>
-                <span className={cn("w-1.5 h-1.5 rounded-full", aiOnline ? "bg-emerald-500" : "bg-red-500")} />
-                {aiOnline ? "AI Online" : "AI Offline"}
-              </span>
-            )}
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700">
+              <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+              EagleView Sandbox
+            </span>
             {!isMobile && (
               <Button
                 onClick={() => navigate("/roof-estimator/new")}
                 className="bg-[#0891B2] hover:bg-[#0E7490] text-white rounded-md shadow-sm"
               >
                 <Plus size={18} className="mr-2" />
-                Create AI Estimate
+                Create Estimate
               </Button>
             )}
           </div>
@@ -674,9 +665,9 @@ export default function RoofEstimator() {
               <ClipboardList size={20} className="text-[#0891B2]" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">AI Roof Estimator</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">EagleView Roof Estimator</h1>
               <p className="text-sm text-[#94A3B8]">
-                {estimates.length} estimates • Manage AI-powered estimates and track pricing
+                {estimates.length} estimates • Manage EagleView sandbox measurements and pricing
               </p>
             </div>
           </div>
@@ -824,11 +815,11 @@ export default function RoofEstimator() {
               </div>
               <h3 className="mt-5 text-lg font-semibold text-[#0F172A]">No estimates found</h3>
               <p className="mx-auto mt-2 max-w-xl text-sm text-[#64748B]">
-                Create your first AI-powered roof estimate to get started.
+                Create your first EagleView sandbox estimate to get started.
               </p>
               <Button onClick={() => navigate("/roof-estimator/new")} className="mt-5 rounded-md bg-[#0891B2] hover:bg-[#0E7490]">
                 <Plus className="mr-2 h-4 w-4" />
-                Create AI Estimate
+                Create Estimate
               </Button>
             </div>
           ) : effectiveViewMode === "table" ? (

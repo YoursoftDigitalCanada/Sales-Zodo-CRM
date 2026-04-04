@@ -17,7 +17,7 @@ import { eagleViewAuthService } from './eagleview-auth.service';
 import { eagleViewMeasurementService, type OrderAddress } from './eagleview-measurement.service';
 
 const SANDBOX_LOOKUP_FAILURE_MESSAGE =
-    'Unable to fetch roof data from EagleView sandbox. Ensure the address is within the supported Omaha area.';
+    'EagleView sandbox currently supports Omaha, Nebraska addresses only. Use autocomplete and pick an Omaha address to continue.';
 
 class EagleViewController {
     private isSandboxMode(): boolean {
@@ -78,35 +78,27 @@ class EagleViewController {
                 return;
             }
 
+            if (!eagleViewMeasurementService.isSandboxSupportedAddress(orderAddress)) {
+                res.status(400).json({
+                    success: false,
+                    message: SANDBOX_LOOKUP_FAILURE_MESSAGE,
+                });
+                return;
+            }
+
             logger.info('[EagleView] Instant order request', { address: orderAddress });
 
             try {
                 const report = await eagleViewMeasurementService.getInstantMeasurement(orderAddress);
-                const aerialImage = !this.isSandboxMode() && report.reportId
-                    ? await eagleViewMeasurementService.getPrimaryAerialImageDataUrl(report.reportId, report)
-                    : null;
                 const { reportDownloadLink: _reportDownloadLink, ...reportData } = report;
 
-                sendSuccess(res, {
-                    ...reportData,
-                    ...(aerialImage
-                        ? {
-                            imageDataUrl: aerialImage.dataUrl,
-                            imageFileTypeId: aerialImage.fileTypeId,
-                        }
-                        : {}),
-                }, this.isSandboxMode() ? 'EagleView lookup retrieved' : 'EagleView report retrieved');
+                sendSuccess(res, reportData, 'EagleView sandbox lookup retrieved');
             } catch (error) {
-                if (this.isSandboxMode()) {
-                    logger.error('[EagleView] Sandbox lookup request failed', {
-                        message: error instanceof Error ? error.message : String(error),
-                        address: orderAddress,
-                    });
-                    next(new ServiceUnavailableError(SANDBOX_LOOKUP_FAILURE_MESSAGE));
-                    return;
-                }
-
-                next(error);
+                logger.error('[EagleView] Sandbox lookup request failed', {
+                    message: error instanceof Error ? error.message : String(error),
+                    address: orderAddress,
+                });
+                next(new ServiceUnavailableError(SANDBOX_LOOKUP_FAILURE_MESSAGE));
             }
         } catch (error) {
             next(error);
@@ -153,9 +145,9 @@ class EagleViewController {
             data: {
                 configured,
                 authenticated: tokenOk,
-                apiType: this.isSandboxMode() ? 'Property Data API' : 'Measurement Order API',
+                apiType: 'Property Data API (Sandbox only)',
                 baseUrl: config.integrations.eagleview.baseUrl,
-                environment: config.integrations.eagleview.environment,
+                environment: this.isSandboxMode() ? config.integrations.eagleview.environment : 'sandbox-forced',
             },
         });
     }

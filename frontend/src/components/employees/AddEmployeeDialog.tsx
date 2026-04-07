@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -220,6 +220,16 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
     onOpenChange(false);
   };
 
+  const handleInvalidSubmit = (formErrors: FieldErrors<EmployeeFormValues>) => {
+    const firstInvalidStep = formSteps.find((step) =>
+      STEP_FIELDS[step].some((field) => Boolean(formErrors[field])),
+    );
+
+    if (firstInvalidStep) {
+      setActiveStep(firstInvalidStep);
+    }
+  };
+
   const currentStepIndex = formSteps.indexOf(activeStep);
   const isLastStep = currentStepIndex === formSteps.length - 1;
 
@@ -279,7 +289,18 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+          <form
+            onSubmit={(event) => {
+              if (!isLastStep) {
+                event.preventDefault();
+                void handleNextStep();
+                return;
+              }
+
+              void form.handleSubmit(handleSubmit, handleInvalidSubmit)(event);
+            }}
+            className="space-y-6"
+          >
             <Tabs value={activeStep} onValueChange={(value) => { void goToStep(value as EmployeeFormStep); }} className="w-full">
               <TabsList className={`grid w-full ${editingEmployee ? 'grid-cols-4' : 'grid-cols-5'}`}>
                 <TabsTrigger value="basic">Basic Info</TabsTrigger>

@@ -28,6 +28,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import FieldErrorMessage from "@/components/forms/FieldErrorMessage";
 import {
   Drawer,
   DrawerContent,
@@ -888,6 +889,18 @@ const ContactDialog = ({
     });
   };
 
+  const clearFieldError = (field: keyof typeof formData) => {
+    setErrors((prev) => {
+      if (!prev[field]) {
+        return prev;
+      }
+
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
   const validateForm = () => {
     const nextErrors: Record<string, string> = {};
 
@@ -965,7 +978,12 @@ const ContactDialog = ({
                   )}
                 />
               </div>
-              {errors.contactPerson && <p className="text-xs text-red-500">{errors.contactPerson}</p>}
+              {errors.contactPerson ? (
+                <FieldErrorMessage
+                  message={errors.contactPerson}
+                  onDismiss={() => clearFieldError("contactPerson")}
+                />
+              ) : null}
             </div>
           </div>
 
@@ -1055,7 +1073,12 @@ const ContactDialog = ({
                 )}
               />
             </div>
-            {errors.contactEmail && <p className="text-xs text-red-500">{errors.contactEmail}</p>}
+            {errors.contactEmail ? (
+              <FieldErrorMessage
+                message={errors.contactEmail}
+                onDismiss={() => clearFieldError("contactEmail")}
+              />
+            ) : null}
           </div>
 
           {/* Phone Numbers */}
@@ -1074,7 +1097,12 @@ const ContactDialog = ({
                   )}
                 />
               </div>
-              {errors.contactNo && <p className="text-xs text-red-500">{errors.contactNo}</p>}
+              {errors.contactNo ? (
+                <FieldErrorMessage
+                  message={errors.contactNo}
+                  onDismiss={() => clearFieldError("contactNo")}
+                />
+              ) : null}
             </div>
 
             <div className="space-y-2">
@@ -1091,7 +1119,12 @@ const ContactDialog = ({
                   )}
                 />
               </div>
-              {errors.mobile && <p className="text-xs text-red-500">{errors.mobile}</p>}
+              {errors.mobile ? (
+                <FieldErrorMessage
+                  message={errors.mobile}
+                  onDismiss={() => clearFieldError("mobile")}
+                />
+              ) : null}
             </div>
           </div>
 
@@ -1110,7 +1143,12 @@ const ContactDialog = ({
                 )}
               />
             </div>
-            {errors.linkedin && <p className="text-xs text-red-500">{errors.linkedin}</p>}
+            {errors.linkedin ? (
+              <FieldErrorMessage
+                message={errors.linkedin}
+                onDismiss={() => clearFieldError("linkedin")}
+              />
+            ) : null}
           </div>
 
           {/* Primary Contact Toggle */}

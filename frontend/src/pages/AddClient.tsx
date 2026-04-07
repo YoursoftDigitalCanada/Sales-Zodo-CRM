@@ -16,6 +16,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { NotificationBell } from "@/components/NotificationBell";
+import FieldErrorMessage from "@/components/forms/FieldErrorMessage";
 import {
   Bell,
   Loader2,
@@ -500,12 +501,14 @@ const StyledInput = ({
   required,
   icon: Icon,
   error,
+  onClearError,
   ...props
 }: {
   label: string;
   required?: boolean;
   icon?: React.ElementType;
   error?: string;
+  onClearError?: () => void;
 } & React.InputHTMLAttributes<HTMLInputElement>) => (
   <div className="space-y-2">
     <Label className="text-sm font-medium text-[#475569]">
@@ -530,7 +533,7 @@ const StyledInput = ({
         aria-invalid={Boolean(error)}
       />
     </div>
-    {error && <p className="text-xs text-red-500">{error}</p>}
+    {error ? <FieldErrorMessage message={error} onDismiss={onClearError} /> : null}
   </div>
 );
 
@@ -543,6 +546,7 @@ const StyledSelect = ({
   placeholder,
   options,
   error,
+  onClearError,
 }: {
   label: string;
   required?: boolean;
@@ -551,6 +555,7 @@ const StyledSelect = ({
   placeholder?: string;
   options: { value: string; label: string }[];
   error?: string;
+  onClearError?: () => void;
 }) => (
   <div className="space-y-2">
     <Label className="text-sm font-medium text-[#475569]">
@@ -576,7 +581,7 @@ const StyledSelect = ({
         ))}
       </SelectContent>
     </Select>
-    {error && <p className="text-xs text-red-500">{error}</p>}
+    {error ? <FieldErrorMessage message={error} onDismiss={onClearError} /> : null}
   </div>
 );
 
@@ -690,6 +695,18 @@ const AddClientPage = () => {
       if (field === "clientType") {
         delete next.clientName;
       }
+      return next;
+    });
+  };
+
+  const clearFormError = (field: keyof FormData) => {
+    setFormErrors((prev) => {
+      if (!prev[field]) {
+        return prev;
+      }
+
+      const next = { ...prev };
+      delete next[field];
       return next;
     });
   };
@@ -1029,6 +1046,7 @@ const AddClientPage = () => {
                         onChange={handleInputChange}
                         icon={Building2}
                         error={formErrors.clientName}
+                        onClearError={() => clearFormError("clientName")}
                       />
 
                       <StyledSelect
@@ -1053,6 +1071,7 @@ const AddClientPage = () => {
                         onChange={handleInputChange}
                         icon={Mail}
                         error={formErrors.primaryEmail}
+                        onClearError={() => clearFormError("primaryEmail")}
                       />
 
                       <StyledInput
@@ -1064,6 +1083,7 @@ const AddClientPage = () => {
                         onChange={handleInputChange}
                         icon={Phone}
                         error={formErrors.phone}
+                        onClearError={() => clearFormError("phone")}
                       />
 
                       <StyledSelect
@@ -1226,6 +1246,7 @@ const AddClientPage = () => {
                         onChange={handleInputChange}
                         className="uppercase"
                         error={formErrors.pincode}
+                        onClearError={() => clearFormError("pincode")}
                       />
 
                       <div className="space-y-2">
@@ -1294,6 +1315,7 @@ const AddClientPage = () => {
                       onChange={handleInputChange}
                       icon={User}
                       error={formErrors.primaryContactName}
+                      onClearError={() => clearFormError("primaryContactName")}
                     />
 
                     <StyledInput
@@ -1312,6 +1334,7 @@ const AddClientPage = () => {
                       onChange={handleInputChange}
                       icon={Phone}
                       error={formErrors.primaryContactPhone}
+                      onClearError={() => clearFormError("primaryContactPhone")}
                     />
                   </div>
                 </StyledCard>
@@ -1560,6 +1583,7 @@ const AddClientPage = () => {
                         onChange={handleInputChange}
                         icon={User}
                         error={formErrors.spouseCoOwnerName}
+                        onClearError={() => clearFormError("spouseCoOwnerName")}
                       />
                       <StyledInput
                         label="Secondary Phone"
@@ -1569,6 +1593,7 @@ const AddClientPage = () => {
                         onChange={handleInputChange}
                         icon={Phone}
                         error={formErrors.secondaryPhone}
+                        onClearError={() => clearFormError("secondaryPhone")}
                       />
                     </div>
                   </div>

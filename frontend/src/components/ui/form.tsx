@@ -3,6 +3,7 @@ import * as LabelPrimitive from "@radix-ui/react-label";
 import { Slot } from "@radix-ui/react-slot";
 import { Controller, ControllerProps, FieldPath, FieldValues, FormProvider, useFormContext } from "react-hook-form";
 
+import FieldErrorMessage from "@/components/forms/FieldErrorMessage";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 
@@ -33,7 +34,7 @@ const FormField = <
 const useFormField = () => {
   const fieldContext = React.useContext(FormFieldContext);
   const itemContext = React.useContext(FormItemContext);
-  const { getFieldState, formState } = useFormContext();
+  const { clearErrors, getFieldState, formState } = useFormContext();
 
   const fieldState = getFieldState(fieldContext.name, formState);
 
@@ -49,6 +50,7 @@ const useFormField = () => {
     formItemId: `${id}-form-item`,
     formDescriptionId: `${id}-form-item-description`,
     formMessageId: `${id}-form-item-message`,
+    clearErrors,
     ...fieldState,
   };
 };
@@ -108,9 +110,9 @@ const FormDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttribu
 );
 FormDescription.displayName = "FormDescription";
 
-const FormMessage = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
+const FormMessage = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, children, ...props }, ref) => {
-    const { error, formMessageId } = useFormField();
+    const { clearErrors, error, formMessageId, name } = useFormField();
     const body = error ? String(error?.message) : children;
 
     if (!body) {
@@ -118,9 +120,14 @@ const FormMessage = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<
     }
 
     return (
-      <p ref={ref} id={formMessageId} className={cn("text-sm font-medium text-destructive", className)} {...props}>
-        {body}
-      </p>
+      <FieldErrorMessage
+        ref={ref}
+        id={formMessageId}
+        message={body}
+        onDismiss={error ? () => clearErrors(name) : undefined}
+        className={cn("text-sm", className)}
+        {...props}
+      />
     );
   },
 );

@@ -87,6 +87,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import AddressAutocompleteInput from "@/components/address/AddressAutocompleteInput";
+import FieldErrorMessage from "@/components/forms/FieldErrorMessage";
 import { ComposeEmailSheet } from "@/features/emails/components/ComposeEmailSheet";
 import {
   getCanadianPhoneError,
@@ -1326,6 +1327,23 @@ export const LeadFormDialog = ({
     [errors]
   );
 
+  const clearFieldError = useCallback((field: string) => {
+    setErrors((prev) => {
+      if (!prev[field]) {
+        return prev;
+      }
+
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  }, []);
+
+  const renderFieldError = (field: string) =>
+    errors[field] ? (
+      <FieldErrorMessage message={errors[field]} onDismiss={() => clearFieldError(field)} />
+    ) : null;
+
   const validateTab = useCallback((tab: LeadFormTab) => {
     const nextErrors: Record<string, string> = {};
 
@@ -1748,7 +1766,7 @@ export const LeadFormDialog = ({
                     required
                     className={cn("h-11 rounded-md", getFieldErrorClass("firstName"))}
                   />
-                  {errors.firstName && <p className="text-xs text-red-500">{errors.firstName}</p>}
+                  {renderFieldError("firstName")}
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-[#475569]">
@@ -1761,7 +1779,7 @@ export const LeadFormDialog = ({
                     required
                     className={cn("h-11 rounded-md", getFieldErrorClass("lastName"))}
                   />
-                  {errors.lastName && <p className="text-xs text-red-500">{errors.lastName}</p>}
+                  {renderFieldError("lastName")}
                 </div>
               </div>
 
@@ -1777,7 +1795,7 @@ export const LeadFormDialog = ({
                     className={cn("h-11 pl-10 rounded-md", getFieldErrorClass("email"))}
                   />
                 </div>
-                {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
+                {renderFieldError("email")}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -1794,7 +1812,7 @@ export const LeadFormDialog = ({
                       className={cn("h-11 pl-10 rounded-md", getFieldErrorClass("phone"))}
                     />
                   </div>
-                  {errors.phone && <p className="text-xs text-red-500">{errors.phone}</p>}
+                  {renderFieldError("phone")}
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-[#475569]">Secondary Phone</Label>
@@ -1804,7 +1822,7 @@ export const LeadFormDialog = ({
                     placeholder="Alt phone number"
                     className={cn("h-11 rounded-md", getFieldErrorClass("secondaryPhone"))}
                   />
-                  {errors.secondaryPhone && <p className="text-xs text-red-500">{errors.secondaryPhone}</p>}
+                  {renderFieldError("secondaryPhone")}
                 </div>
               </div>
 
@@ -1816,7 +1834,7 @@ export const LeadFormDialog = ({
                   placeholder="Jane Doe"
                   className={cn("h-11 rounded-md", getFieldErrorClass("spouseCoOwnerName"))}
                 />
-                {errors.spouseCoOwnerName && <p className="text-xs text-red-500">{errors.spouseCoOwnerName}</p>}
+                {renderFieldError("spouseCoOwnerName")}
               </div>
 
               <div className="space-y-2">
@@ -1860,7 +1878,7 @@ export const LeadFormDialog = ({
                   placeholder="123 Main Street"
                   className={cn("h-11 rounded-md", getFieldErrorClass("propertyAddress"))}
                 />
-                {errors.propertyAddress && <p className="text-xs text-red-500">{errors.propertyAddress}</p>}
+                {renderFieldError("propertyAddress")}
               </div>
 
               <div className="grid grid-cols-3 gap-4">
@@ -1890,7 +1908,7 @@ export const LeadFormDialog = ({
                     placeholder="M5V 2H1"
                     className={cn("h-11 rounded-md", getFieldErrorClass("zipCode"))}
                   />
-                  {errors.zipCode && <p className="text-xs text-red-500">{errors.zipCode}</p>}
+                  {renderFieldError("zipCode")}
                 </div>
               </div>
 
@@ -1945,7 +1963,7 @@ export const LeadFormDialog = ({
                       ))}
                   </SelectContent>
                 </Select>
-                {errors.serviceType && <p className="text-xs text-red-500">{errors.serviceType}</p>}
+                {renderFieldError("serviceType")}
               </div>
 
               <div className="space-y-2">
@@ -2027,7 +2045,7 @@ export const LeadFormDialog = ({
                   rows={3}
                   className={cn("rounded-md resize-none", getFieldErrorClass("issueDescription"))}
                 />
-                {errors.issueDescription && <p className="text-xs text-red-500">{errors.issueDescription}</p>}
+                {renderFieldError("issueDescription")}
                 <p className="text-xs text-[#94A3B8]">Max 500 characters</p>
               </div>
 
@@ -2277,7 +2295,7 @@ export const LeadFormDialog = ({
                       placeholder="1-10"
                       className={cn("h-11 rounded-md w-32", getFieldErrorClass("numberOfOtherQuotes"))}
                     />
-                    {errors.numberOfOtherQuotes && <p className="text-xs text-red-500">{errors.numberOfOtherQuotes}</p>}
+                    {renderFieldError("numberOfOtherQuotes")}
                   </div>
                 )}
               </div>
@@ -2324,7 +2342,7 @@ export const LeadFormDialog = ({
                     placeholder="e.g., State Farm, Allstate, USAA..."
                     className={cn("h-11 rounded-md", getFieldErrorClass("insuranceCompanyName"))}
                   />
-                  {errors.insuranceCompanyName && <p className="text-xs text-red-500">{errors.insuranceCompanyName}</p>}
+                  {renderFieldError("insuranceCompanyName")}
                 </div>
 
                 <div className="space-y-2">
@@ -2372,7 +2390,7 @@ export const LeadFormDialog = ({
                           placeholder="Adjuster name"
                           className={cn("h-11 rounded-md", getFieldErrorClass("adjusterName"))}
                         />
-                        {errors.adjusterName && <p className="text-xs text-red-500">{errors.adjusterName}</p>}
+                        {renderFieldError("adjusterName")}
                       </div>
                       <div className="space-y-2">
                         <Label className="text-sm font-medium text-[#475569]">Adjuster Phone</Label>
@@ -2382,7 +2400,7 @@ export const LeadFormDialog = ({
                           placeholder="Phone number"
                           className={cn("h-11 rounded-md", getFieldErrorClass("adjusterPhone"))}
                         />
-                        {errors.adjusterPhone && <p className="text-xs text-red-500">{errors.adjusterPhone}</p>}
+                        {renderFieldError("adjusterPhone")}
                       </div>
                     </div>
                     <div className="space-y-2">
@@ -2394,7 +2412,7 @@ export const LeadFormDialog = ({
                         placeholder="adjuster@insurance.com"
                         className={cn("h-11 rounded-md", getFieldErrorClass("adjusterEmail"))}
                       />
-                      {errors.adjusterEmail && <p className="text-xs text-red-500">{errors.adjusterEmail}</p>}
+                      {renderFieldError("adjusterEmail")}
                     </div>
                   </>
                 )}
@@ -2425,7 +2443,7 @@ export const LeadFormDialog = ({
                     placeholder="1-10"
                     className={cn("h-11 rounded-md", getFieldErrorClass("leadScore"))}
                   />
-                  {errors.leadScore && <p className="text-xs text-red-500">{errors.leadScore}</p>}
+                  {renderFieldError("leadScore")}
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-[#475569]">Next Step</Label>
@@ -2484,7 +2502,7 @@ export const LeadFormDialog = ({
                   rows={4}
                   className={cn("rounded-md resize-none", getFieldErrorClass("qualificationCallNotes"))}
                 />
-                {errors.qualificationCallNotes && <p className="text-xs text-red-500">{errors.qualificationCallNotes}</p>}
+                {renderFieldError("qualificationCallNotes")}
               </div>
             </TabsContent>
 
@@ -2558,7 +2576,7 @@ export const LeadFormDialog = ({
                     className={cn("h-11 pl-10 rounded-md", getFieldErrorClass("potentialValue"))}
                   />
                 </div>
-                {errors.potentialValue && <p className="text-xs text-red-500">{errors.potentialValue}</p>}
+                {renderFieldError("potentialValue")}
               </div>
 
               <div className="space-y-2">
@@ -2649,7 +2667,7 @@ export const LeadFormDialog = ({
                       className={cn("h-11 pl-10 rounded-md", getFieldErrorClass("website"))}
                     />
                   </div>
-                  {errors.website && <p className="text-xs text-red-500">{errors.website}</p>}
+                  {renderFieldError("website")}
                 </div>
               </div>
 

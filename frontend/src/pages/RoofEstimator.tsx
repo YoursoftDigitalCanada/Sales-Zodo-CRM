@@ -77,6 +77,7 @@ import {
   SwipeActionCard,
   usePullToRefresh,
 } from "@/features/clients/components/responsive-helpers";
+import { useCanPerformAction } from "@/hooks/usePermissionAccess";
 
 /* ─── Helpers ──────────────────────────────────────────────── */
 
@@ -194,6 +195,8 @@ function EstimateRow({
   onView,
   onEdit,
   onDelete,
+  canUpdate,
+  canDelete,
 }: {
   est: RoofEstimate;
   isSelected: boolean;
@@ -201,6 +204,8 @@ function EstimateRow({
   onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  canUpdate: boolean;
+  canDelete: boolean;
 }) {
   return (
     <motion.tr
@@ -265,24 +270,28 @@ function EstimateRow({
               <Eye size={16} />
             </motion.a>
           )}
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={onEdit}
-            className="p-2 rounded-md hover:bg-[#D97706]/10 text-[#D97706] transition-colors"
-            title="Edit"
-          >
-            <Pencil size={16} />
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={onDelete}
-            className="p-2 rounded-md hover:bg-red-500/10 text-red-500 transition-colors"
-            title="Delete"
-          >
-            <Trash2 size={16} />
-          </motion.button>
+          {canUpdate ? (
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={onEdit}
+              className="p-2 rounded-md hover:bg-[#D97706]/10 text-[#D97706] transition-colors"
+              title="Edit"
+            >
+              <Pencil size={16} />
+            </motion.button>
+          ) : null}
+          {canDelete ? (
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={onDelete}
+              className="p-2 rounded-md hover:bg-red-500/10 text-red-500 transition-colors"
+              title="Delete"
+            >
+              <Trash2 size={16} />
+            </motion.button>
+          ) : null}
         </div>
       </td>
     </motion.tr>
@@ -298,6 +307,8 @@ function EstimateCard({
   onView,
   onEdit,
   onDelete,
+  canUpdate,
+  canDelete,
 }: {
   est: RoofEstimate;
   isSelected: boolean;
@@ -305,6 +316,8 @@ function EstimateCard({
   onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  canUpdate: boolean;
+  canDelete: boolean;
 }) {
   return (
     <motion.div
@@ -343,12 +356,16 @@ function EstimateCard({
               <Eye size={14} />
             </a>
           )}
-          <button onClick={onEdit} className="p-1.5 rounded-md hover:bg-[#D97706]/10 text-[#D97706] transition-colors" title="Edit">
-            <Pencil size={14} />
-          </button>
-          <button onClick={onDelete} className="p-1.5 rounded-md hover:bg-red-500/10 text-red-500 transition-colors" title="Delete">
-            <Trash2 size={14} />
-          </button>
+          {canUpdate ? (
+            <button onClick={onEdit} className="p-1.5 rounded-md hover:bg-[#D97706]/10 text-[#D97706] transition-colors" title="Edit">
+              <Pencil size={14} />
+            </button>
+          ) : null}
+          {canDelete ? (
+            <button onClick={onDelete} className="p-1.5 rounded-md hover:bg-red-500/10 text-red-500 transition-colors" title="Delete">
+              <Trash2 size={14} />
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -388,6 +405,8 @@ function MobileEstimateCard({
   onView,
   onEdit,
   onDelete,
+  canUpdate,
+  canDelete,
 }: {
   est: RoofEstimate;
   isSelected: boolean;
@@ -395,9 +414,10 @@ function MobileEstimateCard({
   onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  canUpdate: boolean;
+  canDelete: boolean;
 }) {
-  return (
-    <SwipeActionCard onView={onView} onDelete={onDelete} className="rounded-md">
+  const content = (
       <div
         className={cn(
           "rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm transition-colors",
@@ -450,24 +470,35 @@ function MobileEstimateCard({
                 <Eye size={15} />
               </a>
             )}
-            <button
-              onClick={onEdit}
-              className="rounded-md p-2 text-[#D97706] transition-colors hover:bg-[#D97706]/10"
-              title="Edit"
-            >
-              <Pencil size={15} />
-            </button>
-            <button
-              onClick={onDelete}
-              className="rounded-md p-2 text-red-500 transition-colors hover:bg-red-500/10"
-              title="Delete"
-            >
-              <Trash2 size={15} />
-            </button>
+            {canUpdate ? (
+              <button
+                onClick={onEdit}
+                className="rounded-md p-2 text-[#D97706] transition-colors hover:bg-[#D97706]/10"
+                title="Edit"
+              >
+                <Pencil size={15} />
+              </button>
+            ) : null}
+            {canDelete ? (
+              <button
+                onClick={onDelete}
+                className="rounded-md p-2 text-red-500 transition-colors hover:bg-red-500/10"
+                title="Delete"
+              >
+                <Trash2 size={15} />
+              </button>
+            ) : null}
           </div>
         </div>
       </div>
+  );
+
+  return canDelete ? (
+    <SwipeActionCard onView={onView} onDelete={onDelete} className="rounded-md">
+      {content}
     </SwipeActionCard>
+  ) : (
+    content
   );
 }
 
@@ -479,6 +510,9 @@ export default function RoofEstimator() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isMobile, isTablet } = useIsMobile();
+  const canCreateEstimates = useCanPerformAction("roof-estimator", "create");
+  const canUpdateEstimates = useCanPerformAction("roof-estimator", "update");
+  const canDeleteEstimates = useCanPerformAction("roof-estimator", "delete");
 
   const [estimates, setEstimates] = useState<RoofEstimate[]>([]);
   const [stats, setStats] = useState<EstimateStatistics | null>(null);
@@ -498,6 +532,14 @@ export default function RoofEstimator() {
   const [showAddFunds, setShowAddFunds] = useState(false);
   const [fundAmount, setFundAmount] = useState("");
   const [addingFunds, setAddingFunds] = useState(false);
+
+  const showPermissionDenied = (description: string) => {
+    toast({
+      title: "Permission denied",
+      description,
+      variant: "destructive",
+    });
+  };
 
   const loadEstimatorData = useMemo(() => async () => {
     setLoading(true);
@@ -564,6 +606,11 @@ export default function RoofEstimator() {
 
   // Delete handler
   const handleDelete = async () => {
+    if (!canDeleteEstimates) {
+      showPermissionDenied("You no longer have permission to delete roof estimates.");
+      return;
+    }
+
     if (!deleteId) return;
     setDeleting(true);
     try {
@@ -621,6 +668,15 @@ export default function RoofEstimator() {
     }
   };
 
+  const openEstimateEditor = (estimateId: string) => {
+    if (!canUpdateEstimates) {
+      showPermissionDenied("You do not have permission to edit roof estimates.");
+      return;
+    }
+
+    navigate(`/roof-estimator/${estimateId}/edit`);
+  };
+
   const allSelected = filtered.length > 0 && selectedEstimates.size === filtered.length;
   const effectiveViewMode: ViewMode = isMobile ? "grid" : viewMode;
   const { handlers, pullDistance, isRefreshing } = usePullToRefresh({
@@ -643,7 +699,7 @@ export default function RoofEstimator() {
               <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
               EagleView Sandbox
             </span>
-            {!isMobile && (
+            {!isMobile && canCreateEstimates && (
               <Button
                 onClick={() => navigate("/roof-estimator/new")}
                 className="bg-[#0891B2] hover:bg-[#0E7490] text-white rounded-md shadow-sm"
@@ -817,10 +873,12 @@ export default function RoofEstimator() {
               <p className="mx-auto mt-2 max-w-xl text-sm text-[#64748B]">
                 Create your first EagleView sandbox estimate to get started.
               </p>
-              <Button onClick={() => navigate("/roof-estimator/new")} className="mt-5 rounded-md bg-[#0891B2] hover:bg-[#0E7490]">
-                <Plus className="mr-2 h-4 w-4" />
-                Create Estimate
-              </Button>
+              {canCreateEstimates ? (
+                <Button onClick={() => navigate("/roof-estimator/new")} className="mt-5 rounded-md bg-[#0891B2] hover:bg-[#0E7490]">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Estimate
+                </Button>
+              ) : null}
             </div>
           ) : effectiveViewMode === "table" ? (
             <div className="overflow-x-auto">
@@ -851,9 +909,11 @@ export default function RoofEstimator() {
                         est={est}
                         isSelected={selectedEstimates.has(est.id)}
                         onSelect={() => toggleSelect(est.id)}
-                        onView={() => navigate(`/roof-estimator/${est.id}/edit`)}
-                        onEdit={() => navigate(`/roof-estimator/${est.id}/edit`)}
+                        onView={() => openEstimateEditor(est.id)}
+                        onEdit={() => openEstimateEditor(est.id)}
                         onDelete={() => setDeleteId(est.id)}
+                        canUpdate={canUpdateEstimates}
+                        canDelete={canDeleteEstimates}
                       />
                     ))}
                   </AnimatePresence>
@@ -871,9 +931,11 @@ export default function RoofEstimator() {
                         est={est}
                         isSelected={selectedEstimates.has(est.id)}
                         onSelect={() => toggleSelect(est.id)}
-                        onView={() => navigate(`/roof-estimator/${est.id}/edit`)}
-                        onEdit={() => navigate(`/roof-estimator/${est.id}/edit`)}
+                        onView={() => openEstimateEditor(est.id)}
+                        onEdit={() => openEstimateEditor(est.id)}
                         onDelete={() => setDeleteId(est.id)}
+                        canUpdate={canUpdateEstimates}
+                        canDelete={canDeleteEstimates}
                       />
                     ) : (
                       <EstimateCard
@@ -881,9 +943,11 @@ export default function RoofEstimator() {
                         est={est}
                         isSelected={selectedEstimates.has(est.id)}
                         onSelect={() => toggleSelect(est.id)}
-                        onView={() => navigate(`/roof-estimator/${est.id}/edit`)}
-                        onEdit={() => navigate(`/roof-estimator/${est.id}/edit`)}
+                        onView={() => openEstimateEditor(est.id)}
+                        onEdit={() => openEstimateEditor(est.id)}
                         onDelete={() => setDeleteId(est.id)}
+                        canUpdate={canUpdateEstimates}
+                        canDelete={canDeleteEstimates}
                       />
                     )
                   ))}
@@ -976,7 +1040,7 @@ export default function RoofEstimator() {
         )}
       </div>
 
-      {isMobile && (
+      {isMobile && canCreateEstimates && (
         <Button
           onClick={() => navigate("/roof-estimator/new")}
           size="icon"

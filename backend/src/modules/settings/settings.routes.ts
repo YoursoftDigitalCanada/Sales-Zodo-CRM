@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate, loadEmployee } from '../../common/middleware/auth.middleware';
-import { requireAnyPermission, requireAnyRole, requirePermission } from '../../common/middleware/permission.middleware';
+import { requireAnyPermission, requirePermission } from '../../common/middleware/permission.middleware';
 import { validate } from '../../common/middleware/validate.middleware';
 import { PERMISSIONS } from '../../common/constants/permissions';
 import { settingsController } from './settings.controller';
@@ -64,7 +64,7 @@ router.post(
 router.get('/notifications', requirePermission(PERMISSIONS.NOTIFICATIONS_VIEW), settingsController.getNotifications.bind(settingsController));
 router.put('/notifications', requirePermission(PERMISSIONS.NOTIFICATIONS_MANAGE), validate(updateNotificationSettingsSchema), settingsController.updateNotifications.bind(settingsController));
 
-router.get('/security', requireAnyRole(['Owner', 'Admin']), settingsController.getSecurity.bind(settingsController));
-router.put('/security', requireAnyRole(['Owner', 'Admin']), validate(updateSecuritySettingsSchema), settingsController.updateSecurity.bind(settingsController));
+router.get('/security', requirePermission(PERMISSIONS.SETTINGS_VIEW), settingsController.getSecurity.bind(settingsController));
+router.put('/security', requirePermission(PERMISSIONS.SETTINGS_UPDATE), validate(updateSecuritySettingsSchema), settingsController.updateSecurity.bind(settingsController));
 
 export default router;

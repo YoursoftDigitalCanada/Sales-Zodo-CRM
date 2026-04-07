@@ -99,6 +99,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { SwipeActionCard } from "@/features/clients/components/responsive-helpers";
+import { useCanPerformAction } from "@/hooks/usePermissionAccess";
 
 function useDebouncedValue<T>(value: T, delay = 300): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -189,6 +190,8 @@ const ProjectRow = ({
   onView,
   onEdit,
   onDelete,
+  canUpdate,
+  canDelete,
 }: {
   project: ProjectEntity;
   isSelected: boolean;
@@ -196,6 +199,8 @@ const ProjectRow = ({
   onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  canUpdate: boolean;
+  canDelete: boolean;
 }) => {
   const stage = getRoofingStage(project);
   const stageMeta = getRoofingStageMeta(stage);
@@ -342,15 +347,17 @@ const ProjectRow = ({
           >
             <Eye size={16} />
           </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={onEdit}
-            className="p-2 rounded-md hover:bg-[#D97706]/10 text-[#D97706] transition-colors"
-            title="Edit"
-          >
-            <Pencil size={16} />
-          </motion.button>
+          {canUpdate ? (
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={onEdit}
+              className="p-2 rounded-md hover:bg-[#D97706]/10 text-[#D97706] transition-colors"
+              title="Edit"
+            >
+              <Pencil size={16} />
+            </motion.button>
+          ) : null}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="p-2 rounded-md hover:bg-white/10 text-[#475569] transition-colors">
@@ -361,13 +368,19 @@ const ProjectRow = ({
               <DropdownMenuItem className="rounded-md" onClick={onView}>
                 <Eye size={14} className="mr-2" /> View Details
               </DropdownMenuItem>
-              <DropdownMenuItem className="rounded-md" onClick={onEdit}>
-                <Pencil size={14} className="mr-2" /> Edit
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="rounded-md text-red-600 focus:text-red-600 focus:bg-red-50" onClick={onDelete}>
-                <Trash2 size={14} className="mr-2" /> Archive
-              </DropdownMenuItem>
+              {canUpdate ? (
+                <DropdownMenuItem className="rounded-md" onClick={onEdit}>
+                  <Pencil size={14} className="mr-2" /> Edit
+                </DropdownMenuItem>
+              ) : null}
+              {canDelete ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="rounded-md text-red-600 focus:text-red-600 focus:bg-red-50" onClick={onDelete}>
+                    <Trash2 size={14} className="mr-2" /> Archive
+                  </DropdownMenuItem>
+                </>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -387,6 +400,8 @@ const ProjectCard = ({
   onView,
   onEdit,
   onDelete,
+  canUpdate,
+  canDelete,
 }: {
   project: ProjectEntity;
   isSelected: boolean;
@@ -394,6 +409,8 @@ const ProjectCard = ({
   onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  canUpdate: boolean;
+  canDelete: boolean;
 }) => {
   const stage = getRoofingStage(project);
   const stageMeta = getRoofingStageMeta(stage);
@@ -456,13 +473,19 @@ const ProjectCard = ({
               <DropdownMenuItem className="rounded-md" onClick={onView}>
                 <Eye size={14} className="mr-2" /> View Details
               </DropdownMenuItem>
-              <DropdownMenuItem className="rounded-md" onClick={onEdit}>
-                <Pencil size={14} className="mr-2" /> Edit
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="rounded-md text-red-600 focus:text-red-600" onClick={onDelete}>
-                <Trash2 size={14} className="mr-2" /> Archive
-              </DropdownMenuItem>
+              {canUpdate ? (
+                <DropdownMenuItem className="rounded-md" onClick={onEdit}>
+                  <Pencil size={14} className="mr-2" /> Edit
+                </DropdownMenuItem>
+              ) : null}
+              {canDelete ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="rounded-md text-red-600 focus:text-red-600" onClick={onDelete}>
+                    <Trash2 size={14} className="mr-2" /> Archive
+                  </DropdownMenuItem>
+                </>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -551,23 +574,19 @@ const MobileJobCard = ({
   project,
   onView,
   onArchive,
+  canArchive,
 }: {
   project: ProjectEntity;
   onView: () => void;
   onArchive: () => void;
+  canArchive: boolean;
 }) => {
   const stage = getRoofingStage(project);
   const stageMeta = getRoofingStageMeta(stage);
   const clientName = getProjectClientName(project);
   const dueDate = project.estimatedEndDate ?? project.dueDate ?? project.endDate;
 
-  return (
-    <SwipeActionCard
-      onView={onView}
-      onDelete={onArchive}
-      primaryLabel="View"
-      secondaryLabel="Archive"
-    >
+  const content = (
       <div
         className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm"
         onClick={onView}
@@ -593,7 +612,19 @@ const MobileJobCard = ({
           </div>
         </div>
       </div>
+  );
+
+  return canArchive ? (
+    <SwipeActionCard
+      onView={onView}
+      onDelete={onArchive}
+      primaryLabel="View"
+      secondaryLabel="Archive"
+    >
+      {content}
     </SwipeActionCard>
+  ) : (
+    content
   );
 };
 
@@ -618,7 +649,7 @@ function ProjectsLoadingGrid() {
   );
 }
 
-function EmptyState({ onCreate }: { onCreate: () => void }) {
+function EmptyState({ onCreate, canCreate }: { onCreate: () => void; canCreate: boolean }) {
   return (
     <div className="bg-white rounded-md border border-dashed border-[rgba(15,23,42,0.18)] p-16 text-center">
       <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-md bg-[#0891B2]/10 text-[#0891B2]">
@@ -628,10 +659,12 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
       <p className="mx-auto mt-2 max-w-xl text-sm text-[#64748B]">
         Adjust the stage filters or create a new roofing job to start tracking inspections, permits, production, and profit.
       </p>
-      <Button onClick={onCreate} className="mt-5 rounded-md bg-[#0891B2] hover:bg-[#0E7490]">
-        <Plus className="mr-2 h-4 w-4" />
-        Create Roofing Job
-      </Button>
+      {canCreate ? (
+        <Button onClick={onCreate} className="mt-5 rounded-md bg-[#0891B2] hover:bg-[#0E7490]">
+          <Plus className="mr-2 h-4 w-4" />
+          Create Roofing Job
+        </Button>
+      ) : null}
     </div>
   );
 }
@@ -649,6 +682,9 @@ export default function ProjectsPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { isMobile } = useIsMobile();
+  const canCreateProjects = useCanPerformAction("projects", "create");
+  const canUpdateProjects = useCanPerformAction("projects", "update");
+  const canDeleteProjects = useCanPerformAction("projects", "delete");
 
   const [search, setSearch] = useState("");
   const [stageFilter, setStageFilter] = useState<string>("ALL");
@@ -659,6 +695,14 @@ export default function ProjectsPage() {
   const [selectedProjects, setSelectedProjects] = useState<Set<string | number>>(new Set());
   const [pendingDelete, setPendingDelete] = useState<ProjectEntity | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
+
+  const showPermissionDenied = (description: string) => {
+    toast({
+      title: "Permission denied",
+      description,
+      variant: "destructive",
+    });
+  };
 
   const debouncedSearch = useDebouncedValue(search, 250);
 
@@ -674,13 +718,24 @@ export default function ProjectsPage() {
   });
 
   const archiveMutation = useMutation({
-    mutationFn: (id: string | number) => deleteProjectById(id),
+    mutationFn: (id: string | number) => {
+      if (!canDeleteProjects) {
+        throw new Error("PERMISSION_DENIED");
+      }
+
+      return deleteProjectById(id);
+    },
     onSuccess: () => {
       setPendingDelete(null);
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       toast({ title: "Roofing job archived", description: "The job was removed from the active operations board." });
     },
-    onError: () => {
+    onError: (error) => {
+      if (error instanceof Error && error.message === "PERMISSION_DENIED") {
+        showPermissionDenied("You no longer have permission to archive projects.");
+        return;
+      }
+
       toast({ title: "Archive failed", description: "The job could not be archived right now.", variant: "destructive" });
     },
   });
@@ -828,13 +883,15 @@ export default function ProjectsPage() {
               >
                 <RefreshCw size={18} />
               </motion.button>
-              <Button
-                onClick={() => navigate("/projects/add")}
-                className={cn("bg-[#0891B2] hover:bg-[#0E7490] text-white rounded-md shadow-sm", isMobile && "hidden")}
-              >
-                <Plus size={18} className="mr-2" />
-                Create Roofing Job
-              </Button>
+              {canCreateProjects ? (
+                <Button
+                  onClick={() => navigate("/projects/add")}
+                  className={cn("bg-[#0891B2] hover:bg-[#0E7490] text-white rounded-md shadow-sm", isMobile && "hidden")}
+                >
+                  <Plus size={18} className="mr-2" />
+                  Create Roofing Job
+                </Button>
+              ) : null}
             </div>
           </div>
         </header>
@@ -1049,7 +1106,7 @@ export default function ProjectsPage() {
               </div>
             ) : orderedProjects.length === 0 ? (
               <div className="p-6">
-                <EmptyState onCreate={() => navigate("/projects/add")} />
+                <EmptyState onCreate={() => navigate("/projects/add")} canCreate={canCreateProjects} />
               </div>
             ) : isMobile ? (
               <div className="p-4 space-y-3">
@@ -1059,6 +1116,7 @@ export default function ProjectsPage() {
                     project={project}
                     onView={() => navigate(`/projects/${project.id}`)}
                     onArchive={() => setPendingDelete(project)}
+                    canArchive={canDeleteProjects}
                   />
                 ))}
               </div>
@@ -1097,6 +1155,8 @@ export default function ProjectsPage() {
                           onView={() => navigate(`/projects/${project.id}`)}
                           onEdit={() => navigate(`/projects/${project.id}/edit`)}
                           onDelete={() => setPendingDelete(project)}
+                          canUpdate={canUpdateProjects}
+                          canDelete={canDeleteProjects}
                         />
                       ))}
                     </AnimatePresence>
@@ -1117,6 +1177,8 @@ export default function ProjectsPage() {
                         onView={() => navigate(`/projects/${project.id}`)}
                         onEdit={() => navigate(`/projects/${project.id}/edit`)}
                         onDelete={() => setPendingDelete(project)}
+                        canUpdate={canUpdateProjects}
+                        canDelete={canDeleteProjects}
                       />
                     ))}
                   </AnimatePresence>
@@ -1133,7 +1195,7 @@ export default function ProjectsPage() {
         </div>
       </main>
 
-      {isMobile && (
+      {isMobile && canCreateProjects && (
         <Button
           size="icon"
           className="fixed bottom-6 right-5 z-40 h-14 w-14 rounded-full bg-[#0891B2] shadow-[0_16px_36px_rgba(8,145,178,0.35)] hover:bg-[#0E7490]"

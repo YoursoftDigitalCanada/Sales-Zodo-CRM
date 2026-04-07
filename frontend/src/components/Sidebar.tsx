@@ -71,6 +71,7 @@ import {
   UserCheck,
   type LucideIcon,
 } from "lucide-react";
+import { AUTH_ACCESS_UPDATED_EVENT, AUTH_STORAGE_KEYS } from "@/features/auth/lib/auth-storage";
 
 // ============================================
 // TYPES
@@ -174,7 +175,7 @@ function isRecentLead(lead: LeadEntity): boolean {
 
 function readStoredPermissions(): string[] | null {
   try {
-    const storedPerms = localStorage.getItem("permissions");
+    const storedPerms = localStorage.getItem(AUTH_STORAGE_KEYS.permissions);
     if (!storedPerms) {
       return null;
     }
@@ -190,14 +191,14 @@ function readStoredOwnerOrAdmin(): boolean {
   try {
     const storedEmployee = localStorage.getItem("employee");
     if (!storedEmployee) {
-      return true;
+      return false;
     }
 
     const employee = JSON.parse(storedEmployee);
     const roleName = employee?.role?.name || employee?.roleName || "";
     return ["Owner", "Admin", "Super Admin"].includes(roleName);
   } catch {
-    return true;
+    return false;
   }
 }
 
@@ -364,10 +365,11 @@ const navigationItems: NavigationItem[] = [
     title: "Support",
     icon: Headphones,
     featureId: "support",
+    permissionModule: "support",
     submenu: [
-      { title: "Tickets", path: "/support/tickets", featureId: "support" },
-      { title: "Knowledge Base", path: "/support/knowledge-base", featureId: "support" },
-      { title: "FAQ", path: "/support/faq", featureId: "support" },
+      { title: "Tickets", path: "/support/tickets", featureId: "support", permissionModule: "support" },
+      { title: "Knowledge Base", path: "/support/knowledge-base", featureId: "support", permissionModule: "support" },
+      { title: "FAQ", path: "/support/faq", featureId: "support", permissionModule: "support" },
     ]
   },
   {
@@ -395,7 +397,7 @@ const navigationItems: NavigationItem[] = [
     icon: Users,
     path: "/users",
     featureId: "team",
-    permissionModule: "employees",
+    permissionModule: "users",
   },
   {
     title: "Roles & Permissions",
@@ -468,25 +470,17 @@ const hasFeatureAccess = (
 // PERMISSION-BASED FILTERING
 // ============================================
 
-/** Check if user has ANY permission for a given module */
+/** Check if user has the module's view permission */
 const hasModulePermission = (
   permissionModule: string | string[] | undefined,
   userPermissions: string[] | null
 ): boolean => {
-  // No permissionModule defined = always visible (e.g. Help Center)
   if (!permissionModule) return true;
   if (Array.isArray(permissionModule)) {
     return permissionModule.some((module) => hasModulePermission(module, userPermissions));
   }
-  // No permissions loaded = show everything (Owner/Admin or legacy user)
-  if (!userPermissions) return true;
-  // Permission codes use dot notation: "module.action" (e.g. "leads.view", "invoices.create")
-  return userPermissions.some((code) => {
-    const dotIndex = code.lastIndexOf('.');
-    if (dotIndex === -1) return false;
-    const codeModule = code.substring(0, dotIndex);
-    return codeModule === permissionModule;
-  });
+  if (!userPermissions) return false;
+  return userPermissions.includes(`${permissionModule}.view`);
 };
 
 const filterNavigationItems = (
@@ -672,7 +666,11 @@ export function Sidebar({
     };
     loadPermissions();
     window.addEventListener("storage", loadPermissions);
-    return () => window.removeEventListener("storage", loadPermissions);
+    window.addEventListener(AUTH_ACCESS_UPDATED_EVENT, loadPermissions);
+    return () => {
+      window.removeEventListener("storage", loadPermissions);
+      window.removeEventListener(AUTH_ACCESS_UPDATED_EVENT, loadPermissions);
+    };
   }, []);
 
   const enabledFeatureSet = useMemo(

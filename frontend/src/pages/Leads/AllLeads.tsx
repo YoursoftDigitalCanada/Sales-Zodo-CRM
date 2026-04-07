@@ -86,6 +86,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { useCanPerformAction } from "@/hooks/usePermissionAccess";
 import AddressAutocompleteInput from "@/components/address/AddressAutocompleteInput";
 import FieldErrorMessage from "@/components/forms/FieldErrorMessage";
 import { ComposeEmailSheet } from "@/features/emails/components/ComposeEmailSheet";
@@ -642,6 +643,9 @@ const LeadCard = ({
   onEmail,
   onCall,
   onStatusChange,
+  canCreate,
+  canUpdate,
+  canDelete,
   delay = 0,
 }: {
   lead: Lead;
@@ -653,6 +657,9 @@ const LeadCard = ({
   onEmail: () => void;
   onCall: () => void;
   onStatusChange: (status: Lead["status"]) => void;
+  canCreate: boolean;
+  canUpdate: boolean;
+  canDelete: boolean;
   delay?: number;
 }) => {
   const statusInfo = getStatusInfo(lead.status);
@@ -705,19 +712,25 @@ const LeadCard = ({
             <DropdownMenuItem onClick={onView} className="rounded-md">
               <Eye size={14} className="mr-2" /> View Details
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={onEdit} className="rounded-md">
-              <Pencil size={14} className="mr-2" /> Edit Lead
-            </DropdownMenuItem>
+            {canUpdate ? (
+              <DropdownMenuItem onClick={onEdit} className="rounded-md">
+                <Pencil size={14} className="mr-2" /> Edit Lead
+              </DropdownMenuItem>
+            ) : null}
             <DropdownMenuItem onClick={onEmail} className="rounded-md">
               <Mail size={14} className="mr-2" /> Send Email
             </DropdownMenuItem>
             <DropdownMenuItem onClick={onCall} className="rounded-md">
               <Phone size={14} className="mr-2" /> Call
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onDelete} className="rounded-md text-red-600 focus:text-red-600">
-              <Trash2 size={14} className="mr-2" /> Delete
-            </DropdownMenuItem>
+            {canDelete ? (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={onDelete} className="rounded-md text-red-600 focus:text-red-600">
+                  <Trash2 size={14} className="mr-2" /> Delete
+                </DropdownMenuItem>
+              </>
+            ) : null}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -865,6 +878,7 @@ const MobileLeadCard = ({
   onOpen,
   onQualify,
   onArchive,
+  canUpdate,
 }: {
   lead: Lead;
   isSelected: boolean;
@@ -872,21 +886,13 @@ const MobileLeadCard = ({
   onOpen: () => void;
   onQualify: () => void;
   onArchive: () => void;
+  canUpdate: boolean;
 }) => {
   const statusInfo = getStatusInfo(lead.status);
   const tempInfo = getTemperatureInfo(lead.temperature);
   const TempIcon = tempInfo.icon;
 
-  return (
-    <SwipeActionCard
-      onView={onQualify}
-      onDelete={onArchive}
-      onLongPress={onSelect}
-      primaryLabel="Qualify"
-      secondaryLabel="Archive"
-      primaryIcon={CheckCircle2}
-      secondaryIcon={FileX2}
-    >
+  const content = (
       <div
         className={cn(
           "rounded-2xl border bg-white p-4 shadow-sm transition-all",
@@ -953,7 +959,22 @@ const MobileLeadCard = ({
           </div>
         </div>
       </div>
+  );
+
+  return canUpdate ? (
+    <SwipeActionCard
+      onView={onQualify}
+      onDelete={onArchive}
+      onLongPress={onSelect}
+      primaryLabel="Qualify"
+      secondaryLabel="Archive"
+      primaryIcon={CheckCircle2}
+      secondaryIcon={FileX2}
+    >
+      {content}
     </SwipeActionCard>
+  ) : (
+    content
   );
 };
 
@@ -973,6 +994,9 @@ const LeadRow = ({
   onDuplicate,
   onScheduleFollowUp,
   onStatusChange,
+  canCreate,
+  canUpdate,
+  canDelete,
 }: {
   lead: Lead;
   isSelected: boolean;
@@ -985,6 +1009,9 @@ const LeadRow = ({
   onDuplicate: () => void;
   onScheduleFollowUp: () => void;
   onStatusChange: (status: Lead["status"]) => void;
+  canCreate: boolean;
+  canUpdate: boolean;
+  canDelete: boolean;
 }) => {
   const statusInfo = getStatusInfo(lead.status);
   const sourceInfo = getSourceInfo(lead.leadSourceName);
@@ -1106,14 +1133,16 @@ const LeadRow = ({
               </TooltipTrigger>
               <TooltipContent>View Details</TooltipContent>
             </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" onClick={onEdit}>
-                  <Pencil size={16} className="text-[#475569]" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Edit</TooltipContent>
-            </Tooltip>
+            {canUpdate ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" onClick={onEdit}>
+                    <Pencil size={16} className="text-[#475569]" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Edit</TooltipContent>
+              </Tooltip>
+            ) : null}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" onClick={onEmail}>
@@ -1133,12 +1162,16 @@ const LeadRow = ({
               <DropdownMenuItem onClick={onView} className="rounded-md">
                 <Eye size={14} className="mr-2" /> View Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onEdit} className="rounded-md">
-                <Pencil size={14} className="mr-2" /> Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onDuplicate} className="rounded-md">
-                <Copy size={14} className="mr-2" /> Duplicate
-              </DropdownMenuItem>
+              {canUpdate ? (
+                <DropdownMenuItem onClick={onEdit} className="rounded-md">
+                  <Pencil size={14} className="mr-2" /> Edit
+                </DropdownMenuItem>
+              ) : null}
+              {canCreate ? (
+                <DropdownMenuItem onClick={onDuplicate} className="rounded-md">
+                  <Copy size={14} className="mr-2" /> Duplicate
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onEmail} className="rounded-md">
                 <Mail size={14} className="mr-2" /> Send Email
@@ -1146,13 +1179,19 @@ const LeadRow = ({
               <DropdownMenuItem onClick={onCall} className="rounded-md">
                 <Phone size={14} className="mr-2" /> Call
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onScheduleFollowUp} className="rounded-md">
-                <CalendarDays size={14} className="mr-2" /> Schedule Follow-up
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onDelete} className="rounded-md text-red-600 focus:text-red-600">
-                <Trash2 size={14} className="mr-2" /> Delete
-              </DropdownMenuItem>
+              {canUpdate ? (
+                <DropdownMenuItem onClick={onScheduleFollowUp} className="rounded-md">
+                  <CalendarDays size={14} className="mr-2" /> Schedule Follow-up
+                </DropdownMenuItem>
+              ) : null}
+              {canDelete ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onDelete} className="rounded-md text-red-600 focus:text-red-600">
+                    <Trash2 size={14} className="mr-2" /> Delete
+                  </DropdownMenuItem>
+                </>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -2733,12 +2772,14 @@ const LeadDetailsDialog = ({
   lead,
   onEdit,
   onStatusChange,
+  canEdit,
 }: {
   isOpen: boolean;
   onClose: () => void;
   lead: Lead | null;
   onEdit: () => void;
   onStatusChange: (status: Lead["status"]) => void;
+  canEdit: boolean;
 }) => {
   if (!lead) return null;
 
@@ -3065,10 +3106,12 @@ const LeadDetailsDialog = ({
             <Phone size={16} />
             Call
           </Button>
-          <Button onClick={onEdit} className="bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-md gap-2">
-            <Pencil size={16} />
-            Edit Lead
-          </Button>
+          {canEdit ? (
+            <Button onClick={onEdit} className="bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-md gap-2">
+              <Pencil size={16} />
+              Edit Lead
+            </Button>
+          ) : null}
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -3544,6 +3587,17 @@ const AllLeads = () => {
   const location = useLocation();
   const importFileInputRef = useRef<HTMLInputElement | null>(null);
   const { isMobile, isTablet } = useIsMobile();
+  const canCreateLeads = useCanPerformAction("leads", "create");
+  const canUpdateLeads = useCanPerformAction("leads", "update");
+  const canDeleteLeads = useCanPerformAction("leads", "delete");
+
+  const showPermissionDenied = useCallback((description: string) => {
+    toast({
+      title: "Permission denied",
+      description,
+      variant: "destructive",
+    });
+  }, [toast]);
 
   // State
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -4050,6 +4104,11 @@ const AllLeads = () => {
   };
 
   const handleAddLead = async (data: Partial<Lead>) => {
+    if (!canCreateLeads) {
+      showPermissionDenied("You no longer have permission to create leads.");
+      return false;
+    }
+
     try {
       const apiData = await buildLeadMutationPayload(data);
       const responseData = await createLead(apiData);
@@ -4079,6 +4138,11 @@ const AllLeads = () => {
 
   // Create lead anyway (skip duplicate check)
   const handleCreateAnyway = async () => {
+    if (!canCreateLeads) {
+      showPermissionDenied("You no longer have permission to create leads.");
+      return;
+    }
+
     if (!pendingLeadData) return;
     try {
       const responseData = await createLead({ ...pendingLeadData, skipDuplicateCheck: true });
@@ -4105,6 +4169,11 @@ const AllLeads = () => {
 
   // Merge with an existing duplicate lead
   const handleMergeWithDuplicate = async (targetLeadId: string) => {
+    if (!canCreateLeads) {
+      showPermissionDenied("You no longer have permission to create leads.");
+      return;
+    }
+
     if (!pendingLeadData) return;
     try {
       // First create the lead (skip check), then merge it into the target
@@ -4137,6 +4206,11 @@ const AllLeads = () => {
   };
 
   const handleEditLead = async (data: Partial<Lead>) => {
+    if (!canUpdateLeads) {
+      showPermissionDenied("You no longer have permission to edit leads.");
+      return false;
+    }
+
     if (!currentLead) return false;
     try {
       const apiData = await buildLeadMutationPayload(data);
@@ -4160,6 +4234,11 @@ const AllLeads = () => {
   };
 
   const handleDeleteLead = async () => {
+    if (!canDeleteLeads) {
+      showPermissionDenied("You no longer have permission to delete leads.");
+      return;
+    }
+
     if (!leadToDelete) return;
     try {
       await deleteLead(leadToDelete.id);
@@ -4187,6 +4266,11 @@ const AllLeads = () => {
   };
 
   const handleDuplicateLead = async (lead: Lead) => {
+    if (!canCreateLeads) {
+      showPermissionDenied("You no longer have permission to duplicate leads.");
+      return;
+    }
+
     try {
       setBulkActionLoading("duplicate");
       const apiData = await buildLeadMutationPayload({
@@ -4216,6 +4300,11 @@ const AllLeads = () => {
   };
 
   const handleStatusChange = async (lead: Lead, status: Lead["status"]) => {
+    if (!canUpdateLeads) {
+      showPermissionDenied("You no longer have permission to update leads.");
+      return;
+    }
+
     // Intercept QUALIFIED status → show meeting scheduling dialog
     if (status === LeadStatus.QUALIFIED && lead.status !== LeadStatus.QUALIFIED) {
       setPendingQualifiedLead(lead);
@@ -4253,6 +4342,11 @@ const AllLeads = () => {
 
   // Handle meeting scheduled after QUALIFIED prompt
   const handleMeetingSchedule = async (meetingData: Record<string, unknown>) => {
+    if (!canUpdateLeads) {
+      showPermissionDenied("You no longer have permission to update leads.");
+      return;
+    }
+
     if (!pendingQualifiedLead) return;
     try {
       if (meetingDialogMode === "followUp") {
@@ -4293,6 +4387,11 @@ const AllLeads = () => {
 
   // Handle skip meeting (still qualify the lead)
   const handleSkipMeeting = async () => {
+    if (!canUpdateLeads) {
+      showPermissionDenied("You no longer have permission to update leads.");
+      return;
+    }
+
     if (!pendingQualifiedLead) return;
     if (meetingDialogMode === "followUp") {
       closeMeetingDialog();
@@ -4363,6 +4462,11 @@ const AllLeads = () => {
   }, [leads, selectedLeads, toast]);
 
   const handleBulkAssign = useCallback(async () => {
+    if (!canUpdateLeads) {
+      showPermissionDenied("You no longer have permission to update leads.");
+      return;
+    }
+
     if (!bulkAssignedToId) {
       toast({
         title: "Assignee Required",
@@ -4405,9 +4509,14 @@ const AllLeads = () => {
     } finally {
       setBulkActionLoading(null);
     }
-  }, [bulkAssignedToId, employees, selectedLeads, toast]);
+  }, [bulkAssignedToId, canUpdateLeads, employees, selectedLeads, showPermissionDenied, toast]);
 
   const handleBulkStatusUpdate = useCallback(async (status: Lead["status"]) => {
+    if (!canUpdateLeads) {
+      showPermissionDenied("You no longer have permission to update leads.");
+      return;
+    }
+
     const leadIds = Array.from(selectedLeads);
     if (leadIds.length === 0) {
       return;
@@ -4438,9 +4547,14 @@ const AllLeads = () => {
     } finally {
       setBulkActionLoading(null);
     }
-  }, [selectedLeads, toast]);
+  }, [canUpdateLeads, selectedLeads, showPermissionDenied, toast]);
 
   const handleBulkTemperatureUpdate = useCallback(async (temperature: Lead["temperature"]) => {
+    if (!canUpdateLeads) {
+      showPermissionDenied("You no longer have permission to update leads.");
+      return;
+    }
+
     const leadIds = Array.from(selectedLeads);
     if (leadIds.length === 0) {
       return;
@@ -4482,9 +4596,14 @@ const AllLeads = () => {
     } finally {
       setBulkActionLoading(null);
     }
-  }, [selectedLeads, toast]);
+  }, [canUpdateLeads, selectedLeads, showPermissionDenied, toast]);
 
   const handleBulkAddTags = useCallback(async () => {
+    if (!canUpdateLeads) {
+      showPermissionDenied("You no longer have permission to update leads.");
+      return;
+    }
+
     const leadIds = Array.from(selectedLeads);
     const inputTagNames = parseTagNames(bulkTagsInput);
 
@@ -4559,7 +4678,7 @@ const AllLeads = () => {
     } finally {
       setBulkActionLoading(null);
     }
-  }, [bulkTagsInput, ensureTagOptionsLoaded, leads, parseTagNames, resolveTagIdsByNames, selectedLeads, toast]);
+  }, [bulkTagsInput, canUpdateLeads, ensureTagOptionsLoaded, leads, parseTagNames, resolveTagIdsByNames, selectedLeads, showPermissionDenied, toast]);
 
   const handleBulkExport = useCallback(() => {
     const selectedLeadRecords = leads.filter((lead) => selectedLeads.has(lead.id));
@@ -4567,6 +4686,11 @@ const AllLeads = () => {
   }, [exportLeadRecords, leads, selectedLeads]);
 
   const handleBulkDelete = useCallback(async () => {
+    if (!canDeleteLeads) {
+      showPermissionDenied("You no longer have permission to delete leads.");
+      return;
+    }
+
     const leadIds = Array.from(selectedLeads);
     if (leadIds.length === 0) {
       return;
@@ -4604,9 +4728,14 @@ const AllLeads = () => {
     } finally {
       setBulkActionLoading(null);
     }
-  }, [selectedLeads, toast]);
+  }, [canDeleteLeads, selectedLeads, showPermissionDenied, toast]);
 
   const handleImportLeads = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!canCreateLeads) {
+      showPermissionDenied("You no longer have permission to import leads.");
+      return;
+    }
+
     const file = event.target.files?.[0];
     event.target.value = "";
 
@@ -4740,7 +4869,7 @@ const AllLeads = () => {
     } finally {
       setBulkActionLoading(null);
     }
-  }, [employees, ensureTagOptionsLoaded, leadSources, loadLeads, resolveTagIdsByNames, toast]);
+  }, [canCreateLeads, employees, ensureTagOptionsLoaded, leadSources, loadLeads, resolveTagIdsByNames, showPermissionDenied, toast]);
 
   // Stats calculations
   const newCount = leads.filter((l) => l.status === "NEW").length;
@@ -4782,15 +4911,19 @@ const AllLeads = () => {
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="rounded-md hidden sm:inline-flex"
-                        onClick={() => importFileInputRef.current?.click()}
-                        disabled={bulkActionLoading === "import"}
-                      >
-                        <Upload size={18} />
-                      </Button>
+                      {canCreateLeads ? (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="rounded-md hidden sm:inline-flex"
+                          onClick={() => importFileInputRef.current?.click()}
+                          disabled={bulkActionLoading === "import"}
+                        >
+                          <Upload size={18} />
+                        </Button>
+                      ) : (
+                        <span />
+                      )}
                     </TooltipTrigger>
                     <TooltipContent>Import Leads</TooltipContent>
                   </Tooltip>
@@ -4810,18 +4943,20 @@ const AllLeads = () => {
                   </Tooltip>
                 </TooltipProvider>
 
-                <Button
-                  onClick={() => {
-                    setCurrentLead(null);
-                    setIsFormOpen(true);
-                  }}
-                  className="bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-md gap-2"
-                  size="sm"
-                >
-                  <UserPlus size={16} />
-                  <span className="hidden sm:inline">Add Lead</span>
-                  <span className="sm:hidden">Add</span>
-                </Button>
+                {canCreateLeads ? (
+                  <Button
+                    onClick={() => {
+                      setCurrentLead(null);
+                      setIsFormOpen(true);
+                    }}
+                    className="bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-md gap-2"
+                    size="sm"
+                  >
+                    <UserPlus size={16} />
+                    <span className="hidden sm:inline">Add Lead</span>
+                    <span className="sm:hidden">Add</span>
+                  </Button>
+                ) : null}
               </div>
             </div>
           </div>
@@ -5166,17 +5301,21 @@ const AllLeads = () => {
                       <Mail size={14} className="mr-1" />
                       Email
                     </Button>
-                    <Button size="sm" variant="outline" className="rounded-md" onClick={() => setIsBulkTagsOpen(true)}>
-                      <Tag size={14} className="mr-1" />
-                      Add Tags
-                    </Button>
-                    <Button size="sm" variant="outline" className="rounded-md" onClick={() => setIsBulkAssignOpen(true)}>
-                      <UserCheck size={14} className="mr-1" />
-                      Assign
-                    </Button>
+                    {canUpdateLeads ? (
+                      <Button size="sm" variant="outline" className="rounded-md" onClick={() => setIsBulkTagsOpen(true)}>
+                        <Tag size={14} className="mr-1" />
+                        Add Tags
+                      </Button>
+                    ) : null}
+                    {canUpdateLeads ? (
+                      <Button size="sm" variant="outline" className="rounded-md" onClick={() => setIsBulkAssignOpen(true)}>
+                        <UserCheck size={14} className="mr-1" />
+                        Assign
+                      </Button>
+                    ) : null}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="sm" variant="outline" className="rounded-md" disabled={bulkActionLoading === "status"}>
+                        <Button size="sm" variant="outline" className="rounded-md" disabled={bulkActionLoading === "status" || !canUpdateLeads}>
                           <RefreshCw size={14} className="mr-1" />
                           Status
                           <ChevronDown size={12} className="ml-1" />
@@ -5197,7 +5336,7 @@ const AllLeads = () => {
                     </DropdownMenu>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="sm" variant="outline" className="rounded-md" disabled={bulkActionLoading === "temperature"}>
+                        <Button size="sm" variant="outline" className="rounded-md" disabled={bulkActionLoading === "temperature" || !canUpdateLeads}>
                           <Thermometer size={14} className="mr-1" />
                           Temp
                           <ChevronDown size={12} className="ml-1" />
@@ -5219,15 +5358,17 @@ const AllLeads = () => {
                       <Download size={14} className="mr-1" />
                       Export
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="rounded-md text-red-600 border-red-200 hover:bg-red-50"
-                      onClick={() => void handleBulkDelete()}
-                    >
-                      <Trash2 size={14} className="mr-1" />
-                      Delete
-                    </Button>
+                    {canDeleteLeads ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="rounded-md text-red-600 border-red-200 hover:bg-red-50"
+                        onClick={() => void handleBulkDelete()}
+                      >
+                        <Trash2 size={14} className="mr-1" />
+                        Delete
+                      </Button>
+                    ) : null}
                   </motion.div>
                 )}
               </Tabs>
@@ -5277,7 +5418,7 @@ const AllLeads = () => {
                           Clear Filters
                         </Button>
                       )}
-                      {!hasActiveFilters && (
+                      {!hasActiveFilters && canCreateLeads && (
                         <Button
                           className="rounded-md bg-[#6637F4] hover:bg-[#6637F4]/90"
                           onClick={() => {
@@ -5304,6 +5445,7 @@ const AllLeads = () => {
                       }}
                       onQualify={() => handleStatusChange(lead, LeadStatus.QUALIFIED)}
                       onArchive={() => handleArchiveLead(lead)}
+                      canUpdate={canUpdateLeads}
                     />
                   ))
                 )}
@@ -5370,6 +5512,9 @@ const AllLeads = () => {
                             onDuplicate={() => void handleDuplicateLead(lead)}
                             onScheduleFollowUp={() => handleScheduleFollowUp(lead)}
                             onStatusChange={(status) => handleStatusChange(lead, status)}
+                            canCreate={canCreateLeads}
+                            canUpdate={canUpdateLeads}
+                            canDelete={canDeleteLeads}
                           />
                         ))
                       )}
@@ -5406,6 +5551,9 @@ const AllLeads = () => {
                           onEmail={() => openLeadEmailComposer(lead)}
                           onCall={() => handleCallLead(lead)}
                           onStatusChange={(status) => handleStatusChange(lead, status)}
+                          canCreate={canCreateLeads}
+                          canUpdate={canUpdateLeads}
+                          canDelete={canDeleteLeads}
                           delay={index * 0.05}
                         />
                       ))
@@ -5438,24 +5586,28 @@ const AllLeads = () => {
                   <Mail size={14} className="mr-1" />
                   Email
                 </Button>
-                <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setIsBulkAssignOpen(true)}>
-                  <UserCheck size={14} className="mr-1" />
-                  Assign
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="rounded-xl text-red-600 border-red-200"
-                  onClick={() => void handleBulkDelete()}
-                >
-                  <Trash2 size={14} className="mr-1" />
-                  Delete
-                </Button>
+                {canUpdateLeads ? (
+                  <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setIsBulkAssignOpen(true)}>
+                    <UserCheck size={14} className="mr-1" />
+                    Assign
+                  </Button>
+                ) : null}
+                {canDeleteLeads ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="rounded-xl text-red-600 border-red-200"
+                    onClick={() => void handleBulkDelete()}
+                  >
+                    <Trash2 size={14} className="mr-1" />
+                    Delete
+                  </Button>
+                ) : null}
               </div>
             </div>
           )}
 
-          {selectedLeads.size === 0 && (
+          {selectedLeads.size === 0 && canCreateLeads && (
             <Button
               onClick={() => {
                 setCurrentLead(null);
@@ -5505,6 +5657,7 @@ const AllLeads = () => {
             handleStatusChange(currentLead, status);
           }
         }}
+        canEdit={canUpdateLeads}
       />
 
       <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>

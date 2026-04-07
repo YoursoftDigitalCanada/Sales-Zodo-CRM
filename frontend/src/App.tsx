@@ -12,10 +12,11 @@ import { BrowserRouter, Navigate, Routes, Route, useLocation, useNavigate } from
 import { ThemeProvider, useTheme } from "next-themes";
 import { CopilotContextProvider } from "@/contexts/CopilotContext";
 import { Sidebar, SidebarSuppressionContext } from "@/components/Sidebar";
-import { getAccessToken } from "@/features/auth/lib/auth-storage";
+import { getAccessToken, updateStoredAccessContext } from "@/features/auth/lib/auth-storage";
+import { getCurrentAccessContext } from "@/features/auth/services/access-context-service";
 import { WorkspaceBrandingProvider, useWorkspaceBranding } from "@/features/settings/context/workspace-branding";
 import { getGeneralSettings } from "@/features/settings/services/settings-service";
-import { canAccessModule, getDefaultAuthorizedRoute } from "@/lib/access-control";
+import { canPerformAction } from "@/lib/access-control";
 import { isOnboardingRequired } from "@/lib/enabled-features";
 import { toast } from "@/hooks/use-toast";
 import useIsMobile from "@/hooks/useIsMobile";
@@ -37,6 +38,7 @@ import {
 // Layout
 import Layout from "./components/Layout";
 import { FeatureGuard } from "@/components/FeatureGuard";
+import { AccessGuard } from "@/components/AccessGuard";
 
 // Page Imports
 import LandingPage from "./pages/LandingPage";
@@ -188,13 +190,30 @@ const WorkspaceThemeSync = () => {
   return null;
 };
 
-const resolveCreateRoute = (pathname: string): string | null => {
-  if (pathname.startsWith("/quotes")) return "/quotes?action=create";
-  if (pathname.startsWith("/invoice")) return "/invoice/create";
-  if (pathname.startsWith("/client-list")) return "/client-list/add";
-  if (pathname.startsWith("/projects") || pathname.startsWith("/kanban")) return "/projects/add";
-  if (pathname.startsWith("/inspections")) return "/inspections/new";
-  if (pathname.startsWith("/roof-estimator")) return "/roof-estimator/new";
+const SETTINGS_ROUTE_PERMISSIONS = [
+  "settings.view",
+  "settings.manage-integrations",
+  "emails.view",
+  "emails.send",
+  "notifications.view",
+  "users.view",
+  "roles.view",
+  "audit.view",
+];
+
+const EMAIL_ROUTE_PERMISSIONS = ["emails.view", "emails.send"];
+
+const resolveCreateRoute = (pathname: string): {
+  path: string;
+  permissionModule?: string;
+  action?: "create";
+} | null => {
+  if (pathname.startsWith("/quotes")) return { path: "/quotes?action=create", permissionModule: "quotes", action: "create" };
+  if (pathname.startsWith("/invoice")) return { path: "/invoice/create", permissionModule: "invoices", action: "create" };
+  if (pathname.startsWith("/client-list")) return { path: "/client-list/add", permissionModule: "clients", action: "create" };
+  if (pathname.startsWith("/projects") || pathname.startsWith("/kanban")) return { path: "/projects/add", permissionModule: "projects", action: "create" };
+  if (pathname.startsWith("/inspections")) return { path: "/inspections/new", permissionModule: "leads", action: "create" };
+  if (pathname.startsWith("/roof-estimator")) return { path: "/roof-estimator/new", permissionModule: "roof-estimator", action: "create" };
   return null;
 };
 
@@ -230,6 +249,22 @@ const AppRoutes = () => {
   const companyName = branding?.companyName?.trim() || "ZODO CRM";
   const companyLogoUrl = branding?.logoUrl || null;
 
+  const syncAccessContext = useCallback(async () => {
+    if (!getAccessToken()) {
+      return;
+    }
+
+    try {
+      const currentAccessContext = await getCurrentAccessContext();
+      updateStoredAccessContext({
+        employee: currentAccessContext.employee,
+        permissions: currentAccessContext.permissions,
+      });
+    } catch {
+      // Non-blocking: route/API guards still enforce access server-side.
+    }
+  }, []);
+
   const toggleAppSidebar = useCallback(() => {
     if (isMobile) {
       setMobileOpen((current) => !current);
@@ -249,7 +284,20 @@ const AppRoutes = () => {
   const handleCreateShortcut = useCallback(async () => {
     const createRoute = resolveCreateRoute(location.pathname);
     if (createRoute) {
-      navigate(createRoute);
+      if (
+        createRoute.permissionModule
+        && createRoute.action
+        && !canPerformAction(createRoute.permissionModule, createRoute.action)
+      ) {
+        toast({
+          title: "Access denied",
+          description: "You no longer have permission to create records from this screen.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      navigate(createRoute.path);
       return;
     }
 
@@ -262,6 +310,41 @@ const AppRoutes = () => {
       });
     }
   }, [location.pathname, navigate]);
+
+  useEffect(() => {
+    if (!getAccessToken()) {
+      return;
+    }
+
+    void syncAccessContext();
+  }, [location.pathname, syncAccessContext]);
+
+  useEffect(() => {
+    if (!getAccessToken()) {
+      return;
+    }
+
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === "visible") {
+        void syncAccessContext();
+      }
+    };
+
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        void syncAccessContext();
+      }
+    }, 10000);
+
+    window.addEventListener("focus", handleVisibilityOrFocus);
+    document.addEventListener("visibilitychange", handleVisibilityOrFocus);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", handleVisibilityOrFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
+    };
+  }, [syncAccessContext]);
 
   const handleSaveShortcut = useCallback(async () => {
     const triggered = await triggerSaveUiAction();
@@ -391,17 +474,17 @@ const AppRoutes = () => {
         <Route
           path="/dashboard"
           element={
-            canAccessModule("dashboard")
-              ? <Index />
-              : <Navigate to={getDefaultAuthorizedRoute()} replace state={{ from: "/dashboard" }} />
+            <AccessGuard permissionModule="dashboard" action="view">
+              <Index />
+            </AccessGuard>
           }
         />
         <Route
           path="/tasks"
           element={
-            <FeatureGuard featureId="tasks">
+            <AccessGuard featureId="tasks" permissionModule="tasks" action="view">
               <TasksPage />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
 
@@ -409,41 +492,41 @@ const AppRoutes = () => {
         <Route
           path="/leads"
           element={
-            <FeatureGuard featureId="leads">
+            <AccessGuard featureId="leads" permissionModule="leads" action="view">
               <AllLeads />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
         <Route
           path="/leads/pipeline"
           element={
-            <FeatureGuard featureId="leads">
+            <AccessGuard featureId="leads" permissionModule="leads" action="view">
               <Pipeline />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
         <Route
           path="/leads/sources"
           element={
-            <FeatureGuard featureId="leads">
+            <AccessGuard featureId="leads" permissionModule="lead-sources" action="view">
               <LeadSources />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
         <Route
           path="/lead-sources/:id"
           element={
-            <FeatureGuard featureId="leads">
+            <AccessGuard featureId="leads" permissionModule="lead-sources" action="view">
               <LeadSourceDetail />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
         <Route
           path="/leads/:id"
           element={
-            <FeatureGuard featureId="leads">
+            <AccessGuard featureId="leads" permissionModule="leads" action="view">
               <LeadDetailPage />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
 
@@ -451,25 +534,25 @@ const AppRoutes = () => {
         <Route
           path="/inspections"
           element={
-            <FeatureGuard featureId="leads">
+            <AccessGuard featureId="leads" permissionModule="leads" action="view">
               <InspectionList />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
         <Route
           path="/inspections/new"
           element={
-            <FeatureGuard featureId="leads">
+            <AccessGuard featureId="leads" permissionModule="leads" action="create">
               <InspectionForm />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
         <Route
           path="/inspections/:id"
           element={
-            <FeatureGuard featureId="leads">
+            <AccessGuard featureId="leads" permissionModule="leads" action="view">
               <InspectionDetail />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
 
@@ -477,58 +560,58 @@ const AppRoutes = () => {
         <Route
           path="/client-list"
           element={
-            <FeatureGuard featureId="clients">
+            <AccessGuard featureId="clients" permissionModule="clients" action="view">
               <ClientListPage />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
         <Route
           path="/client-list/add"
           element={
-            <FeatureGuard featureId="clients">
+            <AccessGuard featureId="clients" permissionModule="clients" action="create">
               <AddClientPage />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
         <Route
           path="/client-list/:id"
           element={
-            <FeatureGuard featureId="clients">
+            <AccessGuard featureId="clients" permissionModule="clients" action="view">
               <ClientDetailPage />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
         <Route
           path="/contacts"
           element={
-            <FeatureGuard featureId="clients">
+            <AccessGuard featureId="clients" permissionModule="contacts" action="view">
               <ClientContactListPage />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
         <Route path="/client-contact-list" element={<Navigate to="/contacts" replace />} />
         <Route
           path="/client-list/:id/edit"
           element={
-            <FeatureGuard featureId="clients">
+            <AccessGuard featureId="clients" permissionModule="clients" action="update">
               <AddClientPage />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
         <Route
           path="/clients/groups"
           element={
-            <FeatureGuard featureId="clients">
+            <AccessGuard featureId="clients" permissionModule="groups" action="view">
               <ClientGroupPage />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
         <Route
           path="/crm"
           element={
-            <FeatureGuard featureId={["leads", "clients"]}>
+            <AccessGuard featureId={["leads", "clients"]} anyOf={["leads.view", "clients.view"]}>
               <CRMPage />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
 
@@ -536,41 +619,41 @@ const AppRoutes = () => {
         <Route
           path="/projects"
           element={
-            <FeatureGuard featureId="projects">
+            <AccessGuard featureId="projects" permissionModule="projects" action="view">
               <ProjectsPage />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
         <Route
           path="/projects/add"
           element={
-            <FeatureGuard featureId="projects">
+            <AccessGuard featureId="projects" permissionModule="projects" action="create">
               <ProjectCreateWizardPage />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
         <Route
           path="/projects/:id"
           element={
-            <FeatureGuard featureId="projects">
+            <AccessGuard featureId="projects" permissionModule="projects" action="view">
               <ProjectDetailPage />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
         <Route
           path="/projects/:id/edit"
           element={
-            <FeatureGuard featureId="projects">
+            <AccessGuard featureId="projects" permissionModule="projects" action="update">
               <ProjectCreateWizardPage />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
         <Route
           path="/kanban"
           element={
-            <FeatureGuard featureId="kanban">
+            <AccessGuard featureId="kanban" permissionModule="projects" action="view">
               <KanbanPage />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
 
@@ -588,17 +671,17 @@ const AppRoutes = () => {
         <Route
           path="/invoice"
           element={
-            <FeatureGuard featureId="finance">
+            <AccessGuard featureId="finance" permissionModule="invoices" action="view">
               <InvoicePage />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
         <Route
           path="/invoice/:id"
           element={
-            <FeatureGuard featureId="finance">
+            <AccessGuard featureId="finance" permissionModule="invoices" action="view">
               <InvoiceDetailPage />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
         {/* DRAFT — re-enable next year */}
@@ -615,9 +698,9 @@ const AppRoutes = () => {
         <Route
           path="/quotes"
           element={
-            <FeatureGuard featureId="finance">
+            <AccessGuard featureId="finance" permissionModule="quotes" action="view">
               <QuotesPage />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
 
@@ -625,9 +708,9 @@ const AppRoutes = () => {
         <Route
           path="/notifications"
           element={
-            <FeatureGuard featureId="letterbox">
+            <AccessGuard featureId="letterbox" permissionModule="notifications" action="view">
               <NotificationsPage />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
 
@@ -635,25 +718,25 @@ const AppRoutes = () => {
         <Route
           path="/support/tickets"
           element={
-            <FeatureGuard featureId="support">
+            <AccessGuard featureId="support" permissionModule="support" action="view">
               <SupportPage />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
         <Route
           path="/support/knowledge-base"
           element={
-            <FeatureGuard featureId="support">
+            <AccessGuard featureId="support" permissionModule="support" action="view">
               <SupportPage />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
         <Route
           path="/support/faq"
           element={
-            <FeatureGuard featureId="support">
+            <AccessGuard featureId="support" permissionModule="support" action="view">
               <SupportPage />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
 
@@ -661,9 +744,9 @@ const AppRoutes = () => {
         <Route
           path="/documents"
           element={
-            <FeatureGuard featureId="files">
+            <AccessGuard featureId="files" permissionModule="files" action="view">
               <DocumentsPage />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
 
@@ -672,66 +755,66 @@ const AppRoutes = () => {
           <Route
             path="/invoice/list"
             element={
-              <FeatureGuard featureId="finance">
+              <AccessGuard featureId="finance" permissionModule="invoices" action="view">
                 <InvoiceList />
-              </FeatureGuard>
+              </AccessGuard>
             }
           />
           <Route
             path="/invoice/create"
             element={
-              <FeatureGuard featureId="finance">
+              <AccessGuard featureId="finance" permissionModule="invoices" action="create">
                 <CreateInvoice />
-              </FeatureGuard>
+              </AccessGuard>
             }
           />
           <Route
             path="/invoice/:id/edit"
             element={
-              <FeatureGuard featureId="finance">
+              <AccessGuard featureId="finance" permissionModule="invoices" action="update">
                 <CreateInvoice />
-              </FeatureGuard>
+              </AccessGuard>
             }
           />
           {/* ✅ NEW: Employee Management Routes */}
           <Route
             path="/employees"
             element={
-              <FeatureGuard featureId="team">
+              <AccessGuard featureId="team" permissionModule="employees" action="view">
                 <AllEmployeesPage />
-              </FeatureGuard>
+              </AccessGuard>
             }
           />
           <Route
             path="/employees/all"
             element={
-              <FeatureGuard featureId="team">
+              <AccessGuard featureId="team" permissionModule="employees" action="view">
                 <AllEmployeesPage />
-              </FeatureGuard>
+              </AccessGuard>
             }
           />
           <Route
             path="/employees/departments"
             element={
-              <FeatureGuard featureId="team">
+              <AccessGuard featureId="team" permissionModule="employees" action="view">
                 <DepartmentsPage />
-              </FeatureGuard>
+              </AccessGuard>
             }
           />
           <Route
             path="/employees/attendance"
             element={
-              <FeatureGuard featureId="team">
+              <AccessGuard featureId="team" permissionModule="employees" action="view">
                 <AttendancePage />
-              </FeatureGuard>
+              </AccessGuard>
             }
           />
           <Route
             path="/employees/leave-requests"
             element={
-              <FeatureGuard featureId="team">
+              <AccessGuard featureId="team" permissionModule="employees" action="view">
                 <LeaveRequestsPage />
-              </FeatureGuard>
+              </AccessGuard>
             }
           />
         </Route>
@@ -773,9 +856,9 @@ const AppRoutes = () => {
         <Route
           path="/users"
           element={
-            <FeatureGuard featureId="team">
+            <AccessGuard featureId="team" permissionModule="users" action="view">
               <UsersPage />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
 
@@ -784,25 +867,25 @@ const AppRoutes = () => {
         <Route
           path="/letterbox"
           element={
-            <FeatureGuard featureId="letterbox">
+            <AccessGuard featureId="letterbox" anyOf={EMAIL_ROUTE_PERMISSIONS}>
               <LetterBoxPage />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
         <Route
           path="/filemanager"
           element={
-            <FeatureGuard featureId="files">
+            <AccessGuard featureId="files" permissionModule="files" action="view">
               <FileManagerPage />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
         <Route
           path="/calendar"
           element={
-            <FeatureGuard featureId="calendar">
+            <AccessGuard featureId="calendar" permissionModule="calendar" action="view">
               <CalendarPage />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
         <Route path="/profile" element={<ProfilePage />} />
@@ -811,75 +894,75 @@ const AppRoutes = () => {
         <Route
           path="/chats"
           element={
-            <FeatureGuard featureId="chat">
+            <AccessGuard featureId="chat" permissionModule="chat" action="view">
               <ChatPage />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
 
         {/* ========== SETTINGS ROUTES ========== */}
-        <Route path="/reports" element={<ReportsPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/reports" element={<AccessGuard featureId="reports" permissionModule="analytics" action="view"><ReportsPage /></AccessGuard>} />
+        <Route path="/settings" element={<AccessGuard anyOf={SETTINGS_ROUTE_PERMISSIONS}><SettingsPage /></AccessGuard>} />
         <Route path="/settings/profile" element={<Navigate to="/profile" replace />} />
-        <Route path="/settings/general" element={<SettingsPage />} />
-        <Route path="/settings/company" element={<SettingsPage />} />
-        <Route path="/settings/billing" element={<SettingsPage />} />
-        <Route path="/settings/email" element={<SettingsPage />} />
-        <Route path="/settings/security" element={<SettingsPage />} />
-        <Route path="/settings/notifications" element={<SettingsPage />} />
-        <Route path="/settings/team" element={<SettingsPage />} />
-        <Route path="/settings/integrations" element={<WhatsAppIntegrationPage />} />
-        <Route path="/settings/integrations/whatsapp" element={<WhatsAppIntegrationPage />} />
-        <Route path="/integrations/whatsapp" element={<WhatsAppIntegrationPage />} />
+        <Route path="/settings/general" element={<AccessGuard anyOf={SETTINGS_ROUTE_PERMISSIONS}><SettingsPage /></AccessGuard>} />
+        <Route path="/settings/company" element={<AccessGuard anyOf={SETTINGS_ROUTE_PERMISSIONS}><SettingsPage /></AccessGuard>} />
+        <Route path="/settings/billing" element={<AccessGuard anyOf={SETTINGS_ROUTE_PERMISSIONS}><SettingsPage /></AccessGuard>} />
+        <Route path="/settings/email" element={<AccessGuard anyOf={SETTINGS_ROUTE_PERMISSIONS}><SettingsPage /></AccessGuard>} />
+        <Route path="/settings/security" element={<AccessGuard anyOf={SETTINGS_ROUTE_PERMISSIONS}><SettingsPage /></AccessGuard>} />
+        <Route path="/settings/notifications" element={<AccessGuard anyOf={SETTINGS_ROUTE_PERMISSIONS}><SettingsPage /></AccessGuard>} />
+        <Route path="/settings/team" element={<AccessGuard anyOf={SETTINGS_ROUTE_PERMISSIONS}><SettingsPage /></AccessGuard>} />
+        <Route path="/settings/integrations" element={<AccessGuard anyOf={SETTINGS_ROUTE_PERMISSIONS}><WhatsAppIntegrationPage /></AccessGuard>} />
+        <Route path="/settings/integrations/whatsapp" element={<AccessGuard anyOf={SETTINGS_ROUTE_PERMISSIONS}><WhatsAppIntegrationPage /></AccessGuard>} />
+        <Route path="/integrations/whatsapp" element={<AccessGuard anyOf={SETTINGS_ROUTE_PERMISSIONS}><WhatsAppIntegrationPage /></AccessGuard>} />
         <Route path="/onboarding" element={<Onboarding />} />
 
         {/* ========== AI MODULES ========== */}
         <Route
           path="/roof-estimator"
           element={
-            <FeatureGuard featureId="roofEstimator">
+            <AccessGuard featureId="roofEstimator" permissionModule="roof-estimator" action="view">
               <RoofEstimator />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
         <Route
           path="/roof-estimator/new"
           element={
-            <FeatureGuard featureId="roofEstimator">
+            <AccessGuard featureId="roofEstimator" permissionModule="roof-estimator" action="create">
               <RoofEstimatorWizard />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
         <Route
           path="/roof-estimator/:id/edit"
           element={
-            <FeatureGuard featureId="roofEstimator">
+            <AccessGuard featureId="roofEstimator" permissionModule="roof-estimator" action="update">
               <RoofEstimatorWizard />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
         <Route
           path="/roof-estimator/editor"
           element={
-            <FeatureGuard featureId="roofEstimator">
+            <AccessGuard featureId="roofEstimator" permissionModule="roof-estimator" action="create">
               <RoofEstimatorPolygonEditor />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
         <Route
           path="/construction-estimator"
           element={
-            <FeatureGuard featureId="roofEstimator">
+            <AccessGuard featureId="roofEstimator" permissionModule="roof-estimator" action="create">
               <ConstructionEstimator />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
         <Route
           path="/construction-estimator/:id"
           element={
-            <FeatureGuard featureId="roofEstimator">
+            <AccessGuard featureId="roofEstimator" permissionModule="roof-estimator" action="view">
               <ConstructionEstimator />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
 
@@ -893,9 +976,9 @@ const AppRoutes = () => {
         <Route
           path="/analytics"
           element={
-            <FeatureGuard featureId="analytics">
+            <AccessGuard featureId="analytics" permissionModule="analytics" action="view">
               <AnalyticsPage />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
 
@@ -903,33 +986,33 @@ const AppRoutes = () => {
         <Route
           path="/reports/sales"
           element={
-            <FeatureGuard featureId="reports">
+            <AccessGuard featureId="reports" permissionModule="analytics" action="view">
               <ReportsPage />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
         <Route
           path="/reports/revenue"
           element={
-            <FeatureGuard featureId="reports">
+            <AccessGuard featureId="reports" permissionModule="analytics" action="view">
               <ReportsPage />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
         <Route
           path="/reports/expenses"
           element={
-            <FeatureGuard featureId="reports">
+            <AccessGuard featureId="reports" permissionModule="analytics" action="view">
               <ReportsPage />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
         <Route
           path="/reports/custom"
           element={
-            <FeatureGuard featureId="reports">
+            <AccessGuard featureId="reports" permissionModule="analytics" action="view">
               <ReportsPage />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
 
@@ -937,9 +1020,9 @@ const AppRoutes = () => {
         <Route
           path="/roles"
           element={
-            <FeatureGuard featureId="team">
+            <AccessGuard featureId="team" permissionModule="roles" action="view">
               <RolesPage />
-            </FeatureGuard>
+            </AccessGuard>
           }
         />
 

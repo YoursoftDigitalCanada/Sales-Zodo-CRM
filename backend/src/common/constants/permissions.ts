@@ -192,7 +192,9 @@ export const PERMISSIONS = {
 
   // Tenants
   TENANTS_VIEW: 'tenants.view',
+  TENANTS_CREATE: 'tenants.create',
   TENANTS_UPDATE: 'tenants.update',
+  TENANTS_DELETE: 'tenants.delete',
   TENANTS_MANAGE_SUBSCRIPTION: 'tenants.manage-subscription',
 
   // Settings
@@ -208,9 +210,16 @@ export const PERMISSIONS = {
   AUDIT_VIEW: 'audit.view',
   AUDIT_EXPORT: 'audit.export',
 
+  // Support
+  SUPPORT_VIEW: 'support.view',
+  SUPPORT_CREATE: 'support.create',
+  SUPPORT_UPDATE: 'support.update',
+  SUPPORT_DELETE: 'support.delete',
+
   // Roof Estimator
   ROOF_ESTIMATOR_VIEW: 'roof-estimator.view',
   ROOF_ESTIMATOR_CREATE: 'roof-estimator.create',
+  ROOF_ESTIMATOR_UPDATE: 'roof-estimator.update',
   ROOF_ESTIMATOR_DELETE: 'roof-estimator.delete',
   ROOF_ESTIMATOR_SETTINGS: 'roof-estimator.settings',
 } as const;
@@ -418,7 +427,9 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
 
   // Tenants
   { code: PERMISSIONS.TENANTS_VIEW, name: 'View Tenant', description: 'View tenant information', module: 'tenants', action: 'view' },
+  { code: PERMISSIONS.TENANTS_CREATE, name: 'Create Tenant', description: 'Create new tenants', module: 'tenants', action: 'create' },
   { code: PERMISSIONS.TENANTS_UPDATE, name: 'Update Tenant', description: 'Edit tenant settings', module: 'tenants', action: 'update' },
+  { code: PERMISSIONS.TENANTS_DELETE, name: 'Delete Tenant', description: 'Delete tenants', module: 'tenants', action: 'delete' },
   { code: PERMISSIONS.TENANTS_MANAGE_SUBSCRIPTION, name: 'Manage Subscription', description: 'Manage tenant subscription', module: 'tenants', action: 'manage-subscription' },
 
   // Settings
@@ -434,9 +445,16 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { code: PERMISSIONS.AUDIT_VIEW, name: 'View Audit Logs', description: 'View audit logs', module: 'audit', action: 'view' },
   { code: PERMISSIONS.AUDIT_EXPORT, name: 'Export Audit Logs', description: 'Export audit data', module: 'audit', action: 'export' },
 
+  // Support
+  { code: PERMISSIONS.SUPPORT_VIEW, name: 'View Support Tickets', description: 'View support tickets and updates', module: 'support', action: 'view' },
+  { code: PERMISSIONS.SUPPORT_CREATE, name: 'Create Support Tickets', description: 'Create support tickets', module: 'support', action: 'create' },
+  { code: PERMISSIONS.SUPPORT_UPDATE, name: 'Update Support Tickets', description: 'Reply to or update support tickets', module: 'support', action: 'update' },
+  { code: PERMISSIONS.SUPPORT_DELETE, name: 'Delete Support Tickets', description: 'Delete support tickets', module: 'support', action: 'delete' },
+
   // Roof Estimator
   { code: PERMISSIONS.ROOF_ESTIMATOR_VIEW, name: 'View Roof Estimates', description: 'View roof estimates and AI results', module: 'roof-estimator', action: 'view' },
   { code: PERMISSIONS.ROOF_ESTIMATOR_CREATE, name: 'Create Roof Estimates', description: 'Generate and save roof estimates', module: 'roof-estimator', action: 'create' },
+  { code: PERMISSIONS.ROOF_ESTIMATOR_UPDATE, name: 'Update Roof Estimates', description: 'Edit saved roof estimates', module: 'roof-estimator', action: 'update' },
   { code: PERMISSIONS.ROOF_ESTIMATOR_DELETE, name: 'Delete Roof Estimates', description: 'Remove roof estimates', module: 'roof-estimator', action: 'delete' },
   { code: PERMISSIONS.ROOF_ESTIMATOR_SETTINGS, name: 'Manage Estimator Settings', description: 'Configure pricing and company info for estimates', module: 'roof-estimator', action: 'settings' },
 ];

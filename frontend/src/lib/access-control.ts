@@ -1,5 +1,12 @@
-import { getStoredEmployee, isStoredEmployeeAdmin } from "@/features/auth/lib/auth-storage";
+import {
+  AUTH_ACCESS_UPDATED_EVENT,
+  AUTH_STORAGE_KEYS,
+  getStoredEmployee,
+  isStoredEmployeeAdmin,
+} from "@/features/auth/lib/auth-storage";
 import { FeatureId, getEnabledFeatures } from "@/lib/enabled-features";
+
+export type PermissionAction = "view" | "create" | "update" | "delete" | string;
 
 const DASHBOARD_ROUTE_CANDIDATES: Array<{
   path: string;
@@ -25,7 +32,7 @@ const DASHBOARD_ROUTE_CANDIDATES: Array<{
 
 export function getStoredPermissions(): string[] | null {
   try {
-    const raw = localStorage.getItem("permissions");
+    const raw = localStorage.getItem(AUTH_STORAGE_KEYS.permissions);
     if (!raw) {
       return null;
     }
@@ -39,12 +46,33 @@ export function getStoredPermissions(): string[] | null {
   }
 }
 
-export function hasModulePermission(
+export function normalizePermissionAction(action: PermissionAction = "view"): string {
+  const normalized = String(action || "view").trim().toLowerCase();
+
+  if (normalized === "edit") {
+    return "update";
+  }
+
+  return normalized || "view";
+}
+
+export function getPermissionCode(
   permissionModule: string | undefined,
+  action: PermissionAction = "view",
+): string | undefined {
+  if (!permissionModule) {
+    return undefined;
+  }
+
+  return `${permissionModule}.${normalizePermissionAction(action)}`;
+}
+
+export function hasPermissionCode(
+  permissionCode: string | undefined,
   permissions: string[] | null,
   isOwnerOrAdmin: boolean,
 ): boolean {
-  if (!permissionModule) {
+  if (!permissionCode) {
     return true;
   }
 
@@ -53,17 +81,47 @@ export function hasModulePermission(
   }
 
   if (!permissions) {
+    return false;
+  }
+
+  return permissions.includes(permissionCode);
+}
+
+export function hasAnyPermissionCode(
+  permissionCodes: Array<string | undefined>,
+  permissions: string[] | null,
+  isOwnerOrAdmin: boolean,
+): boolean {
+  if (permissionCodes.length === 0) {
     return true;
   }
 
-  return permissions.some((code) => {
-    const dotIndex = code.lastIndexOf(".");
-    if (dotIndex === -1) {
-      return false;
-    }
+  return permissionCodes.some((permissionCode) =>
+    hasPermissionCode(permissionCode, permissions, isOwnerOrAdmin)
+  );
+}
 
-    return code.slice(0, dotIndex) === permissionModule;
-  });
+export function hasModulePermission(
+  permissionModule: string | string[] | undefined,
+  permissions: string[] | null,
+  isOwnerOrAdmin: boolean,
+  action: PermissionAction = "view",
+): boolean {
+  if (!permissionModule) {
+    return true;
+  }
+
+  if (Array.isArray(permissionModule)) {
+    return permissionModule.some((moduleId) =>
+      hasModulePermission(moduleId, permissions, isOwnerOrAdmin, action)
+    );
+  }
+
+  return hasPermissionCode(
+    getPermissionCode(permissionModule, action),
+    permissions,
+    isOwnerOrAdmin,
+  );
 }
 
 export function hasFeatureAccess(featureId: FeatureId | undefined, enabledFeatures: FeatureId[]): boolean {
@@ -75,10 +133,38 @@ export function hasFeatureAccess(featureId: FeatureId | undefined, enabledFeatur
 }
 
 export function canAccessModule(permissionModule?: string): boolean {
+  return canPerformAction(permissionModule, "view");
+}
+
+export function canPerformAction(permissionModule: string | undefined, action: PermissionAction): boolean {
   const employee = getStoredEmployee();
   const isAdmin = isStoredEmployeeAdmin(employee);
   const permissions = getStoredPermissions();
-  return hasModulePermission(permissionModule, permissions, isAdmin);
+  return hasModulePermission(permissionModule, permissions, isAdmin, action);
+}
+
+export function canAccessPermission(permissionCode?: string): boolean {
+  const employee = getStoredEmployee();
+  const isAdmin = isStoredEmployeeAdmin(employee);
+  const permissions = getStoredPermissions();
+  return hasPermissionCode(permissionCode, permissions, isAdmin);
+}
+
+export function canAccessAnyPermission(permissionCodes: Array<string | undefined>): boolean {
+  const employee = getStoredEmployee();
+  const isAdmin = isStoredEmployeeAdmin(employee);
+  const permissions = getStoredPermissions();
+  return hasAnyPermissionCode(permissionCodes, permissions, isAdmin);
+}
+
+export function subscribeToPermissionChanges(listener: () => void): () => void {
+  const handleChange = () => listener();
+  window.addEventListener(AUTH_ACCESS_UPDATED_EVENT, handleChange);
+  window.addEventListener("storage", handleChange);
+  return () => {
+    window.removeEventListener(AUTH_ACCESS_UPDATED_EVENT, handleChange);
+    window.removeEventListener("storage", handleChange);
+  };
 }
 
 export function canAccessFeature(featureId?: FeatureId): boolean {
@@ -93,7 +179,7 @@ export function getDefaultAuthorizedRoute(): string {
 
   const firstAllowed = DASHBOARD_ROUTE_CANDIDATES.find((route) => (
     hasFeatureAccess(route.featureId, features)
-    && hasModulePermission(route.permissionModule, permissions, isAdmin)
+    && hasModulePermission(route.permissionModule, permissions, isAdmin, "view")
   ));
 
   return firstAllowed?.path || "/login";

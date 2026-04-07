@@ -5,6 +5,7 @@ import { closeRedisConnection } from './config/redis';
 import { logger } from './common/utils/logger';
 import { imapPoller } from './common/services/imap-poller.service';
 import { emailScheduler } from './common/services/email-scheduler.service';
+import { permissionSyncService } from './common/services/permission-sync.service';
 
 // ============================================================================
 // SERVER STARTUP
@@ -14,6 +15,7 @@ async function startServer(): Promise<void> {
   try {
     // Connect to database
     await connectDatabase();
+    await permissionSyncService.sync();
 
     // Start HTTP server
     const server = app.listen(config.app.port, () => {

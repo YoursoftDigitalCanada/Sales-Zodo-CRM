@@ -79,7 +79,7 @@ import {
   type SupportTicket as ApiTicket,
 } from "@/services/supportTicketsService";
 import { createSupportTicketsRealtimeStream } from "@/services/supportTicketsRealtime";
-import { getStoredEmployee } from "@/features/auth/lib/auth-storage";
+import { useCanPerformAction } from "@/hooks/usePermissionAccess";
 
 // Map API ticket to frontend format
 const mapTicket = (t: ApiTicket): Ticket => ({
@@ -226,26 +226,23 @@ const SupportPage = () => {
   const [streamState, setStreamState] = useState<"connecting" | "live" | "reconnecting">("connecting");
   // Form state
   const currentRequester = useMemo(() => getCurrentRequester(), []);
-  const currentEmployee = useMemo(() => getStoredEmployee(), []);
-  const canManageTicketStatus = useMemo(() => {
-    const employeeRecord = currentEmployee as Record<string, unknown> | null;
-    const roleValue = employeeRecord?.role;
-    const roleName = typeof roleValue === "string"
-      ? roleValue
-      : typeof roleValue === "object" && roleValue !== null && typeof (roleValue as { name?: unknown }).name === "string"
-        ? String((roleValue as { name: string }).name)
-        : typeof employeeRecord?.roleName === "string"
-          ? String(employeeRecord.roleName)
-          : "";
-
-    return /^(super admin|super_admin)$/i.test(roleName.trim());
-  }, [currentEmployee]);
+  const canCreateTickets = useCanPerformAction("support", "create");
+  const canUpdateTickets = useCanPerformAction("support", "update");
+  const canDeleteTickets = useCanPerformAction("support", "delete");
   const [formData, setFormData] = useState({ subject: "", description: "", priority: "medium" as Ticket["priority"], category: "Technical" });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const trimmedSubject = formData.subject.trim();
   const trimmedDescription = formData.description.trim();
   const canSubmitTicket = trimmedSubject.length >= 3 && trimmedDescription.length >= 10;
+
+  const showPermissionDenied = useCallback((description: string) => {
+    toast({
+      title: "Permission denied",
+      description,
+      variant: "destructive",
+    });
+  }, [toast]);
 
   // Load tickets from API
   const loadTickets = useCallback(async () => {
@@ -340,6 +337,11 @@ const SupportPage = () => {
 
   // Handlers
   const handleCreateTicket = async () => {
+    if (!canCreateTickets) {
+      showPermissionDenied("You no longer have permission to create support tickets.");
+      return;
+    }
+
     if (!canSubmitTicket) {
       toast({
         title: "Validation Error",
@@ -381,6 +383,11 @@ const SupportPage = () => {
   };
 
   const handleReply = async () => {
+    if (!canUpdateTickets) {
+      showPermissionDenied("You no longer have permission to reply to support tickets.");
+      return;
+    }
+
     if (!currentTicket || !replyText.trim()) return;
     try {
       const updated = await apiAddMessage(currentTicket.id, { message: replyText });
@@ -395,6 +402,11 @@ const SupportPage = () => {
   };
 
   const updateTicketStatus = async (id: string, status: Ticket["status"]) => {
+    if (!canUpdateTickets) {
+      showPermissionDenied("You no longer have permission to update support tickets.");
+      return;
+    }
+
     try {
       const updated = await apiUpdateStatus(id, toApiStatus(status));
       const nextTicket = mapTicket(updated);
@@ -407,6 +419,11 @@ const SupportPage = () => {
   };
 
   const handleDelete = async () => {
+    if (!canDeleteTickets) {
+      showPermissionDenied("You no longer have permission to delete support tickets.");
+      return;
+    }
+
     if (!deleteId) return;
     try {
       await apiDeleteTicket(deleteId);
@@ -452,7 +469,7 @@ const SupportPage = () => {
                   {streamState === "live" ? "Live Sync" : "Reconnecting..."}
                 </div>
               )}
-              {activeTab === "tickets" && (
+              {activeTab === "tickets" && canCreateTickets && (
                 <Button size="sm" className={cn("bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md", isMobile && "flex-1")} onClick={() => setIsFormOpen(true)}>
                   <Plus size={16} className="mr-2" />New Ticket
                 </Button>
@@ -558,7 +575,9 @@ const SupportPage = () => {
                   <Headphones size={48} className="text-[#94A3B8] mx-auto mb-4" />
                   <h3 className="text-lg font-semibold text-[#0F172A] mb-2">No tickets found</h3>
                   <p className="text-[#94A3B8] mb-4">All clear or adjust your filters</p>
-                  <Button className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md" onClick={() => setIsFormOpen(true)}><Plus size={16} className="mr-2" />New Ticket</Button>
+                  {canCreateTickets ? (
+                    <Button className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md" onClick={() => setIsFormOpen(true)}><Plus size={16} className="mr-2" />New Ticket</Button>
+                  ) : null}
                 </div>
               ) : (
                 <AnimatePresence>
@@ -596,7 +615,7 @@ const SupportPage = () => {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48 rounded-md">
                               <DropdownMenuItem onClick={() => { setCurrentTicket(ticket); setIsDetailOpen(true); }} className="rounded-md"><Eye size={14} className="mr-2" />View</DropdownMenuItem>
-                              {canManageTicketStatus && (
+                              {canUpdateTickets && (
                                 <>
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem onClick={() => updateTicketStatus(ticket.id, "in-progress")} className="rounded-md"><Clock size={14} className="mr-2" />Mark In Progress</DropdownMenuItem>
@@ -604,8 +623,12 @@ const SupportPage = () => {
                                   <DropdownMenuItem onClick={() => updateTicketStatus(ticket.id, "closed")} className="rounded-md"><XCircle size={14} className="mr-2" />Close</DropdownMenuItem>
                                 </>
                               )}
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => setDeleteId(ticket.id)} className="rounded-md text-red-600"><Trash2 size={14} className="mr-2" />Delete</DropdownMenuItem>
+                              {canDeleteTickets ? (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem onClick={() => setDeleteId(ticket.id)} className="rounded-md text-red-600"><Trash2 size={14} className="mr-2" />Delete</DropdownMenuItem>
+                                </>
+                              ) : null}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
@@ -828,7 +851,7 @@ const SupportPage = () => {
                   </div>
                 ) : (
                   <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-3 py-2 text-xs text-[#64748B]">
-                    Only Super Admin can change ticket status.
+                    You do not have permission to change ticket status.
                   </div>
                 )}
                 {/* Messages */}
@@ -847,17 +870,25 @@ const SupportPage = () => {
                   ))}
                 </div>
                 {/* Reply */}
-                <div className="space-y-2">
-                  <Textarea value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="Type your reply..." className="rounded-md h-20" />
-                  <div className="flex justify-between">
-                    <Button variant="outline" onClick={() => { setDeleteId(currentTicket.id); setIsDetailOpen(false); }} className="rounded-md text-red-600 border-red-200 hover:bg-red-50" size="sm">
-                      <Trash2 size={14} className="mr-1" />Delete
-                    </Button>
-                    <Button onClick={handleReply} disabled={!replyText.trim()} className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md" size="sm">
-                      <Send size={14} className="mr-1" />Send Reply
-                    </Button>
+                {(canUpdateTickets || canDeleteTickets) ? (
+                  <div className="space-y-2">
+                    {canUpdateTickets ? (
+                      <Textarea value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="Type your reply..." className="rounded-md h-20" />
+                    ) : null}
+                    <div className="flex justify-between">
+                      {canDeleteTickets ? (
+                        <Button variant="outline" onClick={() => { setDeleteId(currentTicket.id); setIsDetailOpen(false); }} className="rounded-md text-red-600 border-red-200 hover:bg-red-50" size="sm">
+                          <Trash2 size={14} className="mr-1" />Delete
+                        </Button>
+                      ) : <div />}
+                      {canUpdateTickets ? (
+                        <Button onClick={handleReply} disabled={!replyText.trim()} className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md" size="sm">
+                          <Send size={14} className="mr-1" />Send Reply
+                        </Button>
+                      ) : null}
+                    </div>
                   </div>
-                </div>
+                ) : null}
               </div>
             </>); })()}
         </DialogContent>

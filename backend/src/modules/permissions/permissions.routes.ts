@@ -10,6 +10,8 @@ const router = Router();
 router.use(authenticate);
 router.use(loadEmployee);
 
+router.get('/current', permissionsController.getCurrent.bind(permissionsController));
+
 // Get all permissions
 router.get('/', requirePermission(PERMISSIONS.ROLES_VIEW), permissionsController.getAll.bind(permissionsController));
 

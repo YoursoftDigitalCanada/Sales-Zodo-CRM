@@ -22,6 +22,13 @@ interface AuthSessionInput {
   permissions?: unknown;
 }
 
+interface StoredAccessContext {
+  user?: unknown;
+  employee?: unknown;
+  tenant?: unknown;
+  permissions?: unknown;
+}
+
 export const AUTH_STORAGE_KEYS = {
   accessToken: "accessToken",
   refreshToken: "refreshToken",
@@ -31,6 +38,32 @@ export const AUTH_STORAGE_KEYS = {
   tenant: "tenant",
   permissions: "permissions",
 } as const;
+
+export const AUTH_ACCESS_UPDATED_EVENT = "zodo:auth-access-updated";
+
+function dispatchAccessUpdated(): void {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(AUTH_ACCESS_UPDATED_EVENT));
+  }
+}
+
+function writeStoredValue(key: string, value: unknown): void {
+  if (value === undefined) {
+    return;
+  }
+
+  if (value === null) {
+    localStorage.removeItem(key);
+    return;
+  }
+
+  if (typeof value === "string") {
+    localStorage.setItem(key, value);
+    return;
+  }
+
+  localStorage.setItem(key, JSON.stringify(value));
+}
 
 export function getAccessToken(): string | null {
   return (
@@ -43,21 +76,22 @@ export function setAuthSession(session: AuthSessionInput): void {
   localStorage.setItem(AUTH_STORAGE_KEYS.accessToken, session.accessToken);
   localStorage.setItem(AUTH_STORAGE_KEYS.legacyToken, session.accessToken);
 
-  if (session.refreshToken) {
+  if ("refreshToken" in session && session.refreshToken) {
     localStorage.setItem(AUTH_STORAGE_KEYS.refreshToken, session.refreshToken);
   }
-  if (session.user) {
-    localStorage.setItem(AUTH_STORAGE_KEYS.user, JSON.stringify(session.user));
-  }
-  if (session.employee) {
-    localStorage.setItem(AUTH_STORAGE_KEYS.employee, JSON.stringify(session.employee));
-  }
-  if (session.tenant) {
-    localStorage.setItem(AUTH_STORAGE_KEYS.tenant, JSON.stringify(session.tenant));
-  }
-  if (session.permissions) {
-    localStorage.setItem(AUTH_STORAGE_KEYS.permissions, JSON.stringify(session.permissions));
-  }
+  writeStoredValue(AUTH_STORAGE_KEYS.user, session.user);
+  writeStoredValue(AUTH_STORAGE_KEYS.employee, session.employee);
+  writeStoredValue(AUTH_STORAGE_KEYS.tenant, session.tenant);
+  writeStoredValue(AUTH_STORAGE_KEYS.permissions, session.permissions);
+  dispatchAccessUpdated();
+}
+
+export function updateStoredAccessContext(context: StoredAccessContext): void {
+  writeStoredValue(AUTH_STORAGE_KEYS.user, context.user);
+  writeStoredValue(AUTH_STORAGE_KEYS.employee, context.employee);
+  writeStoredValue(AUTH_STORAGE_KEYS.tenant, context.tenant);
+  writeStoredValue(AUTH_STORAGE_KEYS.permissions, context.permissions);
+  dispatchAccessUpdated();
 }
 
 export function clearAuthSession(): void {
@@ -69,6 +103,7 @@ export function clearAuthSession(): void {
     "onboardingData",
     "workspaceBranding",
   ].forEach((key) => localStorage.removeItem(key));
+  dispatchAccessUpdated();
 }
 
 export function getStoredEmployee(): AuthEmployee | null {
@@ -99,7 +134,7 @@ export function getStoredEmployeeRoleName(employee?: AuthEmployee | null): strin
 
 export function isStoredEmployeeAdmin(employee?: AuthEmployee | null): boolean {
   if (!employee) {
-    return true;
+    return false;
   }
 
   const roleName = getStoredEmployeeRoleName(employee);

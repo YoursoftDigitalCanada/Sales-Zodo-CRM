@@ -128,6 +128,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useCanPerformAction, useHasPermission } from "@/hooks/usePermissionAccess";
 
 // ============================================
 // TYPES
@@ -518,6 +519,11 @@ const InvoiceRow = ({
   onRecordPayment,
   onPrint,
   onHistory,
+  canUpdate,
+  canDelete,
+  canSend,
+  canMarkPaid,
+  canCreate,
 }: {
   invoice: Invoice;
   isSelected: boolean;
@@ -531,6 +537,11 @@ const InvoiceRow = ({
   onRecordPayment: () => void;
   onPrint: () => void;
   onHistory: () => void;
+  canUpdate: boolean;
+  canDelete: boolean;
+  canSend: boolean;
+  canMarkPaid: boolean;
+  canCreate: boolean;
 }) => {
   const statusConfig = getStatusConfig(invoice.status);
   const StatusIcon = statusConfig.icon;
@@ -647,7 +658,7 @@ const InvoiceRow = ({
       {/* Actions */}
       <td className="py-4 px-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          {invoice.status === "Draft" && (
+          {canSend && invoice.status === "Draft" && (
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
@@ -658,7 +669,7 @@ const InvoiceRow = ({
               <Send size={16} />
             </motion.button>
           )}
-          {(invoice.status === "Sent" || invoice.status === "Partial" || invoice.status === "Overdue") && (
+          {canMarkPaid && (invoice.status === "Sent" || invoice.status === "Partial" || invoice.status === "Overdue") && (
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
@@ -690,19 +701,31 @@ const InvoiceRow = ({
                 <Eye size={14} className="mr-2" />
                 View Invoice
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onEdit} className="rounded-md">
-                <Pencil size={14} className="mr-2" />
-                Edit Invoice
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onDuplicate} className="rounded-md">
-                <Copy size={14} className="mr-2" />
-                Duplicate
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onSend} className="rounded-md">
-                <Send size={14} className="mr-2" />
-                Send Invoice
-              </DropdownMenuItem>
+              {canUpdate ? (
+                <DropdownMenuItem onClick={onEdit} className="rounded-md">
+                  <Pencil size={14} className="mr-2" />
+                  Edit Invoice
+                </DropdownMenuItem>
+              ) : null}
+              {canCreate ? (
+                <DropdownMenuItem onClick={onDuplicate} className="rounded-md">
+                  <Copy size={14} className="mr-2" />
+                  Duplicate
+                </DropdownMenuItem>
+              ) : null}
+              {(canUpdate || canCreate) ? <DropdownMenuSeparator /> : null}
+              {canSend ? (
+                <DropdownMenuItem onClick={onSend} className="rounded-md">
+                  <Send size={14} className="mr-2" />
+                  Send Invoice
+                </DropdownMenuItem>
+              ) : null}
+              {canMarkPaid ? (
+                <DropdownMenuItem onClick={onRecordPayment} className="rounded-md">
+                  <CreditCard size={14} className="mr-2" />
+                  Record Payment
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuItem onClick={onDownload} className="rounded-md">
                 <FileDown size={14} className="mr-2" />
                 Download PDF
@@ -716,14 +739,18 @@ const InvoiceRow = ({
                 <History size={14} className="mr-2" />
                 View History
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="rounded-md text-red-600 focus:text-red-600 focus:bg-red-50"
-                onClick={onDelete}
-              >
-                <Trash2 size={14} className="mr-2" />
-                Delete
-              </DropdownMenuItem>
+              {canDelete ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="rounded-md text-red-600 focus:text-red-600 focus:bg-red-50"
+                    onClick={onDelete}
+                  >
+                    <Trash2 size={14} className="mr-2" />
+                    Delete
+                  </DropdownMenuItem>
+                </>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -746,6 +773,9 @@ const InvoiceCard = ({
   onSend,
   onDownload,
   onPrint,
+  canUpdate,
+  canDelete,
+  canSend,
 }: {
   invoice: Invoice;
   isSelected: boolean;
@@ -756,6 +786,9 @@ const InvoiceCard = ({
   onSend: () => void;
   onDownload: () => void;
   onPrint: () => void;
+  canUpdate: boolean;
+  canDelete: boolean;
+  canSend: boolean;
 }) => {
   const statusConfig = getStatusConfig(invoice.status);
   const StatusIcon = statusConfig.icon;
@@ -810,14 +843,18 @@ const InvoiceCard = ({
                 <Eye size={14} className="mr-2" />
                 View
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onEdit} className="rounded-md">
-                <Pencil size={14} className="mr-2" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onSend} className="rounded-md">
-                <Send size={14} className="mr-2" />
-                Send
-              </DropdownMenuItem>
+              {canUpdate ? (
+                <DropdownMenuItem onClick={onEdit} className="rounded-md">
+                  <Pencil size={14} className="mr-2" />
+                  Edit
+                </DropdownMenuItem>
+              ) : null}
+              {canSend ? (
+                <DropdownMenuItem onClick={onSend} className="rounded-md">
+                  <Send size={14} className="mr-2" />
+                  Send
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuItem onClick={onDownload} className="rounded-md">
                 <FileDown size={14} className="mr-2" />
                 Download
@@ -826,14 +863,18 @@ const InvoiceCard = ({
                 <Printer size={14} className="mr-2" />
                 Print
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="rounded-md text-red-600"
-                onClick={onDelete}
-              >
-                <Trash2 size={14} className="mr-2" />
-                Delete
-              </DropdownMenuItem>
+              {canDelete ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="rounded-md text-red-600"
+                    onClick={onDelete}
+                  >
+                    <Trash2 size={14} className="mr-2" />
+                    Delete
+                  </DropdownMenuItem>
+                </>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -920,20 +961,24 @@ const MobileInvoiceCard = ({
   isSelected,
   onTap,
   onQuickAction,
+  canSend,
+  canMarkPaid,
 }: {
   invoice: Invoice;
   isSelected: boolean;
   onTap: () => void;
   onQuickAction: () => void;
+  canSend: boolean;
+  canMarkPaid: boolean;
 }) => {
   const overdue = isOverdue(invoice.dueDate, invoice.status);
   const statusConfig = getStatusConfig(overdue && invoice.status !== "Paid" ? "overdue" : invoice.status);
   const StatusIcon = statusConfig.icon;
   const amountDue = Math.max((invoice.total || 0) - (invoice.amountPaid || 0), 0);
   const quickActionLabel =
-    invoice.status === "Draft"
+    invoice.status === "Draft" && canSend
       ? "Send"
-      : ["Sent", "Partial", "Overdue"].includes(invoice.status)
+      : ["Sent", "Partial", "Overdue"].includes(invoice.status) && canMarkPaid
         ? "Record Payment"
         : "View";
 
@@ -1310,7 +1355,7 @@ const SendInvoiceDialog = ({
 // EMPTY STATE COMPONENT
 // ============================================
 
-const EmptyState = ({ onAdd }: { onAdd: () => void }) => (
+const EmptyState = ({ onAdd, canCreate }: { onAdd: () => void; canCreate: boolean }) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
@@ -1323,13 +1368,15 @@ const EmptyState = ({ onAdd }: { onAdd: () => void }) => (
     <p className="text-[#94A3B8] text-center max-w-sm mb-6">
       Create your first invoice to start tracking payments and revenue.
     </p>
-    <Button
-      onClick={onAdd}
-      className="bg-[#F1F5F9]/90 hover:from-[#22D3EE]/90 hover:to-[#22D3EE] text-[#0F172A] rounded-md "
-    >
-      <Plus size={18} className="mr-2" />
-      Create Your First Invoice
-    </Button>
+    {canCreate ? (
+      <Button
+        onClick={onAdd}
+        className="bg-[#F1F5F9]/90 hover:from-[#22D3EE]/90 hover:to-[#22D3EE] text-[#0F172A] rounded-md "
+      >
+        <Plus size={18} className="mr-2" />
+        Create Your First Invoice
+      </Button>
+    ) : null}
   </motion.div>
 );
 
@@ -1341,6 +1388,19 @@ const InvoicePage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isMobile } = useIsMobile();
+  const canCreateInvoices = useCanPerformAction("invoices", "create");
+  const canUpdateInvoices = useCanPerformAction("invoices", "update");
+  const canDeleteInvoices = useCanPerformAction("invoices", "delete");
+  const canSendInvoices = useHasPermission("invoices.send");
+  const canMarkInvoicesPaid = useHasPermission("invoices.mark-paid");
+
+  const showPermissionDenied = useCallback((description: string) => {
+    toast({
+      title: "Permission denied",
+      description,
+      variant: "destructive",
+    });
+  }, [toast]);
 
   // State
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -1425,6 +1485,11 @@ const InvoicePage = () => {
   }, [filterDate, filterStatus, mobileStatusTab, searchTerm]);
 
   const handleDeleteInvoice = async () => {
+    if (!canDeleteInvoices) {
+      showPermissionDenied("You no longer have permission to delete invoices.");
+      return;
+    }
+
     if (!invoiceToDelete) return;
     setIsDeleting(true);
     try {
@@ -1448,6 +1513,11 @@ const InvoicePage = () => {
   };
 
   const handleRecordPayment = async (invoiceId: string, amount: number, method: string, notes: string) => {
+    if (!canMarkInvoicesPaid) {
+      showPermissionDenied("You no longer have permission to record invoice payments.");
+      return;
+    }
+
     try {
       const updated = await recordInvoicePayment(invoiceId, {
         amount,
@@ -1470,6 +1540,11 @@ const InvoicePage = () => {
   };
 
   const handleSendInvoice = async (invoiceId: string, email: string, _message: string) => {
+    if (!canSendInvoices) {
+      showPermissionDenied("You no longer have permission to send invoices.");
+      return;
+    }
+
     try {
       const updated = await sendInvoice(invoiceId, email || undefined);
       const normalized = normalizeInvoice(updated);
@@ -1517,6 +1592,11 @@ const InvoicePage = () => {
   };
 
   const handleDuplicate = async (invoice: Invoice) => {
+    if (!canCreateInvoices) {
+      showPermissionDenied("You no longer have permission to create invoices.");
+      return;
+    }
+
     try {
       if (!invoice.clientId) {
         toast({
@@ -1669,6 +1749,11 @@ const InvoicePage = () => {
   };
 
   const handleBulkDelete = async () => {
+    if (!canDeleteInvoices) {
+      showPermissionDenied("You no longer have permission to delete invoices.");
+      return;
+    }
+
     if (selectedInvoices.length === 0) return;
     try {
       await Promise.all(selectedInvoices.map((id) => deleteInvoice(id)));
@@ -1688,6 +1773,11 @@ const InvoicePage = () => {
   };
 
   const handleBulkSend = async () => {
+    if (!canSendInvoices) {
+      showPermissionDenied("You no longer have permission to send invoices.");
+      return;
+    }
+
     if (selectedInvoices.length === 0) return;
     try {
       await Promise.allSettled(
@@ -1742,26 +1832,41 @@ const InvoicePage = () => {
   };
 
   const openDeleteDialog = (invoice: Invoice) => {
+    if (!canDeleteInvoices) {
+      showPermissionDenied("You no longer have permission to delete invoices.");
+      return;
+    }
+
     setInvoiceToDelete(invoice);
     setDeleteDialogOpen(true);
   };
 
   const openSendDialog = (invoice: Invoice) => {
+    if (!canSendInvoices) {
+      showPermissionDenied("You no longer have permission to send invoices.");
+      return;
+    }
+
     setInvoiceToSend(invoice);
     setSendDialogOpen(true);
   };
 
   const openPaymentDialog = (invoice: Invoice) => {
+    if (!canMarkInvoicesPaid) {
+      showPermissionDenied("You no longer have permission to record invoice payments.");
+      return;
+    }
+
     setInvoiceForPayment(invoice);
     setPaymentDialogOpen(true);
   };
 
   const handleMobileQuickAction = (invoice: Invoice) => {
-    if (invoice.status === "Draft") {
+    if (invoice.status === "Draft" && canSendInvoices) {
       openSendDialog(invoice);
       return;
     }
-    if (["Sent", "Partial", "Overdue"].includes(invoice.status)) {
+    if (["Sent", "Partial", "Overdue"].includes(invoice.status) && canMarkInvoicesPaid) {
       openPaymentDialog(invoice);
       return;
     }
@@ -1872,13 +1977,15 @@ const InvoicePage = () => {
                     <span className="font-medium">Export</span>
                   </motion.button>
 
-                  <Button
-                    onClick={() => navigate("/invoice/create")}
-                    className="bg-[#F1F5F9]/90 hover:from-[#22D3EE]/90 hover:to-[#22D3EE] text-[#0F172A] rounded-md  px-5"
-                  >
-                    <Plus size={18} className="mr-2" />
-                    New Invoice
-                  </Button>
+                  {canCreateInvoices ? (
+                    <Button
+                      onClick={() => navigate("/invoice/create")}
+                      className="bg-[#F1F5F9]/90 hover:from-[#22D3EE]/90 hover:to-[#22D3EE] text-[#0F172A] rounded-md  px-5"
+                    >
+                      <Plus size={18} className="mr-2" />
+                      New Invoice
+                    </Button>
+                  ) : null}
                 </>
               )}
             </div>
@@ -2005,14 +2112,18 @@ const InvoicePage = () => {
                       {selectedInvoices.length} selected
                     </span>
                     <div className="flex items-center gap-2">
-                      <Button size="sm" onClick={handleBulkSend} className="h-9 rounded-xl bg-[#0891B2] text-white hover:bg-[#0891B2]/90">
-                        <Send size={14} className="mr-1.5" />
-                        Send
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={handleBulkDelete} className="h-9 rounded-xl border-red-200 text-red-600 hover:bg-red-50">
-                        <Trash2 size={14} className="mr-1.5" />
-                        Delete
-                      </Button>
+                      {canSendInvoices ? (
+                        <Button size="sm" onClick={handleBulkSend} className="h-9 rounded-xl bg-[#0891B2] text-white hover:bg-[#0891B2]/90">
+                          <Send size={14} className="mr-1.5" />
+                          Send
+                        </Button>
+                      ) : null}
+                      {canDeleteInvoices ? (
+                        <Button size="sm" variant="outline" onClick={handleBulkDelete} className="h-9 rounded-xl border-red-200 text-red-600 hover:bg-red-50">
+                          <Trash2 size={14} className="mr-1.5" />
+                          Delete
+                        </Button>
+                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -2022,13 +2133,24 @@ const InvoicePage = () => {
                 <ListCardSkeleton rows={4} />
               ) : filteredInvoices.length === 0 ? (
                 <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white">
-                  <EmptyState onAdd={() => navigate("/invoice/create")} />
+                  <EmptyState onAdd={() => navigate("/invoice/create")} canCreate={canCreateInvoices} />
                 </div>
               ) : (
                 <div className="space-y-3">
                   {paginatedInvoices.map((invoice) => {
                     const isSelected = selectedInvoices.includes(invoice.id);
-                    return (
+                    const card = (
+                      <MobileInvoiceCard
+                        invoice={invoice}
+                        isSelected={isSelected}
+                        onTap={() => navigate(`/invoice/${invoice.id}`)}
+                        onQuickAction={() => handleMobileQuickAction(invoice)}
+                        canSend={canSendInvoices}
+                        canMarkPaid={canMarkInvoicesPaid}
+                      />
+                    );
+
+                    return canDeleteInvoices ? (
                       <SwipeActionCard
                         key={invoice.id}
                         onView={() => navigate(`/invoice/${invoice.id}`)}
@@ -2037,13 +2159,10 @@ const InvoicePage = () => {
                         primaryLabel="View"
                         secondaryLabel="Delete"
                       >
-                        <MobileInvoiceCard
-                          invoice={invoice}
-                          isSelected={isSelected}
-                          onTap={() => navigate(`/invoice/${invoice.id}`)}
-                          onQuickAction={() => handleMobileQuickAction(invoice)}
-                        />
+                        {card}
                       </SwipeActionCard>
+                    ) : (
+                      <div key={invoice.id}>{card}</div>
                     );
                   })}
                 </div>
@@ -2078,13 +2197,15 @@ const InvoicePage = () => {
                 )}
               </div>
 
-              <Button
-                type="button"
-                onClick={() => navigate("/invoice/create")}
-                className="fixed bottom-5 right-5 z-40 h-14 w-14 rounded-full bg-[#0891B2] p-0 text-white shadow-lg hover:bg-[#0891B2]/90"
-              >
-                <Plus size={22} />
-              </Button>
+              {canCreateInvoices ? (
+                <Button
+                  type="button"
+                  onClick={() => navigate("/invoice/create")}
+                  className="fixed bottom-5 right-5 z-40 h-14 w-14 rounded-full bg-[#0891B2] p-0 text-white shadow-lg hover:bg-[#0891B2]/90"
+                >
+                  <Plus size={22} />
+                </Button>
+              ) : null}
             </div>
           ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
@@ -2190,24 +2311,28 @@ const InvoicePage = () => {
                           <span className="text-sm text-[#94A3B8]">
                             {selectedInvoices.length} selected
                           </span>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-9 rounded-md border-[rgba(15,23,42,0.06)]"
-                            onClick={handleBulkSend}
-                          >
-                            <Send size={14} className="mr-1" />
-                            Send
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={handleBulkDelete}
-                            className="h-9 rounded-md border-red-200 text-red-600 hover:bg-red-50"
-                          >
-                            <Trash2 size={14} className="mr-1" />
-                            Delete
-                          </Button>
+                          {canSendInvoices ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-9 rounded-md border-[rgba(15,23,42,0.06)]"
+                              onClick={handleBulkSend}
+                            >
+                              <Send size={14} className="mr-1" />
+                              Send
+                            </Button>
+                          ) : null}
+                          {canDeleteInvoices ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={handleBulkDelete}
+                              className="h-9 rounded-md border-red-200 text-red-600 hover:bg-red-50"
+                            >
+                              <Trash2 size={14} className="mr-1" />
+                              Delete
+                            </Button>
+                          ) : null}
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -2254,7 +2379,7 @@ const InvoicePage = () => {
                     <p className="text-[#94A3B8]">Loading invoices...</p>
                   </div>
                 ) : filteredInvoices.length === 0 ? (
-                  <EmptyState onAdd={() => navigate("/invoice/create")} />
+                  <EmptyState onAdd={() => navigate("/invoice/create")} canCreate={canCreateInvoices} />
                 ) : viewMode === "table" ? (
                   <>
                     {/* Table View */}
@@ -2302,22 +2427,18 @@ const InvoicePage = () => {
                                 onSelect={(checked) => handleSelectInvoice(invoice.id, checked)}
                                 onView={() => navigate(`/invoice/${invoice.id}`)}
                                 onEdit={() => navigate(`/invoice/${invoice.id}/edit`)}
-                                onDelete={() => {
-                                  setInvoiceToDelete(invoice);
-                                  setDeleteDialogOpen(true);
-                                }}
-                                onSend={() => {
-                                  setInvoiceToSend(invoice);
-                                  setSendDialogOpen(true);
-                                }}
+                                onDelete={() => openDeleteDialog(invoice)}
+                                onSend={() => openSendDialog(invoice)}
                                 onDownload={() => handleDownloadPDF(invoice)}
                                 onDuplicate={() => handleDuplicate(invoice)}
-                                onRecordPayment={() => {
-                                  setInvoiceForPayment(invoice);
-                                  setPaymentDialogOpen(true);
-                                }}
+                                onRecordPayment={() => openPaymentDialog(invoice)}
                                 onPrint={() => handlePrintInvoice(invoice)}
                                 onHistory={() => navigate(`/invoice/${invoice.id}`)}
+                                canUpdate={canUpdateInvoices}
+                                canDelete={canDeleteInvoices}
+                                canSend={canSendInvoices}
+                                canMarkPaid={canMarkInvoicesPaid}
+                                canCreate={canCreateInvoices}
                               />
                             ))}
                           </AnimatePresence>
@@ -2443,16 +2564,13 @@ const InvoicePage = () => {
                               onSelect={(checked) => handleSelectInvoice(invoice.id, checked)}
                               onView={() => navigate(`/invoice/${invoice.id}`)}
                               onEdit={() => navigate(`/invoice/${invoice.id}/edit`)}
-                              onDelete={() => {
-                                setInvoiceToDelete(invoice);
-                                setDeleteDialogOpen(true);
-                              }}
-                              onSend={() => {
-                                setInvoiceToSend(invoice);
-                                setSendDialogOpen(true);
-                              }}
+                              onDelete={() => openDeleteDialog(invoice)}
+                              onSend={() => openSendDialog(invoice)}
                               onDownload={() => handleDownloadPDF(invoice)}
                               onPrint={() => handlePrintInvoice(invoice)}
+                              canUpdate={canUpdateInvoices}
+                              canDelete={canDeleteInvoices}
+                              canSend={canSendInvoices}
                             />
                           </motion.div>
                         ))}
@@ -2607,28 +2725,30 @@ const InvoicePage = () => {
 
                 <div className="space-y-2">
                   {[
-                    { icon: FilePlus, label: "Create Invoice", color: "teal", action: () => navigate("/invoice/create") },
+                    canCreateInvoices ? { icon: FilePlus, label: "Create Invoice", color: "teal", action: () => navigate("/invoice/create") } : null,
                     { icon: Receipt, label: "Create Quote", color: "gold", action: () => navigate("/quotes?action=create") },
-                    {
-                      icon: CreditCard,
-                      label: "Record Payment",
-                      color: "green",
-                      action: () => {
-                        const candidate = invoices.find((inv) => inv.status !== "Paid" && inv.status !== "Cancelled");
-                        if (!candidate) {
-                          toast({
-                            title: "No unpaid invoices",
-                            description: "There are no invoices ready for payment.",
-                          });
-                          return;
+                    canMarkInvoicesPaid
+                      ? {
+                          icon: CreditCard,
+                          label: "Record Payment",
+                          color: "green",
+                          action: () => {
+                            const candidate = invoices.find((inv) => inv.status !== "Paid" && inv.status !== "Cancelled");
+                            if (!candidate) {
+                              toast({
+                                title: "No unpaid invoices",
+                                description: "There are no invoices ready for payment.",
+                              });
+                              return;
+                            }
+                            setInvoiceForPayment(candidate);
+                            setPaymentDialogOpen(true);
+                          },
                         }
-                        setInvoiceForPayment(candidate);
-                        setPaymentDialogOpen(true);
-                      },
-                    },
+                      : null,
                     { icon: FileSpreadsheet, label: "Generate Report", color: "purple", action: () => navigate("/reports/revenue") },
                     { icon: Settings, label: "Invoice Settings", color: "slate", action: () => navigate("/settings/billing") },
-                  ].map((action, index) => {
+                  ].filter(Boolean).map((action, index) => {
                     const colorClasses: Record<string, string> = {
                       teal: "bg-[#0891B2]/10 text-[#0891B2]",
                       gold: "bg-[#D97706]/10 text-[#D97706]",

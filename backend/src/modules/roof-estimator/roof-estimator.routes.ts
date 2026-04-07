@@ -322,7 +322,7 @@ router.get(
 
 router.put(
     '/:id',
-    requirePermission(PERMISSIONS.ROOF_ESTIMATOR_CREATE),
+    requirePermission(PERMISSIONS.ROOF_ESTIMATOR_UPDATE),
     validate(estimateIdSchema),
     validate(updateEstimateSchema),
     roofEstimatorController.update.bind(roofEstimatorController)

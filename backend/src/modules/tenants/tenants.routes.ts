@@ -16,9 +16,9 @@ router.get('/onboarding', requireAdmin(), tenantsController.getOnboarding.bind(t
 router.put('/onboarding', requireAdmin(), validate(tenantOnboardingSchema), tenantsController.completeOnboarding.bind(tenantsController));
 
 router.get('/', requirePermission(PERMISSIONS.TENANTS_VIEW), validate(tenantQuerySchema), tenantsController.getMany.bind(tenantsController));
-router.post('/', requirePermission(PERMISSIONS.TENANTS_VIEW), validate(createTenantSchema), tenantsController.create.bind(tenantsController));
+router.post('/', requirePermission(PERMISSIONS.TENANTS_CREATE), validate(createTenantSchema), tenantsController.create.bind(tenantsController));
 router.get('/:id', requirePermission(PERMISSIONS.TENANTS_VIEW), validate(tenantIdSchema), tenantsController.getById.bind(tenantsController));
 router.put('/:id', requirePermission(PERMISSIONS.TENANTS_UPDATE), validate(tenantIdSchema), validate(updateTenantSchema), tenantsController.update.bind(tenantsController));
-router.delete('/:id', requirePermission(PERMISSIONS.TENANTS_UPDATE), validate(tenantIdSchema), tenantsController.delete.bind(tenantsController));
+router.delete('/:id', requirePermission(PERMISSIONS.TENANTS_DELETE), validate(tenantIdSchema), tenantsController.delete.bind(tenantsController));
 
 export default router;

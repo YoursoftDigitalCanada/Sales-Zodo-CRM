@@ -3,6 +3,27 @@ import { permissionsService } from './permissions.service';
 import { sendSuccess } from '../../common/utils/responseFormatter';
 
 export class PermissionsController {
+    async getCurrent(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            sendSuccess(res, {
+                permissions: req.permissions || [],
+                employee: req.employee
+                    ? {
+                        id: req.employee.id,
+                        role: req.employee.role
+                            ? {
+                                id: req.employee.role.id,
+                                name: req.employee.role.name,
+                            }
+                            : null,
+                    }
+                    : null,
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
     async getAll(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const permissions = await permissionsService.getAll();

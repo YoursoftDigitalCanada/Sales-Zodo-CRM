@@ -104,6 +104,7 @@ import {
 import { cn } from "@/lib/utils";
 import { getClients, deleteClient } from "@/services/clientService";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { useCanPerformAction } from "@/hooks/usePermissionAccess";
 import {
   ListCardSkeleton,
   PullToRefreshIndicator,
@@ -385,6 +386,8 @@ const ClientRow = ({
   onDelete,
   onToggleFavorite,
   columns,
+  canUpdate,
+  canDelete,
 }: {
   client: Client;
   isSelected: boolean;
@@ -394,6 +397,8 @@ const ClientRow = ({
   onDelete: () => void;
   onToggleFavorite: () => void;
   columns: ColumnConfig[];
+  canUpdate: boolean;
+  canDelete: boolean;
 }) => {
   const isOverdue = client.lastInteractionDate
     ? new Date().getTime() - new Date(client.lastInteractionDate).getTime() > 30 * 24 * 60 * 60 * 1000
@@ -623,15 +628,17 @@ const ClientRow = ({
           >
             <Eye size={16} />
           </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={onEdit}
-            className="p-2 rounded-md hover:bg-[#D97706]/10 text-[#D97706] transition-colors"
-            title="Edit"
-          >
-            <Pencil size={16} />
-          </motion.button>
+          {canUpdate ? (
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={onEdit}
+              className="p-2 rounded-md hover:bg-[#D97706]/10 text-[#D97706] transition-colors"
+              title="Edit"
+            >
+              <Pencil size={16} />
+            </motion.button>
+          ) : null}
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -648,18 +655,22 @@ const ClientRow = ({
                 <Phone size={14} className="mr-2" />
                 Call Client
               </DropdownMenuItem>
-              <DropdownMenuItem className="rounded-md">
-                <Copy size={14} className="mr-2" />
-                Duplicate
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="rounded-md text-red-600 focus:text-red-600 focus:bg-red-50"
-                onClick={onDelete}
-              >
-                <Trash2 size={14} className="mr-2" />
-                Delete
-              </DropdownMenuItem>
+              {canDelete ? (
+                <>
+                  <DropdownMenuItem className="rounded-md">
+                    <Copy size={14} className="mr-2" />
+                    Duplicate
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="rounded-md text-red-600 focus:text-red-600 focus:bg-red-50"
+                    onClick={onDelete}
+                  >
+                    <Trash2 size={14} className="mr-2" />
+                    Delete
+                  </DropdownMenuItem>
+                </>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -680,6 +691,8 @@ const ClientCard = ({
   onEdit,
   onDelete,
   onToggleFavorite,
+  canUpdate,
+  canDelete,
 }: {
   client: Client;
   isSelected: boolean;
@@ -688,6 +701,8 @@ const ClientCard = ({
   onEdit: () => void;
   onDelete: () => void;
   onToggleFavorite: () => void;
+  canUpdate: boolean;
+  canDelete: boolean;
 }) => {
   return (
     <motion.div
@@ -755,18 +770,24 @@ const ClientCard = ({
                 <Eye size={14} className="mr-2" />
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem className="rounded-md" onClick={onEdit}>
-                <Pencil size={14} className="mr-2" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="rounded-md text-red-600 focus:text-red-600"
-                onClick={onDelete}
-              >
-                <Trash2 size={14} className="mr-2" />
-                Delete
-              </DropdownMenuItem>
+              {canUpdate ? (
+                <DropdownMenuItem className="rounded-md" onClick={onEdit}>
+                  <Pencil size={14} className="mr-2" />
+                  Edit
+                </DropdownMenuItem>
+              ) : null}
+              {canDelete ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="rounded-md text-red-600 focus:text-red-600"
+                    onClick={onDelete}
+                  >
+                    <Trash2 size={14} className="mr-2" />
+                    Delete
+                  </DropdownMenuItem>
+                </>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -874,12 +895,14 @@ const MobileClientCard = ({
   onSelect,
   onView,
   onDelete,
+  canDelete,
 }: {
   client: Client;
   isSelected: boolean;
   onSelect: (checked: boolean) => void;
   onView: () => void;
   onDelete: () => void;
+  canDelete: boolean;
 }) => {
   const statusTone =
     client.status === "Active"
@@ -888,13 +911,7 @@ const MobileClientCard = ({
         ? "bg-amber-100 text-amber-700"
         : "bg-slate-100 text-slate-600";
 
-  return (
-    <SwipeActionCard
-      onView={onView}
-      onDelete={onDelete}
-      onLongPress={() => onSelect(!isSelected)}
-      className="shadow-sm"
-    >
+  const content = (
       <div
         className={cn(
           "rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-4",
@@ -948,7 +965,19 @@ const MobileClientCard = ({
           </div>
         </div>
       </div>
+  );
+
+  return canDelete ? (
+    <SwipeActionCard
+      onView={onView}
+      onDelete={onDelete}
+      onLongPress={() => onSelect(!isSelected)}
+      className="shadow-sm"
+    >
+      {content}
     </SwipeActionCard>
+  ) : (
+    content
   );
 };
 
@@ -960,6 +989,17 @@ const ClientListPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isMobile, isTablet } = useIsMobile();
+  const canCreateClients = useCanPerformAction("clients", "create");
+  const canUpdateClients = useCanPerformAction("clients", "update");
+  const canDeleteClients = useCanPerformAction("clients", "delete");
+
+  const showPermissionDenied = (description: string) => {
+    toast({
+      title: "Permission denied",
+      description,
+      variant: "destructive",
+    });
+  };
 
   // State
   const [clients, setClients] = useState<Client[]>([]);
@@ -1072,6 +1112,11 @@ const ClientListPage = () => {
   };
 
   const handleDeleteClient = async () => {
+    if (!canDeleteClients) {
+      showPermissionDenied("You no longer have permission to delete clients.");
+      return;
+    }
+
     if (!clientToDelete) return;
 
     setIsDeleting(true);
@@ -1096,6 +1141,11 @@ const ClientListPage = () => {
   };
 
   const handleBulkDelete = async () => {
+    if (!canDeleteClients) {
+      showPermissionDenied("You no longer have permission to delete clients.");
+      return;
+    }
+
     setIsDeleting(true);
     try {
       await Promise.all(
@@ -1316,15 +1366,17 @@ const ClientListPage = () => {
 
             {/* Right - Actions */}
             <div className="flex items-center gap-3">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => navigate("/client-list/add")}
-                className="flex items-center gap-2 px-4 py-2.5 bg-[#0891B2] text-white text-sm font-medium rounded-md  hover:bg-[#0891B2]/90 transition-colors"
-              >
-                <Plus size={16} />
-                <span>Add Client</span>
-              </motion.button>
+              {canCreateClients ? (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => navigate("/client-list/add")}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-[#0891B2] text-white text-sm font-medium rounded-md  hover:bg-[#0891B2]/90 transition-colors"
+                >
+                  <Plus size={16} />
+                  <span>Add Client</span>
+                </motion.button>
+              ) : null}
 
               <NotificationBell
                 buttonClassName="border-0 bg-white/5 p-2.5 text-[#475569] hover:bg-slate-200"
@@ -1547,15 +1599,17 @@ const ClientListPage = () => {
                   <div className="flex items-center justify-between rounded-2xl bg-[#0891B2]/10 px-3 py-2">
                     <span className="text-sm font-medium text-[#0891B2]">{selectedClients.length} selected</span>
                     <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setBulkDeleteDialogOpen(true)}
-                        className="h-8 text-red-600 hover:bg-red-100"
-                      >
-                        <Trash2 size={14} className="mr-1" />
-                        Delete
-                      </Button>
+                      {canDeleteClients ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setBulkDeleteDialogOpen(true)}
+                          className="h-8 text-red-600 hover:bg-red-100"
+                        >
+                          <Trash2 size={14} className="mr-1" />
+                          Delete
+                        </Button>
+                      ) : null}
                       <Button size="sm" variant="ghost" onClick={() => setSelectedClients([])} className="h-8">
                         <X size={14} />
                       </Button>
@@ -1646,15 +1700,17 @@ const ClientListPage = () => {
                         <span className="text-sm font-medium text-[#0891B2]">
                           {selectedClients.length} selected
                         </span>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setBulkDeleteDialogOpen(true)}
-                          className="h-7 text-red-600 hover:bg-red-100"
-                        >
-                          <Trash2 size={14} className="mr-1" />
-                          Delete
-                        </Button>
+                        {canDeleteClients ? (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setBulkDeleteDialogOpen(true)}
+                            className="h-7 text-red-600 hover:bg-red-100"
+                          >
+                            <Trash2 size={14} className="mr-1" />
+                            Delete
+                          </Button>
+                        ) : null}
                         <Button size="sm" variant="ghost" onClick={() => setSelectedClients([])} className="h-7">
                           <X size={14} />
                         </Button>
@@ -1812,7 +1868,9 @@ const ClientListPage = () => {
                   onClick={() =>
                     searchTerm || activeFiltersCount > 0
                       ? clearFilters()
-                      : navigate("/client-list/add")
+                      : canCreateClients
+                        ? navigate("/client-list/add")
+                        : showPermissionDenied("You no longer have permission to create clients.")
                   }
                   className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
                 >
@@ -1843,6 +1901,7 @@ const ClientListPage = () => {
                         setClientToDelete(client);
                         setDeleteDialogOpen(true);
                       }}
+                      canDelete={canDeleteClients}
                     />
                   ))}
                 </AnimatePresence>
@@ -1925,6 +1984,8 @@ const ClientListPage = () => {
                           }}
                           onToggleFavorite={() => handleToggleFavorite(client.id)}
                           columns={responsiveColumns}
+                          canUpdate={canUpdateClients}
+                          canDelete={canDeleteClients}
                         />
                       ))}
                     </AnimatePresence>
@@ -1949,6 +2010,8 @@ const ClientListPage = () => {
                           setDeleteDialogOpen(true);
                         }}
                         onToggleFavorite={() => handleToggleFavorite(client.id)}
+                        canUpdate={canUpdateClients}
+                        canDelete={canDeleteClients}
                       />
                     ))}
                   </AnimatePresence>
@@ -2107,14 +2170,16 @@ const ClientListPage = () => {
 
         {isMobile ? (
           <>
-            <button
-              type="button"
-              onClick={() => navigate("/client-list/add")}
-              className="fixed bottom-24 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#0891B2] text-white shadow-xl transition-transform active:scale-95"
-              aria-label="Add Client"
-            >
-              <Plus size={22} />
-            </button>
+            {canCreateClients ? (
+              <button
+                type="button"
+                onClick={() => navigate("/client-list/add")}
+                className="fixed bottom-24 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#0891B2] text-white shadow-xl transition-transform active:scale-95"
+                aria-label="Add Client"
+              >
+                <Plus size={22} />
+              </button>
+            ) : null}
 
             <Drawer open={isFilterDrawerOpen} onOpenChange={setIsFilterDrawerOpen}>
               <DrawerContent className="max-h-[85vh] rounded-t-[24px] border-none bg-white px-0">

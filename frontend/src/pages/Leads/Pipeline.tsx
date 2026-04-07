@@ -51,6 +51,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useToast } from "@/components/ui/use-toast";
+import { useCanPerformAction } from "@/hooks/usePermissionAccess";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import api from "@/lib/axios";
@@ -478,7 +479,7 @@ const PipelineLeadCard = ({
 // ============================================
 
 const PipelineColumn = ({
-  stage, onLeadOpenRecord, onLeadPreview, onLeadEdit, onLeadDelete, onAddLead, onDropLead, isMobile = false, enableNativeDrag = true,
+  stage, onLeadOpenRecord, onLeadPreview, onLeadEdit, onLeadDelete, onAddLead, onDropLead, canCreate = true, isMobile = false, enableNativeDrag = true,
 }: {
   stage: PipelineStage;
   onLeadOpenRecord: (lead: Lead) => void;
@@ -487,6 +488,7 @@ const PipelineColumn = ({
   onLeadDelete: (lead: Lead) => void;
   onAddLead: (stageId: string) => void;
   onDropLead: (leadId: string, targetStageId: string) => void;
+  canCreate?: boolean;
   isMobile?: boolean;
   enableNativeDrag?: boolean;
 }) => {
@@ -539,16 +541,18 @@ const PipelineColumn = ({
         </div>
         <div className="flex items-center justify-between">
           <span className="text-sm font-semibold text-[#0F172A]">{formatCurrency(totalValue)}</span>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button size="icon" variant="ghost" className="h-7 w-7 rounded-md hover:bg-white/50" onClick={() => onAddLead(stage.id)}>
-                  <Plus size={14} style={{ color: stage.color }} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Add Lead to {stage.name}</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          {canCreate ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button size="icon" variant="ghost" className="h-7 w-7 rounded-md hover:bg-white/50" onClick={() => onAddLead(stage.id)}>
+                    <Plus size={14} style={{ color: stage.color }} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Add Lead to {stage.name}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : null}
         </div>
       </div>
 
@@ -593,10 +597,12 @@ const PipelineColumn = ({
               <StageIcon size={20} style={{ color: stage.color }} />
             </div>
             <p className="text-sm text-[#94A3B8] mb-2">No leads in this stage</p>
-            <Button size="sm" variant="outline" className="rounded-md text-xs" onClick={() => onAddLead(stage.id)}>
-              <Plus size={12} className="mr-1" />
-              Add Lead
-            </Button>
+            {canCreate ? (
+              <Button size="sm" variant="outline" className="rounded-md text-xs" onClick={() => onAddLead(stage.id)}>
+                <Plus size={12} className="mr-1" />
+                Add Lead
+              </Button>
+            ) : null}
           </div>
         )}
       </div>
@@ -786,6 +792,7 @@ const Pipeline = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isMobile } = useIsMobile();
+  const canCreateLeads = useCanPerformAction("leads", "create");
   const [pipeline, setPipeline] = useState<PipelineStage[]>(buildEmptyPipeline());
   const [searchQuery, setSearchQuery] = useState("");
   const [filterTemperature, setFilterTemperature] = useState("all");
@@ -1130,6 +1137,15 @@ const Pipeline = () => {
   };
 
   const openAddLeadDialog = (stageId?: string | null) => {
+    if (!canCreateLeads) {
+      toast({
+        title: "Access denied",
+        description: "You no longer have permission to create leads.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLeadDialogMode("create");
     setEditingLead(null);
     setPendingAddStageId(stageId ?? null);
@@ -1166,6 +1182,15 @@ const Pipeline = () => {
   };
 
   const handleCreateLeadFromDialog = async (data: any) => {
+    if (!canCreateLeads) {
+      toast({
+        title: "Access denied",
+        description: "You no longer have permission to create leads.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
     try {
       const apiData = await buildLeadMutationPayload(data, { requestedStageId: pendingAddStageId });
       const responseData = await createLead(apiData);
@@ -1599,6 +1624,7 @@ const Pipeline = () => {
                   className="bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-md gap-2"
                   onClick={() => openAddLeadDialog(null)}
                   size={isMobile ? "icon" : "default"}
+                  disabled={!canCreateLeads}
                 >
                   <Plus size={18} />
                   {!isMobile && "Add Lead"}
@@ -1647,6 +1673,7 @@ const Pipeline = () => {
                   onLeadDelete={handleLeadDelete}
                   onAddLead={handleAddLead}
                   onDropLead={handleDropLead}
+                  canCreate={canCreateLeads}
                   isMobile={isMobile}
                   enableNativeDrag={enableNativePipelineDrag}
                 />
@@ -1668,6 +1695,7 @@ const Pipeline = () => {
           size="icon"
           className="fixed bottom-6 right-5 z-40 h-14 w-14 rounded-full bg-[#6637F4] shadow-[0_16px_36px_rgba(102,55,244,0.35)] hover:bg-[#6637F4]/90"
           onClick={() => openAddLeadDialog(null)}
+          disabled={!canCreateLeads}
         >
           <Plus size={22} />
         </Button>

@@ -1398,7 +1398,7 @@ export const LeadFormDialog = ({
           nextErrors.lastName = lastNameError;
         }
 
-        const phoneError = getCanadianPhoneError(formData.phone, "Phone number", { required: true });
+        const phoneError = getCanadianPhoneError(formData.phone, "Phone number");
         if (phoneError) {
           nextErrors.phone = phoneError;
         }
@@ -1420,9 +1420,6 @@ export const LeadFormDialog = ({
         break;
       }
       case "property":
-        if (!formData.propertyAddress.trim()) {
-          nextErrors.propertyAddress = "Property address is required.";
-        }
         if (formData.zipCode.trim()) {
           const postalCodeError = getCanadianPostalCodeError(formData.zipCode, "Postal code");
           if (postalCodeError) {
@@ -1431,9 +1428,6 @@ export const LeadFormDialog = ({
         }
         break;
       case "service":
-        if (!formData.serviceType.trim()) {
-          nextErrors.serviceType = "Select the requested service.";
-        }
         if (formData.issueDescription.trim().length > 500) {
           nextErrors.issueDescription = "Issue description must be 500 characters or less.";
         }
@@ -1477,9 +1471,6 @@ export const LeadFormDialog = ({
           if (!Number.isInteger(leadScore) || leadScore < 1 || leadScore > 10) {
             nextErrors.leadScore = "Lead score must be a whole number between 1 and 10.";
           }
-        }
-        if (!formData.qualificationCallNotes.trim()) {
-          nextErrors.qualificationCallNotes = "Qualification notes are required.";
         }
         break;
       case "details":
@@ -1840,7 +1831,7 @@ export const LeadFormDialog = ({
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-[#475569]">
-                    Phone Number <span className="text-red-500">*</span>
+                    Phone Number
                   </Label>
                   <div className="relative">
                     <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
@@ -1894,7 +1885,7 @@ export const LeadFormDialog = ({
             <TabsContent value="property" className="space-y-4 mt-0">
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#475569]">
-                  Property Address <span className="text-red-500">*</span>
+                  Property Address
                 </Label>
                 <AddressAutocompleteInput
                   value={formData.propertyAddress}
@@ -1986,7 +1977,7 @@ export const LeadFormDialog = ({
             <TabsContent value="service" className="space-y-4 mt-0">
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#475569]">
-                  What Service Do You Need? <span className="text-red-500">*</span>
+                  What Service Do You Need?
                 </Label>
                 <Select
                   value={formData.serviceType}
@@ -2532,7 +2523,7 @@ export const LeadFormDialog = ({
 
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#475569]">
-                  Qualification Notes <span className="text-red-500">*</span>
+                  Qualification Notes
                 </Label>
                 <Textarea
                   value={formData.qualificationCallNotes}
@@ -4109,8 +4100,10 @@ const AllLeads = () => {
       return false;
     }
 
+    let apiData: Awaited<ReturnType<typeof buildLeadMutationPayload>> | null = null;
+
     try {
-      const apiData = await buildLeadMutationPayload(data);
+      apiData = await buildLeadMutationPayload(data);
       const responseData = await createLead(apiData);
       const newLead = mapApiLead(responseData);
       setLeads((prev) => [newLead, ...prev]);

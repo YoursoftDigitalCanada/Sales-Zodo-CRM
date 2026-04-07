@@ -89,6 +89,15 @@ import { useIsMobile } from "@/hooks/useIsMobile";
 import AddressAutocompleteInput from "@/components/address/AddressAutocompleteInput";
 import { ComposeEmailSheet } from "@/features/emails/components/ComposeEmailSheet";
 import {
+  getCanadianPhoneError,
+  getCanadianPostalCodeError,
+  getEmailAddressError,
+  getPersonNameError,
+  normalizeCanadianPostalCode,
+  normalizeEmailAddress,
+  normalizeWhitespace,
+} from "@contracts/contact";
+import {
   ListCardSkeleton,
   PullToRefreshIndicator,
   SwipeActionCard,
@@ -1265,15 +1274,15 @@ export const LeadFormDialog = ({
   const getTabErrorFields = useCallback((tab: LeadFormTab) => {
     switch (tab) {
       case "basic":
-        return ["firstName", "lastName", "phone", "email"];
+        return ["firstName", "lastName", "phone", "email", "secondaryPhone", "spouseCoOwnerName"];
       case "property":
-        return ["propertyAddress"];
+        return ["propertyAddress", "zipCode"];
       case "service":
         return ["serviceType", "issueDescription"];
       case "qualification":
         return ["numberOfOtherQuotes"];
       case "insurance":
-        return ["insuranceCompanyName", "adjusterEmail"];
+        return ["insuranceCompanyName", "adjusterEmail", "adjusterName", "adjusterPhone"];
       case "assessment":
         return ["leadScore", "qualificationCallNotes"];
       case "details":
@@ -1297,7 +1306,7 @@ export const LeadFormDialog = ({
       }
 
       if (field === "adjusterAssigned" && value !== "Yes") {
-        fieldsToClear.push("adjusterEmail");
+        fieldsToClear.push("adjusterEmail", "adjusterName", "adjusterPhone");
       }
 
       if (!fieldsToClear.some((item) => prev[item])) {
@@ -1319,26 +1328,49 @@ export const LeadFormDialog = ({
 
   const validateTab = useCallback((tab: LeadFormTab) => {
     const nextErrors: Record<string, string> = {};
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     switch (tab) {
-      case "basic":
-        if (!formData.firstName.trim()) {
-          nextErrors.firstName = "First name is required.";
+      case "basic": {
+        const firstNameError = getPersonNameError(formData.firstName, "First name", { required: true });
+        if (firstNameError) {
+          nextErrors.firstName = firstNameError;
         }
-        if (!formData.lastName.trim()) {
-          nextErrors.lastName = "Last name is required.";
+
+        const lastNameError = getPersonNameError(formData.lastName, "Last name", { required: true });
+        if (lastNameError) {
+          nextErrors.lastName = lastNameError;
         }
-        if (!formData.phone.trim()) {
-          nextErrors.phone = "Phone number is required.";
+
+        const phoneError = getCanadianPhoneError(formData.phone, "Phone number", { required: true });
+        if (phoneError) {
+          nextErrors.phone = phoneError;
         }
-        if (formData.email.trim() && !emailRegex.test(formData.email.trim())) {
-          nextErrors.email = "Enter a valid email address.";
+
+        const emailError = getEmailAddressError(formData.email, "Email");
+        if (emailError) {
+          nextErrors.email = emailError;
+        }
+
+        const secondaryPhoneError = getCanadianPhoneError(formData.secondaryPhone, "Secondary phone");
+        if (secondaryPhoneError) {
+          nextErrors.secondaryPhone = secondaryPhoneError;
+        }
+
+        const spouseNameError = getPersonNameError(formData.spouseCoOwnerName, "Spouse / co-owner name");
+        if (spouseNameError) {
+          nextErrors.spouseCoOwnerName = spouseNameError;
         }
         break;
+      }
       case "property":
         if (!formData.propertyAddress.trim()) {
           nextErrors.propertyAddress = "Property address is required.";
+        }
+        if (formData.zipCode.trim()) {
+          const postalCodeError = getCanadianPostalCodeError(formData.zipCode, "Postal code");
+          if (postalCodeError) {
+            nextErrors.zipCode = postalCodeError;
+          }
         }
         break;
       case "service":
@@ -1363,8 +1395,23 @@ export const LeadFormDialog = ({
         if (formData.isInsuranceClaim === "Yes" && !formData.insuranceCompanyName.trim()) {
           nextErrors.insuranceCompanyName = "Insurance company name is required.";
         }
-        if (formData.adjusterEmail.trim() && !emailRegex.test(formData.adjusterEmail.trim())) {
-          nextErrors.adjusterEmail = "Enter a valid adjuster email address.";
+        if (formData.adjusterEmail.trim()) {
+          const adjusterEmailError = getEmailAddressError(formData.adjusterEmail, "Adjuster email");
+          if (adjusterEmailError) {
+            nextErrors.adjusterEmail = adjusterEmailError;
+          }
+        }
+        if (formData.adjusterName.trim()) {
+          const adjusterNameError = getPersonNameError(formData.adjusterName, "Adjuster name");
+          if (adjusterNameError) {
+            nextErrors.adjusterName = adjusterNameError;
+          }
+        }
+        if (formData.adjusterPhone.trim()) {
+          const adjusterPhoneError = getCanadianPhoneError(formData.adjusterPhone, "Adjuster phone");
+          if (adjusterPhoneError) {
+            nextErrors.adjusterPhone = adjusterPhoneError;
+          }
         }
         break;
       case "assessment":
@@ -1753,10 +1800,11 @@ export const LeadFormDialog = ({
                   <Label className="text-sm font-medium text-[#475569]">Secondary Phone</Label>
                   <Input
                     value={formData.secondaryPhone}
-                    onChange={(e) => setFormData({ ...formData, secondaryPhone: e.target.value })}
+                    onChange={(e) => setFieldValue("secondaryPhone", e.target.value)}
                     placeholder="Alt phone number"
-                    className="h-11 rounded-md"
+                    className={cn("h-11 rounded-md", getFieldErrorClass("secondaryPhone"))}
                   />
+                  {errors.secondaryPhone && <p className="text-xs text-red-500">{errors.secondaryPhone}</p>}
                 </div>
               </div>
 
@@ -1764,10 +1812,11 @@ export const LeadFormDialog = ({
                 <Label className="text-sm font-medium text-[#475569]">Spouse / Co-Owner Name</Label>
                 <Input
                   value={formData.spouseCoOwnerName}
-                  onChange={(e) => setFormData({ ...formData, spouseCoOwnerName: e.target.value })}
+                  onChange={(e) => setFieldValue("spouseCoOwnerName", e.target.value)}
                   placeholder="Jane Doe"
-                  className="h-11 rounded-md"
+                  className={cn("h-11 rounded-md", getFieldErrorClass("spouseCoOwnerName"))}
                 />
+                {errors.spouseCoOwnerName && <p className="text-xs text-red-500">{errors.spouseCoOwnerName}</p>}
               </div>
 
               <div className="space-y-2">
@@ -1801,6 +1850,12 @@ export const LeadFormDialog = ({
                       state: details.state || current.state,
                       zipCode: details.postalCode || current.zipCode,
                     }));
+                    setErrors((prev) => {
+                      const next = { ...prev };
+                      delete next.propertyAddress;
+                      delete next.zipCode;
+                      return next;
+                    });
                   }}
                   placeholder="123 Main Street"
                   className={cn("h-11 rounded-md", getFieldErrorClass("propertyAddress"))}
@@ -1831,10 +1886,11 @@ export const LeadFormDialog = ({
                   <Label className="text-sm font-medium text-[#475569]">Zip Code</Label>
                   <Input
                     value={formData.zipCode}
-                    onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
+                    onChange={(e) => setFieldValue("zipCode", e.target.value)}
                     placeholder="M5V 2H1"
-                    className="h-11 rounded-md"
+                    className={cn("h-11 rounded-md", getFieldErrorClass("zipCode"))}
                   />
+                  {errors.zipCode && <p className="text-xs text-red-500">{errors.zipCode}</p>}
                 </div>
               </div>
 
@@ -2312,19 +2368,21 @@ export const LeadFormDialog = ({
                         <Label className="text-sm font-medium text-[#475569]">Adjuster Name</Label>
                         <Input
                           value={formData.adjusterName}
-                          onChange={(e) => setFormData({ ...formData, adjusterName: e.target.value })}
+                          onChange={(e) => setFieldValue("adjusterName", e.target.value)}
                           placeholder="Adjuster name"
-                          className="h-11 rounded-md"
+                          className={cn("h-11 rounded-md", getFieldErrorClass("adjusterName"))}
                         />
+                        {errors.adjusterName && <p className="text-xs text-red-500">{errors.adjusterName}</p>}
                       </div>
                       <div className="space-y-2">
                         <Label className="text-sm font-medium text-[#475569]">Adjuster Phone</Label>
                         <Input
                           value={formData.adjusterPhone}
-                          onChange={(e) => setFormData({ ...formData, adjusterPhone: e.target.value })}
+                          onChange={(e) => setFieldValue("adjusterPhone", e.target.value)}
                           placeholder="Phone number"
-                          className="h-11 rounded-md"
+                          className={cn("h-11 rounded-md", getFieldErrorClass("adjusterPhone"))}
                         />
+                        {errors.adjusterPhone && <p className="text-xs text-red-500">{errors.adjusterPhone}</p>}
                       </div>
                     </div>
                     <div className="space-y-2">
@@ -3739,18 +3797,18 @@ const AllLeads = () => {
 
   const buildLeadMutationPayload = useCallback(async (data: Partial<Lead>) => {
     const apiData: Record<string, any> = {
-      firstName: data.firstName,
-      lastName: data.lastName,
-      email: data.email || undefined,
-      phone: data.phone || undefined,
-      companyName: data.companyName,
-      jobTitle: data.jobTitle || undefined,
+      firstName: normalizeWhitespace(data.firstName),
+      lastName: normalizeWhitespace(data.lastName),
+      email: data.email ? normalizeEmailAddress(data.email) : undefined,
+      phone: data.phone?.trim() || undefined,
+      companyName: data.companyName?.trim() || "",
+      jobTitle: data.jobTitle?.trim() || undefined,
       website: data.website && data.website.trim() ? data.website.trim() : undefined,
-      location: data.location || undefined,
+      location: data.location?.trim() || undefined,
       status: normalizeLeadStatusValue(String(data.status || LeadStatus.NEW)),
       temperature: normalizeLeadTemperatureValue(String(data.temperature || LeadTemperature.WARM)),
       potentialValue: data.potentialValue || 0,
-      notes: data.notes || undefined,
+      notes: data.notes?.trim() || undefined,
       ...buildNewFieldsPayload(data),
     };
 
@@ -3872,13 +3930,20 @@ const AllLeads = () => {
   // Handlers
   // Helper to build the new-fields portion of the API payload
   const buildNewFieldsPayload = (data: Partial<Lead>) => {
-    const opt = (v: any) => (v && v !== "" ? v : undefined);
+    const opt = (v: any) => {
+      if (typeof v === "string") {
+        const trimmed = v.trim();
+        return trimmed ? trimmed : undefined;
+      }
+
+      return v && v !== "" ? v : undefined;
+    };
     return {
       // Stage 1: Property
       propertyAddress: opt(data.propertyAddress),
       city: opt(data.city),
       state: opt(data.state),
-      zipCode: opt(data.zipCode),
+      zipCode: data.zipCode ? normalizeCanadianPostalCode(data.zipCode) : undefined,
       propertyType: opt(data.propertyType),
       // Stage 1: Service
       serviceType: opt(data.serviceType),
@@ -3893,7 +3958,7 @@ const AllLeads = () => {
       confirmedEmail: data.confirmedEmail || false,
       confirmedAddress: data.confirmedAddress || false,
       secondaryPhone: opt(data.secondaryPhone),
-      spouseCoOwnerName: opt(data.spouseCoOwnerName),
+      spouseCoOwnerName: data.spouseCoOwnerName ? normalizeWhitespace(data.spouseCoOwnerName) : undefined,
       // Stage 2: Ownership
       isHomeowner: opt(data.isHomeowner),
       isDecisionMaker: opt(data.isDecisionMaker),
@@ -3911,9 +3976,9 @@ const AllLeads = () => {
       hasClaimBeenFiled: opt(data.hasClaimBeenFiled),
       claimNumber: opt(data.claimNumber),
       adjusterAssigned: opt(data.adjusterAssigned),
-      adjusterName: opt(data.adjusterName),
+      adjusterName: data.adjusterName ? normalizeWhitespace(data.adjusterName) : undefined,
       adjusterPhone: opt(data.adjusterPhone),
-      adjusterEmail: opt(data.adjusterEmail),
+      adjusterEmail: data.adjusterEmail ? normalizeEmailAddress(data.adjusterEmail) : undefined,
       adjusterMeetingDate: opt(data.adjusterMeetingDate),
       // Stage 2: Budget
       budgetRange: opt(data.budgetRange),

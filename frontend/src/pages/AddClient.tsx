@@ -51,6 +51,16 @@ import { normalizeProvinceName } from "@/lib/address-utils";
 import { getClientById, createClient, updateClient } from "@/services/clientService";
 import { getEmployees } from "@/features/users";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import {
+  getCanadianPhoneError,
+  getCanadianPostalCodeError,
+  getEmailAddressError,
+  getPersonNameError,
+  isValidPersonName,
+  normalizeCanadianPostalCode,
+  normalizeEmailAddress,
+  normalizeWhitespace,
+} from "@contracts/contact";
 
 // ============================================
 // CANADIAN DATA
@@ -141,6 +151,8 @@ interface FormData {
   secondaryPhone: string;
   spouseCoOwnerName: string;
 }
+
+type FormErrors = Partial<Record<keyof FormData, string>>;
 
 // ============================================
 // INITIAL STATE
@@ -303,26 +315,29 @@ const mapFormDataToApiPayload = (data: FormData) => {
 
   return {
     ...logoPayload,
-    clientName: data.clientName,
+    clientName:
+      data.clientType === "Individual"
+        ? normalizeWhitespace(data.clientName)
+        : data.clientName.trim(),
     clientType: toApiClientType(data.clientType),
-    primaryEmail: data.primaryEmail,
-    primaryPhone: data.phone,
+    primaryEmail: normalizeEmailAddress(data.primaryEmail),
+    primaryPhone: data.phone.trim(),
     status: toApiStatus(data.status),
     ...ownerPayload,
     gstHstNumber: data.gstNumber || null,
     pstQstNumber: data.pstNumber || null,
     businessStructure: data.businessType || null,
     corpRegistrationNumber: data.companyRegistrationNo || null,
-    streetAddress: data.billingAddressLine1 || null,
-    suite: data.billingAddressLine2 || null,
-    city: data.city || null,
-    province: data.state || null,
-    postalCode: data.pincode || null,
+    streetAddress: data.billingAddressLine1.trim() || null,
+    suite: data.billingAddressLine2.trim() || null,
+    city: data.city.trim() || null,
+    province: data.state.trim() || null,
+    postalCode: data.pincode.trim() ? normalizeCanadianPostalCode(data.pincode) : null,
     country: data.country || null,
-    internalNotes: data.notes || null,
-    contactName: data.primaryContactName || null,
-    position: data.primaryContactDesignation || null,
-    directPhone: data.primaryContactPhone || null,
+    internalNotes: data.notes.trim() || null,
+    contactName: normalizeWhitespace(data.primaryContactName) || null,
+    position: data.primaryContactDesignation.trim() || null,
+    directPhone: data.primaryContactPhone.trim() || null,
     creditLimit: Number.isFinite(data.creditLimit) ? data.creditLimit : 0,
     paymentTerms:
       data.paymentTermsDays > 0 ? `${data.paymentTermsDays} days` : null,
@@ -342,10 +357,75 @@ const mapFormDataToApiPayload = (data: FormData) => {
     isInsuranceClaim: data.isInsuranceClaim || null,
     isHomeowner: data.isHomeowner || null,
     isHOA: data.isHOA || null,
-    hoaRestrictions: data.hoaRestrictions || null,
-    secondaryPhone: data.secondaryPhone || null,
-    spouseCoOwnerName: data.spouseCoOwnerName || null,
+    hoaRestrictions: data.hoaRestrictions.trim() || null,
+    secondaryPhone: data.secondaryPhone.trim() || null,
+    spouseCoOwnerName: normalizeWhitespace(data.spouseCoOwnerName) || null,
   };
+};
+
+const validateClientForm = (data: FormData): FormErrors => {
+  const errors: FormErrors = {};
+  const clientName = normalizeWhitespace(data.clientName);
+
+  if (!clientName) {
+    errors.clientName = "Client / Company name is required.";
+  } else if (data.clientType === "Individual" && !isValidPersonName(clientName)) {
+    errors.clientName =
+      "Client name can only contain letters, spaces, apostrophes, periods, and hyphens.";
+  }
+
+  const primaryEmailError = getEmailAddressError(data.primaryEmail, "Primary email", {
+    required: true,
+  });
+  if (primaryEmailError) {
+    errors.primaryEmail = primaryEmailError;
+  }
+
+  const primaryPhoneError = getCanadianPhoneError(data.phone, "Primary phone", {
+    required: true,
+  });
+  if (primaryPhoneError) {
+    errors.phone = primaryPhoneError;
+  }
+
+  const postalCodeError = getCanadianPostalCodeError(data.pincode, "Postal code");
+  if (postalCodeError) {
+    errors.pincode = postalCodeError;
+  }
+
+  const contactNameError = getPersonNameError(
+    data.primaryContactName,
+    "Contact name",
+  );
+  if (contactNameError) {
+    errors.primaryContactName = contactNameError;
+  }
+
+  const contactPhoneError = getCanadianPhoneError(
+    data.primaryContactPhone,
+    "Direct phone",
+  );
+  if (contactPhoneError) {
+    errors.primaryContactPhone = contactPhoneError;
+  }
+
+  const secondaryPhoneError = getCanadianPhoneError(
+    data.secondaryPhone,
+    "Secondary phone",
+  );
+  if (secondaryPhoneError) {
+    errors.secondaryPhone = secondaryPhoneError;
+  }
+
+  const spouseNameError = getPersonNameError(
+    data.spouseCoOwnerName,
+    "Spouse / co-owner name",
+  );
+  if (spouseNameError) {
+    errors.spouseCoOwnerName = spouseNameError;
+  }
+
+  return errors;
 };
 
 // ============================================
@@ -419,11 +499,13 @@ const StyledInput = ({
   label,
   required,
   icon: Icon,
+  error,
   ...props
 }: {
   label: string;
   required?: boolean;
   icon?: React.ElementType;
+  error?: string;
 } & React.InputHTMLAttributes<HTMLInputElement>) => (
   <div className="space-y-2">
     <Label className="text-sm font-medium text-[#475569]">
@@ -441,11 +523,14 @@ const StyledInput = ({
         {...props}
         className={cn(
           "h-11 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all",
+          error && "border-red-500 focus:border-red-500 focus:ring-red-500/20",
           Icon && "pl-10",
           props.className
         )}
+        aria-invalid={Boolean(error)}
       />
     </div>
+    {error && <p className="text-xs text-red-500">{error}</p>}
   </div>
 );
 
@@ -457,6 +542,7 @@ const StyledSelect = ({
   onValueChange,
   placeholder,
   options,
+  error,
 }: {
   label: string;
   required?: boolean;
@@ -464,6 +550,7 @@ const StyledSelect = ({
   onValueChange: (value: string) => void;
   placeholder?: string;
   options: { value: string; label: string }[];
+  error?: string;
 }) => (
   <div className="space-y-2">
     <Label className="text-sm font-medium text-[#475569]">
@@ -471,7 +558,10 @@ const StyledSelect = ({
       {required && <span className="text-red-500 ml-1">*</span>}
     </Label>
     <Select value={value} onValueChange={onValueChange}>
-      <SelectTrigger className="h-11 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20">
+      <SelectTrigger className={cn(
+        "h-11 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20",
+        error && "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+      )}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent className="rounded-md border-[rgba(15,23,42,0.06)]">
@@ -486,6 +576,7 @@ const StyledSelect = ({
         ))}
       </SelectContent>
     </Select>
+    {error && <p className="text-xs text-red-500">{error}</p>}
   </div>
 );
 
@@ -507,6 +598,7 @@ const AddClientPage = () => {
   const [isFetching, setIsFetching] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>(initialFormState);
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [activeSection, setActiveSection] = useState<string>("basic");
   const [employeeOptions, setEmployeeOptions] = useState<{ value: string; label: string }[]>([]);
 
@@ -565,15 +657,41 @@ const AddClientPage = () => {
   ) => {
     const { id, value } = e.target;
     setFormData((prev) => ({ ...prev, [id]: value }));
+    setFormErrors((prev) => {
+      if (!prev[id as keyof FormData]) {
+        return prev;
+      }
+
+      const next = { ...prev };
+      delete next[id as keyof FormData];
+      return next;
+    });
   };
 
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
     setFormData((prev) => ({ ...prev, [id]: Number(value) }));
+    setFormErrors((prev) => {
+      if (!prev[id as keyof FormData]) {
+        return prev;
+      }
+
+      const next = { ...prev };
+      delete next[id as keyof FormData];
+      return next;
+    });
   };
 
   const handleSelectChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormErrors((prev) => {
+      const next = { ...prev };
+      delete next[field as keyof FormData];
+      if (field === "clientType") {
+        delete next.clientName;
+      }
+      return next;
+    });
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -604,6 +722,18 @@ const AddClientPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const validationErrors = validateClientForm(formData);
+    setFormErrors(validationErrors);
+
+    if (Object.keys(validationErrors).length > 0) {
+      toast({
+        title: "Validation error",
+        description: "Please fix the highlighted client details and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -898,6 +1028,7 @@ const AddClientPage = () => {
                         value={formData.clientName}
                         onChange={handleInputChange}
                         icon={Building2}
+                        error={formErrors.clientName}
                       />
 
                       <StyledSelect
@@ -921,6 +1052,7 @@ const AddClientPage = () => {
                         value={formData.primaryEmail}
                         onChange={handleInputChange}
                         icon={Mail}
+                        error={formErrors.primaryEmail}
                       />
 
                       <StyledInput
@@ -931,6 +1063,7 @@ const AddClientPage = () => {
                         value={formData.phone}
                         onChange={handleInputChange}
                         icon={Phone}
+                        error={formErrors.phone}
                       />
 
                       <StyledSelect
@@ -1035,14 +1168,21 @@ const AddClientPage = () => {
                               setFormData((prev) => ({ ...prev, billingAddressLine1: value }))
                             }
                             onSelectAddress={(details) =>
-                              setFormData((prev) => ({
-                                ...prev,
-                                billingAddressLine1: details.addressLine1 || details.formattedAddress || prev.billingAddressLine1,
-                                city: details.city || prev.city,
-                                state: normalizeProvinceName(details.state) || prev.state,
-                                pincode: details.postalCode || prev.pincode,
-                                country: details.country || prev.country,
-                              }))
+                              {
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  billingAddressLine1: details.addressLine1 || details.formattedAddress || prev.billingAddressLine1,
+                                  city: details.city || prev.city,
+                                  state: normalizeProvinceName(details.state) || prev.state,
+                                  pincode: details.postalCode || prev.pincode,
+                                  country: details.country || prev.country,
+                                }));
+                                setFormErrors((prev) => {
+                                  const next = { ...prev };
+                                  delete next.pincode;
+                                  return next;
+                                });
+                              }
                             }
                             className="h-11 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all"
                             iconClassName="text-[#475569]"
@@ -1085,6 +1225,7 @@ const AddClientPage = () => {
                         value={formData.pincode}
                         onChange={handleInputChange}
                         className="uppercase"
+                        error={formErrors.pincode}
                       />
 
                       <div className="space-y-2">
@@ -1152,6 +1293,7 @@ const AddClientPage = () => {
                       value={formData.primaryContactName}
                       onChange={handleInputChange}
                       icon={User}
+                      error={formErrors.primaryContactName}
                     />
 
                     <StyledInput
@@ -1169,6 +1311,7 @@ const AddClientPage = () => {
                       value={formData.primaryContactPhone}
                       onChange={handleInputChange}
                       icon={Phone}
+                      error={formErrors.primaryContactPhone}
                     />
                   </div>
                 </StyledCard>
@@ -1416,6 +1559,7 @@ const AddClientPage = () => {
                         value={formData.spouseCoOwnerName}
                         onChange={handleInputChange}
                         icon={User}
+                        error={formErrors.spouseCoOwnerName}
                       />
                       <StyledInput
                         label="Secondary Phone"
@@ -1424,6 +1568,7 @@ const AddClientPage = () => {
                         value={formData.secondaryPhone}
                         onChange={handleInputChange}
                         icon={Phone}
+                        error={formErrors.secondaryPhone}
                       />
                     </div>
                   </div>

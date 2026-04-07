@@ -44,6 +44,11 @@ import {
 import { getStoredEmployee, isStoredEmployeeAdmin } from '@/features/auth/lib/auth-storage';
 import { getDepartments, getEmployees } from '@/features/users';
 import api from '@/lib/axios';
+import {
+  normalizeCanadianPostalCode,
+  normalizeEmailAddress,
+  normalizeWhitespace,
+} from '@contracts/contact';
 
 interface FilterState {
   departments: string[];
@@ -171,9 +176,9 @@ const parseSkills = (value?: string) =>
     .filter(Boolean);
 
 const buildEmployeePayload = (data: EmployeeFormPayload, departmentName?: string) => ({
-  firstName: data.firstName.trim(),
-  lastName: data.lastName.trim(),
-  email: data.email.trim().toLowerCase(),
+  firstName: normalizeWhitespace(data.firstName),
+  lastName: normalizeWhitespace(data.lastName),
+  email: normalizeEmailAddress(data.email),
   phone: data.phone.trim(),
   department: departmentName || null,
   position: data.position.trim(),
@@ -184,16 +189,16 @@ const buildEmployeePayload = (data: EmployeeFormPayload, departmentName?: string
   salary: data.salary ? Number(data.salary) : null,
   skills: parseSkills(data.skills),
   address: {
-    street: data.street?.trim() || '',
-    city: data.city?.trim() || '',
-    state: data.state?.trim() || '',
-    zipCode: data.zipCode?.trim() || '',
-    country: data.country?.trim() || '',
+    street: data.street?.trim() || null,
+    city: data.city?.trim() || null,
+    state: data.state?.trim() || null,
+    zipCode: data.zipCode?.trim() ? normalizeCanadianPostalCode(data.zipCode) : null,
+    country: data.country?.trim() || null,
   },
   emergencyContact: {
-    name: data.emergencyName?.trim() || '',
-    relationship: data.emergencyRelationship?.trim() || '',
-    phone: data.emergencyPhone?.trim() || '',
+    name: data.emergencyName?.trim() ? normalizeWhitespace(data.emergencyName) : null,
+    relationship: data.emergencyRelationship?.trim() || null,
+    phone: data.emergencyPhone?.trim() || null,
   },
 });
 
@@ -534,7 +539,7 @@ const AllEmployeesPage: React.FC = () => {
     if (data.portalEmail && data.portalPassword && !editingEmployee) {
       try {
         await api.post('/employees/create-portal-access', {
-          email: data.portalEmail,
+          email: normalizeEmailAddress(data.portalEmail),
           password: data.portalPassword,
           phone: payload.phone,
           firstName: payload.firstName,

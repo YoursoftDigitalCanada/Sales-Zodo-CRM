@@ -25,6 +25,10 @@ import {
   projectWizardDefaultValues,
   projectWizardSchema,
 } from "@/lib/validations/project.schema";
+import {
+  normalizeEmailAddress,
+  normalizeWhitespace,
+} from "@contracts/contact";
 
 const DRAFT_STORAGE_KEY = "roofing-project-wizard-draft-v2";
 
@@ -302,10 +306,10 @@ function createDraftPayload(values: ProjectWizardFormValues, stageOptions: Proje
       wizardDraft: true,
       localOnlyClient: values.clientSelection === "new"
         ? {
-            firstName: values.newClientFirstName,
-            lastName: values.newClientLastName,
-            email: values.newClientEmail,
-            phone: values.newClientPhone,
+            firstName: normalizeWhitespace(values.newClientFirstName),
+            lastName: normalizeWhitespace(values.newClientLastName),
+            email: normalizeEmailAddress(values.newClientEmail),
+            phone: values.newClientPhone.trim(),
             company: values.newClientCompany,
           }
         : null,
@@ -520,14 +524,14 @@ export function useProjectForm(editId?: string) {
       let resolvedClientId = values.clientSelection === "existing" ? safeText(values.clientId) : null;
 
       if (!resolvedClientId && values.clientSelection === "new") {
-        const fullName = [values.newClientFirstName, values.newClientLastName].filter(Boolean).join(" ").trim();
+        const fullName = normalizeWhitespace([values.newClientFirstName, values.newClientLastName].filter(Boolean).join(" "));
         const company = safeText(values.newClientCompany);
         const createClientPayload = {
           clientName: company || fullName || "New Client",
           companyName: company,
           clientType: company ? "BUSINESS" : "INDIVIDUAL",
-          primaryEmail: values.newClientEmail,
-          primaryPhone: values.newClientPhone,
+          primaryEmail: normalizeEmailAddress(values.newClientEmail),
+          primaryPhone: values.newClientPhone.trim(),
           status: "ACTIVE",
           contactName: fullName || null,
         };

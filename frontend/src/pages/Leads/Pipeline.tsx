@@ -57,6 +57,11 @@ import api from "@/lib/axios";
 import { ComposeEmailSheet } from "@/features/emails/components/ComposeEmailSheet";
 import { ListCardSkeleton, SwipeActionCard } from "@/features/clients/components/responsive-helpers";
 import {
+  normalizeCanadianPostalCode,
+  normalizeEmailAddress,
+  normalizeWhitespace,
+} from "@contracts/contact";
+import {
   Search,
   Plus,
   Filter,
@@ -988,18 +993,18 @@ const Pipeline = () => {
       : (selectedStatus || "NEW");
 
     const apiData: Record<string, any> = {
-      firstName: data.firstName,
-      lastName: data.lastName,
-      email: data.email || undefined,
-      phone: data.phone || undefined,
-      companyName: data.companyName,
-      jobTitle: data.jobTitle || undefined,
+      firstName: normalizeWhitespace(data.firstName),
+      lastName: normalizeWhitespace(data.lastName),
+      email: data.email ? normalizeEmailAddress(data.email) : undefined,
+      phone: data.phone?.trim() || undefined,
+      companyName: data.companyName?.trim() || "",
+      jobTitle: data.jobTitle?.trim() || undefined,
       website: data.website && data.website.trim() ? data.website.trim() : undefined,
-      location: data.location || undefined,
+      location: data.location?.trim() || undefined,
       status: resolvedStatus,
       temperature: String(data.temperature || "WARM").toUpperCase(),
       potentialValue: data.potentialValue || 0,
-      notes: data.notes || undefined,
+      notes: data.notes?.trim() || undefined,
       ...buildNewFieldsPayload(data),
     };
 
@@ -1053,13 +1058,20 @@ const Pipeline = () => {
   };
 
   const buildNewFieldsPayload = (data: Record<string, any>) => {
-    const opt = (value: any) => (value && value !== "" ? value : undefined);
+    const opt = (value: any) => {
+      if (typeof value === "string") {
+        const trimmed = value.trim();
+        return trimmed ? trimmed : undefined;
+      }
+
+      return value && value !== "" ? value : undefined;
+    };
 
     return {
       propertyAddress: opt(data.propertyAddress),
       city: opt(data.city),
       state: opt(data.state),
-      zipCode: opt(data.zipCode),
+      zipCode: data.zipCode ? normalizeCanadianPostalCode(data.zipCode) : undefined,
       propertyType: opt(data.propertyType),
       serviceType: opt(data.serviceType),
       isInsuranceClaim: opt(data.isInsuranceClaim),
@@ -1072,7 +1084,7 @@ const Pipeline = () => {
       confirmedEmail: data.confirmedEmail || false,
       confirmedAddress: data.confirmedAddress || false,
       secondaryPhone: opt(data.secondaryPhone),
-      spouseCoOwnerName: opt(data.spouseCoOwnerName),
+      spouseCoOwnerName: data.spouseCoOwnerName ? normalizeWhitespace(data.spouseCoOwnerName) : undefined,
       isHomeowner: opt(data.isHomeowner),
       isDecisionMaker: opt(data.isDecisionMaker),
       ownershipType: opt(data.ownershipType),
@@ -1087,9 +1099,9 @@ const Pipeline = () => {
       hasClaimBeenFiled: opt(data.hasClaimBeenFiled),
       claimNumber: opt(data.claimNumber),
       adjusterAssigned: opt(data.adjusterAssigned),
-      adjusterName: opt(data.adjusterName),
+      adjusterName: data.adjusterName ? normalizeWhitespace(data.adjusterName) : undefined,
       adjusterPhone: opt(data.adjusterPhone),
-      adjusterEmail: opt(data.adjusterEmail),
+      adjusterEmail: data.adjusterEmail ? normalizeEmailAddress(data.adjusterEmail) : undefined,
       adjusterMeetingDate: opt(data.adjusterMeetingDate),
       budgetRange: opt(data.budgetRange),
       workTimeline: opt(data.workTimeline),

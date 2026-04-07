@@ -1,4 +1,14 @@
 import { z } from "zod";
+import {
+  CANADIAN_PHONE_VALIDATION_MESSAGE,
+  CANADIAN_POSTAL_CODE_VALIDATION_MESSAGE,
+  EMAIL_VALIDATION_MESSAGE,
+  PERSON_NAME_VALIDATION_MESSAGE,
+  isValidCanadianPhoneNumber,
+  isValidCanadianPostalCode,
+  isValidEmailAddress,
+  isValidPersonName,
+} from "@contracts/contact";
 
 export const PROJECT_TYPE_OPTIONS = [
   { value: "REPAIR", label: "Repair" },
@@ -218,7 +228,12 @@ export const DURATION_OPTIONS = [
 ] as const;
 
 const optionalString = z.string().trim().optional().or(z.literal(""));
-const optionalEmail = z.string().trim().email("Enter a valid email").optional().or(z.literal(""));
+const optionalEmail = z
+  .string()
+  .trim()
+  .refine((value) => value.length === 0 || isValidEmailAddress(value), EMAIL_VALIDATION_MESSAGE)
+  .optional()
+  .or(z.literal(""));
 
 const numeric = z
   .union([z.number(), z.string(), z.null(), z.undefined()])
@@ -346,15 +361,23 @@ export const projectWizardSchema = z
     if (values.clientSelection === "new") {
       if (!values.newClientFirstName) {
         ctx.addIssue({ path: ["newClientFirstName"], code: z.ZodIssueCode.custom, message: "First name is required" });
+      } else if (!isValidPersonName(values.newClientFirstName)) {
+        ctx.addIssue({ path: ["newClientFirstName"], code: z.ZodIssueCode.custom, message: `First name ${PERSON_NAME_VALIDATION_MESSAGE}` });
       }
       if (!values.newClientLastName) {
         ctx.addIssue({ path: ["newClientLastName"], code: z.ZodIssueCode.custom, message: "Last name is required" });
+      } else if (!isValidPersonName(values.newClientLastName)) {
+        ctx.addIssue({ path: ["newClientLastName"], code: z.ZodIssueCode.custom, message: `Last name ${PERSON_NAME_VALIDATION_MESSAGE}` });
       }
       if (!values.newClientEmail) {
         ctx.addIssue({ path: ["newClientEmail"], code: z.ZodIssueCode.custom, message: "Email is required" });
+      } else if (!isValidEmailAddress(values.newClientEmail)) {
+        ctx.addIssue({ path: ["newClientEmail"], code: z.ZodIssueCode.custom, message: EMAIL_VALIDATION_MESSAGE });
       }
       if (!values.newClientPhone) {
         ctx.addIssue({ path: ["newClientPhone"], code: z.ZodIssueCode.custom, message: "Phone is required" });
+      } else if (!isValidCanadianPhoneNumber(values.newClientPhone)) {
+        ctx.addIssue({ path: ["newClientPhone"], code: z.ZodIssueCode.custom, message: CANADIAN_PHONE_VALIDATION_MESSAGE });
       }
     }
 
@@ -371,8 +394,8 @@ export const projectWizardSchema = z
       if (!values.jobSiteZip) {
         ctx.addIssue({ path: ["jobSiteZip"], code: z.ZodIssueCode.custom, message: "Postal code is required" });
       }
-      if (values.jobSiteZip && !/^[A-Za-z]\d[A-Za-z]\s?\d[A-Za-z]\d$/i.test(values.jobSiteZip.trim())) {
-        ctx.addIssue({ path: ["jobSiteZip"], code: z.ZodIssueCode.custom, message: "Enter a valid Canadian postal code (e.g. V3V 2Z0)" });
+      if (values.jobSiteZip && !isValidCanadianPostalCode(values.jobSiteZip)) {
+        ctx.addIssue({ path: ["jobSiteZip"], code: z.ZodIssueCode.custom, message: CANADIAN_POSTAL_CODE_VALIDATION_MESSAGE });
       }
     }
 

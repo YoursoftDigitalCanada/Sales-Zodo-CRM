@@ -48,12 +48,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { Department, Employee, EmploymentType, EmployeeStatus } from './types';
+import {
+  CANADIAN_PHONE_VALIDATION_MESSAGE,
+  CANADIAN_POSTAL_CODE_VALIDATION_MESSAGE,
+  EMAIL_VALIDATION_MESSAGE,
+  PERSON_NAME_VALIDATION_MESSAGE,
+  isValidCanadianPhoneNumber,
+  isValidCanadianPostalCode,
+  isValidEmailAddress,
+  isValidPersonName,
+} from '@contracts/contact';
 
 const employeeFormSchema = z.object({
-  firstName: z.string().min(2, 'First name must be at least 2 characters'),
-  lastName: z.string().min(2, 'Last name must be at least 2 characters'),
-  email: z.string().email('Invalid email address'),
-  phone: z.string().min(10, 'Phone number must be at least 10 digits'),
+  firstName: z.string().trim().min(2, 'First name must be at least 2 characters').refine(isValidPersonName, `First name ${PERSON_NAME_VALIDATION_MESSAGE}`),
+  lastName: z.string().trim().min(2, 'Last name must be at least 2 characters').refine(isValidPersonName, `Last name ${PERSON_NAME_VALIDATION_MESSAGE}`),
+  email: z.string().trim().refine(isValidEmailAddress, EMAIL_VALIDATION_MESSAGE),
+  phone: z.string().trim().refine(isValidCanadianPhoneNumber, CANADIAN_PHONE_VALIDATION_MESSAGE),
   position: z.string().min(2, 'Position is required'),
   departmentId: z.string().min(1, 'Department is required'),
   employmentType: z.enum(['full-time', 'part-time', 'contract', 'intern']),
@@ -63,13 +73,16 @@ const employeeFormSchema = z.object({
   street: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),
-  zipCode: z.string().optional(),
+  zipCode: z.string().optional().refine((value) => !value || isValidCanadianPostalCode(value), CANADIAN_POSTAL_CODE_VALIDATION_MESSAGE),
   country: z.string().optional(),
-  emergencyName: z.string().optional(),
+  emergencyName: z.string().optional().refine((value) => !value || isValidPersonName(value), `Emergency contact name ${PERSON_NAME_VALIDATION_MESSAGE}`),
   emergencyRelationship: z.string().optional(),
-  emergencyPhone: z.string().optional(),
+  emergencyPhone: z.string().optional().refine((value) => !value || isValidCanadianPhoneNumber(value), CANADIAN_PHONE_VALIDATION_MESSAGE),
   skills: z.string().optional(),
   portalEmail: z.string().optional().refine(
+    (val) => !val || isValidEmailAddress(val),
+    { message: EMAIL_VALIDATION_MESSAGE }
+  ).refine(
     (val) => !val || val.endsWith('@zodo.ca'),
     { message: 'Portal email must end with @zodo.ca' }
   ),
@@ -132,7 +145,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
       city: editingEmployee?.address?.city || '',
       state: editingEmployee?.address?.state || '',
       zipCode: editingEmployee?.address?.zipCode || '',
-      country: editingEmployee?.address?.country || 'USA',
+      country: editingEmployee?.address?.country || 'Canada',
       emergencyName: editingEmployee?.emergencyContact?.name || '',
       emergencyRelationship: editingEmployee?.emergencyContact?.relationship || '',
       emergencyPhone: editingEmployee?.emergencyContact?.phone || '',
@@ -160,7 +173,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
       city: editingEmployee?.address?.city || '',
       state: editingEmployee?.address?.state || '',
       zipCode: editingEmployee?.address?.zipCode || '',
-      country: editingEmployee?.address?.country || 'USA',
+      country: editingEmployee?.address?.country || 'Canada',
       emergencyName: editingEmployee?.emergencyContact?.name || '',
       emergencyRelationship: editingEmployee?.emergencyContact?.relationship || '',
       emergencyPhone: editingEmployee?.emergencyContact?.phone || '',

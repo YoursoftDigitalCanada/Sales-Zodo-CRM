@@ -1,4 +1,12 @@
 import { z } from 'zod';
+import {
+    CANADIAN_PHONE_VALIDATION_MESSAGE,
+    EMAIL_VALIDATION_MESSAGE,
+    PERSON_NAME_VALIDATION_MESSAGE,
+    isValidCanadianPhoneNumber,
+    isValidEmailAddress,
+    isValidPersonName,
+} from '@contracts/contact';
 
 // ============================================================================
 // CONTACTS - Add Contact
@@ -6,14 +14,14 @@ import { z } from 'zod';
 
 export const createContactSchema = z.object({
     body: z.object({
-        contactName: z.string().min(1).max(255),
+        contactName: z.string().trim().min(1).max(255).refine(isValidPersonName, `Contact name ${PERSON_NAME_VALIDATION_MESSAGE}`),
         companyId: z.string().uuid().optional().nullable(),
         type: z.enum(['CLIENT', 'LEAD']).default('CLIENT'),
         jobTitle: z.string().max(100).optional().nullable(),
         department: z.string().max(100).optional().nullable(),
-        email: z.string().email(),
-        officePhone: z.string().max(30).optional().nullable(),
-        mobilePhone: z.string().max(30).optional().nullable(),
+        email: z.string().trim().refine(isValidEmailAddress, EMAIL_VALIDATION_MESSAGE),
+        officePhone: z.string().trim().max(30).refine(isValidCanadianPhoneNumber, CANADIAN_PHONE_VALIDATION_MESSAGE).optional().nullable(),
+        mobilePhone: z.string().trim().max(30).refine(isValidCanadianPhoneNumber, CANADIAN_PHONE_VALIDATION_MESSAGE).optional().nullable(),
         linkedInUrl: z.string().url().optional().nullable(),
         isPrimaryContact: z.boolean().default(false),
     }),
@@ -21,14 +29,14 @@ export const createContactSchema = z.object({
 
 export const updateContactSchema = z.object({
     body: z.object({
-        contactName: z.string().min(1).max(255).optional(),
+        contactName: z.string().trim().min(1).max(255).refine(isValidPersonName, `Contact name ${PERSON_NAME_VALIDATION_MESSAGE}`).optional(),
         companyId: z.string().uuid().optional().nullable(),
         type: z.enum(['CLIENT', 'LEAD']).optional(),
         jobTitle: z.string().max(100).optional().nullable(),
         department: z.string().max(100).optional().nullable(),
-        email: z.string().email().optional(),
-        officePhone: z.string().max(30).optional().nullable(),
-        mobilePhone: z.string().max(30).optional().nullable(),
+        email: z.string().trim().refine(isValidEmailAddress, EMAIL_VALIDATION_MESSAGE).optional(),
+        officePhone: z.string().trim().max(30).refine(isValidCanadianPhoneNumber, CANADIAN_PHONE_VALIDATION_MESSAGE).optional().nullable(),
+        mobilePhone: z.string().trim().max(30).refine(isValidCanadianPhoneNumber, CANADIAN_PHONE_VALIDATION_MESSAGE).optional().nullable(),
         linkedInUrl: z.string().url().optional().nullable(),
         isPrimaryContact: z.boolean().optional(),
     }),

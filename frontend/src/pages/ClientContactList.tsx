@@ -52,6 +52,13 @@ import { Label } from "@/components/ui/label";
 import { getClients as getClientEntities } from "@/features/clients";
 import api from "@/lib/axios";
 import {
+  getCanadianPhoneError,
+  getEmailAddressError,
+  getPersonNameError,
+  normalizeEmailAddress,
+  normalizeWhitespace,
+} from "@contracts/contact";
+import {
   Bell,
   Plus,
   FileDown,
@@ -833,6 +840,7 @@ const ContactDialog = ({
     notes: "",
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (contact) {
@@ -864,10 +872,65 @@ const ContactDialog = ({
         notes: "",
       });
     }
+    setErrors({});
   }, [contact, isOpen]);
+
+  const setFieldValue = (field: keyof typeof formData, value: string | boolean) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    setErrors((prev) => {
+      if (!prev[field]) {
+        return prev;
+      }
+
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
+  const validateForm = () => {
+    const nextErrors: Record<string, string> = {};
+
+    const nameError = getPersonNameError(formData.contactPerson, "Contact name", { required: true });
+    if (nameError) {
+      nextErrors.contactPerson = nameError;
+    }
+
+    const emailError = getEmailAddressError(formData.contactEmail, "Email", { required: true });
+    if (emailError) {
+      nextErrors.contactEmail = emailError;
+    }
+
+    const officePhoneError = getCanadianPhoneError(formData.contactNo, "Office phone");
+    if (officePhoneError) {
+      nextErrors.contactNo = officePhoneError;
+    }
+
+    const mobilePhoneError = getCanadianPhoneError(formData.mobile, "Mobile");
+    if (mobilePhoneError) {
+      nextErrors.mobile = mobilePhoneError;
+    }
+
+    if (formData.linkedin.trim()) {
+      try {
+        new URL(formData.linkedin.trim());
+      } catch {
+        nextErrors.linkedin = "Enter a valid LinkedIn URL, including http:// or https://";
+      }
+    }
+
+    return nextErrors;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const validationErrors = validateForm();
+    setErrors(validationErrors);
+
+    if (Object.keys(validationErrors).length > 0) {
+      return;
+    }
+
     setIsLoading(true);
 
     await onSubmit({
@@ -893,12 +956,16 @@ const ContactDialog = ({
                 <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                 <Input
                   value={formData.contactPerson}
-                  onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
+                  onChange={(e) => setFieldValue("contactPerson", e.target.value)}
                   placeholder="John Doe"
                   required
-                  className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
+                  className={cn(
+                    "h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20",
+                    errors.contactPerson && "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                  )}
                 />
               </div>
+              {errors.contactPerson && <p className="text-xs text-red-500">{errors.contactPerson}</p>}
             </div>
           </div>
 
@@ -979,12 +1046,16 @@ const ContactDialog = ({
               <Input
                 type="email"
                 value={formData.contactEmail}
-                onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
+                onChange={(e) => setFieldValue("contactEmail", e.target.value)}
                 placeholder="john@company.com"
                 required
-                className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
+                className={cn(
+                  "h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20",
+                  errors.contactEmail && "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                )}
               />
             </div>
+            {errors.contactEmail && <p className="text-xs text-red-500">{errors.contactEmail}</p>}
           </div>
 
           {/* Phone Numbers */}
@@ -995,11 +1066,15 @@ const ContactDialog = ({
                 <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                 <Input
                   value={formData.contactNo}
-                  onChange={(e) => setFormData({ ...formData, contactNo: e.target.value })}
+                  onChange={(e) => setFieldValue("contactNo", e.target.value)}
                   placeholder="+1 (555) 000-0000"
-                  className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
+                  className={cn(
+                    "h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20",
+                    errors.contactNo && "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                  )}
                 />
               </div>
+              {errors.contactNo && <p className="text-xs text-red-500">{errors.contactNo}</p>}
             </div>
 
             <div className="space-y-2">
@@ -1008,11 +1083,15 @@ const ContactDialog = ({
                 <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                 <Input
                   value={formData.mobile}
-                  onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
+                  onChange={(e) => setFieldValue("mobile", e.target.value)}
                   placeholder="+1 (555) 000-0000"
-                  className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
+                  className={cn(
+                    "h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20",
+                    errors.mobile && "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                  )}
                 />
               </div>
+              {errors.mobile && <p className="text-xs text-red-500">{errors.mobile}</p>}
             </div>
           </div>
 
@@ -1023,11 +1102,15 @@ const ContactDialog = ({
               <Linkedin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
               <Input
                 value={formData.linkedin}
-                onChange={(e) => setFormData({ ...formData, linkedin: e.target.value })}
+                onChange={(e) => setFieldValue("linkedin", e.target.value)}
                 placeholder="https://linkedin.com/in/username"
-                className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
+                className={cn(
+                  "h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20",
+                  errors.linkedin && "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                )}
               />
             </div>
+            {errors.linkedin && <p className="text-xs text-red-500">{errors.linkedin}</p>}
           </div>
 
           {/* Primary Contact Toggle */}
@@ -1039,7 +1122,7 @@ const ContactDialog = ({
             <Checkbox
               checked={formData.isPrimary}
               onCheckedChange={(checked) =>
-                setFormData({ ...formData, isPrimary: checked as boolean })
+                setFieldValue("isPrimary", checked as boolean)
               }
               className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
             />
@@ -1228,15 +1311,15 @@ const ClientContactListPage = () => {
   const handleAddContact = async (data: Partial<Contact>) => {
     try {
       const payload = {
-        contactName: data.contactPerson || "",
+        contactName: normalizeWhitespace(data.contactPerson) || "",
         companyId: data.clientId ? String(data.clientId) : undefined,
         type: (data.type?.toUpperCase() === "CLIENT" ? "CLIENT" : data.type?.toUpperCase() === "LEAD" ? "LEAD" : "CLIENT") as string,
-        jobTitle: data.designation || undefined,
-        department: data.department || undefined,
-        email: data.contactEmail || "",
-        officePhone: data.contactNo || undefined,
-        mobilePhone: data.mobile || undefined,
-        linkedInUrl: data.linkedin || undefined,
+        jobTitle: data.designation?.trim() || undefined,
+        department: data.department?.trim() || undefined,
+        email: data.contactEmail ? normalizeEmailAddress(data.contactEmail) : "",
+        officePhone: data.contactNo?.trim() || undefined,
+        mobilePhone: data.mobile?.trim() || undefined,
+        linkedInUrl: data.linkedin?.trim() || undefined,
         isPrimaryContact: data.isPrimary || false,
       };
       await api.post("/contacts", payload);
@@ -1260,15 +1343,15 @@ const ClientContactListPage = () => {
     if (!editingContact) return;
     try {
       const payload: Record<string, any> = {};
-      if (data.contactPerson !== undefined) payload.contactName = data.contactPerson;
+      if (data.contactPerson !== undefined) payload.contactName = normalizeWhitespace(data.contactPerson);
       if (data.clientId !== undefined) payload.companyId = String(data.clientId);
       if (data.type !== undefined) payload.type = data.type.toUpperCase();
-      if (data.designation !== undefined) payload.jobTitle = data.designation;
-      if (data.department !== undefined) payload.department = data.department;
-      if (data.contactEmail !== undefined) payload.email = data.contactEmail;
-      if (data.contactNo !== undefined) payload.officePhone = data.contactNo;
-      if (data.mobile !== undefined) payload.mobilePhone = data.mobile;
-      if (data.linkedin !== undefined) payload.linkedInUrl = data.linkedin;
+      if (data.designation !== undefined) payload.jobTitle = data.designation?.trim() || null;
+      if (data.department !== undefined) payload.department = data.department?.trim() || null;
+      if (data.contactEmail !== undefined) payload.email = data.contactEmail ? normalizeEmailAddress(data.contactEmail) : data.contactEmail;
+      if (data.contactNo !== undefined) payload.officePhone = data.contactNo?.trim() || null;
+      if (data.mobile !== undefined) payload.mobilePhone = data.mobile?.trim() || null;
+      if (data.linkedin !== undefined) payload.linkedInUrl = data.linkedin?.trim() || null;
       if (data.isPrimary !== undefined) payload.isPrimaryContact = data.isPrimary;
 
       await api.put(`/contacts/${editingContact.id}`, payload);

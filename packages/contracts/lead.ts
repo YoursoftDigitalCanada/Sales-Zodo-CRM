@@ -5,14 +5,45 @@ import {
   SortOrderSchema,
   PipelineEntityTypeSchema,
 } from "./enums";
+import {
+  CANADIAN_PHONE_VALIDATION_MESSAGE,
+  CANADIAN_POSTAL_CODE_VALIDATION_MESSAGE,
+  EMAIL_VALIDATION_MESSAGE,
+  PERSON_NAME_VALIDATION_MESSAGE,
+  isValidCanadianPhoneNumber,
+  isValidCanadianPostalCode,
+  isValidEmailAddress,
+  isValidPersonName,
+} from "./contact";
 
 const nullableDateTime = z.string().datetime().optional().nullable().or(z.literal(""));
 
 export const CreateLeadSchema = z.object({
-  firstName: z.string().min(1).max(100),
-  lastName: z.string().min(1).max(100),
-  email: z.string().email().optional().nullable(),
-  phone: z.string().max(30).optional().nullable(),
+  firstName: z
+    .string()
+    .trim()
+    .min(1)
+    .max(100)
+    .refine(isValidPersonName, `First name ${PERSON_NAME_VALIDATION_MESSAGE}`),
+  lastName: z
+    .string()
+    .trim()
+    .min(1)
+    .max(100)
+    .refine(isValidPersonName, `Last name ${PERSON_NAME_VALIDATION_MESSAGE}`),
+  email: z
+    .string()
+    .trim()
+    .refine(isValidEmailAddress, EMAIL_VALIDATION_MESSAGE)
+    .optional()
+    .nullable(),
+  phone: z
+    .string()
+    .trim()
+    .max(30)
+    .refine(isValidCanadianPhoneNumber, CANADIAN_PHONE_VALIDATION_MESSAGE)
+    .optional()
+    .nullable(),
   location: z.string().max(255).optional().nullable(),
   companyName: z.string().max(255).default(""),
   jobTitle: z.string().max(100).optional().nullable(),
@@ -27,7 +58,13 @@ export const CreateLeadSchema = z.object({
   propertyAddress: z.string().max(500).optional().nullable(),
   city: z.string().max(100).optional().nullable(),
   state: z.string().max(50).optional().nullable(),
-  zipCode: z.string().max(10).optional().nullable(),
+  zipCode: z
+    .string()
+    .trim()
+    .max(10)
+    .refine(isValidCanadianPostalCode, CANADIAN_POSTAL_CODE_VALIDATION_MESSAGE)
+    .optional()
+    .nullable(),
   propertyType: z.enum(["Residential", "Commercial", "Multi-Family"]).optional().nullable(),
   serviceType: z.string().max(100).optional().nullable(),
   isInsuranceClaim: z.enum(["Yes", "No", "Not Sure"]).optional().nullable(),
@@ -46,8 +83,20 @@ export const CreateLeadSchema = z.object({
   confirmedPhone: z.boolean().optional(),
   confirmedEmail: z.boolean().optional(),
   confirmedAddress: z.boolean().optional(),
-  secondaryPhone: z.string().max(30).optional().nullable(),
-  spouseCoOwnerName: z.string().max(100).optional().nullable(),
+  secondaryPhone: z
+    .string()
+    .trim()
+    .max(30)
+    .refine(isValidCanadianPhoneNumber, CANADIAN_PHONE_VALIDATION_MESSAGE)
+    .optional()
+    .nullable(),
+  spouseCoOwnerName: z
+    .string()
+    .trim()
+    .max(100)
+    .refine(isValidPersonName, `Spouse / co-owner name ${PERSON_NAME_VALIDATION_MESSAGE}`)
+    .optional()
+    .nullable(),
   isHomeowner: z.enum(["Yes", "No", "Tenant"]).optional().nullable(),
   isDecisionMaker: z.enum(["Yes", "No", "Need Spouse Approval"]).optional().nullable(),
   ownershipType: z.enum(["Owner-Occupied", "Rental Property", "Investment Property"]).optional().nullable(),
@@ -62,9 +111,27 @@ export const CreateLeadSchema = z.object({
   hasClaimBeenFiled: z.enum(["Yes", "No", "Planning To"]).optional().nullable(),
   claimNumber: z.string().max(100).optional().nullable(),
   adjusterAssigned: z.enum(["Yes", "No", "Not Yet"]).optional().nullable(),
-  adjusterName: z.string().max(100).optional().nullable(),
-  adjusterPhone: z.string().max(30).optional().nullable(),
-  adjusterEmail: z.string().email().optional().nullable().or(z.literal("")),
+  adjusterName: z
+    .string()
+    .trim()
+    .max(100)
+    .refine(isValidPersonName, `Adjuster name ${PERSON_NAME_VALIDATION_MESSAGE}`)
+    .optional()
+    .nullable(),
+  adjusterPhone: z
+    .string()
+    .trim()
+    .max(30)
+    .refine(isValidCanadianPhoneNumber, CANADIAN_PHONE_VALIDATION_MESSAGE)
+    .optional()
+    .nullable(),
+  adjusterEmail: z
+    .string()
+    .trim()
+    .refine(isValidEmailAddress, EMAIL_VALIDATION_MESSAGE)
+    .optional()
+    .nullable()
+    .or(z.literal("")),
   adjusterMeetingDate: nullableDateTime,
   budgetRange: z.string().max(100).optional().nullable(),
   workTimeline: z.string().max(100).optional().nullable(),

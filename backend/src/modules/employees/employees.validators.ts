@@ -1,4 +1,14 @@
 import { z } from 'zod';
+import {
+    CANADIAN_PHONE_VALIDATION_MESSAGE,
+    CANADIAN_POSTAL_CODE_VALIDATION_MESSAGE,
+    EMAIL_VALIDATION_MESSAGE,
+    PERSON_NAME_VALIDATION_MESSAGE,
+    isValidCanadianPhoneNumber,
+    isValidCanadianPostalCode,
+    isValidEmailAddress,
+    isValidPersonName,
+} from '@contracts/contact';
 
 const employmentStatusSchema = z.enum(['active', 'inactive', 'on-leave', 'probation']);
 const employmentTypeSchema = z.enum(['full-time', 'part-time', 'contract', 'intern']);
@@ -7,14 +17,14 @@ const employeeAddressSchema = z.object({
     street: z.string().max(200).optional().nullable(),
     city: z.string().max(100).optional().nullable(),
     state: z.string().max(100).optional().nullable(),
-    zipCode: z.string().max(30).optional().nullable(),
+    zipCode: z.string().trim().max(30).refine(isValidCanadianPostalCode, CANADIAN_POSTAL_CODE_VALIDATION_MESSAGE).optional().nullable(),
     country: z.string().max(100).optional().nullable(),
 });
 
 const emergencyContactSchema = z.object({
-    name: z.string().max(100).optional().nullable(),
+    name: z.string().trim().max(100).refine(isValidPersonName, `Emergency contact name ${PERSON_NAME_VALIDATION_MESSAGE}`).optional().nullable(),
     relationship: z.string().max(100).optional().nullable(),
-    phone: z.string().max(50).optional().nullable(),
+    phone: z.string().trim().max(50).refine(isValidCanadianPhoneNumber, CANADIAN_PHONE_VALIDATION_MESSAGE).optional().nullable(),
 });
 
 export const createEmployeeSchema = z.object({
@@ -25,7 +35,7 @@ export const createEmployeeSchema = z.object({
         department: z.string().max(100).optional().nullable(),
         position: z.string().max(100).optional().nullable(),
         hireDate: z.string().datetime().optional().nullable(),
-        phone: z.string().max(50).optional().nullable(),
+        phone: z.string().trim().max(50).refine(isValidCanadianPhoneNumber, CANADIAN_PHONE_VALIDATION_MESSAGE).optional().nullable(),
         salary: z.coerce.number().min(0).optional().nullable(),
         employmentStatus: employmentStatusSchema.optional(),
         employmentType: employmentTypeSchema.optional(),
@@ -38,10 +48,10 @@ export const createEmployeeSchema = z.object({
 
 export const updateEmployeeSchema = z.object({
     body: z.object({
-        firstName: z.string().min(1).max(100).optional(),
-        lastName: z.string().min(1).max(100).optional(),
-        email: z.string().email().optional(),
-        phone: z.string().max(50).optional().nullable(),
+        firstName: z.string().trim().min(1).max(100).refine(isValidPersonName, `First name ${PERSON_NAME_VALIDATION_MESSAGE}`).optional(),
+        lastName: z.string().trim().min(1).max(100).refine(isValidPersonName, `Last name ${PERSON_NAME_VALIDATION_MESSAGE}`).optional(),
+        email: z.string().trim().refine(isValidEmailAddress, EMAIL_VALIDATION_MESSAGE).optional(),
+        phone: z.string().trim().max(50).refine(isValidCanadianPhoneNumber, CANADIAN_PHONE_VALIDATION_MESSAGE).optional().nullable(),
         roleId: z.string().uuid().optional(),
         employeeCode: z.string().max(50).optional(),
         employeeNumber: z.string().max(50).optional(),
@@ -60,13 +70,13 @@ export const updateEmployeeSchema = z.object({
 
 export const createPortalAccessSchema = z.object({
     body: z.object({
-        email: z.string().email().refine((value) => value.endsWith('@zodo.ca'), {
+        email: z.string().trim().refine(isValidEmailAddress, EMAIL_VALIDATION_MESSAGE).refine((value) => value.endsWith('@zodo.ca'), {
             message: 'Portal email must end with @zodo.ca',
         }),
         password: z.string().min(8).max(128),
-        firstName: z.string().min(1).max(100),
-        lastName: z.string().min(1).max(100),
-        phone: z.string().max(50).optional().nullable(),
+        firstName: z.string().trim().min(1).max(100).refine(isValidPersonName, `First name ${PERSON_NAME_VALIDATION_MESSAGE}`),
+        lastName: z.string().trim().min(1).max(100).refine(isValidPersonName, `Last name ${PERSON_NAME_VALIDATION_MESSAGE}`),
+        phone: z.string().trim().max(50).refine(isValidCanadianPhoneNumber, CANADIAN_PHONE_VALIDATION_MESSAGE).optional().nullable(),
         position: z.string().max(100).optional().nullable(),
         department: z.string().max(100).optional().nullable(),
         hireDate: z.string().datetime().optional().nullable(),

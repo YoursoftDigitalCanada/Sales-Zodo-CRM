@@ -1,18 +1,27 @@
 import { z } from 'zod';
+import {
+    CANADIAN_PHONE_VALIDATION_MESSAGE,
+    CANADIAN_POSTAL_CODE_VALIDATION_MESSAGE,
+    EMAIL_VALIDATION_MESSAGE,
+    PERSON_NAME_VALIDATION_MESSAGE,
+    isValidCanadianPhoneNumber,
+    isValidCanadianPostalCode,
+    isValidEmailAddress,
+    isValidPersonName,
+} from '@contracts/contact';
 
 // ============================================================================
 // CLIENTS - Add New Client
 // ============================================================================
 
-export const createClientSchema = z.object({
-    body: z.object({
+const createClientBodySchema = z.object({
         // 1️⃣ Basic Information
         clientLogo: z.string().url().optional().nullable(),
-        clientName: z.string().min(1).max(255),
+        clientName: z.string().trim().min(1).max(255),
         companyName: z.string().max(255).optional().nullable(),
         clientType: z.enum(['BUSINESS', 'INDIVIDUAL']).default('BUSINESS'),
-        primaryEmail: z.string().email(),
-        primaryPhone: z.string().min(1).max(30),
+        primaryEmail: z.string().trim().refine(isValidEmailAddress, EMAIL_VALIDATION_MESSAGE),
+        primaryPhone: z.string().trim().min(1).max(30).refine(isValidCanadianPhoneNumber, CANADIAN_PHONE_VALIDATION_MESSAGE),
         status: z.enum(['ACTIVE', 'INACTIVE']).default('ACTIVE'),
         assignedOwner: z.string().uuid().optional().nullable(),
 
@@ -27,16 +36,16 @@ export const createClientSchema = z.object({
         suite: z.string().max(50).optional().nullable(),
         city: z.string().max(100).optional().nullable(),
         province: z.string().max(100).optional().nullable(),
-        postalCode: z.string().max(20).optional().nullable(),
+        postalCode: z.string().trim().max(20).refine(isValidCanadianPostalCode, CANADIAN_POSTAL_CODE_VALIDATION_MESSAGE).optional().nullable(),
         country: z.string().max(100).optional().nullable(),
 
         // 4️⃣ Internal Notes
         internalNotes: z.string().optional().nullable(),
 
         // 5️⃣ Primary Contact
-        contactName: z.string().max(255).optional().nullable(),
+        contactName: z.string().trim().max(255).refine(isValidPersonName, `Contact name ${PERSON_NAME_VALIDATION_MESSAGE}`).optional().nullable(),
         position: z.string().max(100).optional().nullable(),
-        directPhone: z.string().max(30).optional().nullable(),
+        directPhone: z.string().trim().max(30).refine(isValidCanadianPhoneNumber, CANADIAN_PHONE_VALIDATION_MESSAGE).optional().nullable(),
 
         // 6️⃣ Financial Settings
         creditLimit: z.number().min(0).optional().nullable(),
@@ -71,20 +80,31 @@ export const createClientSchema = z.object({
         hoaRestrictions: z.string().max(2000).optional().nullable(),
 
         // 1️⃣3️⃣ Secondary Contact
-        secondaryPhone: z.string().max(30).optional().nullable(),
-        spouseCoOwnerName: z.string().max(200).optional().nullable(),
-    }),
+        secondaryPhone: z.string().trim().max(30).refine(isValidCanadianPhoneNumber, CANADIAN_PHONE_VALIDATION_MESSAGE).optional().nullable(),
+        spouseCoOwnerName: z.string().trim().max(200).refine(isValidPersonName, `Spouse / co-owner name ${PERSON_NAME_VALIDATION_MESSAGE}`).optional().nullable(),
+    })
+    .superRefine((value, ctx) => {
+        if (value.clientType === 'INDIVIDUAL' && !isValidPersonName(value.clientName)) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['clientName'],
+                message: `Client name ${PERSON_NAME_VALIDATION_MESSAGE}`,
+            });
+        }
+    });
+
+export const createClientSchema = z.object({
+    body: createClientBodySchema,
 });
 
-export const updateClientSchema = z.object({
-    body: z.object({
+const updateClientBodySchema = z.object({
         // 1️⃣ Basic Information
         clientLogo: z.string().url().optional().nullable(),
-        clientName: z.string().min(1).max(255).optional(),
+        clientName: z.string().trim().min(1).max(255).optional(),
         companyName: z.string().max(255).optional().nullable(),
         clientType: z.enum(['BUSINESS', 'INDIVIDUAL']).optional(),
-        primaryEmail: z.string().email().optional(),
-        primaryPhone: z.string().min(1).max(30).optional(),
+        primaryEmail: z.string().trim().refine(isValidEmailAddress, EMAIL_VALIDATION_MESSAGE).optional(),
+        primaryPhone: z.string().trim().min(1).max(30).refine(isValidCanadianPhoneNumber, CANADIAN_PHONE_VALIDATION_MESSAGE).optional(),
         status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
         assignedOwner: z.string().uuid().optional().nullable(),
 
@@ -99,16 +119,16 @@ export const updateClientSchema = z.object({
         suite: z.string().max(50).optional().nullable(),
         city: z.string().max(100).optional().nullable(),
         province: z.string().max(100).optional().nullable(),
-        postalCode: z.string().max(20).optional().nullable(),
+        postalCode: z.string().trim().max(20).refine(isValidCanadianPostalCode, CANADIAN_POSTAL_CODE_VALIDATION_MESSAGE).optional().nullable(),
         country: z.string().max(100).optional().nullable(),
 
         // 4️⃣ Internal Notes
         internalNotes: z.string().optional().nullable(),
 
         // 5️⃣ Primary Contact
-        contactName: z.string().max(255).optional().nullable(),
+        contactName: z.string().trim().max(255).refine(isValidPersonName, `Contact name ${PERSON_NAME_VALIDATION_MESSAGE}`).optional().nullable(),
         position: z.string().max(100).optional().nullable(),
-        directPhone: z.string().max(30).optional().nullable(),
+        directPhone: z.string().trim().max(30).refine(isValidCanadianPhoneNumber, CANADIAN_PHONE_VALIDATION_MESSAGE).optional().nullable(),
 
         // 6️⃣ Financial Settings
         creditLimit: z.number().min(0).optional().nullable(),
@@ -143,9 +163,21 @@ export const updateClientSchema = z.object({
         hoaRestrictions: z.string().max(2000).optional().nullable(),
 
         // 1️⃣3️⃣ Secondary Contact
-        secondaryPhone: z.string().max(30).optional().nullable(),
-        spouseCoOwnerName: z.string().max(200).optional().nullable(),
-    }),
+        secondaryPhone: z.string().trim().max(30).refine(isValidCanadianPhoneNumber, CANADIAN_PHONE_VALIDATION_MESSAGE).optional().nullable(),
+        spouseCoOwnerName: z.string().trim().max(200).refine(isValidPersonName, `Spouse / co-owner name ${PERSON_NAME_VALIDATION_MESSAGE}`).optional().nullable(),
+    })
+    .superRefine((value, ctx) => {
+        if (value.clientType === 'INDIVIDUAL' && value.clientName && !isValidPersonName(value.clientName)) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['clientName'],
+                message: `Client name ${PERSON_NAME_VALIDATION_MESSAGE}`,
+            });
+        }
+    });
+
+export const updateClientSchema = z.object({
+    body: updateClientBodySchema,
 });
 
 export const clientQuerySchema = z.object({

@@ -130,10 +130,10 @@ import {
 // ============================================
 
 interface Contact {
-  id: number;
+  id: string;
   type: string;
   clientName: string;
-  clientId?: number;
+  clientId?: string;
   contactPerson: string;
   designation: string;
   department?: string;
@@ -822,9 +822,9 @@ const ContactDialog = ({
 }: {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: Partial<Contact>) => void;
+  onSubmit: (data: Partial<Contact>) => Promise<boolean>;
   contact?: Contact | null;
-  clients: { id: number; clientName: string }[];
+  clients: { id: string; clientName: string }[];
 }) => {
   const { isMobile } = useIsMobile();
   const [formData, setFormData] = useState({
@@ -946,13 +946,15 @@ const ContactDialog = ({
 
     setIsLoading(true);
 
-    await onSubmit({
+    const didSave = await onSubmit({
       ...formData,
-      clientId: formData.clientId ? parseInt(formData.clientId) : undefined,
+      clientId: formData.clientId || undefined,
     });
 
     setIsLoading(false);
-    onClose();
+    if (didSave) {
+      onClose();
+    }
   };
 
   const isEditMode = Boolean(contact);
@@ -1235,7 +1237,7 @@ const ClientContactListPage = () => {
 
   // State
   const [contacts, setContacts] = useState<Contact[]>([]);
-  const [clients, setClients] = useState<{ id: number; clientName: string }[]>([]);
+  const [clients, setClients] = useState<{ id: string; clientName: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
@@ -1301,10 +1303,10 @@ const ClientContactListPage = () => {
       const res = await api.get("/contacts", { params: { limit: 100, sortBy: "contactName", sortOrder: "asc" } });
       const apiContacts = res.data?.data?.data || res.data?.data || [];
       const mapped = (apiContacts || []).map((c: any) => ({
-        id: c.id,
+        id: String(c.id),
         type: c.type || "Client",
         clientName: c.company?.clientName || "",
-        clientId: c.companyId,
+        clientId: c.companyId ? String(c.companyId) : undefined,
         contactPerson: c.contactName || "",
         designation: c.jobTitle || "",
         department: c.department || "",
@@ -1337,13 +1339,28 @@ const ClientContactListPage = () => {
       const data = await getClientEntities();
       setClients(
         data.map((c: any) => ({
-          id: c.id ?? c.Id,
+          id: String(c.id ?? c.Id ?? ""),
           clientName: c.clientName ?? c.ClientName ?? c.name ?? "",
         }))
       );
     } catch (error) {
       console.error("Failed to fetch clients for dropdown");
     }
+  };
+
+  const getContactErrorMessage = (error: any, fallback: string) => {
+    const responseData = error?.response?.data;
+    const validationErrors = responseData?.details?.errors;
+
+    if (validationErrors && typeof validationErrors === "object") {
+      for (const value of Object.values(validationErrors)) {
+        if (Array.isArray(value) && value.length > 0 && typeof value[0] === "string") {
+          return value[0];
+        }
+      }
+    }
+
+    return responseData?.message || error?.message || fallback;
   };
 
   const handleAddContact = async (data: Partial<Contact>) => {
@@ -1367,18 +1384,20 @@ const ClientContactListPage = () => {
       });
       // Refresh from API to get server-generated data
       fetchContacts();
+      return true;
     } catch (error: any) {
       console.error("Add contact error:", error);
       toast({
         title: "Error",
-        description: error?.response?.data?.message || "Failed to add contact",
+        description: getContactErrorMessage(error, "Failed to add contact."),
         variant: "destructive",
       });
+      return false;
     }
   };
 
   const handleUpdateContact = async (data: Partial<Contact>) => {
-    if (!editingContact) return;
+    if (!editingContact) return false;
     try {
       const payload: Record<string, any> = {};
       if (data.contactPerson !== undefined) payload.contactName = normalizeWhitespace(data.contactPerson);
@@ -1398,13 +1417,15 @@ const ClientContactListPage = () => {
         description: "Contact updated successfully",
       });
       fetchContacts();
+      return true;
     } catch (error: any) {
       console.error("Update contact error:", error);
       toast({
         title: "Error",
-        description: error?.response?.data?.message || "Failed to update contact",
+        description: getContactErrorMessage(error, "Failed to update contact."),
         variant: "destructive",
       });
+      return false;
     }
   };
 

@@ -120,6 +120,24 @@ export default function IntegrationsPage() {
         }, 2000);
     };
 
+    const handleConfigureSettings = (integration: Integration) => {
+        const settingsRouteByIntegrationId: Record<string, string> = {
+            whatsapp: "/integrations/whatsapp",
+        };
+
+        const settingsRoute = settingsRouteByIntegrationId[integration.id];
+        if (settingsRoute) {
+            setSelectedIntegration(null);
+            navigate(settingsRoute);
+            return;
+        }
+
+        toast({
+            title: "Settings unavailable",
+            description: `${integration.name} does not have a dedicated settings screen yet.`,
+        });
+    };
+
     const handleToggleWebhook = (wh: WebhookItem) => {
         setLocalWebhooks((prev) =>
             prev.map((w) => w.id === wh.id ? { ...w, status: w.status === "active" ? "paused" as const : "active" as const } : w)
@@ -687,7 +705,10 @@ export default function IntegrationsPage() {
                                                     className="w-full flex items-center gap-2 px-4 py-2.5 bg-[#F8FAFC] border border-[rgba(15,23,42,0.06)] rounded-md text-sm font-medium text-[#0F172A] hover:bg-[#F1F5F9] transition-colors">
                                                     <RefreshCw size={14} /> Force Sync Now
                                                 </button>
-                                                <button className="w-full flex items-center gap-2 px-4 py-2.5 bg-[#F8FAFC] border border-[rgba(15,23,42,0.06)] rounded-md text-sm font-medium text-[#0F172A] hover:bg-[#F1F5F9] transition-colors">
+                                                <button
+                                                    onClick={() => handleConfigureSettings(selectedIntegration)}
+                                                    className="w-full flex items-center gap-2 px-4 py-2.5 bg-[#F8FAFC] border border-[rgba(15,23,42,0.06)] rounded-md text-sm font-medium text-[#0F172A] hover:bg-[#F1F5F9] transition-colors"
+                                                >
                                                     <Settings size={14} /> Configure Settings
                                                 </button>
                                                 <button onClick={() => handleDisconnect(selectedIntegration)}

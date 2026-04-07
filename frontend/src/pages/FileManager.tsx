@@ -100,7 +100,9 @@ import {
   ExternalLink,
   Move,
   FolderInput,
+  ArrowLeft,
   ArrowUpRight,
+  RotateCcw,
   TrendingUp,
   BarChart3,
   PieChart,
@@ -116,6 +118,7 @@ import {
   getRecentFiles,
   getStarredFiles,
   getTrashedFiles,
+  getTrashedFolders,
   getStorageAnalytics,
   toggleFileStar,
   toggleFolderStar,
@@ -127,6 +130,9 @@ import {
   renameFolder as apiRenameFolder,
   bulkDeleteFiles,
   restoreFile as apiRestoreFile,
+  restoreFolder as apiRestoreFolder,
+  permanentDeleteFile as apiPermanentDeleteFile,
+  permanentDeleteFolder as apiPermanentDeleteFolder,
   createShareLink as apiCreateShareLink,
   isPreviewable,
   getPreviewType,
@@ -621,8 +627,10 @@ const FolderCard = ({
   onStar,
   onShare,
   onRename,
+  onRestore,
   onDelete,
   viewMode,
+  inTrash = false,
   delay = 0,
 }: {
   folder: FileItem;
@@ -632,8 +640,10 @@ const FolderCard = ({
   onStar: () => void;
   onShare: () => void;
   onRename: () => void;
+  onRestore?: () => void;
   onDelete: () => void;
   viewMode: "grid" | "list";
+  inTrash?: boolean;
   delay?: number;
 }) => {
   if (viewMode === "list") {
@@ -648,7 +658,7 @@ const FolderCard = ({
             ? "bg-[#0891B2]/5 border-[#22D3EE]"
             : "bg-white border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg "
         )}
-        onClick={onOpen}
+        onClick={inTrash ? undefined : onOpen}
       >
         <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
           <Checkbox
@@ -681,13 +691,15 @@ const FolderCard = ({
         <div className="text-sm text-[#475569]">{folder.modified}</div>
 
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" onClick={onStar}>
-            {folder.starred ? (
-              <Star size={16} className="text-[#D97706] fill-[#FBBF24]" />
-            ) : (
-              <StarOff size={16} className="text-[#475569]" />
-            )}
-          </Button>
+          {!inTrash ? (
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" onClick={onStar}>
+              {folder.starred ? (
+                <Star size={16} className="text-[#D97706] fill-[#FBBF24]" />
+              ) : (
+                <StarOff size={16} className="text-[#475569]" />
+              )}
+            </Button>
+          ) : null}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md">
@@ -695,22 +707,36 @@ const FolderCard = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48 rounded-md">
-              <DropdownMenuItem onClick={onOpen} className="rounded-md">
-                <FolderOpen size={14} className="mr-2" /> Open
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onShare} className="rounded-md">
-                <Share2 size={14} className="mr-2" /> Share
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onRename} className="rounded-md">
-                <Pencil size={14} className="mr-2" /> Rename
-              </DropdownMenuItem>
-              <DropdownMenuItem className="rounded-md">
-                <Move size={14} className="mr-2" /> Move to
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onDelete} className="rounded-md text-red-600 focus:text-red-600">
-                <Trash2 size={14} className="mr-2" /> Delete
-              </DropdownMenuItem>
+              {inTrash ? (
+                <>
+                  <DropdownMenuItem onClick={onRestore} className="rounded-md text-[#0891B2] focus:text-[#0891B2]">
+                    <RotateCcw size={14} className="mr-2" /> Restore
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onDelete} className="rounded-md text-red-600 focus:text-red-600">
+                    <Trash2 size={14} className="mr-2" /> Delete Permanently
+                  </DropdownMenuItem>
+                </>
+              ) : (
+                <>
+                  <DropdownMenuItem onClick={onOpen} className="rounded-md">
+                    <FolderOpen size={14} className="mr-2" /> Open
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onShare} className="rounded-md">
+                    <Share2 size={14} className="mr-2" /> Share
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onRename} className="rounded-md">
+                    <Pencil size={14} className="mr-2" /> Rename
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="rounded-md">
+                    <Move size={14} className="mr-2" /> Move to
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onDelete} className="rounded-md text-red-600 focus:text-red-600">
+                    <Trash2 size={14} className="mr-2" /> Delete
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -730,7 +756,7 @@ const FolderCard = ({
           ? "border-[#22D3EE] ring-2 ring-[#22D3EE]/20"
           : "border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg "
       )}
-      onClick={onOpen}
+      onClick={inTrash ? undefined : onOpen}
     >
       {/* Selection Checkbox */}
       <div
@@ -756,22 +782,36 @@ const FolderCard = ({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48 rounded-md">
-            <DropdownMenuItem onClick={onOpen} className="rounded-md">
-              <FolderOpen size={14} className="mr-2" /> Open
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={onShare} className="rounded-md">
-              <Share2 size={14} className="mr-2" /> Share
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={onRename} className="rounded-md">
-              <Pencil size={14} className="mr-2" /> Rename
-            </DropdownMenuItem>
-            <DropdownMenuItem className="rounded-md">
-              <Move size={14} className="mr-2" /> Move to
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onDelete} className="rounded-md text-red-600 focus:text-red-600">
-              <Trash2 size={14} className="mr-2" /> Delete
-            </DropdownMenuItem>
+            {inTrash ? (
+              <>
+                <DropdownMenuItem onClick={onRestore} className="rounded-md text-[#0891B2] focus:text-[#0891B2]">
+                  <RotateCcw size={14} className="mr-2" /> Restore
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={onDelete} className="rounded-md text-red-600 focus:text-red-600">
+                  <Trash2 size={14} className="mr-2" /> Delete Permanently
+                </DropdownMenuItem>
+              </>
+            ) : (
+              <>
+                <DropdownMenuItem onClick={onOpen} className="rounded-md">
+                  <FolderOpen size={14} className="mr-2" /> Open
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onShare} className="rounded-md">
+                  <Share2 size={14} className="mr-2" /> Share
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onRename} className="rounded-md">
+                  <Pencil size={14} className="mr-2" /> Rename
+                </DropdownMenuItem>
+                <DropdownMenuItem className="rounded-md">
+                  <Move size={14} className="mr-2" /> Move to
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={onDelete} className="rounded-md text-red-600 focus:text-red-600">
+                  <Trash2 size={14} className="mr-2" /> Delete
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -784,19 +824,21 @@ const FolderCard = ({
         >
           <Folder size={28} style={{ color: folder.color }} />
         </div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onStar();
-          }}
-          className="p-2 rounded-md hover:bg-white/10 transition-colors"
-        >
-          {folder.starred ? (
-            <Star size={18} className="text-[#D97706] fill-[#FBBF24]" />
-          ) : (
-            <Star size={18} className="text-[#475569] group-hover:text-[#475569]" />
-          )}
-        </button>
+        {!inTrash ? (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onStar();
+            }}
+            className="p-2 rounded-md hover:bg-white/10 transition-colors"
+          >
+            {folder.starred ? (
+              <Star size={18} className="text-[#D97706] fill-[#FBBF24]" />
+            ) : (
+              <Star size={18} className="text-[#475569] group-hover:text-[#475569]" />
+            )}
+          </button>
+        ) : null}
       </div>
 
       {/* Folder Info */}
@@ -851,8 +893,10 @@ const FileCard = ({
   onShare,
   onDownload,
   onRename,
+  onRestore,
   onDelete,
   viewMode,
+  inTrash = false,
   delay = 0,
 }: {
   file: FileItem;
@@ -863,8 +907,10 @@ const FileCard = ({
   onShare: () => void;
   onDownload: () => void;
   onRename: () => void;
+  onRestore?: () => void;
   onDelete: () => void;
   viewMode: "grid" | "list";
+  inTrash?: boolean;
   delay?: number;
 }) => {
   const Icon = getFileIcon(file.fileType);
@@ -924,13 +970,15 @@ const FileCard = ({
           <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" onClick={onDownload}>
             <Download size={16} className="text-[#475569]" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" onClick={onStar}>
-            {file.starred ? (
-              <Star size={16} className="text-[#D97706] fill-[#FBBF24]" />
-            ) : (
-              <StarOff size={16} className="text-[#475569]" />
-            )}
-          </Button>
+          {!inTrash ? (
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" onClick={onStar}>
+              {file.starred ? (
+                <Star size={16} className="text-[#D97706] fill-[#FBBF24]" />
+              ) : (
+                <StarOff size={16} className="text-[#475569]" />
+              )}
+            </Button>
+          ) : null}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md">
@@ -944,19 +992,33 @@ const FileCard = ({
               <DropdownMenuItem onClick={onDownload} className="rounded-md">
                 <Download size={14} className="mr-2" /> Download
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onShare} className="rounded-md">
-                <Share2 size={14} className="mr-2" /> Share
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onRename} className="rounded-md">
-                <Pencil size={14} className="mr-2" /> Rename
-              </DropdownMenuItem>
-              <DropdownMenuItem className="rounded-md">
-                <Move size={14} className="mr-2" /> Move to
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onDelete} className="rounded-md text-red-600 focus:text-red-600">
-                <Trash2 size={14} className="mr-2" /> Delete
-              </DropdownMenuItem>
+              {inTrash ? (
+                <>
+                  <DropdownMenuItem onClick={onRestore} className="rounded-md text-[#0891B2] focus:text-[#0891B2]">
+                    <RotateCcw size={14} className="mr-2" /> Restore
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onDelete} className="rounded-md text-red-600 focus:text-red-600">
+                    <Trash2 size={14} className="mr-2" /> Delete Permanently
+                  </DropdownMenuItem>
+                </>
+              ) : (
+                <>
+                  <DropdownMenuItem onClick={onShare} className="rounded-md">
+                    <Share2 size={14} className="mr-2" /> Share
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onRename} className="rounded-md">
+                    <Pencil size={14} className="mr-2" /> Rename
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="rounded-md">
+                    <Move size={14} className="mr-2" /> Move to
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onDelete} className="rounded-md text-red-600 focus:text-red-600">
+                    <Trash2 size={14} className="mr-2" /> Delete
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -1032,16 +1094,30 @@ const FileCard = ({
               <DropdownMenuItem onClick={onDownload} className="rounded-md">
                 <Download size={14} className="mr-2" /> Download
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onShare} className="rounded-md">
-                <Share2 size={14} className="mr-2" /> Share
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onRename} className="rounded-md">
-                <Pencil size={14} className="mr-2" /> Rename
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onDelete} className="rounded-md text-red-600 focus:text-red-600">
-                <Trash2 size={14} className="mr-2" /> Delete
-              </DropdownMenuItem>
+              {inTrash ? (
+                <>
+                  <DropdownMenuItem onClick={onRestore} className="rounded-md text-[#0891B2] focus:text-[#0891B2]">
+                    <RotateCcw size={14} className="mr-2" /> Restore
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onDelete} className="rounded-md text-red-600 focus:text-red-600">
+                    <Trash2 size={14} className="mr-2" /> Delete Permanently
+                  </DropdownMenuItem>
+                </>
+              ) : (
+                <>
+                  <DropdownMenuItem onClick={onShare} className="rounded-md">
+                    <Share2 size={14} className="mr-2" /> Share
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onRename} className="rounded-md">
+                    <Pencil size={14} className="mr-2" /> Rename
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onDelete} className="rounded-md text-red-600 focus:text-red-600">
+                    <Trash2 size={14} className="mr-2" /> Delete
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -1063,19 +1139,21 @@ const FileCard = ({
           <h3 className="font-medium text-[#0F172A] truncate group-hover:text-[#0891B2] transition-colors flex-1">
             {file.name}
           </h3>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onStar();
-            }}
-            className="flex-shrink-0"
-          >
-            {file.starred ? (
-              <Star size={16} className="text-[#D97706] fill-[#FBBF24]" />
-            ) : (
-              <Star size={16} className="text-[#475569] hover:text-[#475569]" />
-            )}
-          </button>
+          {!inTrash ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onStar();
+              }}
+              className="flex-shrink-0"
+            >
+              {file.starred ? (
+                <Star size={16} className="text-[#D97706] fill-[#FBBF24]" />
+              ) : (
+                <Star size={16} className="text-[#475569] hover:text-[#475569]" />
+              )}
+            </button>
+          ) : null}
         </div>
         <div className="flex items-center justify-between mt-2">
           <span className="text-xs text-[#475569]">{file.sizeFormatted}</span>
@@ -1108,7 +1186,7 @@ const UploadProgress = ({
       initial={{ opacity: 0, y: 100 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 100 }}
-      className="fixed bottom-6 right-6 w-96 bg-white rounded-md card-shadow border border-[rgba(15,23,42,0.06)] overflow-hidden z-50"
+      className="fixed inset-x-4 bottom-4 z-[60] mx-auto w-auto max-w-md rounded-md border border-[rgba(15,23,42,0.06)] bg-white card-shadow overflow-hidden sm:inset-x-auto sm:bottom-6 sm:right-6 sm:mx-0 sm:w-96"
     >
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-[rgba(15,23,42,0.06)] bg-[#F0FDFA]">
@@ -1655,6 +1733,27 @@ const FileManagerPage = () => {
   const [shareItem, setShareItem] = useState<FileItem | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteItem, setDeleteItem] = useState<FileItem | null>(null);
+  const isTrashView = activeTab === "trash";
+  const canNavigateBack = activeTab === "all" && breadcrumbs.length > 1;
+
+  useEffect(() => {
+    if (uploadingFiles.length === 0) {
+      return;
+    }
+
+    const allCompleted = uploadingFiles.every((file) => file.status === "completed");
+    if (!allCompleted) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setUploadingFiles([]);
+    }, 3000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [uploadingFiles]);
 
   // ── Helper: Convert API response to FileItem ──
   const fileToItem = (f: FileResponse): FileItem => ({
@@ -1704,7 +1803,12 @@ const FileManagerPage = () => {
       } else if (activeTab === "starred") {
         apiFiles = await getStarredFiles();
       } else if (activeTab === "trash") {
-        apiFiles = await getTrashedFiles();
+        const [trashedFiles, trashedFolders] = await Promise.all([
+          getTrashedFiles(),
+          getTrashedFolders(),
+        ]);
+        apiFiles = trashedFiles;
+        apiFolders = trashedFolders;
       } else {
         const [filesRes, foldersRes] = await Promise.all([
           getFiles({ folderId: currentFolderId || undefined, search: searchTerm || undefined }),
@@ -1791,7 +1895,7 @@ const FileManagerPage = () => {
       status: "uploading" as const,
     }));
 
-    setUploadingFiles((prev) => [...prev, ...newUploadingFiles]);
+    setUploadingFiles((prev) => [...prev.filter((file) => file.status === "uploading"), ...newUploadingFiles]);
 
     toast({
       title: "Upload Started",
@@ -1899,23 +2003,65 @@ const FileManagerPage = () => {
     setShowDeleteConfirm(true);
   };
 
-  const handleDelete = async () => {
-    if (!deleteItem) return;
+  const handleRestore = async (item: FileItem) => {
     try {
-      if (deleteItem.type === "folder") {
-        await apiDeleteFolder(deleteItem.id);
-        setFolders((prev) => prev.filter((f) => f.id !== deleteItem.id));
+      if (item.type === "folder") {
+        await apiRestoreFolder(item.id);
+        setFolders((prev) => prev.filter((folder) => folder.id !== item.id));
       } else {
-        await apiDeleteFile(deleteItem.id);
-        setFiles((prev) => prev.filter((f) => f.id !== deleteItem.id));
+        await apiRestoreFile(item.id);
+        setFiles((prev) => prev.filter((file) => file.id !== item.id));
       }
+
+      setSelectedItems((prev) => prev.filter((selectedId) => selectedId !== item.id));
       toast({
-        title: "Deleted",
-        description: `"${deleteItem.name}" has been moved to trash.`,
+        title: "Restored",
+        description: `"${item.name}" is back in your files.`,
       });
       loadStorage();
     } catch (err) {
-      toast({ title: "Error", description: "Failed to delete.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Failed to restore the selected item.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteItem) return;
+    try {
+      if (isTrashView) {
+        if (deleteItem.type === "folder") {
+          await apiPermanentDeleteFolder(deleteItem.id);
+          setFolders((prev) => prev.filter((f) => f.id !== deleteItem.id));
+        } else {
+          await apiPermanentDeleteFile(deleteItem.id);
+          setFiles((prev) => prev.filter((f) => f.id !== deleteItem.id));
+        }
+      } else {
+        if (deleteItem.type === "folder") {
+          await apiDeleteFolder(deleteItem.id);
+          setFolders((prev) => prev.filter((f) => f.id !== deleteItem.id));
+        } else {
+          await apiDeleteFile(deleteItem.id);
+          setFiles((prev) => prev.filter((f) => f.id !== deleteItem.id));
+        }
+      }
+      toast({
+        title: isTrashView ? "Deleted permanently" : "Deleted",
+        description: isTrashView
+          ? `"${deleteItem.name}" has been permanently deleted.`
+          : `"${deleteItem.name}" has been moved to trash.`,
+      });
+      setSelectedItems((prev) => prev.filter((selectedId) => selectedId !== deleteItem.id));
+      loadStorage();
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: isTrashView ? "Failed to permanently delete the item." : "Failed to delete.",
+        variant: "destructive",
+      });
     }
     setShowDeleteConfirm(false);
     setDeleteItem(null);
@@ -1939,26 +2085,70 @@ const FileManagerPage = () => {
   const handleBulkDelete = async () => {
     try {
       const fileIds = selectedItems.filter(id => files.some(f => f.id === id));
-      if (fileIds.length > 0) {
-        await bulkDeleteFiles(fileIds);
-      }
-      // Also delete selected folders one by one
       const folderIds = selectedItems.filter(id => folders.some(f => f.id === id));
-      for (const fId of folderIds) {
-        await apiDeleteFolder(fId);
+
+      if (isTrashView) {
+        if (fileIds.length > 0) {
+          await Promise.all(fileIds.map((fileId) => apiPermanentDeleteFile(fileId)));
+        }
+        if (folderIds.length > 0) {
+          await Promise.all(folderIds.map((folderId) => apiPermanentDeleteFolder(folderId)));
+        }
+      } else {
+        if (fileIds.length > 0) {
+          await bulkDeleteFiles(fileIds);
+        }
+        for (const folderId of folderIds) {
+          await apiDeleteFolder(folderId);
+        }
       }
 
       setFolders((prev) => prev.filter((f) => !selectedItems.includes(f.id)));
       setFiles((prev) => prev.filter((f) => !selectedItems.includes(f.id)));
 
       toast({
-        title: "Items Deleted",
-        description: `${selectedItems.length} item(s) have been moved to trash.`,
+        title: isTrashView ? "Items deleted permanently" : "Items Deleted",
+        description: isTrashView
+          ? `${selectedItems.length} item(s) were permanently deleted.`
+          : `${selectedItems.length} item(s) have been moved to trash.`,
       });
       setSelectedItems([]);
       loadStorage();
     } catch (err) {
-      toast({ title: "Error", description: "Failed to delete items.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: isTrashView ? "Failed to permanently delete selected items." : "Failed to delete items.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleBulkRestore = async () => {
+    try {
+      const fileIds = selectedItems.filter(id => files.some(f => f.id === id));
+      const folderIds = selectedItems.filter(id => folders.some(f => f.id === id));
+
+      if (fileIds.length > 0) {
+        await Promise.all(fileIds.map((fileId) => apiRestoreFile(fileId)));
+      }
+      if (folderIds.length > 0) {
+        await Promise.all(folderIds.map((folderId) => apiRestoreFolder(folderId)));
+      }
+
+      setFolders((prev) => prev.filter((folder) => !selectedItems.includes(folder.id)));
+      setFiles((prev) => prev.filter((file) => !selectedItems.includes(file.id)));
+      toast({
+        title: "Items restored",
+        description: `${selectedItems.length} item(s) were restored.`,
+      });
+      setSelectedItems([]);
+      loadStorage();
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to restore selected items.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -1980,11 +2170,29 @@ const FileManagerPage = () => {
     setSelectedItems([]);
   };
 
+  const handleGoBack = () => {
+    if (!canNavigateBack) {
+      return;
+    }
+
+    handleNavigateBreadcrumb(breadcrumbs.length - 2);
+  };
+
   const handleNavigateBreadcrumb = (index: number) => {
     const crumb = breadcrumbs[index];
     setCurrentFolderId(crumb.id);
     setBreadcrumbs((prev) => prev.slice(0, index + 1));
     setSelectedItems([]);
+  };
+
+  const handleTabChange = (nextTab: string) => {
+    setActiveTab(nextTab);
+    setSelectedItems([]);
+
+    if (nextTab !== "all") {
+      setCurrentFolderId(null);
+      setBreadcrumbs([{ id: null, name: "My Files" }]);
+    }
   };
 
   const handleOpenFile = (file: FileItem) => {
@@ -1999,6 +2207,17 @@ const FileManagerPage = () => {
   const storageUsed = storage?.totalUsed || 0;
   const storageTotal = storage?.totalLimit || 10737418240;
   const storagePercentage = Math.round((storageUsed / storageTotal) * 100);
+  const activeTabLabel = activeTab === "all"
+    ? breadcrumbs.length > 1
+      ? breadcrumbs[breadcrumbs.length - 1].name
+      : "File Manager"
+    : activeTab === "recent"
+      ? "Recent Files"
+      : activeTab === "starred"
+        ? "Starred Files"
+        : activeTab === "shared"
+          ? "Shared Files"
+          : "Trash";
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
@@ -2040,7 +2259,19 @@ const FileManagerPage = () => {
           <div className="px-4 py-3 sm:px-6 sm:py-4">
             <div className="flex items-center justify-between">
               {/* Title & Breadcrumb */}
-              <div>
+              <div className="flex items-center gap-3">
+                {canNavigateBack ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-10 w-10 rounded-md border-[rgba(15,23,42,0.06)]"
+                    onClick={handleGoBack}
+                  >
+                    <ArrowLeft size={16} />
+                  </Button>
+                ) : null}
+                <div>
                 <div className="hidden sm:flex items-center gap-2 text-sm text-[#94A3B8] mb-1">
                   <span>Dashboard</span>
                   <ChevronRight size={14} />
@@ -2062,8 +2293,9 @@ const FileManagerPage = () => {
                   ))}
                 </div>
                 <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">
-                  {breadcrumbs.length > 1 ? breadcrumbs[breadcrumbs.length - 1].name : "File Manager"}
+                  {activeTabLabel}
                 </h1>
+                </div>
               </div>
 
               {/* Header Actions */}
@@ -2142,7 +2374,7 @@ const FileManagerPage = () => {
                 <motion.button
                   key={item.id}
                   whileHover={{ x: 4 }}
-                  onClick={() => setActiveTab(item.id)}
+                  onClick={() => handleTabChange(item.id)}
                   className={cn(
                     "w-full flex items-center justify-between px-4 py-3 rounded-md transition-all",
                     activeTab === item.id
@@ -2257,10 +2489,11 @@ const FileManagerPage = () => {
                 { id: "recent", icon: Clock, label: "Recent" },
                 { id: "starred", icon: Star, label: "Starred" },
                 { id: "shared", icon: Share2, label: "Shared" },
+                { id: "trash", icon: Trash2, label: "Trash" },
               ].map((item) => (
                 <button
                   key={item.id}
-                  onClick={() => setActiveTab(item.id)}
+                  onClick={() => handleTabChange(item.id)}
                   className={cn(
                     "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap flex-shrink-0 transition-colors",
                     activeTab === item.id
@@ -2309,14 +2542,28 @@ const FileManagerPage = () => {
                         {selectedItems.length} selected
                       </span>
                       <div className="h-4 w-px bg-[#0891B2]/30" />
-                      <Button variant="ghost" size="sm" className="h-8 rounded-md text-[#0891B2]">
-                        <Download size={14} className="mr-1" />
-                        Download
-                      </Button>
-                      <Button variant="ghost" size="sm" className="h-8 rounded-md text-[#0891B2]">
-                        <Share2 size={14} className="mr-1" />
-                        Share
-                      </Button>
+                      {!isTrashView ? (
+                        <>
+                          <Button variant="ghost" size="sm" className="h-8 rounded-md text-[#0891B2]">
+                            <Download size={14} className="mr-1" />
+                            Download
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-8 rounded-md text-[#0891B2]">
+                            <Share2 size={14} className="mr-1" />
+                            Share
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 rounded-md text-[#0891B2]"
+                          onClick={handleBulkRestore}
+                        >
+                          <RotateCcw size={14} className="mr-1" />
+                          Restore
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"
@@ -2324,7 +2571,7 @@ const FileManagerPage = () => {
                         onClick={handleBulkDelete}
                       >
                         <Trash2 size={14} className="mr-1" />
-                        Delete
+                        {isTrashView ? "Delete Permanently" : "Delete"}
                       </Button>
                       <button
                         onClick={() => setSelectedItems([])}
@@ -2484,8 +2731,10 @@ const FileManagerPage = () => {
                           onRename={() => {
                             toast({ title: "Rename", description: "Rename dialog would open" });
                           }}
+                          onRestore={() => handleRestore(folder)}
                           onDelete={() => handleDeleteConfirm(folder)}
                           viewMode={viewMode}
+                          inTrash={isTrashView}
                           delay={index * 0.05}
                         />
                       ))}
@@ -2504,8 +2753,10 @@ const FileManagerPage = () => {
                           onRename={() => {
                             toast({ title: "Rename", description: "Rename dialog would open" });
                           }}
+                          onRestore={() => handleRestore(folder)}
                           onDelete={() => handleDeleteConfirm(folder)}
                           viewMode={viewMode}
+                          inTrash={isTrashView}
                           delay={index * 0.03}
                         />
                       ))}
@@ -2537,8 +2788,10 @@ const FileManagerPage = () => {
                           onRename={() => {
                             toast({ title: "Rename", description: "Rename dialog would open" });
                           }}
+                          onRestore={() => handleRestore(file)}
                           onDelete={() => handleDeleteConfirm(file)}
                           viewMode={viewMode}
+                          inTrash={isTrashView}
                           delay={index * 0.05}
                         />
                       ))}
@@ -2558,8 +2811,10 @@ const FileManagerPage = () => {
                           onRename={() => {
                             toast({ title: "Rename", description: "Rename dialog would open" });
                           }}
+                          onRestore={() => handleRestore(file)}
                           onDelete={() => handleDeleteConfirm(file)}
                           viewMode={viewMode}
+                          inTrash={isTrashView}
                           delay={index * 0.03}
                         />
                       ))}
@@ -2580,27 +2835,31 @@ const FileManagerPage = () => {
                   </div>
                   <h3 className="text-xl font-semibold text-[#0F172A] mb-2">No files found</h3>
                   <p className="text-[#94A3B8] text-center max-w-md mb-6">
-                    {searchTerm
+                    {isTrashView
+                      ? "Trash is empty. Permanently deleted items disappear from here."
+                      : searchTerm
                       ? `No files match "${searchTerm}". Try a different search term.`
                       : "This folder is empty. Upload files or create a new folder to get started."}
                   </p>
-                  <div className="flex gap-3">
-                    <Button
-                      onClick={handleUploadClick}
-                      className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
-                    >
-                      <Upload size={16} className="mr-2" />
-                      Upload Files
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowCreateFolder(true)}
-                      className="rounded-md"
-                    >
-                      <FolderPlus size={16} className="mr-2" />
-                      New Folder
-                    </Button>
-                  </div>
+                  {!isTrashView ? (
+                    <div className="flex gap-3">
+                      <Button
+                        onClick={handleUploadClick}
+                        className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
+                      >
+                        <Upload size={16} className="mr-2" />
+                        Upload Files
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowCreateFolder(true)}
+                        className="rounded-md"
+                      >
+                        <FolderPlus size={16} className="mr-2" />
+                        New Folder
+                      </Button>
+                    </div>
+                  ) : null}
                 </motion.div>
               )}
             </div>
@@ -2657,9 +2916,13 @@ const FileManagerPage = () => {
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent className="rounded-md">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-[#0F172A]">Delete {deleteItem?.type}?</AlertDialogTitle>
+            <AlertDialogTitle className="text-[#0F172A]">
+              {isTrashView ? `Delete ${deleteItem?.type} permanently?` : `Delete ${deleteItem?.type}?`}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{deleteItem?.name}"? This action can be undone from the trash.
+              {isTrashView
+                ? `Are you sure you want to permanently delete "${deleteItem?.name}"? This action cannot be undone.`
+                : `Are you sure you want to delete "${deleteItem?.name}"? This action can be undone from the trash.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -2669,7 +2932,7 @@ const FileManagerPage = () => {
               className="bg-red-500 hover:bg-red-600 text-[#0F172A] rounded-md"
             >
               <Trash2 size={16} className="mr-2" />
-              Delete
+              {isTrashView ? "Delete Permanently" : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

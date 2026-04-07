@@ -12,6 +12,7 @@ router.use(loadEmployee);
 
 // Collection routes (before :id)
 router.get('/tree', requirePermission(PERMISSIONS.FOLDERS_VIEW), foldersController.getTree.bind(foldersController));
+router.get('/trash', requirePermission(PERMISSIONS.FOLDERS_VIEW), foldersController.getTrash.bind(foldersController));
 router.get('/', requirePermission(PERMISSIONS.FOLDERS_VIEW), validate(folderQuerySchema), foldersController.getMany.bind(foldersController));
 router.post('/', requirePermission(PERMISSIONS.FOLDERS_CREATE), validate(createFolderSchema), foldersController.create.bind(foldersController));
 

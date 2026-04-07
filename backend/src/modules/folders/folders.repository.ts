@@ -39,6 +39,14 @@ export class FoldersRepository {
         return { data, total };
     }
 
+    async findTrashed(tenantId: string) {
+        return prisma.folder.findMany({
+            where: { tenantId, deletedAt: { not: null } },
+            include: folderInclude,
+            orderBy: { updatedAt: 'desc' },
+        });
+    }
+
     async update(id: string, tenantId: string, data: UpdateFolderDto) {
         // Verify tenant ownership
         const existing = await prisma.folder.findFirst({ where: { id, tenantId, deletedAt: null } });

@@ -25,6 +25,13 @@ export class FoldersController {
         } catch (e) { next(e); }
     }
 
+    async getTrash(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const folders = await foldersService.getTrash(req.context.tenantId);
+            sendSuccess(res, folders);
+        } catch (e) { next(e); }
+    }
+
     async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const folder = await foldersService.getById(req.params.id, req.context.tenantId);

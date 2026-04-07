@@ -4,6 +4,7 @@ import React, { useState, useCallback, useEffect, useMemo, useRef } from "react"
 import { getLeads, getLeadById, createLead, updateLead, deleteLead, updateLeadStatus, convertLead } from "@/features/leads";
 import { createCalendarEvent } from "@/features/calendar";
 import { autocompleteAddress } from "@/features/roof-estimator/services/roof-estimator-service";
+import { saveLeadDetailNavigationState } from "@/features/leads/lead-detail-navigation";
 import { LeadFormDialog } from "@/pages/Leads/AllLeads";
 // import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { motion, AnimatePresence } from "framer-motion";
@@ -963,6 +964,7 @@ const Pipeline = () => {
   );
 
   const handleLeadOpenRecord = (lead: Lead) => {
+    saveLeadDetailNavigationState(lead.id, leadDetailNavigationState);
     navigate(`/leads/${lead.id}`, { state: leadDetailNavigationState });
   };
 

@@ -714,10 +714,10 @@ const AddClientPage = () => {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
+      if (file.size > 10 * 1024) {
         toast({
           title: "File too large",
-          description: "Please select an image under 2MB.",
+          description: "Please select a client photo under 10KB.",
           variant: "destructive",
         });
         return;
@@ -1021,7 +1021,7 @@ const AddClientPage = () => {
                           Client Logo / Photo
                         </h3>
                         <p className="text-sm text-[#475569] mt-1">
-                          Supports JPG, PNG (Max 2MB)
+                          Supports JPG, PNG (Max 10KB)
                         </p>
                         {previewImage && (
                           <button

@@ -1100,7 +1100,7 @@ const GroupFormDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px] p-0 rounded-md overflow-hidden">
+      <DialogContent className="sm:max-w-[500px] p-0 rounded-md overflow-hidden max-h-[90vh]">
         <div className="p-6 border-b border-[rgba(15,23,42,0.06)] bg-[#F0FDFA]">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-[#0F172A]">
@@ -1112,7 +1112,7 @@ const GroupFormDialog = ({
           </DialogHeader>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="max-h-[calc(90vh-88px)] overflow-y-auto p-6 space-y-5">
           {/* Group Name */}
           <div className="space-y-2">
             <Label className="text-sm font-medium text-[#475569]">

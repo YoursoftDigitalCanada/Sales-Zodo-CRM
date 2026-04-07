@@ -39,6 +39,11 @@ export class FoldersService {
         return folders.map(toFolderResponseDto);
     }
 
+    async getTrash(tenantId: string) {
+        const folders = await foldersRepository.findTrashed(tenantId);
+        return folders.map(toFolderResponseDto);
+    }
+
     async update(id: string, tenantId: string, data: UpdateFolderDto) {
         const existing = await foldersRepository.findById(id, tenantId);
         if (!existing) throw new NotFoundError('Folder not found', ErrorCodes.RESOURCE_NOT_FOUND);

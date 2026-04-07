@@ -87,6 +87,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useCanPerformAction } from "@/hooks/usePermissionAccess";
+import { saveLeadDetailNavigationState } from "@/features/leads/lead-detail-navigation";
 import AddressAutocompleteInput from "@/components/address/AddressAutocompleteInput";
 import FieldErrorMessage from "@/components/forms/FieldErrorMessage";
 import { ComposeEmailSheet } from "@/features/emails/components/ComposeEmailSheet";
@@ -2082,8 +2083,8 @@ export const LeadFormDialog = ({
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#475569]">How Did You Hear About Us?</Label>
                 <Select
-                  value={formData.leadSourceName}
-                  onValueChange={(val) => setFormData({ ...formData, leadSourceName: val })}
+                  value={formData.source}
+                  onValueChange={(val) => setFormData({ ...formData, source: val })}
                 >
                   <SelectTrigger className="h-11 rounded-md">
                     <SelectValue placeholder="Select" />
@@ -6054,6 +6055,7 @@ const AllLeads = () => {
                       variant="outline"
                       onClick={() => {
                         setIsSidePanelOpen(false);
+                        saveLeadDetailNavigationState(lead.id, leadDetailNavigationState);
                         navigate(`/leads/${lead.id}`, { state: leadDetailNavigationState });
                       }}
                     >

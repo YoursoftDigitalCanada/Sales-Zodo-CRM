@@ -130,7 +130,8 @@ export class LeadsService {
     (data as any).leadNumber = leadNumber;
 
     // ── Territory-first assignment, then round-robin fallback ────────────
-    if (!data.assignedToId) {
+    // Respect explicit null from manual forms so "Unassigned" stays unassigned.
+    if (data.assignedToId === undefined) {
       try {
         const territoryAssignee = await this.findTerritoryAssignee(tenantId, data);
         if (territoryAssignee) {

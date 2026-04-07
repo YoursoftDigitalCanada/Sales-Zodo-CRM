@@ -290,6 +290,11 @@ export async function getFolderTree(): Promise<FolderResponse[]> {
     return extract<FolderResponse[]>(res);
 }
 
+export async function getTrashedFolders(): Promise<FolderResponse[]> {
+    const res = await api.get("/folders/trash");
+    return extract<FolderResponse[]>(res);
+}
+
 export async function getFolderById(id: string): Promise<FolderResponse> {
     const res = await api.get(`/folders/${id}`);
     return extract<FolderResponse>(res);
@@ -317,4 +322,8 @@ export async function toggleFolderStar(id: string): Promise<FolderResponse> {
 export async function restoreFolder(id: string): Promise<FolderResponse> {
     const res = await api.put(`/folders/${id}/restore`);
     return extract<FolderResponse>(res);
+}
+
+export async function permanentDeleteFolder(id: string): Promise<void> {
+    await api.delete(`/folders/${id}/permanent`);
 }

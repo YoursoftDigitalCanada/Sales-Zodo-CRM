@@ -29,6 +29,11 @@ import { WhatsAppActionButton } from "@/features/whatsapp/components/WhatsAppAct
 import { ActivityTimeline } from "@/components/ActivityTimeline";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import {
+    readLeadDetailNavigationState,
+    saveLeadDetailNavigationState,
+    type LeadDetailNavigationState,
+} from "@/features/leads/lead-detail-navigation";
+import {
     ArrowLeft, Loader2, Mail, Phone, MapPin, Building2, Globe, Briefcase,
     Tag, Calendar, Clock, DollarSign, TrendingUp, Thermometer, User, Users,
     FileText, MessageSquare, CheckSquare, Activity, MoreHorizontal,
@@ -140,11 +145,6 @@ interface NoteEntry {
     date: string;
     author: string;
 }
-
-type LeadDetailNavigationState = {
-    from?: string;
-    fromLabel?: string;
-};
 
 const STRUCTURED_NOTE_REGEX = /^\[(.+?) \| (.+?)\]\n([\s\S]+)$/;
 
@@ -497,8 +497,16 @@ const LeadDetailPage = () => {
     const [showComposeEmail, setShowComposeEmail] = useState(false);
 
     const navigationState = (location.state as LeadDetailNavigationState | null) ?? null;
-    const sourcePath = typeof navigationState?.from === "string" ? navigationState.from : "";
-    const backLabel = navigationState?.fromLabel || (sourcePath.startsWith("/leads/pipeline") ? "Pipeline" : "Leads");
+    const persistedNavigationState = id ? readLeadDetailNavigationState(id) : null;
+    const effectiveNavigationState = navigationState?.from ? navigationState : persistedNavigationState;
+    const sourcePath = typeof effectiveNavigationState?.from === "string" ? effectiveNavigationState.from : "";
+    const backLabel = effectiveNavigationState?.fromLabel || (sourcePath.startsWith("/leads/pipeline") ? "Pipeline" : "Leads");
+
+    useEffect(() => {
+        if (id && navigationState?.from) {
+            saveLeadDetailNavigationState(id, navigationState);
+        }
+    }, [id, navigationState]);
 
     const handleBackNavigation = useCallback(() => {
         const currentPath = `${location.pathname}${location.search}${location.hash}`;
@@ -789,6 +797,9 @@ const LeadDetailPage = () => {
     const ownerName = lead.assignedTo
         ? `${lead.assignedTo.user.firstName} ${lead.assignedTo.user.lastName}`
         : "Unassigned";
+    const creatorName = lead.createdBy
+        ? `${lead.createdBy.user.firstName} ${lead.createdBy.user.lastName}`.trim() || "ZODO Team"
+        : "ZODO Team";
     const leadAge = Math.floor((Date.now() - new Date(lead.createdAt).getTime()) / 86400000);
     const propertyAddr = [lead.propertyAddress, lead.city, lead.state, lead.zipCode].filter(Boolean).join(", ");
     const openRelatedTasks = relatedTasks.filter((task) => !["DONE", "COMPLETED"].includes(String(task.status || "").toUpperCase())).length;
@@ -839,7 +850,7 @@ const LeadDetailPage = () => {
                             <p className="text-[11px] text-[#9CA3AF] mt-0.5">
                                 {lead.companyName && <><Building2 className="inline h-3 w-3 mr-0.5" />{lead.companyName} · </>}
                                 {ownerName !== "Unassigned" && <>Assigned to <span className="font-medium text-[#6B7280]">{ownerName}</span> · </>}
-                                Created {formatDate(lead.createdAt)}
+                                Created by <span className="font-medium text-[#6B7280]">{creatorName}</span> · {formatDate(lead.createdAt)}
                             </p>
                         </div>
                     </div>
@@ -934,6 +945,7 @@ const LeadDetailPage = () => {
                                 { l: "Location", v: lead.location }, { l: "Website", v: lead.website, href: lead.website || undefined },
                                 { l: "Preferred Contact", v: lead.preferredContactMethod }, { l: "Best Time", v: lead.bestTimeToContact },
                                 { l: "Spouse/Co-Owner", v: lead.spouseCoOwnerName }, { l: "Assigned To", v: ownerName },
+                                { l: "Created By", v: creatorName },
                             ].filter(r => r.v).map((r, i) => (
                                 <div key={i} className="py-1"><p className="text-[10px] text-[#9CA3AF] uppercase tracking-wider font-medium">{r.l}</p>
                                     {r.href ? <a href={r.href} className="text-[#14B8A6] hover:underline font-medium text-sm" target={r.href.startsWith('http') ? '_blank' : undefined} rel={r.href.startsWith('http') ? 'noreferrer' : undefined}>{r.v}</a> : <p className="font-medium text-[#111827]">{r.v}</p>}

@@ -72,6 +72,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+import { useCanPerformAction } from "@/hooks/usePermissionAccess";
 import {
   CheckSquare,
   Square,
@@ -520,6 +521,9 @@ const TaskListItem = ({
   onClick,
   onEdit,
   onDelete,
+  canCreate = true,
+  canUpdate = true,
+  canDelete = true,
 }: {
   task: Task;
   onToggleComplete: () => void;
@@ -529,6 +533,9 @@ const TaskListItem = ({
   onClick: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  canCreate?: boolean;
+  canUpdate?: boolean;
+  canDelete?: boolean;
 }) => {
   const statusInfo = getStatusInfo(task.status);
   const priorityInfo = getPriorityInfo(task.priority);
@@ -554,11 +561,14 @@ const TaskListItem = ({
       <div className="pt-0.5" onClick={(e) => e.stopPropagation()}>
         <button
           onClick={onToggleComplete}
+          disabled={!canUpdate}
           className={cn(
             "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
             task.status === "completed"
               ? "bg-green-500 border-green-500 text-[#0F172A]"
-              : "border-slate-300 hover:border-[#6637F4]"
+              : canUpdate
+                ? "border-slate-300 hover:border-[#6637F4]"
+                : "border-slate-300 cursor-default"
           )}
         >
           {task.status === "completed" && <Check size={12} />}
@@ -579,19 +589,21 @@ const TaskListItem = ({
               >
                 {task.title}
               </h3>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleStar();
-                }}
-                className="opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                {task.isStarred ? (
-                  <Star size={16} className="text-yellow-500 fill-yellow-500" />
-                ) : (
-                  <Star size={16} className="text-[#475569] hover:text-yellow-500" />
-                )}
-              </button>
+              {canUpdate ? (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleStar();
+                  }}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  {task.isStarred ? (
+                    <Star size={16} className="text-yellow-500 fill-yellow-500" />
+                  ) : (
+                    <Star size={16} className="text-[#475569] hover:text-yellow-500" />
+                  )}
+                </button>
+              ) : null}
               {task.isRecurring && (
                 <Repeat size={14} className="text-[#475569]" />
               )}
@@ -721,24 +733,34 @@ const TaskListItem = ({
                   <DropdownMenuItem onClick={onClick} className="rounded-md">
                     <Eye size={14} className="mr-2" /> View Details
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onEdit} className="rounded-md">
-                    <Pencil size={14} className="mr-2" /> Edit Task
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onToggleStar} className="rounded-md">
-                    <Star size={14} className="mr-2" />
-                    {task.isStarred ? "Remove Star" : "Add Star"}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={onDuplicate} className="rounded-md">
-                    <Copy size={14} className="mr-2" /> Duplicate
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onArchive} className="rounded-md">
-                    <Archive size={14} className="mr-2" /> Archive
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={onDelete} className="rounded-md text-red-600">
-                    <Trash2 size={14} className="mr-2" /> Delete
-                  </DropdownMenuItem>
+                  {canUpdate ? (
+                    <DropdownMenuItem onClick={onEdit} className="rounded-md">
+                      <Pencil size={14} className="mr-2" /> Edit Task
+                    </DropdownMenuItem>
+                  ) : null}
+                  {canUpdate ? (
+                    <DropdownMenuItem onClick={onToggleStar} className="rounded-md">
+                      <Star size={14} className="mr-2" />
+                      {task.isStarred ? "Remove Star" : "Add Star"}
+                    </DropdownMenuItem>
+                  ) : null}
+                  {canUpdate || canCreate || canDelete ? <DropdownMenuSeparator /> : null}
+                  {canCreate ? (
+                    <DropdownMenuItem onClick={onDuplicate} className="rounded-md">
+                      <Copy size={14} className="mr-2" /> Duplicate
+                    </DropdownMenuItem>
+                  ) : null}
+                  {canUpdate ? (
+                    <DropdownMenuItem onClick={onArchive} className="rounded-md">
+                      <Archive size={14} className="mr-2" /> Archive
+                    </DropdownMenuItem>
+                  ) : null}
+                  {(canDelete && (canUpdate || canCreate)) ? <DropdownMenuSeparator /> : null}
+                  {canDelete ? (
+                    <DropdownMenuItem onClick={onDelete} className="rounded-md text-red-600">
+                      <Trash2 size={14} className="mr-2" /> Delete
+                    </DropdownMenuItem>
+                  ) : null}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -760,6 +782,8 @@ const TaskCard = ({
   onClick,
   onEdit,
   onDelete,
+  canUpdate = true,
+  canDelete = true,
   delay = 0,
 }: {
   task: Task;
@@ -768,6 +792,8 @@ const TaskCard = ({
   onClick: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  canUpdate?: boolean;
+  canDelete?: boolean;
   delay?: number;
 }) => {
   const statusInfo = getStatusInfo(task.status);
@@ -803,16 +829,18 @@ const TaskCard = ({
         className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1"
         onClick={(e) => e.stopPropagation()}
       >
-        <button
-          onClick={onToggleStar}
-          className="p-1.5 rounded-md bg-white/80 backdrop-blur-sm hover:bg-white"
-        >
-          {task.isStarred ? (
-            <Star size={14} className="text-yellow-500 fill-yellow-500" />
-          ) : (
-            <Star size={14} className="text-[#475569]" />
-          )}
-        </button>
+        {canUpdate ? (
+          <button
+            onClick={onToggleStar}
+            className="p-1.5 rounded-md bg-white/80 backdrop-blur-sm hover:bg-white"
+          >
+            {task.isStarred ? (
+              <Star size={14} className="text-yellow-500 fill-yellow-500" />
+            ) : (
+              <Star size={14} className="text-[#475569]" />
+            )}
+          </button>
+        ) : null}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md bg-white/80 backdrop-blur-sm hover:bg-white">
@@ -823,13 +851,17 @@ const TaskCard = ({
             <DropdownMenuItem onClick={onClick} className="rounded-md text-sm">
               <Eye size={14} className="mr-2" /> View
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={onEdit} className="rounded-md text-sm">
-              <Pencil size={14} className="mr-2" /> Edit
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onDelete} className="rounded-md text-sm text-red-600">
-              <Trash2 size={14} className="mr-2" /> Delete
-            </DropdownMenuItem>
+            {canUpdate ? (
+              <DropdownMenuItem onClick={onEdit} className="rounded-md text-sm">
+                <Pencil size={14} className="mr-2" /> Edit
+              </DropdownMenuItem>
+            ) : null}
+            {canDelete ? <DropdownMenuSeparator /> : null}
+            {canDelete ? (
+              <DropdownMenuItem onClick={onDelete} className="rounded-md text-sm text-red-600">
+                <Trash2 size={14} className="mr-2" /> Delete
+              </DropdownMenuItem>
+            ) : null}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -998,6 +1030,8 @@ const KanbanColumn = ({
   onEdit,
   onDelete,
   onStatusChange,
+  canUpdate = true,
+  canDelete = true,
 }: {
   status: typeof taskStatuses[0];
   tasks: Task[];
@@ -1007,6 +1041,8 @@ const KanbanColumn = ({
   onEdit: (task: Task) => void;
   onDelete: (task: Task) => void;
   onStatusChange: (taskId: string, newStatus: string) => void;
+  canUpdate?: boolean;
+  canDelete?: boolean;
 }) => {
   const StatusIcon = status.icon;
   const [isDragOver, setIsDragOver] = useState(false);
@@ -1065,8 +1101,9 @@ const KanbanColumn = ({
             return (
               <div
                 key={task.id}
-                draggable
+                draggable={canUpdate}
                 onDragStart={(e) => {
+                  if (!canUpdate) return;
                   e.dataTransfer.setData("text/plain", task.id);
                   e.dataTransfer.effectAllowed = "move";
                 }}
@@ -1099,7 +1136,9 @@ const KanbanColumn = ({
                         "w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0 mt-0.5",
                         task.status === "completed"
                           ? "bg-green-500 border-green-500 text-[#0F172A]"
-                          : "border-slate-300 hover:border-[#6637F4]"
+                          : canUpdate
+                            ? "border-slate-300 hover:border-[#6637F4]"
+                            : "border-slate-300 cursor-default"
                       )}
                     >
                       {task.status === "completed" && <Check size={10} />}
@@ -1177,19 +1216,21 @@ const KanbanColumn = ({
 
                     {/* Actions */}
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onToggleStar(task);
-                        }}
-                        className="p-1 rounded hover:bg-white/10"
-                      >
-                        {task.isStarred ? (
-                          <Star size={12} className="text-yellow-500 fill-yellow-500" />
-                        ) : (
-                          <Star size={12} className="text-[#475569]" />
-                        )}
-                      </button>
+                      {canUpdate ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleStar(task);
+                          }}
+                          className="p-1 rounded hover:bg-white/10"
+                        >
+                          {task.isStarred ? (
+                            <Star size={12} className="text-yellow-500 fill-yellow-500" />
+                          ) : (
+                            <Star size={12} className="text-[#475569]" />
+                          )}
+                        </button>
+                      ) : null}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                           <button className="p-1 rounded hover:bg-white/10">
@@ -1197,12 +1238,16 @@ const KanbanColumn = ({
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-40 rounded-md">
-                          <DropdownMenuItem onClick={() => onEdit(task)} className="rounded-md text-sm">
-                            <Pencil size={12} className="mr-2" /> Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => onDelete(task)} className="rounded-md text-sm text-red-600">
-                            <Trash2 size={12} className="mr-2" /> Delete
-                          </DropdownMenuItem>
+                          {canUpdate ? (
+                            <DropdownMenuItem onClick={() => onEdit(task)} className="rounded-md text-sm">
+                              <Pencil size={12} className="mr-2" /> Edit
+                            </DropdownMenuItem>
+                          ) : null}
+                          {canDelete ? (
+                            <DropdownMenuItem onClick={() => onDelete(task)} className="rounded-md text-sm text-red-600">
+                              <Trash2 size={12} className="mr-2" /> Delete
+                            </DropdownMenuItem>
+                          ) : null}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -1799,6 +1844,8 @@ const TaskDetailsDialog = ({
   onToggleComplete,
   onToggleStar,
   onToggleSubtask,
+  canUpdate = true,
+  canDelete = true,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -1808,6 +1855,8 @@ const TaskDetailsDialog = ({
   onToggleComplete: () => void;
   onToggleStar: () => void;
   onToggleSubtask: (subtaskId: string) => void;
+  canUpdate?: boolean;
+  canDelete?: boolean;
 }) => {
   if (!task) return null;
 
@@ -1828,11 +1877,14 @@ const TaskDetailsDialog = ({
             <div className="flex items-start gap-4">
               <button
                 onClick={onToggleComplete}
+                disabled={!canUpdate}
                 className={cn(
                   "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all mt-1",
                   task.status === "completed"
                     ? "bg-green-500 border-green-500 text-[#0F172A]"
-                    : "border-slate-300 hover:border-[#6637F4]"
+                    : canUpdate
+                      ? "border-slate-300 hover:border-[#6637F4]"
+                      : "border-slate-300 cursor-default"
                 )}
               >
                 {task.status === "completed" && <Check size={14} />}
@@ -1864,16 +1916,18 @@ const TaskDetailsDialog = ({
                 </div>
               </div>
             </div>
-            <button
-              onClick={onToggleStar}
-              className="p-2 rounded-md hover:bg-white/10 transition-colors"
-            >
-              {task.isStarred ? (
-                <Star size={20} className="text-yellow-500 fill-yellow-500" />
-              ) : (
-                <Star size={20} className="text-[#475569]" />
-              )}
-            </button>
+            {canUpdate ? (
+              <button
+                onClick={onToggleStar}
+                className="p-2 rounded-md hover:bg-white/10 transition-colors"
+              >
+                {task.isStarred ? (
+                  <Star size={20} className="text-yellow-500 fill-yellow-500" />
+                ) : (
+                  <Star size={20} className="text-[#475569]" />
+                )}
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -1993,8 +2047,15 @@ const TaskDetailsDialog = ({
                 {task.subtasks.map((subtask) => (
                   <div
                     key={subtask.id}
-                    onClick={() => onToggleSubtask(subtask.id)}
-                    className="flex items-center gap-3 p-3 bg-[#F7F7FB] rounded-md cursor-pointer hover:bg-white/10 transition-colors"
+                    onClick={() => {
+                      if (canUpdate) {
+                        onToggleSubtask(subtask.id);
+                      }
+                    }}
+                    className={cn(
+                      "flex items-center gap-3 p-3 bg-[#F7F7FB] rounded-md transition-colors",
+                      canUpdate ? "cursor-pointer hover:bg-white/10" : "cursor-default"
+                    )}
                   >
                     <div
                       className={cn(
@@ -2052,21 +2113,25 @@ const TaskDetailsDialog = ({
         </div>
 
         <DialogFooter className="p-6 pt-0 gap-3 border-t border-[rgba(15,23,42,0.06)]">
-          <Button
-            variant="outline"
-            onClick={onDelete}
-            className="rounded-md text-red-600 border-red-200 hover:bg-red-50"
-          >
-            <Trash2 size={16} className="mr-2" />
-            Delete
-          </Button>
-          <Button
-            onClick={onEdit}
-            className="bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-md"
-          >
-            <Pencil size={16} className="mr-2" />
-            Edit Task
-          </Button>
+          {canDelete ? (
+            <Button
+              variant="outline"
+              onClick={onDelete}
+              className="rounded-md text-red-600 border-red-200 hover:bg-red-50"
+            >
+              <Trash2 size={16} className="mr-2" />
+              Delete
+            </Button>
+          ) : null}
+          {canUpdate ? (
+            <Button
+              onClick={onEdit}
+              className="bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-md"
+            >
+              <Pencil size={16} className="mr-2" />
+              Edit Task
+            </Button>
+          ) : null}
         </DialogFooter>
       </DialogContent>
     </Dialog>

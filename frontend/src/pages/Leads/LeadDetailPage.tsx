@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 // import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import {
     Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator
@@ -140,6 +140,11 @@ interface NoteEntry {
     date: string;
     author: string;
 }
+
+type LeadDetailNavigationState = {
+    from?: string;
+    fromLabel?: string;
+};
 
 const STRUCTURED_NOTE_REGEX = /^\[(.+?) \| (.+?)\]\n([\s\S]+)$/;
 
@@ -452,6 +457,7 @@ const ConvertLeadDialog = ({ open, onClose, lead, onSuccess }: ConvertDialogProp
 const LeadDetailPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const { toast } = useToast();
     const { isMobile } = useIsMobile();
     const [lead, setLead] = useState<LeadData | null>(null);
@@ -489,6 +495,26 @@ const LeadDetailPage = () => {
     const [emails, setEmails] = useState<any[]>([]);
     const [loadingEmails, setLoadingEmails] = useState(false);
     const [showComposeEmail, setShowComposeEmail] = useState(false);
+
+    const navigationState = (location.state as LeadDetailNavigationState | null) ?? null;
+    const sourcePath = typeof navigationState?.from === "string" ? navigationState.from : "";
+    const backLabel = navigationState?.fromLabel || (sourcePath.startsWith("/leads/pipeline") ? "Pipeline" : "Leads");
+
+    const handleBackNavigation = useCallback(() => {
+        const currentPath = `${location.pathname}${location.search}${location.hash}`;
+
+        if (sourcePath && sourcePath !== currentPath) {
+            navigate(sourcePath);
+            return;
+        }
+
+        if (typeof window !== "undefined" && window.history.length > 1) {
+            navigate(-1);
+            return;
+        }
+
+        navigate("/leads");
+    }, [location.hash, location.pathname, location.search, navigate, sourcePath]);
 
     const applyLeadState = useCallback((data: LeadData) => {
         setLead(data);
@@ -781,14 +807,25 @@ const LeadDetailPage = () => {
                     <Breadcrumb><BreadcrumbList>
                         <BreadcrumbItem><BreadcrumbLink href="/dashboard" className="text-xs">Dashboard</BreadcrumbLink></BreadcrumbItem>
                         <BreadcrumbSeparator />
-                        <BreadcrumbItem><BreadcrumbLink href="/leads" className="text-xs">Leads</BreadcrumbLink></BreadcrumbItem>
+                        <BreadcrumbItem>
+                            <BreadcrumbLink
+                                href={sourcePath || "/leads"}
+                                className="text-xs"
+                                onClick={(event) => {
+                                    event.preventDefault();
+                                    handleBackNavigation();
+                                }}
+                            >
+                                {backLabel}
+                            </BreadcrumbLink>
+                        </BreadcrumbItem>
                         <BreadcrumbSeparator />
                         <BreadcrumbItem><BreadcrumbPage className="text-xs font-semibold text-[#14B8A6]">{fullName}</BreadcrumbPage></BreadcrumbItem>
                     </BreadcrumbList></Breadcrumb>
                 </div>
                 <div className="px-6 pb-3 flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3 min-w-0">
-                        <button onClick={() => navigate('/leads')} className="p-1.5 rounded-lg hover:bg-[#F9FAFB] text-[#6B7280] transition-colors flex-shrink-0"><ArrowLeft size={18} /></button>
+                        <button onClick={handleBackNavigation} className="p-1.5 rounded-lg hover:bg-[#F9FAFB] text-[#6B7280] transition-colors flex-shrink-0"><ArrowLeft size={18} /></button>
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#14B8A6] to-[#0D9488] flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-sm">
                             {getInitials(lead.firstName, lead.lastName)}
                         </div>

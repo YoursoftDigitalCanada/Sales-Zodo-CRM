@@ -98,7 +98,7 @@ import {
   RefreshCw,
   type LucideIcon,
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 // ============================================
 // TYPES
@@ -784,6 +784,7 @@ const LeadDetailPanel = ({
 const Pipeline = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const { isMobile } = useIsMobile();
   const [pipeline, setPipeline] = useState<PipelineStage[]>(buildEmptyPipeline());
   const [searchQuery, setSearchQuery] = useState("");
@@ -946,8 +947,16 @@ const Pipeline = () => {
     ? pipeline.find((s) => s.leads.some((l) => l.id === selectedLead.id))?.color || "#6637F4"
     : "#6637F4";
 
+  const leadDetailNavigationState = useMemo(
+    () => ({
+      from: `${location.pathname}${location.search}${location.hash}`,
+      fromLabel: "Pipeline",
+    }),
+    [location.hash, location.pathname, location.search],
+  );
+
   const handleLeadOpenRecord = (lead: Lead) => {
-    navigate(`/leads/${lead.id}`);
+    navigate(`/leads/${lead.id}`, { state: leadDetailNavigationState });
   };
 
   const handleLeadPreview = (lead: Lead) => {

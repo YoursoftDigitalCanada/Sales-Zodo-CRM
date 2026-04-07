@@ -3676,6 +3676,14 @@ const AllLeads = () => {
     onRefresh: loadLeads,
   });
 
+  const leadDetailNavigationState = useMemo(
+    () => ({
+      from: `${location.pathname}${location.search}${location.hash}`,
+      fromLabel: "Leads",
+    }),
+    [location.hash, location.pathname, location.search],
+  );
+
   // Filtered and sorted leads
   const filteredLeads = useMemo(() => {
     let result = [...leads];
@@ -5900,7 +5908,7 @@ const AllLeads = () => {
                       variant="outline"
                       onClick={() => {
                         setIsSidePanelOpen(false);
-                        navigate(`/leads/${lead.id}`);
+                        navigate(`/leads/${lead.id}`, { state: leadDetailNavigationState });
                       }}
                     >
                       <ExternalLink size={14} className="mr-1" />

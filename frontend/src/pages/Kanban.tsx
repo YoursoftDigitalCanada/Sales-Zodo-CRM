@@ -1106,11 +1106,11 @@ const KanbanPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="flex min-h-screen flex-col bg-[#F8FAFC]">
 
       <main
         className={cn(
-          "flex-1 transition-all duration-300"
+          "flex flex-1 flex-col transition-all duration-300"
         )}
       >
         {/* ============================================ */}
@@ -1209,7 +1209,7 @@ const KanbanPage: React.FC = () => {
         {/* ============================================ */}
         {/* MAIN CONTENT */}
         {/* ============================================ */}
-        <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+        <div className="flex-1 p-4 md:p-6 space-y-4 md:space-y-6">
           {/* Page Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1314,29 +1314,29 @@ const KanbanPage: React.FC = () => {
           )}
         </div>
 
-        {/* Footer */}
-        <footer className="px-6 py-4 border-t border-[rgba(15,23,42,0.06)] bg-white">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-[#475569]">
-            <div className="flex items-center gap-2">
-              <span>© {new Date().getFullYear()}</span>
-              <span className="font-semibold text-[#0F172A]">Yoursoft</span>
-              <span className="text-[#0891B2] font-semibold">Digital</span>
-              <span>• All rights reserved</span>
-            </div>
-            <div className="flex items-center gap-4">
-              <a href="#" className="hover:text-[#0891B2] transition-colors">
-                Privacy
-              </a>
-              <a href="#" className="hover:text-[#0891B2] transition-colors">
-                Terms
-              </a>
-              <a href="#" className="hover:text-[#0891B2] transition-colors">
-                Support
-              </a>
-            </div>
-          </div>
-        </footer>
       </main>
+
+      <footer className="shrink-0 border-t border-[rgba(15,23,42,0.06)] bg-white px-6 py-4">
+        <div className="flex flex-col items-center justify-between gap-4 text-sm text-[#475569] sm:flex-row">
+          <div className="flex flex-wrap items-center justify-center gap-2 text-center sm:justify-start sm:text-left">
+            <span>© {new Date().getFullYear()}</span>
+            <span className="font-semibold text-[#0F172A]">Yoursoft</span>
+            <span className="font-semibold text-[#0891B2]">Digital</span>
+            <span>• All rights reserved</span>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:justify-end">
+            <a href="#" className="transition-colors hover:text-[#0891B2]">
+              Privacy
+            </a>
+            <a href="#" className="transition-colors hover:text-[#0891B2]">
+              Terms
+            </a>
+            <a href="#" className="transition-colors hover:text-[#0891B2]">
+              Support
+            </a>
+          </div>
+        </div>
+      </footer>
 
       {isMobile && (
         <Button

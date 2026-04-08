@@ -146,11 +146,11 @@ export const attendanceIdSchema = z.object({
 export const checkInAttendanceSchema = z.object({
     body: z.object({
         isRemote: z.boolean().optional(),
-        lat: z.number().optional(),
-        lng: z.number().optional(),
-        accuracy: z.number().nonnegative().max(5000).optional(),
+        lat: z.number(),
+        lng: z.number(),
+        accuracy: z.number().nonnegative().max(5000),
         capturedAt: isoDateString.optional(),
-    }).optional().default({}),
+    }),
 });
 
 export const checkOutAttendanceSchema = z.object({

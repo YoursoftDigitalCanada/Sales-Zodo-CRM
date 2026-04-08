@@ -292,9 +292,9 @@ export async function getCurrentAttendance(): Promise<AttendanceCurrentEntity> {
 
 export async function checkInAttendance(data: {
     isRemote?: boolean;
-    lat?: number;
-    lng?: number;
-    accuracy?: number;
+    lat: number;
+    lng: number;
+    accuracy: number;
     capturedAt?: string;
 }): Promise<AttendanceCurrentEntity> {
     const response = await api.post("/employees/attendance/check-in", data);

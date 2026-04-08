@@ -141,7 +141,7 @@ const ATTENDANCE_META_PREFIX = '__attendance_meta__:';
 const LATE_THRESHOLD_MINUTES = 9 * 60 + 15;
 const HALF_DAY_MINUTES = 4 * 60;
 const FULL_DAY_MINUTES = 8 * 60;
-const ATTENDANCE_LOCATION_ACCURACY_LIMIT_METERS = 200;
+const ATTENDANCE_LOCATION_ACCURACY_LIMIT_METERS = 35;
 
 function asRecord(value: unknown): Record<string, unknown> {
     return value && typeof value === 'object' && !Array.isArray(value)
@@ -422,6 +422,10 @@ function hasValidCoordinates(lat?: number | null, lng?: number | null): boolean 
         && lat <= 90
         && lng >= -180
         && lng <= 180;
+}
+
+function hasValidAccuracy(value?: number | null): value is number {
+    return typeof value === 'number' && Number.isFinite(value) && value >= 0;
 }
 
 function mapLeaveTypeToDto(value: LeaveRequestRow['type']): LeaveRequestDto['leaveType'] {
@@ -1167,11 +1171,11 @@ export class EmployeesService {
             throw new BadRequestError('Live location is required to check in.');
         }
 
-        if (
-            typeof data.accuracy === 'number'
-            && Number.isFinite(data.accuracy)
-            && data.accuracy > ATTENDANCE_LOCATION_ACCURACY_LIMIT_METERS
-        ) {
+        if (!hasValidAccuracy(data.accuracy)) {
+            throw new BadRequestError('A precise live GPS accuracy reading is required to check in.');
+        }
+
+        if (data.accuracy > ATTENDANCE_LOCATION_ACCURACY_LIMIT_METERS) {
             throw new BadRequestError(
                 `Location accuracy is too weak to check in. Please retry when accuracy is under ${ATTENDANCE_LOCATION_ACCURACY_LIMIT_METERS} meters.`,
             );

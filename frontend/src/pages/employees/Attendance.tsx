@@ -187,6 +187,16 @@ type AttendanceCoordinates = {
   capturedAt: string;
 };
 
+type AttendanceCoordinateRequestOptions = {
+  desiredAccuracyMeters?: number;
+  timeoutMs?: number;
+};
+
+type ResolveAttendanceLocationOptions = AttendanceCoordinateRequestOptions & {
+  forceFresh?: boolean;
+  maxAgeMs?: number;
+};
+
 type AttendanceLocationState = {
   status: 'idle' | 'locating' | 'ready' | 'error';
   lat?: number;
@@ -196,11 +206,38 @@ type AttendanceLocationState = {
   errorMessage?: string | null;
 };
 
-const ATTENDANCE_LOCATION_ACCURACY_LIMIT_METERS = 200;
+const ATTENDANCE_LOCATION_ACCURACY_LIMIT_METERS = 35;
+const ATTENDANCE_LOCATION_CAPTURE_TIMEOUT_MS = 20_000;
+const ATTENDANCE_LOCATION_ACTION_MAX_AGE_MS = 10_000;
 const ATTENDANCE_LOCATION_SYNC_INTERVAL_MS = 60_000;
 const ATTENDANCE_LOCATION_SYNC_DISTANCE_METERS = 25;
 
-const getCurrentCoordinates = (required: boolean): Promise<AttendanceCoordinates | null> => new Promise((resolve, reject) => {
+const getAttendanceAccuracy = (accuracy?: number | null): number => (
+  typeof accuracy === 'number' && Number.isFinite(accuracy) ? accuracy : Number.POSITIVE_INFINITY
+);
+
+const shouldPreferAttendanceCoordinates = (
+  candidate: AttendanceCoordinates,
+  current?: AttendanceCoordinates | null,
+): boolean => {
+  if (!current) {
+    return true;
+  }
+
+  const candidateAccuracy = getAttendanceAccuracy(candidate.accuracy);
+  const currentAccuracy = getAttendanceAccuracy(current.accuracy);
+
+  if (candidateAccuracy !== currentAccuracy) {
+    return candidateAccuracy < currentAccuracy;
+  }
+
+  return new Date(candidate.capturedAt).getTime() > new Date(current.capturedAt).getTime();
+};
+
+const getCurrentCoordinates = (
+  required: boolean,
+  options: AttendanceCoordinateRequestOptions = {},
+): Promise<AttendanceCoordinates | null> => new Promise((resolve, reject) => {
   if (typeof navigator === 'undefined' || !navigator.geolocation) {
     if (required) {
       reject(new Error('Location access is required to check in from attendance.'));
@@ -211,34 +248,95 @@ const getCurrentCoordinates = (required: boolean): Promise<AttendanceCoordinates
     return;
   }
 
-  navigator.geolocation.getCurrentPosition(
+  const desiredAccuracyMeters = options.desiredAccuracyMeters ?? ATTENDANCE_LOCATION_ACCURACY_LIMIT_METERS;
+  const timeoutMs = options.timeoutMs ?? ATTENDANCE_LOCATION_CAPTURE_TIMEOUT_MS;
+  let bestCoordinates: AttendanceCoordinates | null = null;
+  let isSettled = false;
+  let lastErrorMessage: string | null = null;
+  let watchId: number | null = null;
+  let timeoutHandle: number | null = null;
+
+  const cleanup = () => {
+    if (watchId !== null) {
+      navigator.geolocation.clearWatch(watchId);
+    }
+    if (timeoutHandle !== null) {
+      window.clearTimeout(timeoutHandle);
+    }
+  };
+
+  const finish = (result: AttendanceCoordinates | null, error?: Error) => {
+    if (isSettled) {
+      return;
+    }
+
+    isSettled = true;
+    cleanup();
+
+    if (error) {
+      reject(error);
+      return;
+    }
+
+    resolve(result);
+  };
+
+  watchId = navigator.geolocation.watchPosition(
     (position) => {
-      resolve({
+      const nextCoordinates: AttendanceCoordinates = {
         lat: position.coords.latitude,
         lng: position.coords.longitude,
         accuracy: typeof position.coords.accuracy === 'number' ? position.coords.accuracy : null,
         capturedAt: new Date(position.timestamp).toISOString(),
-      });
-    },
-    (error) => {
-      if (!required) {
-        resolve(null);
-        return;
+      };
+
+      if (shouldPreferAttendanceCoordinates(nextCoordinates, bestCoordinates)) {
+        bestCoordinates = nextCoordinates;
       }
 
+      if (getAttendanceAccuracy(nextCoordinates.accuracy) <= desiredAccuracyMeters) {
+        finish(nextCoordinates);
+      }
+    },
+    (error) => {
       const message = error.code === error.PERMISSION_DENIED
-        ? 'Location access is required to check in. Please allow location and try again.'
+        ? 'Location access is required to check in. Please allow precise location and try again.'
         : error.code === error.TIMEOUT
           ? 'Location request timed out. Please try again in a place with better GPS signal.'
           : 'Unable to get your current location. Please try again.';
-      reject(new Error(message));
+
+      if (error.code === error.PERMISSION_DENIED) {
+        if (!required) {
+          finish(null);
+          return;
+        }
+
+        finish(null, new Error(message));
+        return;
+      }
+
+      lastErrorMessage = message;
     },
     {
       enableHighAccuracy: true,
-      timeout: 15000,
+      timeout: timeoutMs,
       maximumAge: 0,
     },
   );
+
+  timeoutHandle = window.setTimeout(() => {
+    if (bestCoordinates) {
+      finish(bestCoordinates);
+      return;
+    }
+
+    if (!required) {
+      finish(null);
+      return;
+    }
+
+    finish(null, new Error(lastErrorMessage || 'Unable to get your current location. Please try again.'));
+  }, timeoutMs);
 });
 
 const getLocationWatchErrorMessage = (error: GeolocationPositionError): string => {
@@ -262,11 +360,11 @@ const formatAccuracyLabel = (accuracy?: number | null): string => {
     return `Excellent (${Math.round(accuracy)}m)`;
   }
 
-  if (accuracy <= 75) {
-    return `Good (${Math.round(accuracy)}m)`;
+  if (accuracy <= ATTENDANCE_LOCATION_ACCURACY_LIMIT_METERS) {
+    return `Verified (${Math.round(accuracy)}m)`;
   }
 
-  if (accuracy <= ATTENDANCE_LOCATION_ACCURACY_LIMIT_METERS) {
+  if (accuracy <= 75) {
     return `Fair (${Math.round(accuracy)}m)`;
   }
 
@@ -468,7 +566,10 @@ const AttendancePage: React.FC = () => {
     }
   }, [currentEmployeeId, isAdminUser]);
 
-  const refreshCurrentLocation = useCallback(async (required: boolean) => {
+  const refreshCurrentLocation = useCallback(async (
+    required: boolean,
+    options: AttendanceCoordinateRequestOptions = {},
+  ) => {
     setIsLocationRefreshing(true);
     setLocationState((current) => ({
       ...current,
@@ -477,7 +578,7 @@ const AttendancePage: React.FC = () => {
     }));
 
     try {
-      const coordinates = await getCurrentCoordinates(required);
+      const coordinates = await getCurrentCoordinates(required, options);
 
       if (!coordinates) {
         setLocationState({
@@ -856,15 +957,24 @@ const AttendancePage: React.FC = () => {
     ]);
   }, [calendarMonth, refreshCalendarData, refreshData]);
 
-  const resolveAttendanceLocation = useCallback(async (required: boolean) => {
+  const resolveAttendanceLocation = useCallback(async (
+    required: boolean,
+    options: ResolveAttendanceLocationOptions = {},
+  ) => {
+    const maxAgeMs = typeof options.maxAgeMs === 'number'
+      ? Math.max(0, options.maxAgeMs)
+      : ATTENDANCE_LOCATION_ACTION_MAX_AGE_MS;
+
     if (
+      !options.forceFresh
+      &&
       locationState.status === 'ready'
       && typeof locationState.lat === 'number'
       && typeof locationState.lng === 'number'
       && locationState.capturedAt
     ) {
       const ageMs = Date.now() - locationState.capturedAt.getTime();
-      if (ageMs <= 45_000) {
+      if (ageMs <= maxAgeMs) {
         return {
           lat: locationState.lat,
           lng: locationState.lng,
@@ -874,7 +984,10 @@ const AttendancePage: React.FC = () => {
       }
     }
 
-    const refreshed = await refreshCurrentLocation(required);
+    const refreshed = await refreshCurrentLocation(required, {
+      desiredAccuracyMeters: options.desiredAccuracyMeters,
+      timeoutMs: options.timeoutMs,
+    });
     if (!refreshed || refreshed.status !== 'ready' || typeof refreshed.lat !== 'number' || typeof refreshed.lng !== 'number') {
       return null;
     }
@@ -890,9 +1003,13 @@ const AttendancePage: React.FC = () => {
   const handleCheckIn = async (isRemote: boolean) => {
     setIsActionLoading(true);
     try {
-      const coordinates = await resolveAttendanceLocation(true);
+      const coordinates = await resolveAttendanceLocation(true, {
+        forceFresh: true,
+        maxAgeMs: 0,
+        desiredAccuracyMeters: ATTENDANCE_LOCATION_ACCURACY_LIMIT_METERS,
+      });
       if (!coordinates || !isLocationAccurate(coordinates.accuracy)) {
-        throw new Error(`Check in needs a more precise location. Please refresh until accuracy is under ${ATTENDANCE_LOCATION_ACCURACY_LIMIT_METERS}m.`);
+        throw new Error(`Check in needs a more precise live GPS fix. Please refresh until accuracy is under ${ATTENDANCE_LOCATION_ACCURACY_LIMIT_METERS}m.`);
       }
       const nextStatus = await checkInAttendance({
         isRemote,
@@ -914,7 +1031,11 @@ const AttendancePage: React.FC = () => {
   const handleCheckOut = async () => {
     setIsActionLoading(true);
     try {
-      const coordinates = await resolveAttendanceLocation(false);
+      const coordinates = await resolveAttendanceLocation(false, {
+        forceFresh: true,
+        maxAgeMs: 0,
+        desiredAccuracyMeters: ATTENDANCE_LOCATION_ACCURACY_LIMIT_METERS,
+      });
       const nextStatus = await checkOutAttendance({
         lat: coordinates?.lat,
         lng: coordinates?.lng,

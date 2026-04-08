@@ -136,7 +136,9 @@ const toAttendanceRecord = (record: AttendanceEntity): AttendanceRecord => ({
   checkOut: record.checkOut ? new Date(record.checkOut) : undefined,
   status: record.status,
   workHours: Number(record.workHours || 0),
+  workMinutes: Number(record.workMinutes || 0),
   overtime: Number(record.overtime || 0),
+  overtimeMinutes: Number(record.overtimeMinutes || 0),
   breakMinutes: Number(record.breakMinutes || 0),
   notes: record.notes || undefined,
   location: record.location,
@@ -1041,7 +1043,9 @@ const AttendancePage: React.FC = () => {
                 <div className="rounded-xl bg-[#F8FAFC] p-3">
                   <p className="text-xs text-[#64748B]">Work Hours</p>
                   <p className="mt-1 text-sm font-medium text-[#0F172A]">
-                    {record.workHours > 0 ? formatWorkHours(record.workHours) : '—'}
+                    {record.workMinutes > 0 || (record.status !== 'on-leave' && record.checkIn)
+                      ? formatMinutesAsDuration(record.workMinutes)
+                      : '—'}
                   </p>
                 </div>
                 <div className="rounded-xl bg-[#F8FAFC] p-3">

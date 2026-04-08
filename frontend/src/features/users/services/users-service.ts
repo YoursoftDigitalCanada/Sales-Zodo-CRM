@@ -111,7 +111,9 @@ export interface AttendanceEntity {
     checkOut?: string;
     status: "present" | "absent" | "late" | "half-day" | "on-leave";
     workHours: number;
+    workMinutes: number;
     overtime: number;
+    overtimeMinutes: number;
     notes?: string | null;
     location?: string;
     isRemote: boolean;

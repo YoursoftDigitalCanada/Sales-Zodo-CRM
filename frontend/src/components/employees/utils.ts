@@ -78,6 +78,9 @@ export const formatCurrency = (amount: number): string => {
 export const formatWorkHours = (hours: number): string => {
   const h = Math.floor(hours);
   const m = Math.round((hours - h) * 60);
+  if (h <= 0 && m > 0) {
+    return `${m}m`;
+  }
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 };
 
@@ -99,6 +102,7 @@ export const formatMinutesAsDuration = (minutes: number): string => {
 
 export type AttendanceDailyTotals = {
   workHours: number;
+  workMinutes: number;
   breakMinutes: number;
   sessionCount: number;
   firstCheckIn?: Date;
@@ -130,7 +134,7 @@ export const buildAttendanceDailyTotals = (records: AttendanceRecord[]): Map<str
       sessionCount: 0,
     };
 
-    existing.workMinutes += Math.max(0, Math.round(record.workHours * 60));
+    existing.workMinutes += Math.max(0, record.workMinutes ?? Math.round(record.workHours * 60));
     existing.breakMinutes += Math.max(0, record.breakMinutes || 0);
     existing.sessionCount += 1;
 
@@ -150,6 +154,7 @@ export const buildAttendanceDailyTotals = (records: AttendanceRecord[]): Map<str
       key,
       {
         workHours: Math.round((value.workMinutes / 60) * 10) / 10,
+        workMinutes: value.workMinutes,
         breakMinutes: value.breakMinutes,
         sessionCount: value.sessionCount,
         firstCheckIn: value.firstCheckIn,

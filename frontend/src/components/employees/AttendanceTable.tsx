@@ -87,6 +87,8 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
             const statusConfig = getAttendanceStatusConfig(record.status);
             const nameParts = record.employeeName.split(' ');
             const isLeaveRecord = record.status === 'on-leave';
+            const sessionMinutes = Math.max(0, record.workMinutes ?? Math.round(record.workHours * 60));
+            const overtimeMinutes = Math.max(0, record.overtimeMinutes ?? Math.round(record.overtime * 60));
             const locationLabel = isLeaveRecord
               ? record.location || 'On Leave'
               : record.location || (record.isRemote ? 'Remote' : 'Office');
@@ -134,14 +136,14 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
                   )}
                 </TableCell>
                 <TableCell>
-                  {record.workHours > 0 ? (
+                  {sessionMinutes > 0 || (!isLeaveRecord && Boolean(record.checkIn)) ? (
                     <div className="space-y-1">
                       <p className="font-medium text-[#0F172A]">
-                        Session: {formatWorkHours(record.workHours)}
+                        Session: {formatMinutesAsDuration(sessionMinutes)}
                       </p>
                       {dayTotals && (
                         <p className="text-xs text-[#64748B]">
-                          Day total: {formatWorkHours(dayTotals.workHours)}
+                          Day total: {formatMinutesAsDuration(dayTotals.workMinutes)}
                         </p>
                       )}
                       <p className="text-xs text-[#64748B]">
@@ -160,9 +162,9 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
                   )}
                 </TableCell>
                 <TableCell>
-                  {record.overtime > 0 ? (
+                  {overtimeMinutes > 0 ? (
                     <Badge className="bg-purple-100 text-purple-700 border-0">
-                      +{formatWorkHours(record.overtime)}
+                      +{formatMinutesAsDuration(overtimeMinutes)}
                     </Badge>
                   ) : (
                     <span className="text-[#94A3B8]">—</span>

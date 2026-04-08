@@ -73,7 +73,9 @@ export interface AttendanceRecord {
   checkOut?: Date;
   status: AttendanceStatus;
   workHours: number;
+  workMinutes: number;
   overtime: number;
+  overtimeMinutes: number;
   breakMinutes?: number;
   notes?: string;
   location?: string;

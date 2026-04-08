@@ -253,7 +253,9 @@ export interface AttendanceRecordDto {
     checkOut?: Date;
     status: 'present' | 'absent' | 'late' | 'half-day' | 'on-leave';
     workHours: number;
+    workMinutes: number;
     overtime: number;
+    overtimeMinutes: number;
     notes?: string | null;
     location?: string;
     isRemote: boolean;

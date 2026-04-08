@@ -34,6 +34,7 @@ interface CheckInOutCardProps {
   isCheckedIn: boolean;
   checkInTime?: Date;
   workedHours?: number;
+  workedMinutes?: number;
   breakMinutes?: number;
   onCheckIn: (isRemote: boolean) => void;
   onCheckOut: () => void;
@@ -116,6 +117,7 @@ export const CheckInOutCard: React.FC<CheckInOutCardProps> = ({
   isCheckedIn,
   checkInTime,
   workedHours = 0,
+  workedMinutes,
   breakMinutes = 0,
   onCheckIn,
   onCheckOut,
@@ -134,14 +136,16 @@ export const CheckInOutCard: React.FC<CheckInOutCardProps> = ({
 
   useEffect(() => {
     setSyncedAt(new Date());
-  }, [breakMinutes, isCheckedIn, isOnBreak, workedHours]);
+  }, [breakMinutes, isCheckedIn, isOnBreak, workedHours, workedMinutes]);
 
   useEffect(() => {
     const tick = () => {
       const now = new Date();
       setCurrentTime(now);
 
-      const baseWorkedMs = Math.max(0, workedHours) * 60 * 60 * 1000;
+      const baseWorkedMs = typeof workedMinutes === 'number'
+        ? Math.max(0, workedMinutes) * 60 * 1000
+        : Math.max(0, workedHours) * 60 * 60 * 1000;
       const baseBreakMs = Math.max(0, breakMinutes) * 60 * 1000;
 
       if (!isCheckedIn) {
@@ -161,7 +165,7 @@ export const CheckInOutCard: React.FC<CheckInOutCardProps> = ({
     tick();
     const timer = window.setInterval(tick, 1000);
     return () => window.clearInterval(timer);
-  }, [breakMinutes, isCheckedIn, isOnBreak, syncedAt, workedHours]);
+  }, [breakMinutes, isCheckedIn, isOnBreak, syncedAt, workedHours, workedMinutes]);
 
   const locationSummary = getLocationSummary(locationState);
   const canCheckIn = !isLoading && locationState?.status === 'ready' && locationState.isAccurate === true;

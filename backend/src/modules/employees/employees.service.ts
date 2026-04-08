@@ -387,7 +387,9 @@ function mapTimeEntryToAttendanceRecord(entry: AttendanceTimeEntryRow): Attendan
         checkOut: entry.endTime || undefined,
         status: getAttendanceStatus(entry.startTime, workedMinutes, Boolean(entry.endTime)),
         workHours,
+        workMinutes: workedMinutes,
         overtime: roundHours(Math.max(0, workedMinutes - FULL_DAY_MINUTES)),
+        overtimeMinutes: Math.max(0, workedMinutes - FULL_DAY_MINUTES),
         notes: entry.notes,
         location: isRemoteAttendance(entry.phase) ? 'Remote' : 'Office',
         isRemote: isRemoteAttendance(entry.phase),
@@ -2024,7 +2026,9 @@ export class EmployeesService {
                         date: new Date(current),
                         status: 'on-leave',
                         workHours: 0,
+                        workMinutes: 0,
                         overtime: 0,
+                        overtimeMinutes: 0,
                         notes: leaveRequest.reason?.trim()
                             ? `Approved ${leaveTypeLabel}: ${leaveRequest.reason.trim()}`
                             : `Approved ${leaveTypeLabel}`,

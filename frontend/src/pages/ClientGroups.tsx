@@ -2042,18 +2042,18 @@ const ClientGroupsPage = () => {
     Boolean(searchQuery) || selectedType !== "all" || sortBy !== "name";
 
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC]" {...handlers}>
+    <div className="min-h-screen bg-[#F8FAFC]" {...handlers}>
       <PullToRefreshIndicator
         visible={isMobile && (pullDistance > 0 || isRefreshing)}
         distance={pullDistance}
         isRefreshing={isRefreshing}
       />
 
-      <main className="flex-1 overflow-auto pb-24 md:pb-0">
+      <main className="w-full min-w-0 overflow-x-hidden overflow-y-auto pb-24 md:pb-0">
         {/* Header */}
         <div className="crm-module-header sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-[rgba(15,23,42,0.06)]">
-          <div className="px-4 py-5 sm:px-6 lg:px-8">
-            <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="mx-auto w-full max-w-[1600px] px-4 py-5 sm:px-6 lg:px-8">
+            <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div>
                 <div className="hidden sm:flex items-center gap-2 text-sm text-[#94A3B8] mb-1">
                   <Link to="/dashboard" className="hover:text-[#0891B2]">
@@ -2072,7 +2072,7 @@ const ClientGroupsPage = () => {
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 xl:justify-end">
                 {!isMobile && (
                   <Button variant="outline" className="rounded-md gap-2">
                     <Upload size={16} />
@@ -2125,7 +2125,7 @@ const ClientGroupsPage = () => {
                 "gap-3 sm:gap-4",
                 isMobile
                   ? "flex overflow-x-auto pb-1"
-                  : "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5"
+                  : "grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5"
               )}
             >
               {[
@@ -2179,7 +2179,8 @@ const ClientGroupsPage = () => {
           </div>
 
           {/* Filters Bar */}
-          <div className="border-t border-[rgba(15,23,42,0.06)] px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
+          <div className="border-t border-[rgba(15,23,42,0.06)]">
+            <div className="mx-auto w-full max-w-[1600px] px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
             {isMobile ? (
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
@@ -2237,10 +2238,10 @@ const ClientGroupsPage = () => {
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex flex-1 items-center gap-3">
+              <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
                   {/* Search */}
-                  <div className={cn("relative", isTablet ? "w-full max-w-sm" : "w-80")}>
+                  <div className={cn("relative w-full", isTablet ? "max-w-sm" : "xl:w-80 xl:max-w-sm")}>
                     <Search
                       size={16}
                       className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]"
@@ -2255,7 +2256,7 @@ const ClientGroupsPage = () => {
 
                   {/* Type Filter */}
                   <Select value={selectedType} onValueChange={setSelectedType}>
-                    <SelectTrigger className="w-44 h-10 rounded-md">
+                    <SelectTrigger className="h-10 w-full rounded-md sm:w-44">
                       <Filter size={14} className="mr-2 text-[#475569]" />
                       <SelectValue placeholder="Filter by type" />
                     </SelectTrigger>
@@ -2273,7 +2274,7 @@ const ClientGroupsPage = () => {
 
                   {/* Sort */}
                   <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
-                    <SelectTrigger className="w-40 h-10 rounded-md">
+                    <SelectTrigger className="h-10 w-full rounded-md sm:w-40">
                       <SelectValue placeholder="Sort by" />
                     </SelectTrigger>
                     <SelectContent className="rounded-md">
@@ -2311,7 +2312,7 @@ const ClientGroupsPage = () => {
                 </div>
 
                 {/* View Toggle */}
-                <div className="flex items-center gap-1 bg-white/5 p-1 rounded-md">
+                <div className="flex shrink-0 items-center gap-1 self-start rounded-md bg-white/5 p-1 xl:self-auto">
                   <Button
                     variant={viewMode === "grid" ? "default" : "ghost"}
                     size="sm"
@@ -2337,11 +2338,12 @@ const ClientGroupsPage = () => {
                 </div>
               </div>
             )}
+            </div>
           </div>
         </div>
 
         {/* Content */}
-        <div className="p-4 sm:p-6 lg:p-8">
+        <div className="mx-auto w-full max-w-[1600px] p-4 sm:p-6 lg:p-8">
           {isOffline && (
             <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
               You&apos;re offline. Showing the most recently loaded client groups.

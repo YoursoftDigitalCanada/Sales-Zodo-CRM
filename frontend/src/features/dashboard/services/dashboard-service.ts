@@ -92,7 +92,9 @@ export interface DashboardClient {
   primaryEmail?: string;
   email?: string;
   contactEmail?: string;
+  primaryPhone?: string;
   primaryContactPhone?: string;
+  directPhone?: string;
   phone?: string;
   mobile?: string;
   contactNo?: string;

@@ -695,7 +695,14 @@ function mapClient(client: DashboardClient): ClientItem {
   return {
     id: readText(client.id ?? client.Id) || readText(client.clientName ?? client.ClientName ?? client.name ?? client.Name),
     name: readText(client.clientName ?? client.ClientName ?? client.name ?? client.Name) || "Client",
-    phone: readText(client.primaryContactPhone ?? client.phone ?? client.mobile ?? client.contactNo),
+    phone: readText(
+      client.primaryPhone
+      ?? client.primaryContactPhone
+      ?? client.directPhone
+      ?? client.phone
+      ?? client.mobile
+      ?? client.contactNo,
+    ),
     email: readText(client.primaryEmail ?? client.email ?? client.contactEmail),
     lastContacted: readText(client.lastInteractionDate ?? client.lastContacted),
   };

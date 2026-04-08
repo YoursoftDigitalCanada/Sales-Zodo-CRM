@@ -205,29 +205,29 @@ export const CheckInOutCard: React.FC<CheckInOutCardProps> = ({
           </Badge>
         </div>
 
-        <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_170px_170px]">
-          <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white px-4 py-4">
+        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)_minmax(0,0.85fr)]">
+          <div className="min-w-0 rounded-md border border-[rgba(15,23,42,0.06)] bg-white px-4 py-4">
             <p className="text-xs uppercase tracking-[0.18em] text-[#94A3B8]">
               {isCheckedIn ? 'Live Timer' : 'Current Time'}
             </p>
-            <div className="mt-2 font-mono text-3xl font-semibold tracking-tight text-[#0F172A]">
+            <div className="mt-2 overflow-hidden text-ellipsis font-mono text-2xl font-semibold tracking-tight text-[#0F172A] sm:text-3xl">
               {isCheckedIn ? elapsedTime : format(currentTime, 'HH:mm:ss')}
             </div>
-            <p className="mt-2 text-sm text-[#475569]">
+            <p className="mt-2 break-words text-sm text-[#475569]">
               {isCheckedIn ? 'Net worked time for today' : format(currentTime, 'EEEE, MMMM d, yyyy')}
             </p>
           </div>
-          <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white px-4 py-4">
+          <div className="min-w-0 rounded-md border border-[rgba(15,23,42,0.06)] bg-white px-4 py-4">
             <p className="text-xs uppercase tracking-[0.18em] text-[#94A3B8]">Worked Today</p>
-            <p className="mt-2 font-mono text-lg font-semibold text-[#0F172A]">{elapsedTime}</p>
-            <p className="mt-2 text-sm text-[#475569]">
+            <p className="mt-2 overflow-hidden text-ellipsis font-mono text-lg font-semibold text-[#0F172A]">{elapsedTime}</p>
+            <p className="mt-2 break-words text-sm text-[#475569]">
               {checkInTime ? `Checked in at ${format(checkInTime, 'h:mm a')}` : 'No check-in recorded yet'}
             </p>
           </div>
-          <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white px-4 py-4">
+          <div className="min-w-0 rounded-md border border-[rgba(15,23,42,0.06)] bg-white px-4 py-4">
             <p className="text-xs uppercase tracking-[0.18em] text-[#94A3B8]">Break Time</p>
             <p className="mt-2 text-lg font-semibold text-[#0F172A]">{breakDuration}</p>
-            <p className="mt-2 text-sm text-[#475569]">
+            <p className="mt-2 break-words text-sm leading-6 text-[#475569]">
               {isOnBreak ? 'Break is running right now' : 'Break time is excluded from total work hours'}
             </p>
           </div>

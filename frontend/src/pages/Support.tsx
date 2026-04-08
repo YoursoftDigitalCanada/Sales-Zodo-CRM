@@ -47,6 +47,8 @@ interface Ticket {
   messagesCount: number; internalNotesCount: number;
   createdAt: string; updatedAt: string; resolvedAt?: string;
   messages: { id: string; sender: string; message: string; timestamp: string; isStaff: boolean }[];
+  attachments: { name: string; url: string; type?: string; size?: string }[];
+  activity: { id: string; type: "created" | "reply" | "internal_note"; actor: string; content: string; createdAt: string }[];
   tags: string[];
 }
 
@@ -71,6 +73,7 @@ const daysAgo = (d: number) => new Date(now.getTime() - d * 86400000).toISOStrin
 
 import {
   getTickets as apiGetTickets,
+  getTicketById as apiGetTicketById,
   createTicket as apiCreateTicket,
   createTicketWithAttachments as apiCreateTicketWithAttachments,
   updateTicketStatus as apiUpdateStatus,
@@ -104,6 +107,19 @@ const mapTicket = (t: ApiTicket): Ticket => ({
     message: m.message,
     timestamp: m.createdAt,
     isStaff: m.isStaff,
+  })),
+  attachments: (t.attachments || []).map((attachment) => ({
+    name: attachment.name,
+    url: attachment.url,
+    type: attachment.type,
+    size: attachment.size,
+  })),
+  activity: (t.activity || []).map((activity) => ({
+    id: activity.id,
+    type: activity.type,
+    actor: activity.actor,
+    content: activity.content,
+    createdAt: activity.createdAt,
   })),
   tags: t.tags || [],
 });
@@ -220,6 +236,8 @@ const SupportPage = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [currentTicket, setCurrentTicket] = useState<Ticket | null>(null);
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
+  const currentTicketId = currentTicket?.id ?? null;
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
   const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
@@ -229,6 +247,7 @@ const SupportPage = () => {
   const canCreateTickets = useCanPerformAction("support", "create");
   const canUpdateTickets = useCanPerformAction("support", "update");
   const canDeleteTickets = useCanPerformAction("support", "delete");
+  const canManageTicketStatus = canUpdateTickets;
   const [formData, setFormData] = useState({ subject: "", description: "", priority: "medium" as Ticket["priority"], category: "Technical" });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -257,6 +276,26 @@ const SupportPage = () => {
     }
   }, []);
 
+  const openTicketDetail = useCallback(async (ticket: Ticket) => {
+    setCurrentTicket(ticket);
+    setReplyText("");
+    setIsDetailOpen(true);
+    setIsDetailLoading(true);
+
+    try {
+      const fullTicket = await apiGetTicketById(ticket.id);
+      setCurrentTicket(mapTicket(fullTicket));
+    } catch (error) {
+      toast({
+        title: "Could not load full ticket",
+        description: getApiErrorMessage(error, "Showing the latest ticket data we already had."),
+        variant: "destructive",
+      });
+    } finally {
+      setIsDetailLoading(false);
+    }
+  }, [toast]);
+
   useEffect(() => {
     loadTickets();
   }, [loadTickets]);
@@ -277,6 +316,9 @@ const SupportPage = () => {
         if (event === "ticket_deleted" && data.id) {
           setTickets(prev => prev.filter(ticket => ticket.id !== data.id));
           setCurrentTicket(prev => (prev?.id === data.id ? null : prev));
+          if (currentTicketId === data.id) {
+            setIsDetailOpen(false);
+          }
         }
       },
     });
@@ -289,7 +331,7 @@ const SupportPage = () => {
       stopRealtime();
       window.clearInterval(pollInterval);
     };
-  }, [loadTickets]);
+  }, [currentTicketId, loadTickets]);
 
   // Stats
   const stats = useMemo(() => ({
@@ -591,7 +633,7 @@ const SupportPage = () => {
                       <motion.div key={ticket.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                         whileHover={{ y: -2 }}
                         className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4 hover:border-[#22D3EE]/30 hover:shadow-lg transition-all cursor-pointer group"
-                        onClick={() => { setCurrentTicket(ticket); setIsDetailOpen(true); }}>
+                        onClick={() => { void openTicketDetail(ticket); }}>
                         <div className={cn("flex items-start gap-4", isMobile && "flex-col gap-3")}>
                           <div className={cn("w-10 h-10 rounded-md flex items-center justify-center shrink-0", sc.bg)}>
                             <StatusIcon size={18} className={sc.color} />
@@ -616,7 +658,7 @@ const SupportPage = () => {
                               <button className={cn("p-2 rounded-md hover:bg-white/10 text-[#475569] transition-all", isMobile ? "self-end opacity-100" : "opacity-0 group-hover:opacity-100")}><MoreVertical size={16} /></button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48 rounded-md">
-                              <DropdownMenuItem onClick={() => { setCurrentTicket(ticket); setIsDetailOpen(true); }} className="rounded-md"><Eye size={14} className="mr-2" />View</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => { void openTicketDetail(ticket); }} className="rounded-md"><Eye size={14} className="mr-2" />View</DropdownMenuItem>
                               {canUpdateTickets && (
                                 <>
                                   <DropdownMenuSeparator />
@@ -818,81 +860,167 @@ const SupportPage = () => {
       </Dialog>
 
       {/* Ticket Detail Dialog */}
-      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+      <Dialog open={isDetailOpen} onOpenChange={(open) => {
+        setIsDetailOpen(open);
+        if (!open) {
+          setReplyText("");
+          setIsDetailLoading(false);
+        }
+      }}>
         <DialogContent className={cn(
           "p-0 overflow-hidden overflow-y-auto",
           isMobile ? "h-[100dvh] w-screen max-w-none rounded-none border-0" : "sm:max-w-[600px] rounded-md max-h-[90vh]",
         )}>
-          {currentTicket && (() => {
-            const sc = statusConfig[currentTicket.status]; const StatusIcon = sc.icon;
-            return (<>
-              <div className="p-6 border-b border-[rgba(15,23,42,0.06)] bg-gradient-to-r from-[#0891B2]/5 to-transparent">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs font-mono text-[#94A3B8]">{currentTicket.ticketNumber}</span>
-                  <span className={cn("px-2 py-0.5 rounded-full text-xs font-semibold", sc.bg, sc.color)}><StatusIcon size={12} className="inline mr-1" />{sc.label}</span>
+          {currentTicket ? (() => {
+            const sc = statusConfig[currentTicket.status];
+            const StatusIcon = sc.icon;
+
+            return (
+              <>
+                <div className="p-6 border-b border-[rgba(15,23,42,0.06)] bg-gradient-to-r from-[#0891B2]/5 to-transparent">
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <span className="text-xs font-mono text-[#94A3B8]">{currentTicket.ticketNumber}</span>
+                    <span className={cn("px-2 py-0.5 rounded-full text-xs font-semibold", sc.bg, sc.color)}>
+                      <StatusIcon size={12} className="inline mr-1" />
+                      {sc.label}
+                    </span>
+                    <span className={cn("px-2 py-0.5 rounded-full text-xs font-semibold capitalize", priorityConfig[currentTicket.priority].bg, priorityConfig[currentTicket.priority].color)}>
+                      {currentTicket.priority}
+                    </span>
+                    {isDetailLoading ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-[#0891B2] border border-[#0891B2]/10">
+                        <RefreshCw size={11} className="animate-spin" />
+                        Refreshing
+                      </span>
+                    ) : null}
+                  </div>
+                  <h2 className="text-xl font-bold text-[#0F172A]">{currentTicket.subject}</h2>
+                  <p className="text-sm text-[#475569] mt-1">{currentTicket.description}</p>
+                  <div className="flex flex-wrap items-center gap-4 mt-3">
+                    <span className="text-xs text-[#475569] flex items-center gap-1"><User size={12} />{currentTicket.requester}</span>
+                    <span className="text-xs text-[#475569] flex items-center gap-1"><Mail size={12} />{currentTicket.requesterEmail}</span>
+                    <span className="text-xs text-[#475569] flex items-center gap-1"><Calendar size={12} />{formatDate(currentTicket.createdAt)}</span>
+                    {currentTicket.assignee ? <span className="text-xs text-[#0891B2] flex items-center gap-1"><Users size={12} />{currentTicket.assignee}</span> : null}
+                  </div>
                 </div>
-                <h2 className="text-xl font-bold text-[#0F172A]">{currentTicket.subject}</h2>
-                <p className="text-sm text-[#475569] mt-1">{currentTicket.description}</p>
-                <div className="flex items-center gap-4 mt-3">
-                  <span className="text-xs text-[#475569] flex items-center gap-1"><User size={12} />{currentTicket.requester}</span>
-                  <span className="text-xs text-[#475569] flex items-center gap-1"><Calendar size={12} />{formatDate(currentTicket.createdAt)}</span>
-                </div>
-              </div>
-              <div className="p-6 space-y-4">
-                {/* Status actions */}
-                {canManageTicketStatus ? (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-[#94A3B8]">Update status:</span>
-                    {(["open", "in-progress", "waiting", "resolved", "closed"] as Ticket["status"][]).map(s => (
-                      <Button key={s} size="sm" variant={currentTicket.status === s ? "default" : "outline"}
-                        className={cn("h-7 text-xs rounded-md capitalize", currentTicket.status === s && "bg-[#0891B2] hover:bg-[#0891B2]/90 text-white")}
-                        onClick={() => { updateTicketStatus(currentTicket.id, s); }}>
-                        {s.replace("-", " ")}
-                      </Button>
+                <div className="p-6 space-y-5">
+                  {canManageTicketStatus ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs text-[#94A3B8]">Update status:</span>
+                      {(["open", "in-progress", "waiting", "resolved", "closed"] as Ticket["status"][]).map(s => (
+                        <Button
+                          key={s}
+                          size="sm"
+                          variant={currentTicket.status === s ? "default" : "outline"}
+                          className={cn("h-7 text-xs rounded-md capitalize", currentTicket.status === s && "bg-[#0891B2] hover:bg-[#0891B2]/90 text-white")}
+                          onClick={() => { updateTicketStatus(currentTicket.id, s); }}
+                        >
+                          {s.replace("-", " ")}
+                        </Button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-3 py-2 text-xs text-[#64748B]">
+                      You do not have permission to change ticket status.
+                    </div>
+                  )}
+
+                  {currentTicket.attachments.length > 0 ? (
+                    <div className="space-y-3">
+                      <p className="text-sm font-semibold text-[#0F172A]">Attachments ({currentTicket.attachments.length})</p>
+                      <div className="grid gap-2">
+                        {currentTicket.attachments.map((attachment) => (
+                          <a
+                            key={`${attachment.url}-${attachment.name}`}
+                            href={attachment.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center gap-3 rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-3 hover:border-[#0891B2]/30 hover:bg-white transition-colors"
+                          >
+                            <div className="w-9 h-9 rounded-md bg-[#0891B2]/10 flex items-center justify-center shrink-0">
+                              <Paperclip size={16} className="text-[#0891B2]" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-[#0F172A] truncate">{attachment.name}</p>
+                              <p className="text-xs text-[#94A3B8]">{attachment.size || attachment.type || "Attachment"}</p>
+                            </div>
+                            <ExternalLink size={14} className="text-[#94A3B8]" />
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <div className="space-y-3">
+                    <p className="text-sm font-semibold text-[#0F172A]">Conversation ({currentTicket.messages.length})</p>
+                    {currentTicket.messages.length === 0 ? (
+                      <p className="text-xs text-[#94A3B8] text-center py-4">No messages yet</p>
+                    ) : currentTicket.messages.map(msg => (
+                      <div key={msg.id} className={cn("p-3 rounded-md", msg.isStaff ? "bg-[#0891B2]/5 border border-[#0891B2]/10" : "bg-[#F8FAFC]")}>
+                        <div className="flex items-center justify-between mb-1 gap-3">
+                          <span className="text-xs font-semibold text-[#0F172A]">
+                            {msg.sender}
+                            {msg.isStaff && <Badge variant="secondary" className="ml-2 text-[9px]">Staff</Badge>}
+                          </span>
+                          <span className="text-xs text-[#94A3B8] whitespace-nowrap">{timeAgo(msg.timestamp)}</span>
+                        </div>
+                        <p className="text-sm text-[#475569] whitespace-pre-wrap">{msg.message}</p>
+                      </div>
                     ))}
                   </div>
-                ) : (
-                  <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-3 py-2 text-xs text-[#64748B]">
-                    You do not have permission to change ticket status.
-                  </div>
-                )}
-                {/* Messages */}
-                <div className="space-y-3">
-                  <p className="text-sm font-semibold text-[#0F172A]">Conversation ({currentTicket.messages.length})</p>
-                  {currentTicket.messages.length === 0 ? (
-                    <p className="text-xs text-[#94A3B8] text-center py-4">No messages yet</p>
-                  ) : currentTicket.messages.map(msg => (
-                    <div key={msg.id} className={cn("p-3 rounded-md", msg.isStaff ? "bg-[#0891B2]/5 border border-[#0891B2]/10" : "bg-[#F8FAFC]")}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-semibold text-[#0F172A]">{msg.sender}{msg.isStaff && <Badge variant="secondary" className="ml-2 text-[9px]">Staff</Badge>}</span>
-                        <span className="text-xs text-[#94A3B8]">{timeAgo(msg.timestamp)}</span>
+
+                  {currentTicket.activity.length > 0 ? (
+                    <div className="space-y-3">
+                      <p className="text-sm font-semibold text-[#0F172A]">Ticket Activity</p>
+                      <div className="space-y-2">
+                        {currentTicket.activity.map((entry) => (
+                          <div key={entry.id} className="flex items-start gap-3 rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-3">
+                            <div className="mt-0.5 w-8 h-8 rounded-full bg-[#F1F5F9] flex items-center justify-center shrink-0">
+                              {entry.type === "created" ? <Plus size={14} className="text-[#0891B2]" /> : entry.type === "internal_note" ? <Lightbulb size={14} className="text-[#D97706]" /> : <MessageSquare size={14} className="text-[#0891B2]" />}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-sm font-medium text-[#0F172A]">{entry.actor}</p>
+                                <span className="text-[11px] uppercase tracking-wide text-[#94A3B8]">{entry.type.replace("_", " ")}</span>
+                              </div>
+                              <p className="text-sm text-[#475569] mt-1 whitespace-pre-wrap">{entry.content}</p>
+                              <p className="text-xs text-[#94A3B8] mt-1">{timeAgo(entry.createdAt)}</p>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                      <p className="text-sm text-[#475569]">{msg.message}</p>
                     </div>
-                  ))}
-                </div>
-                {/* Reply */}
-                {(canUpdateTickets || canDeleteTickets) ? (
-                  <div className="space-y-2">
-                    {canUpdateTickets ? (
-                      <Textarea value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="Type your reply..." className="rounded-md h-20" />
-                    ) : null}
-                    <div className="flex justify-between">
-                      {canDeleteTickets ? (
-                        <Button variant="outline" onClick={() => { setDeleteId(currentTicket.id); setIsDetailOpen(false); }} className="rounded-md text-red-600 border-red-200 hover:bg-red-50" size="sm">
-                          <Trash2 size={14} className="mr-1" />Delete
-                        </Button>
-                      ) : <div />}
+                  ) : null}
+
+                  {(canUpdateTickets || canDeleteTickets) ? (
+                    <div className="space-y-2">
                       {canUpdateTickets ? (
-                        <Button onClick={handleReply} disabled={!replyText.trim()} className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md" size="sm">
-                          <Send size={14} className="mr-1" />Send Reply
-                        </Button>
+                        <Textarea value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="Type your reply..." className="rounded-md h-20" />
                       ) : null}
+                      <div className="flex justify-between gap-3">
+                        {canDeleteTickets ? (
+                          <Button variant="outline" onClick={() => { setDeleteId(currentTicket.id); setIsDetailOpen(false); }} className="rounded-md text-red-600 border-red-200 hover:bg-red-50" size="sm">
+                            <Trash2 size={14} className="mr-1" />Delete
+                          </Button>
+                        ) : <div />}
+                        {canUpdateTickets ? (
+                          <Button onClick={handleReply} disabled={!replyText.trim()} className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md" size="sm">
+                            <Send size={14} className="mr-1" />Send Reply
+                          </Button>
+                        ) : null}
+                      </div>
                     </div>
-                  </div>
-                ) : null}
-              </div>
-            </>); })()}
+                  ) : null}
+                </div>
+              </>
+            );
+          })() : (
+            <div className="flex min-h-[320px] flex-col items-center justify-center gap-3 p-8 text-center">
+              <Headphones size={28} className="text-[#94A3B8]" />
+              <p className="text-sm font-medium text-[#0F172A]">Ticket details unavailable</p>
+              <p className="text-xs text-[#94A3B8]">Pick a ticket again to load its full conversation.</p>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

@@ -247,7 +247,6 @@ const SupportPage = () => {
   const canCreateTickets = useCanPerformAction("support", "create");
   const canUpdateTickets = useCanPerformAction("support", "update");
   const canDeleteTickets = useCanPerformAction("support", "delete");
-  const canManageTicketStatus = canUpdateTickets;
   const [formData, setFormData] = useState({ subject: "", description: "", priority: "medium" as Ticket["priority"], category: "Technical" });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -377,6 +376,10 @@ const SupportPage = () => {
     return faqs.filter(f => f.question.toLowerCase().includes(q) || f.answer.toLowerCase().includes(q));
   }, [faqs, searchQuery]);
 
+  const canReopenTicket = useCallback((ticket: Ticket | null) => {
+    return Boolean(ticket && canUpdateTickets && ticket.status === "closed");
+  }, [canUpdateTickets]);
+
   // Handlers
   const handleCreateTicket = async () => {
     if (!canCreateTickets) {
@@ -456,7 +459,7 @@ const SupportPage = () => {
       setCurrentTicket(prev => (prev?.id === id ? nextTicket : prev));
       toast({ title: "Status Updated", description: `Ticket status changed to ${status}.` });
     } catch (err) {
-      toast({ title: "Error", description: "Failed to update status.", variant: "destructive" });
+      toast({ title: "Error", description: getApiErrorMessage(err, "Failed to update status."), variant: "destructive" });
     }
   };
 
@@ -659,12 +662,13 @@ const SupportPage = () => {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48 rounded-md">
                               <DropdownMenuItem onClick={() => { void openTicketDetail(ticket); }} className="rounded-md"><Eye size={14} className="mr-2" />View</DropdownMenuItem>
-                              {canUpdateTickets && (
+                              {canReopenTicket(ticket) && (
                                 <>
                                   <DropdownMenuSeparator />
-                                  <DropdownMenuItem onClick={() => updateTicketStatus(ticket.id, "in-progress")} className="rounded-md"><Clock size={14} className="mr-2" />Mark In Progress</DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => updateTicketStatus(ticket.id, "resolved")} className="rounded-md"><CheckCircle2 size={14} className="mr-2" />Mark Resolved</DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => updateTicketStatus(ticket.id, "closed")} className="rounded-md"><XCircle size={14} className="mr-2" />Close</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => updateTicketStatus(ticket.id, "open")} className="rounded-md">
+                                    <RefreshCw size={14} className="mr-2" />
+                                    Reopen Ticket
+                                  </DropdownMenuItem>
                                 </>
                               )}
                               {canDeleteTickets ? (
@@ -904,26 +908,26 @@ const SupportPage = () => {
                   </div>
                 </div>
                 <div className="p-6 space-y-5">
-                  {canManageTicketStatus ? (
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs text-[#94A3B8]">Update status:</span>
-                      {(["open", "in-progress", "waiting", "resolved", "closed"] as Ticket["status"][]).map(s => (
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold text-[#0F172A]">Status</p>
+                    {canReopenTicket(currentTicket) ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs text-[#94A3B8]">This ticket is closed. You can reopen it if you still need help.</span>
                         <Button
-                          key={s}
                           size="sm"
-                          variant={currentTicket.status === s ? "default" : "outline"}
-                          className={cn("h-7 text-xs rounded-md capitalize", currentTicket.status === s && "bg-[#0891B2] hover:bg-[#0891B2]/90 text-white")}
-                          onClick={() => { updateTicketStatus(currentTicket.id, s); }}
+                          className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
+                          onClick={() => { updateTicketStatus(currentTicket.id, "open"); }}
                         >
-                          {s.replace("-", " ")}
+                          <RefreshCw size={14} className="mr-1" />
+                          Reopen Ticket
                         </Button>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-3 py-2 text-xs text-[#64748B]">
-                      You do not have permission to change ticket status.
-                    </div>
-                  )}
+                      </div>
+                    ) : (
+                      <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-3 py-2 text-xs text-[#64748B]">
+                        Support manages ticket progress. You can reopen the ticket after it has been closed.
+                      </div>
+                    )}
+                  </div>
 
                   {currentTicket.attachments.length > 0 ? (
                     <div className="space-y-3">

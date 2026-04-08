@@ -1,5 +1,6 @@
 import { Prisma, TicketPriority, TicketStatus } from '@prisma/client';
 import { prisma } from '../../config/database';
+import { BadRequestError } from '../../common/errors/HttpErrors';
 import type {
   AddSupportTicketMessageDto,
   CreateSupportTicketDto,
@@ -243,11 +244,16 @@ export class SupportTicketsRepository {
         return existing;
       }
 
+      const canRequesterReopenClosedTicket = existing.status === 'CLOSED' && status === 'OPEN';
+      if (!canRequesterReopenClosedTicket) {
+        throw new BadRequestError('Support manages ticket status. You can reopen the ticket only after it has been closed.');
+      }
+
       await tx.supportTicket.update({
         where: { id },
         data: {
           status,
-          resolvedAt: status === 'RESOLVED' || status === 'CLOSED' ? new Date() : null,
+          resolvedAt: null,
         },
       });
       await createSystemNote(

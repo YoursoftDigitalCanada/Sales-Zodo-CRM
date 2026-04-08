@@ -174,53 +174,71 @@ export const CheckInOutCard: React.FC<CheckInOutCardProps> = ({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="overflow-hidden rounded-[28px] border border-[rgba(15,23,42,0.08)] bg-white shadow-[0_22px_70px_-40px_rgba(15,23,42,0.45)]"
+      className="overflow-hidden rounded-md border border-[rgba(15,23,42,0.06)] bg-white shadow-sm transition-colors hover:border-[#22D3EE]/30"
     >
-      <div
-        className={`border-b border-white/10 px-6 py-6 ${
-          isCheckedIn
-            ? 'bg-[linear-gradient(135deg,#0f766e_0%,#10b981_55%,#34d399_100%)]'
-            : 'bg-[linear-gradient(135deg,#0f172a_0%,#1e293b_60%,#334155_100%)]'
-        }`}
-      >
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/60">Attendance</p>
-            <h3 className="mt-2 text-xl font-semibold text-white">
-              {isCheckedIn ? 'Currently Working' : 'Ready to Start'}
-            </h3>
+      <div className="border-b border-[rgba(15,23,42,0.06)] bg-[#FCFEFF] px-6 py-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-md ${
+              isCheckedIn ? 'bg-emerald-100 text-emerald-700' : 'bg-[#E0F2FE] text-[#0891B2]'
+            }`}>
+              {isCheckedIn ? <Clock className="h-5 w-5" /> : <LogIn className="h-5 w-5" />}
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#64748B]">Attendance</p>
+              <h3 className="mt-2 text-xl font-semibold text-[#0F172A]">
+                {isCheckedIn ? 'Currently Working' : 'Ready to Start'}
+              </h3>
+              <p className="mt-1 text-sm text-[#475569]">
+                {isCheckedIn
+                  ? 'Your workday stays visible here with the latest timing and location details.'
+                  : 'Use your live device location to start a trusted attendance entry.'}
+              </p>
+            </div>
           </div>
-          <Badge className={`border-0 ${isCheckedIn ? 'bg-white/18 text-white' : 'bg-white/12 text-white'}`}>
+          <Badge className={`border-0 ${
+            isCheckedIn
+              ? (isOnBreak ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700')
+              : 'bg-slate-100 text-slate-700'
+          }`}>
             {isCheckedIn ? (isOnBreak ? 'On Break' : 'Live') : 'Offline'}
           </Badge>
         </div>
 
-        <div className="mt-5 text-4xl font-semibold tracking-tight text-white">
-          {isCheckedIn ? elapsedTime : format(currentTime, 'HH:mm:ss')}
+        <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_170px_170px]">
+          <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white px-4 py-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-[#94A3B8]">
+              {isCheckedIn ? 'Live Timer' : 'Current Time'}
+            </p>
+            <div className="mt-2 font-mono text-3xl font-semibold tracking-tight text-[#0F172A]">
+              {isCheckedIn ? elapsedTime : format(currentTime, 'HH:mm:ss')}
+            </div>
+            <p className="mt-2 text-sm text-[#475569]">
+              {isCheckedIn ? 'Net worked time for today' : format(currentTime, 'EEEE, MMMM d, yyyy')}
+            </p>
+          </div>
+          <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white px-4 py-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-[#94A3B8]">Worked Today</p>
+            <p className="mt-2 font-mono text-lg font-semibold text-[#0F172A]">{elapsedTime}</p>
+            <p className="mt-2 text-sm text-[#475569]">
+              {checkInTime ? `Checked in at ${format(checkInTime, 'h:mm a')}` : 'No check-in recorded yet'}
+            </p>
+          </div>
+          <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white px-4 py-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-[#94A3B8]">Break Time</p>
+            <p className="mt-2 text-lg font-semibold text-[#0F172A]">{breakDuration}</p>
+            <p className="mt-2 text-sm text-[#475569]">
+              {isOnBreak ? 'Break is running right now' : 'Break time is excluded from total work hours'}
+            </p>
+          </div>
         </div>
-        <p className="mt-2 text-sm text-white/72">
-          {isCheckedIn ? 'Net worked time for today' : format(currentTime, 'EEEE, MMMM d, yyyy')}
-        </p>
       </div>
 
       <div className="space-y-5 p-6">
-        {(workedHours > 0 || breakMinutes > 0 || isCheckedIn) && (
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl border border-[rgba(15,23,42,0.08)] bg-[#F8FAFC] p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-[#64748B]">Worked Today</p>
-              <p className="mt-2 font-mono text-lg font-semibold text-[#0F172A]">{elapsedTime}</p>
-            </div>
-            <div className="rounded-2xl border border-[rgba(15,23,42,0.08)] bg-[#F8FAFC] p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-[#64748B]">Break Time</p>
-              <p className="mt-2 font-semibold text-[#0F172A]">{breakDuration}</p>
-            </div>
-          </div>
-        )}
-
-        <div className="rounded-2xl border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-4">
+        <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#FCFEFF] p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-3">
-              <div className="rounded-2xl bg-[#E0F2FE] p-2 text-[#0369A1]">
+              <div className="rounded-md bg-[#E0F2FE] p-2 text-[#0369A1]">
                 <Crosshair className="h-4 w-4" />
               </div>
               <div>
@@ -232,11 +250,11 @@ export const CheckInOutCard: React.FC<CheckInOutCardProps> = ({
               {locationSummary.badge}
               <Button
                 type="button"
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={onRefreshLocation}
                 disabled={isLoading}
-                className="h-8 rounded-full px-3 text-[#475569]"
+                className="h-8 rounded-md border-[rgba(15,23,42,0.08)] bg-white px-3 text-[#475569] hover:bg-[#F8FAFC]"
               >
                 <RefreshCw className="mr-2 h-3.5 w-3.5" />
                 Refresh
@@ -246,18 +264,18 @@ export const CheckInOutCard: React.FC<CheckInOutCardProps> = ({
 
           <div className="mt-4 space-y-3">
             {locationState?.coordinatesLabel && (
-              <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white/90 px-4 py-3">
+              <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white px-4 py-3">
                 <p className="text-xs uppercase tracking-[0.18em] text-[#64748B]">Current Coordinates</p>
                 <p className="mt-1 font-medium text-[#0F172A]">{locationState.coordinatesLabel}</p>
               </div>
             )}
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white/90 px-4 py-3">
+              <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white px-4 py-3">
                 <p className="text-xs uppercase tracking-[0.18em] text-[#64748B]">GPS Accuracy</p>
                 <p className="mt-1 font-medium text-[#0F172A]">{locationState?.accuracyLabel || 'Waiting for device fix'}</p>
               </div>
-              <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white/90 px-4 py-3">
+              <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white px-4 py-3">
                 <p className="text-xs uppercase tracking-[0.18em] text-[#64748B]">Captured</p>
                 <p className="mt-1 font-medium text-[#0F172A]">
                   {locationState?.capturedAt
@@ -268,7 +286,7 @@ export const CheckInOutCard: React.FC<CheckInOutCardProps> = ({
             </div>
 
             {isCheckedIn && (
-              <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3">
+              <div className="rounded-md border border-emerald-100 bg-emerald-50 px-4 py-3">
                 <div className="flex items-center gap-2 text-emerald-700">
                   <ShieldCheck className="h-4 w-4" />
                   <p className="text-sm font-medium">
@@ -294,10 +312,10 @@ export const CheckInOutCard: React.FC<CheckInOutCardProps> = ({
               <button
                 type="button"
                 onClick={() => setIsRemote(false)}
-                className={`rounded-2xl border px-4 py-4 text-left transition-all ${
+                className={`rounded-md border px-4 py-4 text-left transition-all ${
                   !isRemote
-                    ? 'border-[#0891B2] bg-[#E0F2FE] text-[#0C4A6E]'
-                    : 'border-[rgba(15,23,42,0.08)] bg-white text-[#475569]'
+                    ? 'border-[#22D3EE] bg-[#0891B2]/5 text-[#0C4A6E] shadow-sm'
+                    : 'border-[rgba(15,23,42,0.08)] bg-white text-[#475569] hover:border-[#22D3EE]/30'
                 }`}
               >
                 <Building2 className="mb-3 h-5 w-5" />
@@ -307,10 +325,10 @@ export const CheckInOutCard: React.FC<CheckInOutCardProps> = ({
               <button
                 type="button"
                 onClick={() => setIsRemote(true)}
-                className={`rounded-2xl border px-4 py-4 text-left transition-all ${
+                className={`rounded-md border px-4 py-4 text-left transition-all ${
                   isRemote
-                    ? 'border-[#0891B2] bg-[#E0F2FE] text-[#0C4A6E]'
-                    : 'border-[rgba(15,23,42,0.08)] bg-white text-[#475569]'
+                    ? 'border-[#22D3EE] bg-[#0891B2]/5 text-[#0C4A6E] shadow-sm'
+                    : 'border-[rgba(15,23,42,0.08)] bg-white text-[#475569] hover:border-[#22D3EE]/30'
                 }`}
               >
                 <Home className="mb-3 h-5 w-5" />
@@ -322,13 +340,13 @@ export const CheckInOutCard: React.FC<CheckInOutCardProps> = ({
             <Button
               onClick={() => onCheckIn(isRemote)}
               disabled={!canCheckIn}
-              className="h-14 w-full rounded-2xl bg-[#0891B2] text-base text-white hover:bg-[#0891B2]/92"
+              className="h-12 w-full rounded-md bg-[#0891B2] text-base text-white hover:bg-[#0891B2]/92"
             >
               <LogIn className="mr-2 h-5 w-5" />
               {isLoading ? 'Saving Attendance...' : `Check In ${isRemote ? 'Remotely' : 'From Office'}`}
             </Button>
 
-            <div className={`rounded-2xl px-4 py-3 text-sm ${
+            <div className={`rounded-md px-4 py-3 text-sm ${
               canCheckIn ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-800'
             }`}>
               <div className="flex items-start gap-2">
@@ -345,7 +363,7 @@ export const CheckInOutCard: React.FC<CheckInOutCardProps> = ({
           </div>
         ) : (
           <div className="space-y-3">
-            <div className="rounded-2xl border border-[rgba(15,23,42,0.08)] bg-[#F8FAFC] px-4 py-3">
+            <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#FCFEFF] px-4 py-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 text-[#475569]">
                   <Clock className="h-4 w-4" />
@@ -361,8 +379,8 @@ export const CheckInOutCard: React.FC<CheckInOutCardProps> = ({
               variant="outline"
               onClick={isOnBreak ? onBreakEnd : onBreakStart}
               disabled={isLoading}
-              className={`h-12 w-full rounded-2xl ${
-                isOnBreak ? 'border-amber-300 bg-amber-50 text-amber-700' : ''
+              className={`h-12 w-full rounded-md ${
+                isOnBreak ? 'border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-50' : 'bg-white'
               }`}
             >
               {isOnBreak ? (
@@ -382,7 +400,7 @@ export const CheckInOutCard: React.FC<CheckInOutCardProps> = ({
               onClick={onCheckOut}
               variant="destructive"
               disabled={isLoading}
-              className="h-14 w-full rounded-2xl text-base"
+              className="h-12 w-full rounded-md text-base"
             >
               <LogOut className="mr-2 h-5 w-5" />
               {isLoading ? 'Saving Attendance...' : 'Check Out'}

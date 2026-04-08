@@ -1015,7 +1015,7 @@ const AttendancePage: React.FC = () => {
           return (
             <div
               key={record.id}
-              className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm"
+              className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm transition-colors hover:border-[#22D3EE]/30"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -1028,19 +1028,19 @@ const AttendancePage: React.FC = () => {
               </div>
 
               <div className="mt-4 grid grid-cols-2 gap-3">
-                <div className="rounded-xl bg-[#F8FAFC] p-3">
+                <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#FCFEFF] p-3">
                   <p className="text-xs text-[#64748B]">Check In</p>
                   <p className="mt-1 text-sm font-medium text-[#0F172A]">
                     {record.checkIn ? format(record.checkIn, 'h:mm a') : '—'}
                   </p>
                 </div>
-                <div className="rounded-xl bg-[#F8FAFC] p-3">
+                <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#FCFEFF] p-3">
                   <p className="text-xs text-[#64748B]">Check Out</p>
                   <p className="mt-1 text-sm font-medium text-[#0F172A]">
                     {record.checkOut ? format(record.checkOut, 'h:mm a') : '—'}
                   </p>
                 </div>
-                <div className="rounded-xl bg-[#F8FAFC] p-3">
+                <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#FCFEFF] p-3">
                   <p className="text-xs text-[#64748B]">Work Hours</p>
                   <p className="mt-1 text-sm font-medium text-[#0F172A]">
                     {record.workMinutes > 0 || (record.status !== 'on-leave' && record.checkIn)
@@ -1048,7 +1048,7 @@ const AttendancePage: React.FC = () => {
                       : '—'}
                   </p>
                 </div>
-                <div className="rounded-xl bg-[#F8FAFC] p-3">
+                <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#FCFEFF] p-3">
                   <p className="text-xs text-[#64748B]">Location</p>
                   <p className="mt-1 text-sm font-medium text-[#0F172A]">
                     {record.status === 'on-leave'
@@ -1064,7 +1064,7 @@ const AttendancePage: React.FC = () => {
               </div>
 
               {record.status !== 'on-leave' && (
-                <div className="mt-4 rounded-xl border border-[rgba(15,23,42,0.06)] bg-[#FCFEFF] p-3">
+                <div className="mt-4 rounded-md border border-[rgba(15,23,42,0.06)] bg-[#FCFEFF] p-3">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-xs uppercase tracking-[0.18em] text-[#64748B]">Location Record</p>
@@ -1109,11 +1109,11 @@ const AttendancePage: React.FC = () => {
 
   return (
     <div className="min-h-screen space-y-6 bg-[#F8FAFC] p-4 sm:p-6">
-      <div className="overflow-hidden rounded-[28px] border border-[rgba(15,23,42,0.08)] bg-white shadow-[0_18px_60px_-42px_rgba(15,23,42,0.45)]">
-        <div className="border-b border-[rgba(15,23,42,0.06)] bg-[linear-gradient(135deg,#f8fafc_0%,#eef6ff_48%,#ecfeff_100%)] px-6 py-6">
+      <div className="overflow-hidden rounded-md border border-[rgba(15,23,42,0.06)] bg-white shadow-sm">
+        <div className="border-b border-[rgba(15,23,42,0.06)] px-6 py-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#0369A1]">Workforce Tracking</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#0891B2]">Workforce Tracking</p>
               <h1 className="mt-2 text-2xl font-semibold text-[#0F172A] sm:text-3xl">Attendance</h1>
               <p className="mt-2 max-w-2xl text-sm text-[#475569] sm:text-base">
                 {isAdminUser
@@ -1124,7 +1124,7 @@ const AttendancePage: React.FC = () => {
             <div className="flex flex-col gap-3 sm:flex-row">
               <Button
                 variant="outline"
-                className="gap-2 bg-white"
+                className="gap-2 rounded-md border-[rgba(15,23,42,0.08)] bg-white"
                 onClick={() => {
                   void refreshCurrentLocation(false).catch(() => undefined);
                 }}
@@ -1135,7 +1135,7 @@ const AttendancePage: React.FC = () => {
               </Button>
               <Button
                 variant="outline"
-                className="gap-2 bg-white"
+                className="gap-2 rounded-md border-[rgba(15,23,42,0.08)] bg-white"
                 onClick={exportRecords}
                 disabled={isLoading || filteredRecords.length === 0}
               >
@@ -1146,7 +1146,7 @@ const AttendancePage: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-3 px-6 py-4">
+        <div className="flex flex-wrap gap-3 bg-[#FCFEFF] px-6 py-4">
           <Badge className="gap-2 border-0 bg-[#E0F2FE] px-3 py-1 text-[#0C4A6E]">
             {locationState.status === 'ready' && locationCardState.isAccurate ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
             {locationState.status === 'ready'
@@ -1186,20 +1186,20 @@ const AttendancePage: React.FC = () => {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         {isAdminUser && (
-          <TabsList className="w-full justify-start overflow-x-auto bg-white sm:w-auto">
-            <TabsTrigger value="overview" className="gap-2">
+          <TabsList className="h-auto w-full justify-start overflow-x-auto rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-1 shadow-sm sm:w-auto">
+            <TabsTrigger value="overview" className="gap-2 rounded-md data-[state=active]:bg-[#0891B2] data-[state=active]:text-white">
               <BarChart3 className="w-4 h-4" />
               Overview
             </TabsTrigger>
-            <TabsTrigger value="records" className="gap-2">
+            <TabsTrigger value="records" className="gap-2 rounded-md data-[state=active]:bg-[#0891B2] data-[state=active]:text-white">
               <TableIcon className="w-4 h-4" />
               Records
             </TabsTrigger>
-            <TabsTrigger value="calendar" className="gap-2">
+            <TabsTrigger value="calendar" className="gap-2 rounded-md data-[state=active]:bg-[#0891B2] data-[state=active]:text-white">
               <CalendarIcon className="w-4 h-4" />
               Calendar
             </TabsTrigger>
-            <TabsTrigger value="my-attendance" className="gap-2">
+            <TabsTrigger value="my-attendance" className="gap-2 rounded-md data-[state=active]:bg-[#0891B2] data-[state=active]:text-white">
               <Clock className="w-4 h-4" />
               My Attendance
             </TabsTrigger>
@@ -1240,12 +1240,12 @@ const AttendancePage: React.FC = () => {
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
-            <div className="rounded-2xl border border-[rgba(15,23,42,0.08)] bg-white p-4">
+            <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm transition-colors hover:border-[#22D3EE]/30">
               <p className="text-xs uppercase tracking-[0.2em] text-[#64748B]">Current Device</p>
               <p className="mt-2 font-semibold text-[#0F172A]">{currentLocationCoordinates || 'Waiting for location'}</p>
               <p className="mt-1 text-sm text-[#475569]">{locationCardState.accuracyLabel}</p>
             </div>
-            <div className="rounded-2xl border border-[rgba(15,23,42,0.08)] bg-white p-4">
+            <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm transition-colors hover:border-[#22D3EE]/30">
               <p className="text-xs uppercase tracking-[0.2em] text-[#64748B]">Live Sync</p>
               <p className="mt-2 font-semibold text-[#0F172A]">
                 {currentActiveRecord?.lastSeenAt
@@ -1256,7 +1256,7 @@ const AttendancePage: React.FC = () => {
                 {isLocationSyncing ? 'Syncing latest position to the attendance record.' : 'Active entries keep their latest location updated.'}
               </p>
             </div>
-            <div className="rounded-2xl border border-[rgba(15,23,42,0.08)] bg-white p-4">
+            <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm transition-colors hover:border-[#22D3EE]/30">
               <p className="text-xs uppercase tracking-[0.2em] text-[#64748B]">GPS Coverage</p>
               <p className="mt-2 font-semibold text-[#0F172A]">{verifiedGpsTodayCount} verified today</p>
               <p className="mt-1 text-sm text-[#475569]">
@@ -1284,19 +1284,20 @@ const AttendancePage: React.FC = () => {
 
         {isAdminUser && (
         <TabsContent value="records" className="space-y-6">
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_200px_180px_180px_180px]">
+          <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm">
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_200px_180px_180px_180px]">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
               <Input
                 placeholder="Search by employee name..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-white"
+                className="rounded-md border-[rgba(15,23,42,0.08)] pl-10 bg-white"
               />
             </div>
 
             <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-              <SelectTrigger className="w-[200px] bg-white">
+              <SelectTrigger className="w-[200px] rounded-md border-[rgba(15,23,42,0.08)] bg-white">
                 <Users className="w-4 h-4 mr-2 text-[#94A3B8]" />
                 <SelectValue placeholder="All Employees" />
               </SelectTrigger>
@@ -1311,7 +1312,7 @@ const AttendancePage: React.FC = () => {
             </Select>
 
             <Select value={dateRange} onValueChange={setDateRange}>
-              <SelectTrigger className="bg-white">
+              <SelectTrigger className="rounded-md border-[rgba(15,23,42,0.08)] bg-white">
                 <CalendarIcon className="w-4 h-4 mr-2 text-[#94A3B8]" />
                 <SelectValue placeholder="Date Range" />
               </SelectTrigger>
@@ -1324,7 +1325,7 @@ const AttendancePage: React.FC = () => {
             </Select>
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="bg-white">
+              <SelectTrigger className="rounded-md border-[rgba(15,23,42,0.08)] bg-white">
                 <Clock className="w-4 h-4 mr-2 text-[#94A3B8]" />
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
@@ -1338,7 +1339,7 @@ const AttendancePage: React.FC = () => {
             </Select>
 
             <Select value={locationFilter} onValueChange={setLocationFilter}>
-              <SelectTrigger className="bg-white">
+              <SelectTrigger className="rounded-md border-[rgba(15,23,42,0.08)] bg-white">
                 <MapPin className="w-4 h-4 mr-2 text-[#94A3B8]" />
                 <SelectValue placeholder="Location Filter" />
               </SelectTrigger>
@@ -1350,19 +1351,20 @@ const AttendancePage: React.FC = () => {
               </SelectContent>
             </Select>
           </div>
+          </div>
 
           <div className="grid gap-4 md:grid-cols-3">
-            <div className="rounded-2xl border border-[rgba(15,23,42,0.08)] bg-white p-4">
+            <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm transition-colors hover:border-[#22D3EE]/30">
               <p className="text-xs uppercase tracking-[0.2em] text-[#64748B]">Visible Records</p>
               <p className="mt-2 text-2xl font-semibold text-[#0F172A]">{filteredRecords.length}</p>
               <p className="mt-1 text-sm text-[#475569]">Filtered by employee, date, status, and location quality.</p>
             </div>
-            <div className="rounded-2xl border border-[rgba(15,23,42,0.08)] bg-white p-4">
+            <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm transition-colors hover:border-[#22D3EE]/30">
               <p className="text-xs uppercase tracking-[0.2em] text-[#64748B]">Verified GPS</p>
               <p className="mt-2 text-2xl font-semibold text-[#0F172A]">{verifiedGpsCount}</p>
               <p className="mt-1 text-sm text-[#475569]">Records with a precise saved location fix.</p>
             </div>
-            <div className="rounded-2xl border border-[rgba(15,23,42,0.08)] bg-white p-4">
+            <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm transition-colors hover:border-[#22D3EE]/30">
               <p className="text-xs uppercase tracking-[0.2em] text-[#64748B]">Live Entries</p>
               <p className="mt-2 text-2xl font-semibold text-[#0F172A]">{liveTrackedCount}</p>
               <p className="mt-1 text-sm text-[#475569]">Checked-in records with recent live location updates.</p>
@@ -1381,9 +1383,10 @@ const AttendancePage: React.FC = () => {
 
         {isAdminUser && (
         <TabsContent value="calendar" className="space-y-6">
-          <div className="flex flex-col sm:flex-row gap-4 mb-4">
+          <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm">
+            <div className="flex flex-col gap-4 sm:flex-row">
             <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-              <SelectTrigger className="w-[250px] bg-white">
+              <SelectTrigger className="w-[250px] rounded-md border-[rgba(15,23,42,0.08)] bg-white">
                 <Users className="w-4 h-4 mr-2 text-[#94A3B8]" />
                 <SelectValue placeholder="Select Employee" />
               </SelectTrigger>
@@ -1396,6 +1399,7 @@ const AttendancePage: React.FC = () => {
                 ))}
               </SelectContent>
             </Select>
+          </div>
           </div>
 
           <AttendanceCalendar
@@ -1449,12 +1453,12 @@ const AttendancePage: React.FC = () => {
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
-            <div className="rounded-2xl border border-[rgba(15,23,42,0.08)] bg-white p-4">
+            <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm transition-colors hover:border-[#22D3EE]/30">
               <p className="text-xs uppercase tracking-[0.2em] text-[#64748B]">Current Device Location</p>
               <p className="mt-2 font-semibold text-[#0F172A]">{currentLocationCoordinates || 'Waiting for location fix'}</p>
               <p className="mt-1 text-sm text-[#475569]">{locationCardState.accuracyLabel}</p>
             </div>
-            <div className="rounded-2xl border border-[rgba(15,23,42,0.08)] bg-white p-4">
+            <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm transition-colors hover:border-[#22D3EE]/30">
               <p className="text-xs uppercase tracking-[0.2em] text-[#64748B]">Attendance Sync</p>
               <p className="mt-2 font-semibold text-[#0F172A]">
                 {currentActiveRecord?.lastSeenAt
@@ -1465,7 +1469,7 @@ const AttendancePage: React.FC = () => {
                 {isLocationSyncing ? 'Updating your active location now.' : 'Your active session keeps its last live position.'}
               </p>
             </div>
-            <div className="rounded-2xl border border-[rgba(15,23,42,0.08)] bg-white p-4">
+            <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm transition-colors hover:border-[#22D3EE]/30">
               <p className="text-xs uppercase tracking-[0.2em] text-[#64748B]">Trust Signal</p>
               <p className="mt-2 font-semibold text-[#0F172A]">
                 {locationCardState.isAccurate ? 'Location is precise enough to record attendance' : 'Move for a more precise GPS fix before check in'}

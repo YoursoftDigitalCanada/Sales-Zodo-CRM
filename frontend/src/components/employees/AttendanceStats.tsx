@@ -40,7 +40,7 @@ const StatCard: React.FC<StatCardProps> = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay }}
       whileHover={{ y: -2 }}
-      className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-6 shadow-sm"
+      className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm transition-colors hover:border-[#22D3EE]/30 hover:shadow-lg"
     >
       <div className="flex items-start justify-between">
         <div className="space-y-2">
@@ -58,7 +58,7 @@ const StatCard: React.FC<StatCardProps> = ({
             </div>
           )}
         </div>
-        <div className={`p-3 rounded-md ${color}`}>
+        <div className={`rounded-md p-3 ${color}`}>
           {icon}
         </div>
       </div>
@@ -157,7 +157,7 @@ export const AttendanceSummaryCard: React.FC<AttendanceSummaryCardProps> = ({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-6 shadow-sm"
+      className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm transition-colors hover:border-[#22D3EE]/30"
     >
       <h3 className="text-lg font-semibold text-[#0F172A] mb-6">Monthly Summary</h3>
 
@@ -172,7 +172,7 @@ export const AttendanceSummaryCard: React.FC<AttendanceSummaryCardProps> = ({
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="bg-emerald-50 rounded-md p-4">
+        <div className="rounded-md border border-emerald-100 bg-emerald-50 p-4">
           <div className="flex items-center gap-2 mb-1">
             <UserCheck className="w-4 h-4 text-emerald-600" />
             <span className="text-xs text-[#475569]">Present</span>
@@ -180,7 +180,7 @@ export const AttendanceSummaryCard: React.FC<AttendanceSummaryCardProps> = ({
           <p className="text-xl font-bold text-[#0F172A]">{presentDays} days</p>
         </div>
 
-        <div className="bg-red-50 rounded-md p-4">
+        <div className="rounded-md border border-red-100 bg-red-50 p-4">
           <div className="flex items-center gap-2 mb-1">
             <UserX className="w-4 h-4 text-red-600" />
             <span className="text-xs text-[#475569]">Absent</span>
@@ -188,7 +188,7 @@ export const AttendanceSummaryCard: React.FC<AttendanceSummaryCardProps> = ({
           <p className="text-xl font-bold text-[#0F172A]">{absentDays} days</p>
         </div>
 
-        <div className="bg-amber-50 rounded-md p-4">
+        <div className="rounded-md border border-amber-100 bg-amber-50 p-4">
           <div className="flex items-center gap-2 mb-1">
             <Clock className="w-4 h-4 text-amber-600" />
             <span className="text-xs text-[#475569]">Late</span>
@@ -196,7 +196,7 @@ export const AttendanceSummaryCard: React.FC<AttendanceSummaryCardProps> = ({
           <p className="text-xl font-bold text-[#0F172A]">{lateDays} days</p>
         </div>
 
-        <div className="bg-orange-50 rounded-md p-4">
+        <div className="rounded-md border border-orange-100 bg-orange-50 p-4">
           <div className="flex items-center gap-2 mb-1">
             <Timer className="w-4 h-4 text-orange-600" />
             <span className="text-xs text-[#475569]">Half Days</span>
@@ -220,7 +220,7 @@ export const AttendanceSummaryCard: React.FC<AttendanceSummaryCardProps> = ({
             <TrendingUp className="w-4 h-4" />
             <span className="text-sm">Total Overtime</span>
           </div>
-          <span className="font-semibold text-purple-600">+{totalOvertime.toFixed(1)}h</span>
+          <span className="font-semibold text-[#0891B2]">+{totalOvertime.toFixed(1)}h</span>
         </div>
 
         <div className="flex items-center justify-between">

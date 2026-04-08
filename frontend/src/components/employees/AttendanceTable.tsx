@@ -67,10 +67,10 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden">
+    <div className="overflow-hidden rounded-md border border-[rgba(15,23,42,0.06)] bg-white shadow-sm">
       <Table>
         <TableHeader>
-          <TableRow className="bg-slate-50">
+          <TableRow className="bg-[#F8FAFC] hover:bg-[#F8FAFC]">
             <TableHead>Employee</TableHead>
             <TableHead>Date</TableHead>
             <TableHead>Check In</TableHead>
@@ -98,7 +98,7 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
             const dayTotals = dailyTotals.get(getAttendanceDayKey(record.employeeId, record.date));
 
             return (
-              <TableRow key={record.id}>
+              <TableRow key={record.id} className="hover:bg-[#F8FAFC]/80">
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <Avatar className="h-9 w-9">

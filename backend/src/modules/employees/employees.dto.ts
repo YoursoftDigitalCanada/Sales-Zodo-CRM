@@ -262,6 +262,14 @@ export interface AttendanceRecordDto {
     clockInLng?: number | null;
     clockOutLat?: number | null;
     clockOutLng?: number | null;
+    clockInAccuracy?: number | null;
+    clockOutAccuracy?: number | null;
+    clockInCapturedAt?: Date | null;
+    clockOutCapturedAt?: Date | null;
+    lastSeenLat?: number | null;
+    lastSeenLng?: number | null;
+    lastSeenAccuracy?: number | null;
+    lastSeenAt?: Date | null;
 }
 
 export interface AttendanceCurrentStatusDto {
@@ -306,12 +314,23 @@ export interface AttendanceCheckInDto {
     isRemote?: boolean;
     lat?: number;
     lng?: number;
+    accuracy?: number;
+    capturedAt?: Date | string;
 }
 
 export interface AttendanceCheckOutDto {
     lat?: number;
     lng?: number;
+    accuracy?: number;
+    capturedAt?: Date | string;
     notes?: string | null;
+}
+
+export interface AttendanceLocationSyncDto {
+    lat: number;
+    lng: number;
+    accuracy?: number;
+    capturedAt?: Date | string;
 }
 
 export interface UpdateAttendanceRecordDto {

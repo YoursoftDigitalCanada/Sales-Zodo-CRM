@@ -18,6 +18,7 @@ import {
     attendanceIdSchema,
     checkInAttendanceSchema,
     checkOutAttendanceSchema,
+    attendanceLocationSyncSchema,
     updateAttendanceSchema,
     createLeaveRequestSchema,
     leaveRequestIdSchema,
@@ -44,6 +45,7 @@ router.get('/attendance/summary', requirePermission(PERMISSIONS.EMPLOYEES_VIEW),
 router.get('/attendance/current', employeesController.getCurrentAttendance.bind(employeesController));
 router.post('/attendance/check-in', validate(checkInAttendanceSchema), employeesController.checkInAttendance.bind(employeesController));
 router.post('/attendance/check-out', validate(checkOutAttendanceSchema), employeesController.checkOutAttendance.bind(employeesController));
+router.post('/attendance/location', validate(attendanceLocationSyncSchema), employeesController.syncAttendanceLocation.bind(employeesController));
 router.post('/attendance/break/start', employeesController.startAttendanceBreak.bind(employeesController));
 router.post('/attendance/break/end', employeesController.endAttendanceBreak.bind(employeesController));
 router.put(

@@ -82,6 +82,14 @@ export interface AttendanceRecord {
   clockInLng?: number | null;
   clockOutLat?: number | null;
   clockOutLng?: number | null;
+  clockInAccuracy?: number | null;
+  clockOutAccuracy?: number | null;
+  clockInCapturedAt?: Date | null;
+  clockOutCapturedAt?: Date | null;
+  lastSeenLat?: number | null;
+  lastSeenLng?: number | null;
+  lastSeenAccuracy?: number | null;
+  lastSeenAt?: Date | null;
 }
 
 export interface LeaveRequest {

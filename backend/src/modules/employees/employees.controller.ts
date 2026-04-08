@@ -229,6 +229,21 @@ export class EmployeesController {
         } catch (e) { next(e); }
     }
 
+    async syncAttendanceLocation(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const employeeId = req.context.employeeId || req.user?.employeeId;
+            if (!employeeId) {
+                throw new BadRequestError(
+                    'Your user account is not linked to an employee profile',
+                    ErrorCodes.EMPLOYEE_NOT_FOUND,
+                );
+            }
+
+            const status = await employeesService.syncAttendanceLocation(employeeId, req.context.tenantId, sanitizeBody(req.body));
+            sendSuccess(res, status, 'Attendance location synced successfully');
+        } catch (e) { next(e); }
+    }
+
     async startAttendanceBreak(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const employeeId = req.context.employeeId || req.user?.employeeId;

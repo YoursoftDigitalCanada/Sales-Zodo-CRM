@@ -13,6 +13,7 @@ import {
     AttendanceCurrentStatusDto,
     AttendanceCheckInDto,
     AttendanceCheckOutDto,
+    AttendanceLocationSyncDto,
     UpdateAttendanceRecordDto,
     LeaveRequestDto,
     CreateLeaveRequestDto,
@@ -69,6 +70,14 @@ type AttendanceMeta = {
     breakStartedAt?: string | null;
     breakMinutes?: number;
     text?: string | null;
+    clockInAccuracy?: number | null;
+    clockOutAccuracy?: number | null;
+    clockInCapturedAt?: string | null;
+    clockOutCapturedAt?: string | null;
+    lastSeenLat?: number | null;
+    lastSeenLng?: number | null;
+    lastSeenAccuracy?: number | null;
+    lastSeenAt?: string | null;
 };
 
 type DailyAttendanceAggregate = {
@@ -132,6 +141,7 @@ const ATTENDANCE_META_PREFIX = '__attendance_meta__:';
 const LATE_THRESHOLD_MINUTES = 9 * 60 + 15;
 const HALF_DAY_MINUTES = 4 * 60;
 const FULL_DAY_MINUTES = 8 * 60;
+const ATTENDANCE_LOCATION_ACCURACY_LIMIT_METERS = 200;
 
 function asRecord(value: unknown): Record<string, unknown> {
     return value && typeof value === 'object' && !Array.isArray(value)
@@ -217,6 +227,15 @@ function normalizeDate(value?: Date | string | null): Date | null {
     return Number.isNaN(nextValue.getTime()) ? null : nextValue;
 }
 
+function normalizeFiniteNumber(value: unknown): number | null {
+    return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function normalizeIsoDateString(value: unknown): string | null {
+    const normalized = normalizeDate(value instanceof Date ? value : typeof value === 'string' ? value : null);
+    return normalized ? normalized.toISOString() : null;
+}
+
 function getDayKey(value: Date): string {
     return value.toISOString().slice(0, 10);
 }
@@ -268,6 +287,14 @@ function parseAttendanceMeta(description?: string | null): AttendanceMeta {
                 ? Math.max(0, parsed.breakMinutes)
                 : 0,
             text: typeof parsed.text === 'string' ? parsed.text : null,
+            clockInAccuracy: normalizeFiniteNumber(parsed.clockInAccuracy),
+            clockOutAccuracy: normalizeFiniteNumber(parsed.clockOutAccuracy),
+            clockInCapturedAt: normalizeIsoDateString(parsed.clockInCapturedAt),
+            clockOutCapturedAt: normalizeIsoDateString(parsed.clockOutCapturedAt),
+            lastSeenLat: normalizeFiniteNumber(parsed.lastSeenLat),
+            lastSeenLng: normalizeFiniteNumber(parsed.lastSeenLng),
+            lastSeenAccuracy: normalizeFiniteNumber(parsed.lastSeenAccuracy),
+            lastSeenAt: normalizeIsoDateString(parsed.lastSeenAt),
         };
     } catch {
         return {
@@ -285,6 +312,14 @@ function serializeAttendanceMeta(meta: AttendanceMeta): string | null {
             ? Math.max(0, Math.round(meta.breakMinutes))
             : 0,
         text: meta.text?.trim() || null,
+        clockInAccuracy: normalizeFiniteNumber(meta.clockInAccuracy),
+        clockOutAccuracy: normalizeFiniteNumber(meta.clockOutAccuracy),
+        clockInCapturedAt: normalizeIsoDateString(meta.clockInCapturedAt),
+        clockOutCapturedAt: normalizeIsoDateString(meta.clockOutCapturedAt),
+        lastSeenLat: normalizeFiniteNumber(meta.lastSeenLat),
+        lastSeenLng: normalizeFiniteNumber(meta.lastSeenLng),
+        lastSeenAccuracy: normalizeFiniteNumber(meta.lastSeenAccuracy),
+        lastSeenAt: normalizeIsoDateString(meta.lastSeenAt),
     };
 
     return `${ATTENDANCE_META_PREFIX}${JSON.stringify(normalized)}`;
@@ -361,11 +396,30 @@ function mapTimeEntryToAttendanceRecord(entry: AttendanceTimeEntryRow): Attendan
         clockInLng: entry.clockInLng,
         clockOutLat: entry.clockOutLat,
         clockOutLng: entry.clockOutLng,
+        clockInAccuracy: meta.clockInAccuracy ?? null,
+        clockOutAccuracy: meta.clockOutAccuracy ?? null,
+        clockInCapturedAt: normalizeDate(meta.clockInCapturedAt),
+        clockOutCapturedAt: normalizeDate(meta.clockOutCapturedAt),
+        lastSeenLat: meta.lastSeenLat ?? null,
+        lastSeenLng: meta.lastSeenLng ?? null,
+        lastSeenAccuracy: meta.lastSeenAccuracy ?? null,
+        lastSeenAt: normalizeDate(meta.lastSeenAt),
     };
 }
 
 function isRemoteAttendance(phase?: string | null): boolean {
     return phase?.trim().toUpperCase() === 'REMOTE';
+}
+
+function hasValidCoordinates(lat?: number | null, lng?: number | null): boolean {
+    return typeof lat === 'number'
+        && Number.isFinite(lat)
+        && typeof lng === 'number'
+        && Number.isFinite(lng)
+        && lat >= -90
+        && lat <= 90
+        && lng >= -180
+        && lng <= 180;
 }
 
 function mapLeaveTypeToDto(value: LeaveRequestRow['type']): LeaveRequestDto['leaveType'] {
@@ -1107,6 +1161,22 @@ export class EmployeesService {
             throw new ConflictError('Already checked in. Please check out first.', ErrorCodes.RESOURCE_ALREADY_EXISTS);
         }
 
+        if (!hasValidCoordinates(data.lat, data.lng)) {
+            throw new BadRequestError('Live location is required to check in.');
+        }
+
+        if (
+            typeof data.accuracy === 'number'
+            && Number.isFinite(data.accuracy)
+            && data.accuracy > ATTENDANCE_LOCATION_ACCURACY_LIMIT_METERS
+        ) {
+            throw new BadRequestError(
+                `Location accuracy is too weak to check in. Please retry when accuracy is under ${ATTENDANCE_LOCATION_ACCURACY_LIMIT_METERS} meters.`,
+            );
+        }
+
+        const capturedAt = normalizeIsoDateString(data.capturedAt) || new Date().toISOString();
+
         await prisma.timeEntry.create({
             data: {
                 employeeId,
@@ -1114,13 +1184,19 @@ export class EmployeesService {
                 startTime: new Date(),
                 status: 'CLOCKED_IN',
                 phase: data.isRemote ? 'REMOTE' : 'OFFICE',
-                clockInLat: data.lat ?? null,
-                clockInLng: data.lng ?? null,
+                clockInLat: data.lat,
+                clockInLng: data.lng,
                 description: serializeAttendanceMeta({
                     isOnBreak: false,
                     breakStartedAt: null,
                     breakMinutes: 0,
                     text: null,
+                    clockInAccuracy: normalizeFiniteNumber(data.accuracy),
+                    clockInCapturedAt: capturedAt,
+                    lastSeenLat: data.lat,
+                    lastSeenLng: data.lng,
+                    lastSeenAccuracy: normalizeFiniteNumber(data.accuracy),
+                    lastSeenAt: capturedAt,
                 }),
             },
         });
@@ -1161,6 +1237,8 @@ export class EmployeesService {
         const endTime = new Date();
         const meta = parseAttendanceMeta(entry.description);
         const breakMinutes = getBreakMinutes(meta, endTime);
+        const hasClockOutCoordinates = hasValidCoordinates(data.lat, data.lng);
+        const capturedAt = normalizeIsoDateString(data.capturedAt) || endTime.toISOString();
 
         await prisma.timeEntry.update({
             where: { id: entry.id },
@@ -1176,6 +1254,12 @@ export class EmployeesService {
                     isOnBreak: false,
                     breakStartedAt: null,
                     breakMinutes,
+                    clockOutAccuracy: hasClockOutCoordinates ? normalizeFiniteNumber(data.accuracy) : meta.clockOutAccuracy,
+                    clockOutCapturedAt: hasClockOutCoordinates ? capturedAt : meta.clockOutCapturedAt,
+                    lastSeenLat: hasClockOutCoordinates ? data.lat : meta.lastSeenLat,
+                    lastSeenLng: hasClockOutCoordinates ? data.lng : meta.lastSeenLng,
+                    lastSeenAccuracy: hasClockOutCoordinates ? normalizeFiniteNumber(data.accuracy) : meta.lastSeenAccuracy,
+                    lastSeenAt: hasClockOutCoordinates ? capturedAt : meta.lastSeenAt,
                 }),
             },
         });
@@ -1187,6 +1271,47 @@ export class EmployeesService {
             action: 'UPDATE',
             module: 'employees',
             description: `Employee ${employeeId} checked out`,
+        });
+
+        return this.getCurrentAttendanceStatus(employeeId, tenantId);
+    }
+
+    async syncAttendanceLocation(
+        employeeId: string,
+        tenantId: string,
+        data: AttendanceLocationSyncDto,
+    ): Promise<AttendanceCurrentStatusDto> {
+        const entry = await prisma.timeEntry.findFirst({
+            where: {
+                employeeId,
+                tenantId,
+                status: 'CLOCKED_IN',
+            },
+            orderBy: {
+                startTime: 'desc',
+            },
+        });
+
+        if (!entry) {
+            throw new NotFoundError('No active attendance entry found', ErrorCodes.RESOURCE_NOT_FOUND);
+        }
+
+        if (!hasValidCoordinates(data.lat, data.lng)) {
+            throw new BadRequestError('A valid live location is required to sync attendance.');
+        }
+
+        const meta = parseAttendanceMeta(entry.description);
+        await prisma.timeEntry.update({
+            where: { id: entry.id },
+            data: {
+                description: serializeAttendanceMeta({
+                    ...meta,
+                    lastSeenLat: data.lat,
+                    lastSeenLng: data.lng,
+                    lastSeenAccuracy: normalizeFiniteNumber(data.accuracy),
+                    lastSeenAt: normalizeIsoDateString(data.capturedAt) || new Date().toISOString(),
+                }),
+            },
         });
 
         return this.getCurrentAttendanceStatus(employeeId, tenantId);

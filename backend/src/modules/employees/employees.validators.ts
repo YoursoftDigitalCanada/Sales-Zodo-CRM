@@ -148,6 +148,8 @@ export const checkInAttendanceSchema = z.object({
         isRemote: z.boolean().optional(),
         lat: z.number().optional(),
         lng: z.number().optional(),
+        accuracy: z.number().nonnegative().max(5000).optional(),
+        capturedAt: isoDateString.optional(),
     }).optional().default({}),
 });
 
@@ -155,8 +157,19 @@ export const checkOutAttendanceSchema = z.object({
     body: z.object({
         lat: z.number().optional(),
         lng: z.number().optional(),
+        accuracy: z.number().nonnegative().max(5000).optional(),
+        capturedAt: isoDateString.optional(),
         notes: z.string().max(2000).optional().nullable(),
     }).optional().default({}),
+});
+
+export const attendanceLocationSyncSchema = z.object({
+    body: z.object({
+        lat: z.number(),
+        lng: z.number(),
+        accuracy: z.number().nonnegative().max(5000).optional(),
+        capturedAt: isoDateString.optional(),
+    }),
 });
 
 export const updateAttendanceSchema = z.object({

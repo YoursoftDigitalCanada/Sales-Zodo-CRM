@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { 
   Clock, 
   MapPin, 
@@ -90,6 +90,9 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
             const locationLabel = isLeaveRecord
               ? record.location || 'On Leave'
               : record.location || (record.isRemote ? 'Remote' : 'Office');
+            const gpsAccuracy = record.lastSeenAccuracy ?? record.clockInAccuracy ?? null;
+            const gpsUpdatedAt = record.lastSeenAt || record.clockInCapturedAt || null;
+            const hasLocationPin = typeof record.clockInLat === 'number' && typeof record.clockInLng === 'number';
             const dayTotals = dailyTotals.get(getAttendanceDayKey(record.employeeId, record.date));
 
             return (
@@ -200,16 +203,31 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
                                 ? 'Working from home'
                                 : 'Working from office'}
                           </p>
-                          {!isLeaveRecord && typeof record.clockInLat === 'number' && typeof record.clockInLng === 'number' && (
+                          {!isLeaveRecord && hasLocationPin && (
                             <div className="flex items-center gap-1 text-xs">
                               <MapPin className="h-3 w-3" />
                               <span>{record.clockInLat.toFixed(6)}, {record.clockInLng.toFixed(6)}</span>
                             </div>
                           )}
+                          {!isLeaveRecord && typeof gpsAccuracy === 'number' && (
+                            <p className="text-xs">Accuracy: {Math.round(gpsAccuracy)}m</p>
+                          )}
                         </div>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
+                  {!isLeaveRecord && (
+                    <div className="mt-1 space-y-1">
+                      <p className="text-xs text-[#64748B]">
+                        {typeof gpsAccuracy === 'number' ? `GPS ${Math.round(gpsAccuracy)}m` : 'GPS not available'}
+                      </p>
+                      {gpsUpdatedAt && (
+                        <p className="text-xs text-[#94A3B8]">
+                          Updated {formatDistanceToNow(gpsUpdatedAt, { addSuffix: true })}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>

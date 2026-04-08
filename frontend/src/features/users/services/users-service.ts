@@ -120,6 +120,14 @@ export interface AttendanceEntity {
     clockInLng?: number | null;
     clockOutLat?: number | null;
     clockOutLng?: number | null;
+    clockInAccuracy?: number | null;
+    clockOutAccuracy?: number | null;
+    clockInCapturedAt?: string | null;
+    clockOutCapturedAt?: string | null;
+    lastSeenLat?: number | null;
+    lastSeenLng?: number | null;
+    lastSeenAccuracy?: number | null;
+    lastSeenAt?: string | null;
 }
 
 export interface AttendanceSummaryEntity {
@@ -284,6 +292,8 @@ export async function checkInAttendance(data: {
     isRemote?: boolean;
     lat?: number;
     lng?: number;
+    accuracy?: number;
+    capturedAt?: string;
 }): Promise<AttendanceCurrentEntity> {
     const response = await api.post("/employees/attendance/check-in", data);
     return extractApiData<AttendanceCurrentEntity>(response.data);
@@ -292,9 +302,21 @@ export async function checkInAttendance(data: {
 export async function checkOutAttendance(data?: {
     lat?: number;
     lng?: number;
+    accuracy?: number;
+    capturedAt?: string;
     notes?: string | null;
 }): Promise<AttendanceCurrentEntity> {
     const response = await api.post("/employees/attendance/check-out", data || {});
+    return extractApiData<AttendanceCurrentEntity>(response.data);
+}
+
+export async function syncAttendanceLocation(data: {
+    lat: number;
+    lng: number;
+    accuracy?: number;
+    capturedAt?: string;
+}): Promise<AttendanceCurrentEntity> {
+    const response = await api.post("/employees/attendance/location", data);
     return extractApiData<AttendanceCurrentEntity>(response.data);
 }
 
